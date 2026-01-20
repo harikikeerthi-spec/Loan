@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Create Account - LoanHero</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                    },
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    },
+                    backgroundImage: {
+                        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(102, 5, 199, 0.4) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224, 195, 137, 0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139, 192, 232, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102, 5, 199, 0.3) 0px, transparent 50%)',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        .dark .glass-card {
+            background: rgba(25, 15, 35, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .form-input {
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(168, 85, 247, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus {
+            background: white;
+            border-color: #a855f7;
+            box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.1);
+        }
+
+        .dark .form-input {
+            background: rgba(25, 15, 35, 0.5);
+            border-color: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+
+        body {
+            background-attachment: fixed;
+        }
+
+        /* Hover effects for buttons and links */
+        .btn-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(102, 5, 199, 0.4);
+        }
+
+        .link-hover:hover {
+            opacity: 0.8;
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative flex items-center justify-center pt-20">
+
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none">
+        <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
+        <div class="absolute inset-0 opacity-30 mix-blend-overlay"
+            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="mainNav"
+        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
+        <div class="w-full max-w-7xl flex justify-between items-center">
+            <div class="flex items-center gap-12">
+                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
+                    <div
+                        class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg transition-transform group-hover:scale-110">
+                        <span class="material-symbols-outlined text-2xl">school</span>
+                    </div>
+                    <span
+                        class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white group-hover:text-primary transition-colors">LoanHero</span>
+                </a>
+            </div>
+            <div class="flex items-center gap-4">
+                <a href="login.html" id="loginLink"
+                    class="px-6 py-2.5 text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/20">Sign
+                    In</a>
+                
+                <!-- User Profile Dropdown (Hidden initially) -->
+                <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
+                    <button id="profileBtn" class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                        <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
+                        <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white"></span>
+                    </button>
+                    
+                    <!-- Dropdown Menu -->
+                    <div id="profileDropdown" class="hidden absolute top-12 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 w-48">
+                        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Logged in as</p>
+                            <p id="dropdownEmail" class="text-sm font-bold text-gray-900 dark:text-white truncate"></p>
+                        </div>
+                        <a href="index.html" class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Dashboard</a>
+                        <a href="#" id="logoutBtn" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="relative z-10 w-full max-w-md px-6">
+        <div class="glass-card p-12 rounded-[3.5rem] border-white/50 shadow-2xl">
+            <div class="text-center mb-10">
+                <h1 class="text-3xl font-bold font-display text-gray-900 dark:text-white mb-2">Join LoanHero</h1>
+                <p class="text-gray-500 font-sans text-sm">Create your account to start your journey</p>
+            </div>
+
+            <form id="signupForm" class="space-y-6">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold uppercase tracking-widest text-gray-500 ml-4 font-sans">Username</label>
+                    <input type="text" id="username" placeholder="john_doe" required
+                        class="w-full px-6 py-4 rounded-full form-input focus:ring-0 outline-none">
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[10px] font-bold uppercase tracking-widest text-gray-500 ml-4 font-sans">Email
+                        Address</label>
+                    <input type="email" id="signupEmail" placeholder="name@example.com" required
+                        class="w-full px-6 py-4 rounded-full form-input focus:ring-0 outline-none">
+                </div>
+
+                <div id="otpSection" class="space-y-2 hidden">
+                    <div class="flex justify-between items-center ml-4">
+                        <label class="text-[10px] font-bold uppercase tracking-widest text-gray-500 font-sans">6-Digit
+                            OTP</label>
+                        <button type="button" id="resendSignupBtn"
+                            class="text-[10px] font-bold uppercase tracking-widest text-primary hover:underline font-sans">Resend?</button>
+                    </div>
+                    <div class="flex gap-2 justify-between">
+                        <input type="text" maxlength="1"
+                            class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
+                        <input type="text" maxlength="1"
+                            class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
+                        <input type="text" maxlength="1"
+                            class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
+                        <input type="text" maxlength="1"
+                            class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
+                        <input type="text" maxlength="1"
+                            class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
+                        <input type="text" maxlength="1"
+                            class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
+                    </div>
+                </div>
+
+                <button type="button" id="getOtpSignupBtn"
+                    class="w-full py-5 bg-primary text-white rounded-full font-bold uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 shadow-2xl transition-all">
+                    Get OTP
+                </button>
+                
+                <button type="submit" id="submitBtn"
+                    class="hidden w-full py-5 bg-primary text-white rounded-full font-bold uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 shadow-2xl transition-all">
+                    Create Account
+                </button>
+            </form>
+
+            <div class="mt-10 text-center">
+                <p class="text-sm text-gray-500 font-sans">Already have an account? <a href="login.html"
+                        class="text-primary font-bold hover:underline">Sign In</a></p>
+            </div>
+        </div>
+    </main>
+
+
+    <script src="assets/js/signup.js"></script>
+    <script src="assets/js/otp-focus.js"></script>
+    <script src="assets/js/auth.js"></script>
+</body>
+
+</html>

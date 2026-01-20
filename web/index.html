@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Atlys Education - Empowering Your Global Journey</title>
+
+    <!-- Meta Tags -->
+    <meta name="description"
+        content="Transparent, flexible, and accessible education loans for students pursuing global excellence." />
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+
+    <!-- Styles & Config -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                    },
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    },
+                    backgroundImage: {
+                        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(102, 5, 199, 0.4) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224, 195, 137, 0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139, 192, 232, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102, 5, 199, 0.3) 0px, transparent 50%)',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        .dark .glass-card {
+            background: rgba(25, 15, 35, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-scrolled {
+            background: rgba(255, 255, 255, 0.8) !important;
+            backdrop-filter: blur(12px);
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+        }
+
+        .dark .nav-scrolled {
+            background: rgba(17, 8, 26, 0.8) !important;
+        }
+
+        body {
+            background-attachment: fixed;
+        }
+
+        @keyframes scrollLeft {
+            0% {
+                transform: translateX(0);
+            }
+
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+
+        @keyframes scrollRight {
+            0% {
+                transform: translateX(-50%);
+            }
+
+            100% {
+                transform: translateX(0);
+            }
+        }
+
+        .animate-scroll-left {
+            animation: scrollLeft 30s linear infinite;
+        }
+
+        .animate-scroll-right {
+            animation: scrollRight 30s linear infinite;
+        }
+
+        .paused {
+            animation-play-state: paused !important;
+        }
+
+        .bank-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 3rem;
+            opacity: 0.6;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .bank-item:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+
+    <!-- Background Structure -->
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none">
+        <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
+        <div class="absolute inset-0 opacity-30 mix-blend-overlay"
+            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
+        </div>
+    </div>
+
+    </div>
+
+    <!-- Navigation -->
+    <nav id="mainNav"
+        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
+        <div class="w-full max-w-7xl flex justify-between items-center">
+            <div class="flex items-center gap-12">
+                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+                        <span class="material-symbols-outlined text-2xl">school</span>
+                    </div>
+                    <span class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero
+                        <span class="text-primary/80"></span></span>
+                </a>
+
+                <div class="hidden lg:flex items-center gap-8">
+                    <a href="about-us.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">About</a>
+                    <a href="how-it-works.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">How
+                        It Works</a>
+                    <a href="emi.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">EMI
+                        Calculator</a>
+                    <a href="faq.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">FAQ</a>
+                    <a href="contact.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Contact</a>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <a href="login.html" id="loginLink"
+                    class="text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Sign
+                    In</a>
+                <a href="signup.html" id="signupLink"
+                    class="px-6 py-2.5 text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/20">Sign
+                    Up</a>
+                
+                <!-- User Profile Dropdown (Hidden initially) -->
+                <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
+                    <button id="profileBtn" class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                        <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
+                        <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white"></span>
+                    </button>
+                    
+                    <!-- Dropdown Menu -->
+                    <div id="profileDropdown" class="hidden absolute top-12 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 w-48">
+                        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Logged in as</p>
+                            <p id="dropdownEmail" class="text-sm font-bold text-gray-900 dark:text-white truncate"></p>
+                        </div>
+                        <a href="index.html" class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Dashboard</a>
+                        <a href="#" id="logoutBtn" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="relative z-10">
+        <!-- Hero Section -->
+        <section class="max-w-7xl mx-auto px-6 pt-48 pb-24 text-center relative">
+            <!-- Hanging Badge -->
+            <div class="relative inline-block mb-12 group">
+                <!-- Vertical Hanging Lines -->
+                <div class="absolute -top-48 left-[20%] w-px h-48 bg-black"></div>
+                <div class="absolute -top-48 right-[20%] w-px h-48 bg-black"></div>
+
+                <!-- Badge -->
+                <div
+                    class="inline-flex items-center gap-6 rounded-full border border-gray-100 dark:border-white/10 bg-white/70 dark:bg-zinc-800/50 px-8 py-3 shadow-md backdrop-blur-md relative z-10 transition-transform hover:-translate-y-1">
+                    <a href="apply-loan.html" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                        <span class="material-symbols-outlined text-2xl">school</span>
+                        <span class="text-sm font-bold text-gray-800 dark:text-gray-200">Education Loan</span>
+                    </a>
+                    <div class="w-px h-6 bg-gray-200 dark:bg-white/10"></div>
+                    <a href="bank-reviews.html" class="flex items-center gap-1.5 group/link cursor-pointer">
+                        <span
+                            class="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 group-hover/link:text-primary transition-colors">Up
+                            to 100% Funding</span>
+                        <span
+                            class="material-symbols-outlined text-[16px] text-gray-400 group-hover/link:text-primary group-hover/link:translate-x-0.5 transition-all">arrow_forward</span>
+                    </a>
+                </div>
+            </div>
+
+            <h1
+                class="text-6xl md:text-8xl font-bold font-display leading-[1.05] tracking-tight mb-8 text-gray-900 dark:text-white">
+                Let's find your <br />
+                <span class="italic text-primary font-normal">perfect</span> loan
+            </h1>
+
+            <p class="text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-16 leading-relaxed font-sans">
+                Your global education journey starts here.
+            </p>
+
+            <div class="max-w-2xl mx-auto mb-12">
+                <label class="block text-center mb-6">
+                    <!-- <span class="text-[11px] font-bold uppercase tracking-[0.3em] text-primary mb-3 inline-block">Step 1</span> -->
+                    <p class="text-sm text-gray-600 dark:text-gray-400 font-sans">Enter the name of the university you
+                        want to attend</p>
+                </label>
+                <div class="relative group">
+                    <input type="text" placeholder="Search for your university..."
+                        class="w-full bg-transparent border-b-2 border-gray-300 dark:border-zinc-600 py-6 text-2xl md:text-3xl font-display focus:outline-none focus:border-primary transition-colors text-center placeholder-gray-400 dark:placeholder-zinc-500 font-semibold"
+                        aria-label="University name input">
+                </div>
+                <button
+                    class="mt-12 px-14 py-5 bg-[#111] dark:bg-white dark:text-black text-white rounded-full font-bold uppercase tracking-[0.3em] text-[10px] hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-black/10">
+                    Proceed
+                </button>
+            </div>
+
+            <div
+                class="flex items-center justify-center gap-4 cursor-pointer group mb-24 transition-opacity hover:opacity-80">
+                <div
+                    class="w-12 h-12 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center group-hover:bg-primary group-hover:border-primary transition-all">
+                    <span
+                        class="material-symbols-outlined text-sm text-gray-900 dark:text-white group-hover:text-white transition-colors">play_arrow</span>
+                </div>
+                <span
+                    class="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 group-hover:text-primary transition-colors">Watch
+                    how it works</span>
+            </div>
+
+            <!-- Stats -->
+            <div
+                class="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-6xl mx-auto border-t border-gray-100 dark:border-white/5 pt-16">
+                <div class="text-center px-8">
+                    <h3 class="text-5xl font-bold text-gray-900 dark:text-white mb-3 font-display">$150M+</h3>
+                    <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 leading-relaxed">Total
+                        Education Funding Disbursed</p>
+                </div>
+                <div class="text-center px-8 border-x-0 md:border-x border-gray-100 dark:border-white/5">
+                    <h3 class="text-5xl font-bold text-gray-900 dark:text-white mb-3 font-display">12,000+</h3>
+                    <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 leading-relaxed">Global
+                        Students Helped</p>
+                </div>
+                <div class="text-center px-8">
+                    <h3 class="text-5xl font-bold text-gray-900 dark:text-white mb-3 font-display">45+</h3>
+                    <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 leading-relaxed">Global
+                        Bank Partners</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stories Section -->
+        <section id="stories" class="max-w-7xl mx-auto px-6 py-24 scroll-mt-24">
+            <div class="flex justify-between items-end mb-12">
+                <div>
+                    <span class="text-primary font-bold text-[11px] tracking-[0.2em] uppercase mb-2 block">Student
+                        Stories</span>
+                    <h2 class="text-4xl md:text-5xl font-display text-gray-900 dark:text-white">
+                        Global campus <br />
+                        <span class="italic font-normal text-gray-600 dark:text-gray-400">experiences</span>
+                    </h2>
+                </div>
+                <div class="flex gap-3">
+                    <button
+                        class="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors shadow-sm text-gray-800 dark:text-gray-200">
+                        <span class="material-symbols-outlined text-sm font-bold">arrow_back</span>
+                    </button>
+                    <button
+                        class="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors shadow-sm text-gray-800 dark:text-gray-200">
+                        <span class="material-symbols-outlined text-sm font-bold">arrow_forward</span>
+                    </button>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Story 1 -->
+                <div class="group relative rounded-2xl overflow-hidden cursor-pointer shadow-lg">
+                    <img alt="Student Portrait Ananya"
+                        class="w-full h-[480px] object-cover transition-transform duration-700 group-hover:scale-105"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-tz-bgJeqqYOLvNptm7fJd6WOm31qLte1hh7rYEJoxuxROWBjZVsAOTBsMWDr-TVUiVCeYpsiayflSZzCd7hsVdBXYQfPF_3v-cqCpwwz_y-7VQVI8nLFlFq4JwrZoMp2KNutuTh2cT60tz2MWXsYpmgozz_BI6R1bAStxmPnmkfcnEWxI9ImfV_eu14gWRb8dyGHbgojouiUZzSgFSLgaG4Lsj9AkihqytsmEf3zumDv-BLm7FqNbKZ_TZuNuBSxX5vtMgIVbUw" />
+                    <div
+                        class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300">
+                    </div>
+                    <div
+                        class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+                        <div
+                            class="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/40 hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined text-white text-2xl">play_arrow</span>
+                        </div>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 p-8 z-10">
+                        <h3 class="text-white font-display text-2xl mb-1 drop-shadow-md font-medium">Ananya</h3>
+                        <p class="text-blue-100 font-bold text-[11px] uppercase tracking-wider drop-shadow-sm">NYU, New
+                            York</p>
+                    </div>
+                </div>
+                <!-- Story 2 -->
+                <div class="group relative rounded-2xl overflow-hidden cursor-pointer shadow-lg">
+                    <img alt="Student David Statue Art"
+                        class="w-full h-[480px] object-cover grayscale transition-transform duration-700 group-hover:scale-105"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuAB8Y-ndBcatwDUx2NaDjxdVa4k8vatz7zuGpCWTqeHR1vyLbkayDaJOnFYu3o-Zft-wOLhrNOCttfEznE3THvkAmZj5P1S2uIvJow-0zRHEmb2jln6OqwwiDo12oDxenketq614J3mRZ1TvnapI106l4_hi8dxV8qeyy9PG71ZvpgIYAyRhDp_Nx7fFmZzUQ51ApwawS8xeU733b08fzDINRjGbrebf3bYcIz1RMsOaib-kLbkmV2jy1Y8ttMYy9CMwjXMRx3rIu0" />
+                    <div
+                        class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300">
+                    </div>
+                    <div
+                        class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+                        <div
+                            class="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/40 hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined text-white text-2xl">play_arrow</span>
+                        </div>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 p-8 z-10">
+                        <h3 class="text-white font-display text-2xl mb-1 drop-shadow-md font-medium">David</h3>
+                        <p class="text-blue-100 font-bold text-[11px] uppercase tracking-wider drop-shadow-sm">LSE,
+                            London</p>
+                    </div>
+                </div>
+                <!-- Story 3 -->
+                <div class="group relative rounded-2xl overflow-hidden cursor-pointer shadow-lg">
+                    <img alt="Student Portrait Mei"
+                        class="w-full h-[480px] object-cover transition-transform duration-700 group-hover:scale-105"
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuAXTOml06uMZtpLp1QlQiRs2sNmhKT9PYP9mNviyHpC4PK_n1Px1u3bZ2sqTkHjmYlXyax3oPNYSuVVZvnAbgMhARuMTcwChch2x373KVLhgdz9QMGdFUCdC2zXbvukSOxLPjQ109dWiRuEGcVVagjoAuMXi1pTKWgFkHU58ms_QMGBKLlJFw6pcaYYysyvfoUSiBDHr_v-Eip-YngQt1ObXyR_v7INqzpoX7YlgSS6cwSjYEckfMo15-9zjhgR_SEpCwbaHUCXTxE" />
+                    <div
+                        class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300">
+                    </div>
+                    <div
+                        class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
+                        <div
+                            class="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/40 hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined text-white text-2xl">play_arrow</span>
+                        </div>
+                    </div>
+                    <div class="absolute bottom-0 left-0 right-0 p-8 z-10">
+                        <h3 class="text-white font-display text-2xl mb-1 drop-shadow-md font-medium">Mei</h3>
+                        <p class="text-blue-100 font-bold text-[11px] uppercase tracking-wider drop-shadow-sm">
+                            University of Melbourne</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Partner Section -->
+        <section
+            class="py-24 border-y border-gray-100 dark:border-white/5 bg-white/20 dark:bg-zinc-900/20 backdrop-blur-sm overflow-hidden">
+            <div class="max-w-7xl mx-auto px-6 mb-12 text-center">
+                <p class="text-[15px] font-bold tracking-[0.3em] text-gray-400 uppercase mb-4">Trusted by Global Banking
+                    Partners</p>
+                <h2 class="text-3xl font-display text-gray-900 dark:text-white">Our Network</h2>
+            </div>
+
+            <div class="flex flex-col gap-16">
+                <!-- Row 1 (Right) -->
+                <div class="relative overflow-hidden w-full py-4">
+                    <div class="bank-row animate-scroll-right flex items-center whitespace-nowrap" data-row="1">
+                        <div class="bank-item"><span class="text-xl font-serif font-extrabold">HDFC BANK</span></div>
+                        <div class="bank-item"><span class="text-xl font-bold italic">SBI</span></div>
+                        <div class="bank-item">
+                            <div class="flex items-center gap-10"><span
+                                    class="material-symbols-outlined text-primary">account_balance</span><span
+                                    class="font-extrabold">ICICI Bank</span></div>
+                        </div>
+                        <div class="bank-item"><span class="font-extrabold tracking-widest uppercase">Axis Bank</span>
+                        </div>
+                        <div class="bank-item"><span class="font-bold">Prodigy <span
+                                    class="font-normal opacity-60">Finance</span></span></div>
+                        <!-- Repeat 1 -->
+                        <div class="bank-item"><span class="text-xl font-serif font-extrabold">HDFC BANK</span></div>
+                        <div class="bank-item"><span class="text-xl font-bold italic">SBI</span></div>
+                        <div class="bank-item">
+                            <div class="flex items-center gap-2"><span
+                                    class="material-symbols-outlined text-primary">account_balance</span><span
+                                    class="font-extrabold">ICICI Bank</span></div>
+                        </div>
+                        <div class="bank-item"><span class="font-extrabold tracking-widest uppercase">Axis Bank</span>
+                        </div>
+                        <div class="bank-item"><span class="font-bold">Prodigy <span
+                                    class="font-normal opacity-60">Finance</span></span></div>
+                    </div>
+                </div>
+
+                <!-- Row 2 (Left) -->
+                <div class="relative overflow-hidden w-full py-4 border-y border-gray-100/30 dark:border-white/5">
+                    <div class="bank-row animate-scroll-left flex items-center whitespace-nowrap" data-row="2">
+                        <div class="bank-item"><span class="font-extrabold">Kotak Mahindra</span></div>
+                        <div class="bank-item"><span class="font-bold">IDBI Bank</span></div>
+                        <div class="bank-item"><span class="font-extrabold">PNB</span></div>
+                        <div class="bank-item"><span class="font-bold text-primary">Yes Bank</span></div>
+                        <div class="bank-item"><span class="font-extrabold">HSBC</span></div>
+                        <!-- Repeat 2 -->
+                        <div class="bank-item"><span class="font-extrabold">Kotak Mahindra</span></div>
+                        <div class="bank-item"><span class="font-bold">IDBI Bank</span></div>
+                        <div class="bank-item"><span class="font-extrabold">PNB</span></div>
+                        <div class="bank-item"><span class="font-bold text-primary">Yes Bank</span></div>
+                        <div class="bank-item"><span class="font-extrabold">HSBC</span></div>
+                    </div>
+                </div>
+
+                <!-- Row 3 (Left) -->
+                <div class="relative overflow-hidden w-full py-4">
+                    <div class="bank-row animate-scroll-left flex items-center whitespace-nowrap" data-row="3">
+                        <div class="bank-item"><span class="font-extrabold">Standard Chartered</span></div>
+                        <div class="bank-item"><span class="font-bold">Barclays</span></div>
+                        <div class="bank-item"><span class="font-extrabold">Citibank</span></div>
+                        <div class="bank-item"><span class="font-bold">Deutsche Bank</span></div>
+                        <div class="bank-item"><span class="font-extrabold">Bank of America</span></div>
+                        <!-- Repeat 3 -->
+                        <div class="bank-item"><span class="font-extrabold">Standard Chartered</span></div>
+                        <div class="bank-item"><span class="font-bold">Barclays</span></div>
+                        <div class="bank-item"><span class="font-extrabold">Citibank</span></div>
+                        <div class="bank-item"><span class="font-bold">Deutsche Bank</span></div>
+                        <div class="bank-item"><span class="font-extrabold">Bank of America</span></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        </section>
+
+
+        <!-- Vault Section -->
+        <section id="vault" class="max-w-7xl mx-auto px-6 py-32 scroll-mt-24">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl md:text-5xl font-display text-gray-900 dark:text-white mb-4">Secure Application
+                    Vault</h2>
+                <p class="text-gray-500 dark:text-gray-400 text-lg font-sans">Manage your critical documents with
+                    bank-grade security.</p>
+            </div>
+            <div
+                class="glass-card rounded-[3rem] p-8 md:p-12 shadow-2xl max-w-xl mx-auto border-white dark:border-zinc-800 relative">
+                <div class="flex items-center gap-4 mb-10 pb-6 border-b border-gray-100 dark:border-white/5">
+                    <div
+                        class="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-2xl">folder_open</span>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-gray-900 dark:text-white">My Documents</h4>
+                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">2 of 3 Uploaded</p>
+                    </div>
+                    <button class="ml-auto material-symbols-outlined text-gray-300">more_vert</button>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Passport -->
+                    <div
+                        class="flex items-center justify-between p-6 bg-gray-50/50 dark:bg-zinc-800/30 rounded-3xl border border-gray-100 dark:border-white/5 transition-all hover:bg-white dark:hover:bg-zinc-800/50">
+                        <div class="flex items-center gap-4">
+                            <span class="material-symbols-outlined text-gray-400">badge</span>
+                            <div>
+                                <p class="font-bold text-sm text-gray-900 dark:text-white">Passport</p>
+                                <p class="text-[10px] text-gray-400 font-medium tracking-tight">Scanned Copy</p>
+                            </div>
+                        </div>
+                        <span
+                            class="flex items-center gap-1.5 text-[9px] font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-lg uppercase tracking-wider">
+                            Uploaded <span class="material-symbols-outlined text-[12px]">check</span>
+                        </span>
+                    </div>
+
+                    <!-- I-20 Letter -->
+                    <div
+                        class="flex items-center justify-between p-6 bg-red-50/30 dark:bg-red-900/10 rounded-3xl border border-red-100 dark:border-red-900/20">
+                        <div class="flex items-center gap-4">
+                            <span class="material-symbols-outlined text-gray-400">text_snippet</span>
+                            <div>
+                                <p class="font-bold text-sm text-gray-900 dark:text-white">I-20 Letter</p>
+                                <p class="text-[10px] text-red-500 font-bold tracking-tight">Action Required</p>
+                            </div>
+                        </div>
+                        <button
+                            class="px-5 py-2 text-[9px] font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-full shadow-sm uppercase tracking-widest hover:bg-gray-50 transition-all">Upload</button>
+                    </div>
+
+                    <!-- ITR Returns -->
+                    <div
+                        class="flex items-center justify-between p-6 bg-gray-50/50 dark:bg-zinc-800/30 rounded-3xl border border-gray-100 dark:border-white/5 transition-all hover:bg-white dark:hover:bg-zinc-800/50">
+                        <div class="flex items-center gap-4">
+                            <span class="material-symbols-outlined text-gray-400">description</span>
+                            <div>
+                                <p class="font-bold text-sm text-gray-900 dark:text-white">ITR Returns</p>
+                                <p class="text-[10px] text-gray-400 font-medium tracking-tight">PDF • 2.4 MB</p>
+                            </div>
+                        </div>
+                        <span
+                            class="flex items-center gap-1.5 text-[9px] font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-lg uppercase tracking-wider">
+                            Uploaded <span class="material-symbols-outlined text-[12px]">check</span>
+                        </span>
+                    </div>
+                </div>
+
+                <div
+                    class="mt-10 flex justify-center items-center gap-2 text-[10px] text-gray-400 font-bold tracking-[0.2em] uppercase">
+                    <span class="material-symbols-outlined text-[14px] text-gray-300">verified_user</span>
+                    Security & 256-Bit Encryption
+                </div>
+            </div>
+        </section>
+        <!-- CTA Section -->
+        <section class="max-w-7xl mx-auto px-6 py-24">
+            <div
+                class="glass-card rounded-[4rem] p-12 md:p-20 text-center relative overflow-hidden shadow-2xl border-white/40 dark:border-white/5">
+                <div class="relative z-10">
+                    <h2
+                        class="text-4xl md:text-6xl font-bold font-display text-gray-900 dark:text-white mb-4 leading-tight">
+                        Ready to fund your global <br class="hidden md:block" /> future?</h2>
+                    <div class="mt-12 max-w-lg mx-auto flex flex-col sm:flex-row gap-3">
+                        <input type="email" placeholder="Enter your email"
+                            class="flex-1 bg-white dark:bg-zinc-800/50 border-none rounded-full px-8 py-5 text-sm focus:ring-2 focus:ring-primary shadow-inner outline-none dark:text-white">
+                        <a href="signup.html"
+                            class="bg-[#111] dark:bg-white dark:text-black text-white px-10 py-5 rounded-full font-bold uppercase tracking-[0.2em] text-[10px] hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center justify-center">Get
+                            Started</a>
+                    </div>
+                    <div
+                        class="mt-8 flex flex-wrap justify-center items-center gap-6 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
+                        <span class="flex items-center gap-2"><span
+                                class="material-symbols-outlined text-[16px] text-green-500">verified_user</span>
+                            Verified by RBI</span>
+                        <span class="flex items-center gap-2"><span
+                                class="material-symbols-outlined text-[16px] text-primary">lock</span> Secure</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-[#190f23] text-white py-20 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                <div class="col-span-1 md:col-span-2">
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
+                            <span class="material-symbols-outlined text-white">school</span>
+                        </div>
+                        <span class="text-2xl font-bold font-display tracking-tight text-white">LoanHero</span>
+                    </div>
+                    <p class="text-gray-400 max-w-sm font-sans leading-relaxed mb-8">
+                        Empowering students with transparent, flexible, and accessible education financing solutions.
+                        Join
+                        thousands of students pursuing their dreams.
+                    </p>
+                    <div class="flex items-center gap-4">
+                        <a href="#"
+                            class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
+                            aria-label="LinkedIn">
+                            <span class="material-symbols-outlined text-white">language</span>
+                        </a>
+                        <a href="#"
+                            class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
+                            aria-label="Twitter">
+                            <span class="material-symbols-outlined text-white">mail</span>
+                        </a>
+                        <a href="#"
+                            class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
+                            aria-label="Facebook">
+                            <span class="material-symbols-outlined text-white">forum</span>
+                        </a>
+                        <a href="#"
+                            class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
+                            aria-label="Instagram">
+                            <span class="material-symbols-outlined text-white">share</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-bold mb-6 font-display text-white">Quick Links</h4>
+                    <ul class="space-y-4 text-gray-400 font-sans">
+                        <li><a href="about-us.html" class="hover:text-primary transition-colors">About Us</a></li>
+                        <li><a href="emi.html" class="hover:text-primary transition-colors">EMI Calculator</a></li>
+                        <li><a href="contact.html" class="hover:text-primary transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-bold mb-6 font-display text-white">Legal</h4>
+                    <ul class="space-y-4 text-gray-400 font-sans">
+                        <li><a href="privacy-policy.html" class="hover:text-primary transition-colors">Privacy
+                                Policy</a></li>
+                        <li><a href="terms-conditions.html" class="hover:text-primary transition-colors">Terms of
+                                Service</a></li>
+                        <li><a href="cookies.html" class="hover:text-primary transition-colors">Cookie Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="pt-8 border-t border-white/10 text-center text-gray-500 text-xs font-sans">
+                <p>&copy; 2023 LoanHero Inc. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Bank Row Click Interaction
+        document.querySelectorAll('.bank-row').forEach(row => {
+            row.addEventListener('click', function () {
+                // Check if already paused
+                const isPaused = this.classList.contains('paused');
+
+                // User said: "that row should stop and other 2 row should be moved in their directions"
+                // So we stop this one. We don't necessarily restart it on second click, 
+                // but a toggle is more user-friendly. I'll make it toggle.
+                this.classList.toggle('paused');
+            });
+        });
+
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('mainNav');
+            if (window.scrollY > 50) {
+                nav.classList.add('nav-scrolled');
+            } else {
+                nav.classList.remove('nav-scrolled');
+            }
+        });
+    </script>
+    <script src="assets/js/auth.js"></script>
+</body>
+
+</html>
