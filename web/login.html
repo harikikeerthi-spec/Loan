@@ -101,22 +101,26 @@
                 <a href="signup.html" id="signupLink"
                     class="px-6 py-2.5 text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/20">Sign
                     Up</a>
-                
+
                 <!-- User Profile Dropdown (Hidden initially) -->
                 <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
-                    <button id="profileBtn" class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                    <button id="profileBtn"
+                        class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
                         <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
                         <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white"></span>
                     </button>
-                    
+
                     <!-- Dropdown Menu -->
-                    <div id="profileDropdown" class="hidden absolute top-12 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 w-48">
+                    <div id="profileDropdown"
+                        class="hidden absolute top-12 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 w-48">
                         <div class="p-4 border-b border-gray-200 dark:border-gray-700">
                             <p class="text-xs text-gray-500 dark:text-gray-400">Logged in as</p>
                             <p id="dropdownEmail" class="text-sm font-bold text-gray-900 dark:text-white truncate"></p>
                         </div>
-                        <a href="index.html" class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Dashboard</a>
-                        <a href="#" id="logoutBtn" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700">Logout</a>
+                        <a href="index.html"
+                            class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Dashboard</a>
+                        <a href="#" id="logoutBtn"
+                            class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700">Logout</a>
                     </div>
                 </div>
             </div>
@@ -135,6 +139,8 @@
                     <label class="text-[10px] font-bold uppercase tracking-widest text-gray-500 ml-4 font-sans">Email
                         Address</label>
                     <input type="email" id="email" placeholder="name@example.com" required
+                        pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
+                        title="Please enter a valid email address (e.g., user@example.com)"
                         class="w-full px-6 py-4 rounded-full form-input focus:ring-0 outline-none">
                 </div>
 
@@ -146,12 +152,18 @@
                             class="text-[10px] font-bold uppercase tracking-widest text-primary hover:underline font-sans">Resend?</button>
                     </div>
                     <div class="flex gap-2 justify-between">
-                        <input type="text" maxlength="1" class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
-                        <input type="text" maxlength="1" class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
-                        <input type="text" maxlength="1" class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
-                        <input type="text" maxlength="1" class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
-                        <input type="text" maxlength="1" class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
-                        <input type="text" maxlength="1" class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
+                        <input type="text" maxlength="1"
+                            class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
+                        <input type="text" maxlength="1"
+                            class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
+                        <input type="text" maxlength="1"
+                            class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
+                        <input type="text" maxlength="1"
+                            class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
+                        <input type="text" maxlength="1"
+                            class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
+                        <input type="text" maxlength="1"
+                            class="otp-input w-12 h-14 text-center text-xl font-bold rounded-2xl form-input focus:ring-0 outline-none">
                     </div>
                 </div>
 
@@ -166,7 +178,7 @@
                     class="w-full py-5 bg-primary text-white rounded-full font-bold uppercase tracking-widest text-xs hover:scale-[1.02] shadow-2xl transition-all">
                     Get OTP
                 </button>
-                
+
                 <button type="submit" id="submitBtn"
                     class="hidden w-full py-5 bg-primary text-white rounded-full font-bold uppercase tracking-widest text-xs hover:scale-[1.02] shadow-2xl transition-all">
                     Sign In
@@ -206,6 +218,7 @@
             }
         });
     </script>
+    <script src="assets/js/email-validation.js"></script>
     <script src="assets/js/app.js"></script>
     <script src="assets/js/otp-focus.js"></script>
     <script src="assets/js/auth.js"></script>

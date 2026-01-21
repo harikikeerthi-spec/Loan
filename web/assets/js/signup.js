@@ -7,24 +7,50 @@ if (signupForm) {
     const submitBtn = document.getElementById('submitBtn');
     const otpSection = document.getElementById('otpSection');
     const signupEmailInput = document.getElementById('signupEmail');
-    const usernameInput = document.getElementById('username');
+    const firstNameInput = document.getElementById('firstName');
+    const lastNameInput = document.getElementById('lastName');
+    const phoneNumberInput = document.getElementById('phoneNumber');
+    const dateOfBirthInput = document.getElementById('dateOfBirth');
     const resendSignupBtn = document.getElementById('resendSignupBtn');
 
     if (getOtpSignupBtn) {
         getOtpSignupBtn.addEventListener('click', async () => {
             const email = signupEmailInput.value.trim();
-            const username = usernameInput.value.trim();
-            
+            const firstName = firstNameInput.value.trim();
+            const lastName = lastNameInput.value.trim();
+            const phoneNumber = phoneNumberInput.value.trim();
+            const dateOfBirth = dateOfBirthInput.value;
+
+            if (!firstName) {
+                showToast('Please enter your first name', 'error');
+                firstNameInput.focus();
+                return;
+            }
+
+            if (!lastName) {
+                showToast('Please enter your last name', 'error');
+                lastNameInput.focus();
+                return;
+            }
+
+            if (!phoneNumber) {
+                showToast('Please enter your phone number', 'error');
+                phoneNumberInput.focus();
+                return;
+            }
+
+            if (!dateOfBirth) {
+                showToast('Please enter your date of birth', 'error');
+                dateOfBirthInput.focus();
+                return;
+            }
+
             if (!email) {
-                alert('Please enter your email');
+                showToast('Please enter your email', 'error');
+                signupEmailInput.focus();
                 return;
             }
-            
-            if (!username) {
-                alert('Please enter your username');
-                return;
-            }
-            
+
             getOtpSignupBtn.disabled = true;
             getOtpSignupBtn.textContent = 'Checking...';
 
@@ -33,18 +59,26 @@ if (signupForm) {
                 const response = await fetch(`${API_URL}/auth/register/send-otp`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, username }),
+                    body: JSON.stringify({
+                        email,
+                        firstName,
+                        lastName,
+                        phoneNumber,
+                        dateOfBirth
+                    }),
                 });
 
                 console.log('Response status:', response.status);
                 const responseData = await response.json();
                 console.log('Response data:', responseData);
 
-                // Check if user already exists
+                // Check if user already exists or validation failed
                 if (responseData.success === false) {
-                    alert(responseData.message);
+                    showToast(responseData.message, 'error');
                     if (responseData.redirect === 'login') {
-                        window.location.href = 'login.html';
+                        setTimeout(() => {
+                            window.location.href = 'login.html';
+                        }, 2000);
                         return;
                     }
                     getOtpSignupBtn.disabled = false;
@@ -54,11 +88,11 @@ if (signupForm) {
 
                 if (!response.ok) throw new Error('Failed to send OTP: ' + (responseData.message || response.statusText));
 
-                alert('OTP sent to your email!');
+                showToast('OTP sent to your email!', 'success');
                 otpSection.classList.remove('hidden');
                 getOtpSignupBtn.classList.add('hidden');
                 submitBtn.classList.remove('hidden');
-                
+
                 // Focus first OTP input
                 const otpInputs = document.querySelectorAll('.otp-input');
                 if (otpInputs.length > 0) {
@@ -66,7 +100,7 @@ if (signupForm) {
                 }
             } catch (error) {
                 console.error('Error details:', error);
-                alert('Error sending OTP: ' + error.message);
+                showToast('Error sending OTP: ' + error.message, 'error');
                 getOtpSignupBtn.disabled = false;
                 getOtpSignupBtn.textContent = 'Get OTP';
             }
@@ -76,19 +110,29 @@ if (signupForm) {
             resendSignupBtn.addEventListener('click', async (e) => {
                 e.preventDefault();
                 const email = signupEmailInput.value.trim();
-                
+
                 try {
-                    const username = usernameInput.value.trim();
+                    const firstName = firstNameInput.value.trim();
+                    const lastName = lastNameInput.value.trim();
+                    const phoneNumber = phoneNumberInput.value.trim();
+                    const dateOfBirth = dateOfBirthInput.value;
+
                     const response = await fetch(`${API_URL}/auth/register/send-otp`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, username }),
+                        body: JSON.stringify({
+                            email,
+                            firstName,
+                            lastName,
+                            phoneNumber,
+                            dateOfBirth
+                        }),
                     });
 
                     if (!response.ok) throw new Error('Failed to resend OTP');
 
-                    alert('OTP resent to your email!');
-                    
+                    showToast('OTP resent to your email!', 'success');
+
                     // Clear OTP inputs
                     const otpInputs = document.querySelectorAll('.otp-input');
                     otpInputs.forEach(input => input.value = '');
@@ -96,7 +140,7 @@ if (signupForm) {
                         otpInputs[0].focus();
                     }
                 } catch (error) {
-                    alert('Error resending OTP');
+                    showToast('Error resending OTP', 'error');
                     console.error(error);
                 }
             });
@@ -106,18 +150,14 @@ if (signupForm) {
     signupForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = signupEmailInput.value.trim();
-        const username = usernameInput.value.trim();
+        const firstName = firstNameInput.value.trim();
+        const lastName = lastNameInput.value.trim();
         const otpInputs = document.querySelectorAll('.otp-input');
         let otp = '';
         otpInputs.forEach(input => otp += input.value);
 
         if (otp.length !== 6) {
-            alert('Please enter a valid 6-digit OTP');
-            return;
-        }
-
-        if (!username) {
-            alert('Please enter your username');
+            showToast('Please enter a valid 6-digit OTP', 'error');
             return;
         }
 
@@ -134,27 +174,29 @@ if (signupForm) {
 
             // If OTP is verified, create account (in this case, the user is already created on OTP verification)
             const data = await verifyResponse.json();
-            
+
             // Store user data in localStorage BEFORE redirect
             localStorage.setItem('accessToken', data.access_token);
             localStorage.setItem('userEmail', email);
-            localStorage.setItem('username', data.username || username);
-            
+            localStorage.setItem('firstName', data.firstName || firstName);
+            localStorage.setItem('lastName', data.lastName || lastName);
+
             console.log('Signup successful! Data saved:', {
                 accessToken: localStorage.getItem('accessToken'),
                 userEmail: localStorage.getItem('userEmail'),
-                username: localStorage.getItem('username')
+                firstName: localStorage.getItem('firstName'),
+                lastName: localStorage.getItem('lastName')
             });
-            
-            alert('Account created successfully! Redirecting to dashboard...');
-            
+
+            showToast('Account created successfully! Redirecting to dashboard...', 'success');
+
             // Use setTimeout to ensure localStorage is written before redirect
             setTimeout(() => {
                 window.location.href = 'index.html';
-            }, 100);
+            }, 1500);
         } catch (error) {
             console.error('Error details:', error);
-            alert('Invalid OTP or Signup Failed: ' + error.message);
+            showToast('Invalid OTP or Signup Failed: ' + error.message, 'error');
         }
     });
 }

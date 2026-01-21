@@ -14,8 +14,19 @@ export class AuthController {
   
   // Step 1: Send OTP for registration
   @Post('register/send-otp')
-  async registerSendOtp(@Body() body: { email: string; username: string }) {
-    return this.authService.sendOtp(body.email, true, body.username);
+  async registerSendOtp(@Body() body: { 
+    email: string; 
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
+    dateOfBirth: string;
+  }) {
+    return this.authService.sendOtp(body.email, true, {
+      firstName: body.firstName,
+      lastName: body.lastName,
+      phoneNumber: body.phoneNumber,
+      dateOfBirth: body.dateOfBirth,
+    });
   }
 
   // Step 2: Verify OTP to complete registration
