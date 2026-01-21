@@ -3,7 +3,7 @@ import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @Get('check-user/:email')
   async checkUserExists(@Param('email') email: string) {
@@ -11,11 +11,11 @@ export class AuthController {
   }
 
   // ==================== USER REGISTRATION ====================
-  
+
   // Step 1: Send OTP for registration
   @Post('register/send-otp')
-  async registerSendOtp(@Body() body: { 
-    email: string; 
+  async registerSendOtp(@Body() body: {
+    email: string;
     firstName: string;
     lastName: string;
     phoneNumber: string;
@@ -36,7 +36,7 @@ export class AuthController {
   }
 
   // ==================== USER LOGIN ====================
-  
+
   // Step 1: Send OTP for login
   @Post('login/send-otp')
   async loginSendOtp(@Body() body: { email: string }) {
@@ -47,5 +47,13 @@ export class AuthController {
   @Post('login/verify-otp')
   async loginVerifyOtp(@Body() body: { email: string; otp: string }) {
     return this.authService.verifyOtp(body.email, body.otp);
+  }
+
+  // ==================== USER DASHBOARD ====================
+
+  // Get user dashboard data
+  @Post('dashboard')
+  async getUserDashboard(@Body() body: { email: string }) {
+    return this.authService.getUserDashboard(body.email);
   }
 }

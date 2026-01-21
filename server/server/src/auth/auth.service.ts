@@ -35,8 +35,16 @@ export class AuthService {
         return { success: false, message: 'Please enter your first name' };
       }
 
+      if (signupInfo.firstName.length > 30) {
+        return { success: false, message: 'First name must not exceed 30 characters' };
+      }
+
       if (!signupInfo?.lastName || signupInfo.lastName.trim() === '') {
         return { success: false, message: 'Please enter your last name' };
+      }
+
+      if (signupInfo.lastName.length > 30) {
+        return { success: false, message: 'Last name must not exceed 30 characters' };
       }
 
       if (!signupInfo?.phoneNumber || signupInfo.phoneNumber.trim() === '') {
@@ -102,21 +110,39 @@ export class AuthService {
       return { success: false, message: 'Please enter your email address' };
     }
 
-    // Email validation: must contain lowercase letters, @, and a valid domain
-    const emailRegex = /^[a-z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
-    if (!emailRegex.test(email.toLowerCase())) {
-      return { success: false, message: 'Please enter a valid email address (e.g., user@example.com)' };
-    }
-
-    // Check if email contains @ symbol
+    // Check for @ symbol first
     if (!email.includes('@')) {
       return { success: false, message: 'Email must contain @ symbol' };
     }
 
-    // Check if email has a domain extension
+    // Split email into username and domain
     const emailParts = email.split('@');
     if (emailParts.length !== 2 || !emailParts[1].includes('.')) {
       return { success: false, message: 'Email must have a valid domain (e.g., .com, .org)' };
+    }
+
+    const username = emailParts[0];
+    const domain = emailParts[1];
+
+    // Validate username: minimum 8 characters
+    if (username.length < 8) {
+      return { success: false, message: 'Email username (before @) must be at least 8 characters long' };
+    }
+
+    // Validate username: must include at least one alphabetical character (a-z)
+    if (!/[a-z]/.test(username)) {
+      return { success: false, message: 'Email username must include at least one alphabetical character (a-z)' };
+    }
+
+    // Validate username: no capital letters allowed
+    if (/[A-Z]/.test(username)) {
+      return { success: false, message: 'Email username must not contain capital letters' };
+    }
+
+    // Email validation: must contain lowercase letters, @, and a valid domain
+    const emailRegex = /^[a-z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
+    if (!emailRegex.test(email.toLowerCase())) {
+      return { success: false, message: 'Please enter a valid email address (e.g., username@example.com)' };
     }
 
     // Check if user exists
@@ -186,6 +212,37 @@ export class AuthService {
       access_token: this.jwtService.sign(payload),
       firstName: user.firstName,
       lastName: user.lastName,
+    };
+  }
+
+  async getUserDashboard(email: string) {
+    const user = await this.usersService.findOne(email);
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    // Format date of birth if it exists
+    let formattedDob: string | null = null;
+    if (user.dateOfBirth) {
+      const date = new Date(user.dateOfBirth);
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      formattedDob = `${day}-${month}-${year}`;
+    }
+
+    return {
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phoneNumber: user.phoneNumber,
+        dateOfBirth: formattedDob,
+        createdAt: user.createdAt,
+      }
     };
   }
 }

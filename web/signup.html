@@ -152,13 +152,13 @@
                         <label
                             class="text-[10px] font-bold uppercase tracking-widest text-gray-500 ml-4 font-sans">First
                             Name</label>
-                        <input type="text" id="firstName" placeholder="John" required
+                        <input type="text" id="firstName" placeholder="John" required maxlength="30"
                             class="w-full px-6 py-4 rounded-full form-input focus:ring-0 outline-none">
                     </div>
                     <div class="space-y-2">
                         <label class="text-[10px] font-bold uppercase tracking-widest text-gray-500 ml-4 font-sans">Last
                             Name</label>
-                        <input type="text" id="lastName" placeholder="Doe" required
+                        <input type="text" id="lastName" placeholder="Doe" required maxlength="30"
                             class="w-full px-6 py-4 rounded-full form-input focus:ring-0 outline-none">
                     </div>
                 </div>
@@ -182,9 +182,9 @@
                 <div class="space-y-2">
                     <label class="text-[10px] font-bold uppercase tracking-widest text-gray-500 ml-4 font-sans">Email
                         Address</label>
-                    <input type="email" id="signupEmail" placeholder="name@example.com" required
+                    <input type="email" id="signupEmail" placeholder="name@example.com" required minlength="8"
                         pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$"
-                        title="Please enter a valid email address (e.g., user@example.com)"
+                        title="Email must be at least 8 characters, lowercase only, and include at least one letter (e.g., user@example.com)"
                         class="w-full px-6 py-4 rounded-full form-input focus:ring-0 outline-none">
                 </div>
 
@@ -236,6 +236,7 @@
     <script src="assets/js/email-validation.js"></script>
     <script src="assets/js/phone-validation.js"></script>
     <script src="assets/js/dob-validation.js"></script>
+    <script src="assets/js/name-validation.js"></script>
     <script src="assets/js/signup.js"></script>
     <script src="assets/js/otp-focus.js"></script>
     <script src="assets/js/auth.js"></script>
