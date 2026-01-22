@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dropdown Debug - LoanHero</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .debug-box {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-primary {
+            background: #6605c7;
+            color: white;
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .status.logged-in {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status.logged-out {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        code {
+            background: #f3f4f6;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .step {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f9fafb;
+            border-left: 4px solid #6605c7;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔍 User Dropdown Debug Tool</h1>
+
+    <div class="debug-box">
+        <h2>Current Status</h2>
+        <div id="statusDisplay" class="status logged-out">Not Logged In</div>
+        <p><strong>Email:</strong> <span id="emailDisplay">None</span></p>
+        <p><strong>Access Token:</strong> <span id="tokenDisplay">None</span></p>
+    </div>
+
+    <div class="debug-box">
+        <h2>Test Controls</h2>
+        <button class="button btn-success" onclick="simulateLogin()">✅ Simulate Login</button>
+        <button class="button btn-danger" onclick="simulateLogout()">❌ Simulate Logout</button>
+        <button class="button btn-primary" onclick="checkStatus()">🔄 Refresh Status</button>
+    </div>
+
+    <div class="debug-box">
+        <h2>Testing Steps</h2>
+
+        <div class="step">
+            <strong>Step 1:</strong> Click "Simulate Login" button above
+            <br><small>This will set localStorage items to simulate a logged-in user</small>
+        </div>
+
+        <div class="step">
+            <strong>Step 2:</strong> Open your main page
+            <br><small>Navigate to <code>index.html</code> in a new tab</small>
+        </div>
+
+        <div class="step">
+            <strong>Step 3:</strong> Look for the profile button
+            <br><small>You should see your email (demo@example.com) in the top-right corner</small>
+        </div>
+
+        <div class="step">
+            <strong>Step 4:</strong> Click the profile button
+            <br><small>A dropdown should appear with: Dashboard, My Profile, My Applications, Document Vault, Settings,
+                Help & Support, and Logout</small>
+        </div>
+
+        <div class="step">
+            <strong>Step 5:</strong> Open browser console (F12)
+            <br><small>Check for any error messages or console logs</small>
+        </div>
+    </div>
+
+    <div class="debug-box">
+        <h2>Quick Links</h2>
+        <a href="index.html" target="_blank" class="button btn-primary">Open Index Page</a>
+        <a href="login.html" target="_blank" class="button btn-primary">Open Login Page</a>
+        <a href="test-dropdown.html" target="_blank" class="button btn-primary">Open Test Dropdown</a>
+    </div>
+
+    <div class="debug-box">
+        <h2>Console Logs</h2>
+        <div id="consoleLogs"
+            style="background: #1f2937; color: #10b981; padding: 15px; border-radius: 5px; font-family: monospace; max-height: 300px; overflow-y: auto;">
+            <div>Waiting for actions...</div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('consoleLogs');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#60a5fa';
+            logsDiv.innerHTML += `<div style="color: ${color};">[${timestamp}] ${message}</div>`;
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function simulateLogin() {
+            const email = 'demo@example.com';
+            const token = 'demo-token-' + Date.now();
+
+            localStorage.setItem('userEmail', email);
+            localStorage.setItem('accessToken', token);
+
+            log('✅ Login simulated successfully', 'success');
+            log(`Email: ${email}`, 'info');
+            log(`Token: ${token}`, 'info');
+
+            checkStatus();
+        }
+
+        function simulateLogout() {
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('accessToken');
+
+            log('❌ Logout simulated', 'error');
+            checkStatus();
+        }
+
+        function checkStatus() {
+            const email = localStorage.getItem('userEmail');
+            const token = localStorage.getItem('accessToken');
+            const statusDiv = document.getElementById('statusDisplay');
+            const emailSpan = document.getElementById('emailDisplay');
+            const tokenSpan = document.getElementById('tokenDisplay');
+
+            if (email && token) {
+                statusDiv.textContent = '✅ Logged In';
+                statusDiv.className = 'status logged-in';
+                emailSpan.textContent = email;
+                tokenSpan.textContent = token.substring(0, 20) + '...';
+                log('Status: User is logged in', 'success');
+            } else {
+                statusDiv.textContent = '❌ Not Logged In';
+                statusDiv.className = 'status logged-out';
+                emailSpan.textContent = 'None';
+                tokenSpan.textContent = 'None';
+                log('Status: User is not logged in', 'error');
+            }
+        }
+
+        // Check status on page load
+        window.addEventListener('load', () => {
+            log('🚀 Debug tool loaded', 'info');
+            checkStatus();
+        });
+    </script>
+</body>
+
+</html>

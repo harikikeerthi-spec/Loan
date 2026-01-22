@@ -83,36 +83,8 @@ function displayUserInfo(user) {
     });
 }
 
-// Profile dropdown toggle
+// Load dashboard data when page loads
 document.addEventListener('DOMContentLoaded', function () {
-    const profileBtn = document.getElementById('profileBtn');
-    const profileDropdown = document.getElementById('profileDropdown');
-
-    if (profileBtn && profileDropdown) {
-        profileBtn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            profileDropdown.classList.toggle('hidden');
-        });
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function (e) {
-            if (!profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
-                profileDropdown.classList.add('hidden');
-            }
-        });
-    }
-
-    // Logout functionality
-    const logoutBtn = document.getElementById('logoutBtn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', function (e) {
-            e.preventDefault();
-            localStorage.clear();
-            window.location.href = 'login.html';
-        });
-    }
-
-    // Load dashboard data when page loads
     loadUserDashboard();
 });
 

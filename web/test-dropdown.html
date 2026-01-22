@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dropdown Test - LoanHero</title>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                    }
+                }
+            }
+        };
+    </script>
+</head>
+
+<body class="bg-gray-50 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-gray-900">User Profile Dropdown Test</h1>
+
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Instructions:</h2>
+            <ol class="list-decimal list-inside space-y-2 text-gray-700">
+                <li>Click the "Simulate Login" button below to set user credentials</li>
+                <li>The profile button will appear in the navigation</li>
+                <li>Click on the profile button to see the dropdown menu</li>
+                <li>The dropdown shows: Dashboard, My Profile, My Applications, Document Vault, Settings, Help &
+                    Support, and Logout</li>
+            </ol>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <button id="simulateLogin"
+                class="px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-all">
+                Simulate Login
+            </button>
+            <button id="simulateLogout"
+                class="px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-all ml-4">
+                Simulate Logout
+            </button>
+        </div>
+
+        <!-- Navigation Bar Demo -->
+        <nav class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
+                        <span class="material-symbols-outlined text-2xl">school</span>
+                    </div>
+                    <span class="font-bold text-2xl text-gray-900">LoanHero</span>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <!-- Login/Signup Links (shown when NOT logged in) -->
+                    <a href="#" id="loginLink"
+                        class="text-sm font-bold text-gray-600 hover:text-primary transition-colors">Sign In</a>
+                    <a href="#" id="signupLink"
+                        class="px-6 py-2.5 text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 transition-all shadow-lg">Sign
+                        Up</a>
+
+                    <!-- User Profile Section (shown when logged in) -->
+                    <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
+                        <button id="profileBtn"
+                            class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 transition-all">
+                            <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
+                            <span id="userEmail" class="text-sm font-bold text-gray-900"></span>
+                        </button>
+
+                        <!-- Dropdown Menu -->
+                        <div id="profileDropdown"
+                            class="hidden absolute top-12 right-0 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 w-64 overflow-hidden">
+                            <div class="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-purple-100">
+                                <p class="text-xs text-gray-500">Logged in as</p>
+                                <p id="dropdownEmail" class="text-sm font-bold text-gray-900 truncate"></p>
+                            </div>
+
+                            <div class="py-2">
+                                <a href="#"
+                                    class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                                    <span class="material-symbols-outlined text-lg text-primary">dashboard</span>
+                                    <span class="font-semibold">Dashboard</span>
+                                </a>
+                                <a href="#"
+                                    class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                                    <span class="material-symbols-outlined text-lg text-primary">person</span>
+                                    <span class="font-semibold">My Profile</span>
+                                </a>
+                                <a href="#"
+                                    class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                                    <span class="material-symbols-outlined text-lg text-primary">description</span>
+                                    <span class="font-semibold">My Applications</span>
+                                </a>
+                                <a href="#"
+                                    class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                                    <span class="material-symbols-outlined text-lg text-primary">folder_open</span>
+                                    <span class="font-semibold">Document Vault</span>
+                                </a>
+                                <a href="#"
+                                    class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                                    <span class="material-symbols-outlined text-lg text-primary">settings</span>
+                                    <span class="font-semibold">Settings</span>
+                                </a>
+                                <a href="#"
+                                    class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                                    <span class="material-symbols-outlined text-lg text-primary">help</span>
+                                    <span class="font-semibold">Help & Support</span>
+                                </a>
+                            </div>
+
+                            <div class="border-t border-gray-200">
+                                <a href="#" id="logoutBtn"
+                                    class="flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors font-semibold">
+                                    <span class="material-symbols-outlined text-lg">logout</span>
+                                    <span>Logout</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+            <h3 class="font-semibold text-blue-900 mb-2">Current Status:</h3>
+            <p id="statusText" class="text-blue-800">User is not logged in</p>
+        </div>
+    </div>
+
+    <script>
+        // Get elements
+        const loginLink = document.getElementById('loginLink');
+        const signupLink = document.getElementById('signupLink');
+        const userProfileSection = document.getElementById('userProfileSection');
+        const userEmail = document.getElementById('userEmail');
+        const dropdownEmail = document.getElementById('dropdownEmail');
+        const profileBtn = document.getElementById('profileBtn');
+        const profileDropdown = document.getElementById('profileDropdown');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const statusText = document.getElementById('statusText');
+        const simulateLoginBtn = document.getElementById('simulateLogin');
+        const simulateLogoutBtn = document.getElementById('simulateLogout');
+
+        // Simulate login
+        simulateLoginBtn.addEventListener('click', () => {
+            const email = 'demo@example.com';
+            localStorage.setItem('userEmail', email);
+            localStorage.setItem('accessToken', 'demo-token-123');
+            updateUI();
+            statusText.textContent = `User logged in as: ${email}`;
+        });
+
+        // Simulate logout
+        simulateLogoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('accessToken');
+            updateUI();
+            statusText.textContent = 'User is not logged in';
+        });
+
+        // Update UI based on login status
+        function updateUI() {
+            const email = localStorage.getItem('userEmail');
+
+            if (email) {
+                // User is logged in
+                loginLink.style.display = 'none';
+                signupLink.style.display = 'none';
+                userProfileSection.classList.remove('hidden');
+                userProfileSection.style.display = 'flex';
+                userEmail.textContent = email;
+                dropdownEmail.textContent = email;
+            } else {
+                // User is not logged in
+                loginLink.style.display = '';
+                signupLink.style.display = '';
+                userProfileSection.classList.add('hidden');
+                userProfileSection.style.display = 'none';
+                profileDropdown.classList.add('hidden');
+            }
+        }
+
+        // Toggle dropdown
+        if (profileBtn && profileDropdown) {
+            profileBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                profileDropdown.classList.toggle('hidden');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', () => {
+                profileDropdown.classList.add('hidden');
+            });
+        }
+
+        // Logout functionality
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                localStorage.removeItem('userEmail');
+                localStorage.removeItem('accessToken');
+                updateUI();
+                statusText.textContent = 'User logged out successfully';
+            });
+        }
+
+        // Initialize on page load
+        updateUI();
+    </script>
+</body>
+
+</html>

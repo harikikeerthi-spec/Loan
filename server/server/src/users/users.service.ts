@@ -54,4 +54,34 @@ export class UsersService {
   async findAll() {
     return this.prisma.user.findMany();
   }
+
+  async updateUserDetails(
+    email: string,
+    firstName: string,
+    lastName: string,
+    phoneNumber: string,
+    dateOfBirth: string
+  ) {
+    // Convert DD-MM-YYYY to Date object
+    let dobDate: Date | null = null;
+    if (dateOfBirth) {
+      const dobParts = dateOfBirth.split('-');
+      if (dobParts.length === 3) {
+        const day = parseInt(dobParts[0], 10);
+        const month = parseInt(dobParts[1], 10) - 1; // Month is 0-indexed in JavaScript
+        const year = parseInt(dobParts[2], 10);
+        dobDate = new Date(year, month, day);
+      }
+    }
+
+    return this.prisma.user.update({
+      where: { email },
+      data: {
+        firstName,
+        lastName,
+        phoneNumber,
+        dateOfBirth: dobDate,
+      },
+    });
+  }
 }

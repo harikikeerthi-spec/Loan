@@ -29,79 +29,91 @@ export class AuthService {
       dateOfBirth?: string;
     }
   ) {
-    // Validate required fields for signup
-    if (isSignup) {
-      if (!signupInfo?.firstName || signupInfo.firstName.trim() === '') {
-        return { success: false, message: 'Please enter your first name' };
+    // Validate required fields for signup (only if provided)
+    if (isSignup && signupInfo) {
+      // Validate firstName if provided
+      if (signupInfo.firstName !== undefined) {
+        if (signupInfo.firstName.trim() === '') {
+          return { success: false, message: 'Please enter your first name' };
+        }
+
+        if (signupInfo.firstName.length > 30) {
+          return { success: false, message: 'First name must not exceed 30 characters' };
+        }
       }
 
-      if (signupInfo.firstName.length > 30) {
-        return { success: false, message: 'First name must not exceed 30 characters' };
+      // Validate lastName if provided
+      if (signupInfo.lastName !== undefined) {
+        if (signupInfo.lastName.trim() === '') {
+          return { success: false, message: 'Please enter your last name' };
+        }
+
+        if (signupInfo.lastName.length > 30) {
+          return { success: false, message: 'Last name must not exceed 30 characters' };
+        }
       }
 
-      if (!signupInfo?.lastName || signupInfo.lastName.trim() === '') {
-        return { success: false, message: 'Please enter your last name' };
+      // Validate phoneNumber if provided
+      if (signupInfo.phoneNumber !== undefined) {
+        if (signupInfo.phoneNumber.trim() === '') {
+          return { success: false, message: 'Please enter your phone number' };
+        }
+
+        // Validate phone number format (only numbers, +, -, spaces, and parentheses)
+        const phoneRegex = /^[0-9+\s\-()]+$/;
+        if (!phoneRegex.test(signupInfo.phoneNumber)) {
+          return { success: false, message: 'Please enter a valid phone number' };
+        }
+
+        // Check exact length (exactly 10 digits)
+        const digitsOnly = signupInfo.phoneNumber.replace(/[^0-9]/g, '');
+        if (digitsOnly.length !== 10) {
+          return { success: false, message: 'Phone number must be exactly 10 digits' };
+        }
       }
 
-      if (signupInfo.lastName.length > 30) {
-        return { success: false, message: 'Last name must not exceed 30 characters' };
-      }
+      // Validate dateOfBirth if provided
+      if (signupInfo.dateOfBirth !== undefined) {
+        if (signupInfo.dateOfBirth.trim() === '') {
+          return { success: false, message: 'Please enter your date of birth' };
+        }
 
-      if (!signupInfo?.phoneNumber || signupInfo.phoneNumber.trim() === '') {
-        return { success: false, message: 'Please enter your phone number' };
-      }
+        // Validate date of birth format (DD-MM-YYYY)
+        const dobPattern = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/;
+        if (!dobPattern.test(signupInfo.dateOfBirth)) {
+          return { success: false, message: 'Date of birth must be in DD-MM-YYYY format (e.g., 15-01-1990)' };
+        }
 
-      // Validate phone number format (only numbers, +, -, spaces, and parentheses)
-      const phoneRegex = /^[0-9+\s\-()]+$/;
-      if (!phoneRegex.test(signupInfo.phoneNumber)) {
-        return { success: false, message: 'Please enter a valid phone number' };
-      }
+        // Parse and validate the date
+        const dobParts = signupInfo.dateOfBirth.split('-');
+        const day = parseInt(dobParts[0], 10);
+        const month = parseInt(dobParts[1], 10);
+        const year = parseInt(dobParts[2], 10);
 
-      // Check exact length (exactly 10 digits)
-      const digitsOnly = signupInfo.phoneNumber.replace(/[^0-9]/g, '');
-      if (digitsOnly.length !== 10) {
-        return { success: false, message: 'Phone number must be exactly 10 digits' };
-      }
+        const dobDate = new Date(year, month - 1, day);
 
-      if (!signupInfo?.dateOfBirth || signupInfo.dateOfBirth.trim() === '') {
-        return { success: false, message: 'Please enter your date of birth' };
-      }
+        // Check if it's a valid date
+        if (dobDate.getFullYear() !== year || dobDate.getMonth() !== month - 1 || dobDate.getDate() !== day) {
+          return { success: false, message: 'Please enter a valid date of birth' };
+        }
 
-      // Validate date of birth format (DD-MM-YYYY)
-      const dobPattern = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/;
-      if (!dobPattern.test(signupInfo.dateOfBirth)) {
-        return { success: false, message: 'Date of birth must be in DD-MM-YYYY format (e.g., 15-01-1990)' };
-      }
+        // Check if date is not in the future
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (dobDate > today) {
+          return { success: false, message: 'Date of birth cannot be in the future' };
+        }
 
-      // Parse and validate the date
-      const dobParts = signupInfo.dateOfBirth.split('-');
-      const day = parseInt(dobParts[0], 10);
-      const month = parseInt(dobParts[1], 10);
-      const year = parseInt(dobParts[2], 10);
+        // Check if person is at least 18 years old
+        const age = Math.floor((today.getTime() - dobDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+        if (age < 18) {
+          return { success: false, message: 'You must be at least 18 years old to register' };
+        }
 
-      const dobDate = new Date(year, month - 1, day);
-
-      // Check if it's a valid date
-      if (dobDate.getFullYear() !== year || dobDate.getMonth() !== month - 1 || dobDate.getDate() !== day) {
-        return { success: false, message: 'Please enter a valid date of birth' };
-      }
-
-      // Check if date is not in the future
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (dobDate > today) {
-        return { success: false, message: 'Date of birth cannot be in the future' };
-      }
-
-      // Check if person is at least 18 years old
-      const age = Math.floor((today.getTime() - dobDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-      if (age < 18) {
-        return { success: false, message: 'You must be at least 18 years old to register' };
-      }
-
-      // Check if date is reasonable (not more than 120 years ago)
-      if (age > 120) {
-        return { success: false, message: 'Please enter a valid date of birth' };
+        // Check if date is reasonable (not more than 120 years ago)
+        if (age > 120) {
+          return { success: false, message: 'Please enter a valid date of birth' };
+        }
       }
     }
 
@@ -208,10 +220,15 @@ export class AuthService {
     }
 
     const payload = { email: user.email, sub: user.id, firstName: user.firstName, lastName: user.lastName };
+
+    // Check if user has complete details
+    const hasUserDetails = !!(user.firstName && user.lastName && user.phoneNumber && user.dateOfBirth);
+
     return {
       access_token: this.jwtService.sign(payload),
       firstName: user.firstName,
       lastName: user.lastName,
+      hasUserDetails,
     };
   }
 
@@ -244,5 +261,118 @@ export class AuthService {
         createdAt: user.createdAt,
       }
     };
+  }
+
+  async updateUserDetails(
+    email: string,
+    firstName: string,
+    lastName: string,
+    phoneNumber: string,
+    dateOfBirth: string
+  ) {
+    // First, check if user exists with the provided email
+    const existingUser = await this.usersService.findOne(email);
+    if (!existingUser) {
+      return {
+        success: false,
+        message: 'User does not exist. Please check your email address or sign up first.'
+      };
+    }
+
+    // Validate firstName
+    if (!firstName || firstName.trim() === '') {
+      return { success: false, message: 'Please enter your first name' };
+    }
+    if (firstName.length > 30) {
+      return { success: false, message: 'First name must not exceed 30 characters' };
+    }
+
+    // Validate lastName
+    if (!lastName || lastName.trim() === '') {
+      return { success: false, message: 'Please enter your last name' };
+    }
+    if (lastName.length > 30) {
+      return { success: false, message: 'Last name must not exceed 30 characters' };
+    }
+
+    // Validate phoneNumber
+    if (!phoneNumber || phoneNumber.trim() === '') {
+      return { success: false, message: 'Please enter your phone number' };
+    }
+    const phoneRegex = /^[0-9+\s\-()]+$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      return { success: false, message: 'Please enter a valid phone number' };
+    }
+    const digitsOnly = phoneNumber.replace(/[^0-9]/g, '');
+    if (digitsOnly.length !== 10) {
+      return { success: false, message: 'Phone number must be exactly 10 digits' };
+    }
+
+    // Validate dateOfBirth
+    if (!dateOfBirth || dateOfBirth.trim() === '') {
+      return { success: false, message: 'Please enter your date of birth' };
+    }
+    const dobPattern = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/;
+    if (!dobPattern.test(dateOfBirth)) {
+      return { success: false, message: 'Date of birth must be in DD-MM-YYYY format (e.g., 15-01-1990)' };
+    }
+
+    // Parse and validate the date
+    const dobParts = dateOfBirth.split('-');
+    const day = parseInt(dobParts[0], 10);
+    const month = parseInt(dobParts[1], 10);
+    const year = parseInt(dobParts[2], 10);
+    const dobDate = new Date(year, month - 1, day);
+
+    if (dobDate.getFullYear() !== year || dobDate.getMonth() !== month - 1 || dobDate.getDate() !== day) {
+      return { success: false, message: 'Please enter a valid date of birth' };
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (dobDate > today) {
+      return { success: false, message: 'Date of birth cannot be in the future' };
+    }
+
+    const age = Math.floor((today.getTime() - dobDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+    if (age < 18) {
+      return { success: false, message: 'You must be at least 18 years old to register' };
+    }
+    if (age > 120) {
+      return { success: false, message: 'Please enter a valid date of birth' };
+    }
+
+    // Update user details
+    try {
+      const user = await this.usersService.updateUserDetails(
+        email,
+        firstName,
+        lastName,
+        phoneNumber,
+        dateOfBirth
+      );
+
+      if (!user) {
+        return { success: false, message: 'User not found' };
+      }
+
+      return {
+        success: true,
+        message: 'Profile updated successfully',
+        user: {
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phoneNumber: user.phoneNumber,
+          dateOfBirth: user.dateOfBirth,
+        }
+      };
+    } catch (error) {
+      console.error('Error updating user details:', error);
+      return {
+        success: false,
+        message: 'Failed to update profile. Please try again or contact support.'
+      };
+    }
   }
 }

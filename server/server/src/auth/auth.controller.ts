@@ -16,10 +16,10 @@ export class AuthController {
   @Post('register/send-otp')
   async registerSendOtp(@Body() body: {
     email: string;
-    firstName: string;
-    lastName: string;
-    phoneNumber: string;
-    dateOfBirth: string;
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: string;
+    dateOfBirth?: string;
   }) {
     return this.authService.sendOtp(body.email, true, {
       firstName: body.firstName,
@@ -55,5 +55,23 @@ export class AuthController {
   @Post('dashboard')
   async getUserDashboard(@Body() body: { email: string }) {
     return this.authService.getUserDashboard(body.email);
+  }
+
+  // Update user details
+  @Post('update-details')
+  async updateUserDetails(@Body() body: {
+    email: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
+    dateOfBirth: string;
+  }) {
+    return this.authService.updateUserDetails(
+      body.email,
+      body.firstName,
+      body.lastName,
+      body.phoneNumber,
+      body.dateOfBirth
+    );
   }
 }

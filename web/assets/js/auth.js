@@ -43,7 +43,7 @@ function updateNavbarAuth() {
             userProfileSection.classList.remove('hidden');
             userProfileSection.style.display = 'flex';
         }
-        
+
         const email = getUserEmail();
         if (userEmail) userEmail.textContent = email;
         if (dropdownEmail) dropdownEmail.textContent = email;
@@ -59,23 +59,31 @@ function updateNavbarAuth() {
         console.log('User not logged in, showing auth links');
     }
 
-    // Toggle dropdown
-    if (profileBtn && profileDropdown) {
+    // Setup dropdown toggle (only if not already set up)
+    if (profileBtn && profileDropdown && !profileBtn.dataset.listenerAdded) {
+        profileBtn.dataset.listenerAdded = 'true';
+
         profileBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            console.log('Profile button clicked, toggling dropdown');
             profileDropdown.classList.toggle('hidden');
         });
 
         // Close dropdown when clicking outside
-        document.addEventListener('click', () => {
-            profileDropdown.classList.add('hidden');
+        document.addEventListener('click', (e) => {
+            if (!profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
+                profileDropdown.classList.add('hidden');
+            }
         });
     }
 
-    // Logout functionality
-    if (logoutBtn) {
+    // Setup logout functionality (only if not already set up)
+    if (logoutBtn && !logoutBtn.dataset.listenerAdded) {
+        logoutBtn.dataset.listenerAdded = 'true';
+
         logoutBtn.addEventListener('click', (e) => {
             e.preventDefault();
+            console.log('Logout clicked');
             logout();
         });
     }
