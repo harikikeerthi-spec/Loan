@@ -196,8 +196,67 @@
             </div>
 
             <div class="flex items-center gap-4">
-                <a href="signup.html" id="registerLink"
-                    class="px-6 py-2.5 text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/20">Login</a>
+                <button id="registerLink"
+                    class="px-6 py-2.5 text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/20 cursor-pointer">Login</button>
+
+                <!-- Auth Modal -->
+                <div id="authModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 w-full max-w-md mx-4 shadow-2xl">
+                        <!-- Close Button -->
+                        <button id="closeAuthModal" class="absolute top-4 right-4 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-2xl">×</button>
+
+                        <!-- Email Step -->
+                        <div id="emailStep" class="space-y-6">
+                            <div>
+                                <h2 class="text-3xl font-bold font-display text-gray-900 dark:text-white mb-2">Welcome</h2>
+                                <p class="text-gray-600 dark:text-gray-400">Enter your email to login or create account</p>
+                            </div>
+
+                            <div>
+                                <input type="email" id="authEmail" placeholder="Enter your email"
+                                    class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary dark:text-white">
+                                <p id="emailError" class="text-red-600 text-sm mt-2 hidden"></p>
+                            </div>
+
+                            <button id="sendOtpBtn"
+                                class="w-full bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                                Send OTP
+                            </button>
+
+                            <p class="text-center text-xs text-gray-500 dark:text-gray-400">
+                                We'll send a 6-digit code to verify your email
+                            </p>
+                        </div>
+
+                        <!-- OTP Step (Hidden initially) -->
+                        <div id="otpStep" class="space-y-6 hidden">
+                            <div>
+                                <h2 class="text-3xl font-bold font-display text-gray-900 dark:text-white mb-2">Verify Code</h2>
+                                <p class="text-gray-600 dark:text-gray-400">Enter the 6-digit code sent to <span id="otpEmail" class="font-semibold"></span></p>
+                            </div>
+
+                            <div>
+                                <input type="text" id="otpInput" placeholder="000000" maxlength="6"
+                                    class="w-full text-center text-2xl tracking-widest bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono">
+                                <p id="otpError" class="text-red-600 text-sm mt-2 hidden"></p>
+                            </div>
+
+                            <button id="verifyOtpBtn"
+                                class="w-full bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                                Verify & Continue
+                            </button>
+
+                            <div class="flex items-center justify-between">
+                                <button id="resendOtpBtn" class="text-primary hover:text-primary/90 text-sm font-semibold transition-colors">
+                                    Resend Code
+                                </button>
+                                <button id="backToEmailBtn" class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-semibold transition-colors">
+                                    Change Email
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- User Profile Dropdown (Hidden initially) -->
                 <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
@@ -298,23 +357,6 @@
             <p class="text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-16 leading-relaxed font-sans">
                 Your global education journey starts here.
             </p>
-
-            <div class="max-w-2xl mx-auto mb-12">
-                <!-- <label class="block text-center mb-6"> -->
-                    <!-- <span class="text-[11px] font-bold uppercase tracking-[0.3em] text-primary mb-3 inline-block">Step 1</span> -->
-                    <!-- <p class="text-sm text-gray-600 dark:text-gray-400 font-sans">Enter the name of the university you
-                        want to attend</p>
-                </label> -->
-                <!-- <div class="relative group">
-                    <input type="text" placeholder="Search for your university..."
-                        class="w-full bg-transparent border-b-2 border-gray-300 dark:border-zinc-600 py-6 text-2xl md:text-3xl font-display focus:outline-none focus:border-primary transition-colors text-center placeholder-gray-400 dark:placeholder-zinc-500 font-semibold"
-                        aria-label="University name input">
-                </div> -->
-                <a href="signup.html"
-                    class="mt-12 inline-flex justify-center px-14 py-5 bg-[#111] dark:bg-white dark:text-black text-white rounded-full font-bold uppercase tracking-[0.3em] text-[10px] hover:scale-105 active:scale-95 transition-all shadow-2xl shadow-black/10">
-                    Register Now
-                </a>
-            </div>
 
             <div
                 class="flex items-center justify-center gap-4 cursor-pointer group mb-24 transition-opacity hover:opacity-80">
@@ -711,6 +753,7 @@
     </script>
     <script src="assets/js/dashboard.js"></script>
     <script src="assets/js/auth.js"></script>
+    <script src="assets/js/auth-modal.js"></script>
 </body>
 
 </html>

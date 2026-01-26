@@ -147,7 +147,12 @@ function setupProfileDropdown() {
     const profileDropdown = document.getElementById('profileDropdown');
     const logoutBtn = document.getElementById('logoutBtn');
 
-    if (profileBtn && profileDropdown) {
+    // Guard to avoid double-binding if auth.js already attached listeners
+    if (profileBtn && profileDropdown && !(profileBtn.dataset.listenerAdded === 'true' || profileBtn.dataset.dropdownListenerAdded === 'true')) {
+        // mark both flags so either script recognizes it's bound
+        profileBtn.dataset.dropdownListenerAdded = 'true';
+        profileBtn.dataset.listenerAdded = 'true';
+
         // Toggle dropdown on button click
         profileBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -155,16 +160,21 @@ function setupProfileDropdown() {
             profileDropdown.classList.toggle('hidden');
         });
 
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
-                profileDropdown.classList.add('hidden');
-            }
-        });
+        // Close dropdown when clicking outside (bind once)
+        if (!document.body.dataset.dropdownOutsideListenerAdded) {
+            document.body.dataset.dropdownOutsideListenerAdded = 'true';
+            document.addEventListener('click', (e) => {
+                if (profileDropdown && !profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
+                    profileDropdown.classList.add('hidden');
+                }
+            });
+        }
     }
 
-    // Setup logout button
-    if (logoutBtn) {
+    // Setup logout button (guarded, check both flags used across scripts)
+    if (logoutBtn && !(logoutBtn.dataset.logoutListenerAdded === 'true' || logoutBtn.dataset.listenerAdded === 'true')) {
+        logoutBtn.dataset.logoutListenerAdded = 'true';
+        logoutBtn.dataset.listenerAdded = 'true';
         logoutBtn.addEventListener('click', (e) => {
             e.preventDefault();
             console.log('Logout clicked');

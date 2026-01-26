@@ -77,11 +77,13 @@ if (userDetailsForm) {
             // Update localStorage with user details
             localStorage.setItem('firstName', firstName);
             localStorage.setItem('lastName', lastName);
+            localStorage.setItem('userPhoneNumber', phoneNumber);
+            localStorage.setItem('userDateOfBirth', dateOfBirth);
 
             console.log('Profile updated successfully!');
             showToast('Profile completed successfully! Redirecting to dashboard...', 'success');
 
-            // Redirect to dashboard
+            // Redirect to homepage with dashboard
             setTimeout(() => {
                 window.location.href = 'index.html';
             }, 1500);

@@ -16,63 +16,39 @@ export class AuthController {
     return this.authService.checkUserExists(email);
   }
 
-  // ==================== USER REGISTRATION ====================
+  // ==================== UNIFIED OTP FLOW ====================
 
   /**
-   * Step 1: Send OTP to email for registration
-   * POST /auth/register/send-otp
-   * @body email: string (required), firstName?: string, lastName?: string, phoneNumber?: string, dateOfBirth?: string
-   * @returns { success: boolean, message: string, redirect?: string }
-   */
-  @Post('register/send-otp')
-  async registerSendOtp(@Body() body: {
-    email: string;
-    firstName?: string;
-    lastName?: string;
-    phoneNumber?: string;
-    dateOfBirth?: string;
-  }) {
-    return this.authService.sendOtp(body.email, true, {
-      firstName: body.firstName,
-      lastName: body.lastName,
-      phoneNumber: body.phoneNumber,
-      dateOfBirth: body.dateOfBirth,
-    });
-  }
-
-  /**
-   * Step 2: Verify OTP and complete user registration
-   * POST /auth/register/verify-otp
-   * @body email: string (required), otp: string (required, 6 digits)
-   * @returns { access_token: string, firstName: string, lastName: string, hasUserDetails: boolean }
-   */
-  @Post('register/verify-otp')
-  async registerVerifyOtp(@Body() body: { email: string; otp: string }) {
-    return this.authService.verifyOtp(body.email, body.otp);
-  }
-
-  // ==================== USER LOGIN ====================
-
-  /**
-   * Step 1: Send OTP to email for login
-   * POST /auth/login/send-otp
+   * Step 1: Send OTP to email (Works for both new and existing users)
+   * POST /auth/send-otp
    * @body email: string (required)
-   * @returns { success: boolean, message: string, redirect?: string }
+   * @returns { success: boolean, message: string, userExists: boolean }
    */
-  @Post('login/send-otp')
-  async loginSendOtp(@Body() body: { email: string }) {
-    return this.authService.sendOtp(body.email, false);
+  @Post('send-otp')
+  async sendOtp(@Body() body: { email: string }) {
+    return this.authService.sendOtpUnified(body.email);
   }
 
   /**
-   * Step 2: Verify OTP and complete user login
-   * POST /auth/login/verify-otp
+   * Step 2: Verify OTP and determine user flow
+   * POST /auth/verify-otp
    * @body email: string (required), otp: string (required, 6 digits)
-   * @returns { access_token: string, firstName: string, lastName: string, hasUserDetails: boolean }
+   * @returns { 
+   *   success: boolean, 
+   *   access_token: string, 
+   *   userExists: boolean,
+   *   hasUserDetails: boolean,
+   *   message: string
+   * }
+   * 
+   * Flow:
+   * - If userExists: true && hasUserDetails: true → Navigate to homepage
+   * - If userExists: true && hasUserDetails: false → Navigate to user-details.html
+   * - If userExists: false → Navigate to user-details.html (new user)
    */
-  @Post('login/verify-otp')
-  async loginVerifyOtp(@Body() body: { email: string; otp: string }) {
-    return this.authService.verifyOtp(body.email, body.otp);
+  @Post('verify-otp')
+  async verifyOtp(@Body() body: { email: string; otp: string }) {
+    return this.authService.verifyOtpUnified(body.email, body.otp);
   }
 
   // ==================== USER DASHBOARD ====================

@@ -201,40 +201,131 @@ export class AuthService {
     }
   }
 
-  async verifyOtp(email: string, otp: string) {
+  // ==================== UNIFIED OTP FLOW ====================
+
+  /**
+   * Send OTP to email - works for both new and existing users
+   * Step 1 of unified flow
+   */
+  async sendOtpUnified(email: string) {
+    // Validate email format
+    if (!email || email.trim() === '') {
+      return { success: false, message: 'Please enter your email address' };
+    }
+
+    if (!email.includes('@')) {
+      return { success: false, message: 'Email must contain @ symbol' };
+    }
+
+    const emailParts = email.split('@');
+    if (emailParts.length !== 2 || !emailParts[1].includes('.')) {
+      return { success: false, message: 'Email must have a valid domain (e.g., .com, .org)' };
+    }
+
+    const username = emailParts[0];
+    const domain = emailParts[1];
+
+    if (username.length < 8) {
+      return { success: false, message: 'Email username (before @) must be at least 8 characters long' };
+    }
+
+    if (!/[a-z]/.test(username)) {
+      return { success: false, message: 'Email username must include at least one alphabetical character (a-z)' };
+    }
+
+    if (/[A-Z]/.test(username)) {
+      return { success: false, message: 'Email username must not contain capital letters' };
+    }
+
+    const emailRegex = /^[a-z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
+    if (!emailRegex.test(email.toLowerCase())) {
+      return { success: false, message: 'Please enter a valid email address (e.g., username@example.com)' };
+    }
+
+    // Check if user exists
+    const existingUser = await this.usersService.findOne(email);
+    
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    this.otps.set(email, otp);
+    console.log(`[AuthService] OTP generated for ${email}: ${otp}`);
+
+    // Send OTP via email
+    await this.emailService.sendOtp(email, otp);
+
+    return { 
+      success: true, 
+      message: 'OTP sent successfully',
+      userExists: !!existingUser // Return whether user exists or not
+    };
+  }
+
+  /**
+   * Verify OTP and handle both new and existing users
+   * Step 2 of unified flow
+   * 
+   * For existing users with complete details: return token + userExists=true, hasUserDetails=true
+   * For existing users without details: return token + userExists=true, hasUserDetails=false
+   * For new users: create user + return token + userExists=false, hasUserDetails=false
+   */
+  async verifyOtpUnified(email: string, otp: string) {
+    // Verify OTP
     const storedOtp = this.otps.get(email);
     if (!storedOtp || storedOtp !== otp) {
-      throw new UnauthorizedException('Invalid OTP');
+      return { 
+        success: false, 
+        message: 'Invalid or expired OTP. Please try again.'
+      };
     }
 
-    this.otps.delete(email); // Invalidate OTP after use
+    // Invalidate OTP after verification
+    this.otps.delete(email);
 
-    // Find or create user
-    let user = await this.usersService.findOne(email);
-    if (!user) {
-      // Get stored signup data
-      const signupInfo = this.signupData.get(email);
-      user = await this.usersService.create({
-        email,
-        firstName: signupInfo?.firstName,
-        lastName: signupInfo?.lastName,
-        phoneNumber: signupInfo?.phoneNumber,
-        dateOfBirth: signupInfo?.dateOfBirth,
-      });
-      this.signupData.delete(email); // Clean up
+    try {
+      // Find or create user
+      let user = await this.usersService.findOne(email);
+      const isNewUser = !user;
+
+      if (!user) {
+        // Create new user
+        user = await this.usersService.create({
+          email,
+          firstName: null,
+          lastName: null,
+          phoneNumber: null,
+          dateOfBirth: null,
+        });
+        console.log(`[AuthService] New user created: ${email}`);
+      }
+
+      // Check if user has complete details
+      const hasUserDetails = !!(user.firstName && user.lastName && user.phoneNumber && user.dateOfBirth);
+
+      // Generate JWT token
+      const payload = { 
+        email: user.email, 
+        sub: user.id, 
+        firstName: user.firstName, 
+        lastName: user.lastName 
+      };
+      const accessToken = this.jwtService.sign(payload);
+
+      return {
+        success: true,
+        message: isNewUser ? 'Signup successful. Please complete your profile.' : 'Login successful.',
+        access_token: accessToken,
+        userExists: !isNewUser,
+        hasUserDetails,
+        firstName: user.firstName,
+        lastName: user.lastName,
+      };
+    } catch (error) {
+      console.error('[AuthService] Error in verifyOtpUnified:', error);
+      return {
+        success: false,
+        message: 'An error occurred during verification. Please try again.'
+      };
     }
-
-    const payload = { email: user.email, sub: user.id, firstName: user.firstName, lastName: user.lastName };
-
-    // Check if user has complete details
-    const hasUserDetails = !!(user.firstName && user.lastName && user.phoneNumber && user.dateOfBirth);
-
-    return {
-      access_token: this.jwtService.sign(payload),
-      firstName: user.firstName,
-      lastName: user.lastName,
-      hasUserDetails,
-    };
   }
 
   async getUserDashboard(email: string) {
