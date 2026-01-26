@@ -20,12 +20,13 @@ function saveUserData(email, accessToken) {
 function logout() {
     localStorage.removeItem('userEmail');
     localStorage.removeItem('accessToken');
-    window.location.href = 'login.html';
+    window.location.href = 'index.html';
 }
 
 function updateNavbarAuth() {
     const signupLink = document.getElementById('signupLink');
     const loginLink = document.getElementById('loginLink');
+    const registerLink = document.getElementById('registerLink');
     const userProfileSection = document.getElementById('userProfileSection');
     const userEmail = document.getElementById('userEmail');
     const dropdownEmail = document.getElementById('dropdownEmail');
@@ -43,6 +44,7 @@ function updateNavbarAuth() {
             userProfileSection.classList.remove('hidden');
             userProfileSection.style.display = 'flex';
         }
+        if (registerLink) registerLink.style.display = 'none';
 
         const email = getUserEmail();
         if (userEmail) userEmail.textContent = email;
@@ -56,6 +58,7 @@ function updateNavbarAuth() {
             userProfileSection.classList.add('hidden');
             userProfileSection.style.display = 'none';
         }
+        if (registerLink) registerLink.style.display = '';
         console.log('User not logged in, showing auth links');
     }
 

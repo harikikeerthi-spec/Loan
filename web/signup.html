@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Create Account - LoanHero</title>
+    <title>Register or Continue - LoanHero</title>
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link
@@ -110,9 +110,8 @@
                 </a>
             </div>
             <div class="flex items-center gap-4">
-                <a href="login.html" id="loginLink"
-                    class="px-6 py-2.5 text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/20">Sign
-                    In</a>
+                <a href="signup.html" id="registerLink"
+                    class="px-6 py-2.5 text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/20">Register</a>
 
                 <!-- User Profile Dropdown (Hidden initially) -->
                 <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
@@ -180,8 +179,8 @@
     <main class="relative z-10 w-full max-w-md px-6">
         <div class="glass-card p-12 rounded-[3.5rem] border-white/50 shadow-2xl">
             <div class="text-center mb-10">
-                <h1 class="text-3xl font-bold font-display text-gray-900 dark:text-white mb-2">Join LoanHero</h1>
-                <p class="text-gray-500 font-sans text-sm">Create your account to start your journey</p>
+                <h1 class="text-3xl font-bold font-display text-gray-900 dark:text-white mb-2">Register or Continue</h1>
+                <p class="text-gray-500 font-sans text-sm">Enter your email to get an OTP. New users complete their details after OTP; existing users go straight to the dashboard.</p>
             </div>
 
             <form id="signupForm" class="space-y-6">
@@ -224,14 +223,9 @@
 
                 <button type="submit" id="submitBtn"
                     class="hidden w-full py-5 bg-primary text-white rounded-full font-bold uppercase tracking-widest text-xs hover:scale-[1.02] active:scale-95 shadow-2xl transition-all">
-                    Create Account
+                    Verify &amp; Continue
                 </button>
             </form>
-
-            <div class="mt-10 text-center">
-                <p class="text-sm text-gray-500 font-sans">Already have an account? <a href="login.html"
-                        class="text-primary font-bold hover:underline">Sign In</a></p>
-            </div>
         </div>
     </main>
 
@@ -246,6 +240,7 @@
     <script src="assets/js/signup.js"></script>
     <script src="assets/js/otp-focus.js"></script>
     <script src="assets/js/auth.js"></script>
+    <script src="assets/js/dashboard.js"></script>
 </body>
 
 </html>

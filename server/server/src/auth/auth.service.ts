@@ -172,15 +172,20 @@ export class AuthService {
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     this.otps.set(email, otp);
+    console.log(`[AuthService] New OTP generated for ${email}: ${otp}`);
 
-    // Store signup data for registration
+    // Store signup data for registration - ONLY update if fields are provided
+    // This prevents overwriting existing data with 'undefined' during resend
     if (isSignup && signupInfo) {
+      const existingData = this.signupData.get(email) || {};
+      
       this.signupData.set(email, {
-        firstName: signupInfo.firstName,
-        lastName: signupInfo.lastName,
-        phoneNumber: signupInfo.phoneNumber,
-        dateOfBirth: signupInfo.dateOfBirth,
+        firstName: signupInfo.firstName ?? existingData.firstName,
+        lastName: signupInfo.lastName ?? existingData.lastName,
+        phoneNumber: signupInfo.phoneNumber ?? existingData.phoneNumber,
+        dateOfBirth: signupInfo.dateOfBirth ?? existingData.dateOfBirth,
       });
+      console.log(`[AuthService] Signup data updated/preserved for ${email}`);
     }
 
     await this.emailService.sendOtp(email, otp);

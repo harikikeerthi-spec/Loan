@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Document Vault - LoanHero</title>
+
+    <!-- Meta Tags -->
+    <meta name="description" content="Securely store and manage your loan application documents." />
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+
+    <!-- Styles & Config -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                    },
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        .dark .glass-card {
+            background: rgba(25, 15, 35, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-scrolled {
+            background: rgba(255, 255, 255, 0.8) !important;
+            backdrop-filter: blur(12px);
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+        }
+
+        .dark .nav-scrolled {
+            background: rgba(17, 8, 26, 0.8) !important;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+
+    <!-- Background Structure -->
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none">
+        <div class="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="mainNav"
+        class="fixed top-0 w-full px-6 py-4 flex justify-center items-center z-50 transition-all duration-500 bg-white/50 dark:bg-black/20 backdrop-blur-md border-b border-gray-200 dark:border-white/10">
+        <div class="w-full max-w-7xl flex justify-between items-center">
+            <div class="flex items-center gap-12">
+                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+                        <span class="material-symbols-outlined text-2xl">school</span>
+                    </div>
+                    <span class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero</span>
+                </a>
+
+                <div class="hidden lg:flex items-center gap-8">
+                    <a href="index.html" class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Dashboard</a>
+                    <a href="vault.html" class="nav-link text-sm font-bold text-primary transition-colors">Vault</a>
+                    <a href="faq.html" class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">FAQ</a>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4 relative">
+                <button id="profileBtn" class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                    <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
+                    <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white">User</span>
+                </button>
+
+                <!-- Profile Dropdown -->
+                <div id="profileDropdown" class="hidden absolute right-0 top-full mt-2 w-64 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 z-50">
+                    <div class="p-6 border-b border-gray-200 dark:border-white/10">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-bold mb-1">Welcome back</p>
+                        <p id="dropdownName" class="text-lg font-bold text-gray-900 dark:text-white mb-1">User Name</p>
+                        <p id="dropdownEmail" class="text-sm text-gray-600 dark:text-gray-400">user@email.com</p>
+                    </div>
+                    
+                    <div class="p-4 space-y-2">
+                        <a href="user-details.html" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                            <span class="material-symbols-outlined text-xl text-primary">person</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">Profile</span>
+                        </a>
+                        <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                            <span class="material-symbols-outlined text-xl text-primary">dashboard</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">Dashboard</span>
+                        </a>
+                        <a href="vault.html" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                            <span class="material-symbols-outlined text-xl text-primary">security</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">Document Vault</span>
+                        </a>
+                        <a href="help.html" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                            <span class="material-symbols-outlined text-xl text-primary">help</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">Help & Support</span>
+                        </a>
+                    </div>
+
+                    <div class="p-4 border-t border-gray-200 dark:border-white/10">
+                        <button id="logoutBtn" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors text-red-600 dark:text-red-400">
+                            <span class="material-symbols-outlined text-xl">logout</span>
+                            <span class="font-semibold">Logout</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="relative z-10 pt-32 pb-24 px-6 max-w-7xl mx-auto">
+        <header class="mb-12">
+            <h1 class="text-4xl font-bold font-display mb-4">Document Vault</h1>
+            <p class="text-gray-500 dark:text-gray-400">Securely upload and manage your identity and academic documents for your loan application.</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Identity Documents -->
+            <div class="glass-card rounded-3xl p-8">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+                        <span class="material-symbols-outlined text-2xl">badge</span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold">Identity Documents</h2>
+                        <p class="text-sm text-gray-500">Government issued identification</p>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Aadhar Card -->
+                    <div class="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-gray-400">description</span>
+                            <div>
+                                <p class="font-bold text-sm">Aadhar Card</p>
+                                <p class="text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <button class="px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- PAN Card -->
+                    <div class="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-gray-400">credit_card</span>
+                            <div>
+                                <p class="font-bold text-sm">PAN Card</p>
+                                <p class="text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <button class="px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- Passport -->
+                    <div class="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-gray-400">passport</span>
+                            <div>
+                                <p class="font-bold text-sm">Passport</p>
+                                <p class="text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <button class="px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Academic Documents -->
+            <div class="glass-card rounded-3xl p-8">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+                        <span class="material-symbols-outlined text-2xl">school</span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold">Academic Documents</h2>
+                        <p class="text-sm text-gray-500">Educational certificates and transcripts</p>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- 10th Marksheet -->
+                    <div class="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-gray-400">history_edu</span>
+                            <div>
+                                <p class="font-bold text-sm">10th Marksheet</p>
+                                <p class="text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <button class="px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- 12th Marksheet -->
+                    <div class="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-gray-400">history_edu</span>
+                            <div>
+                                <p class="font-bold text-sm">12th Marksheet</p>
+                                <p class="text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <button class="px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- Degree Certificate -->
+                    <div class="flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-gray-400">workspace_premium</span>
+                            <div>
+                                <p class="font-bold text-sm">Degree Certificate</p>
+                                <p class="text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <button class="px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="assets/js/theme-config.js"></script>
+    <script src="assets/js/dashboard.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserDashboard();
+        });
+    </script>
+</body>
+
+</html>
