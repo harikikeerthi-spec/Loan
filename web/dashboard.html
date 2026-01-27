@@ -154,6 +154,11 @@
                             <span class="material-symbols-outlined text-xl text-primary">dashboard</span>
                             <span class="font-semibold text-gray-900 dark:text-white">Dashboard</span>
                         </a>
+                        <a href="my-applications.html"
+                            class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                            <span class="material-symbols-outlined text-xl text-primary">description</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">My Applications</span>
+                        </a>
                         <a href="vault.html"
                             class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
                             <span class="material-symbols-outlined text-xl text-primary">security</span>
@@ -597,6 +602,16 @@
         document.addEventListener('DOMContentLoaded', () => {
             loadUserDashboard();
             loadDashboardData();
+        });
+
+        // Navigation scroll effect
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('mainNav');
+            if (window.scrollY > 50) {
+                nav.classList.add('nav-scrolled');
+            } else {
+                nav.classList.remove('nav-scrolled');
+            }
         });
     </script>
 </body>

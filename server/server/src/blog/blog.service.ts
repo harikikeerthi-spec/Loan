@@ -6,6 +6,48 @@ import { PrismaService } from '../prisma/prisma.service';
 export class BlogService {
     constructor(private prisma: PrismaService) { }
 
+    private normalizeTagName(tag: string) {
+        return (tag || '')
+            .trim()
+            .replace(/^#/, '')
+            .toLowerCase();
+    }
+
+    private slugifyTag(tag: string) {
+        const normalized = this.normalizeTagName(tag);
+        return normalized
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '');
+    }
+
+    private async upsertTags(tagNames: string[]) {
+        const normalized = Array.from(
+            new Set((tagNames || []).map((t) => this.normalizeTagName(t)).filter(Boolean)),
+        );
+
+        if (!normalized.length) {
+            return [];
+        }
+
+        return Promise.all(
+            normalized.map((name) =>
+                this.prisma.tag.upsert({
+                    where: { name },
+                    update: {},
+                    create: { name, slug: this.slugifyTag(name) },
+                }),
+            ),
+        );
+    }
+
+    private mapTags(blog: any) {
+        if (!blog) return blog;
+        return {
+            ...blog,
+            tags: (blog.tags || []).map((t: any) => t.tag.name),
+        };
+    }
+
     /**
      * Get all published blogs with basic info (title, excerpt, category, etc.)
      * Used for blog listing page
@@ -19,7 +61,7 @@ export class BlogService {
         const { category, featured, limit = 10, offset = 0 } = options || {};
 
         const where: any = {
-            published: true,
+            isPublished: true,
         };
 
         if (category) {
@@ -27,7 +69,7 @@ export class BlogService {
         }
 
         if (featured !== undefined) {
-            where.featured = featured;
+            where.isFeatured = featured;
         }
 
         const blogs = await this.prisma.blog.findMany({
@@ -44,12 +86,19 @@ export class BlogService {
                 featuredImage: true,
                 readTime: true,
                 views: true,
-                featured: true,
+                isFeatured: true,
                 publishedAt: true,
                 createdAt: true,
+                tags: {
+                    select: {
+                        tag: {
+                            select: { name: true },
+                        },
+                    },
+                },
             },
             orderBy: [
-                { featured: 'desc' },
+                { isFeatured: 'desc' },
                 { publishedAt: 'desc' },
             ],
             take: limit,
@@ -60,7 +109,7 @@ export class BlogService {
 
         return {
             success: true,
-            data: blogs,
+            data: blogs.map((blog) => this.mapTags(blog)),
             pagination: {
                 total,
                 limit,
@@ -76,8 +125,8 @@ export class BlogService {
     async getFeaturedBlog() {
         const blog = await this.prisma.blog.findFirst({
             where: {
-                published: true,
-                featured: true,
+                isPublished: true,
+                isFeatured: true,
             },
             select: {
                 id: true,
@@ -92,6 +141,13 @@ export class BlogService {
                 readTime: true,
                 views: true,
                 publishedAt: true,
+                tags: {
+                    select: {
+                        tag: {
+                            select: { name: true },
+                        },
+                    },
+                },
             },
             orderBy: {
                 publishedAt: 'desc',
@@ -108,7 +164,7 @@ export class BlogService {
 
         return {
             success: true,
-            data: blog,
+            data: this.mapTags(blog),
         };
     }
 
@@ -135,6 +191,22 @@ export class BlogService {
                 publishedAt: true,
                 createdAt: true,
                 updatedAt: true,
+                tags: {
+                    select: {
+                        tag: {
+                            select: { name: true },
+                        },
+                    },
+                },
+                comments: {
+                    orderBy: { createdAt: 'desc' },
+                    select: {
+                        id: true,
+                        author: true,
+                        content: true,
+                        createdAt: true,
+                    },
+                },
             },
         });
 
@@ -150,7 +222,7 @@ export class BlogService {
 
         return {
             success: true,
-            data: blog,
+            data: this.mapTags(blog),
         };
     }
 
@@ -161,6 +233,32 @@ export class BlogService {
     async getBlogById(id: string) {
         const blog = await this.prisma.blog.findUnique({
             where: { id },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                excerpt: true,
+                content: true,
+                category: true,
+                authorName: true,
+                authorImage: true,
+                authorRole: true,
+                featuredImage: true,
+                readTime: true,
+                views: true,
+                isFeatured: true,
+                isPublished: true,
+                publishedAt: true,
+                createdAt: true,
+                updatedAt: true,
+                tags: {
+                    select: {
+                        tag: {
+                            select: { name: true },
+                        },
+                    },
+                },
+            },
         });
 
         if (!blog) {
@@ -169,7 +267,7 @@ export class BlogService {
 
         return {
             success: true,
-            data: blog,
+            data: this.mapTags(blog),
         };
     }
 
@@ -193,6 +291,13 @@ export class BlogService {
                 readTime: true,
                 views: true,
                 publishedAt: true,
+                tags: {
+                    select: {
+                        tag: {
+                            select: { name: true },
+                        },
+                    },
+                },
             },
             orderBy: {
                 views: 'desc',
@@ -202,7 +307,7 @@ export class BlogService {
 
         return {
             success: true,
-            data: blogs,
+            data: blogs.map((blog) => this.mapTags(blog)),
         };
     }
 
@@ -272,7 +377,7 @@ export class BlogService {
         const categories = await this.prisma.blog.groupBy({
             by: ['category'],
             where: {
-                published: true,
+                isPublished: true,
             },
             _count: {
                 category: true,
@@ -294,7 +399,7 @@ export class BlogService {
     async getRelatedBlogs(category: string, excludeSlug: string, limit = 3) {
         const blogs = await this.prisma.blog.findMany({
             where: {
-                published: true,
+                isPublished: true,
                 category,
                 slug: { not: excludeSlug },
             },
@@ -307,6 +412,13 @@ export class BlogService {
                 featuredImage: true,
                 readTime: true,
                 publishedAt: true,
+                tags: {
+                    select: {
+                        tag: {
+                            select: { name: true },
+                        },
+                    },
+                },
             },
             orderBy: {
                 publishedAt: 'desc',
@@ -316,7 +428,7 @@ export class BlogService {
 
         return {
             success: true,
-            data: blogs,
+            data: blogs.map((blog) => this.mapTags(blog)),
         };
     }
 
@@ -337,6 +449,7 @@ export class BlogService {
         isFeatured?: boolean;
         isPublished?: boolean;
         authorId?: string;
+        tags?: string[];
     }) {
         // Generate slug from title if not provided
         if (!data.slug) {
@@ -346,20 +459,52 @@ export class BlogService {
                 .replace(/(^-|-$)/g, '');
         }
 
-        const { isPublished, isFeatured, ...rest } = data;
+        const { isPublished, isFeatured, tags = [], ...rest } = data as any;
+        const tagRecords = await this.upsertTags(tags);
         const blog = await this.prisma.blog.create({
             data: {
                 ...rest,
-                published: isPublished,
-                featured: isFeatured,
+                isPublished,
+                isFeatured,
                 publishedAt: isPublished ? new Date() : null,
+                tags: tagRecords.length
+                    ? {
+                        create: tagRecords.map((tag) => ({
+                            tag: {
+                                connect: { id: tag.id },
+                            },
+                        })),
+                    }
+                    : undefined,
+            },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                excerpt: true,
+                content: true,
+                category: true,
+                authorName: true,
+                authorImage: true,
+                authorRole: true,
+                featuredImage: true,
+                readTime: true,
+                isFeatured: true,
+                isPublished: true,
+                publishedAt: true,
+                createdAt: true,
+                tags: {
+                    select: {
+                        tag: { select: { name: true } },
+                    },
+                },
             },
         });
 
         return {
             success: true,
             message: 'Blog created successfully',
-            data: blog,
+            data: this.mapTags(blog),
         };
     }
 
@@ -381,6 +526,7 @@ export class BlogService {
             readTime?: number;
             isFeatured?: boolean;
             isPublished?: boolean;
+            tags?: string[];
         },
     ) {
         const existingBlog = await this.prisma.blog.findUnique({
@@ -396,20 +542,58 @@ export class BlogService {
             (data as any).publishedAt = new Date();
         }
 
-        const { isPublished, isFeatured, ...rest } = data;
+        const { isPublished, isFeatured, tags, ...rest } = data as any;
         const updateData: any = { ...rest };
-        if (isPublished !== undefined) updateData.published = isPublished;
-        if (isFeatured !== undefined) updateData.featured = isFeatured;
+        if (isPublished !== undefined) updateData.isPublished = isPublished;
+        if (isFeatured !== undefined) updateData.isFeatured = isFeatured;
 
-        const blog = await this.prisma.blog.update({
+        await this.prisma.blog.update({
             where: { id },
             data: updateData,
+        });
+
+        if (tags !== undefined) {
+            const tagRecords = await this.upsertTags(tags);
+            await this.prisma.blogTag.deleteMany({ where: { blogId: id } });
+
+            if (tagRecords.length) {
+                await this.prisma.blogTag.createMany({
+                    data: tagRecords.map((tag) => ({ blogId: id, tagId: tag.id })),
+                });
+            }
+        }
+
+        const blog = await this.prisma.blog.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                excerpt: true,
+                content: true,
+                category: true,
+                authorName: true,
+                authorImage: true,
+                authorRole: true,
+                featuredImage: true,
+                readTime: true,
+                isFeatured: true,
+                isPublished: true,
+                publishedAt: true,
+                createdAt: true,
+                updatedAt: true,
+                tags: {
+                    select: {
+                        tag: { select: { name: true } },
+                    },
+                },
+            },
         });
 
         return {
             success: true,
             message: 'Blog updated successfully',
-            data: blog,
+            data: this.mapTags(blog),
         };
     }
 
@@ -441,7 +625,7 @@ export class BlogService {
     async searchBlogs(query: string, limit = 10) {
         const blogs = await this.prisma.blog.findMany({
             where: {
-                published: true,
+                isPublished: true,
                 OR: [
                     { title: { contains: query, mode: 'insensitive' } },
                     { excerpt: { contains: query, mode: 'insensitive' } },
@@ -457,6 +641,13 @@ export class BlogService {
                 featuredImage: true,
                 readTime: true,
                 publishedAt: true,
+                tags: {
+                    select: {
+                        tag: {
+                            select: { name: true },
+                        },
+                    },
+                },
             },
             orderBy: {
                 publishedAt: 'desc',
@@ -466,8 +657,151 @@ export class BlogService {
 
         return {
             success: true,
-            data: blogs,
+            data: blogs.map((blog) => this.mapTags(blog)),
             count: blogs.length,
+        };
+    }
+
+    /**
+     * Search blogs by tag name (handles #tag syntax)
+     */
+    async searchBlogsByTag(tag: string, limit = 10, offset = 0) {
+        const normalizedTag = this.normalizeTagName(tag);
+
+        if (!normalizedTag) {
+            return {
+                success: true,
+                data: [],
+                count: 0,
+                pagination: { total: 0, limit, offset, hasMore: false },
+            };
+        }
+
+        const where = {
+            isPublished: true,
+            tags: {
+                some: {
+                    tag: { name: normalizedTag },
+                },
+            },
+        } as const;
+
+        const [blogs, total] = await Promise.all([
+            this.prisma.blog.findMany({
+                where,
+                select: {
+                    id: true,
+                    title: true,
+                    slug: true,
+                    excerpt: true,
+                    category: true,
+                    featuredImage: true,
+                    readTime: true,
+                    publishedAt: true,
+                    tags: {
+                        select: {
+                            tag: { select: { name: true } },
+                        },
+                    },
+                },
+                orderBy: { publishedAt: 'desc' },
+                take: limit,
+                skip: offset,
+            }),
+            this.prisma.blog.count({ where }),
+        ]);
+
+        return {
+            success: true,
+            data: blogs.map((blog) => this.mapTags(blog)),
+            count: total,
+            pagination: {
+                total,
+                limit,
+                offset,
+                hasMore: offset + blogs.length < total,
+            },
+        };
+    }
+
+    /**
+     * Add a new comment to a blog
+     */
+    async addCommentToBlog(
+        blogId: string,
+        data: {
+            author: string;
+            content: string;
+        },
+    ) {
+        const blog = await this.prisma.blog.findUnique({
+            where: { id: blogId },
+            select: { id: true },
+        });
+
+        if (!blog) {
+            throw new NotFoundException('Blog not found');
+        }
+
+        const comment = await this.prisma.comment.create({
+            data: {
+                blogId,
+                author: data.author,
+                content: data.content,
+            },
+            select: {
+                id: true,
+                author: true,
+                content: true,
+                createdAt: true,
+            },
+        });
+
+        return {
+            success: true,
+            message: 'Comment added successfully',
+            data: comment,
+        };
+    }
+
+    /**
+     * Get comments for a blog with pagination
+     */
+    async getCommentsForBlog(blogId: string, limit = 20, offset = 0) {
+        const blog = await this.prisma.blog.findUnique({
+            where: { id: blogId },
+            select: { id: true },
+        });
+
+        if (!blog) {
+            throw new NotFoundException('Blog not found');
+        }
+
+        const [comments, total] = await Promise.all([
+            this.prisma.comment.findMany({
+                where: { blogId },
+                orderBy: { createdAt: 'desc' },
+                take: limit,
+                skip: offset,
+                select: {
+                    id: true,
+                    author: true,
+                    content: true,
+                    createdAt: true,
+                },
+            }),
+            this.prisma.comment.count({ where: { blogId } }),
+        ]);
+
+        return {
+            success: true,
+            data: comments,
+            pagination: {
+                total,
+                limit,
+                offset,
+                hasMore: offset + comments.length < total,
+            },
         };
     }
 }

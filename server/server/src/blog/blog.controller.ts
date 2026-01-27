@@ -79,6 +79,26 @@ export class BlogController {
     }
 
     /**
+     * Search blogs by tag (supports #tag syntax)
+     * GET /blogs/tags/:tag
+     * @param tag - Tag name or #tag value
+     * @query limit - Number of results (default: 10)
+     * @query offset - Number of results to skip (default: 0)
+     */
+    @Get('tags/:tag')
+    async searchBlogsByTag(
+        @Param('tag') tag: string,
+        @Query('limit') limit?: string,
+        @Query('offset') offset?: string,
+    ) {
+        return this.blogService.searchBlogsByTag(
+            tag,
+            limit ? parseInt(limit, 10) : 10,
+            offset ? parseInt(offset, 10) : 0,
+        );
+    }
+
+    /**
      * Get related blogs by category
      * GET /blogs/related/:category
      * @param category - Category name
@@ -119,6 +139,44 @@ export class BlogController {
     @Get('popular')
     async getPopularBlogs(@Query('limit') limit?: string) {
         return this.blogService.getPopularBlogs(limit ? parseInt(limit, 10) : 10);
+    }
+
+    /**
+     * Get comments for a blog post
+     * GET /blogs/:id/comments
+     * @param id - Blog ID
+     * @query limit - Number of comments to return (default: 20)
+     * @query offset - Number of comments to skip (default: 0)
+     */
+    @Get(':id/comments')
+    async getCommentsForBlog(
+        @Param('id') id: string,
+        @Query('limit') limit?: string,
+        @Query('offset') offset?: string,
+    ) {
+        return this.blogService.getCommentsForBlog(
+            id,
+            limit ? parseInt(limit, 10) : 20,
+            offset ? parseInt(offset, 10) : 0,
+        );
+    }
+
+    /**
+     * Add a comment to a blog post
+     * POST /blogs/:id/comments
+     * @param id - Blog ID
+     * @body author, content
+     */
+    @Post(':id/comments')
+    async addCommentToBlog(
+        @Param('id') id: string,
+        @Body()
+        body: {
+            author: string;
+            content: string;
+        },
+    ) {
+        return this.blogService.addCommentToBlog(id, body);
     }
 
     /**
@@ -180,6 +238,7 @@ export class BlogController {
             isFeatured?: boolean;
             isPublished?: boolean;
             authorId?: string;
+            tags?: string[];
         },
     ) {
         return this.blogService.createBlog(body);
@@ -209,6 +268,7 @@ export class BlogController {
             readTime?: number;
             isFeatured?: boolean;
             isPublished?: boolean;
+            tags?: string[];
         },
     ) {
         return this.blogService.updateBlog(id, body);

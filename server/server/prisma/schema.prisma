@@ -33,17 +33,48 @@ model Blog {
   featuredImage String?                         // Main blog image URL
   readTime      Int       @default(5)           // Estimated read time in minutes
   views         Int       @default(0)           // View count
-  featured      Boolean   @default(false) @map("isFeatured")      // Featured blog flag
-  published     Boolean   @default(false) @map("isPublished")      // Publication status
+  isFeatured    Boolean   @default(false)        // Featured blog flag
+  isPublished   Boolean   @default(false)        // Publication status
   publishedAt   DateTime?                       // Publication date
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  comments      Comment[]
+  tags          BlogTag[]
   
   // Optional relation to User (author)
   authorId      String?
   author        User?     @relation("AuthorBlogs", fields: [authorId], references: [id])
   
   @@index([category])
-  @@index([published])
-  @@index([featured])
+  @@index([isPublished])
+  @@index([isFeatured])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  blogId    String
+  author    String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  blog      Blog     @relation(fields: [blogId], references: [id])
+
+  @@index([blogId])
+}
+
+model Tag {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  blogs     BlogTag[]
+}
+
+model BlogTag {
+  blogId String
+  tagId  String
+  blog   Blog @relation(fields: [blogId], references: [id])
+  tag    Tag  @relation(fields: [tagId], references: [id])
+
+  @@id([blogId, tagId])
+  @@index([tagId])
 }

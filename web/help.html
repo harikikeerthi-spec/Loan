@@ -79,51 +79,67 @@
                     <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
                         <span class="material-symbols-outlined text-2xl">school</span>
                     </div>
-                    <span class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero</span>
+                    <span
+                        class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero</span>
                 </a>
 
                 <div class="hidden lg:flex items-center gap-8">
-                    <a href="index.html" class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Dashboard</a>
-                    <a href="vault.html" class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Vault</a>
+                    <a href="index.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Dashboard</a>
+                    <a href="vault.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Vault</a>
                     <a href="help.html" class="nav-link text-sm font-bold text-primary transition-colors">Help</a>
                 </div>
             </div>
 
             <div class="flex items-center gap-4 relative">
-                <button id="profileBtn" class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                <button id="profileBtn"
+                    class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
                     <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
                     <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white">User</span>
                 </button>
 
                 <!-- Profile Dropdown -->
-                <div id="profileDropdown" class="hidden absolute right-0 top-full mt-2 w-64 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 z-50">
+                <div id="profileDropdown"
+                    class="hidden absolute right-0 top-full mt-2 w-64 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 z-50">
                     <div class="p-6 border-b border-gray-200 dark:border-white/10">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-bold mb-1">Welcome back</p>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-bold mb-1">
+                            Welcome back</p>
                         <p id="dropdownName" class="text-lg font-bold text-gray-900 dark:text-white mb-1">User Name</p>
                         <p id="dropdownEmail" class="text-sm text-gray-600 dark:text-gray-400">user@email.com</p>
                     </div>
-                    
+
                     <div class="p-4 space-y-2">
-                        <a href="user-details.html" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                        <a href="user-details.html"
+                            class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
                             <span class="material-symbols-outlined text-xl text-primary">person</span>
                             <span class="font-semibold text-gray-900 dark:text-white">Profile</span>
                         </a>
-                        <a href="dashboard.html" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                        <a href="dashboard.html"
+                            class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
                             <span class="material-symbols-outlined text-xl text-primary">dashboard</span>
                             <span class="font-semibold text-gray-900 dark:text-white">Dashboard</span>
                         </a>
-                        <a href="vault.html" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                        <a href="my-applications.html"
+                            class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                            <span class="material-symbols-outlined text-xl text-primary">description</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">My Applications</span>
+                        </a>
+                        <a href="vault.html"
+                            class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
                             <span class="material-symbols-outlined text-xl text-primary">security</span>
                             <span class="font-semibold text-gray-900 dark:text-white">Document Vault</span>
                         </a>
-                        <a href="help.html" class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                        <a href="help.html"
+                            class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
                             <span class="material-symbols-outlined text-xl text-primary">help</span>
                             <span class="font-semibold text-gray-900 dark:text-white">Help & Support</span>
                         </a>
                     </div>
 
                     <div class="p-4 border-t border-gray-200 dark:border-white/10">
-                        <button id="logoutBtn" class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors text-red-600 dark:text-red-400">
+                        <button id="logoutBtn"
+                            class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors text-red-600 dark:text-red-400">
                             <span class="material-symbols-outlined text-xl">logout</span>
                             <span class="font-semibold">Logout</span>
                         </button>
@@ -137,8 +153,10 @@
         <header class="text-center mb-16">
             <h1 class="text-5xl font-bold font-display mb-6">How can we help?</h1>
             <div class="max-w-2xl mx-auto relative">
-                <input type="text" placeholder="Search for answers..." class="w-full pl-12 pr-6 py-4 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-xl" />
-                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
+                <input type="text" placeholder="Search for answers..."
+                    class="w-full pl-12 pr-6 py-4 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-xl" />
+                <span
+                    class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
             </div>
         </header>
 
@@ -168,17 +186,25 @@
                 <form class="space-y-4">
                     <div>
                         <label class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300">Name</label>
-                        <input type="text" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="Your Name" />
+                        <input type="text"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            placeholder="Your Name" />
                     </div>
                     <div>
                         <label class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300">Email</label>
-                        <input type="email" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="your@email.com" />
+                        <input type="email"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            placeholder="your@email.com" />
                     </div>
                     <div>
                         <label class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300">Message</label>
-                        <textarea rows="4" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="How can we help you?"></textarea>
+                        <textarea rows="4"
+                            class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                            placeholder="How can we help you?"></textarea>
                     </div>
-                    <button type="submit" class="w-full py-4 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">Send Message</button>
+                    <button type="submit"
+                        class="w-full py-4 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">Send
+                        Message</button>
                 </form>
             </div>
 
@@ -186,11 +212,13 @@
             <div class="flex flex-col justify-center space-y-8">
                 <div>
                     <h2 class="text-3xl font-bold font-display mb-4">We're here for you.</h2>
-                    <p class="text-gray-600 dark:text-gray-400 mb-8">Out support team is available 24/7 to assist you with any questions or concerns you might have regarding your education loan journey.</p>
+                    <p class="text-gray-600 dark:text-gray-400 mb-8">Out support team is available 24/7 to assist you
+                        with any questions or concerns you might have regarding your education loan journey.</p>
                 </div>
                 <div class="space-y-6">
                     <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center text-green-500">
+                        <div
+                            class="w-12 h-12 bg-green-500/10 rounded-full flex items-center justify-center text-green-500">
                             <span class="material-symbols-outlined">call</span>
                         </div>
                         <div>
@@ -199,7 +227,8 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500">
+                        <div
+                            class="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500">
                             <span class="material-symbols-outlined">mail</span>
                         </div>
                         <div>
@@ -208,7 +237,8 @@
                         </div>
                     </div>
                     <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 bg-purple-500/10 rounded-full flex items-center justify-center text-purple-500">
+                        <div
+                            class="w-12 h-12 bg-purple-500/10 rounded-full flex items-center justify-center text-purple-500">
                             <span class="material-symbols-outlined">chat</span>
                         </div>
                         <div>
