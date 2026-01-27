@@ -287,14 +287,8 @@ export class AuthService {
       const isNewUser = !user;
 
       if (!user) {
-        // Create new user
-        user = await this.usersService.create({
-          email,
-          firstName: null,
-          lastName: null,
-          phoneNumber: null,
-          dateOfBirth: null,
-        });
+        // Create new user with only email; optional fields omitted
+        user = await this.usersService.create({ email });
         console.log(`[AuthService] New user created: ${email}`);
       }
 
