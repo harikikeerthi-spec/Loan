@@ -1,11 +1,11 @@
 // Authentication Modal Handler
 const API_URL = 'http://localhost:3000';
 
-const authModal = document.getElementById('authModal');
-const registerLink = document.getElementById('registerLink');
-const closeAuthModal = document.getElementById('closeAuthModal');
-const emailStep = document.getElementById('emailStep');
-const otpStep = document.getElementById('otpStep');
+let authModal = document.getElementById('authModal');
+let registerLink = document.getElementById('registerLink');
+let closeAuthModal = document.getElementById('closeAuthModal');
+let emailStep = document.getElementById('emailStep');
+let otpStep = document.getElementById('otpStep');
 
 // Email Step Elements
 const authEmail = document.getElementById('authEmail');
@@ -23,27 +23,43 @@ const backToEmailBtn = document.getElementById('backToEmailBtn');
 let currentEmail = '';
 
 // Open Auth Modal
-if (registerLink) {
-    registerLink.addEventListener('click', () => {
-        authModal.classList.remove('hidden');
-        authModal.style.display = 'flex';
-        authEmail.focus();
-    });
+function bindOpenHandler() {
+    // Re-query in case elements were dynamically rendered
+    authModal = document.getElementById('authModal');
+    registerLink = document.getElementById('registerLink');
+    if (registerLink && !registerLink.dataset.listenerAdded) {
+        registerLink.dataset.listenerAdded = 'true';
+        registerLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (!authModal) authModal = document.getElementById('authModal');
+            if (authModal) {
+                authModal.classList.remove('hidden');
+                authModal.style.display = 'flex';
+                if (authEmail) authEmail.focus();
+            }
+        });
+    }
 }
+bindOpenHandler();
 
 // Close Auth Modal
-if (closeAuthModal) {
+if (closeAuthModal && !closeAuthModal.dataset.listenerAdded) {
+    closeAuthModal.dataset.listenerAdded = 'true';
     closeAuthModal.addEventListener('click', closeModal);
 }
 
 // Close modal when clicking outside
-authModal.addEventListener('click', (e) => {
-    if (e.target === authModal) {
-        closeModal();
-    }
-});
+if (authModal && !authModal.dataset.backdropListenerAdded) {
+    authModal.dataset.backdropListenerAdded = 'true';
+    authModal.addEventListener('click', (e) => {
+        if (e.target === authModal) {
+            closeModal();
+        }
+    });
+}
 
 function closeModal() {
+    if (!authModal) return;
     authModal.classList.add('hidden');
     authModal.style.display = 'none';
     resetForm();

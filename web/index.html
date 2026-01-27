@@ -155,7 +155,8 @@
     <!-- Background Structure -->
     <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none overflow-hidden">
         <!-- Background Video -->
-        <video autoplay muted loop playsinline class="absolute inset-0 w-full h-full object-cover opacity-30 dark:opacity-20 transition-opacity duration-1000">
+        <video autoplay muted loop playsinline
+            class="absolute inset-0 w-full h-full object-cover opacity-30 dark:opacity-20 transition-opacity duration-1000">
             <source src="https://videos.pexels.com/video-files/4496268/4496268-hd_1920_1080_24fps.mp4" type="video/mp4">
         </video>
         <div class="absolute inset-0 bg-mesh-gradient opacity-80"></div>
@@ -163,9 +164,6 @@
             style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
         </div>
     </div>
-
-    </div>
-
     <!-- Navigation -->
     <nav id="mainNav"
         class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
@@ -188,6 +186,8 @@
                     <a href="emi.html"
                         class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">EMI
                         Calculator</a>
+                    <a href="blog.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Blog</a>
                     <a href="faq.html"
                         class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">FAQ</a>
                     <a href="contact.html"
@@ -196,67 +196,8 @@
             </div>
 
             <div class="flex items-center gap-4">
-                <button id="registerLink"
-                    class="px-6 py-2.5 text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/20 cursor-pointer">Login</button>
-
-                <!-- Auth Modal -->
-                <div id="authModal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-                    <div class="bg-white dark:bg-gray-800 rounded-2xl p-8 w-full max-w-md mx-4 shadow-2xl">
-                        <!-- Close Button -->
-                        <button id="closeAuthModal" class="absolute top-4 right-4 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-2xl">×</button>
-
-                        <!-- Email Step -->
-                        <div id="emailStep" class="space-y-6">
-                            <div>
-                                <h2 class="text-3xl font-bold font-display text-gray-900 dark:text-white mb-2">Welcome</h2>
-                                <p class="text-gray-600 dark:text-gray-400">Enter your email to login or create account</p>
-                            </div>
-
-                            <div>
-                                <input type="email" id="authEmail" placeholder="Enter your email"
-                                    class="w-full bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary dark:text-white">
-                                <p id="emailError" class="text-red-600 text-sm mt-2 hidden"></p>
-                            </div>
-
-                            <button id="sendOtpBtn"
-                                class="w-full bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                                Send OTP
-                            </button>
-
-                            <p class="text-center text-xs text-gray-500 dark:text-gray-400">
-                                We'll send a 6-digit code to verify your email
-                            </p>
-                        </div>
-
-                        <!-- OTP Step (Hidden initially) -->
-                        <div id="otpStep" class="space-y-6 hidden">
-                            <div>
-                                <h2 class="text-3xl font-bold font-display text-gray-900 dark:text-white mb-2">Verify Code</h2>
-                                <p class="text-gray-600 dark:text-gray-400">Enter the 6-digit code sent to <span id="otpEmail" class="font-semibold"></span></p>
-                            </div>
-
-                            <div>
-                                <input type="text" id="otpInput" placeholder="000000" maxlength="6"
-                                    class="w-full text-center text-2xl tracking-widest bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono">
-                                <p id="otpError" class="text-red-600 text-sm mt-2 hidden"></p>
-                            </div>
-
-                            <button id="verifyOtpBtn"
-                                class="w-full bg-primary text-white py-3 rounded-lg font-bold hover:bg-primary/90 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
-                                Verify & Continue
-                            </button>
-
-                            <div class="flex items-center justify-between">
-                                <button id="resendOtpBtn" class="text-primary hover:text-primary/90 text-sm font-semibold transition-colors">
-                                    Resend Code
-                                </button>
-                                <button id="backToEmailBtn" class="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-semibold transition-colors">
-                                    Change Email
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <a href="login.html" id="loginLink"
+                    class="px-6 py-2.5 text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/20 cursor-pointer">Login</a>
 
                 <!-- User Profile Dropdown (Hidden initially) -->
                 <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
@@ -360,14 +301,8 @@
 
             <div
                 class="flex items-center justify-center gap-4 cursor-pointer group mb-24 transition-opacity hover:opacity-80">
-                <div
-                    class="w-12 h-12 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center group-hover:bg-primary group-hover:border-primary transition-all">
-                    <span
-                        class="material-symbols-outlined text-sm text-gray-900 dark:text-white group-hover:text-white transition-colors">play_arrow</span>
-                </div>
-                <span
-                    class="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 group-hover:text-primary transition-colors">Watch
-                    how it works</span>
+
+                <button>Enroll</button>
             </div>
 
             <!-- Stats -->
@@ -645,7 +580,7 @@
                     <div class="mt-12 max-w-lg mx-auto flex flex-col sm:flex-row gap-3">
                         <input type="email" placeholder="Enter your email"
                             class="flex-1 bg-white dark:bg-zinc-800/50 border-none rounded-full px-8 py-5 text-sm focus:ring-2 focus:ring-primary shadow-inner outline-none dark:text-white">
-                        <a href="signup.html"
+                        <a href="apply-loan.html"
                             class="bg-[#111] dark:bg-white dark:text-black text-white px-10 py-5 rounded-full font-bold uppercase tracking-[0.2em] text-[10px] hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center justify-center">Get
                             Started</a>
                     </div>
@@ -753,7 +688,6 @@
     </script>
     <script src="assets/js/dashboard.js"></script>
     <script src="assets/js/auth.js"></script>
-    <script src="assets/js/auth-modal.js"></script>
 </body>
 
 </html>

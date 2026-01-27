@@ -1,0 +1,429 @@
+// Blog API Service
+// Base URL for API calls - change this for production
+const API_BASE_URL = 'http://localhost:3000';
+
+/**
+ * Format date to readable string
+ */
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return date.toLocaleDateString('en-US', options);
+}
+
+/**
+ * Create blog card HTML
+ */
+function createBlogCard(blog, index) {
+    const delayClass = `animate-delay-${(index % 6) + 1}`;
+    const defaultImage = 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600&q=80';
+    const defaultAuthorImage = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&q=80';
+
+    return `
+        <a href="blog-article.html?slug=${blog.slug}"
+            class="blog-card glass-card rounded-2xl overflow-hidden shadow-lg opacity-0 animate-fade-in-up ${delayClass}">
+            <div class="relative h-56 overflow-hidden">
+                <img src="${blog.featuredImage || defaultImage}"
+                    alt="${blog.title}" class="w-full h-full object-cover" />
+                <div class="absolute top-4 left-4">
+                    <span
+                        class="px-3 py-1 bg-white/90 dark:bg-zinc-800/90 backdrop-blur-sm text-primary text-[9px] font-bold uppercase tracking-wider rounded-full">
+                        ${blog.category}
+                    </span>
+                </div>
+            </div>
+            <div class="p-6">
+                <h3
+                    class="text-xl font-display font-bold text-gray-900 dark:text-white mb-3 leading-snug hover:text-primary transition-colors">
+                    ${blog.title}
+                </h3>
+                <p class="text-gray-500 dark:text-gray-400 font-sans text-sm leading-relaxed mb-4 line-clamp-2">
+                    ${blog.excerpt}
+                </p>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="${blog.authorImage || defaultAuthorImage}"
+                            alt="${blog.authorName}" class="w-8 h-8 rounded-full object-cover" />
+                        <span class="text-xs font-bold text-gray-600 dark:text-gray-400">${blog.authorName}</span>
+                    </div>
+                    <span class="text-xs text-gray-400">${blog.readTime} min read</span>
+                </div>
+            </div>
+        </a>
+    `;
+}
+
+/**
+ * Create featured blog HTML
+ */
+function createFeaturedBlog(blog) {
+    const defaultImage = 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&q=80';
+    const defaultAuthorImage = 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&q=80';
+
+    return `
+        <a href="blog-article.html?slug=${blog.slug}" class="block group">
+            <div
+                class="glass-card rounded-[2rem] overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500">
+                <div class="grid md:grid-cols-2 gap-0">
+                    <div class="relative h-72 md:h-[400px] overflow-hidden">
+                        <img src="${blog.featuredImage || defaultImage}"
+                            alt="${blog.title}"
+                            class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                        <div class="absolute top-6 left-6">
+                            <span
+                                class="px-4 py-1.5 bg-primary text-white text-[10px] font-bold uppercase tracking-wider rounded-full">
+                                Featured
+                            </span>
+                        </div>
+                    </div>
+                    <div class="p-8 md:p-12 flex flex-col justify-center">
+                        <span class="text-primary font-bold text-[11px] tracking-[0.2em] uppercase mb-3">${blog.category}</span>
+                        <h2
+                            class="text-3xl md:text-4xl font-display font-bold text-gray-900 dark:text-white mb-4 leading-tight group-hover:text-primary transition-colors">
+                            ${blog.title}
+                        </h2>
+                        <p class="text-gray-500 dark:text-gray-400 font-sans leading-relaxed mb-6">
+                            ${blog.excerpt}
+                        </p>
+                        <div class="flex items-center gap-4">
+                            <img src="${blog.authorImage || defaultAuthorImage}"
+                                alt="${blog.authorName}"
+                                class="w-12 h-12 rounded-full object-cover border-2 border-primary/20" />
+                            <div>
+                                <p class="font-bold text-gray-900 dark:text-white text-sm">${blog.authorName}</p>
+                                <p class="text-gray-400 text-xs">${formatDate(blog.publishedAt)} · ${blog.readTime} min read</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    `;
+}
+
+/**
+ * Fetch all blogs from API
+ */
+async function fetchBlogs(options = {}) {
+    try {
+        const params = new URLSearchParams();
+        if (options.category) params.append('category', options.category);
+        if (options.featured !== undefined) params.append('featured', options.featured);
+        if (options.limit) params.append('limit', options.limit);
+        if (options.offset) params.append('offset', options.offset);
+
+        const url = `${API_BASE_URL}/blogs?${params.toString()}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch blogs');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching blogs:', error);
+        return { success: false, data: [], error: error.message };
+    }
+}
+
+/**
+ * Fetch featured blog from API
+ */
+async function fetchFeaturedBlog() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/blogs/featured`);
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch featured blog');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching featured blog:', error);
+        return { success: false, data: null, error: error.message };
+    }
+}
+
+/**
+ * Fetch single blog by slug
+ */
+async function fetchBlogBySlug(slug) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/blogs/slug/${slug}`);
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch blog');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching blog:', error);
+        return { success: false, data: null, error: error.message };
+    }
+}
+
+/**
+ * Fetch blog categories
+ */
+async function fetchCategories() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/blogs/categories`);
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch categories');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        return { success: false, data: [], error: error.message };
+    }
+}
+
+/**
+ * Fetch related blogs
+ */
+async function fetchRelatedBlogs(category, excludeSlug, limit = 3) {
+    try {
+        const params = new URLSearchParams();
+        if (excludeSlug) params.append('exclude', excludeSlug);
+        if (limit) params.append('limit', limit);
+
+        const response = await fetch(`${API_BASE_URL}/blogs/related/${encodeURIComponent(category)}?${params.toString()}`);
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch related blogs');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching related blogs:', error);
+        return { success: false, data: [], error: error.message };
+    }
+}
+
+/**
+ * Search blogs
+ */
+async function searchBlogs(query, limit = 10) {
+    try {
+        const params = new URLSearchParams();
+        params.append('q', query);
+        params.append('limit', limit);
+
+        const response = await fetch(`${API_BASE_URL}/blogs/search?${params.toString()}`);
+
+        if (!response.ok) {
+            throw new Error('Failed to search blogs');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error searching blogs:', error);
+        return { success: false, data: [], error: error.message };
+    }
+}
+
+/**
+ * Get URL parameter
+ */
+function getUrlParam(param) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(param);
+}
+
+/**
+ * Initialize blog listing page
+ */
+async function initBlogListingPage() {
+    const featuredSection = document.getElementById('featured-blog-section');
+    const blogGrid = document.getElementById('blog-grid');
+    const categoryPills = document.getElementById('category-pills');
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    const loadingSpinner = document.getElementById('loading-spinner');
+
+    let currentOffset = 0;
+    const limit = 6;
+    let currentCategory = null;
+
+    // Show loading state
+    if (loadingSpinner) loadingSpinner.classList.remove('hidden');
+
+    // Load featured blog
+    if (featuredSection) {
+        const featuredResult = await fetchFeaturedBlog();
+        if (featuredResult.success && featuredResult.data) {
+            featuredSection.innerHTML = createFeaturedBlog(featuredResult.data);
+        }
+    }
+
+    // Load categories for filter pills
+    if (categoryPills) {
+        const categoriesResult = await fetchCategories();
+        if (categoriesResult.success && categoriesResult.data) {
+            let pillsHtml = `
+                <button data-category="" 
+                    class="category-pill active px-6 py-2.5 rounded-full text-sm font-bold bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-zinc-700 shadow-sm">
+                    All Posts
+                </button>
+            `;
+
+            categoriesResult.data.forEach(cat => {
+                pillsHtml += `
+                    <button data-category="${cat.name}"
+                        class="category-pill px-6 py-2.5 rounded-full text-sm font-bold bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-zinc-700 shadow-sm hover:border-primary">
+                        ${cat.name} (${cat.count})
+                    </button>
+                `;
+            });
+
+            categoryPills.innerHTML = pillsHtml;
+
+            // Add click handlers
+            categoryPills.querySelectorAll('.category-pill').forEach(pill => {
+                pill.addEventListener('click', async function () {
+                    categoryPills.querySelectorAll('.category-pill').forEach(p => p.classList.remove('active'));
+                    this.classList.add('active');
+
+                    currentCategory = this.dataset.category || null;
+                    currentOffset = 0;
+                    await loadBlogs(true);
+                });
+            });
+        }
+    }
+
+    // Load blogs
+    async function loadBlogs(reset = false) {
+        if (loadingSpinner) loadingSpinner.classList.remove('hidden');
+
+        const options = {
+            limit,
+            offset: currentOffset,
+            featured: false  // Exclude featured from grid
+        };
+
+        if (currentCategory) {
+            options.category = currentCategory;
+        }
+
+        const result = await fetchBlogs(options);
+
+        if (loadingSpinner) loadingSpinner.classList.add('hidden');
+
+        if (result.success && result.data) {
+            const blogsHtml = result.data.map((blog, index) => createBlogCard(blog, index)).join('');
+
+            if (reset) {
+                blogGrid.innerHTML = blogsHtml;
+            } else {
+                blogGrid.insertAdjacentHTML('beforeend', blogsHtml);
+            }
+
+            currentOffset += result.data.length;
+
+            // Show/hide load more button
+            if (loadMoreBtn) {
+                if (result.pagination && result.pagination.hasMore) {
+                    loadMoreBtn.classList.remove('hidden');
+                } else {
+                    loadMoreBtn.classList.add('hidden');
+                }
+            }
+        }
+    }
+
+    // Initial load
+    await loadBlogs(true);
+
+    // Load more handler
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', () => loadBlogs(false));
+    }
+}
+
+/**
+ * Initialize blog article page
+ */
+async function initBlogArticlePage() {
+    const slug = getUrlParam('slug');
+
+    if (!slug) {
+        console.error('No blog slug provided');
+        return;
+    }
+
+    const articleContent = document.getElementById('article-content');
+    const articleTitle = document.getElementById('article-title');
+    const articleExcerpt = document.getElementById('article-excerpt');
+    const articleCategory = document.getElementById('article-category');
+    const articleImage = document.getElementById('article-image');
+    const authorName = document.getElementById('author-name');
+    const authorRole = document.getElementById('author-role');
+    const authorImage = document.getElementById('author-image');
+    const publishDate = document.getElementById('publish-date');
+    const readTime = document.getElementById('read-time');
+    const viewCount = document.getElementById('view-count');
+    const relatedBlogs = document.getElementById('related-blogs');
+
+    // Fetch blog data
+    const result = await fetchBlogBySlug(slug);
+
+    if (!result.success || !result.data) {
+        if (articleContent) {
+            articleContent.innerHTML = '<p class="text-center text-gray-500">Blog not found</p>';
+        }
+        return;
+    }
+
+    const blog = result.data;
+
+    // Update page title
+    document.title = `${blog.title} - LoanHero Blog`;
+
+    // Update article elements
+    if (articleTitle) articleTitle.textContent = blog.title;
+    if (articleExcerpt) articleExcerpt.textContent = blog.excerpt;
+    if (articleCategory) articleCategory.textContent = blog.category;
+    if (articleImage) articleImage.src = blog.featuredImage || 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1200&q=80';
+    if (authorName) authorName.textContent = blog.authorName;
+    if (authorRole) authorRole.textContent = blog.authorRole || 'Author';
+    if (authorImage) authorImage.src = blog.authorImage || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&q=80';
+    if (publishDate) publishDate.textContent = formatDate(blog.publishedAt);
+    if (readTime) readTime.textContent = `${blog.readTime} min read`;
+    if (viewCount) viewCount.textContent = `${blog.views.toLocaleString()} views`;
+    if (articleContent) articleContent.innerHTML = blog.content;
+
+    // Fetch and display related blogs
+    if (relatedBlogs) {
+        const relatedResult = await fetchRelatedBlogs(blog.category, slug, 3);
+
+        if (relatedResult.success && relatedResult.data && relatedResult.data.length > 0) {
+            let relatedHtml = '';
+            relatedResult.data.forEach((relBlog, index) => {
+                relatedHtml += createBlogCard(relBlog, index);
+            });
+            relatedBlogs.innerHTML = relatedHtml;
+        } else {
+            // Hide related section if no related blogs
+            const relatedSection = document.getElementById('related-section');
+            if (relatedSection) relatedSection.classList.add('hidden');
+        }
+    }
+}
+
+// Export functions for use in HTML
+window.BlogAPI = {
+    fetchBlogs,
+    fetchFeaturedBlog,
+    fetchBlogBySlug,
+    fetchCategories,
+    fetchRelatedBlogs,
+    searchBlogs,
+    initBlogListingPage,
+    initBlogArticlePage,
+    createBlogCard,
+    createFeaturedBlog,
+    formatDate,
+    getUrlParam
+};

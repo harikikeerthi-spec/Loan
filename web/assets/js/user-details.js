@@ -6,8 +6,8 @@ const accessToken = localStorage.getItem('accessToken');
 const userEmail = localStorage.getItem('userEmail');
 
 if (!accessToken || !userEmail) {
-    // User not logged in, redirect to signup
-    window.location.href = 'signup.html';
+    // User not logged in, redirect to login
+    window.location.href = 'login.html';
 }
 
 const userDetailsForm = document.getElementById('userDetailsForm');
@@ -81,9 +81,9 @@ if (userDetailsForm) {
             localStorage.setItem('userDateOfBirth', dateOfBirth);
 
             console.log('Profile updated successfully!');
-            showToast('Profile completed successfully! Redirecting to dashboard...', 'success');
+            showToast('Profile completed successfully! Redirecting to home...', 'success');
 
-            // Redirect to homepage with dashboard
+            // Redirect to homepage
             setTimeout(() => {
                 window.location.href = 'index.html';
             }, 1500);

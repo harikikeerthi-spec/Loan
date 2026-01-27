@@ -5,7 +5,6 @@ const API_URL = 'http://localhost:3000';
 const publicPages = [
     'index.html',
     'login.html',
-    'signup.html',
     'about-us.html',
     'contact.html',
     'faq.html',
