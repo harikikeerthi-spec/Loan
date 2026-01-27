@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { EmailService } from './email.service';
 import { JwtService } from '@nestjs/jwt';
@@ -178,7 +178,7 @@ export class AuthService {
     // This prevents overwriting existing data with 'undefined' during resend
     if (isSignup && signupInfo) {
       const existingData = this.signupData.get(email) || {};
-      
+
       this.signupData.set(email, {
         firstName: signupInfo.firstName ?? existingData.firstName,
         lastName: signupInfo.lastName ?? existingData.lastName,
@@ -244,7 +244,7 @@ export class AuthService {
 
     // Check if user exists
     const existingUser = await this.usersService.findOne(email);
-    
+
     // Generate OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     this.otps.set(email, otp);
@@ -253,8 +253,8 @@ export class AuthService {
     // Send OTP via email
     await this.emailService.sendOtp(email, otp);
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       message: 'OTP sent successfully',
       userExists: !!existingUser // Return whether user exists or not
     };
@@ -272,8 +272,8 @@ export class AuthService {
     // Verify OTP
     const storedOtp = this.otps.get(email);
     if (!storedOtp || storedOtp !== otp) {
-      return { 
-        success: false, 
+      return {
+        success: false,
         message: 'Invalid or expired OTP. Please try again.'
       };
     }
@@ -296,11 +296,11 @@ export class AuthService {
       const hasUserDetails = !!(user.firstName && user.lastName && user.phoneNumber && user.dateOfBirth);
 
       // Generate JWT token
-      const payload = { 
-        email: user.email, 
-        sub: user.id, 
-        firstName: user.firstName, 
-        lastName: user.lastName 
+      const payload = {
+        email: user.email,
+        sub: user.id,
+        firstName: user.firstName,
+        lastName: user.lastName
       };
       const accessToken = this.jwtService.sign(payload);
 
