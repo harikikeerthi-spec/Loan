@@ -87,4 +87,9 @@ export class AuthController {
       body.dateOfBirth
     );
   }
+
+  @Get('user-profile/:email')
+  async getUserProfile(@Param('email') email: string) {
+    return this.authService.getUserProfile(email);
+  }
 }
