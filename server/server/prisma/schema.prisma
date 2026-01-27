@@ -33,8 +33,8 @@ model Blog {
   featuredImage String?                         // Main blog image URL
   readTime      Int       @default(5)           // Estimated read time in minutes
   views         Int       @default(0)           // View count
-  isFeatured    Boolean   @default(false)       // Featured blog flag
-  isPublished   Boolean   @default(false)       // Publication status
+  featured      Boolean   @default(false) @map("isFeatured")      // Featured blog flag
+  published     Boolean   @default(false) @map("isPublished")      // Publication status
   publishedAt   DateTime?                       // Publication date
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -44,6 +44,6 @@ model Blog {
   author        User?     @relation("AuthorBlogs", fields: [authorId], references: [id])
   
   @@index([category])
-  @@index([isPublished])
-  @@index([isFeatured])
+  @@index([published])
+  @@index([featured])
 }

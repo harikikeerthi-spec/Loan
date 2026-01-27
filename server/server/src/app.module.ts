@@ -6,6 +6,8 @@ import { UsersModule } from './users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { BlogModule } from './blog/blog.module';
 
+import { BlogModule } from './blog/blog.module';
+
 @Module({
   imports: [PrismaModule, AuthModule, UsersModule, BlogModule],
   controllers: [AppController],
