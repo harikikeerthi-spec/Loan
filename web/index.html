@@ -59,7 +59,7 @@
         }
 
         .nav-scrolled {
-            background: rgba(255, 255, 255, 0.8) !important;
+            background: rgba(17, 8, 26, 0.95) !important;
             backdrop-filter: blur(12px);
             padding-top: 1rem !important;
             padding-bottom: 1rem !important;
@@ -154,11 +154,7 @@
 
     <!-- Background Structure -->
     <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none overflow-hidden">
-        <!-- Background Video -->
-        <video autoplay muted loop playsinline
-            class="absolute inset-0 w-full h-full object-cover opacity-30 dark:opacity-20 transition-opacity duration-1000">
-            <source src="https://videos.pexels.com/video-files/4496268/4496268-hd_1920_1080_24fps.mp4" type="video/mp4">
-        </video>
+
         <div class="absolute inset-0 bg-mesh-gradient opacity-80"></div>
         <div class="absolute inset-0 opacity-20 mix-blend-overlay"
             style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
@@ -170,41 +166,42 @@
         <div class="w-full max-w-7xl flex justify-between items-center">
             <div class="flex items-center gap-12">
                 <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
-                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+                    <div
+                        class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white shadow-lg backdrop-blur-sm border border-white/20">
                         <span class="material-symbols-outlined text-2xl">school</span>
                     </div>
-                    <span class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero
+                    <span class="font-bold text-2xl tracking-tight font-display text-white">LoanHero
                         <span class="text-primary/80"></span></span>
                 </a>
 
                 <div class="hidden lg:flex items-center gap-8">
                     <a href="about-us.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">About</a>
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">About</a>
                     <a href="how-it-works.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">How
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">How
                         It Works</a>
                     <a href="emi.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">EMI
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors font-sans">EMI
                         Calculator</a>
                     <a href="blog.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Blog</a>
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Blog</a>
                     <a href="faq.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">FAQ</a>
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">FAQ</a>
                     <a href="contact.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Contact</a>
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Contact</a>
                 </div>
             </div>
 
             <div class="flex items-center gap-4">
                 <a href="login.html" id="loginLink"
-                    class="px-6 py-2.5 text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/20 cursor-pointer">Login</a>
+                    class="px-6 py-2.5 text-sm font-bold bg-white text-primary rounded-full hover:bg-gray-100 transition-all shadow-lg hover:shadow-white/20 cursor-pointer">Login</a>
 
                 <!-- User Profile Dropdown (Hidden initially) -->
                 <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
                     <button id="profileBtn"
-                        class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
-                        <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
-                        <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white"></span>
+                        class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-white/10 transition-all text-white border border-white/20">
+                        <span class="material-symbols-outlined text-2xl text-white">account_circle</span>
+                        <span id="userEmail" class="text-sm font-bold text-white"></span>
                     </button>
 
                     <!-- Dropdown Menu -->
@@ -263,68 +260,82 @@
     </nav>
 
     <main class="relative z-10">
-        <!-- Hero Section -->
-        <section class="max-w-7xl mx-auto px-6 pt-48 pb-24 text-center relative">
-            <!-- Hanging Badge -->
-            <div class="relative inline-block mb-12 group drop-from-top">
-                <!-- Vertical Hanging Lines -->
-                <div class="absolute -top-48 left-[20%] w-px h-48 bg-black"></div>
-                <div class="absolute -top-48 right-[20%] w-px h-48 bg-black"></div>
+        <!-- Hero Section Wrapper -->
+        <div
+            class="relative w-full overflow-hidden bg-[#190f23] bg-cover bg-center bg-no-repeat bg-[url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1600&q=80')]">
+            <!-- Background Video -->
+            <video autoplay muted loop playsinline
+                poster="https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1600&q=80"
+                class="absolute inset-0 w-full h-full object-cover z-0 motion-reduce:hidden opacity-90">
+                <source src="https://videos.pexels.com/video-files/5532766/5532766-hd_1920_1080_25fps.mp4"
+                    type="video/mp4">
+            </video>
+            <!-- Minimal Dark Overlay -->
+            <div class="absolute inset-0 bg-black/60 z-0"></div>
 
-                <!-- Badge -->
+            <section class="max-w-7xl mx-auto px-6 pt-48 pb-24 text-center relative z-10">
+                <!-- Hanging Badge -->
+                <div class="relative inline-block mb-12 group drop-from-top">
+                    <!-- Vertical Hanging Lines -->
+                    <div class="absolute -top-48 left-[20%] w-px h-48 bg-white/30"></div>
+                    <div class="absolute -top-48 right-[20%] w-px h-48 bg-white/30"></div>
+
+                    <!-- Badge -->
+                    <div
+                        class="inline-flex items-center gap-6 rounded-full border border-white/20 bg-white/90 backdrop-blur-md px-8 py-3 shadow-md relative z-10 transition-transform hover:-translate-y-1">
+                        <a href="apply-loan.html" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                            <span class="material-symbols-outlined text-2xl text-primary">school</span>
+                            <span class="text-sm font-bold text-gray-900">Education Loan</span>
+                        </a>
+                        <div class="w-px h-6 bg-gray-300"></div>
+                        <a href="bank-reviews.html" class="flex items-center gap-1.5 group/link cursor-pointer">
+                            <span
+                                class="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 group-hover/link:text-primary transition-colors">Up
+                                to 100% Funding</span>
+                            <span
+                                class="material-symbols-outlined text-[16px] text-gray-500 group-hover/link:text-primary group-hover/link:translate-x-0.5 transition-all">arrow_forward</span>
+                        </a>
+                    </div>
+                </div>
+
+                <h1
+                    class="text-6xl md:text-8xl font-bold font-display leading-[1.05] tracking-tight mb-8 text-white drop-shadow-sm">
+                    Let's find your <br />
+                    <span class="italic text-primary font-normal">perfect</span> loan
+                </h1>
+
+                <p class="text-xl text-gray-100 max-w-2xl mx-auto mb-16 leading-relaxed font-sans drop-shadow-sm">
+                    Your global education journey starts here.
+                </p>
+
                 <div
-                    class="inline-flex items-center gap-6 rounded-full border border-gray-100 dark:border-white/10 bg-white/70 dark:bg-zinc-800/50 px-8 py-3 shadow-md backdrop-blur-md relative z-10 transition-transform hover:-translate-y-1">
-                    <a href="apply-loan.html" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                        <span class="material-symbols-outlined text-2xl">school</span>
-                        <span class="text-sm font-bold text-gray-800 dark:text-gray-200">Education Loan</span>
-                    </a>
-                    <div class="w-px h-6 bg-gray-200 dark:bg-white/10"></div>
-                    <a href="bank-reviews.html" class="flex items-center gap-1.5 group/link cursor-pointer">
-                        <span
-                            class="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 group-hover/link:text-primary transition-colors">Up
-                            to 100% Funding</span>
-                        <span
-                            class="material-symbols-outlined text-[16px] text-gray-400 group-hover/link:text-primary group-hover/link:translate-x-0.5 transition-all">arrow_forward</span>
+                    class="flex items-center justify-center gap-4 cursor-pointer group mb-24 transition-opacity hover:opacity-80">
+                    <a href="apply-loan.html"
+                        class="px-8 py-4 bg-primary text-white font-bold rounded-full shadow-lg hover:bg-gold-accent hover:text-gray-900 transition-all">
+                        Start Your Application
                     </a>
                 </div>
-            </div>
 
-            <h1
-                class="text-6xl md:text-8xl font-bold font-display leading-[1.05] tracking-tight mb-8 text-gray-900 dark:text-white">
-                Let's find your <br />
-                <span class="italic text-primary font-normal">perfect</span> loan
-            </h1>
-
-            <p class="text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto mb-16 leading-relaxed font-sans">
-                Your global education journey starts here.
-            </p>
-
-            <div
-                class="flex items-center justify-center gap-4 cursor-pointer group mb-24 transition-opacity hover:opacity-80">
-
-                <button>Enroll</button>
-            </div>
-
-            <!-- Stats -->
-            <div
-                class="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-6xl mx-auto border-t border-gray-100 dark:border-white/5 pt-16">
-                <div class="text-center px-8">
-                    <h3 class="text-5xl font-bold text-gray-900 dark:text-white mb-3 font-display">$150M+</h3>
-                    <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 leading-relaxed">Total
-                        Education Funding Disbursed</p>
+                <!-- Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-6xl mx-auto border-t border-white/10 pt-16">
+                    <div class="text-center px-8">
+                        <h3 class="text-5xl font-bold text-white mb-3 font-display">$150M+</h3>
+                        <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-100 leading-relaxed">Total
+                            Education Funding Disbursed</p>
+                    </div>
+                    <div class="text-center px-8 border-x-0 md:border-x border-white/10">
+                        <h3 class="text-5xl font-bold text-white mb-3 font-display">12,000+</h3>
+                        <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-100 leading-relaxed">Global
+                            Students Helped</p>
+                    </div>
+                    <div class="text-center px-8">
+                        <h3 class="text-5xl font-bold text-white mb-3 font-display">45+</h3>
+                        <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-100 leading-relaxed">Global
+                            Bank Partners</p>
+                    </div>
                 </div>
-                <div class="text-center px-8 border-x-0 md:border-x border-gray-100 dark:border-white/5">
-                    <h3 class="text-5xl font-bold text-gray-900 dark:text-white mb-3 font-display">12,000+</h3>
-                    <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 leading-relaxed">Global
-                        Students Helped</p>
-                </div>
-                <div class="text-center px-8">
-                    <h3 class="text-5xl font-bold text-gray-900 dark:text-white mb-3 font-display">45+</h3>
-                    <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 leading-relaxed">Global
-                        Bank Partners</p>
-                </div>
-            </div>
-        </section>
+            </section>
+        </div>
 
         <!-- Stories Section -->
         <section id="stories" class="max-w-7xl mx-auto px-6 py-24 scroll-mt-24">
@@ -426,69 +437,215 @@
 
             <div class="flex flex-col gap-16">
                 <!-- Row 1 (Right) -->
-                <div class="relative overflow-hidden w-full py-4">
+                <div class="relative overflow-hidden w-full py-2">
                     <div class="bank-row animate-scroll-right flex items-center whitespace-nowrap" data-row="1">
-                        <div class="bank-item"><span class="text-xl font-serif font-extrabold">HDFC BANK</span></div>
-                        <div class="bank-item"><span class="text-xl font-bold italic">SBI</span></div>
-                        <div class="bank-item">
-                            <div class="flex items-center gap-10"><span
-                                    class="material-symbols-outlined text-primary">account_balance</span><span
-                                    class="font-extrabold">ICICI Bank</span></div>
-                        </div>
-                        <div class="bank-item"><span class="font-extrabold tracking-widest uppercase">Axis Bank</span>
-                        </div>
-                        <div class="bank-item"><span class="font-bold">Prodigy <span
-                                    class="font-normal opacity-60">Finance</span></span></div>
+                        <!-- Set 1 -->
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            HDFC Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            SBI</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            ICICI Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Axis Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Prodigy Finance</div>
                         <!-- Repeat 1 -->
-                        <div class="bank-item"><span class="text-xl font-serif font-extrabold">HDFC BANK</span></div>
-                        <div class="bank-item"><span class="text-xl font-bold italic">SBI</span></div>
-                        <div class="bank-item">
-                            <div class="flex items-center gap-2"><span
-                                    class="material-symbols-outlined text-primary">account_balance</span><span
-                                    class="font-extrabold">ICICI Bank</span></div>
-                        </div>
-                        <div class="bank-item"><span class="font-extrabold tracking-widest uppercase">Axis Bank</span>
-                        </div>
-                        <div class="bank-item"><span class="font-bold">Prodigy <span
-                                    class="font-normal opacity-60">Finance</span></span></div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            HDFC Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            SBI</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            ICICI Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Axis Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Prodigy Finance</div>
+                        <!-- Repeat 2 -->
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            HDFC Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            SBI</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            ICICI Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Axis Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Prodigy Finance</div>
+                        <!-- Repeat 3 -->
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            HDFC Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            SBI</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            ICICI Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Axis Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Prodigy Finance</div>
                     </div>
                 </div>
 
                 <!-- Row 2 (Left) -->
-                <div class="relative overflow-hidden w-full py-4 border-y border-gray-100/30 dark:border-white/5">
+                <div class="relative overflow-hidden w-full py-1 border-y border-gray-100/30 dark:border-white/5">
                     <div class="bank-row animate-scroll-left flex items-center whitespace-nowrap" data-row="2">
-                        <div class="bank-item"><span class="font-extrabold">Kotak Mahindra</span></div>
-                        <div class="bank-item"><span class="font-bold">IDBI Bank</span></div>
-                        <div class="bank-item"><span class="font-extrabold">PNB</span></div>
-                        <div class="bank-item"><span class="font-bold text-primary">Yes Bank</span></div>
-                        <div class="bank-item"><span class="font-extrabold">HSBC</span></div>
+                        <!-- Set 1 -->
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Kotak Mahindra</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            IDBI Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            PNB</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Yes Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            HSBC</div>
+                        <!-- Repeat 1 -->
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Kotak Mahindra</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            IDBI Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            PNB</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Yes Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            HSBC</div>
                         <!-- Repeat 2 -->
-                        <div class="bank-item"><span class="font-extrabold">Kotak Mahindra</span></div>
-                        <div class="bank-item"><span class="font-bold">IDBI Bank</span></div>
-                        <div class="bank-item"><span class="font-extrabold">PNB</span></div>
-                        <div class="bank-item"><span class="font-bold text-primary">Yes Bank</span></div>
-                        <div class="bank-item"><span class="font-extrabold">HSBC</span></div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Kotak Mahindra</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            IDBI Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            PNB</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Yes Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            HSBC</div>
+                        <!-- Repeat 3 -->
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Kotak Mahindra</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            IDBI Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            PNB</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Yes Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            HSBC</div>
                     </div>
                 </div>
 
                 <!-- Row 3 (Left) -->
-                <div class="relative overflow-hidden w-full py-4">
-                    <div class="bank-row animate-scroll-left flex items-center whitespace-nowrap" data-row="3">
-                        <div class="bank-item"><span class="font-extrabold">Standard Chartered</span></div>
-                        <div class="bank-item"><span class="font-bold">Barclays</span></div>
-                        <div class="bank-item"><span class="font-extrabold">Citibank</span></div>
-                        <div class="bank-item"><span class="font-bold">Deutsche Bank</span></div>
-                        <div class="bank-item"><span class="font-extrabold">Bank of America</span></div>
+                <div class="relative overflow-hidden w-full py-2">
+                    <div class="bank-row animate-scroll-right flex items-center whitespace-nowrap" data-row="3">
+                        <!-- Set 1 -->
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Standard Chartered</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Barclays</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Citibank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Deutsche Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Bank of America</div>
+                        <!-- Repeat 1 -->
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Standard Chartered</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Barclays</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Citibank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Deutsche Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Bank of America</div>
+                        <!-- Repeat 2 -->
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Standard Chartered</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Barclays</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Citibank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Deutsche Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Bank of America</div>
                         <!-- Repeat 3 -->
-                        <div class="bank-item"><span class="font-extrabold">Standard Chartered</span></div>
-                        <div class="bank-item"><span class="font-bold">Barclays</span></div>
-                        <div class="bank-item"><span class="font-extrabold">Citibank</span></div>
-                        <div class="bank-item"><span class="font-bold">Deutsche Bank</span></div>
-                        <div class="bank-item"><span class="font-extrabold">Bank of America</span></div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Standard Chartered</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Barclays</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Citibank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Deutsche Bank</div>
+                        <div
+                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
+                            Bank of America</div>
                     </div>
                 </div>
             </div>
-        </section>
         </section>
 
 

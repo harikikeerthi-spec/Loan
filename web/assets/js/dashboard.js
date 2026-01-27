@@ -69,7 +69,7 @@ async function loadUserDashboard() {
             localStorage.setItem('lastName', user.lastName || '');
             localStorage.setItem('userPhoneNumber', user.phoneNumber || '');
             localStorage.setItem('userDateOfBirth', user.dateOfBirth || '');
-            
+
             displayUserInfo(user);
             setupProfileDropdown();
             return data.user;
@@ -89,7 +89,7 @@ function displayUserInfo(user) {
     const dropdownEmailElement = document.getElementById('dropdownEmail');
     const dropdownNameElement = document.getElementById('dropdownName');
 
-    const displayName = user.firstName && user.lastName ? 
+    const displayName = user.firstName && user.lastName ?
         `${user.firstName} ${user.lastName}` : user.email;
 
     if (userEmailElement) {

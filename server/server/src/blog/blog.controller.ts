@@ -111,7 +111,40 @@ export class BlogController {
     }
 
     /**
-     * Get single blog by ID
+     * Get most popular blogs (by view count)
+     * GET /blogs/popular
+     * @query limit - Number of blogs to return (default: 10)
+     * @returns { success: boolean, data: Blog[] }
+     */
+    @Get('popular')
+    async getPopularBlogs(@Query('limit') limit?: string) {
+        return this.blogService.getPopularBlogs(limit ? parseInt(limit, 10) : 10);
+    }
+
+    /**
+     * Get blog statistics
+     * GET /blogs/:id/stats
+     * @param id - Blog ID
+     * @returns { success: boolean, data: { views, publishedAt, createdAt, category } }
+     */
+    @Get(':id/stats')
+    async getBlogStats(@Param('id') id: string) {
+        return this.blogService.getBlogStats(id);
+    }
+
+    /**
+     * Increment blog view count (for manual tracking)
+     * POST /blogs/:id/view
+     * @param id - Blog ID
+     * @returns { success: boolean, views: number }
+     */
+    @Post(':id/view')
+    async incrementBlogView(@Param('id') id: string) {
+        return this.blogService.incrementBlogView(id);
+    }
+
+    /**
+     * Get single blog by ID    
      * GET /blogs/:id
      * @param id - Blog ID
      * @returns { success: boolean, data: Blog }

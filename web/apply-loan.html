@@ -119,23 +119,27 @@
                 <a href="login.html" id="loginLink"
                     class="text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Sign
                     In</a>
-                
-                
+
+
                 <!-- User Profile Dropdown (Hidden initially) -->
                 <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
-                    <button id="profileBtn" class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                    <button id="profileBtn"
+                        class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
                         <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
                         <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white"></span>
                     </button>
-                    
+
                     <!-- Dropdown Menu -->
-                    <div id="profileDropdown" class="hidden absolute top-12 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 w-48">
+                    <div id="profileDropdown"
+                        class="hidden absolute top-12 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 w-48">
                         <div class="p-4 border-b border-gray-200 dark:border-gray-700">
                             <p class="text-xs text-gray-500 dark:text-gray-400">Logged in as</p>
                             <p id="dropdownEmail" class="text-sm font-bold text-gray-900 dark:text-white truncate"></p>
                         </div>
-                        <a href="index.html" class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Dashboard</a>
-                        <a href="#" id="logoutBtn" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700">Logout</a>
+                        <a href="index.html"
+                            class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Dashboard</a>
+                        <a href="#" id="logoutBtn"
+                            class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700">Logout</a>
                     </div>
                 </div>
             </div>
@@ -154,49 +158,102 @@
             </div>
 
             <div class="glass-card rounded-3xl p-8 md:p-12 shadow-xl">
-                <form class="space-y-8">
+                <form id="loanApplicationForm" class="space-y-8">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
-                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">First Name</label>
-                            <input type="text" class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary" placeholder="Enter your first name">
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">First Name
+                                *</label>
+                            <input type="text" id="firstName" required
+                                class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3"
+                                placeholder="Enter your first name">
                         </div>
                         <div>
-                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Last Name</label>
-                            <input type="text" class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary" placeholder="Enter your last name">
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Last Name
+                                *</label>
+                            <input type="text" id="lastName" required
+                                class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3"
+                                placeholder="Enter your last name">
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
-                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Email Address</label>
-                            <input type="email" class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary" placeholder="your.email@example.com">
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Email Address
+                                *</label>
+                            <input type="email" id="email" required
+                                class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3"
+                                placeholder="your.email@example.com">
                         </div>
                         <div>
-                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Phone Number</label>
-                            <input type="tel" class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary" placeholder="+91 98765 43210">
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Phone Number
+                                *</label>
+                            <input type="tel" id="phone" required
+                                class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3"
+                                placeholder="+91 98765 43210">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Preferred Bank
+                                *</label>
+                            <select id="bankName" required
+                                class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3">
+                                <option value="">Select a bank</option>
+                                <option value="SBI">State Bank of India</option>
+                                <option value="HDFC">HDFC Bank</option>
+                                <option value="ICICI">ICICI Bank</option>
+                                <option value="Axis">Axis Bank</option>
+                                <option value="Kotak">Kotak Mahindra Bank</option>
+                                <option value="BOB">Bank of Baroda</option>
+                                <option value="PNB">Punjab National Bank</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Loan Type
+                                *</label>
+                            <select id="loanType" required
+                                class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3">
+                                <option value="">Select loan type</option>
+                                <option value="education" selected>Education Loan</option>
+                                <option value="home">Home Loan</option>
+                                <option value="personal">Personal Loan</option>
+                                <option value="business">Business Loan</option>
+                                <option value="vehicle">Vehicle Loan</option>
+                            </select>
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Target University</label>
-                        <input type="text" class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary" placeholder="University name">
+                        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Target
+                            University</label>
+                        <input type="text" id="university"
+                            class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3"
+                            placeholder="University name">
                     </div>
 
                     <div>
-                        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Desired Loan Amount (USD)</label>
+                        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Desired Loan Amount
+                            (₹) *</label>
                         <div class="relative">
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">$</span>
-                            <input type="number" class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 pl-8 focus:border-primary focus:ring-primary" placeholder="50000">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₹</span>
+                            <input type="number" id="loanAmount" required min="10000"
+                                class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 pl-8 focus:border-primary focus:ring-primary px-4 py-3"
+                                placeholder="500000">
                         </div>
                     </div>
 
-                     <div>
-                        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Course Details</label>
-                        <textarea rows="4" class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary" placeholder="Briefly describe the course you are applying for..."></textarea>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Course Details /
+                            Purpose</label>
+                        <textarea id="courseDetails" rows="4"
+                            class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3"
+                            placeholder="Briefly describe the course you are applying for..."></textarea>
                     </div>
 
                     <div class="pt-4">
-                        <button type="submit" class="w-full py-4 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 uppercase tracking-widest text-sm">
+                        <button type="submit" id="submitBtn"
+                            class="w-full py-4 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 uppercase tracking-widest text-sm">
                             Submit Application
                         </button>
                     </div>
@@ -220,16 +277,24 @@
                         Join thousands of students pursuing their dreams.
                     </p>
                     <div class="flex items-center gap-4">
-                        <a href="#" class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors" aria-label="LinkedIn">
+                        <a href="#"
+                            class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
+                            aria-label="LinkedIn">
                             <span class="material-symbols-outlined text-white">language</span>
                         </a>
-                        <a href="#" class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors" aria-label="Twitter">
+                        <a href="#"
+                            class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
+                            aria-label="Twitter">
                             <span class="material-symbols-outlined text-white">mail</span>
                         </a>
-                        <a href="#" class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors" aria-label="Facebook">
+                        <a href="#"
+                            class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
+                            aria-label="Facebook">
                             <span class="material-symbols-outlined text-white">forum</span>
                         </a>
-                        <a href="#" class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors" aria-label="Instagram">
+                        <a href="#"
+                            class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
+                            aria-label="Instagram">
                             <span class="material-symbols-outlined text-white">share</span>
                         </a>
                     </div>
@@ -247,8 +312,10 @@
                 <div>
                     <h4 class="text-lg font-bold mb-6 font-display text-white">Legal</h4>
                     <ul class="space-y-4 text-gray-400 font-sans">
-                        <li><a href="privacy-policy.html" class="hover:text-primary transition-colors">Privacy Policy</a></li>
-                        <li><a href="terms-conditions.html" class="hover:text-primary transition-colors">Terms of Service</a></li>
+                        <li><a href="privacy-policy.html" class="hover:text-primary transition-colors">Privacy
+                                Policy</a></li>
+                        <li><a href="terms-conditions.html" class="hover:text-primary transition-colors">Terms of
+                                Service</a></li>
                         <li><a href="cookies.html" class="hover:text-primary transition-colors">Cookie Policy</a></li>
                     </ul>
                 </div>
@@ -260,7 +327,49 @@
         </div>
     </footer>
 
+    <!-- Success Modal -->
+    <div id="successModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+        <div
+            class="relative bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl w-full max-w-md p-8 text-center animate-bounce-in">
+            <div
+                class="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span class="material-symbols-outlined text-5xl text-green-600">check_circle</span>
+            </div>
+            <h2 class="text-2xl font-bold font-display mb-4 text-gray-900 dark:text-white">Application Submitted!</h2>
+            <p class="text-gray-500 dark:text-gray-400 mb-6">Your loan application has been submitted successfully. You
+                can track its status from your dashboard.</p>
+            <a href="dashboard.html"
+                class="inline-block px-8 py-3 bg-primary text-white font-bold rounded-full hover:bg-primary/90 transition-all">
+                Go to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <style>
+        @keyframes bounce-in {
+            0% {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .animate-bounce-in {
+            animation: bounce-in 0.4s ease-out forwards;
+        }
+    </style>
+
     <script>
+        // Nav scroll effect
         window.addEventListener('scroll', () => {
             const nav = document.getElementById('mainNav');
             if (window.scrollY > 50) {
@@ -269,9 +378,77 @@
                 nav.classList.remove('nav-scrolled');
             }
         });
+
+        // Form submission handler
+        document.getElementById('loanApplicationForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            // Gather form data
+            const application = {
+                id: Date.now(),
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                bank: document.getElementById('bankName').value,
+                type: document.getElementById('loanType').value,
+                university: document.getElementById('university').value,
+                amount: document.getElementById('loanAmount').value,
+                purpose: document.getElementById('courseDetails').value,
+                status: 'pending',
+                date: new Date().toISOString()
+            };
+
+            // Load existing dashboard data
+            let dashboardData = JSON.parse(localStorage.getItem('dashboardData')) || {
+                applications: [],
+                documents: {
+                    aadhar: { uploaded: false, status: 'pending' },
+                    pan: { uploaded: false, status: 'pending' },
+                    passport: { uploaded: false, status: 'pending' },
+                    '10th': { uploaded: false, status: 'pending' },
+                    '12th': { uploaded: false, status: 'pending' },
+                    degree: { uploaded: false, status: 'pending' },
+                },
+                activity: []
+            };
+
+            // Add new application
+            dashboardData.applications.unshift(application);
+
+            // Add activity log
+            dashboardData.activity.unshift({
+                type: 'new_application',
+                description: `New ${formatLoanType(application.type)} application submitted to ${application.bank}`,
+                amount: application.amount,
+                date: new Date().toISOString()
+            });
+
+            // Save to localStorage
+            localStorage.setItem('dashboardData', JSON.stringify(dashboardData));
+
+            // Show success modal after a short delay
+            setTimeout(() => {
+                document.getElementById('successModal').classList.remove('hidden');
+            }, 500);
+        });
+
+        function formatLoanType(type) {
+            const types = {
+                education: 'Education Loan',
+                home: 'Home Loan',
+                personal: 'Personal Loan',
+                business: 'Business Loan',
+                vehicle: 'Vehicle Loan'
+            };
+            return types[type] || type;
+        }
     </script>
     <script src="assets/js/auth.js"></script>
-    <script src="assets/js/dashboard.js"></script>
 </body>
 
 </html>

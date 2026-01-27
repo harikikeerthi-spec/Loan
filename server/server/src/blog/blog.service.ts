@@ -153,6 +153,7 @@ export class BlogService {
         };
     }
 
+
     /**
      * Get blog by ID
      */
@@ -168,6 +169,98 @@ export class BlogService {
         return {
             success: true,
             data: blog,
+        };
+    }
+
+    /**
+     * Get most popular blogs by view count
+     */
+    async getPopularBlogs(limit = 10) {
+        const blogs = await this.prisma.blog.findMany({
+            where: {
+                isPublished: true,
+            },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                excerpt: true,
+                category: true,
+                authorName: true,
+                authorImage: true,
+                featuredImage: true,
+                readTime: true,
+                views: true,
+                publishedAt: true,
+            },
+            orderBy: {
+                views: 'desc',
+            },
+            take: limit,
+        });
+
+        return {
+            success: true,
+            data: blogs,
+        };
+    }
+
+    /**
+     * Get blog statistics
+     */
+    async getBlogStats(id: string) {
+        const blog = await this.prisma.blog.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                views: true,
+                category: true,
+                publishedAt: true,
+                createdAt: true,
+                updatedAt: true,
+                isFeatured: true,
+                isPublished: true,
+            },
+        });
+
+        if (!blog) {
+            throw new NotFoundException('Blog not found');
+        }
+
+        return {
+            success: true,
+            data: {
+                ...blog,
+                daysSincePublished: blog.publishedAt
+                    ? Math.floor((Date.now() - new Date(blog.publishedAt).getTime()) / (1000 * 60 * 60 * 24))
+                    : null,
+            },
+        };
+    }
+
+    /**
+     * Manually increment blog view count
+     */
+    async incrementBlogView(id: string) {
+        const blog = await this.prisma.blog.findUnique({
+            where: { id },
+        });
+
+        if (!blog) {
+            throw new NotFoundException('Blog not found');
+        }
+
+        const updated = await this.prisma.blog.update({
+            where: { id },
+            data: { views: { increment: 1 } },
+            select: { views: true },
+        });
+
+        return {
+            success: true,
+            views: updated.views,
         };
     }
 
