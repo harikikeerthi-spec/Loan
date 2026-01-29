@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Application Sync Test - LoanHero</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #6605c7;
+            border-bottom: 3px solid #6605c7;
+            padding-bottom: 10px;
+        }
+
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border-left: 4px solid #6605c7;
+        }
+
+        .status {
+            padding: 8px 16px;
+            border-radius: 6px;
+            display: inline-block;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        button {
+            background: #6605c7;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #5504a3;
+            transform: translateY(-2px);
+        }
+
+        .data-display {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+
+        .stat-box {
+            display: inline-block;
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #6605c7 0%, #8b3fcc 100%);
+            color: white;
+            border-radius: 8px;
+            margin: 10px;
+            min-width: 150px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .links {
+            margin: 30px 0;
+        }
+
+        .links a {
+            padding: 12px 24px;
+            background: #6605c7;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            margin: 5px;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+
+        .links a:hover {
+            background: #5504a3;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🧪 Application Synchronization Test Suite</h1>
+
+        <div class="test-section">
+            <h2>📊 Current Dashboard Statistics</h2>
+            <div id="stats">
+                <div class="stat-box">
+                    <span class="stat-number" id="totalApps">0</span>
+                    <span class="stat-label">Total Applications</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number" id="activeApps">0</span>
+                    <span class="stat-label">Active Applications</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-number" id="pendingApps">0</span>
+                    <span class="stat-label">Pending</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔧 Test Actions</h2>
+            <button onclick="refreshData()">🔄 Refresh Data</button>
+            <button onclick="addTestApplication()">➕ Add Test Application</button>
+            <button onclick="clearAllApplications()">🗑️ Clear All Applications</button>
+            <button onclick="viewRawData()">👁️ View Raw Data</button>
+        </div>
+
+        <div class="test-section">
+            <h2>📝 Recent Applications</h2>
+            <div id="applicationsList"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔗 Quick Navigation</h2>
+            <div class="links">
+                <a href="dashboard.html" target="_blank">Open Dashboard</a>
+                <a href="my-applications.html" target="_blank">Open My Applications</a>
+                <a href="apply-loan.html" target="_blank">Apply for Loan</a>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>ℹ️ Test Instructions</h2>
+            <ol>
+                <li><strong>Test 1 - Same Tab:</strong> Click "Apply for Loan" above, submit an application, then come
+                    back to this page and click "Refresh Data"</li>
+                <li><strong>Test 2 - Multiple Tabs:</strong> Open "Dashboard" in a new tab, then click "Add Test
+                    Application" here and watch the dashboard update</li>
+                <li><strong>Test 3 - Focus Change:</strong> Open Dashboard, switch to another app, come back and verify
+                    it reloads</li>
+                <li><strong>Test 4 - Visibility:</strong> Open Dashboard, switch tabs, come back and verify the data
+                    refreshes</li>
+            </ol>
+        </div>
+
+        <div id="rawDataDisplay" style="display: none;">
+            <div class="test-section">
+                <h2>📄 Raw localStorage Data</h2>
+                <pre class="data-display" id="rawData"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load and display data
+        function loadData() {
+            const dashboardData = JSON.parse(localStorage.getItem('dashboardData')) || {
+                applications: [],
+                documents: {},
+                activity: []
+            };
+
+            return dashboardData;
+        }
+
+        function refreshData() {
+            const data = loadData();
+
+            // Update statistics
+            const totalApps = data.applications.length;
+            const activeApps = data.applications.filter(a => a.status !== 'approved' && a.status !== 'rejected').length;
+            const pendingApps = data.applications.filter(a => a.status === 'pending').length;
+
+            document.getElementById('totalApps').textContent = totalApps;
+            document.getElementById('activeApps').textContent = activeApps;
+            document.getElementById('pendingApps').textContent = pendingApps;
+
+            // Display applications list
+            const listContainer = document.getElementById('applicationsList');
+
+            if (data.applications.length === 0) {
+                listContainer.innerHTML = '<div class="status info">No applications found. Try adding a test application or submitting one from the Apply Loan page.</div>';
+            } else {
+                listContainer.innerHTML = data.applications.map((app, index) => `
+                    <div style="background: white; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid ${getStatusColor(app.status)};">
+                        <strong>${app.firstName || 'N/A'} ${app.lastName || ''}</strong> - ${formatLoanType(app.type)}<br>
+                        <small>Bank: ${app.bank || 'N/A'} | Amount: ₹${formatAmount(app.amount)} | Status: <span class="status ${getStatusClass(app.status)}">${app.status}</span></small><br>
+                        <small>Date: ${new Date(app.date).toLocaleString()}</small>
+                    </div>
+                `).join('');
+            }
+
+            console.log('Data refreshed:', data);
+        }
+
+        function addTestApplication() {
+            const data = loadData();
+
+            const testApp = {
+                id: Date.now(),
+                firstName: 'Test',
+                lastName: 'User',
+                email: 'test@example.com',
+                phone: '+91 98765 43210',
+                bank: ['HDFC', 'SBI', 'ICICI', 'Axis'][Math.floor(Math.random() * 4)],
+                type: ['education', 'home', 'personal', 'business'][Math.floor(Math.random() * 4)],
+                university: 'Test University',
+                amount: Math.floor(Math.random() * 1000000) + 100000,
+                purpose: 'Test application created at ' + new Date().toLocaleTimeString(),
+                status: 'pending',
+                date: new Date().toISOString()
+            };
+
+            data.applications.unshift(testApp);
+            data.activity = data.activity || [];
+            data.activity.unshift({
+                type: 'new_application',
+                description: `Test ${formatLoanType(testApp.type)} application added`,
+                date: new Date().toISOString()
+            });
+
+            localStorage.setItem('dashboardData', JSON.stringify(data));
+
+            alert('✅ Test application added! Check the Dashboard tab if you have it open.');
+            refreshData();
+        }
+
+        function clearAllApplications() {
+            if (confirm('Are you sure you want to clear all applications? This cannot be undone!')) {
+                localStorage.removeItem('dashboardData');
+                alert('✅ All applications cleared!');
+                refreshData();
+            }
+        }
+
+        function viewRawData() {
+            const display = document.getElementById('rawDataDisplay');
+            const rawDataPre = document.getElementById('rawData');
+
+            if (display.style.display === 'none') {
+                const data = loadData();
+                rawDataPre.textContent = JSON.stringify(data, null, 2);
+                display.style.display = 'block';
+            } else {
+                display.style.display = 'none';
+            }
+        }
+
+        // Helper functions
+        function formatAmount(amount) {
+            return new Intl.NumberFormat('en-IN').format(amount || 0);
+        }
+
+        function formatLoanType(type) {
+            const types = {
+                education: 'Education Loan',
+                home: 'Home Loan',
+                personal: 'Personal Loan',
+                business: 'Business Loan',
+                vehicle: 'Vehicle Loan'
+            };
+            return types[type] || type || 'Loan';
+        }
+
+        function getStatusColor(status) {
+            const colors = {
+                pending: '#ffc107',
+                approved: '#28a745',
+                rejected: '#dc3545',
+                processing: '#007bff'
+            };
+            return colors[status] || '#6c757d';
+        }
+
+        function getStatusClass(status) {
+            return status === 'approved' ? 'success' :
+                status === 'rejected' ? 'error' : 'info';
+        }
+
+        // Auto-refresh on storage change (for multi-tab testing)
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'dashboardData') {
+                console.log('Storage changed in another tab!');
+                refreshData();
+
+                // Show notification
+                const notification = document.createElement('div');
+                notification.className = 'status success';
+                notification.style.position = 'fixed';
+                notification.style.top = '20px';
+                notification.style.right = '20px';
+                notification.style.zIndex = '1000';
+                notification.textContent = '✅ Data updated from another tab!';
+                document.body.appendChild(notification);
+
+                setTimeout(() => notification.remove(), 3000);
+            }
+        });
+
+        // Auto-refresh on page visibility change
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                console.log('Page became visible, refreshing data...');
+                refreshData();
+            }
+        });
+
+        // Auto-refresh on window focus
+        window.addEventListener('focus', () => {
+            console.log('Window focused, refreshing data...');
+            refreshData();
+        });
+
+        // Initial load
+        refreshData();
+        console.log('Test page loaded. Use the buttons above to test synchronization.');
+    </script>
+</body>
+
+</html>

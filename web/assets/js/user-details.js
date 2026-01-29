@@ -1,12 +1,13 @@
-// API Base URL
+// User profile details completion page for new/existing users without profile data
+// Uses unified OTP authentication flow
 const API_URL = 'http://localhost:3000';
 
-// Check if user is logged in
+// Verify user has been authenticated via OTP
 const accessToken = localStorage.getItem('accessToken');
 const userEmail = localStorage.getItem('userEmail');
 
 if (!accessToken || !userEmail) {
-    // User not logged in, redirect to login
+    // User not authenticated, redirect to unified login flow
     window.location.href = 'login.html';
 }
 
@@ -26,7 +27,7 @@ if (userDetailsForm) {
         const phoneNumber = phoneNumberInput.value.trim();
         const dateOfBirth = dateOfBirthInput.value;
 
-        // Basic validation
+        // Validate all required fields are filled
         if (!firstName) {
             showToast('Please enter your first name', 'error');
             firstNameInput.focus();
@@ -55,7 +56,7 @@ if (userDetailsForm) {
         submitBtn.textContent = 'Updating...';
 
         try {
-            console.log('Updating user details...');
+            // Submit profile details to complete registration/profile update
             const response = await fetch(`${API_URL}/auth/update-details`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -74,21 +75,20 @@ if (userDetailsForm) {
                 throw new Error(data.message || 'Failed to update profile');
             }
 
-            // Update localStorage with user details
+            // Persist user details to localStorage for quick access
             localStorage.setItem('firstName', firstName);
             localStorage.setItem('lastName', lastName);
             localStorage.setItem('userPhoneNumber', phoneNumber);
             localStorage.setItem('userDateOfBirth', dateOfBirth);
 
-            console.log('Profile updated successfully!');
             showToast('Profile completed successfully! Redirecting to home...', 'success');
 
-            // Redirect to homepage
+            // Redirect to homepage after profile completion
             setTimeout(() => {
                 window.location.href = 'index.html';
             }, 1500);
         } catch (error) {
-            console.error('Error details:', error);
+            console.error('Profile update error:', error);
             showToast('Error updating profile: ' + error.message, 'error');
             submitBtn.disabled = false;
             submitBtn.textContent = 'Complete Profile';

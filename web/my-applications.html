@@ -139,12 +139,64 @@
                         Calculator</a>
                 </div>
             </div>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-4 relative">
                 <a href="apply-loan.html"
                     class="hidden md:flex px-6 py-3 bg-primary text-white font-bold rounded-full hover:bg-primary/90 transition-all shadow-lg shadow-primary/20 items-center gap-2">
                     <span class="material-symbols-outlined">add</span>
                     New Application
                 </a>
+                <button id="profileBtn"
+                    class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                    <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
+                    <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white">User</span>
+                </button>
+
+                <!-- Profile Dropdown -->
+                <div id="profileDropdown"
+                    class="hidden absolute right-0 top-full mt-2 w-64 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 z-50">
+                    <div id="profileHeaderSection" class="p-6 border-b border-gray-200 dark:border-white/10">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-bold mb-1">
+                            Welcome back</p>
+                        <p id="dropdownName" class="text-lg font-bold text-gray-900 dark:text-white mb-1">User Name</p>
+                        <p id="dropdownEmail" class="text-sm text-gray-600 dark:text-gray-400">user@email.com</p>
+                    </div>
+
+                    <div class="p-4 space-y-2">
+                        <a href="user-details.html"
+                            class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                            <span class="material-symbols-outlined text-xl text-primary">person</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">Profile</span>
+                        </a>
+                        <a href="dashboard.html"
+                            class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                            <span class="material-symbols-outlined text-xl text-primary">dashboard</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">Dashboard</span>
+                        </a>
+                        <a href="my-applications.html"
+                            class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                            <span class="material-symbols-outlined text-xl text-primary">description</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">My Applications</span>
+                        </a>
+                        <a href="vault.html"
+                            class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                            <span class="material-symbols-outlined text-xl text-primary">security</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">Document Vault</span>
+                        </a>
+                        <a href="help.html"
+                            class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                            <span class="material-symbols-outlined text-xl text-primary">help</span>
+                            <span class="font-semibold text-gray-900 dark:text-white">Help & Support</span>
+                        </a>
+                    </div>
+
+                    <div class="p-4 border-t border-gray-200 dark:border-white/10">
+                        <button id="logoutBtn"
+                            class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors text-red-600 dark:text-red-400">
+                            <span class="material-symbols-outlined text-xl">logout</span>
+                            <span class="font-semibold">Logout</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </nav>
@@ -557,6 +609,28 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', loadApplications);
+
+        // Listen for storage changes to update applications in real-time
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'dashboardData') {
+                console.log('Applications updated from another source, reloading...');
+                loadApplications();
+            }
+        });
+
+        // Also check for updates when the window regains focus
+        window.addEventListener('focus', () => {
+            console.log('Window focused, checking for application updates...');
+            loadApplications();
+        });
+
+        // Check for updates when page becomes visible
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                console.log('Page became visible, checking for application updates...');
+                loadApplications();
+            }
+        });
     </script>
 </body>
 

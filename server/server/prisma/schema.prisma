@@ -8,16 +8,19 @@ datasource db {
 }
 
 model User {
-  id          String    @id @default(uuid())
-  email       String    @unique
-  firstName   String?
-  lastName    String?
-  phoneNumber String?
-  dateOfBirth DateTime?
-  mobile      String
-  password    String
-  createdAt   DateTime  @default(now())
-  blogs       Blog[]    @relation("AuthorBlogs")
+  id                String              @id @default(uuid())
+  email             String              @unique
+  firstName         String?
+  lastName          String?
+  phoneNumber       String?
+  dateOfBirth       DateTime?
+  mobile            String
+  password          String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @default(now()) @updatedAt
+  blogs             Blog[]              @relation("AuthorBlogs")
+  loanApplications  LoanApplication[]
+  documents         UserDocument[]
 }
 
 model Blog {
@@ -77,4 +80,39 @@ model BlogTag {
 
   @@id([blogId, tagId])
   @@index([tagId])
+}
+
+model LoanApplication {
+  id        String   @id @default(uuid())
+  userId    String
+  bank      String
+  loanType  String   // education, home, personal, business, vehicle
+  amount    Float
+  purpose   String?
+  status    String   @default("pending") // pending, processing, approved, rejected
+  date      DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([status])
+}
+
+model UserDocument {
+  id        String   @id @default(uuid())
+  userId    String
+  docType   String   // aadhar, pan, passport, 10th, 12th, degree
+  uploaded  Boolean  @default(false)
+  status    String   @default("pending") // pending, uploaded, verified, rejected
+  filePath  String?
+  uploadedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, docType])
+  @@index([userId])
+  @@index([docType])
 }
