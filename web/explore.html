@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Explore Community - LoanHero</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                    },
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    }
+                },
+            },
+        };
+    </script>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+
+    <!-- Background Structure -->
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none overflow-hidden">
+        <div class="absolute inset-0 bg-mesh-gradient opacity-80"></div>
+        <div class="absolute inset-0 opacity-20 mix-blend-overlay"
+            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="mainNav"
+        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
+        <div class="w-full max-w-7xl flex justify-between items-center">
+            <div class="flex items-center gap-12">
+                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
+                    <div
+                        class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg backdrop-blur-sm border border-white/20">
+                        <span class="material-symbols-outlined text-2xl">school</span>
+                    </div>
+                    <span class="font-bold text-2xl tracking-tight font-display text-white">LoanHero</span>
+                </a>
+                <div class="hidden lg:flex items-center gap-8">
+                    <a href="about-us.html"
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">About</a>
+                    <a href="how-it-works.html"
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">How It
+                        Works</a>
+                    <a href="explore.html"
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors border-b-2 border-primary">Community</a>
+                </div>
+            </div>
+            <div id="authButtons" class="flex items-center gap-4">
+                <a href="login.html"
+                    class="px-6 py-2.5 rounded-full text-sm font-bold text-white/90 hover:text-white transition-all">Sign
+                    In</a>
+                <a href="signup.html"
+                    class="px-6 py-2.5 bg-white text-primary rounded-full text-sm font-bold hover:scale-105 active:scale-95 transition-all shadow-xl">Join
+                    Now</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="relative z-10 pt-32 pb-24">
+        <div class="max-w-7xl mx-auto px-6">
+            <header class="text-center mb-16">
+                <span
+                    class="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-[0.2em] mb-4">Explore
+                    Community</span>
+                <h1 class="text-4xl md:text-6xl font-bold font-display text-gray-900 dark:text-white mb-6">Choose Your
+                    <span class="text-primary italic">Topic</span></h1>
+                <p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed">
+                    Dive into specific discussions, share your knowledge, and find answers to your most pressing
+                    questions about student life and financing.
+                </p>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Loan Types -->
+                <a href="engage.html?topic=loan-types"
+                    class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500">
+                    <div
+                        class="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 mb-6 group-hover:scale-110 transition-transform">
+                        <span class="material-symbols-outlined text-3xl">account_balance_wallet</span>
+                    </div>
+                    <h3 class="text-xl font-bold font-display mb-3 text-gray-900 dark:text-white">Loan Types</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+                        Compare education loans, personal loans for students, and secured vs unsecured options.
+                    </p>
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-primary">420 Active</span>
+                        <span
+                            class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </div>
+                </a>
+
+                <!-- Interest Rates -->
+                <a href="engage.html?topic=interest-rates"
+                    class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500">
+                    <div
+                        class="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-500 mb-6 group-hover:scale-110 transition-transform">
+                        <span class="material-symbols-outlined text-3xl">trending_up</span>
+                    </div>
+                    <h3 class="text-xl font-bold font-display mb-3 text-gray-900 dark:text-white">Interest Rates</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+                        Discuss latest Repo rates, MCLR, and how to negotiate for lower interest rates with banks.
+                    </p>
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-primary">150 Active</span>
+                        <span
+                            class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </div>
+                </a>
+
+                <!-- Repayment Options -->
+                <a href="engage.html?topic=repayment"
+                    class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500">
+                    <div
+                        class="w-14 h-14 bg-green-500/10 rounded-2xl flex items-center justify-center text-green-500 mb-6 group-hover:scale-110 transition-transform">
+                        <span class="material-symbols-outlined text-3xl">payments</span>
+                    </div>
+                    <h3 class="text-xl font-bold font-display mb-3 text-gray-900 dark:text-white">Repayment Options</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+                        Strategies for early repayment, moratorium periods, and managing EMIs after graduation.
+                    </p>
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-primary">280 Active</span>
+                        <span
+                            class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </div>
+                </a>
+
+                <!-- Discussions on Banks -->
+                <a href="engage.html?topic=banks"
+                    class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500">
+                    <div
+                        class="w-14 h-14 bg-orange-500/10 rounded-2xl flex items-center justify-center text-orange-500 mb-6 group-hover:scale-110 transition-transform">
+                        <span class="material-symbols-outlined text-3xl">account_balance</span>
+                    </div>
+                    <h3 class="text-xl font-bold font-display mb-3 text-gray-900 dark:text-white">Bank Reviews</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+                        Honest reviews about SBI, HDFC, ICICI, and international lenders like Prodigy.
+                    </p>
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-primary">890 Active</span>
+                        <span
+                            class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </div>
+                </a>
+
+                <!-- Government Schemes -->
+                <a href="engage.html?topic=schemes"
+                    class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500">
+                    <div
+                        class="w-14 h-14 bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 mb-6 group-hover:scale-110 transition-transform">
+                        <span class="material-symbols-outlined text-3xl">gavel</span>
+                    </div>
+                    <h3 class="text-xl font-bold font-display mb-3 text-gray-900 dark:text-white">Govt. Schemes</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+                        Stay updated on interest subvention schemes like CSIS and education subsidies.
+                    </p>
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-primary">120 Active</span>
+                        <span
+                            class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </div>
+                </a>
+
+                <!-- Accommodations -->
+                <a href="engage.html?topic=accommodation"
+                    class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500">
+                    <div
+                        class="w-14 h-14 bg-teal-500/10 rounded-2xl flex items-center justify-center text-teal-500 mb-6 group-hover:scale-110 transition-transform">
+                        <span class="material-symbols-outlined text-3xl">home_work</span>
+                    </div>
+                    <h3 class="text-xl font-bold font-display mb-3 text-gray-900 dark:text-white">Accommodation</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+                        Find roommates, discuss student housing in UK, USA, Canada, and Australia.
+                    </p>
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-primary">2.1k Active</span>
+                        <span
+                            class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-[#190f23] text-white py-20 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 text-center text-gray-500 text-xs font-sans">
+            <p>&copy; 2026 LoanHero Inc. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('mainNav');
+            if (window.scrollY > 50) {
+                nav.classList.add('nav-scrolled');
+            } else {
+                nav.classList.remove('nav-scrolled');
+            }
+        });
+    </script>
+</body>
+
+</html>

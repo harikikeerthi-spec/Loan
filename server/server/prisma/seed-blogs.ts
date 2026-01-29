@@ -294,6 +294,132 @@ const sampleBlogs = [
         isPublished: true,
         publishedAt: new Date('2026-01-01'),
     },
+    {
+        title: 'Mastering Standardized Tests: A Financial Perspective',
+        slug: 'mastering-standardized-tests-financial-perspective',
+        excerpt: 'How GRE, GMAT, and TOEFL scores impact your loan eligibility and interest rates. Investing in prep is investing in your loan terms.',
+        content: `
+<h2>Introduction</h2>
+<p>Standardized tests like the GRE, GMAT, and SAT are often seen as hurdles for admission. However, they are also critical financial documents. Banks view high test scores as indicators of high employability, which can significantly lower your loan interest rates.</p>
+
+<h2>How Scores Impact Loans</h2>
+<p>Lenders use your test scores as part of their risk assessment. A student with a 330 GRE score is often eligible for "Premium University" loan rates, which can be 0.5% to 1.5% lower than standard rates.</p>
+
+<h2>Prep as an Investment</h2>
+<p>If spending $500 on a prep course saves you 1% in interest on a $50,000 loan over 10 years, that's a saving of over $3,000. The ROI on test prep is one of the highest in your study-abroad journey.</p>
+
+<h2>Score-Based Scholarships</h2>
+<p>Most merit-based scholarships are heavily weighted toward these scores. Reducing your principal amount through a scholarship is the best way to manage debt.</p>
+
+<h2>Conclusion</h2>
+<p>Don't just aim for "passing" scores. Aim for scores that make you a "low-risk" borrower in the eyes of financial institutions.</p>
+        `,
+        category: 'Study Abroad',
+        authorName: 'Anjali Menon',
+        authorRole: 'Test Prep Expert',
+        authorImage: 'assets/img/avatar_2.png',
+        featuredImage: 'assets/img/blog_1.png',
+        readTime: 7,
+        isFeatured: false,
+        isPublished: true,
+        publishedAt: new Date('2026-01-20'),
+    },
+    {
+        title: 'Accommodation Hacks for London & New York',
+        slug: 'accommodation-hacks-london-ny',
+        excerpt: 'The hidden rental markets in the worlds most expensive cities. How to find a safe home without breaking your student budget.',
+        content: `
+<h2>The Reality of Big City Housing</h2>
+<p>London and New York City are notorious for high rents. For an international student, this can be the largest part of your monthly spend.</p>
+
+<h2>1. Look Beyond Zone 1 & 2 (London)</h2>
+<p>Zones 3 and 4 offer significantly lower rents with manageable commutes. Look for areas like Stratford or Wembley which have excellent connectivity.</p>
+
+<h2>2. The "Guarantor" Problem</h2>
+<p>Most private landlords in NYC require a US-based guarantor who earns 80x the rent. For students, companies like Insurent or TheGuarantors can act as your institutional guarantor for a fee.</p>
+
+<h2>3. Use Student Hubs</h2>
+<p>Platforms like SpareRoom, UniLodge, and Facebook University Groups are better than traditional real estate agents for finding roommates.</p>
+
+<h2>4. Budget for Utilities</h2>
+<p>Remember to check if "Bills are Included." In London, Council Tax is a big cost, but full-time students are exempt—make sure you get your exemption certificate from the uni!</p>
+
+<h2>Summary</h2>
+<p>Start your search at least 12 weeks before your flight. Never pay a deposit before seeing the place or verifying the landlord via video call.</p>
+        `,
+        category: 'Financial Tips',
+        authorName: 'David Wilson',
+        authorRole: 'International Student Alumni',
+        authorImage: 'assets/img/avatar_3.png',
+        featuredImage: 'assets/img/blog_2.png',
+        readTime: 6,
+        isFeatured: false,
+        isPublished: true,
+        publishedAt: new Date('2026-01-22'),
+    },
+    {
+        title: 'Tax Benefits on Education Loans: Section 80E Explained',
+        slug: 'tax-benefits-education-loans-80e',
+        excerpt: 'Did you know the interest you pay on your education loan is fully tax-deductible? Here is how to maximize your savings.',
+        content: `
+<h2>What is Section 80E?</h2>
+<p>Under the Indian Income Tax Act, Section 80E allows you to claim a deduction for the interest paid on an education loan taken for higher studies.</p>
+
+<h2>1. Who can claim it?</h2>
+<p>Only the individual who has taken the loan can claim the deduction. It can be for their own studies, or for studies of their spouse or children.</p>
+
+<h2>2. No Upper Limit</h2>
+<p>Unlike other deductions, there is no maximum limit on the amount of interest you can claim. The entire interest component of your EMI is deductible.</p>
+
+<h2>3. The 8-Year Rule</h2>
+<p>The deduction is available for a maximum of 8 years or until the interest is fully repaid, whichever is earlier.</p>
+
+<h2>4. Approved Lenders Only</h2>
+<p>The loan must be taken from a scheduled bank or an approved financial institution. Loans from family or friends do not qualify.</p>
+
+<h2>Pro Tip</h2>
+<p>If your parents are the co-borrowers and are in a higher tax bracket, taking the loan in their name can lead to greater household tax savings.</p>
+        `,
+        category: 'Education Loans',
+        authorName: 'Suresh Iyer',
+        authorRole: 'Tax Consultant',
+        authorImage: 'assets/img/avatar_1.png',
+        featuredImage: 'assets/img/blog_3.png',
+        readTime: 5,
+        isFeatured: false,
+        isPublished: true,
+        publishedAt: new Date('2026-01-25'),
+    },
+    {
+        title: 'Mental Health Abroad: Staying Resilient',
+        slug: 'mental-health-abroad-resilience',
+        excerpt: 'Dealing with loneliness, academic pressure, and cultural shock. Strategies for a healthy mind while chasing your dreams.',
+        content: `
+<h2>The Unspoken Challenge</h2>
+<p>While everyone talks about visas and loans, the mental health of international students is often ignored. Isolation and "Imposter Syndrome" are common but manageable.</p>
+
+<h2>Dealing with Cultural Shock</h2>
+<p>Everything from the weather to the social cues will be different. Give yourself a 3-month "grace period" to feel out of place—it is part of the growth process.</p>
+
+<h2>Building a Support System</h2>
+<p>Join student societies immediately. Do not just stick to your own community; diversity is the best cure for homesickness.</p>
+
+<h2>Universities Resources</h2>
+<p>Most universities in the UK, USA, and Australia offer free, confidential counseling services. Use them. They are experts in student-specific stress like homesickness and exam anxiety.</p>
+
+<h2>Routine is Key</h2>
+<p>Keep a regular sleep schedule and try to cook familiar food at least once a week. Small comforts go a long way in stabilizing your mood.</p>
+        `,
+        category: 'Success Stories',
+        authorName: 'Dr. Sarah Smith',
+        authorRole: 'Student Counselor',
+        authorImage: 'assets/img/avatar_2.png',
+        featuredImage: 'assets/img/blog_1.png',
+        readTime: 8,
+        isFeatured: false,
+        isPublished: true,
+        publishedAt: new Date('2026-01-28'),
+    },
 ];
 
 async function main() {

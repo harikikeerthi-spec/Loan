@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Engage Community - LoanHero</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                    },
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    }
+                },
+            },
+        };
+    </script>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+
+    <!-- Background -->
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none overflow-hidden">
+        <div class="absolute inset-0 bg-mesh-gradient opacity-80"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="mainNav"
+        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
+        <div class="w-full max-w-7xl flex justify-between items-center">
+            <div class="flex items-center gap-12">
+                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
+                    <div
+                        class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg backdrop-blur-sm border border-white/20">
+                        <span class="material-symbols-outlined text-2xl">school</span>
+                    </div>
+                    <span class="font-bold text-2xl tracking-tight font-display text-white">LoanHero</span>
+                </a>
+                <div class="hidden lg:flex items-center gap-8">
+                    <a href="explore.html"
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">arrow_back</span> Back to Explore
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="relative z-10 pt-32 pb-24">
+        <div class="max-w-4xl mx-auto px-6">
+            <div class="mb-12">
+                <span id="topicBadge"
+                    class="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-[0.2em] mb-4">Topic</span>
+                <h1 id="topicTitle"
+                    class="text-3xl md:text-5xl font-bold font-display text-gray-900 dark:text-white capitalize">Loading
+                    Topic...</h1>
+            </div>
+
+            <div class="space-y-6">
+                <!-- Create Post Box -->
+                <div class="glass-card p-6 rounded-3xl border-primary/20 shadow-lg">
+                    <div class="flex gap-4">
+                        <div
+                            class="w-12 h-12 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-500">
+                            <span class="material-symbols-outlined">person</span>
+                        </div>
+                        <div class="flex-1">
+                            <textarea placeholder="Share your thoughts or ask a question..."
+                                class="w-full bg-zinc-100/50 dark:bg-zinc-900/50 border-none rounded-2xl p-4 text-sm focus:ring-1 focus:ring-primary outline-none transition-all dark:text-white min-h-[100px]"></textarea>
+                            <div class="flex justify-between items-center mt-4">
+                                <div class="flex gap-2">
+                                    <button
+                                        class="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-gray-500 transition-colors">
+                                        <span class="material-symbols-outlined text-xl">image</span>
+                                    </button>
+                                    <button
+                                        class="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-gray-500 transition-colors">
+                                        <span class="material-symbols-outlined text-xl">link</span>
+                                    </button>
+                                </div>
+                                <button
+                                    class="px-8 py-2.5 bg-primary text-white rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20">Post</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sample Discussion Posts -->
+                <div id="postsContainer" class="space-y-6">
+                    <!-- Post 1 -->
+                    <div class="glass-card p-8 rounded-3xl group">
+                        <div class="flex items-start justify-between mb-6">
+                            <div class="flex gap-4">
+                                <img src="assets/img/avatar_3.png" class="w-12 h-12 rounded-full object-cover"
+                                    alt="User">
+                                <div>
+                                    <h4 class="font-bold text-gray-900 dark:text-white">Arun Kumar</h4>
+                                    <p class="text-xs text-gray-500">2 hours ago • MSc Data Science @ London</p>
+                                </div>
+                            </div>
+                            <button class="text-gray-400 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined">more_vert</span>
+                            </button>
+                        </div>
+                        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 font-sans">
+                            Has anyone recently applied for an SBI education loan for the UK? I heard they've
+                            streamlined the collateral process for top universities. Any tips on how to speed up the
+                            sanction letter?
+                        </p>
+                        <div class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">arrow_upward</span> 24 Likes
+                            </button>
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">chat_bubble</span> 12 Comments
+                            </button>
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">share</span> Share
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Post 2 -->
+                    <div class="glass-card p-8 rounded-3xl group">
+                        <div class="flex items-start justify-between mb-6">
+                            <div class="flex gap-4">
+                                <img src="assets/img/avatar_2.png" class="w-12 h-12 rounded-full object-cover"
+                                    alt="User">
+                                <div>
+                                    <h4 class="font-bold text-gray-900 dark:text-white">Priya Sharma</h4>
+                                    <p class="text-xs text-gray-500">5 hours ago • Engineering @ Berlin</p>
+                                </div>
+                            </div>
+                            <button class="text-gray-400 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined">more_vert</span>
+                            </button>
+                        </div>
+                        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 font-sans">
+                            Friendly reminder for everyone looking for accommodation in Germany: Start searching at
+                            least 4 months in advance! The WG market is very competitive right now.
+                        </p>
+                        <div class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">arrow_upward</span> 56 Likes
+                            </button>
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">chat_bubble</span> 8 Comments
+                            </button>
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">share</span> Share
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Topic Title Handling
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const topic = params.get('topic');
+            const topicTitle = document.getElementById('topicTitle');
+            const topicBadge = document.getElementById('topicBadge');
+
+            if (topic) {
+                const cleanTopic = topic.replace(/-/g, ' ');
+                topicTitle.textContent = cleanTopic;
+                topicBadge.textContent = 'Topic: ' + cleanTopic;
+            }
+        });
+
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('mainNav');
+            if (window.scrollY > 50) {
+                nav.classList.add('nav-scrolled');
+            } else {
+                nav.classList.remove('nav-scrolled');
+            }
+        });
+    </script>
+</body>
+
+</html>

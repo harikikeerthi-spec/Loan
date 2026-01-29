@@ -75,12 +75,6 @@ if (userDetailsForm) {
                 throw new Error(data.message || 'Failed to update profile');
             }
 
-            // Persist user details to localStorage for quick access
-            localStorage.setItem('firstName', firstName);
-            localStorage.setItem('lastName', lastName);
-            localStorage.setItem('userPhoneNumber', phoneNumber);
-            localStorage.setItem('userDateOfBirth', dateOfBirth);
-
             showToast('Profile completed successfully! Redirecting to home...', 'success');
 
             // Redirect to homepage after profile completion
