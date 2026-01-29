@@ -663,6 +663,53 @@ export class BlogService {
     }
 
     /**
+     * Get all tags with usage count
+     */
+    async getAllTags(limit?: number) {
+        // Get all tags with their blog count
+        const tags = await this.prisma.tag.findMany({
+            select: {
+                id: true,
+                name: true,
+                slug: true,
+                blogs: {
+                    where: {
+                        blog: {
+                            isPublished: true,
+                        },
+                    },
+                    select: {
+                        blogId: true,
+                    },
+                },
+            },
+            orderBy: {
+                name: 'asc',
+            },
+        });
+
+        // Count blogs per tag and sort by count
+        let tagsWithCount = tags
+            .map((tag) => ({
+                name: tag.name,
+                slug: tag.slug,
+                count: tag.blogs.length,
+            }))
+            .filter((tag) => tag.count > 0) // Only return tags used in published blogs
+            .sort((a, b) => b.count - a.count);
+
+        // Apply limit if specified
+        if (limit) {
+            tagsWithCount = tagsWithCount.slice(0, limit);
+        }
+
+        return {
+            success: true,
+            data: tagsWithCount,
+        };
+    }
+
+    /**
      * Search blogs by tag name (handles #tag syntax)
      */
     async searchBlogsByTag(tag: string, limit = 10, offset = 0) {

@@ -609,13 +609,8 @@
                                 <span class="material-symbols-outlined text-lg">link</span>
                             </button>
                         </div>
-                        <div class="flex flex-wrap gap-2">
-                            <span
-                                class="px-3 py-1.5 bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400 text-xs font-bold rounded-full">#EducationLoan</span>
-                            <span
-                                class="px-3 py-1.5 bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400 text-xs font-bold rounded-full">#StudyAbroad</span>
-                            <span
-                                class="px-3 py-1.5 bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400 text-xs font-bold rounded-full">#FinancialPlanning</span>
+                        <div id="article-tags" class="flex flex-wrap gap-2">
+                            <!-- Tags will be loaded dynamically -->
                         </div>
                     </div>
                 </div>
@@ -669,6 +664,63 @@
                 </aside>
             </div>
         </article>
+
+        <!-- Comments Section -->
+        <section class="max-w-4xl mx-auto px-6 pb-16">
+            <h2 class="text-3xl font-display font-bold text-gray-900 dark:text-white mb-8">Comments</h2>
+
+            <!-- Comment Form -->
+            <div class="glass-card rounded-3xl p-8 mb-12">
+                <h3 class="text-xl font-display font-bold text-gray-900 dark:text-white mb-6">Leave a Comment</h3>
+                <form id="comment-form" class="space-y-6">
+                    <div>
+                        <label for="comment-author"
+                            class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                            Your Name *
+                        </label>
+                        <input type="text" id="comment-author" name="author" required
+                            class="w-full bg-white dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary focus:border-transparent shadow-sm outline-none dark:text-white"
+                            placeholder="Enter your name" />
+                    </div>
+                    <div>
+                        <label for="comment-content"
+                            class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                            Your Comment *
+                        </label>
+                        <textarea id="comment-content" name="content" required rows="5"
+                            class="w-full bg-white dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary focus:border-transparent shadow-sm outline-none dark:text-white resize-none"
+                            placeholder="Share your thoughts..."></textarea>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <p class="text-xs text-gray-500 dark:text-gray-400">Your comment will be publicly visible.</p>
+                        <button type="submit"
+                            class="bg-primary text-white px-8 py-3 rounded-full font-bold uppercase tracking-wider text-xs hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/30">
+                            Post Comment
+                        </button>
+                    </div>
+                    <div id="comment-message" class="hidden mt-4 p-4 rounded-xl"></div>
+                </form>
+            </div>
+
+            <!-- Comments List -->
+            <div id="comments-container">
+                <!-- Loading Spinner -->
+                <div id="comments-loading" class="flex justify-center items-center py-12">
+                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+                </div>
+
+                <!-- Comments will be loaded here -->
+                <div id="comments-list" class="space-y-6"></div>
+
+                <!-- No Comments Message -->
+                <div id="no-comments" class="hidden text-center py-12">
+                    <span
+                        class="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-4 block">chat_bubble_outline</span>
+                    <p class="text-gray-500 dark:text-gray-400 font-sans">No comments yet. Be the first to share your
+                        thoughts!</p>
+                </div>
+            </div>
+        </section>
 
         <!-- Related Articles -->
         <section id="related-section" class="max-w-7xl mx-auto px-6 pb-24">

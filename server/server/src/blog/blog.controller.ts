@@ -79,6 +79,17 @@ export class BlogController {
     }
 
     /**
+     * Get all tags with count
+     * GET /blogs/tags
+     * @query limit - Number of tags to return (optional)
+     * @returns { success: boolean, data: { name: string, count: number, slug: string }[] }
+     */
+    @Get('tags')
+    async getAllTags(@Query('limit') limit?: string) {
+        return this.blogService.getAllTags(limit ? parseInt(limit, 10) : undefined);
+    }
+
+    /**
      * Search blogs by tag (supports #tag syntax)
      * GET /blogs/tags/:tag
      * @param tag - Tag name or #tag value

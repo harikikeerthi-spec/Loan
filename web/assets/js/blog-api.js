@@ -48,6 +48,13 @@ function createBlogCard(blog, index) {
                     </div>
                     <span class="text-xs text-gray-400">${blog.readTime} min read</span>
                 </div>
+                ${blog.tags && blog.tags.length > 0 ? `
+                    <div class="flex flex-wrap gap-2 mt-4">
+                        ${blog.tags.slice(0, 3).map(tag => `
+                            <span class="px-2 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded-full">#${tag}</span>
+                        `).join('')}
+                    </div>
+                ` : ''}
             </div>
         </a>
     `;
@@ -245,15 +252,32 @@ async function initBlogListingPage() {
     let currentOffset = 0;
     const limit = 6;
     let currentCategory = null;
+    let currentTag = getUrlParam('tag'); // Check for tag in URL
 
     // Show loading state
     if (loadingSpinner) loadingSpinner.classList.remove('hidden');
 
-    // Load featured blog
-    if (featuredSection) {
-        const featuredResult = await fetchFeaturedBlog();
-        if (featuredResult.success && featuredResult.data) {
-            featuredSection.innerHTML = createFeaturedBlog(featuredResult.data);
+    // Update page heading if filtering by tag
+    if (currentTag) {
+        const pageHeading = document.getElementById('page-heading');
+        const pageDescription = document.getElementById('page-description');
+        if (pageHeading) {
+            pageHeading.innerHTML = `Posts tagged <span class="italic text-primary font-normal">#${currentTag}</span>`;
+        }
+        if (pageDescription) {
+            pageDescription.innerHTML = `Showing all blog posts tagged with #${currentTag}. <a href="blog.html" class="text-primary hover:underline">View all posts</a>`;
+        }
+        // Hide featured section when filtering by tag
+        if (featuredSection) {
+            featuredSection.parentElement.style.display = 'none';
+        }
+    } else {
+        // Load featured blog only when not filtering
+        if (featuredSection) {
+            const featuredResult = await fetchFeaturedBlog();
+            if (featuredResult.success && featuredResult.data) {
+                featuredSection.innerHTML = createFeaturedBlog(featuredResult.data);
+            }
         }
     }
 
@@ -297,17 +321,30 @@ async function initBlogListingPage() {
     async function loadBlogs(reset = false) {
         if (loadingSpinner) loadingSpinner.classList.remove('hidden');
 
-        const options = {
-            limit,
-            offset: currentOffset,
-            featured: false  // Exclude featured from grid
-        };
+        let result;
 
-        if (currentCategory) {
-            options.category = currentCategory;
+        // If filtering by tag, use tag search API
+        if (currentTag) {
+            const response = await fetch(`${API_BASE_URL}/blogs/tags/${encodeURIComponent(currentTag)}?limit=${limit}&offset=${currentOffset}`);
+            if (response.ok) {
+                result = await response.json();
+            } else {
+                result = { success: false, data: [] };
+            }
+        } else {
+            // Regular blog listing
+            const options = {
+                limit,
+                offset: currentOffset,
+                featured: false  // Exclude featured from grid
+            };
+
+            if (currentCategory) {
+                options.category = currentCategory;
+            }
+
+            result = await fetchBlogs(options);
         }
-
-        const result = await fetchBlogs(options);
 
         if (loadingSpinner) loadingSpinner.classList.add('hidden');
 
@@ -340,6 +377,185 @@ async function initBlogListingPage() {
     if (loadMoreBtn) {
         loadMoreBtn.addEventListener('click', () => loadBlogs(false));
     }
+}
+
+/**
+ * Fetch comments for a blog
+ */
+async function fetchComments(blogId, limit = 20, offset = 0) {
+    try {
+        const params = new URLSearchParams();
+        params.append('limit', limit);
+        params.append('offset', offset);
+
+        const response = await fetch(`${API_BASE_URL}/blogs/${blogId}/comments?${params.toString()}`);
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch comments');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error fetching comments:', error);
+        return { success: false, data: [], error: error.message };
+    }
+}
+
+/**
+ * Post a comment to a blog
+ */
+async function postComment(blogId, author, content) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/blogs/${blogId}/comments`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ author, content }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to post comment');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error posting comment:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Create comment HTML
+ */
+function createCommentHTML(comment) {
+    const timeAgo = getTimeAgo(comment.createdAt);
+
+    return `
+        <div class="glass-card rounded-2xl p-6">
+            <div class="flex items-start gap-4">
+                <div class="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-xl">person</span>
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-bold text-gray-900 dark:text-white">${escapeHTML(comment.author)}</h4>
+                        <span class="text-xs text-gray-400">${timeAgo}</span>
+                    </div>
+                    <p class="text-gray-600 dark:text-gray-400 leading-relaxed">${escapeHTML(comment.content)}</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Get time ago string
+ */
+function getTimeAgo(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+
+    if (seconds < 60) return 'Just now';
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
+    if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
+    if (seconds < 604800) return `${Math.floor(seconds / 86400)} days ago`;
+
+    return formatDate(dateString);
+}
+
+/**
+ * Escape HTML to prevent XSS
+ */
+function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+/**
+ * Initialize comments for a blog
+ */
+async function initBlogComments(blogId) {
+    const commentsList = document.getElementById('comments-list');
+    const commentsLoading = document.getElementById('comments-loading');
+    const noComments = document.getElementById('no-comments');
+    const commentForm = document.getElementById('comment-form');
+    const commentMessage = document.getElementById('comment-message');
+
+    // Load comments
+    async function loadComments() {
+        if (commentsLoading) commentsLoading.classList.remove('hidden');
+        if (noComments) noComments.classList.add('hidden');
+
+        const result = await fetchComments(blogId);
+
+        if (commentsLoading) commentsLoading.classList.add('hidden');
+
+        if (result.success && result.data && result.data.length > 0) {
+            const commentsHTML = result.data.map(comment => createCommentHTML(comment)).join('');
+            if (commentsList) commentsList.innerHTML = commentsHTML;
+        } else {
+            if (commentsList) commentsList.innerHTML = '';
+            if (noComments) noComments.classList.remove('hidden');
+        }
+    }
+
+    // Handle comment form submission
+    if (commentForm) {
+        commentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const author = document.getElementById('comment-author').value.trim();
+            const content = document.getElementById('comment-content').value.trim();
+
+            if (!author || !content) {
+                showMessage('Please fill in all fields', 'error');
+                return;
+            }
+
+            // Disable form during submission
+            const submitBtn = commentForm.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Posting...';
+
+            const result = await postComment(blogId, author, content);
+
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Post Comment';
+
+            if (result.success) {
+                showMessage('Comment posted successfully!', 'success');
+                commentForm.reset();
+                // Reload comments
+                await loadComments();
+            } else {
+                showMessage(result.error || 'Failed to post comment', 'error');
+            }
+        });
+    }
+
+    function showMessage(message, type) {
+        if (!commentMessage) return;
+
+        commentMessage.textContent = message;
+        commentMessage.classList.remove('hidden', 'bg-green-50', 'text-green-800', 'bg-red-50', 'text-red-800',
+            'dark:bg-green-900/20', 'dark:text-green-400', 'dark:bg-red-900/20', 'dark:text-red-400');
+
+        if (type === 'success') {
+            commentMessage.classList.add('bg-green-50', 'text-green-800', 'dark:bg-green-900/20', 'dark:text-green-400');
+        } else {
+            commentMessage.classList.add('bg-red-50', 'text-red-800', 'dark:bg-red-900/20', 'dark:text-red-400');
+        }
+
+        setTimeout(() => {
+            commentMessage.classList.add('hidden');
+        }, 5000);
+    }
+
+    // Initial load
+    await loadComments();
 }
 
 /**
@@ -394,6 +610,21 @@ async function initBlogArticlePage() {
     if (viewCount) viewCount.textContent = `${blog.views.toLocaleString()} views`;
     if (articleContent) articleContent.innerHTML = blog.content;
 
+    // Render tags
+    const articleTags = document.getElementById('article-tags');
+    if (articleTags && blog.tags && blog.tags.length > 0) {
+        const tagsHTML = blog.tags.map(tag => `
+            <a href="blog.html?tag=${encodeURIComponent(tag)}"
+                class="px-3 py-1.5 bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-gray-400 text-xs font-bold rounded-full hover:bg-primary hover:text-white transition-all cursor-pointer">
+                #${tag}
+            </a>
+        `).join('');
+        articleTags.innerHTML = tagsHTML;
+    }
+
+    // Initialize comments
+    await initBlogComments(blog.id);
+
     // Fetch and display related blogs
     if (relatedBlogs) {
         const relatedResult = await fetchRelatedBlogs(blog.category, slug, 3);
@@ -420,8 +651,11 @@ window.BlogAPI = {
     fetchCategories,
     fetchRelatedBlogs,
     searchBlogs,
+    fetchComments,
+    postComment,
     initBlogListingPage,
     initBlogArticlePage,
+    initBlogComments,
     createBlogCard,
     createFeaturedBlog,
     formatDate,
