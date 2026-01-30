@@ -1,0 +1,95 @@
+
+📚 Total Blogs in Database: 15
+
+Blogs:
+---------------------------------------------------
+1. Building Your Network in a New Country
+   ID: 69f9e749-e490-4aea-a615-aff78c96f914
+   Slug: building-network-new-country
+   Status: ✅ Published
+   Views: 1
+---------------------------------------------------
+2. Mental Health Abroad: Staying Resilient
+   ID: fd7139bd-760a-4b43-8711-11be49fb467f
+   Slug: mental-health-abroad-resilience
+   Status: ✅ Published
+   Views: 0
+---------------------------------------------------
+3. Tax Benefits on Education Loans: Section 80E Explained
+   ID: 4ac3b8bb-e865-4790-9f60-6c7cfa8b0775
+   Slug: tax-benefits-education-loans-80e
+   Status: ✅ Published
+   Views: 0
+---------------------------------------------------
+4. Accommodation Hacks for London & New York
+   ID: b72f40e7-ee90-4775-872a-8269af92c9bd
+   Slug: accommodation-hacks-london-ny
+   Status: ✅ Published
+   Views: 0
+---------------------------------------------------
+5. Mastering Standardized Tests: A Financial Perspective
+   ID: 4f81f02c-651e-49ed-b3bb-a0cdc3c705b0
+   Slug: mastering-standardized-tests-financial-perspective
+   Status: ✅ Published
+   Views: 1
+---------------------------------------------------
+6. Understanding Interest Rates: Fixed vs Floating
+   ID: 6ad9e57d-9616-4011-b65f-84d0bd7a05b2
+   Slug: fixed-vs-floating-interest-rates
+   Status: ✅ Published
+   Views: 2
+---------------------------------------------------
+7. The Future of Fintech in Education
+   ID: bf6483d5-e526-4ce6-b78c-b30ec25f34ab
+   Slug: future-of-fintech-education
+   Status: ✅ Published
+   Views: 3
+---------------------------------------------------
+8. Managing Your Finances While Studying Abroad
+   ID: 50354b07-7520-41cd-b979-98abcac03f28
+   Slug: managing-finances-abroad
+   Status: ✅ Published
+   Views: 1
+---------------------------------------------------
+9. Top 10 Tips for Securing an Education Loan
+   ID: eaa7817f-bd50-4562-9474-9b33676b1b66
+   Slug: top-10-tips-education-loan
+   Status: ✅ Published
+   Views: 1
+---------------------------------------------------
+10. Visa Application Tips for Student Loans
+   ID: e2f46a6e-bec0-4ce1-b302-fd7b561c91e5
+   Slug: visa-application-tips-student-loans
+   Status: ✅ Published
+   Views: 3
+---------------------------------------------------
+11. Understanding EMI: How Your Loan Repayment Works
+   ID: 198135cc-91b2-4601-afd2-9857b0406fa9
+   Slug: understanding-emi-loan-repayment
+   Status: ✅ Published
+   Views: 2
+---------------------------------------------------
+12. Success Story: From Small Town to Stanford
+   ID: 1fc7673c-8219-4256-8bf1-b735fb394dd6
+   Slug: success-story-small-town-to-stanford
+   Status: ✅ Published
+   Views: 1
+---------------------------------------------------
+13. How to Save Money While Studying Abroad
+   ID: 3fd4463c-6d8e-4fe4-ad21-f3b0a22812e8
+   Slug: how-to-save-money-studying-abroad
+   Status: ✅ Published
+   Views: 6
+---------------------------------------------------
+14. Top 10 Countries for International Students in 2026
+   ID: ee5b22f2-8b8e-4394-a47d-57a1dfaf2690
+   Slug: top-10-countries-international-students-2026
+   Status: ✅ Published
+   Views: 1
+---------------------------------------------------
+15. Complete Guide to Education Loans in 2026: Everything You Need to Know
+   ID: 0ece36d4-8cd9-48bb-b783-b011de80c499
+   Slug: complete-guide-education-loans-2026
+   Status: ✅ Published
+   Views: 7
+---------------------------------------------------

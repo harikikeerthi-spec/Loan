@@ -851,4 +851,192 @@ export class BlogService {
             },
         };
     }
+
+    // ==================== ADMIN METHODS ====================
+
+    /**
+     * Get all blogs (including unpublished) for admin
+     */
+    async getAllBlogsAdmin(options?: {
+        limit?: number;
+        offset?: number;
+    }) {
+        const { limit = 50, offset = 0 } = options || {};
+
+        const blogs = await this.prisma.blog.findMany({
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                excerpt: true,
+                category: true,
+                authorName: true,
+                authorImage: true,
+                authorRole: true,
+                featuredImage: true,
+                readTime: true,
+                views: true,
+                isFeatured: true,
+                isPublished: true,
+                publishedAt: true,
+                createdAt: true,
+                updatedAt: true,
+                tags: {
+                    select: {
+                        tag: {
+                            select: { name: true },
+                        },
+                    },
+                },
+            },
+            orderBy: [
+                { createdAt: 'desc' },
+            ],
+            take: limit,
+            skip: offset,
+        });
+
+        const total = await this.prisma.blog.count();
+
+        return {
+            success: true,
+            data: blogs.map((blog) => this.mapTags(blog)),
+            pagination: {
+                total,
+                limit,
+                offset,
+                hasMore: offset + blogs.length < total,
+            },
+        };
+    }
+
+    /**
+     * Get blog statistics for admin dashboard
+     */
+    async getBlogStatistics() {
+        const [total, published, draft, featured] = await Promise.all([
+            this.prisma.blog.count(),
+            this.prisma.blog.count({ where: { isPublished: true } }),
+            this.prisma.blog.count({ where: { isPublished: false } }),
+            this.prisma.blog.count({ where: { isFeatured: true, isPublished: true } }),
+        ]);
+
+        const totalViews = await this.prisma.blog.aggregate({
+            _sum: {
+                views: true,
+            },
+        });
+
+        return {
+            success: true,
+            data: {
+                total,
+                published,
+                draft,
+                featured,
+                totalViews: totalViews._sum.views || 0,
+            },
+        };
+    }
+
+    /**
+     * Bulk delete blogs by IDs
+     */
+    async bulkDeleteBlogs(blogIds: string[]) {
+        if (!blogIds || blogIds.length === 0) {
+            return {
+                success: false,
+                message: 'No blog IDs provided',
+            };
+        }
+
+        const result = await this.prisma.blog.deleteMany({
+            where: {
+                id: {
+                    in: blogIds,
+                },
+            },
+        });
+
+        return {
+            success: true,
+            message: `${result.count} blog(s) deleted successfully`,
+            deleted: result.count,
+        };
+    }
+
+    /**
+     * Bulk update blog publication status
+     */
+    async bulkUpdateStatus(blogIds: string[], isPublished: boolean) {
+        if (!blogIds || blogIds.length === 0) {
+            return {
+                success: false,
+                message: 'No blog IDs provided',
+            };
+        }
+
+        const updateData: any = { isPublished };
+
+        // Set publishedAt when publishing
+        if (isPublished) {
+            // Only set publishedAt for blogs that don't have it yet
+            const blogs = await this.prisma.blog.findMany({
+                where: {
+                    id: { in: blogIds },
+                    publishedAt: null,
+                },
+                select: { id: true },
+            });
+
+            // Update blogs with publishedAt
+            if (blogs.length > 0) {
+                await this.prisma.blog.updateMany({
+                    where: {
+                        id: { in: blogs.map(b => b.id) },
+                    },
+                    data: {
+                        isPublished: true,
+                        publishedAt: new Date(),
+                    },
+                });
+            }
+
+            // Update blogs that already have publishedAt
+            const publishedBlogIds = blogIds.filter(
+                id => !blogs.find(b => b.id === id)
+            );
+
+            if (publishedBlogIds.length > 0) {
+                await this.prisma.blog.updateMany({
+                    where: {
+                        id: { in: publishedBlogIds },
+                    },
+                    data: {
+                        isPublished: true,
+                    },
+                });
+            }
+
+            return {
+                success: true,
+                message: `${blogIds.length} blog(s) published successfully`,
+                updated: blogIds.length,
+            };
+        } else {
+            // Unpublishing blogs
+            const result = await this.prisma.blog.updateMany({
+                where: {
+                    id: { in: blogIds },
+                },
+                data: updateData,
+            });
+
+            return {
+                success: true,
+                message: `${result.count} blog(s) unpublished successfully`,
+                updated: result.count,
+            };
+        }
+    }
 }

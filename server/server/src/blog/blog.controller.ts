@@ -7,8 +7,11 @@ import {
     Body,
     Param,
     Query,
+    UseGuards,
+    Request,
 } from '@nestjs/common';
 import { BlogService } from './blog.service';
+import { AdminGuard } from '../auth/admin.guard';
 
 @Controller('blogs')
 export class BlogController {
@@ -226,13 +229,44 @@ export class BlogController {
     // ==================== ADMIN ENDPOINTS ====================
 
     /**
-     * Create a new blog post
+     * Get all blogs (including unpublished) - ADMIN ONLY
+     * GET /blogs/admin/all
+     * @query limit - Number of blogs (default: 50)
+     * @query offset - Skip blogs (default: 0)
+     * @returns { success: boolean, data: Blog[], pagination }
+     */
+    @Get('admin/all')
+    @UseGuards(AdminGuard)
+    async getAllBlogsAdmin(
+        @Query('limit') limit?: string,
+        @Query('offset') offset?: string,
+    ) {
+        return this.blogService.getAllBlogsAdmin({
+            limit: limit ? parseInt(limit, 10) : 50,
+            offset: offset ? parseInt(offset, 10) : 0,
+        });
+    }
+
+    /**
+     * Get blog statistics - ADMIN ONLY
+     * GET /blogs/admin/stats
+     * @returns { success: boolean, data: { total, published, draft, featured } }
+     */
+    @Get('admin/stats')
+    @UseGuards(AdminGuard)
+    async getBlogStatistics() {
+        return this.blogService.getBlogStatistics();
+    }
+
+    /**
+     * Create a new blog post - ADMIN ONLY
      * POST /blogs
      * @body title, slug, excerpt, content, category, authorName, authorImage?, 
      *       authorRole?, featuredImage?, readTime?, isFeatured?, isPublished?
      * @returns { success: boolean, message: string, data: Blog }
      */
     @Post()
+    @UseGuards(AdminGuard)
     async createBlog(
         @Body()
         body: {
@@ -251,18 +285,25 @@ export class BlogController {
             authorId?: string;
             tags?: string[];
         },
+        @Request() req: any,
     ) {
-        return this.blogService.createBlog(body);
+        // Add admin user ID as author if not specified
+        const blogData = {
+            ...body,
+            authorId: body.authorId || req.user.id,
+        };
+        return this.blogService.createBlog(blogData);
     }
 
     /**
-     * Update a blog post
+     * Update a blog post - ADMIN ONLY
      * PUT /blogs/:id
      * @param id - Blog ID
      * @body Any blog fields to update
      * @returns { success: boolean, message: string, data: Blog }
      */
     @Put(':id')
+    @UseGuards(AdminGuard)
     async updateBlog(
         @Param('id') id: string,
         @Body()
@@ -286,13 +327,42 @@ export class BlogController {
     }
 
     /**
-     * Delete a blog post
+     * Delete a blog post - ADMIN ONLY
      * DELETE /blogs/:id
      * @param id - Blog ID
      * @returns { success: boolean, message: string }
      */
     @Delete(':id')
+    @UseGuards(AdminGuard)
     async deleteBlog(@Param('id') id: string) {
         return this.blogService.deleteBlog(id);
+    }
+
+    /**
+     * Bulk delete blogs - ADMIN ONLY
+     * POST /blogs/admin/bulk-delete
+     * @body blogIds - Array of blog IDs to delete
+     * @returns { success: boolean, message: string, deleted: number }
+     */
+    @Post('admin/bulk-delete')
+    @UseGuards(AdminGuard)
+    async bulkDeleteBlogs(
+        @Body() body: { blogIds: string[] }
+    ) {
+        return this.blogService.bulkDeleteBlogs(body.blogIds);
+    }
+
+    /**
+     * Bulk update blog status - ADMIN ONLY
+     * POST /blogs/admin/bulk-status
+     * @body blogIds, isPublished
+     * @returns { success: boolean, message: string, updated: number }
+     */
+    @Post('admin/bulk-status')
+    @UseGuards(AdminGuard)
+    async bulkUpdateStatus(
+        @Body() body: { blogIds: string[], isPublished: boolean }
+    ) {
+        return this.blogService.bulkUpdateStatus(body.blogIds, body.isPublished);
     }
 }
