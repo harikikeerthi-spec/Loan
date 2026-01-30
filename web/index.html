@@ -121,6 +121,93 @@
             transform: scale(1.1);
         }
 
+        /* Dropdown Navigation Styles */
+        .nav-dropdown {
+            position: relative;
+        }
+
+        .nav-dropdown-content {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 0.5rem;
+            min-width: 200px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border-radius: 1rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        .dark .nav-dropdown-content {
+            background: rgba(25, 15, 35, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-dropdown:hover .nav-dropdown-content,
+        .nav-dropdown-content:hover {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .nav-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1.25rem;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .dark .nav-dropdown-item {
+            color: #e5e7eb;
+        }
+
+        .nav-dropdown-item:hover {
+            background: rgba(102, 5, 199, 0.1);
+            border-left-color: #6605c7;
+            color: #6605c7;
+        }
+
+        .dark .nav-dropdown-item:hover {
+            background: rgba(102, 5, 199, 0.2);
+            color: #a855f7;
+        }
+
+        .nav-dropdown-item .material-symbols-outlined {
+            font-size: 1.25rem;
+            opacity: 0.7;
+        }
+
+        .nav-dropdown-item:hover .material-symbols-outlined {
+            opacity: 1;
+        }
+
+        .nav-dropdown-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            cursor: pointer;
+        }
+
+        .nav-dropdown-toggle .material-symbols-outlined {
+            font-size: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-dropdown:hover .nav-dropdown-toggle .material-symbols-outlined {
+            transform: rotate(180deg);
+        }
+
         /* Drop from top animation - starts off-screen at top */
         @keyframes dropFromTop {
             0% {
@@ -155,8 +242,8 @@
     <!-- Background Structure -->
     <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none overflow-hidden">
 
-        <div class="absolute inset-0 bg-mesh-gradient opacity-80"></div>
-        <div class="absolute inset-0 opacity-20 mix-blend-overlay"
+        <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
+        <div class="absolute inset-0 opacity-30 mix-blend-overlay"
             style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
         </div>
     </div>
@@ -177,18 +264,30 @@
                 <div class="hidden lg:flex items-center gap-8">
                     <a href="about-us.html"
                         class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">About</a>
-                    <a href="how-it-works.html"
-                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">How
-                        It Works</a>
-                    <a href="emi.html"
-                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors font-sans">EMI
-                        Calculator</a>
+
+                    <!-- Loans Dropdown -->
+                    <div class="nav-dropdown">
+                        <div
+                            class="nav-dropdown-toggle nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">
+                            <span>Loans</span>
+                            <span class="material-symbols-outlined">expand_more</span>
+                        </div>
+                        <div class="nav-dropdown-content">
+                            <a href="emi.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">calculate</span>
+                                <span>EMI Calculator</span>
+                            </a>
+                            <a href="compare-loans.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">compare</span>
+                                <span>Compare Loans</span>
+                            </a>
+                        </div>
+                    </div>
+
                     <a href="blog.html"
                         class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Blog</a>
                     <a href="explore.html"
                         class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Community</a>
-                    <a href="faq.html"
-                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">FAQ</a>
                     <a href="contact.html"
                         class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Contact</a>
                 </div>
@@ -333,7 +432,7 @@
                 </div>
 
                 <!-- Stats -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-6xl mx-auto border-t border-white/10 pt-16">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-6xl mx-auto">
                     <div class="text-center px-8">
                         <h3 class="text-5xl font-bold text-white mb-3 font-display">$150M+</h3>
                         <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-100 leading-relaxed">Total
@@ -886,6 +985,9 @@
                     <h4 class="text-lg font-bold mb-6 font-display text-white">Quick Links</h4>
                     <ul class="space-y-4 text-gray-400 font-sans">
                         <li><a href="about-us.html" class="hover:text-primary transition-colors">About Us</a></li>
+                        <li><a href="how-it-works.html" class="hover:text-primary transition-colors">How It Works</a>
+                        </li>
+                        <li><a href="faq.html" class="hover:text-primary transition-colors">FAQ</a></li>
                         <li><a href="emi.html" class="hover:text-primary transition-colors">EMI Calculator</a></li>
                         <li><a href="contact.html" class="hover:text-primary transition-colors">Contact</a></li>
                     </ul>
@@ -932,6 +1034,7 @@
             }
         });
     </script>
+    <script src="assets/js/theme-toggle.js"></script>
     <script src="assets/js/dashboard.js"></script>
     <script src="assets/js/auth.js"></script>
 </body>

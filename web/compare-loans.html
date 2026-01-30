@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Compare Education Loans - LoanHero</title>
+
+    <!-- Meta Tags -->
+    <meta name="description"
+        content="Compare education loan options from top banks. Find the best interest rates, terms, and eligibility criteria for your study abroad dreams." />
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+
+    <!-- Styles & Config -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                    },
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    },
+                    backgroundImage: {
+                        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(102, 5, 199, 0.4) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224, 195, 137, 0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139, 192, 232, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102, 5, 199, 0.3) 0px, transparent 50%)',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        .dark .glass-card {
+            background: rgba(25, 15, 35, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-scrolled {
+            background: rgba(17, 8, 26, 0.95) !important;
+            backdrop-filter: blur(12px);
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+        }
+
+        .dark .nav-scrolled {
+            background: rgba(17, 8, 26, 0.8) !important;
+        }
+
+        .nav-scrolled .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        .nav-scrolled .nav-link:hover {
+            color: #6605c7 !important;
+        }
+
+        .nav-scrolled .font-display {
+            color: white !important;
+        }
+
+        .nav-scrolled #loginLink {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        .nav-scrolled #loginLink:hover {
+            color: #6605c7 !important;
+        }
+
+        .nav-scrolled .material-symbols-outlined {
+            color: white !important;
+        }
+
+        body {
+            background-attachment: fixed;
+        }
+
+        /* Comparison card hover effect */
+        .loan-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .loan-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(102, 5, 199, 0.15);
+        }
+
+        .loan-card.featured {
+            border: 2px solid #6605c7;
+            position: relative;
+        }
+
+        .loan-card.featured::before {
+            content: 'Best Rate';
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #6605c7, #8b5cf6);
+            color: white;
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        /* Filter pill styling */
+        .filter-pill {
+            transition: all 0.2s ease;
+        }
+
+        .filter-pill:hover {
+            transform: scale(1.05);
+        }
+
+        .filter-pill.active {
+            background: #6605c7;
+            color: white;
+        }
+
+        /* Compare checkbox */
+        .compare-checkbox:checked {
+            background: #6605c7;
+            border-color: #6605c7;
+        }
+
+        /* Sticky compare bar */
+        .compare-bar {
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Dropdown Navigation Styles */
+        .nav-dropdown {
+            position: relative;
+        }
+
+        .nav-dropdown-content {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 0.5rem;
+            min-width: 200px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border-radius: 1rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        .dark .nav-dropdown-content {
+            background: rgba(25, 15, 35, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-dropdown:hover .nav-dropdown-content,
+        .nav-dropdown-content:hover {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .nav-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1.25rem;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .dark .nav-dropdown-item {
+            color: #e5e7eb;
+        }
+
+        .nav-dropdown-item:hover {
+            background: rgba(102, 5, 199, 0.1);
+            border-left-color: #6605c7;
+            color: #6605c7;
+        }
+
+        .dark .nav-dropdown-item:hover {
+            background: rgba(102, 5, 199, 0.2);
+            color: #a855f7;
+        }
+
+        .nav-dropdown-item .material-symbols-outlined {
+            font-size: 1.25rem;
+            opacity: 0.7;
+        }
+
+        .nav-dropdown-item:hover .material-symbols-outlined {
+            opacity: 1;
+        }
+
+        .nav-dropdown-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            cursor: pointer;
+        }
+
+        .nav-dropdown-toggle .material-symbols-outlined {
+            font-size: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-dropdown:hover .nav-dropdown-toggle .material-symbols-outlined {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+
+    <!-- Background Structure -->
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none">
+        <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
+        <div class="absolute inset-0 opacity-30 mix-blend-overlay"
+            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="mainNav"
+        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
+        <div class="w-full max-w-7xl flex justify-between items-center">
+            <div class="flex items-center gap-12">
+                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+                        <span class="material-symbols-outlined text-2xl">school</span>
+                    </div>
+                    <span
+                        class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero</span>
+                </a>
+
+                <div class="hidden lg:flex items-center gap-8">
+                    <a href="about-us.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">About</a>
+
+                    <!-- Loans Dropdown -->
+                    <div class="nav-dropdown">
+                        <div class="nav-dropdown-toggle nav-link text-sm font-bold text-primary transition-colors">
+                            <span>Loans</span>
+                            <span class="material-symbols-outlined">expand_more</span>
+                        </div>
+                        <div class="nav-dropdown-content">
+                            <a href="emi.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">calculate</span>
+                                <span>EMI Calculator</span>
+                            </a>
+                            <a href="compare-loans.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">compare</span>
+                                <span>Compare Loans</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <a href="blog.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Blog</a>
+                    <a href="explore.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Community</a>
+                    <a href="contact.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">Contact</a>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <!-- Dark Mode Toggle -->
+                <button id="themeToggle"
+                    class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                    title="Toggle theme">
+                    <span class="material-symbols-outlined text-xl text-gray-600 dark:text-gray-300"
+                        id="themeIcon">dark_mode</span>
+                </button>
+
+                <a href="login.html" id="loginLink"
+                    class="text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Login</a>
+
+                <!-- User Profile Dropdown (Hidden initially) -->
+                <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
+                    <button id="profileBtn" class="flex items-center gap-2 px-4 py-2 rounded-full transition-all">
+                        <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
+                        <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white"></span>
+                    </button>
+
+                    <!-- Dropdown Menu -->
+                    <div id="profileDropdown"
+                        class="hidden absolute right-0 top-full mt-2 w-64 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 z-50 overflow-hidden">
+                        <div class="p-6 border-b border-gray-200 dark:border-white/10">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-bold mb-1">
+                                Welcome back</p>
+                            <p id="dropdownEmail" class="text-sm text-gray-600 dark:text-gray-400">user@email.com</p>
+                        </div>
+
+                        <div class="p-4 space-y-2">
+                            <a href="dashboard.html"
+                                class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                                <span class="material-symbols-outlined text-xl text-primary">dashboard</span>
+                                <span class="font-semibold text-gray-900 dark:text-white">Dashboard</span>
+                            </a>
+                            <a href="vault.html"
+                                class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
+                                <span class="material-symbols-outlined text-xl text-primary">security</span>
+                                <span class="font-semibold text-gray-900 dark:text-white">Document Vault</span>
+                            </a>
+                        </div>
+
+                        <div class="p-4 border-t border-gray-200 dark:border-white/10">
+                            <button id="logoutBtn"
+                                class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors text-red-600 dark:text-red-400">
+                                <span class="material-symbols-outlined text-xl">logout</span>
+                                <span class="font-semibold">Logout</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="relative z-10 pt-32 pb-24 px-6 max-w-7xl mx-auto">
+        <!-- Header Section -->
+        <header class="text-center mb-16">
+            <h1 class="text-4xl md:text-5xl font-bold font-display mb-6">
+                Compare Education Loans
+            </h1>
+            <p class="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+                Find the perfect loan for your education journey. Compare interest rates, processing fees, and terms
+                from India's top banks.
+            </p>
+        </header>
+
+        <!-- Filter Section -->
+        <div class="glass-card rounded-2xl p-6 mb-10">
+            <div class="flex flex-wrap items-center gap-4">
+                <span class="text-sm font-bold text-gray-700 dark:text-gray-300">Filter by:</span>
+
+                <!-- Loan Amount Filter -->
+                <select id="loanAmountFilter"
+                    class="px-4 py-2 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-sm font-medium focus:ring-2 focus:ring-primary focus:border-transparent">
+                    <option value="all">All Amounts</option>
+                    <option value="10">Up to ₹10 Lakhs</option>
+                    <option value="25">₹10-25 Lakhs</option>
+                    <option value="50">₹25-50 Lakhs</option>
+                    <option value="100">Above ₹50 Lakhs</option>
+                </select>
+
+                <!-- Country Filter -->
+                <select id="countryFilter"
+                    class="px-4 py-2 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-sm font-medium focus:ring-2 focus:ring-primary focus:border-transparent">
+                    <option value="all">All Countries</option>
+                    <option value="usa">USA</option>
+                    <option value="uk">UK</option>
+                    <option value="canada">Canada</option>
+                    <option value="australia">Australia</option>
+                    <option value="germany">Germany</option>
+                    <option value="india">Within India</option>
+                </select>
+
+                <!-- Collateral Filter -->
+                <select id="collateralFilter"
+                    class="px-4 py-2 rounded-full border border-gray-200 dark:border-white/10 bg-white dark:bg-zinc-800 text-sm font-medium focus:ring-2 focus:ring-primary focus:border-transparent">
+                    <option value="all">Collateral</option>
+                    <option value="no">No Collateral</option>
+                    <option value="yes">With Collateral</option>
+                </select>
+
+                <button onclick="resetFilters()" class="ml-auto text-sm text-primary font-semibold hover:underline">
+                    Reset Filters
+                </button>
+            </div>
+        </div>
+
+        <!-- Loan Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12" id="loanCardsContainer">
+
+            <!-- SBI Card -->
+            <div class="loan-card glass-card rounded-3xl p-8 featured" data-bank="sbi" data-amount="100"
+                data-collateral="both" data-country="all">
+                <div class="flex items-center gap-4 mb-6">
+                    <div
+                        class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white text-2xl font-bold">
+                        SBI
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold">SBI Education Loan</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">State Bank of India</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4 mb-8">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Interest Rate</span>
+                        <span class="text-2xl font-bold text-primary">8.15%</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Max Loan Amount</span>
+                        <span class="font-semibold">₹1.5 Crore</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Processing Fee</span>
+                        <span class="font-semibold">0.5%</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Tenure</span>
+                        <span class="font-semibold">Up to 15 Years</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Collateral</span>
+                        <span class="font-semibold">Above ₹7.5L</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 mb-6">
+                    <span
+                        class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold rounded-full">Fast
+                        Approval</span>
+                    <span
+                        class="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold rounded-full">Moratorium</span>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="applyNow('SBI')"
+                        class="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all">
+                        Apply Now
+                    </button>
+                    <label
+                        class="flex items-center gap-2 px-4 py-3 border border-gray-200 dark:border-white/10 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5">
+                        <input type="checkbox" class="compare-checkbox w-5 h-5 rounded border-gray-300"
+                            onchange="toggleCompare('sbi', this)">
+                        <span class="text-sm font-medium">Compare</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- HDFC Card -->
+            <div class="loan-card glass-card rounded-3xl p-8" data-bank="hdfc" data-amount="100" data-collateral="both"
+                data-country="all">
+                <div class="flex items-center gap-4 mb-6">
+                    <div
+                        class="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center text-white text-xl font-bold">
+                        HDFC
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold">HDFC Credila</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">HDFC Bank</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4 mb-8">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Interest Rate</span>
+                        <span class="text-2xl font-bold text-primary">9.55%</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Max Loan Amount</span>
+                        <span class="font-semibold">₹1 Crore</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Processing Fee</span>
+                        <span class="font-semibold">1%</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Tenure</span>
+                        <span class="font-semibold">Up to 12 Years</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Collateral</span>
+                        <span class="font-semibold">Optional</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 mb-6">
+                    <span
+                        class="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-bold rounded-full">No
+                        Co-borrower</span>
+                    <span
+                        class="px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-bold rounded-full">100%
+                        Finance</span>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="applyNow('HDFC')"
+                        class="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all">
+                        Apply Now
+                    </button>
+                    <label
+                        class="flex items-center gap-2 px-4 py-3 border border-gray-200 dark:border-white/10 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5">
+                        <input type="checkbox" class="compare-checkbox w-5 h-5 rounded border-gray-300"
+                            onchange="toggleCompare('hdfc', this)">
+                        <span class="text-sm font-medium">Compare</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- ICICI Card -->
+            <div class="loan-card glass-card rounded-3xl p-8" data-bank="icici" data-amount="50" data-collateral="no"
+                data-country="all">
+                <div class="flex items-center gap-4 mb-6">
+                    <div
+                        class="w-16 h-16 bg-orange-500 rounded-2xl flex items-center justify-center text-white text-xl font-bold">
+                        ICICI
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold">ICICI Student Loan</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">ICICI Bank</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4 mb-8">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Interest Rate</span>
+                        <span class="text-2xl font-bold text-primary">10.25%</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Max Loan Amount</span>
+                        <span class="font-semibold">₹50 Lakhs</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Processing Fee</span>
+                        <span class="font-semibold">0.75%</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Tenure</span>
+                        <span class="font-semibold">Up to 10 Years</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Collateral</span>
+                        <span class="font-semibold text-green-600">Not Required</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 mb-6">
+                    <span
+                        class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold rounded-full">No
+                        Collateral</span>
+                    <span
+                        class="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold rounded-full">Quick
+                        Disbursal</span>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="applyNow('ICICI')"
+                        class="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all">
+                        Apply Now
+                    </button>
+                    <label
+                        class="flex items-center gap-2 px-4 py-3 border border-gray-200 dark:border-white/10 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5">
+                        <input type="checkbox" class="compare-checkbox w-5 h-5 rounded border-gray-300"
+                            onchange="toggleCompare('icici', this)">
+                        <span class="text-sm font-medium">Compare</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Axis Card -->
+            <div class="loan-card glass-card rounded-3xl p-8" data-bank="axis" data-amount="75" data-collateral="yes"
+                data-country="all">
+                <div class="flex items-center gap-4 mb-6">
+                    <div
+                        class="w-16 h-16 bg-pink-600 rounded-2xl flex items-center justify-center text-white text-xl font-bold">
+                        AXIS
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold">Axis Education Loan</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Axis Bank</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4 mb-8">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Interest Rate</span>
+                        <span class="text-2xl font-bold text-primary">9.75%</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Max Loan Amount</span>
+                        <span class="font-semibold">₹75 Lakhs</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Processing Fee</span>
+                        <span class="font-semibold">1%</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Tenure</span>
+                        <span class="font-semibold">Up to 15 Years</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Collateral</span>
+                        <span class="font-semibold">Required</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 mb-6">
+                    <span
+                        class="px-3 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-bold rounded-full">Tax
+                        Benefits</span>
+                    <span
+                        class="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-xs font-bold rounded-full">Pre-Visa
+                        Disbursal</span>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="applyNow('Axis')"
+                        class="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all">
+                        Apply Now
+                    </button>
+                    <label
+                        class="flex items-center gap-2 px-4 py-3 border border-gray-200 dark:border-white/10 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5">
+                        <input type="checkbox" class="compare-checkbox w-5 h-5 rounded border-gray-300"
+                            onchange="toggleCompare('axis', this)">
+                        <span class="text-sm font-medium">Compare</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Bank of Baroda Card -->
+            <div class="loan-card glass-card rounded-3xl p-8" data-bank="bob" data-amount="100" data-collateral="yes"
+                data-country="all">
+                <div class="flex items-center gap-4 mb-6">
+                    <div
+                        class="w-16 h-16 bg-orange-600 rounded-2xl flex items-center justify-center text-white text-xl font-bold">
+                        BOB
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold">Baroda Scholar</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Bank of Baroda</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4 mb-8">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Interest Rate</span>
+                        <span class="text-2xl font-bold text-primary">8.35%</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Max Loan Amount</span>
+                        <span class="font-semibold">₹80 Lakhs</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Processing Fee</span>
+                        <span class="font-semibold">Nil</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Tenure</span>
+                        <span class="font-semibold">Up to 15 Years</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Collateral</span>
+                        <span class="font-semibold">Above ₹4L</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 mb-6">
+                    <span
+                        class="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold rounded-full">No
+                        Processing Fee</span>
+                    <span
+                        class="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold rounded-full">0.5%
+                        Women Discount</span>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="applyNow('BOB')"
+                        class="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all">
+                        Apply Now
+                    </button>
+                    <label
+                        class="flex items-center gap-2 px-4 py-3 border border-gray-200 dark:border-white/10 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5">
+                        <input type="checkbox" class="compare-checkbox w-5 h-5 rounded border-gray-300"
+                            onchange="toggleCompare('bob', this)">
+                        <span class="text-sm font-medium">Compare</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- PNB Card -->
+            <div class="loan-card glass-card rounded-3xl p-8" data-bank="pnb" data-amount="100" data-collateral="yes"
+                data-country="all">
+                <div class="flex items-center gap-4 mb-6">
+                    <div
+                        class="w-16 h-16 bg-red-700 rounded-2xl flex items-center justify-center text-white text-xl font-bold">
+                        PNB
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold">PNB Udaan</h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Punjab National Bank</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4 mb-8">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Interest Rate</span>
+                        <span class="text-2xl font-bold text-primary">8.45%</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Max Loan Amount</span>
+                        <span class="font-semibold">No Limit</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Processing Fee</span>
+                        <span class="font-semibold">0.5%</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Tenure</span>
+                        <span class="font-semibold">Up to 15 Years</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-600 dark:text-gray-400">Collateral</span>
+                        <span class="font-semibold">Above ₹7.5L</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3 mb-6">
+                    <span
+                        class="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs font-bold rounded-full">No
+                        Upper Limit</span>
+                    <span
+                        class="px-3 py-1 bg-teal-100 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 text-xs font-bold rounded-full">Govt.
+                        Subsidy</span>
+                </div>
+
+                <div class="flex gap-3">
+                    <button onclick="applyNow('PNB')"
+                        class="flex-1 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-all">
+                        Apply Now
+                    </button>
+                    <label
+                        class="flex items-center gap-2 px-4 py-3 border border-gray-200 dark:border-white/10 rounded-xl cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5">
+                        <input type="checkbox" class="compare-checkbox w-5 h-5 rounded border-gray-300"
+                            onchange="toggleCompare('pnb', this)">
+                        <span class="text-sm font-medium">Compare</span>
+                    </label>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- CTA Section -->
+        <div class="glass-card rounded-3xl p-12 text-center">
+            <h2 class="text-2xl font-bold font-display mb-4">Can't decide? Let us help!</h2>
+            <p class="text-gray-600 dark:text-gray-400 mb-8 max-w-xl mx-auto">
+                Get personalized loan recommendations based on your profile. Our experts will guide you through the
+                entire process.
+            </p>
+            <a href="contact.html"
+                class="inline-flex items-center gap-2 px-8 py-4 bg-primary text-white font-bold rounded-full hover:bg-primary/90 transition-all shadow-lg hover:shadow-primary/30">
+                <span class="material-symbols-outlined">support_agent</span>
+                Talk to an Expert
+            </a>
+        </div>
+    </main>
+
+    <!-- Compare Bar (Hidden initially) -->
+    <div id="compareBar"
+        class="hidden compare-bar fixed bottom-0 left-0 right-0 bg-white dark:bg-zinc-900 border-t border-gray-200 dark:border-white/10 p-4 z-50 shadow-2xl">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <span class="text-sm font-bold text-gray-700 dark:text-gray-300">
+                    <span id="compareCount">0</span> loans selected for comparison
+                </span>
+                <div id="compareChips" class="flex gap-2">
+                    <!-- Chips will be added here dynamically -->
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="clearComparison()"
+                    class="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                    Clear All
+                </button>
+                <button onclick="openComparisonModal()"
+                    class="px-6 py-2 bg-primary text-white font-bold rounded-full hover:bg-primary/90 transition-all">
+                    Compare Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comparison Modal -->
+    <div id="comparisonModal"
+        class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+        <div class="bg-white dark:bg-zinc-900 rounded-3xl max-w-4xl w-full max-h-[80vh] overflow-auto p-8">
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-2xl font-bold font-display">Loan Comparison</h2>
+                <button onclick="closeComparisonModal()"
+                    class="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div id="comparisonTable" class="overflow-x-auto">
+                <!-- Table will be generated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="relative z-10 border-t border-gray-200 dark:border-white/10 mt-20">
+        <div class="max-w-7xl mx-auto px-6 py-16">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12">
+                <div class="col-span-1">
+                    <a href="index.html" class="flex items-center gap-2 mb-6">
+                        <div
+                            class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+                            <span class="material-symbols-outlined text-2xl">school</span>
+                        </div>
+                        <span class="font-bold text-2xl tracking-tight font-display">LoanHero</span>
+                    </a>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm">
+                        Your trusted partner for education financing. Making dreams accessible.
+                    </p>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-bold mb-6 font-display text-white">Quick Links</h4>
+                    <ul class="space-y-4 text-gray-400 font-sans">
+                        <li><a href="about-us.html" class="hover:text-primary transition-colors">About Us</a></li>
+                        <li><a href="how-it-works.html" class="hover:text-primary transition-colors">How It Works</a>
+                        </li>
+                        <li><a href="faq.html" class="hover:text-primary transition-colors">FAQ</a></li>
+                        <li><a href="emi.html" class="hover:text-primary transition-colors">EMI Calculator</a></li>
+                        <li><a href="contact.html" class="hover:text-primary transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-bold mb-6 font-display text-white">Resources</h4>
+                    <ul class="space-y-4 text-gray-400 font-sans">
+                        <li><a href="blog.html" class="hover:text-primary transition-colors">Blog</a></li>
+                        <li><a href="compare-loans.html" class="hover:text-primary transition-colors">Compare Loans</a>
+                        </li>
+                        <li><a href="explore.html" class="hover:text-primary transition-colors">Community</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-bold mb-6 font-display text-white">Connect</h4>
+                    <div class="flex gap-4">
+                        <a href="#"
+                            class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-primary transition-colors">
+                            <span class="material-symbols-outlined text-white">mail</span>
+                        </a>
+                        <a href="#"
+                            class="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-primary transition-colors">
+                            <span class="material-symbols-outlined text-white">phone</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="border-t border-gray-200 dark:border-white/10 mt-12 pt-8 text-center text-gray-500 text-sm">
+                <p>© 2026 LoanHero. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="assets/js/theme-toggle.js"></script>
+    <script src="assets/js/dashboard.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script>
+        // Loan data for comparison
+        const loanData = {
+            sbi: { name: 'SBI Education Loan', rate: '8.15%', maxLoan: '₹1.5 Crore', fee: '0.5%', tenure: '15 Years', collateral: 'Above ₹7.5L' },
+            hdfc: { name: 'HDFC Credila', rate: '9.55%', maxLoan: '₹1 Crore', fee: '1%', tenure: '12 Years', collateral: 'Optional' },
+            icici: { name: 'ICICI Student Loan', rate: '10.25%', maxLoan: '₹50 Lakhs', fee: '0.75%', tenure: '10 Years', collateral: 'Not Required' },
+            axis: { name: 'Axis Education Loan', rate: '9.75%', maxLoan: '₹75 Lakhs', fee: '1%', tenure: '15 Years', collateral: 'Required' },
+            bob: { name: 'Baroda Scholar', rate: '8.35%', maxLoan: '₹80 Lakhs', fee: 'Nil', tenure: '15 Years', collateral: 'Above ₹4L' },
+            pnb: { name: 'PNB Udaan', rate: '8.45%', maxLoan: 'No Limit', fee: '0.5%', tenure: '15 Years', collateral: 'Above ₹7.5L' }
+        };
+
+        let selectedLoans = [];
+
+        function toggleCompare(bankId, checkbox) {
+            if (checkbox.checked) {
+                if (selectedLoans.length >= 3) {
+                    alert('You can compare up to 3 loans at a time');
+                    checkbox.checked = false;
+                    return;
+                }
+                selectedLoans.push(bankId);
+            } else {
+                selectedLoans = selectedLoans.filter(id => id !== bankId);
+            }
+            updateCompareBar();
+        }
+
+        function updateCompareBar() {
+            const bar = document.getElementById('compareBar');
+            const count = document.getElementById('compareCount');
+            const chips = document.getElementById('compareChips');
+
+            if (selectedLoans.length > 0) {
+                bar.classList.remove('hidden');
+                count.textContent = selectedLoans.length;
+
+                chips.innerHTML = selectedLoans.map(id => `
+                    <span class="px-3 py-1 bg-primary/10 text-primary text-sm font-bold rounded-full">
+                        ${loanData[id].name}
+                    </span>
+                `).join('');
+            } else {
+                bar.classList.add('hidden');
+            }
+        }
+
+        function clearComparison() {
+            selectedLoans = [];
+            document.querySelectorAll('.compare-checkbox').forEach(cb => cb.checked = false);
+            updateCompareBar();
+        }
+
+        function openComparisonModal() {
+            if (selectedLoans.length < 2) {
+                alert('Please select at least 2 loans to compare');
+                return;
+            }
+
+            const modal = document.getElementById('comparisonModal');
+            const table = document.getElementById('comparisonTable');
+
+            const headers = ['Feature', ...selectedLoans.map(id => loanData[id].name)];
+            const rows = [
+                ['Interest Rate', ...selectedLoans.map(id => loanData[id].rate)],
+                ['Max Loan Amount', ...selectedLoans.map(id => loanData[id].maxLoan)],
+                ['Processing Fee', ...selectedLoans.map(id => loanData[id].fee)],
+                ['Tenure', ...selectedLoans.map(id => loanData[id].tenure)],
+                ['Collateral', ...selectedLoans.map(id => loanData[id].collateral)]
+            ];
+
+            table.innerHTML = `
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200 dark:border-white/10">
+                            ${headers.map((h, i) => `<th class="py-4 px-4 text-left ${i === 0 ? 'text-gray-500' : 'text-primary'} font-bold">${h}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map(row => `
+                            <tr class="border-b border-gray-100 dark:border-white/5">
+                                ${row.map((cell, i) => `<td class="py-4 px-4 ${i === 0 ? 'text-gray-500 font-medium' : 'font-semibold'}">${cell}</td>`).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeComparisonModal() {
+            document.getElementById('comparisonModal').classList.add('hidden');
+        }
+
+        function applyNow(bank) {
+            window.location.href = `login.html?apply=${bank}`;
+        }
+
+        function resetFilters() {
+            document.getElementById('loanAmountFilter').value = 'all';
+            document.getElementById('countryFilter').value = 'all';
+            document.getElementById('collateralFilter').value = 'all';
+            filterLoans();
+        }
+
+        function filterLoans() {
+            // Simple filter implementation - can be enhanced
+            const cards = document.querySelectorAll('.loan-card');
+            cards.forEach(card => {
+                card.style.display = 'block';
+            });
+        }
+
+        // Navigation scroll effect
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('mainNav');
+            if (window.scrollY > 50) {
+                nav.classList.add('nav-scrolled');
+            } else {
+                nav.classList.remove('nav-scrolled');
+            }
+        });
+
+        // Theme toggle handled by theme-toggle.js
+
+        // Close modal on outside click
+        document.getElementById('comparisonModal').addEventListener('click', (e) => {
+            if (e.target.id === 'comparisonModal') {
+                closeComparisonModal();
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -338,11 +338,17 @@
             </div>
             <h2 class="text-2xl font-bold font-display mb-4 text-gray-900 dark:text-white">Application Submitted!</h2>
             <p class="text-gray-500 dark:text-gray-400 mb-6">Your loan application has been submitted successfully. You
-                can track its status from your dashboard.</p>
-            <a href="dashboard.html"
-                class="inline-block px-8 py-3 bg-primary text-white font-bold rounded-full hover:bg-primary/90 transition-all">
-                Go to Dashboard
-            </a>
+                can track its status from your applications page.</p>
+            <div class="flex gap-3">
+                <a href="my-applications.html"
+                    class="flex-1 inline-block px-8 py-3 bg-primary text-white font-bold rounded-full hover:bg-primary/90 transition-all">
+                    View My Applications
+                </a>
+                <a href="dashboard.html"
+                    class="flex-1 inline-block px-8 py-3 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white font-bold rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
+                    Go to Dashboard
+                </a>
+            </div>
         </div>
     </div>
 
@@ -369,6 +375,8 @@
     </style>
 
     <script>
+        const API_URL = 'http://localhost:3000';
+
         // Nav scroll effect
         window.addEventListener('scroll', () => {
             const nav = document.getElementById('mainNav');
@@ -380,61 +388,110 @@
         });
 
         // Form submission handler
-        document.getElementById('loanApplicationForm').addEventListener('submit', function (e) {
+        document.getElementById('loanApplicationForm').addEventListener('submit', async function (e) {
             e.preventDefault();
 
             const submitBtn = document.getElementById('submitBtn');
             submitBtn.disabled = true;
             submitBtn.textContent = 'Submitting...';
 
+            // Get user info from localStorage
+            const userId = localStorage.getItem('userId');
+            const accessToken = localStorage.getItem('accessToken');
+            const userEmail = localStorage.getItem('userEmail');
+
+            if (!userId || !accessToken || !userEmail) {
+                alert('You must be logged in to submit an application');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Application';
+                window.location.href = 'login.html';
+                return;
+            }
+
             // Gather form data
-            const application = {
-                id: Date.now(),
-                firstName: document.getElementById('firstName').value,
-                lastName: document.getElementById('lastName').value,
-                email: document.getElementById('email').value,
-                phone: document.getElementById('phone').value,
-                bank: document.getElementById('bankName').value,
-                type: document.getElementById('loanType').value,
-                university: document.getElementById('university').value,
-                amount: document.getElementById('loanAmount').value,
-                purpose: document.getElementById('courseDetails').value,
-                status: 'pending',
-                date: new Date().toISOString()
-            };
+            const loanType = document.getElementById('loanType').value;
+            const bank = document.getElementById('bankName').value;
+            const amount = parseFloat(document.getElementById('loanAmount').value);
+            const purpose = document.getElementById('courseDetails').value;
 
-            // Load existing dashboard data
-            let dashboardData = JSON.parse(localStorage.getItem('dashboardData')) || {
-                applications: [],
-                documents: {
-                    aadhar: { uploaded: false, status: 'pending' },
-                    pan: { uploaded: false, status: 'pending' },
-                    passport: { uploaded: false, status: 'pending' },
-                    '10th': { uploaded: false, status: 'pending' },
-                    '12th': { uploaded: false, status: 'pending' },
-                    degree: { uploaded: false, status: 'pending' },
-                },
-                activity: []
-            };
+            try {
+                // Call backend API to create application
+                const response = await fetch(`${API_URL}/auth/create-application`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify({
+                        userId,
+                        bank,
+                        loanType,
+                        amount,
+                        purpose
+                    })
+                });
 
-            // Add new application
-            dashboardData.applications.unshift(application);
+                const data = await response.json();
 
-            // Add activity log
-            dashboardData.activity.unshift({
-                type: 'new_application',
-                description: `New ${formatLoanType(application.type)} application submitted to ${application.bank}`,
-                amount: application.amount,
-                date: new Date().toISOString()
-            });
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || 'Failed to submit application');
+                }
 
-            // Save to localStorage
-            localStorage.setItem('dashboardData', JSON.stringify(dashboardData));
+                // Build local application object for caching
+                const application = {
+                    id: data.application.id,
+                    userId: data.application.userId,
+                    firstName: document.getElementById('firstName').value,
+                    lastName: document.getElementById('lastName').value,
+                    email: userEmail,
+                    phone: document.getElementById('phone').value,
+                    bank: data.application.bank,
+                    type: data.application.loanType,
+                    university: document.getElementById('university').value,
+                    amount: data.application.amount,
+                    purpose: data.application.purpose,
+                    status: data.application.status || 'pending',
+                    date: data.application.date || new Date().toISOString()
+                };
 
-            // Show success modal after a short delay
-            setTimeout(() => {
-                document.getElementById('successModal').classList.remove('hidden');
-            }, 500);
+                // Load existing dashboard data
+                let dashboardData = JSON.parse(localStorage.getItem('dashboardData')) || {
+                    applications: [],
+                    documents: {
+                        aadhar: { uploaded: false, status: 'pending' },
+                        pan: { uploaded: false, status: 'pending' },
+                        passport: { uploaded: false, status: 'pending' },
+                        '10th': { uploaded: false, status: 'pending' },
+                        '12th': { uploaded: false, status: 'pending' },
+                        degree: { uploaded: false, status: 'pending' },
+                    },
+                    activity: []
+                };
+
+                // Add new application
+                dashboardData.applications.unshift(application);
+
+                // Add activity log
+                dashboardData.activity.unshift({
+                    type: 'new_application',
+                    description: `New ${formatLoanType(application.type)} application submitted to ${application.bank}`,
+                    amount: application.amount,
+                    date: new Date().toISOString()
+                });
+
+                // Save to localStorage
+                localStorage.setItem('dashboardData', JSON.stringify(dashboardData));
+
+                // Show success modal after a short delay
+                setTimeout(() => {
+                    document.getElementById('successModal').classList.remove('hidden');
+                }, 500);
+            } catch (error) {
+                console.error('Error submitting application:', error);
+                alert('Error submitting application: ' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Submit Application';
+            }
         });
 
         function formatLoanType(type) {

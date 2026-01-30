@@ -330,12 +330,48 @@
     <script src="assets/js/theme-config.js"></script>
     <script src="assets/js/auth.js"></script>
     <script>
+        const API_URL = 'http://localhost:3000';
+        
         // Data store
         let applications = [];
         let currentFilter = 'all';
 
-        // Load applications from localStorage
-        function loadApplications() {
+        // Load applications from backend API (filtered by current user)
+        async function loadApplications() {
+            const userId = localStorage.getItem('userId');
+            const accessToken = localStorage.getItem('accessToken');
+
+            // First, try to load from backend API
+            if (userId && accessToken) {
+                try {
+                    const response = await fetch(`${API_URL}/auth/applications`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`
+                        },
+                        body: JSON.stringify({ userId })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.success && data.applications) {
+                            applications = data.applications || [];
+                            // Update localStorage with fresh data
+                            let dashboardData = JSON.parse(localStorage.getItem('dashboardData')) || { applications: [] };
+                            dashboardData.applications = applications;
+                            localStorage.setItem('dashboardData', JSON.stringify(dashboardData));
+                            renderApplications();
+                            updateStats();
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading applications from API:', error);
+                }
+            }
+
+            // Fallback to localStorage if API fails
             const dashboardData = JSON.parse(localStorage.getItem('dashboardData')) || { applications: [] };
             applications = dashboardData.applications || [];
             renderApplications();

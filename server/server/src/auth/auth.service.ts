@@ -308,6 +308,7 @@ export class AuthService {
         success: true,
         message: isNewUser ? 'Signup successful. Please complete your profile.' : 'Login successful.',
         access_token: accessToken,
+        userId: user.id,
         userExists: !isNewUser,
         hasUserDetails,
         firstName: user.firstName,

@@ -160,6 +160,7 @@ if (verifyOtpBtn) {
             // Save user data to localStorage
             localStorage.setItem('accessToken', data.access_token);
             localStorage.setItem('userEmail', currentEmail);
+            if (data.userId) localStorage.setItem('userId', data.userId);
             if (data.firstName) localStorage.setItem('firstName', data.firstName);
             if (data.lastName) localStorage.setItem('lastName', data.lastName);
 

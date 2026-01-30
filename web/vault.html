@@ -58,7 +58,7 @@
         }
 
         .nav-scrolled {
-            background: rgba(255, 255, 255, 0.8) !important;
+            background: rgba(17, 8, 26, 0.95) !important;
             backdrop-filter: blur(12px);
             padding-top: 1rem !important;
             padding-bottom: 1rem !important;
@@ -66,6 +66,35 @@
 
         .dark .nav-scrolled {
             background: rgba(17, 8, 26, 0.8) !important;
+        }
+
+        /* White text when scrolled */
+        .nav-scrolled .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        .nav-scrolled .nav-link:hover {
+            color: #6605c7 !important;
+        }
+
+        .nav-scrolled .font-display {
+            color: white !important;
+        }
+
+        .nav-scrolled #loginLink {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        .nav-scrolled #loginLink:hover {
+            color: #6605c7 !important;
+        }
+
+        .nav-scrolled .material-symbols-outlined {
+            color: white !important;
+        }
+
+        body {
+            background-attachment: fixed;
         }
     </style>
 </head>
@@ -83,7 +112,7 @@
 
     <!-- Navigation -->
     <nav id="mainNav"
-        class="fixed top-0 w-full px-6 py-4 flex justify-center items-center z-50 transition-all duration-500 bg-white/50 dark:bg-black/20 backdrop-blur-md border-b border-gray-200 dark:border-white/10">
+        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
         <div class="w-full max-w-7xl flex justify-between items-center">
             <div class="flex items-center gap-12">
                 <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
@@ -95,17 +124,14 @@
                 </a>
 
                 <div class="hidden lg:flex items-center gap-8">
-                    <a href="index.html"
+                    <a href="dashboard.html"
                         class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Dashboard</a>
                     <a href="vault.html" class="nav-link text-sm font-bold text-primary transition-colors">Vault</a>
-                    <a href="faq.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">FAQ</a>
                 </div>
             </div>
 
             <div class="flex items-center gap-4 relative">
-                <button id="profileBtn"
-                    class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                <button id="profileBtn" class="flex items-center gap-2 px-4 py-2 rounded-full transition-all">
                     <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
                     <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white">User</span>
 
@@ -299,6 +325,8 @@
 
     <script src="assets/js/theme-config.js"></script>
     <script src="assets/js/dashboard.js"></script>
+    <script src="assets/js/auth.js"></script>
+
     <script>
         // Store uploaded files
         const uploadedFiles = {};
