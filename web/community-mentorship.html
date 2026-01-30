@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Mentorship Program - LoanHero Community</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                    },
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    },
+                    backgroundImage: {
+                        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(102, 5, 199, 0.4) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224, 195, 137, 0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139, 192, 232, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102, 5, 199, 0.3) 0px, transparent 50%)',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        .dark .glass-card {
+            background: rgba(25, 15, 35, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-scrolled {
+            background: rgba(17, 8, 26, 0.95) !important;
+            backdrop-filter: blur(12px);
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+        }
+
+        .mentor-card:hover .mentor-image {
+            transform: scale(1.1);
+        }
+
+        .mentor-image {
+            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none">
+        <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
+        <div class="absolute inset-0 opacity-30 mix-blend-overlay"
+            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="mainNav"
+        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
+        <div class="w-full max-w-7xl flex justify-between items-center">
+            <div class="flex items-center gap-12">
+                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+                        <span class="material-symbols-outlined text-2xl">school</span>
+                    </div>
+                    <span
+                        class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero</span>
+                </a>
+
+                <div class="hidden lg:flex items-center gap-8">
+                    <a href="about-us.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">About</a>
+                    <a href="emi.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">EMI
+                        Calculator</a>
+                    <a href="blog.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Blog</a>
+                    <a href="explore.html"
+                        class="nav-link text-sm font-bold text-primary transition-colors">Community</a>
+                    <a href="contact.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">Contact</a>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <a href="login.html" id="loginLink"
+                    class="text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Login</a>
+
+                <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
+                    <button id="profileBtn" class="flex items-center gap-2 px-4 py-2 rounded-full transition-all">
+                        <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
+                        <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="relative z-10 pt-32 pb-24">
+        <div class="max-w-7xl mx-auto px-6">
+            <!-- Header -->
+            <header class="text-center mb-16">
+                <span
+                    class="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-[0.2em] mb-4">Mentorship
+                    Program</span>
+                <h1 class="text-4xl md:text-6xl font-bold font-display text-gray-900 dark:text-white mb-6">Connect with
+                    <span class="text-primary italic">Experienced</span> Alumni
+                </h1>
+                <p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed">
+                    Get one-on-one guidance from students who've successfully navigated the education loan process and
+                    are
+                    now studying or working abroad.
+                </p>
+            </header>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
+                <div class="glass-card p-6 rounded-3xl text-center">
+                    <div class="text-4xl font-bold text-primary mb-2">250+</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 font-sans">Active Mentors</div>
+                </div>
+                <div class="glass-card p-6 rounded-3xl text-center">
+                    <div class="text-4xl font-bold text-primary mb-2">3,500+</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 font-sans">Students Mentored</div>
+                </div>
+                <div class="glass-card p-6 rounded-3xl text-center">
+                    <div class="text-4xl font-bold text-primary mb-2">92%</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 font-sans">Success Rate</div>
+                </div>
+                <div class="glass-card p-6 rounded-3xl text-center">
+                    <div class="text-4xl font-bold text-primary mb-2">4.8/5</div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 font-sans">Average Rating</div>
+                </div>
+            </div>
+
+            <!-- How It Works -->
+            <div class="mb-20">
+                <h2 class="text-3xl font-bold font-display text-gray-900 dark:text-white mb-12 text-center">How
+                    Mentorship
+                    <span class="text-primary italic">Works</span>
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="glass-card p-8 rounded-[2.5rem] text-center">
+                        <div
+                            class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-3xl text-white">search</span>
+                        </div>
+                        <h3 class="text-xl font-bold font-display text-gray-900 dark:text-white mb-3">1. Find Your
+                            Mentor</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">
+                            Browse mentors by university, loan type, bank, or country. Filter by expertise and
+                            availability.
+                        </p>
+                    </div>
+
+                    <div class="glass-card p-8 rounded-[2.5rem] text-center">
+                        <div
+                            class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-3xl text-white">calendar_month</span>
+                        </div>
+                        <h3 class="text-xl font-bold font-display text-gray-900 dark:text-white mb-3">2. Book a Session
+                        </h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">
+                            Schedule a free 30-minute video call at a time convenient for both of you. No commitment
+                            required.
+                        </p>
+                    </div>
+
+                    <div class="glass-card p-8 rounded-[2.5rem] text-center">
+                        <div
+                            class="w-16 h-16 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-3xl text-white">check_circle</span>
+                        </div>
+                        <h3 class="text-xl font-bold font-display text-gray-900 dark:text-white mb-3">3. Get Guidance
+                        </h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400">
+                            Ask questions, get personalized advice, and learn from real experiences. Follow up anytime!
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Featured Mentors -->
+            <div class="mb-16">
+                <h2 class="text-3xl font-bold font-display text-gray-900 dark:text-white mb-8">Featured Mentors</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Mentor 1 -->
+                    <div
+                        class="glass-card p-8 rounded-[2.5rem] mentor-card transition-all duration-300 hover:-translate-y-2">
+                        <div class="flex items-start gap-4 mb-6">
+                            <div class="overflow-hidden rounded-2xl">
+                                <img src="assets/img/avatar_1.png" class="w-20 h-20 object-cover mentor-image"
+                                    alt="Mentor">
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-1">Arjun Patel</h4>
+                                <p class="text-xs text-gray-500 mb-2">MBA @ Harvard</p>
+                                <div class="flex items-center gap-1 text-xs text-yellow-600">
+                                    <span class="material-symbols-outlined text-sm">star</span>
+                                    <span class="font-bold">4.9</span>
+                                    <span class="text-gray-400">(47 reviews)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 mb-6">
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">account_balance</span>
+                                <span>HDFC Education Loan - ₹75L</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">location_on</span>
+                                <span>USA - Business Schools</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">schedule</span>
+                                <span>52 students mentored</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 mb-6">
+                            <span
+                                class="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold">Non-Collateral</span>
+                            <span
+                                class="px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 text-[10px] font-bold">MBA</span>
+                            <span
+                                class="px-3 py-1 rounded-full bg-green-500/10 text-green-600 text-[10px] font-bold">USA</span>
+                        </div>
+
+                        <button
+                            class="w-full px-6 py-3 bg-primary text-white rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all">
+                            Book Session
+                        </button>
+                    </div>
+
+                    <!-- Mentor 2 -->
+                    <div
+                        class="glass-card p-8 rounded-[2.5rem] mentor-card transition-all duration-300 hover:-translate-y-2">
+                        <div class="flex items-start gap-4 mb-6">
+                            <div class="overflow-hidden rounded-2xl">
+                                <img src="assets/img/avatar_2.png" class="w-20 h-20 object-cover mentor-image"
+                                    alt="Mentor">
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-1">Sneha Iyer</h4>
+                                <p class="text-xs text-gray-500 mb-2">MS CS @ Stanford</p>
+                                <div class="flex items-center gap-1 text-xs text-yellow-600">
+                                    <span class="material-symbols-outlined text-sm">star</span>
+                                    <span class="font-bold">5.0</span>
+                                    <span class="text-gray-400">(68 reviews)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 mb-6">
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">account_balance</span>
+                                <span>SBI Scholar Loan - ₹40L</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">location_on</span>
+                                <span>USA - Tech Programs</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">schedule</span>
+                                <span>89 students mentored</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 mb-6">
+                            <span class="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold">Top
+                                Universities</span>
+                            <span
+                                class="px-3 py-1 rounded-full bg-purple-500/10 text-purple-600 text-[10px] font-bold">Computer
+                                Science</span>
+                        </div>
+
+                        <button
+                            class="w-full px-6 py-3 bg-primary text-white rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all">
+                            Book Session
+                        </button>
+                    </div>
+
+                    <!-- Mentor 3 -->
+                    <div
+                        class="glass-card p-8 rounded-[2.5rem] mentor-card transition-all duration-300 hover:-translate-y-2">
+                        <div class="flex items-start gap-4 mb-6">
+                            <div class="overflow-hidden rounded-2xl">
+                                <img src="assets/img/avatar_3.png" class="w-20 h-20 object-cover mentor-image"
+                                    alt="Mentor">
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-1">Vikram Shah</h4>
+                                <p class="text-xs text-gray-500 mb-2">Engineering @ Cambridge</p>
+                                <div class="flex items-center gap-1 text-xs text-yellow-600">
+                                    <span class="material-symbols-outlined text-sm">star</span>
+                                    <span class="font-bold">4.8</span>
+                                    <span class="text-gray-400">(35 reviews)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 mb-6">
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">account_balance</span>
+                                <span>ICICI Education Loan - ₹55L</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">location_on</span>
+                                <span>UK - Engineering</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">schedule</span>
+                                <span>42 students mentored</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 mb-6">
+                            <span
+                                class="px-3 py-1 rounded-full bg-orange-500/10 text-orange-600 text-[10px] font-bold">UK</span>
+                            <span
+                                class="px-3 py-1 rounded-full bg-teal-500/10 text-teal-600 text-[10px] font-bold">Engineering</span>
+                        </div>
+
+                        <button
+                            class="w-full px-6 py-3 bg-primary text-white rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all">
+                            Book Session
+                        </button>
+                    </div>
+
+                    <!-- Mentor 4 -->
+                    <div
+                        class="glass-card p-8 rounded-[2.5rem] mentor-card transition-all duration-300 hover:-translate-y-2">
+                        <div class="flex items-start gap-4 mb-6">
+                            <div class="overflow-hidden rounded-2xl">
+                                <img src="assets/img/avatar_1.png" class="w-20 h-20 object-cover mentor-image"
+                                    alt="Mentor">
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-1">Meera Kapoor</h4>
+                                <p class="text-xs text-gray-500 mb-2">Medicine @ Toronto</p>
+                                <div class="flex items-center gap-1 text-xs text-yellow-600">
+                                    <span class="material-symbols-outlined text-sm">star</span>
+                                    <span class="font-bold">4.9</span>
+                                    <span class="text-gray-400">(51 reviews)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 mb-6">
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">account_balance</span>
+                                <span>Axis Bank Loan - ₹60L</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">location_on</span>
+                                <span>Canada - Medical Programs</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">schedule</span>
+                                <span>38 students mentored</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 mb-6">
+                            <span
+                                class="px-3 py-1 rounded-full bg-red-500/10 text-red-600 text-[10px] font-bold">Canada</span>
+                            <span
+                                class="px-3 py-1 rounded-full bg-pink-500/10 text-pink-600 text-[10px] font-bold">Medical</span>
+                        </div>
+
+                        <button
+                            class="w-full px-6 py-3 bg-primary text-white rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all">
+                            Book Session
+                        </button>
+                    </div>
+
+                    <!-- Mentor 5 -->
+                    <div
+                        class="glass-card p-8 rounded-[2.5rem] mentor-card transition-all duration-300 hover:-translate-y-2">
+                        <div class="flex items-start gap-4 mb-6">
+                            <div class="overflow-hidden rounded-2xl">
+                                <img src="assets/img/avatar_2.png" class="w-20 h-20 object-cover mentor-image"
+                                    alt="Mentor">
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-1">Rohan Desai</h4>
+                                <p class="text-xs text-gray-500 mb-2">Finance @ LSE</p>
+                                <div class="flex items-center gap-1 text-xs text-yellow-600">
+                                    <span class="material-symbols-outlined text-sm">star</span>
+                                    <span class="font-bold">4.7</span>
+                                    <span class="text-gray-400">(29 reviews)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 mb-6">
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">account_balance</span>
+                                <span>Credila Loan - ₹50L</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">location_on</span>
+                                <span>UK - Finance Programs</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">schedule</span>
+                                <span>31 students mentored</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 mb-6">
+                            <span
+                                class="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-600 text-[10px] font-bold">Finance</span>
+                            <span
+                                class="px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-600 text-[10px] font-bold">Scholarship</span>
+                        </div>
+
+                        <button
+                            class="w-full px-6 py-3 bg-primary text-white rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all">
+                            Book Session
+                        </button>
+                    </div>
+
+                    <!-- Mentor 6 -->
+                    <div
+                        class="glass-card p-8 rounded-[2.5rem] mentor-card transition-all duration-300 hover:-translate-y-2">
+                        <div class="flex items-start gap-4 mb-6">
+                            <div class="overflow-hidden rounded-2xl">
+                                <img src="assets/img/avatar_3.png" class="w-20 h-20 object-cover mentor-image"
+                                    alt="Mentor">
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-1">Ananya Sharma</h4>
+                                <p class="text-xs text-gray-500 mb-2">Design @ Parsons</p>
+                                <div class="flex items-center gap-1 text-xs text-yellow-600">
+                                    <span class="material-symbols-outlined text-sm">star</span>
+                                    <span class="font-bold">5.0</span>
+                                    <span class="text-gray-400">(44 reviews)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-3 mb-6">
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">account_balance</span>
+                                <span>Prodigy Finance - $70k</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">location_on</span>
+                                <span>USA - Design Schools</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-sm text-primary">schedule</span>
+                                <span>56 students mentored</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 mb-6">
+                            <span
+                                class="px-3 py-1 rounded-full bg-lime-500/10 text-lime-600 text-[10px] font-bold">Design</span>
+                            <span
+                                class="px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-600 text-[10px] font-bold">International
+                                Lender</span>
+                        </div>
+
+                        <button
+                            class="w-full px-6 py-3 bg-primary text-white rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all">
+                            Book Session
+                        </button>
+                    </div>
+                </div>
+
+                <div class="text-center mt-12">
+                    <button
+                        class="px-8 py-3 bg-white dark:bg-zinc-800 text-primary rounded-full text-sm font-bold uppercase tracking-widest hover:scale-105 transition-all border-2 border-primary">
+                        Browse All 250+ Mentors
+                    </button>
+                </div>
+            </div>
+
+            <!-- Become a Mentor CTA -->
+            <div class="mt-20">
+                <div class="glass-card p-12 rounded-[3rem]">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                        <div>
+                            <span
+                                class="inline-block px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider mb-4">Give
+                                Back</span>
+                            <h2 class="text-3xl font-bold font-display text-gray-900 dark:text-white mb-4">
+                                Become a <span class="text-primary italic">Mentor</span>
+                            </h2>
+                            <p class="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
+                                Have you successfully secured an education loan and are now studying or working abroad?
+                                Share your knowledge and help the next generation of students achieve their dreams!
+                            </p>
+                            <ul class="space-y-3 mb-8">
+                                <li class="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+                                    <span class="material-symbols-outlined text-primary">check_circle</span>
+                                    <span>Flexible schedule - mentor on your own time</span>
+                                </li>
+                                <li class="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+                                    <span class="material-symbols-outlined text-primary">check_circle</span>
+                                    <span>Build your network and leadership skills</span>
+                                </li>
+                                <li class="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+                                    <span class="material-symbols-outlined text-primary">check_circle</span>
+                                    <span>Make a real difference in students' lives</span>
+                                </li>
+                            </ul>
+                            <button
+                                class="px-8 py-4 bg-primary text-white rounded-full text-sm font-bold uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/30">
+                                Apply to Mentor
+                            </button>
+                        </div>
+                        <div class="hidden md:block">
+                            <div
+                                class="aspect-square rounded-3xl bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-9xl text-primary">groups</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-[#190f23] text-white py-20 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                <div class="col-span-1 md:col-span-2">
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
+                            <span class="material-symbols-outlined text-white">school</span>
+                        </div>
+                        <span class="text-2xl font-bold font-display tracking-tight text-white">LoanHero</span>
+                    </div>
+                    <p class="text-gray-400 max-w-sm font-sans leading-relaxed mb-8">
+                        Empowering students with transparent, flexible, and accessible education financing solutions.
+                    </p>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-bold mb-6 font-display text-white">Quick Links</h4>
+                    <ul class="space-y-4 text-gray-400 font-sans">
+                        <li><a href="about-us.html" class="hover:text-primary transition-colors">About Us</a></li>
+                        <li><a href="explore.html" class="hover:text-primary transition-colors">Community</a></li>
+                        <li><a href="contact.html" class="hover:text-primary transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-bold mb-6 font-display text-white">Legal</h4>
+                    <ul class="space-y-4 text-gray-400 font-sans">
+                        <li><a href="privacy-policy.html" class="hover:text-primary transition-colors">Privacy
+                                Policy</a></li>
+                        <li><a href="terms-conditions.html" class="hover:text-primary transition-colors">Terms of
+                                Service</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="pt-8 border-t border-white/10 text-center text-gray-500 text-xs font-sans">
+                <p>&copy; 2026 LoanHero Inc. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('mainNav');
+            if (window.scrollY > 50) {
+                nav.classList.add('nav-scrolled');
+            } else {
+                nav.classList.remove('nav-scrolled');
+            }
+        });
+
+        // Add 'Online Now' indicators randomly
+        document.addEventListener('DOMContentLoaded', () => {
+            const images = document.querySelectorAll('.mentor-image');
+            images.forEach(img => {
+                // 50% chance to be online
+                if (Math.random() > 0.5) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'relative';
+                    img.parentNode.insertBefore(wrapper, img);
+                    wrapper.appendChild(img);
+
+                    const onlineBadge = document.createElement('div');
+                    onlineBadge.className = 'absolute bottom-1 right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-zinc-800 rounded-full z-10 animate-pulse';
+                    onlineBadge.title = "Online Now";
+                    wrapper.appendChild(onlineBadge);
+                }
+            });
+        });
+    </script>
+    <script src="assets/js/auth.js"></script>
+</body>
+
+</html>

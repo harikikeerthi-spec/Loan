@@ -358,7 +358,18 @@
                         if (data.success && data.applications) {
                             applications = data.applications || [];
                             // Update localStorage with fresh data
-                            let dashboardData = JSON.parse(localStorage.getItem('dashboardData')) || { applications: [] };
+                            let dashboardData = JSON.parse(localStorage.getItem('dashboardData')) || {
+                                applications: [],
+                                documents: {
+                                    aadhar: { uploaded: false, status: 'pending' },
+                                    pan: { uploaded: false, status: 'pending' },
+                                    passport: { uploaded: false, status: 'pending' },
+                                    '10th': { uploaded: false, status: 'pending' },
+                                    '12th': { uploaded: false, status: 'pending' },
+                                    degree: { uploaded: false, status: 'pending' },
+                                },
+                                activity: []
+                            };
                             dashboardData.applications = applications;
                             localStorage.setItem('dashboardData', JSON.stringify(dashboardData));
                             renderApplications();

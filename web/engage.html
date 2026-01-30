@@ -202,6 +202,44 @@
                     Topic...</h1>
             </div>
 
+            <!-- Trending & Filters -->
+            <div class="flex flex-col md:flex-row gap-6 mb-8">
+                <!-- Trending Now -->
+                <div class="glass-card p-6 rounded-3xl flex-1">
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="material-symbols-outlined text-primary">trending_up</span>
+                        <h3 class="font-bold text-sm uppercase tracking-wider text-gray-900 dark:text-white">Trending
+                            Now</h3>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <span
+                            class="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold cursor-pointer hover:bg-primary hover:text-white transition-all">#SBILoans</span>
+                        <span
+                            class="px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 text-xs font-bold cursor-pointer hover:bg-blue-500 hover:text-white transition-all">#UKVisa</span>
+                        <span
+                            class="px-3 py-1 rounded-full bg-green-500/10 text-green-600 text-xs font-bold cursor-pointer hover:bg-green-500 hover:text-white transition-all">#InterestRates</span>
+                        <span
+                            class="px-3 py-1 rounded-full bg-orange-500/10 text-orange-600 text-xs font-bold cursor-pointer hover:bg-orange-500 hover:text-white transition-all">#Scholarships</span>
+                    </div>
+                </div>
+
+                <!-- Sort & Filter -->
+                <div class="glass-card p-6 rounded-3xl">
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined text-gray-500">sort</span>
+                            <span class="text-sm font-bold text-gray-700 dark:text-gray-300">Sort by:</span>
+                        </div>
+                        <select
+                            class="bg-transparent text-sm font-semibold text-primary border-none focus:ring-0 cursor-pointer">
+                            <option>Latest</option>
+                            <option>Most Liked</option>
+                            <option>Most Discussed</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             <div class="space-y-6">
                 <!-- Create Post Box -->
                 <div class="glass-card p-6 rounded-3xl border-primary/20 shadow-lg">
@@ -241,7 +279,8 @@
                                     alt="User">
                                 <div>
                                     <h4 class="font-bold text-gray-900 dark:text-white">Arun Kumar</h4>
-                                    <p class="text-xs text-gray-500">2 hours ago • MSc Data Science @ London</p>
+                                    <p class="text-xs text-gray-500"><span class="post-time">2 hours ago</span> • MSc
+                                        Data Science @ London</p>
                                 </div>
                             </div>
                             <button class="text-gray-400 hover:text-primary transition-colors">
@@ -277,7 +316,8 @@
                                     alt="User">
                                 <div>
                                     <h4 class="font-bold text-gray-900 dark:text-white">Priya Sharma</h4>
-                                    <p class="text-xs text-gray-500">5 hours ago • Engineering @ Berlin</p>
+                                    <p class="text-xs text-gray-500"><span class="post-time">5 hours ago</span> •
+                                        Engineering @ Berlin</p>
                                 </div>
                             </div>
                             <button class="text-gray-400 hover:text-primary transition-colors">
@@ -296,6 +336,116 @@
                             <button
                                 class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
                                 <span class="material-symbols-outlined text-lg">chat_bubble</span> 8 Comments
+                            </button>
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">share</span> Share
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Post 3 -->
+                    <div class="glass-card p-8 rounded-3xl group">
+                        <div class="flex items-start justify-between mb-6">
+                            <div class="flex gap-4">
+                                <img src="assets/img/avatar_1.png" class="w-12 h-12 rounded-full object-cover"
+                                    alt="User">
+                                <div>
+                                    <h4 class="font-bold text-gray-900 dark:text-white">Vikram Reddy</h4>
+                                    <p class="text-xs text-gray-500"><span class="post-time">1 day ago</span> • PhD
+                                        Physics @ Cambridge</p>
+                                </div>
+                            </div>
+                            <button class="text-gray-400 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined">more_vert</span>
+                            </button>
+                        </div>
+                        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 font-sans">
+                            Just got my loan approved! For anyone applying to ICICI: they're now offering a 0.5% rate
+                            discount
+                            if you opt for auto-debit from a salary account. Saved me 40k over the loan tenure!
+                        </p>
+                        <div class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">arrow_upward</span> 89 Likes
+                            </button>
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">chat_bubble</span> 34 Comments
+                            </button>
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">share</span> Share
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Post 4 -->
+                    <div class="glass-card p-8 rounded-3xl group">
+                        <div class="flex items-start justify-between mb-6">
+                            <div class="flex gap-4">
+                                <img src="assets/img/avatar_2.png" class="w-12 h-12 rounded-full object-cover"
+                                    alt="User">
+                                <div>
+                                    <h4 class="font-bold text-gray-900 dark:text-white">Kavita Menon</h4>
+                                    <p class="text-xs text-gray-500"><span class="post-time">3 days ago</span> • MBA @
+                                        INSEAD</p>
+                                </div>
+                            </div>
+                            <button class="text-gray-400 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined">more_vert</span>
+                            </button>
+                        </div>
+                        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 font-sans">
+                            Pro tip: If you're planning to apply for a loan, get your CIBIL score corrected FIRST.
+                            I wasted 2 months because of an error in my credit report that I didn't know about.
+                        </p>
+                        <div class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">arrow_upward</span> 142 Likes
+                            </button>
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">chat_bubble</span> 28 Comments
+                            </button>
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">share</span> Share
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Post 5 -->
+                    <div class="glass-card p-8 rounded-3xl group">
+                        <div class="flex items-start justify-between mb-6">
+                            <div class="flex gap-4">
+                                <img src="assets/img/avatar_3.png" class="w-12 h-12 rounded-full object-cover"
+                                    alt="User">
+                                <div>
+                                    <h4 class="font-bold text-gray-900 dark:text-white">Ankit Joshi</h4>
+                                    <p class="text-xs text-gray-500"><span class="post-time">1 week ago</span> • MS CS @
+                                        Carnegie Mellon</p>
+                                </div>
+                            </div>
+                            <button class="text-gray-400 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined">more_vert</span>
+                            </button>
+                        </div>
+                        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 font-sans">
+                            Question: Has anyone used Prodigy Finance for USA? How does their interest rate compare to
+                            Indian banks? I'm comparing between SBI 8.5% vs Prodigy 9.2% but without collateral
+                            requirement.
+                        </p>
+                        <div class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">arrow_upward</span> 67 Likes
+                            </button>
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">chat_bubble</span> 45 Comments
                             </button>
                             <button
                                 class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
@@ -378,27 +528,52 @@
     </footer>
 
     <script>
-        // Topic Title Handling
+        // Interaction Scripts
         document.addEventListener('DOMContentLoaded', () => {
-            const params = new URLSearchParams(window.location.search);
-            const topic = params.get('topic');
-            const topicTitle = document.getElementById('topicTitle');
-            const topicBadge = document.getElementById('topicBadge');
+            // Randomize active counts slightly to look live
+            document.querySelectorAll('.active-count').forEach(el => {
+                let count = parseInt(el.dataset.baseCount);
+                let fluctuation = Math.floor(Math.random() * 15) - 5; // +/- 5
+                el.innerText = (count + fluctuation).toLocaleString() + " Active";
+            });
 
-            if (topic) {
-                const cleanTopic = topic.replace(/-/g, ' ');
-                topicTitle.textContent = cleanTopic;
-                topicBadge.textContent = 'Topic: ' + cleanTopic;
-            }
-        });
+            // Like Button Logic
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(btn => {
+                if (btn.innerHTML.includes('arrow_upward') || btn.innerHTML.includes('favorite')) {
+                    btn.addEventListener('click', function () {
+                        const icon = this.querySelector('.material-symbols-outlined');
+                        const text = this.innerText.split(' '); // ["arrow_upward", "24"]
+                        let count = parseInt(text[1] || text[0]);
 
-        window.addEventListener('scroll', () => {
-            const nav = document.getElementById('mainNav');
-            if (window.scrollY > 50) {
-                nav.classList.add('nav-scrolled');
-            } else {
-                nav.classList.remove('nav-scrolled');
-            }
+                        if (this.classList.contains('text-primary')) {
+                            // Unlike
+                            this.classList.remove('text-primary');
+                            this.classList.add('text-gray-500');
+                            if (!isNaN(count)) this.innerHTML = `<span class="material-symbols-outlined text-lg">arrow_upward</span> ${count - 1} Likes`;
+                        } else {
+                            // Like
+                            this.classList.remove('text-gray-500');
+                            this.classList.add('text-primary');
+                            if (!isNaN(count)) this.innerHTML = `<span class="material-symbols-outlined text-lg fill-current">arrow_upward</span> ${count + 1} Likes`;
+
+                            // Optional: Add a subtle pop animation
+                            this.style.transform = "scale(1.2)";
+                            setTimeout(() => this.style.transform = "scale(1)", 200);
+                        }
+                    });
+                }
+            });
+
+            // Dynamic Relative Time (simulated)
+            const times = document.querySelectorAll('.post-time');
+            times.forEach(t => {
+                // Randomly set recent times for "freshness"
+                const r = Math.random();
+                if (r > 0.7) t.innerText = "Just now";
+                else if (r > 0.4) t.innerText = Math.floor(Math.random() * 50 + 2) + " mins ago";
+                else t.innerText = Math.floor(Math.random() * 10 + 1) + " hours ago";
+            });
         });
     </script>
     <script src="assets/js/auth.js"></script>

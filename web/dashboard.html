@@ -562,6 +562,24 @@
             const saved = localStorage.getItem('dashboardData');
             if (saved) {
                 dashboardData = JSON.parse(saved);
+                
+                // Ensure all required properties exist
+                if (!Array.isArray(dashboardData.applications)) {
+                    dashboardData.applications = [];
+                }
+                if (!Array.isArray(dashboardData.activity)) {
+                    dashboardData.activity = [];
+                }
+                if (!dashboardData.documents || typeof dashboardData.documents !== 'object') {
+                    dashboardData.documents = {
+                        aadhar: { uploaded: false, status: 'pending' },
+                        pan: { uploaded: false, status: 'pending' },
+                        passport: { uploaded: false, status: 'pending' },
+                        '10th': { uploaded: false, status: 'pending' },
+                        '12th': { uploaded: false, status: 'pending' },
+                        degree: { uploaded: false, status: 'pending' },
+                    };
+                }
             }
             renderDashboard();
         }

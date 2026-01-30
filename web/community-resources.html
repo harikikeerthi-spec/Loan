@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Resources Hub - LoanHero Community</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                    },
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    },
+                    backgroundImage: {
+                        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(102, 5, 199, 0.4) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224, 195, 137, 0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139, 192, 232, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102, 5, 199, 0.3) 0px, transparent 50%)',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        .dark .glass-card {
+            background: rgba(25, 15, 35, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-scrolled {
+            background: rgba(17, 8, 26, 0.95) !important;
+            backdrop-filter: blur(12px);
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+        }
+
+        .resource-card:hover {
+            transform: scale(1.03);
+        }
+
+        .download-badge {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none">
+        <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
+        <div class="absolute inset-0 opacity-30 mix-blend-overlay"
+            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="mainNav"
+        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
+        <div class="w-full max-w-7xl flex justify-between items-center">
+            <div class="flex items-center gap-12">
+                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+                        <span class="material-symbols-outlined text-2xl">school</span>
+                    </div>
+                    <span
+                        class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero</span>
+                </a>
+
+                <div class="hidden lg:flex items-center gap-8">
+                    <a href="about-us.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">About</a>
+                    <a href="emi.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">EMI
+                        Calculator</a>
+                    <a href="blog.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Blog</a>
+                    <a href="explore.html"
+                        class="nav-link text-sm font-bold text-primary transition-colors">Community</a>
+                    <a href="contact.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">Contact</a>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <a href="login.html" id="loginLink"
+                    class="text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Login</a>
+
+                <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
+                    <button id="profileBtn" class="flex items-center gap-2 px-4 py-2 rounded-full transition-all">
+                        <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
+                        <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="relative z-10 pt-32 pb-24">
+        <div class="max-w-7xl mx-auto px-6">
+            <!-- Header -->
+            <header class="text-center mb-16">
+                <span
+                    class="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-[0.2em] mb-4">Resources
+                    Hub</span>
+                <h1 class="text-4xl md:text-6xl font-bold font-display text-gray-900 dark:text-white mb-6">Free Tools &
+                    <span class="text-primary italic">Resources</span>
+                </h1>
+                <p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed">
+                    Download comprehensive guides, checklists, templates, and tools created by our community of experts
+                    and successful students.
+                </p>
+            </header>
+
+            <!-- Resource Categories -->
+            <div class="flex flex-wrap justify-center gap-3 mb-12">
+                <button
+                    class="px-6 py-2 rounded-full bg-primary text-white text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all">All
+                    Resources</button>
+                <button
+                    class="px-6 py-2 rounded-full bg-white/50 dark:bg-white/10 text-gray-600 dark:text-gray-300 text-xs font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all">Guides</button>
+                <button
+                    class="px-6 py-2 rounded-full bg-white/50 dark:bg-white/10 text-gray-600 dark:text-gray-300 text-xs font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all">Checklists</button>
+                <button
+                    class="px-6 py-2 rounded-full bg-white/50 dark:bg-white/10 text-gray-600 dark:text-gray-300 text-xs font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all">Templates</button>
+                <button
+                    class="px-6 py-2 rounded-full bg-white/50 dark:bg-white/10 text-gray-600 dark:text-gray-300 text-xs font-bold uppercase tracking-widest hover:bg-primary hover:text-white transition-all">Calculators</button>
+            </div>
+
+            <!-- Featured Resources -->
+            <div class="mb-16">
+                <h2 class="text-2xl font-bold font-display text-gray-900 dark:text-white mb-8">Featured Resources</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Resource 1 -->
+                    <div class="glass-card p-8 rounded-[2.5rem] resource-card transition-all duration-300">
+                        <div class="flex items-start justify-between mb-6">
+                            <div
+                                class="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-3xl text-white">description</span>
+                            </div>
+                            <span
+                                class="px-3 py-1 rounded-full bg-green-500/10 text-green-600 dark:text-green-400 text-[10px] font-bold uppercase tracking-wider">Popular</span>
+                        </div>
+                        <h3 class="text-xl font-bold font-display text-gray-900 dark:text-white mb-3">Complete Education
+                            Loan Application Guide 2026</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
+                            Step-by-step 50-page comprehensive guide covering everything from choosing the right loan
+                            type
+                            to negotiating interest rates. Includes real case studies.
+                        </p>
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center gap-4 text-xs text-gray-500">
+                                <div class="flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">download</span>
+                                    <span>8.5k downloads</span>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">star</span>
+                                    <span>4.9/5</span>
+                                </div>
+                            </div>
+                            <span class="text-xs font-bold text-gray-500">PDF • 5.2 MB</span>
+                        </div>
+                        <button
+                            class="w-full px-6 py-3 bg-primary text-white rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/30">
+                            Download Free
+                        </button>
+                    </div>
+
+                    <!-- Resource 2 -->
+                    <div class="glass-card p-8 rounded-[2.5rem] resource-card transition-all duration-300">
+                        <div class="flex items-start justify-between mb-6">
+                            <div
+                                class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-3xl text-white">checklist</span>
+                            </div>
+                            <span
+                                class="px-3 py-1 rounded-full bg-red-500/10 text-red-600 dark:text-red-400 text-[10px] font-bold uppercase tracking-wider download-badge">New</span>
+                        </div>
+                        <h3 class="text-xl font-bold font-display text-gray-900 dark:text-white mb-3">Document Checklist
+                            for All Major Banks</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
+                            Never miss a document again! Bank-specific checklists for SBI, HDFC, ICICI, Axis, and more.
+                            Includes formats and sample documents.
+                        </p>
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center gap-4 text-xs text-gray-500">
+                                <div class="flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">download</span>
+                                    <span>6.2k downloads</span>
+                                </div>
+                                <div class="flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">star</span>
+                                    <span>4.8/5</span>
+                                </div>
+                            </div>
+                            <span class="text-xs font-bold text-gray-500">DOCX • 850 KB</span>
+                        </div>
+                        <button
+                            class="w-full px-6 py-3 bg-primary text-white rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/30">
+                            Download Free
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- All Resources Grid -->
+            <div>
+                <h2 class="text-2xl font-bold font-display text-gray-900 dark:text-white mb-8">All Resources</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Resource 3 -->
+                    <div class="glass-card p-6 rounded-3xl resource-card transition-all duration-300">
+                        <div class="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined text-2xl text-orange-600">calculate</span>
+                        </div>
+                        <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-2">EMI Calculator Spreadsheet</h4>
+                        <p class="text-xs text-gray-500 mb-4">Excel template with advanced formulas for comparing
+                            multiple
+                            loan offers</p>
+                        <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                            <span>4.1k downloads</span>
+                            <span>XLSX • 120 KB</span>
+                        </div>
+                        <button
+                            class="w-full px-4 py-2 bg-white dark:bg-zinc-800 text-primary rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all border-2 border-primary">
+                            Download
+                        </button>
+                    </div>
+
+                    <!-- Resource 4 -->
+                    <div class="glass-card p-6 rounded-3xl resource-card transition-all duration-300">
+                        <div class="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined text-2xl text-green-600">account_balance</span>
+                        </div>
+                        <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-2">Bank Interest Rate Comparison
+                        </h4>
+                        <p class="text-xs text-gray-500 mb-4">Updated weekly comparison of education loan rates from 15+
+                            banks</p>
+                        <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                            <span>5.8k downloads</span>
+                            <span>PDF • 890 KB</span>
+                        </div>
+                        <button
+                            class="w-full px-4 py-2 bg-white dark:bg-zinc-800 text-primary rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all border-2 border-primary">
+                            Download
+                        </button>
+                    </div>
+
+                    <!-- Resource 5 -->
+                    <div class="glass-card p-6 rounded-3xl resource-card transition-all duration-300">
+                        <div class="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined text-2xl text-purple-600">edit_document</span>
+                        </div>
+                        <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-2">SOP Template for Loan
+                            Application</h4>
+                        <p class="text-xs text-gray-500 mb-4">Statement of Purpose template that helped 500+ students
+                            get
+                            approved</p>
+                        <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                            <span>3.2k downloads</span>
+                            <span>DOCX • 45 KB</span>
+                        </div>
+                        <button
+                            class="w-full px-4 py-2 bg-white dark:bg-zinc-800 text-primary rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all border-2 border-primary">
+                            Download
+                        </button>
+                    </div>
+
+                    <!-- Resource 6 -->
+                    <div class="glass-card p-6 rounded-3xl resource-card transition-all duration-300">
+                        <div class="w-12 h-12 rounded-xl bg-red-500/10 flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined text-2xl text-red-600">event</span>
+                        </div>
+                        <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-2">Loan Timeline Planner</h4>
+                        <p class="text-xs text-gray-500 mb-4">Month-by-month timeline from application to disbursement
+                        </p>
+                        <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                            <span>2.9k downloads</span>
+                            <span>PDF • 320 KB</span>
+                        </div>
+                        <button
+                            class="w-full px-4 py-2 bg-white dark:bg-zinc-800 text-primary rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all border-2 border-primary">
+                            Download
+                        </button>
+                    </div>
+
+                    <!-- Resource 7 -->
+                    <div class="glass-card p-6 rounded-3xl resource-card transition-all duration-300">
+                        <div class="w-12 h-12 rounded-xl bg-teal-500/10 flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined text-2xl text-teal-600">gavel</span>
+                        </div>
+                        <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-2">Tax Benefit Calculator</h4>
+                        <p class="text-xs text-gray-500 mb-4">Calculate Section 80E deductions on education loan
+                            interest</p>
+                        <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                            <span>4.5k downloads</span>
+                            <span>XLSX • 95 KB</span>
+                        </div>
+                        <button
+                            class="w-full px-4 py-2 bg-white dark:bg-zinc-800 text-primary rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all border-2 border-primary">
+                            Download
+                        </button>
+                    </div>
+
+                    <!-- Resource 8 -->
+                    <div class="glass-card p-6 rounded-3xl resource-card transition-all duration-300">
+                        <div class="w-12 h-12 rounded-xl bg-pink-500/10 flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined text-2xl text-pink-600">quiz</span>
+                        </div>
+                        <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-2">Loan Negotiation Script</h4>
+                        <p class="text-xs text-gray-500 mb-4">Word-for-word scripts to negotiate better rates with banks
+                        </p>
+                        <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                            <span>3.7k downloads</span>
+                            <span>PDF • 280 KB</span>
+                        </div>
+                        <button
+                            class="w-full px-4 py-2 bg-white dark:bg-zinc-800 text-primary rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all border-2 border-primary">
+                            Download
+                        </button>
+                    </div>
+
+                    <!-- Resource 9 -->
+                    <div class="glass-card p-6 rounded-3xl resource-card transition-all duration-300">
+                        <div class="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined text-2xl text-indigo-600">tips_and_updates</span>
+                        </div>
+                        <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-2">Repayment Strategies Guide</h4>
+                        <p class="text-xs text-gray-500 mb-4">Smart tactics to minimize interest and repay loans faster
+                        </p>
+                        <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                            <span>5.1k downloads</span>
+                            <span>PDF • 1.8 MB</span>
+                        </div>
+                        <button
+                            class="w-full px-4 py-2 bg-white dark:bg-zinc-800 text-primary rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all border-2 border-primary">
+                            Download
+                        </button>
+                    </div>
+
+                    <!-- Resource 10 -->
+                    <div class="glass-card p-6 rounded-3xl resource-card transition-all duration-300">
+                        <div class="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined text-2xl text-yellow-600">school</span>
+                        </div>
+                        <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-2">Scholarship Application Guide
+                        </h4>
+                        <p class="text-xs text-gray-500 mb-4">How to find and apply for scholarships to reduce loan
+                            burden</p>
+                        <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                            <span>6.8k downloads</span>
+                            <span>PDF • 3.2 MB</span>
+                        </div>
+                        <button
+                            class="w-full px-4 py-2 bg-white dark:bg-zinc-800 text-primary rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all border-2 border-primary">
+                            Download
+                        </button>
+                    </div>
+
+                    <!-- Resource 11 -->
+                    <div class="glass-card p-6 rounded-3xl resource-card transition-all duration-300">
+                        <div class="w-12 h-12 rounded-xl bg-cyan-500/10 flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined text-2xl text-cyan-600">travel_explore</span>
+                        </div>
+                        <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-2">Visa + Loan Coordination Guide
+                        </h4>
+                        <p class="text-xs text-gray-500 mb-4">Timing disbursement with visa applications for UK, USA,
+                            Canada</p>
+                        <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                            <span>4.3k downloads</span>
+                            <span>PDF • 1.5 MB</span>
+                        </div>
+                        <button
+                            class="w-full px-4 py-2 bg-white dark:bg-zinc-800 text-primary rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all border-2 border-primary">
+                            Download
+                        </button>
+                    </div>
+
+                    <!-- Resource 12 -->
+                    <div class="glass-card p-6 rounded-3xl resource-card transition-all duration-300">
+                        <div class="w-12 h-12 rounded-xl bg-lime-500/10 flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined text-2xl text-lime-600">account_box</span>
+                        </div>
+                        <h4 class="font-bold text-lg text-gray-900 dark:text-white mb-2">Co-applicant Selection Guide
+                        </h4>
+                        <p class="text-xs text-gray-500 mb-4">Choosing the right co-applicant for maximum loan approval
+                            chances</p>
+                        <div class="flex items-center justify-between text-xs text-gray-500 mb-4">
+                            <span>2.5k downloads</span>
+                            <span>PDF • 680 KB</span>
+                        </div>
+                        <button
+                            class="w-full px-4 py-2 bg-white dark:bg-zinc-800 text-primary rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 transition-all border-2 border-primary">
+                            Download
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CTA -->
+            <div class="mt-20">
+                <div class="glass-card p-12 rounded-[3rem] text-center">
+                    <h2 class="text-3xl font-bold font-display text-gray-900 dark:text-white mb-4">
+                        Have a <span class="text-primary italic">Resource</span> to Share?
+                    </h2>
+                    <p class="text-gray-600 dark:text-gray-400 mb-6 max-w-2xl mx-auto">
+                        Created a useful template, guide, or tool? Share it with the community and help thousands of
+                        students!
+                    </p>
+                    <button
+                        class="px-8 py-4 bg-primary text-white rounded-full text-sm font-bold uppercase tracking-widest hover:scale-105 transition-all shadow-lg shadow-primary/30">
+                        Submit Resource
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-[#190f23] text-white py-20 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                <div class="col-span-1 md:col-span-2">
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
+                            <span class="material-symbols-outlined text-white">school</span>
+                        </div>
+                        <span class="text-2xl font-bold font-display tracking-tight text-white">LoanHero</span>
+                    </div>
+                    <p class="text-gray-400 max-w-sm font-sans leading-relaxed mb-8">
+                        Empowering students with transparent, flexible, and accessible education financing solutions.
+                    </p>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-bold mb-6 font-display text-white">Quick Links</h4>
+                    <ul class="space-y-4 text-gray-400 font-sans">
+                        <li><a href="about-us.html" class="hover:text-primary transition-colors">About Us</a></li>
+                        <li><a href="explore.html" class="hover:text-primary transition-colors">Community</a></li>
+                        <li><a href="contact.html" class="hover:text-primary transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-bold mb-6 font-display text-white">Legal</h4>
+                    <ul class="space-y-4 text-gray-400 font-sans">
+                        <li><a href="privacy-policy.html" class="hover:text-primary transition-colors">Privacy
+                                Policy</a></li>
+                        <li><a href="terms-conditions.html" class="hover:text-primary transition-colors">Terms of
+                                Service</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="pt-8 border-t border-white/10 text-center text-gray-500 text-xs font-sans">
+                <p>&copy; 2026 LoanHero Inc. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('mainNav');
+            if (window.scrollY > 50) {
+                nav.classList.add('nav-scrolled');
+            } else {
+                nav.classList.remove('nav-scrolled');
+            }
+        });
+    </script>
+    <script src="assets/js/auth.js"></script>
+</body>
+
+</html>
