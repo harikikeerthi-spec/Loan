@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Comment Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .debug { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .comment { border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 5px; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>Comment Debug Test</h1>
+
+    <div class="debug">
+        <h3>Step 1: Get Blog ID</h3>
+        <button onclick="getBlogId()">Get Blog ID</button>
+        <div id="blogIdResult"></div>
+    </div>
+
+    <div class="debug">
+        <h3>Step 2: Load Comments</h3>
+        <button onclick="loadComments()">Load Comments</button>
+        <div id="commentsResult"></div>
+    </div>
+
+    <div class="debug">
+        <h3>Step 3: Post Comment</h3>
+        <input type="text" id="author" placeholder="Author" value="Test User"><br><br>
+        <textarea id="content" placeholder="Comment content" rows="3">This is a test comment</textarea><br><br>
+        <button onclick="postComment()">Post Comment</button>
+        <div id="postResult"></div>
+    </div>
+
+    <div class="debug">
+        <h3>Step 4: Reload Comments</h3>
+        <button onclick="loadComments()">Reload Comments</button>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+        let currentBlogId = null;
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = type;
+            div.textContent = new Date().toLocaleTimeString() + ': ' + message;
+            return div;
+        }
+
+        async function getBlogId() {
+            const resultDiv = document.getElementById('blogIdResult');
+            resultDiv.innerHTML = '';
+
+            try {
+                console.log('Fetching blogs...');
+                const response = await fetch(`${API_BASE}/blogs?limit=1`);
+                const data = await response.json();
+                console.log('Blogs response:', data);
+
+                if (data.success && data.data.length > 0) {
+                    currentBlogId = data.data[0].id;
+                    resultDiv.appendChild(log(`Blog ID: ${currentBlogId}`, 'success'));
+                } else {
+                    resultDiv.appendChild(log('No blogs found', 'error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.appendChild(log(`Error: ${error.message}`, 'error'));
+            }
+        }
+
+        async function loadComments() {
+            if (!currentBlogId) {
+                alert('Get blog ID first');
+                return;
+            }
+
+            const resultDiv = document.getElementById('commentsResult');
+            resultDiv.innerHTML = '';
+
+            try {
+                console.log('Loading comments for blog:', currentBlogId);
+                const response = await fetch(`${API_BASE}/blogs/${currentBlogId}/comments`);
+                const data = await response.json();
+                console.log('Comments response:', data);
+
+                if (data.success) {
+                    resultDiv.appendChild(log(`Found ${data.data.length} comments`, 'success'));
+
+                    data.data.forEach(comment => {
+                        const commentDiv = document.createElement('div');
+                        commentDiv.className = 'comment';
+                        commentDiv.innerHTML = `
+                            <strong>${comment.author}</strong> (${comment.likes || 0} likes)<br>
+                            ${comment.content}<br>
+                            <small>ID: ${comment.id} | Created: ${comment.createdAt}</small>
+                        `;
+                        resultDiv.appendChild(commentDiv);
+                    });
+                } else {
+                    resultDiv.appendChild(log('Failed to load comments', 'error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.appendChild(log(`Error: ${error.message}`, 'error'));
+            }
+        }
+
+        async function postComment() {
+            if (!currentBlogId) {
+                alert('Get blog ID first');
+                return;
+            }
+
+            const author = document.getElementById('author').value;
+            const content = document.getElementById('content').value;
+            const resultDiv = document.getElementById('postResult');
+            resultDiv.innerHTML = '';
+
+            try {
+                console.log('Posting comment:', { author, content });
+                const response = await fetch(`${API_BASE}/blogs/${currentBlogId}/comments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ author, content })
+                });
+                const data = await response.json();
+                console.log('Post response:', data);
+
+                if (data.success) {
+                    resultDiv.appendChild(log('Comment posted successfully!', 'success'));
+                } else {
+                    resultDiv.appendChild(log(`Failed: ${data.error}`, 'error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                resultDiv.appendChild(log(`Error: ${error.message}`, 'error'));
+            }
+        }
+    </script>
+</body>
+</html>

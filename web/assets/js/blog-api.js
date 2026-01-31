@@ -12,6 +12,16 @@ function formatDate(dateString) {
 }
 
 /**
+ * Escape HTML to prevent XSS
+ */
+function escapeHTML(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+/**
  * Create blog card HTML
  */
 function createBlogCard(blog, index) {
@@ -109,7 +119,7 @@ function createFeaturedBlog(blog) {
 }
 
 /**
- * Fetch all blogs from API
+ * Fetch all blogs from API and combine with admin blogs
  */
 async function fetchBlogs(options = {}) {
     try {
@@ -122,14 +132,104 @@ async function fetchBlogs(options = {}) {
         const url = `${API_BASE_URL}/blogs?${params.toString()}`;
         const response = await fetch(url);
 
-        if (!response.ok) {
-            throw new Error('Failed to fetch blogs');
+        let apiBlogs = [];
+        if (response.ok) {
+            const apiResult = await response.json();
+            if (apiResult.success) {
+                apiBlogs = apiResult.data || [];
+            }
         }
 
-        return await response.json();
+        // Get admin blogs from localStorage - only published ones
+        const adminBlogs = JSON.parse(localStorage.getItem('adminBlogs') || '[]')
+            .filter(blog => blog.status === 'published')
+            .map(blog => ({
+                id: blog.id,
+                title: blog.title,
+                slug: `admin-${blog.id}`, // Create unique slug for admin blogs
+                excerpt: blog.excerpt,
+                content: blog.content,
+                category: blog.category,
+                tags: blog.tags || [],
+                authorName: blog.author,
+                authorImage: null,
+                featuredImage: blog.image,
+                readTime: Math.ceil(blog.content.split(' ').length / 200), // Estimate read time
+                createdAt: blog.createdAt,
+                updatedAt: blog.updatedAt,
+                adminId: blog.adminId,
+                adminName: blog.adminName,
+                isAdminBlog: true // Mark as admin blog
+            }));
+
+        // Combine API blogs and admin blogs
+        const allBlogs = [...adminBlogs, ...apiBlogs];
+
+        // Apply filtering if needed
+        let filteredBlogs = allBlogs;
+        if (options.category) {
+            filteredBlogs = filteredBlogs.filter(blog =>
+                blog.category.toLowerCase() === options.category.toLowerCase()
+            );
+        }
+
+        // Sort by creation date (newest first)
+        filteredBlogs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        // Apply pagination
+        const offset = options.offset || 0;
+        const limit = options.limit || 10;
+        const paginatedBlogs = filteredBlogs.slice(offset, offset + limit);
+
+        return {
+            success: true,
+            data: paginatedBlogs,
+            total: filteredBlogs.length,
+            hasMore: offset + limit < filteredBlogs.length
+        };
+
     } catch (error) {
         console.error('Error fetching blogs:', error);
-        return { success: false, data: [], error: error.message };
+
+        // Fallback: return only admin blogs if API fails
+        const adminBlogs = JSON.parse(localStorage.getItem('adminBlogs') || '[]')
+            .filter(blog => blog.status === 'published')
+            .map(blog => ({
+                id: blog.id,
+                title: blog.title,
+                slug: `admin-${blog.id}`,
+                excerpt: blog.excerpt,
+                content: blog.content,
+                category: blog.category,
+                tags: blog.tags || [],
+                authorName: blog.author,
+                authorImage: null,
+                featuredImage: blog.image,
+                readTime: Math.ceil(blog.content.split(' ').length / 200),
+                createdAt: blog.createdAt,
+                updatedAt: blog.createdAt,
+                isAdminBlog: true
+            }));
+
+        let filteredBlogs = adminBlogs;
+        if (options.category) {
+            filteredBlogs = filteredBlogs.filter(blog =>
+                blog.category.toLowerCase() === options.category.toLowerCase()
+            );
+        }
+
+        filteredBlogs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        const offset = options.offset || 0;
+        const limit = options.limit || 10;
+        const paginatedBlogs = filteredBlogs.slice(offset, offset + limit);
+
+        return {
+            success: true,
+            data: paginatedBlogs,
+            total: filteredBlogs.length,
+            hasMore: offset + limit < filteredBlogs.length
+        };
     }
 }
 
@@ -156,6 +256,38 @@ async function fetchFeaturedBlog() {
  */
 async function fetchBlogBySlug(slug) {
     try {
+        // Check if it's an admin blog (starts with 'admin-')
+        if (slug.startsWith('admin-')) {
+            const adminBlogId = slug.replace('admin-', '');
+            const adminBlogs = JSON.parse(localStorage.getItem('adminBlogs') || '[]');
+            const adminBlog = adminBlogs.find(blog => blog.id === adminBlogId && blog.status === 'published');
+
+            if (adminBlog) {
+                return {
+                    success: true,
+                    data: {
+                        id: adminBlog.id,
+                        title: adminBlog.title,
+                        slug: slug,
+                        excerpt: adminBlog.excerpt,
+                        content: adminBlog.content,
+                        category: adminBlog.category,
+                        tags: adminBlog.tags || [],
+                        authorName: adminBlog.author,
+                        authorImage: null,
+                        featuredImage: adminBlog.image,
+                        readTime: Math.ceil(adminBlog.content.split(' ').length / 200),
+                        createdAt: adminBlog.createdAt,
+                        updatedAt: adminBlog.updatedAt,
+                        adminId: adminBlog.adminId,
+                        adminName: adminBlog.adminName,
+                        isAdminBlog: true
+                    }
+                };
+            }
+        }
+
+        // Try API for regular blogs
         const response = await fetch(`${API_BASE_URL}/blogs/slug/${slug}`);
 
         if (!response.ok) {
@@ -170,20 +302,87 @@ async function fetchBlogBySlug(slug) {
 }
 
 /**
- * Fetch blog categories
+ * Fetch blog categories from API and admin blogs
  */
 async function fetchCategories() {
     try {
-        const response = await fetch(`${API_BASE_URL}/blogs/categories`);
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch categories');
+        // Try to get categories from API
+        let apiCategories = [];
+        try {
+            const response = await fetch(`${API_BASE_URL}/blogs/categories`);
+            if (response.ok) {
+                const apiResult = await response.json();
+                if (apiResult.success) {
+                    apiCategories = apiResult.data || [];
+                }
+            }
+        } catch (apiError) {
+            console.warn('API categories not available, using admin categories only');
         }
 
-        return await response.json();
+        // Get categories from admin blogs (only published ones)
+        const adminBlogs = JSON.parse(localStorage.getItem('adminBlogs') || '[]')
+            .filter(blog => blog.status === 'published');
+
+        const adminCategories = {};
+        adminBlogs.forEach(blog => {
+            const category = blog.category;
+            if (adminCategories[category]) {
+                adminCategories[category]++;
+            } else {
+                adminCategories[category] = 1;
+            }
+        });
+
+        const adminCategoriesArray = Object.keys(adminCategories).map(name => ({
+            name: name,
+            count: adminCategories[name]
+        }));
+
+        // Combine API and admin categories
+        const allCategories = [...apiCategories];
+
+        // Merge admin categories with API categories
+        adminCategoriesArray.forEach(adminCat => {
+            const existingCat = allCategories.find(cat => cat.name === adminCat.name);
+            if (existingCat) {
+                existingCat.count += adminCat.count;
+            } else {
+                allCategories.push(adminCat);
+            }
+        });
+
+        return {
+            success: true,
+            data: allCategories
+        };
+
     } catch (error) {
         console.error('Error fetching categories:', error);
-        return { success: false, data: [], error: error.message };
+
+        // Fallback: return categories from admin blogs only
+        const adminBlogs = JSON.parse(localStorage.getItem('adminBlogs') || '[]')
+            .filter(blog => blog.status === 'published');
+
+        const adminCategories = {};
+        adminBlogs.forEach(blog => {
+            const category = blog.category;
+            if (adminCategories[category]) {
+                adminCategories[category]++;
+            } else {
+                adminCategories[category] = 1;
+            }
+        });
+
+        const adminCategoriesArray = Object.keys(adminCategories).map(name => ({
+            name: name,
+            count: adminCategories[name]
+        }));
+
+        return {
+            success: true,
+            data: adminCategoriesArray
+        };
     }
 }
 
@@ -377,6 +576,73 @@ async function initBlogListingPage() {
     if (loadMoreBtn) {
         loadMoreBtn.addEventListener('click', () => loadBlogs(false));
     }
+
+    // Refresh handler
+    const refreshBtn = document.getElementById('refresh-btn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+            // Load ALL blogs for refresh (not just first batch)
+            const allBlogsLimit = 1000; // Load up to 1000 blogs
+            const options = {
+                limit: allBlogsLimit,
+                offset: 0,
+                featured: false
+            };
+
+            if (currentCategory) {
+                options.category = currentCategory;
+            }
+
+            if (loadingSpinner) loadingSpinner.classList.remove('hidden');
+
+            let result;
+            if (currentTag) {
+                const response = await fetch(`${API_BASE_URL}/blogs/tags/${encodeURIComponent(currentTag)}?limit=${allBlogsLimit}&offset=0`);
+                if (response.ok) {
+                    result = await response.json();
+                } else {
+                    result = { success: false, data: [] };
+                }
+            } else {
+                result = await fetchBlogs(options);
+            }
+
+            if (loadingSpinner) loadingSpinner.classList.add('hidden');
+
+            if (result.success && result.data) {
+                const blogsHtml = result.data.map((blog, index) => createBlogCard(blog, index)).join('');
+                blogGrid.innerHTML = blogsHtml;
+
+                // Reset offset for future load more operations
+                currentOffset = result.data.length;
+
+                // Hide load more button since we loaded everything
+                if (loadMoreBtn) {
+                    loadMoreBtn.classList.add('hidden');
+                }
+
+                // Show success message
+                const originalText = refreshBtn.innerHTML;
+                refreshBtn.innerHTML = '<span class="material-symbols-outlined text-lg mr-2">check_circle</span>All Blogs Loaded!';
+                refreshBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+                refreshBtn.classList.remove('bg-primary', 'hover:bg-primary/90');
+                setTimeout(() => {
+                    refreshBtn.innerHTML = originalText;
+                    refreshBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    refreshBtn.classList.add('bg-primary', 'hover:bg-primary/90');
+                }, 2000);
+            }
+        });
+    }
+
+    // Auto-refresh when page becomes visible (user switches back to tab)
+    document.addEventListener('visibilitychange', async () => {
+        if (!document.hidden) {
+            // Page became visible, refresh blogs
+            currentOffset = 0;
+            await loadBlogs(true);
+        }
+    });
 }
 
 /**
@@ -388,13 +654,19 @@ async function fetchComments(blogId, limit = 20, offset = 0) {
         params.append('limit', limit);
         params.append('offset', offset);
 
-        const response = await fetch(`${API_BASE_URL}/blogs/${blogId}/comments?${params.toString()}`);
+        const url = `${API_BASE_URL}/blogs/${blogId}/comments?${params.toString()}`;
+        console.log('Fetching comments from:', url);
+
+        const response = await fetch(url);
 
         if (!response.ok) {
+            console.error('Failed to fetch comments, status:', response.status);
             throw new Error('Failed to fetch comments');
         }
 
-        return await response.json();
+        const data = await response.json();
+        console.log('Comments API response:', data);
+        return data;
     } catch (error) {
         console.error('Error fetching comments:', error);
         return { success: false, data: [], error: error.message };
@@ -406,7 +678,44 @@ async function fetchComments(blogId, limit = 20, offset = 0) {
  */
 async function postComment(blogId, author, content) {
     try {
-        const response = await fetch(`${API_BASE_URL}/blogs/${blogId}/comments`, {
+        const url = `${API_BASE_URL}/blogs/${blogId}/comments`;
+        console.log('=== POSTING COMMENT ===');
+        console.log('Posting comment to:', url);
+        console.log('Blog ID:', blogId);
+        console.log('Author:', author);
+        console.log('Content:', content);
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ author, content }),
+        });
+
+        console.log('Post response status:', response.status);
+        console.log('Post response ok:', response.ok);
+
+        if (!response.ok) {
+            console.error('Post comment failed, status:', response.status);
+            throw new Error('Failed to post comment');
+        }
+
+        const data = await response.json();
+        console.log('Post comment response data:', data);
+        return data;
+    } catch (error) {
+        console.error('Error posting comment:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Post a reply to a comment
+ */
+async function postReply(commentId, author, content) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/blogs/comments/${commentId}/replies`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -415,34 +724,136 @@ async function postComment(blogId, author, content) {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to post comment');
+            throw new Error('Failed to post reply');
         }
 
         return await response.json();
     } catch (error) {
-        console.error('Error posting comment:', error);
+        console.error('Error posting reply:', error);
         return { success: false, error: error.message };
     }
 }
 
 /**
- * Create comment HTML
+ * Delete a comment
  */
-function createCommentHTML(comment) {
+async function deleteComment(commentId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/blogs/comments/${commentId}`, {
+            method: 'DELETE',
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to delete comment');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error deleting comment:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Like or unlike a comment
+ */
+async function toggleCommentLike(commentId, userId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/blogs/comments/${commentId}/like`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to toggle like');
+        }
+
+        return await response.json();
+    } catch (error) {
+        console.error('Error toggling like:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Create comment HTML with likes and replies support
+ */
+function createCommentHTML(comment, isReply = false) {
     const timeAgo = getTimeAgo(comment.createdAt);
+    const userId = getUserIdentifier(); // Get user identifier for likes
+    const commentClass = isReply ? 'ml-12 mt-4' : '';
+
+    // Check if user has liked this comment (stored in localStorage)
+    const likedComments = JSON.parse(localStorage.getItem('likedComments') || '[]');
+    const isLiked = likedComments.includes(comment.id);
+
+    const likeButtonClass = isLiked ? 'text-red-500' : 'text-gray-400 hover:text-red-500';
+    const likeIcon = isLiked ? 'favorite' : 'favorite_border';
+
+    let repliesHTML = '';
+    if (comment.replies && comment.replies.length > 0) {
+        repliesHTML = comment.replies.map(reply => createCommentHTML(reply, true)).join('');
+    }
 
     return `
-        <div class="glass-card rounded-2xl p-6">
+        <div class="comment-item ${commentClass} glass-card rounded-2xl p-6" data-comment-id="${comment.id}">
             <div class="flex items-start gap-4">
-                <div class="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                    <span class="material-symbols-outlined text-primary text-xl">person</span>
+                <div class="flex-shrink-0 w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary text-lg">person</span>
                 </div>
                 <div class="flex-1">
                     <div class="flex items-center justify-between mb-2">
                         <h4 class="font-bold text-gray-900 dark:text-white">${escapeHTML(comment.author)}</h4>
                         <span class="text-xs text-gray-400">${timeAgo}</span>
                     </div>
-                    <p class="text-gray-600 dark:text-gray-400 leading-relaxed">${escapeHTML(comment.content)}</p>
+                    <p class="text-gray-600 dark:text-gray-400 leading-relaxed mb-4">${escapeHTML(comment.content)}</p>
+
+                    <!-- Action buttons -->
+                    <div class="flex items-center gap-4">
+                        <button class="like-btn flex items-center gap-1 text-sm ${likeButtonClass} transition-colors"
+                                data-comment-id="${comment.id}">
+                            <span class="material-symbols-outlined text-base">${likeIcon}</span>
+                            <span class="likes-count">${comment.likes || 0}</span>
+                        </button>
+                        <button class="reply-btn flex items-center gap-1 text-sm text-gray-400 hover:text-primary transition-colors"
+                                data-comment-id="${comment.id}">
+                            <span class="material-symbols-outlined text-base">reply</span>
+                            <span>Reply</span>
+                        </button>
+                        <button class="delete-comment-btn flex items-center gap-1 text-sm text-gray-400 hover:text-red-500 transition-colors"
+                                data-comment-id="${comment.id}">
+                            <span class="material-symbols-outlined text-base">delete</span>
+                            <span>Delete</span>
+                        </button>
+                    </div>
+
+                    <!-- Reply form (hidden by default) -->
+                    <div class="reply-form hidden mt-4 p-4 bg-gray-50 dark:bg-zinc-800/50 rounded-xl">
+                        <form class="reply-comment-form space-y-3">
+                            <input type="text" name="author" required
+                                class="w-full bg-white dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none dark:text-white"
+                                placeholder="Your name" />
+                            <textarea name="content" required rows="2"
+                                class="w-full bg-white dark:bg-zinc-800/50 border border-gray-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none dark:text-white resize-none"
+                                placeholder="Write a reply..."></textarea>
+                            <div class="flex justify-end gap-2">
+                                <button type="button" class="cancel-reply-btn px-4 py-2 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                                    Cancel
+                                </button>
+                                <button type="submit" class="px-4 py-2 bg-primary text-white text-sm rounded-lg hover:bg-primary/90">
+                                    Reply
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Replies container -->
+                    <div class="replies-container mt-4">
+                        ${repliesHTML}
+                    </div>
                 </div>
             </div>
         </div>
@@ -466,12 +877,39 @@ function getTimeAgo(dateString) {
 }
 
 /**
- * Escape HTML to prevent XSS
+ * Get user identifier for likes (using IP-like identifier)
  */
-function escapeHTML(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+function getUserIdentifier() {
+    let userId = localStorage.getItem('userIdentifier');
+    if (!userId) {
+        // Generate a simple identifier based on timestamp and random number
+        userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('userIdentifier', userId);
+    }
+    return userId;
+}
+
+/**
+ * Add comment to liked list
+ */
+function addLikedComment(commentId) {
+    const likedComments = JSON.parse(localStorage.getItem('likedComments') || '[]');
+    if (!likedComments.includes(commentId)) {
+        likedComments.push(commentId);
+        localStorage.setItem('likedComments', JSON.stringify(likedComments));
+    }
+}
+
+/**
+ * Remove comment from liked list
+ */
+function removeLikedComment(commentId) {
+    const likedComments = JSON.parse(localStorage.getItem('likedComments') || '[]');
+    const index = likedComments.indexOf(commentId);
+    if (index > -1) {
+        likedComments.splice(index, 1);
+        localStorage.setItem('likedComments', JSON.stringify(likedComments));
+    }
 }
 
 /**
@@ -486,20 +924,165 @@ async function initBlogComments(blogId) {
 
     // Load comments
     async function loadComments() {
-        if (commentsLoading) commentsLoading.classList.remove('hidden');
-        if (noComments) noComments.classList.add('hidden');
+        if (commentsLoading) {
+            commentsLoading.classList.remove('hidden');
+        }
+        if (noComments) {
+            noComments.classList.add('hidden');
+        }
 
         const result = await fetchComments(blogId);
 
-        if (commentsLoading) commentsLoading.classList.add('hidden');
+        if (commentsLoading) {
+            commentsLoading.classList.add('hidden');
+        }
 
         if (result.success && result.data && result.data.length > 0) {
             const commentsHTML = result.data.map(comment => createCommentHTML(comment)).join('');
-            if (commentsList) commentsList.innerHTML = commentsHTML;
+
+            if (commentsList) {
+                commentsList.innerHTML = commentsHTML;
+                attachCommentEventListeners();
+            } else {
+                console.error('commentsList element not found!');
+            }
         } else {
-            if (commentsList) commentsList.innerHTML = '';
-            if (noComments) noComments.classList.remove('hidden');
+            if (commentsList) {
+                commentsList.innerHTML = '';
+            }
+            if (noComments) {
+                noComments.classList.remove('hidden');
+            }
         }
+    }
+
+    // Attach event listeners to comment buttons
+    function attachCommentEventListeners() {
+        // Like buttons
+        document.querySelectorAll('.like-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const commentId = btn.dataset.commentId;
+                const userId = getUserIdentifier();
+
+                const result = await toggleCommentLike(commentId, userId);
+                if (result.success) {
+                    const likesCountEl = btn.querySelector('.likes-count');
+                    const iconEl = btn.querySelector('.material-symbols-outlined');
+
+                    likesCountEl.textContent = result.likesCount;
+
+                    if (result.liked) {
+                        btn.classList.remove('text-gray-400', 'hover:text-red-500');
+                        btn.classList.add('text-red-500');
+                        iconEl.textContent = 'favorite';
+                        addLikedComment(commentId);
+                    } else {
+                        btn.classList.remove('text-red-500');
+                        btn.classList.add('text-gray-400', 'hover:text-red-500');
+                        iconEl.textContent = 'favorite_border';
+                        removeLikedComment(commentId);
+                    }
+                }
+            });
+        });
+
+        // Reply buttons
+        document.querySelectorAll('.reply-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const commentId = btn.dataset.commentId;
+                const commentItem = btn.closest('.comment-item');
+                const replyForm = commentItem.querySelector('.reply-form');
+
+                // Hide all other reply forms
+                document.querySelectorAll('.reply-form').forEach(form => {
+                    if (form !== replyForm) {
+                        form.classList.add('hidden');
+                    }
+                });
+
+                // Toggle this reply form
+                replyForm.classList.toggle('hidden');
+
+                if (!replyForm.classList.contains('hidden')) {
+                    replyForm.querySelector('input[name="author"]').focus();
+                }
+            });
+        });
+
+        // Cancel reply buttons
+        document.querySelectorAll('.cancel-reply-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const replyForm = btn.closest('.reply-form');
+                replyForm.classList.add('hidden');
+            });
+        });
+
+        // Reply forms
+        document.querySelectorAll('.reply-comment-form').forEach(form => {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+
+                const commentItem = form.closest('.comment-item');
+                const commentId = commentItem.dataset.commentId;
+                const author = form.querySelector('input[name="author"]').value.trim();
+                const content = form.querySelector('textarea[name="content"]').value.trim();
+
+                if (!author || !content) {
+                    showMessage('Please fill in all fields', 'error');
+                    return;
+                }
+
+                // Disable form during submission
+                const submitBtn = form.querySelector('button[type="submit"]');
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Posting...';
+
+                const result = await postReply(commentId, author, content);
+
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Reply';
+
+                if (result.success) {
+                    form.reset();
+                    form.closest('.reply-form').classList.add('hidden');
+                    showMessage('Reply posted successfully!', 'success');
+                    // Reload comments to show the new reply
+                    await loadComments();
+                } else {
+                    showMessage(result.error || 'Failed to post reply', 'error');
+                }
+            });
+        });
+
+        // Delete buttons
+        document.querySelectorAll('.delete-comment-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const commentId = btn.dataset.commentId;
+                
+                if (confirm('Are you sure you want to delete this comment?')) {
+                    const result = await deleteComment(commentId);
+                    if (result.success) {
+                        showMessage('Comment deleted successfully', 'success');
+                        // Remove from DOM
+                        const commentEl = btn.closest('.comment-item');
+                        if (commentEl) commentEl.remove();
+
+                        // Check if list is now empty and show "no comments" if needed
+                        const commentsList = document.getElementById('comments-list');
+                        if (commentsList && commentsList.children.length === 0) {
+                            const noComments = document.getElementById('no-comments');
+                            if (noComments) noComments.classList.remove('hidden');
+                        }
+                    } else {
+                        showMessage(result.error || 'Failed to delete comment', 'error');
+                    }
+                }
+            });
+        });
     }
 
     // Handle comment form submission
@@ -526,11 +1109,41 @@ async function initBlogComments(blogId) {
             submitBtn.textContent = 'Post Comment';
 
             if (result.success) {
+                // Instead of reloading all comments, add the new comment directly to the UI
+                const newComment = {
+                    id: result.data.id,
+                    author: author,
+                    content: content,
+                    likes: 0,
+                    createdAt: new Date().toISOString(),
+                    replies: []
+                };
+
+                // Hide "no comments" message if it was showing
+                if (noComments && !noComments.classList.contains('hidden')) {
+                    noComments.classList.add('hidden');
+                }
+
+                // Add the new comment to the top of the list
+                const newCommentHTML = createCommentHTML(newComment);
+
+                if (commentsList) {
+                    // If there are no comments yet, just set the HTML
+                    if (commentsList.innerHTML.trim() === '') {
+                        commentsList.innerHTML = newCommentHTML;
+                    } else {
+                        // Prepend the new comment
+                        commentsList.innerHTML = newCommentHTML + commentsList.innerHTML;
+                    }
+
+                    // Re-attach event listeners for the new comment
+                    attachCommentEventListeners();
+                }
+
                 showMessage('Comment posted successfully!', 'success');
                 commentForm.reset();
-                // Reload comments
-                await loadComments();
             } else {
+                console.error('Failed to post comment:', result.error);
                 showMessage(result.error || 'Failed to post comment', 'error');
             }
         });
@@ -562,12 +1175,15 @@ async function initBlogComments(blogId) {
  * Initialize blog article page
  */
 async function initBlogArticlePage() {
-    const slug = getUrlParam('slug');
+    let slug = getUrlParam('slug');
 
+    // If no slug provided, use a default blog for testing
     if (!slug) {
-        console.error('No blog slug provided');
-        return;
+        console.log('No slug provided, using default blog for testing');
+        slug = 'top-5-cs-universities-2026'; // Default test blog
     }
+
+    console.log('Initializing blog article page with slug:', slug);
 
     const articleContent = document.getElementById('article-content');
     const articleTitle = document.getElementById('article-title');
@@ -583,9 +1199,12 @@ async function initBlogArticlePage() {
     const relatedBlogs = document.getElementById('related-blogs');
 
     // Fetch blog data
+    console.log('Fetching blog data for slug:', slug);
     const result = await fetchBlogBySlug(slug);
+    console.log('Blog fetch result:', result);
 
     if (!result.success || !result.data) {
+        console.error('Blog not found or fetch failed');
         if (articleContent) {
             articleContent.innerHTML = '<p class="text-center text-gray-500">Blog not found</p>';
         }
@@ -593,6 +1212,7 @@ async function initBlogArticlePage() {
     }
 
     const blog = result.data;
+    console.log('Blog data:', blog);
 
     // Update page title
     document.title = `${blog.title} - LoanHero Blog`;
@@ -623,6 +1243,7 @@ async function initBlogArticlePage() {
     }
 
     // Initialize comments
+    console.log('Initializing comments for blog ID:', blog.id);
     await initBlogComments(blog.id);
 
     // Fetch and display related blogs
@@ -653,6 +1274,8 @@ window.BlogAPI = {
     searchBlogs,
     fetchComments,
     postComment,
+    postReply,
+    toggleCommentLike,
     initBlogListingPage,
     initBlogArticlePage,
     initBlogComments,

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Admin System</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .test { border: 1px solid #ccc; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { border-color: green; background-color: #f0fff0; }
+        .error { border-color: red; background-color: #fff0f0; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .admin-info { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Admin System Test</h1>
+
+    <div class="test">
+        <h3>Current Admin Session:</h3>
+        <div id="currentAdmin">Not logged in</div>
+    </div>
+
+    <div class="test">
+        <h3>Login Tests:</h3>
+        <button onclick="loginAsAdmin1()">Login as Admin 1</button>
+        <button onclick="loginAsAdmin2()">Login as Admin 2</button>
+        <button onclick="loginAsAdmin3()">Login as Admin 3</button>
+        <button onclick="logout()">Logout</button>
+    </div>
+
+    <div class="test">
+        <h3>Blog Creation Tests:</h3>
+        <button onclick="createBlogForCurrentAdmin()">Create Blog for Current Admin</button>
+        <button onclick="showAllBlogs()">Show All Blogs</button>
+        <button onclick="showCurrentAdminBlogs()">Show Current Admin's Blogs</button>
+        <button onclick="clearAllBlogs()">Clear All Blogs</button>
+    </div>
+
+    <div class="test">
+        <h3>Test Results:</h3>
+        <div id="results"></div>
+    </div>
+
+    <div class="test">
+        <h3>Navigation:</h3>
+        <a href="admin-login.html" target="_blank">Admin Login Page</a> |
+        <a href="admin-blogs.html" target="_blank">Admin Dashboard</a> |
+        <a href="blog.html" target="_blank">Blog Page</a>
+    </div>
+
+    <script>
+        function updateCurrentAdmin() {
+            const currentAdmin = JSON.parse(localStorage.getItem('currentAdmin') || 'null');
+            const adminDiv = document.getElementById('currentAdmin');
+
+            if (currentAdmin) {
+                adminDiv.innerHTML = `
+                    <div class="admin-info">
+                        <strong>${currentAdmin.name}</strong><br>
+                        Email: ${currentAdmin.email}<br>
+                        ID: ${currentAdmin.id}<br>
+                        Login Time: ${new Date(currentAdmin.loginTime).toLocaleString()}
+                    </div>
+                `;
+            } else {
+                adminDiv.innerHTML = 'Not logged in';
+            }
+        }
+
+        function loginAsAdmin1() {
+            const admin = {
+                id: 'admin1',
+                name: 'John Admin',
+                email: 'admin1@loanhero.com',
+                role: 'admin',
+                loginTime: new Date().toISOString()
+            };
+            localStorage.setItem('currentAdmin', JSON.stringify(admin));
+            updateCurrentAdmin();
+            logResult('Logged in as Admin 1', 'success');
+        }
+
+        function loginAsAdmin2() {
+            const admin = {
+                id: 'admin2',
+                name: 'Sarah Admin',
+                email: 'admin2@loanhero.com',
+                role: 'admin',
+                loginTime: new Date().toISOString()
+            };
+            localStorage.setItem('currentAdmin', JSON.stringify(admin));
+            updateCurrentAdmin();
+            logResult('Logged in as Admin 2', 'success');
+        }
+
+        function loginAsAdmin3() {
+            const admin = {
+                id: 'admin3',
+                name: 'Mike Admin',
+                email: 'admin3@loanhero.com',
+                role: 'admin',
+                loginTime: new Date().toISOString()
+            };
+            localStorage.setItem('currentAdmin', JSON.stringify(admin));
+            updateCurrentAdmin();
+            logResult('Logged in as Admin 3', 'success');
+        }
+
+        function logout() {
+            localStorage.removeItem('currentAdmin');
+            updateCurrentAdmin();
+            logResult('Logged out', 'success');
+        }
+
+        function createBlogForCurrentAdmin() {
+            const currentAdmin = JSON.parse(localStorage.getItem('currentAdmin'));
+            if (!currentAdmin) {
+                logResult('No admin logged in', 'error');
+                return;
+            }
+
+            const blog = {
+                id: Date.now().toString(),
+                title: `Test Blog by ${currentAdmin.name}`,
+                category: 'education',
+                tags: ['test', 'admin'],
+                image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&q=80',
+                excerpt: `This is a test blog created by ${currentAdmin.name}`,
+                content: `<p>This blog was created by ${currentAdmin.name} (ID: ${currentAdmin.id}) to test the admin isolation system.</p>`,
+                author: currentAdmin.name,
+                status: 'published',
+                adminId: currentAdmin.id,
+                adminName: currentAdmin.name,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            };
+
+            const blogs = JSON.parse(localStorage.getItem('adminBlogs') || '[]');
+            blogs.unshift(blog);
+            localStorage.setItem('adminBlogs', JSON.stringify(blogs));
+
+            logResult(`Blog created by ${currentAdmin.name}`, 'success');
+        }
+
+        function showAllBlogs() {
+            const blogs = JSON.parse(localStorage.getItem('adminBlogs') || '[]');
+            let result = `<h4>All Blogs (${blogs.length}):</h4>`;
+            blogs.forEach(blog => {
+                result += `<div style="border:1px solid #ddd; padding:5px; margin:5px;">
+                    <strong>${blog.title}</strong><br>
+                    Admin: ${blog.adminName} (ID: ${blog.adminId})<br>
+                    Status: ${blog.status}
+                </div>`;
+            });
+            document.getElementById('results').innerHTML = result;
+        }
+
+        function showCurrentAdminBlogs() {
+            const currentAdmin = JSON.parse(localStorage.getItem('currentAdmin'));
+            if (!currentAdmin) {
+                logResult('No admin logged in', 'error');
+                return;
+            }
+
+            const allBlogs = JSON.parse(localStorage.getItem('adminBlogs') || '[]');
+            const adminBlogs = allBlogs.filter(blog => blog.adminId === currentAdmin.id);
+
+            let result = `<h4>${currentAdmin.name}'s Blogs (${adminBlogs.length}):</h4>`;
+            adminBlogs.forEach(blog => {
+                result += `<div style="border:1px solid #ddd; padding:5px; margin:5px;">
+                    <strong>${blog.title}</strong><br>
+                    Status: ${blog.status}
+                </div>`;
+            });
+            document.getElementById('results').innerHTML = result;
+        }
+
+        function clearAllBlogs() {
+            localStorage.removeItem('adminBlogs');
+            logResult('All blogs cleared', 'success');
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function logResult(message, type) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = type;
+            div.innerHTML = `${new Date().toLocaleTimeString()}: ${message}`;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+
+        // Initialize
+        updateCurrentAdmin();
+
+        // Initialize demo admins
+        const admins = JSON.parse(localStorage.getItem('adminUsers') || '[]');
+        if (admins.length === 0) {
+            const demoAdmins = [
+                { id: 'admin1', name: 'John Admin', email: 'admin1@loanhero.com', password: 'password123', role: 'admin' },
+                { id: 'admin2', name: 'Sarah Admin', email: 'admin2@loanhero.com', password: 'password123', role: 'admin' },
+                { id: 'admin3', name: 'Mike Admin', email: 'admin3@loanhero.com', password: 'password123', role: 'admin' }
+            ];
+            localStorage.setItem('adminUsers', JSON.stringify(demoAdmins));
+        }
+    </script>
+</body>
+</html>

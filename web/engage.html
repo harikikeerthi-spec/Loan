@@ -47,6 +47,28 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
+        /* Initial nav text colors (black) */
+        .nav-link {
+            color: rgba(0, 0, 0, 0.9) !important;
+        }
+
+        .font-display {
+            color: black !important;
+        }
+
+        #loginLink {
+            color: rgba(0, 0, 0, 0.9) !important;
+        }
+
+        .material-symbols-outlined {
+            color: black !important;
+        }
+
+        /* Keep dropdown icons purple initially */
+        #profileDropdown .material-symbols-outlined {
+            color: #6605c7 !important;
+        }
+
         .nav-scrolled {
             background: rgba(17, 8, 26, 0.95) !important;
             backdrop-filter: blur(12px);
@@ -82,6 +104,98 @@
         .nav-scrolled .material-symbols-outlined {
             color: white !important;
         }
+
+        /* Keep dropdown icons visible */
+        .nav-scrolled #profileDropdown .material-symbols-outlined {
+            color: #6605c7 !important;
+        }
+
+        /* Dropdown Navigation Styles */
+        .nav-dropdown {
+            position: relative;
+        }
+
+        .nav-dropdown-content {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 0.5rem;
+            min-width: 200px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border-radius: 1rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        .dark .nav-dropdown-content {
+            background: rgba(25, 15, 35, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-dropdown:hover .nav-dropdown-content,
+        .nav-dropdown-content:hover {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .nav-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1.25rem;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .dark .nav-dropdown-item {
+            color: #e5e7eb;
+        }
+
+        .nav-dropdown-item:hover {
+            background: rgba(102, 5, 199, 0.1);
+            border-left-color: #6605c7;
+            color: #6605c7;
+        }
+
+        .dark .nav-dropdown-item:hover {
+            background: rgba(102, 5, 199, 0.2);
+            color: #a855f7;
+        }
+
+        .nav-dropdown-item .material-symbols-outlined {
+            font-size: 1.25rem;
+            opacity: 0.7;
+        }
+
+        .nav-dropdown-item:hover .material-symbols-outlined {
+            opacity: 1;
+        }
+
+        .nav-dropdown-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            cursor: pointer;
+        }
+
+        .nav-dropdown-toggle .material-symbols-outlined {
+            font-size: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-dropdown:hover .nav-dropdown-toggle .material-symbols-outlined {
+            transform: rotate(180deg);
+        }
     </style>
 </head>
 
@@ -114,12 +228,30 @@
                 <div class="hidden lg:flex items-center gap-8">
                     <a href="about-us.html"
                         class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">About</a>
-                    <a href="emi.html"
-                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors font-sans">EMI
-                        Calculator</a>
+
+                    <!-- Loans Dropdown -->
+                    <div class="nav-dropdown">
+                        <div
+                            class="nav-dropdown-toggle nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">
+                            <span>Loans</span>
+                            <span class="material-symbols-outlined">expand_more</span>
+                        </div>
+                        <div class="nav-dropdown-content">
+                            <a href="emi.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">calculate</span>
+                                <span>EMI Calculator</span>
+                            </a>
+                            <a href="compare-loans.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">compare</span>
+                                <span>Compare Loans</span>
+                            </a>
+                        </div>
+                    </div>
+
                     <a href="blog.html"
                         class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Blog</a>
-                    <a href="explore.html" class="nav-link text-sm font-bold text-white transition-colors">Community</a>
+                    <a href="explore.html"
+                        class="nav-link text-sm font-bold text-white hover:text-primary transition-colors">Community</a>
                     <a href="contact.html"
                         class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Contact</a>
                 </div>
@@ -453,6 +585,120 @@
                             </button>
                         </div>
                     </div>
+
+                    <!-- Post 6: Northeastern University & I-20 Issue -->
+                    <div class="glass-card p-8 rounded-3xl group">
+                        <div class="flex items-start justify-between mb-6">
+                            <div class="flex gap-4">
+                                <img src="assets/img/avatar_2.png" class="w-12 h-12 rounded-full object-cover"
+                                    alt="User">
+                                <div>
+                                    <h4 class="font-bold text-gray-900 dark:text-white">Rahul Verma</h4>
+                                    <p class="text-xs text-gray-500"><span class="post-time">4 hours ago</span> • MS
+                                        Info Systems @ Northeastern</p>
+                                </div>
+                            </div>
+                            <button class="text-gray-400 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined">more_vert</span>
+                            </button>
+                        </div>
+                        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 font-sans">
+                            🚨 <strong>Urgent I-20 Help:</strong> Has anyone who got into Northeastern (Boston campus)
+                            successfully used a loan sanction letter from <strong>Auxilo</strong> for their financial
+                            docs? NEU portal says they need "liquid funds" proof. Does the loan letter count as liquid
+                            or do I need a separate bank solvency certificate? Stressing out! 😰
+                        </p>
+                        <div class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">arrow_upward</span> 31 Likes
+                            </button>
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">chat_bubble</span> 18 Comments
+                            </button>
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">share</span> Share
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Post 7: Germany Blocked Account -->
+                    <div class="glass-card p-8 rounded-3xl group">
+                        <div class="flex items-start justify-between mb-6">
+                            <div class="flex gap-4">
+                                <img src="assets/img/avatar_1.png" class="w-12 h-12 rounded-full object-cover"
+                                    alt="User">
+                                <div>
+                                    <h4 class="font-bold text-gray-900 dark:text-white">Sneha Dubey</h4>
+                                    <p class="text-xs text-gray-500"><span class="post-time">6 hours ago</span> •
+                                        Masters @ TU Munich</p>
+                                </div>
+                            </div>
+                            <button class="text-gray-400 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined">more_vert</span>
+                            </button>
+                        </div>
+                        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 font-sans">
+                            For Germany students 🇩🇪: I just transferred my loan amount from SBI directly to
+                            <strong>Expatrio</strong> for the Blocked Account. The exchange rate hit was brutal (₹91 per
+                            Euro!). If you haven't transferred yet, try using a forex card or checking if your bank has
+                            a tie-up with Coracle. Might save you like ₹15k-20k.
+                        </p>
+                        <div class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">arrow_upward</span> 94 Likes
+                            </button>
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">chat_bubble</span> 42 Comments
+                            </button>
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">share</span> Share
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Post 8: Australia Living Expenses -->
+                    <div class="glass-card p-8 rounded-3xl group">
+                        <div class="flex items-start justify-between mb-6">
+                            <div class="flex gap-4">
+                                <img src="assets/img/avatar_3.png" class="w-12 h-12 rounded-full object-cover"
+                                    alt="User">
+                                <div>
+                                    <h4 class="font-bold text-gray-900 dark:text-white">Chris D'Souza</h4>
+                                    <p class="text-xs text-gray-500"><span class="post-time">12 hours ago</span> •
+                                        Commerce @ Uni of Melbourne</p>
+                                </div>
+                            </div>
+                            <button class="text-gray-400 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined">more_vert</span>
+                            </button>
+                        </div>
+                        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 font-sans">
+                            Hey guys, slight panic. My loan disbursal for <strong>University of Melbourne</strong>
+                            tuition is sorted, but HDFC is saying they will only release "Living Expenses" monthly? Rent
+                            in Melbourne is crazy and landlords ask for bond + 4 weeks upfront. Has anyone negotiated a
+                            lump sum release for living expenses?
+                        </p>
+                        <div class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">arrow_upward</span> 45 Likes
+                            </button>
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">chat_bubble</span> 23 Comments
+                            </button>
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">share</span> Share
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -469,7 +715,8 @@
                         <span class="text-2xl font-bold font-display tracking-tight text-white">LoanHero</span>
                     </div>
                     <p class="text-gray-400 max-w-sm font-sans leading-relaxed mb-8">
-                        Empowering students with transparent, flexible, and accessible education financing solutions.
+                        Empowering students with transparent, flexible, and accessible education
+                        financing solutions.
                         Join
                         thousands of students pursuing their dreams.
                     </p>
@@ -500,11 +747,14 @@
                 <div>
                     <h4 class="text-lg font-bold mb-6 font-display text-white">Quick Links</h4>
                     <ul class="space-y-4 text-gray-400 font-sans">
-                        <li><a href="about-us.html" class="hover:text-primary transition-colors">About Us</a></li>
-                        <li><a href="how-it-works.html" class="hover:text-primary transition-colors">How It Works</a>
+                        <li><a href="about-us.html" class="hover:text-primary transition-colors">About
+                                Us</a></li>
+                        <li><a href="how-it-works.html" class="hover:text-primary transition-colors">How
+                                It Works</a>
                         </li>
                         <li><a href="faq.html" class="hover:text-primary transition-colors">FAQ</a></li>
-                        <li><a href="emi.html" class="hover:text-primary transition-colors">EMI Calculator</a></li>
+                        <li><a href="emi.html" class="hover:text-primary transition-colors">EMI
+                                Calculator</a></li>
                         <li><a href="contact.html" class="hover:text-primary transition-colors">Contact</a></li>
                     </ul>
                 </div>
@@ -516,7 +766,8 @@
                                 Policy</a></li>
                         <li><a href="terms-conditions.html" class="hover:text-primary transition-colors">Terms of
                                 Service</a></li>
-                        <li><a href="cookies.html" class="hover:text-primary transition-colors">Cookie Policy</a></li>
+                        <li><a href="cookies.html" class="hover:text-primary transition-colors">Cookie
+                                Policy</a></li>
                     </ul>
                 </div>
             </div>

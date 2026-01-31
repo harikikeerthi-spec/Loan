@@ -10,6 +10,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
         rel="stylesheet" />
+
     <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
@@ -49,6 +50,28 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
+        /* Initial nav text colors (black) */
+        .nav-link {
+            color: rgba(0, 0, 0, 0.9) !important;
+        }
+
+        .font-display {
+            color: black !important;
+        }
+
+        #loginLink {
+            color: rgba(0, 0, 0, 0.9) !important;
+        }
+
+        .material-symbols-outlined {
+            color: black !important;
+        }
+
+        /* Keep dropdown icons purple initially */
+        #profileDropdown .material-symbols-outlined {
+            color: #6605c7 !important;
+        }
+
         .nav-scrolled {
             background: rgba(17, 8, 26, 0.95) !important;
             backdrop-filter: blur(12px);
@@ -85,6 +108,11 @@
             color: white !important;
         }
 
+        /* Keep dropdown icons visible */
+        .nav-scrolled #profileDropdown .material-symbols-outlined {
+            color: #6605c7 !important;
+        }
+
         .form-input {
             background: rgba(255, 255, 255, 0.5);
             border: 1px solid rgba(102, 5, 199, 0.1);
@@ -105,6 +133,93 @@
 
         body {
             background-attachment: fixed;
+        }
+
+        /* Dropdown Navigation Styles */
+        .nav-dropdown {
+            position: relative;
+        }
+
+        .nav-dropdown-content {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 0.5rem;
+            min-width: 200px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border-radius: 1rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        .dark .nav-dropdown-content {
+            background: rgba(25, 15, 35, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-dropdown:hover .nav-dropdown-content,
+        .nav-dropdown-content:hover {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .nav-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1.25rem;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .dark .nav-dropdown-item {
+            color: #e5e7eb;
+        }
+
+        .nav-dropdown-item:hover {
+            background: rgba(102, 5, 199, 0.1);
+            border-left-color: #6605c7;
+            color: #6605c7;
+        }
+
+        .dark .nav-dropdown-item:hover {
+            background: rgba(102, 5, 199, 0.2);
+            color: #a855f7;
+        }
+
+        .nav-dropdown-item .material-symbols-outlined {
+            font-size: 1.25rem;
+            opacity: 0.7;
+        }
+
+        .nav-dropdown-item:hover .material-symbols-outlined {
+            opacity: 1;
+        }
+
+        .nav-dropdown-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            cursor: pointer;
+        }
+
+        .nav-dropdown-toggle .material-symbols-outlined {
+            font-size: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-dropdown:hover .nav-dropdown-toggle .material-symbols-outlined {
+            transform: rotate(180deg);
         }
     </style>
 </head>
@@ -128,36 +243,107 @@
                     <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
                         <span class="material-symbols-outlined text-2xl">school</span>
                     </div>
-                    <span
-                        class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero</span>
+                    <span class="font-bold text-2xl tracking-tight font-display text-white">LoanHero
+                        <span class="text-primary/80"></span></span>
                 </a>
 
                 <div class="hidden lg:flex items-center gap-8">
                     <a href="about-us.html"
-                        class="text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">About</a>
-                    <a href="emi.html"
-                        class="text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">EMI
-                        Calculator</a>
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">About</a>
+
+                    <!-- Loans Dropdown -->
+                    <div class="nav-dropdown">
+                        <div
+                            class="nav-dropdown-toggle nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">
+                            <span>Loans</span>
+                            <span class="material-symbols-outlined">expand_more</span>
+                        </div>
+                        <div class="nav-dropdown-content">
+                            <a href="emi.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">calculate</span>
+                                <span>EMI Calculator</span>
+                            </a>
+                            <a href="compare-loans.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">compare</span>
+                                <span>Compare Loans</span>
+                            </a>
+                        </div>
+                    </div>
+
                     <a href="blog.html"
-                        class="text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Blog</a>
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Blog</a>
                     <a href="explore.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Community</a>
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Community</a>
                     <a href="contact.html"
-                        class="text-sm font-bold text-primary transition-colors font-sans">Contact</a>
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Contact</a>
                 </div>
             </div>
 
             <div class="flex items-center gap-4">
                 <a href="login.html" id="loginLink"
-                    class="text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Login</a>
+                    class="px-6 py-2.5 text-sm font-bold bg-white text-primary rounded-full hover:bg-gray-100 transition-all shadow-lg hover:shadow-white/20 cursor-pointer">Login</a>
 
                 <!-- User Profile Dropdown (Hidden initially) -->
                 <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
                     <button id="profileBtn"
-                        class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
-                        <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
-                        <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white"></span>
+                        class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-white/10 transition-all text-white border border-white/20">
+                        <span class="material-symbols-outlined text-2xl text-white">account_circle</span>
+                        <span id="userEmail" class="text-sm font-bold text-white"></span>
                     </button>
+
+                    <!-- Dropdown Menu -->
+                    <div id="profileDropdown"
+                        class="hidden absolute top-12 right-0 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 w-64 overflow-hidden">
+                        <div
+                            class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-primary/5 to-purple-500/5">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 font-sans">Logged in as</p>
+                            <p id="dropdownEmail" class="text-sm font-bold text-gray-900 dark:text-white truncate"></p>
+                        </div>
+
+                        <div class="py-2">
+                            <a href="dashboard.html"
+                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                <span class="material-symbols-outlined text-lg text-primary opacity-100">dashboard</span>
+                                <span class="font-semibold">Dashboard</span>
+                            </a>
+                            <a href="profile.html"
+                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                <span class="material-symbols-outlined text-lg text-primary opacity-100">person</span>
+                                <span class="font-semibold">My Profile</span>
+                            </a>
+                            <a href="my-applications.html"
+                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                <span class="material-symbols-outlined text-lg text-primary opacity-100">description</span>
+                                <span class="font-semibold">My Applications</span>
+                            </a>
+                            <a href="vault.html"
+                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                <span class="material-symbols-outlined text-lg text-primary opacity-100">folder_open</span>
+                                <span class="font-semibold">Document Vault</span>
+                            </a>
+                            <a href="settings.html"
+                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                <span class="material-symbols-outlined text-lg text-primary opacity-100">settings</span>
+                                <span class="font-semibold">Settings</span>
+                            </a>
+                            <a href="help.html"
+                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                <span class="material-symbols-outlined text-lg text-primary opacity-100">help</span>
+                                <span class="font-semibold">Help & Support</span>
+                            </a>
+                        </div>
+
+                        <div class="border-t border-gray-200 dark:border-gray-700">
+                            <a href="#" id="logoutBtn"
+                                class="flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-semibold">
+                                <span class="material-symbols-outlined text-lg">logout</span>
+                                <span>Logout</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+                   
 
                     <!-- Dropdown Menu -->
                     <div id="profileDropdown"
@@ -416,7 +602,6 @@
         });
     </script>
     <script src="assets/js/auth.js"></script>
-    <script src="assets/js/dashboard.js"></script>
 </body>
 
 </html>

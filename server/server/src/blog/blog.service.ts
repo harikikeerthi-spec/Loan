@@ -812,7 +812,155 @@ export class BlogService {
     }
 
     /**
-     * Get comments for a blog with pagination
+     * Add a reply to a comment
+     */
+    async addReplyToComment(
+        commentId: string,
+        data: {
+            author: string;
+            content: string;
+        },
+    ) {
+        const parentComment = await this.prisma.comment.findUnique({
+            where: { id: commentId },
+            select: { id: true, blogId: true },
+        });
+
+        if (!parentComment) {
+            throw new NotFoundException('Comment not found');
+        }
+
+        const reply = await this.prisma.comment.create({
+            data: {
+                blogId: parentComment.blogId,
+                parentId: commentId,
+                author: data.author,
+                content: data.content,
+            },
+            select: {
+                id: true,
+                author: true,
+                content: true,
+                likes: true,
+                createdAt: true,
+            },
+        });
+
+        return {
+            success: true,
+            message: 'Reply added successfully',
+            data: reply,
+        };
+    }
+
+    /**
+     * Delete a comment
+     */
+    async deleteComment(commentId: string) {
+        const comment = await this.prisma.comment.findUnique({
+            where: { id: commentId },
+            select: { id: true },
+        });
+
+        if (!comment) {
+            throw new NotFoundException('Comment not found');
+        }
+
+        // Deleting a comment should also delete its likes and replies
+        // In Prisma, we can use a transaction to ensure both are deleted
+        await this.prisma.$transaction([
+            // Delete likes for this comment
+            this.prisma.commentLike.deleteMany({
+                where: { commentId },
+            }),
+            // Delete replies (which are also comments pointing to this one)
+            // Note: This only handles one level of replies. For deep nesting, 
+            // the schema should ideally have onDelete: Cascade
+            this.prisma.comment.deleteMany({
+                where: { parentId: commentId },
+            }),
+            // Finally delete the comment itself
+            this.prisma.comment.delete({
+                where: { id: commentId },
+            }),
+        ]);
+
+        return {
+            success: true,
+            message: 'Comment deleted successfully',
+        };
+    }
+
+    /**
+     * Like or unlike a comment
+     */
+    async toggleCommentLike(
+        commentId: string,
+        userId: string, // IP address or user identifier
+    ) {
+        const comment = await this.prisma.comment.findUnique({
+            where: { id: commentId },
+            select: { id: true, likes: true },
+        });
+
+        if (!comment) {
+            throw new NotFoundException('Comment not found');
+        }
+
+        // Check if user already liked this comment
+        const existingLike = await this.prisma.commentLike.findUnique({
+            where: {
+                commentId_userId: {
+                    commentId,
+                    userId,
+                },
+            },
+        });
+
+        if (existingLike) {
+            // Unlike: remove the like
+            await this.prisma.commentLike.delete({
+                where: { id: existingLike.id },
+            });
+
+            // Decrement likes count
+            await this.prisma.comment.update({
+                where: { id: commentId },
+                data: { likes: { decrement: 1 } },
+            });
+
+            return {
+                success: true,
+                message: 'Comment unliked',
+                liked: false,
+                likesCount: comment.likes - 1,
+            };
+        } else {
+            // Like: add the like
+            await this.prisma.commentLike.create({
+                data: {
+                    commentId,
+                    userId,
+                },
+            });
+
+            // Increment likes count
+            await this.prisma.comment.update({
+                where: { id: commentId },
+                data: { likes: { increment: 1 } },
+            });
+
+            return {
+                success: true,
+                message: 'Comment liked',
+                liked: true,
+                likesCount: comment.likes + 1,
+            };
+        }
+    }
+
+    /**
+     * Get comments for a blog with pagination (only top-level comments)
      */
     async getCommentsForBlog(blogId: string, limit = 20, offset = 0) {
         const blog = await this.prisma.blog.findUnique({
@@ -826,7 +974,10 @@ export class BlogService {
 
         const [comments, total] = await Promise.all([
             this.prisma.comment.findMany({
-                where: { blogId },
+                where: {
+                    blogId,
+                    parentId: null, // Only top-level comments
+                },
                 orderBy: { createdAt: 'desc' },
                 take: limit,
                 skip: offset,
@@ -834,10 +985,26 @@ export class BlogService {
                     id: true,
                     author: true,
                     content: true,
+                    likes: true,
                     createdAt: true,
+                    replies: {
+                        select: {
+                            id: true,
+                            author: true,
+                            content: true,
+                            likes: true,
+                            createdAt: true,
+                        },
+                        orderBy: { createdAt: 'asc' },
+                    },
                 },
             }),
-            this.prisma.comment.count({ where: { blogId } }),
+            this.prisma.comment.count({
+                where: {
+                    blogId,
+                    parentId: null,
+                }
+            }),
         ]);
 
         return {

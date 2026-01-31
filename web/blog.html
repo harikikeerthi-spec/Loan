@@ -58,6 +58,28 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
+        /* Initial nav text colors (black) */
+        .nav-link {
+            color: rgba(0, 0, 0, 0.9) !important;
+        }
+
+        .font-display {
+            color: black !important;
+        }
+
+        #loginLink {
+            color: rgba(0, 0, 0, 0.9) !important;
+        }
+
+        .material-symbols-outlined {
+            color: black !important;
+        }
+
+        /* Keep dropdown icons purple initially */
+        #profileDropdown .material-symbols-outlined {
+            color: #6605c7 !important;
+        }
+
         .nav-scrolled {
             background: rgba(17, 8, 26, 0.95) !important;
             backdrop-filter: blur(12px);
@@ -92,6 +114,11 @@
 
         .nav-scrolled .material-symbols-outlined {
             color: white !important;
+        }
+
+        /* Keep dropdown icons visible */
+        .nav-scrolled #profileDropdown .material-symbols-outlined {
+            color: #6605c7 !important;
         }
 
         body {
@@ -187,84 +214,106 @@
         <div class="w-full max-w-7xl flex justify-between items-center">
             <div class="flex items-center gap-12">
                 <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
-                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+                    <div
+                        class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white shadow-lg backdrop-blur-sm border border-white/20">
                         <span class="material-symbols-outlined text-2xl">school</span>
                     </div>
-                    <span
-                        class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero</span>
+                    <span class="font-bold text-2xl tracking-tight font-display text-white">LoanHero
+                        <span class="text-primary/80"></span></span>
                 </a>
 
                 <div class="hidden lg:flex items-center gap-8">
                     <a href="about-us.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">About</a>
-                    <a href="emi.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">EMI
-                        Calculator</a>
-                    <a href="blog.html" class="nav-link text-sm font-bold text-primary transition-colors">Blog</a>
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">About</a>
+
+                    <!-- Loans Dropdown -->
+                    <div class="nav-dropdown">
+                        <div
+                            class="nav-dropdown-toggle nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">
+                            <span>Loans</span>
+                            <span class="material-symbols-outlined">expand_more</span>
+                        </div>
+                        <div class="nav-dropdown-content">
+                            <a href="emi.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">calculate</span>
+                                <span>EMI Calculator</span>
+                            </a>
+                            <a href="compare-loans.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">compare</span>
+                                <span>Compare Loans</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <a href="blog.html"
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Blog</a>
                     <a href="explore.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Community</a>
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Community</a>
                     <a href="contact.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">Contact</a>
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Contact</a>
                 </div>
             </div>
 
             <div class="flex items-center gap-4">
                 <a href="login.html" id="loginLink"
-                    class="text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Login</a>
+                    class="px-6 py-2.5 text-sm font-bold bg-white text-primary rounded-full hover:bg-gray-100 transition-all shadow-lg hover:shadow-white/20 cursor-pointer">Login</a>
 
                 <!-- User Profile Dropdown (Hidden initially) -->
                 <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
                     <button id="profileBtn"
-                        class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
-                        <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
-                        <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white"></span>
+                        class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-white/10 transition-all text-white border border-white/20">
+                        <span class="material-symbols-outlined text-2xl text-white">account_circle</span>
+                        <span id="userEmail" class="text-sm font-bold text-white"></span>
                     </button>
 
                     <!-- Dropdown Menu -->
                     <div id="profileDropdown"
-                        class="hidden absolute right-0 top-full mt-2 w-64 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-gray-200 dark:border-white/10 z-50 overflow-hidden">
-                        <div class="p-6 border-b border-gray-200 dark:border-white/10">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider font-bold mb-1">
-                                Welcome back</p>
-                            <!-- <p id="dropdownName" class="text-lg font-bold text-gray-900 dark:text-white mb-1">User Name -->
-                            </p>
-                            <p id="dropdownEmail" class="text-sm text-gray-600 dark:text-gray-400">user@email.com</p>
+                        class="hidden absolute top-12 right-0 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 w-64 overflow-hidden">
+                        <div
+                            class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-primary/5 to-purple-500/5">
+                            <p class="text-xs text-gray-500 dark:text-gray-400 font-sans">Logged in as</p>
+                            <p id="dropdownEmail" class="text-sm font-bold text-gray-900 dark:text-white truncate"></p>
                         </div>
 
-                        <div class="p-4 space-y-2">
-                            <a href="user-details.html"
-                                class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
-                                <span class="material-symbols-outlined text-xl text-primary">person</span>
-                                <span class="font-semibold text-gray-900 dark:text-white">Profile</span>
-                            </a>
+                        <div class="py-2">
                             <a href="dashboard.html"
-                                class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
-                                <span class="material-symbols-outlined text-xl text-primary">dashboard</span>
-                                <span class="font-semibold text-gray-900 dark:text-white">Dashboard</span>
+                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                <span class="material-symbols-outlined text-lg text-primary opacity-100">dashboard</span>
+                                <span class="font-semibold">Dashboard</span>
+                            </a>
+                            <a href="profile.html"
+                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                <span class="material-symbols-outlined text-lg text-primary opacity-100">person</span>
+                                <span class="font-semibold">My Profile</span>
                             </a>
                             <a href="my-applications.html"
-                                class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
-                                <span class="material-symbols-outlined text-xl text-primary">description</span>
-                                <span class="font-semibold text-gray-900 dark:text-white">My Applications</span>
+                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                <span class="material-symbols-outlined text-lg text-primary opacity-100">description</span>
+                                <span class="font-semibold">My Applications</span>
                             </a>
                             <a href="vault.html"
-                                class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
-                                <span class="material-symbols-outlined text-xl text-primary">security</span>
-                                <span class="font-semibold text-gray-900 dark:text-white">Document Vault</span>
+                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                <span class="material-symbols-outlined text-lg text-primary opacity-100">folder_open</span>
+                                <span class="font-semibold">Document Vault</span>
+                            </a>
+                            <a href="settings.html"
+                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                <span class="material-symbols-outlined text-lg text-primary opacity-100">settings</span>
+                                <span class="font-semibold">Settings</span>
                             </a>
                             <a href="help.html"
-                                class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors">
-                                <span class="material-symbols-outlined text-xl text-primary">help</span>
-                                <span class="font-semibold text-gray-900 dark:text-white">Help & Support</span>
+                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                <span class="material-symbols-outlined text-lg text-primary opacity-100">help</span>
+                                <span class="font-semibold">Help & Support</span>
                             </a>
                         </div>
 
-                        <div class="p-4 border-t border-gray-200 dark:border-white/10">
-                            <button id="logoutBtn"
-                                class="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors text-red-600 dark:text-red-400">
-                                <span class="material-symbols-outlined text-xl">logout</span>
-                                <span class="font-semibold">Logout</span>
-                            </button>
+                        <div class="border-t border-gray-200 dark:border-gray-700">
+                            <a href="#" id="logoutBtn"
+                                class="flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-semibold">
+                                <span class="material-symbols-outlined text-lg">logout</span>
+                                <span>Logout</span>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -272,21 +321,16 @@
         </div>
     </nav>
 
-    <main class="relative z-10">
-        <!-- Hero Section -->
-        <section class="max-w-7xl mx-auto px-6 pt-40 pb-16 text-center">
-            <span class="inline-block text-primary font-bold text-[11px] tracking-[0.2em] uppercase mb-4">Our
-                Blog</span>
-            <h1 id="page-heading"
-                class="text-5xl md:text-7xl font-bold font-display leading-[1.1] tracking-tight mb-6 text-gray-900 dark:text-white">
-                Insights & <span class="italic text-primary font-normal">Resources</span>
-            </h1>
-            <p id="page-description"
-                class="text-xl text-gray-500 dark:text-gray-400 max-w-2xl mx-auto leading-relaxed font-sans">
+    <main class="relative z-10 max-w-7xl mx-auto px-6 pt-32 pb-24">
+        <div class="text-center mb-16">
+            <span class="text-primary font-bold text-[11px] tracking-[0.2em] uppercase mb-4 block">Our Blog</span>
+            <h1 class="text-5xl md:text-6xl font-bold font-display text-gray-900 dark:text-white mb-6">Insights & <span
+                    class="italic text-primary font-normal">Resources</span></h1>
+            <p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed">
                 Expert advice on education loans, study abroad tips, financial planning, and inspiring student success
                 stories.
             </p>
-        </section>
+        </div>
 
         <!-- Category Filter -->
         <section class="max-w-7xl mx-auto px-6 pb-12">
@@ -329,7 +373,12 @@
             </div>
 
             <!-- Load More Button -->
-            <div class="text-center mt-16">
+            <div class="text-center mt-16 space-y-4">
+                <button id="refresh-btn"
+                    class="px-6 py-3 bg-primary text-white font-bold rounded-full shadow-lg hover:shadow-xl hover:bg-primary/90 transition-all text-sm uppercase tracking-wider">
+                    <span class="material-symbols-outlined text-lg mr-2">refresh</span>
+                    Refresh Blogs
+                </button>
                 <button id="load-more-btn"
                     class="hidden px-8 py-4 bg-white dark:bg-zinc-800 text-gray-700 dark:text-gray-300 font-bold rounded-full border border-gray-200 dark:border-zinc-700 shadow-lg hover:shadow-xl hover:border-primary transition-all text-sm uppercase tracking-wider">
                     Load More Articles

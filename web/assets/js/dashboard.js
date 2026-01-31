@@ -15,6 +15,13 @@ const publicPages = [
     'terms-conditions.html',
     'cookies.html',
     'eligibility.html',
+    'explore.html',
+    'engage.html',
+    'blog.html',
+    'community-events.html',
+    'community-mentorship.html',
+    'community-resources.html',
+    'community-success-stories.html',
     ''  // Root path
 ];
 

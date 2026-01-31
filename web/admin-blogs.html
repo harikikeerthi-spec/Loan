@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Admin - Blog Management - LoanHero</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                    },
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    },
+                    backgroundImage: {
+                        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(102, 5, 199, 0.4) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224, 195, 137, 0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139, 192, 232, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102, 5, 199, 0.3) 0px, transparent 50%)',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        .dark .glass-card {
+            background: rgba(25, 15, 35, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .admin-form {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+
+        .dark .admin-form {
+            background: rgba(25, 15, 35, 0.8);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none">
+        <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
+        <div class="absolute inset-0 opacity-30 mix-blend-overlay"
+            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="mainNav"
+        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
+        <div class="w-full max-w-7xl flex justify-between items-center">
+            <div class="flex items-center gap-12">
+                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+                        <span class="material-symbols-outlined text-2xl">school</span>
+                    </div>
+                    <span class="font-bold text-2xl tracking-tight font-display text-white">LoanHero
+                        <span class="text-primary/80">Admin</span></span>
+                </a>
+
+                <div class="hidden lg:flex items-center gap-8">
+                    <a href="index.html"
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">← Back to Site</a>
+                    <a href="#blogs-list"
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">View Blogs</a>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <button id="themeToggle"
+                    class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white shadow-lg backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-all">
+                    <span class="material-symbols-outlined text-xl">dark_mode</span>
+                </button>
+
+                <!-- Admin Profile -->
+                <div class="flex items-center gap-3 text-white">
+                    <div class="text-right">
+                        <div class="text-sm font-semibold" id="currentAdminName">Admin</div>
+                        <div class="text-xs opacity-80" id="currentAdminEmail">admin@loanhero.com</div>
+                    </div>
+                    <button id="logoutBtn"
+                        class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-lg transition-all">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="pt-32 pb-16 px-6">
+        <div class="max-w-7xl mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-12">
+                <h1 class="text-4xl md:text-5xl font-bold font-display text-gray-900 dark:text-white mb-4">
+                    Blog Management
+                </h1>
+                <p class="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                    Create, edit, and manage your blog posts with our intuitive admin interface.
+                </p>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-8">
+                <!-- Blog Form -->
+                <div class="lg:col-span-2">
+                    <div class="admin-form rounded-2xl p-8 shadow-xl border border-gray-200/50 dark:border-gray-700/50">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-2xl font-bold font-display text-gray-900 dark:text-white">
+                                <span class="material-symbols-outlined text-primary mr-2">edit</span>
+                                Write New Blog
+                            </h2>
+                            <button id="clearForm" class="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+                                Clear Form
+                            </button>
+                        </div>
+
+                        <form id="blogForm" class="space-y-6">
+                            <!-- Title -->
+                            <div>
+                                <label for="blogTitle" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    Blog Title *
+                                </label>
+                                <input type="text" id="blogTitle" name="title" required
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                    placeholder="Enter an engaging title for your blog post">
+                            </div>
+
+                            <!-- Category & Tags -->
+                            <div class="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="blogCategory" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        Category *
+                                    </label>
+                                    <select id="blogCategory" name="category" required
+                                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
+                                        <option value="">Select Category</option>
+                                        <option value="education">Education</option>
+                                        <option value="finance">Finance</option>
+                                        <option value="loans">Loans</option>
+                                        <option value="student-life">Student Life</option>
+                                        <option value="career">Career</option>
+                                        <option value="tips">Tips & Tricks</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="blogTags" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                        Tags (comma-separated)
+                                    </label>
+                                    <input type="text" id="blogTags" name="tags"
+                                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                        placeholder="e.g., education, loans, tips">
+                                </div>
+                            </div>
+
+                            <!-- Featured Image URL -->
+                            <div>
+                                <label for="blogImage" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    Featured Image URL
+                                </label>
+                                <input type="url" id="blogImage" name="image"
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                    placeholder="https://example.com/image.jpg">
+                            </div>
+
+                            <!-- Excerpt -->
+                            <div>
+                                <label for="blogExcerpt" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    Excerpt (Short Summary) *
+                                </label>
+                                <textarea id="blogExcerpt" name="excerpt" rows="3" required
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
+                                    placeholder="Write a brief summary of your blog post..."></textarea>
+                            </div>
+
+                            <!-- Content -->
+                            <div>
+                                <label for="blogContent" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    Content *
+                                </label>
+                                <textarea id="blogContent" name="content" rows="12" required
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
+                                    placeholder="Write your blog content here... You can use basic HTML formatting."></textarea>
+                            </div>
+
+                            <!-- Author -->
+                            <div>
+                                <label for="blogAuthor" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    Author Name *
+                                </label>
+                                <input type="text" id="blogAuthor" name="author" required
+                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                    placeholder="Your name or author name">
+                            </div>
+
+                            <!-- Status -->
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                                    Status
+                                </label>
+                                <div class="flex gap-4">
+                                    <label class="flex items-center">
+                                        <input type="radio" name="status" value="draft" checked
+                                            class="w-4 h-4 text-primary border-gray-300 dark:border-gray-600 focus:ring-primary">
+                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Draft</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="radio" name="status" value="published"
+                                            class="w-4 h-4 text-primary border-gray-300 dark:border-gray-600 focus:ring-primary">
+                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Published</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Submit Buttons -->
+                            <div class="flex gap-4 pt-4">
+                                <button type="submit"
+                                    class="flex-1 bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl">
+                                    <span class="material-symbols-outlined text-lg mr-2">save</span>
+                                    Save Blog
+                                </button>
+                                <button type="button" id="previewBtn"
+                                    class="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
+                                    <span class="material-symbols-outlined text-lg mr-2">visibility</span>
+                                    Preview
+                                </button>
+                                <a href="blog.html" target="_blank"
+                                    class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all shadow-lg hover:shadow-xl">
+                                    <span class="material-symbols-outlined text-lg mr-2">open_in_new</span>
+                                    View Blog
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Blog List Sidebar -->
+                <div class="space-y-6">
+                    <!-- Recent Blogs -->
+                    <div class="admin-form rounded-2xl p-6 shadow-xl border border-gray-200/50 dark:border-gray-700/50">
+                        <h3 class="text-lg font-bold font-display text-gray-900 dark:text-white mb-4 flex items-center">
+                            <span class="material-symbols-outlined text-primary mr-2">article</span>
+                            Recent Blogs
+                        </h3>
+                        <div id="blogsList" class="space-y-3">
+                            <!-- Blog items will be populated here -->
+                            <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                                <span class="material-symbols-outlined text-3xl mb-2 block">article</span>
+                                <p>No blogs yet</p>
+                                <p class="text-sm">Create your first blog post!</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Stats -->
+                    <div class="admin-form rounded-2xl p-6 shadow-xl border border-gray-200/50 dark:border-gray-700/50">
+                        <h3 class="text-lg font-bold font-display text-gray-900 dark:text-white mb-4 flex items-center">
+                            <span class="material-symbols-outlined text-primary mr-2">analytics</span>
+                            Quick Stats
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Total Blogs</span>
+                                <span class="font-semibold text-primary" id="totalBlogs">0</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Published</span>
+                                <span class="font-semibold text-green-600" id="publishedBlogs">0</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600 dark:text-gray-400">Drafts</span>
+                                <span class="font-semibold text-orange-600" id="draftBlogs">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tips -->
+                    <div class="glass-card rounded-2xl p-6">
+                        <h3 class="text-lg font-bold font-display text-gray-900 dark:text-white mb-4 flex items-center">
+                            <span class="material-symbols-outlined text-primary mr-2">lightbulb</span>
+                            Writing Tips
+                        </h3>
+                        <ul class="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                            <li>• Use engaging titles that grab attention</li>
+                            <li>• Keep excerpts under 150 characters</li>
+                            <li>• Add relevant tags for better discoverability</li>
+                            <li>• Include high-quality images</li>
+                            <li>• Write in a conversational tone</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Success/Error Messages -->
+    <div id="messageToast" class="fixed bottom-6 right-6 z-50 hidden">
+        <div class="glass-card rounded-xl p-4 shadow-xl max-w-sm">
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-green-600" id="messageIcon">check_circle</span>
+                <p class="text-sm font-medium text-gray-900 dark:text-white" id="messageText"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/theme-toggle.js"></script>
+    <script>
+        // Check authentication
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentAdmin = JSON.parse(localStorage.getItem('currentAdmin'));
+            if (!currentAdmin) {
+                // Not logged in, redirect to login
+                window.location.href = 'admin-login.html';
+                return;
+            }
+
+            // Display current admin info
+            document.getElementById('currentAdminName').textContent = currentAdmin.name;
+            document.getElementById('currentAdminEmail').textContent = currentAdmin.email;
+
+            // Initialize the page
+            updateBlogsList();
+            updateStats();
+        });
+
+        // Logout functionality
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            localStorage.removeItem('currentAdmin');
+            window.location.href = 'admin-login.html';
+        });
+
+        // Form handling
+        document.getElementById('blogForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const currentAdmin = JSON.parse(localStorage.getItem('currentAdmin'));
+            if (!currentAdmin) {
+                showMessage('Please log in first', 'error', 'red');
+                return;
+            }
+
+            const formData = new FormData(this);
+            const blogData = {
+                title: formData.get('title'),
+                category: formData.get('category'),
+                tags: formData.get('tags').split(',').map(tag => tag.trim()).filter(tag => tag),
+                image: formData.get('image'),
+                excerpt: formData.get('excerpt'),
+                content: formData.get('content'),
+                author: formData.get('author'),
+                status: formData.get('status'),
+                adminId: currentAdmin.id, // Track which admin created this blog
+                adminName: currentAdmin.name,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                id: Date.now().toString()
+            };
+
+            const editingId = document.getElementById('blogForm').dataset.editingId;
+
+            if (editingId) {
+                // Update existing blog
+                const blogs = JSON.parse(localStorage.getItem('adminBlogs') || '[]');
+                const blogIndex = blogs.findIndex(b => b.id === editingId && b.adminId === currentAdmin.id);
+
+                if (blogIndex !== -1) {
+                    blogs[blogIndex] = {
+                        ...blogs[blogIndex],
+                        title: formData.get('title'),
+                        category: formData.get('category'),
+                        tags: formData.get('tags').split(',').map(tag => tag.trim()).filter(tag => tag),
+                        image: formData.get('image'),
+                        excerpt: formData.get('excerpt'),
+                        content: formData.get('content'),
+                        author: formData.get('author'),
+                        status: formData.get('status'),
+                        updatedAt: new Date().toISOString()
+                    };
+                    localStorage.setItem('adminBlogs', JSON.stringify(blogs));
+                    showMessage(`Blog "${blogs[blogIndex].title}" updated successfully!`, 'check_circle', 'green');
+
+                    // Reset form state
+                    delete document.getElementById('blogForm').dataset.editingId;
+                    const submitBtn = document.querySelector('#blogForm button[type="submit"]');
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined text-lg mr-2">save</span>Save Blog';
+                }
+            } else {
+                // Create new blog
+                const blogData = {
+                    title: formData.get('title'),
+                    category: formData.get('category'),
+                    tags: formData.get('tags').split(',').map(tag => tag.trim()).filter(tag => tag),
+                    image: formData.get('image'),
+                    excerpt: formData.get('excerpt'),
+                    content: formData.get('content'),
+                    author: formData.get('author'),
+                    status: formData.get('status'),
+                    adminId: currentAdmin.id, // Track which admin created this blog
+                    adminName: currentAdmin.name,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    id: Date.now().toString()
+                };
+
+                // Save to localStorage (in a real app, this would be an API call)
+                const blogs = JSON.parse(localStorage.getItem('adminBlogs') || '[]');
+                blogs.unshift(blogData);
+                localStorage.setItem('adminBlogs', JSON.stringify(blogs));
+
+                showMessage(`Blog "${blogData.title}" saved successfully!`, 'check_circle', 'green');
+            }
+
+            updateBlogsList();
+            updateStats();
+            this.reset();
+        });
+
+        // Clear form
+        document.getElementById('clearForm').addEventListener('click', function() {
+            document.getElementById('blogForm').reset();
+        });
+
+        // Preview functionality
+        document.getElementById('previewBtn').addEventListener('click', function() {
+            const formData = new FormData(document.getElementById('blogForm'));
+            const title = formData.get('title');
+            const content = formData.get('content');
+
+            if (!title || !content) {
+                showMessage('Please fill in title and content to preview', 'warning', 'orange');
+                return;
+            }
+
+            // Open preview in new window
+            const previewWindow = window.open('', '_blank');
+            previewWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Preview: ${title}</title>
+                    <script src="https://cdn.tailwindcss.com"></script>
+                </head>
+                <body class="p-8 max-w-4xl mx-auto">
+                    <h1 class="text-3xl font-bold mb-4">${title}</h1>
+                    <div class="prose max-w-none">${content.replace(/\n/g, '<br>')}</div>
+                </body>
+                </html>
+            `);
+        });
+
+        // Show message toast
+        function showMessage(text, icon, color) {
+            const toast = document.getElementById('messageToast');
+            const iconEl = document.getElementById('messageIcon');
+            const textEl = document.getElementById('messageText');
+
+            iconEl.textContent = icon;
+            iconEl.className = `material-symbols-outlined text-${color}-600`;
+            textEl.textContent = text;
+
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // Update blogs list
+        function updateBlogsList() {
+            const currentAdmin = JSON.parse(localStorage.getItem('currentAdmin'));
+            if (!currentAdmin) return;
+
+            const allBlogs = JSON.parse(localStorage.getItem('adminBlogs') || '[]');
+            // Only show blogs created by current admin
+            const blogs = allBlogs.filter(blog => blog.adminId === currentAdmin.id);
+            const blogsList = document.getElementById('blogsList');
+
+            if (blogs.length === 0) {
+                blogsList.innerHTML = `
+                    <div class="text-center py-8 text-gray-500 dark:text-gray-400">
+                        <span class="material-symbols-outlined text-3xl mb-2 block">article</span>
+                        <p>No blogs yet</p>
+                        <p class="text-sm">Create your first blog post!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            blogsList.innerHTML = blogs.slice(0, 5).map(blog => `
+                <div class="p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-semibold text-sm text-gray-900 dark:text-white truncate flex-1 mr-2">${blog.title}</h4>
+                        <div class="flex gap-1">
+                            <button onclick="editBlog('${blog.id}')"
+                                class="p-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded"
+                                title="Edit blog">
+                                <span class="material-symbols-outlined text-sm">edit</span>
+                            </button>
+                            <button onclick="deleteBlog('${blog.id}')"
+                                class="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                                title="Delete blog">
+                                <span class="material-symbols-outlined text-sm">delete</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-gray-500 dark:text-gray-400">${blog.category}</span>
+                        <span class="text-xs px-2 py-1 rounded-full ${blog.status === 'published' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'}">
+                            ${blog.status}
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update stats
+        function updateStats() {
+            const currentAdmin = JSON.parse(localStorage.getItem('currentAdmin'));
+            if (!currentAdmin) return;
+
+            const allBlogs = JSON.parse(localStorage.getItem('adminBlogs') || '[]');
+            const blogs = allBlogs.filter(blog => blog.adminId === currentAdmin.id);
+
+            const totalBlogs = document.getElementById('totalBlogs');
+            const publishedBlogs = document.getElementById('publishedBlogs');
+            const draftBlogs = document.getElementById('draftBlogs');
+
+            totalBlogs.textContent = blogs.length;
+            publishedBlogs.textContent = blogs.filter(blog => blog.status === 'published').length;
+            draftBlogs.textContent = blogs.filter(blog => blog.status === 'draft').length;
+        }
+
+        // Edit blog function
+        function editBlog(blogId) {
+            const currentAdmin = JSON.parse(localStorage.getItem('currentAdmin'));
+            if (!currentAdmin) return;
+
+            const blogs = JSON.parse(localStorage.getItem('adminBlogs') || '[]');
+            const blog = blogs.find(b => b.id === blogId && b.adminId === currentAdmin.id);
+
+            if (!blog) {
+                showMessage('Blog not found or access denied', 'error', 'red');
+                return;
+            }
+
+            // Populate form with blog data
+            document.getElementById('blogTitle').value = blog.title;
+            document.getElementById('blogCategory').value = blog.category;
+            document.getElementById('blogTags').value = blog.tags ? blog.tags.join(', ') : '';
+            document.getElementById('blogImage').value = blog.image || '';
+            document.getElementById('blogExcerpt').value = blog.excerpt;
+            document.getElementById('blogContent').value = blog.content;
+            document.getElementById('blogAuthor').value = blog.author;
+
+            // Set status
+            const statusInputs = document.querySelectorAll('input[name="status"]');
+            statusInputs.forEach(input => {
+                input.checked = input.value === blog.status;
+            });
+
+            // Store editing blog ID
+            document.getElementById('blogForm').dataset.editingId = blogId;
+
+            // Change submit button text
+            const submitBtn = document.querySelector('#blogForm button[type="submit"]');
+            submitBtn.innerHTML = '<span class="material-symbols-outlined text-lg mr-2">update</span>Update Blog';
+
+            // Scroll to form
+            document.getElementById('blogForm').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Delete blog function
+        function deleteBlog(blogId) {
+            const currentAdmin = JSON.parse(localStorage.getItem('currentAdmin'));
+            if (!currentAdmin) return;
+
+            if (!confirm('Are you sure you want to delete this blog? This action cannot be undone.')) {
+                return;
+            }
+
+            const blogs = JSON.parse(localStorage.getItem('adminBlogs') || '[]');
+            const blogIndex = blogs.findIndex(b => b.id === blogId && b.adminId === currentAdmin.id);
+
+            if (blogIndex === -1) {
+                showMessage('Blog not found or access denied', 'error', 'red');
+                return;
+            }
+
+            blogs.splice(blogIndex, 1);
+            localStorage.setItem('adminBlogs', JSON.stringify(blogs));
+
+            showMessage('Blog deleted successfully', 'check_circle', 'green');
+            updateBlogsList();
+            updateStats();
+        }
+
+        // Make functions global
+        window.editBlog = editBlog;
+        window.deleteBlog = deleteBlog;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateBlogsList();
+            updateStats();
+        });
+    </script>
+</body>
+
+</html>

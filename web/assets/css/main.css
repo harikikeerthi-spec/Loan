@@ -60,7 +60,7 @@
 
 /* Navigation Scrolled State */
 .nav-scrolled {
-    background: rgba(255, 255, 255, 0.8) !important;
+    background: rgba(17, 8, 26, 0.95) !important;
     backdrop-filter: blur(12px);
     padding-top: 1rem !important;
     padding-bottom: 1rem !important;

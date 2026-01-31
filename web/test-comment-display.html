@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Comment Display Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .comment { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .reply { margin-left: 30px; border-left: 3px solid #007bff; padding-left: 15px; }
+        .like-btn { background: #f8f9fa; border: 1px solid #ddd; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+        .like-btn.liked { background: #ffe6e6; border-color: #ff6b6b; }
+        .reply-btn { background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-left: 10px; }
+        .reply-form { margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Comment Display Test</h1>
+
+    <div id="blog-info">
+        <h2>Loading blog...</h2>
+    </div>
+
+    <div id="comments-section">
+        <h2>Comments</h2>
+        <div id="comments-list"></div>
+        <div id="no-comments">No comments yet.</div>
+    </div>
+
+    <div id="add-comment-section">
+        <h3>Add Comment</h3>
+        <input type="text" id="comment-author" placeholder="Your name" value="Test User"><br><br>
+        <textarea id="comment-content" placeholder="Your comment" rows="3">This is a test comment to verify display functionality.</textarea><br><br>
+        <button onclick="addComment()">Add Comment</button>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+        let currentBlogId = null;
+
+        // Mock comment data for testing display
+        const mockComments = [
+            {
+                id: 'comment1',
+                author: 'John Doe',
+                content: 'Great article! Very informative.',
+                likes: 5,
+                createdAt: new Date().toISOString(),
+                replies: [
+                    {
+                        id: 'reply1',
+                        author: 'Jane Smith',
+                        content: 'I agree, this helped me a lot!',
+                        likes: 2,
+                        createdAt: new Date().toISOString()
+                    }
+                ]
+            },
+            {
+                id: 'comment2',
+                author: 'Bob Wilson',
+                content: 'Thanks for sharing this information.',
+                likes: 1,
+                createdAt: new Date().toISOString(),
+                replies: []
+            }
+        ];
+
+        async function loadBlog() {
+            try {
+                const response = await fetch(`${API_BASE}/blogs?limit=1`);
+                const data = await response.json();
+
+                if (data.success && data.data.length > 0) {
+                    const blog = data.data[0];
+                    currentBlogId = blog.id;
+                    document.getElementById('blog-info').innerHTML = `
+                        <h2>${blog.title}</h2>
+                        <p>${blog.excerpt}</p>
+                        <p><strong>ID:</strong> ${blog.id}</p>
+                    `;
+                    loadComments();
+                } else {
+                    document.getElementById('blog-info').innerHTML = '<h2>No blogs found</h2>';
+                }
+            } catch (error) {
+                document.getElementById('blog-info').innerHTML = '<h2>Error loading blog</h2>';
+                console.error('Error:', error);
+                // Use mock data for testing
+                displayComments(mockComments);
+            }
+        }
+
+        async function loadComments() {
+            if (!currentBlogId) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/blogs/${currentBlogId}/comments`);
+                const data = await response.json();
+
+                if (data.success && data.data.length > 0) {
+                    displayComments(data.data);
+                } else {
+                    document.getElementById('comments-list').innerHTML = '';
+                    document.getElementById('no-comments').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading comments:', error);
+                // Use mock data for testing
+                displayComments(mockComments);
+            }
+        }
+
+        function displayComments(comments) {
+            const container = document.getElementById('comments-list');
+            document.getElementById('no-comments').style.display = 'none';
+
+            container.innerHTML = comments.map(comment => createCommentHTML(comment)).join('');
+            attachEventListeners();
+        }
+
+        function createCommentHTML(comment, isReply = false) {
+            const className = isReply ? 'comment reply' : 'comment';
+            const repliesHTML = comment.replies ?
+                comment.replies.map(reply => createCommentHTML(reply, true)).join('') : '';
+
+            return `
+                <div class="${className}" data-comment-id="${comment.id}">
+                    <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                        <strong>${comment.author}</strong>
+                        <span style="margin-left: auto; color: #666; font-size: 0.8em;">
+                            ${new Date(comment.createdAt).toLocaleDateString()}
+                        </span>
+                    </div>
+                    <p>${comment.content}</p>
+                    <div style="margin-top: 10px;">
+                        <button class="like-btn" data-comment-id="${comment.id}">
+                            👍 ${comment.likes || 0} Likes
+                        </button>
+                        <button class="reply-btn" data-comment-id="${comment.id}">Reply</button>
+                    </div>
+                    <div class="reply-form hidden" data-comment-id="${comment.id}">
+                        <input type="text" placeholder="Your name" class="reply-author"><br><br>
+                        <textarea placeholder="Your reply" rows="2" class="reply-content"></textarea><br><br>
+                        <button onclick="submitReply('${comment.id}')">Submit Reply</button>
+                        <button onclick="cancelReply('${comment.id}')">Cancel</button>
+                    </div>
+                    <div class="replies-container">
+                        ${repliesHTML}
+                    </div>
+                </div>
+            `;
+        }
+
+        function attachEventListeners() {
+            // Like buttons
+            document.querySelectorAll('.like-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const commentId = btn.dataset.commentId;
+                    const userId = 'test_user_' + Date.now();
+
+                    try {
+                        const response = await fetch(`${API_BASE}/blogs/comments/${commentId}/like`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ userId })
+                        });
+                        const data = await response.json();
+
+                        if (data.success) {
+                            btn.textContent = `👍 ${data.likesCount} Likes`;
+                            btn.classList.toggle('liked', data.liked);
+                        }
+                    } catch (error) {
+                        console.error('Error liking comment:', error);
+                    }
+                });
+            });
+
+            // Reply buttons
+            document.querySelectorAll('.reply-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const commentId = btn.dataset.commentId;
+                    const replyForm = document.querySelector(`.reply-form[data-comment-id="${commentId}"]`);
+                    replyForm.classList.toggle('hidden');
+                });
+            });
+        }
+
+        async function addComment() {
+            if (!currentBlogId) {
+                alert('No blog loaded');
+                return;
+            }
+
+            const author = document.getElementById('comment-author').value;
+            const content = document.getElementById('comment-content').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/blogs/${currentBlogId}/comments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ author, content })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Comment added successfully!');
+                    loadComments(); // Reload comments
+                } else {
+                    alert('Error adding comment');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error adding comment');
+            }
+        }
+
+        async function submitReply(commentId) {
+            const replyForm = document.querySelector(`.reply-form[data-comment-id="${commentId}"]`);
+            const author = replyForm.querySelector('.reply-author').value;
+            const content = replyForm.querySelector('.reply-content').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/blogs/comments/${commentId}/replies`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ author, content })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Reply added successfully!');
+                    replyForm.classList.add('hidden');
+                    loadComments(); // Reload comments
+                } else {
+                    alert('Error adding reply');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error adding reply');
+            }
+        }
+
+        function cancelReply(commentId) {
+            const replyForm = document.querySelector(`.reply-form[data-comment-id="${commentId}"]`);
+            replyForm.classList.add('hidden');
+        }
+
+        // Load blog on page load
+        window.onload = loadBlog;
+    </script>
+</body>
+</html>

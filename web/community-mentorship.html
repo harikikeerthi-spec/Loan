@@ -64,6 +64,93 @@
         .mentor-image {
             transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
+
+        /* Dropdown Navigation Styles */
+        .nav-dropdown {
+            position: relative;
+        }
+
+        .nav-dropdown-content {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 0.5rem;
+            min-width: 200px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border-radius: 1rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        .dark .nav-dropdown-content {
+            background: rgba(25, 15, 35, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-dropdown:hover .nav-dropdown-content,
+        .nav-dropdown-content:hover {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .nav-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1.25rem;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .dark .nav-dropdown-item {
+            color: #e5e7eb;
+        }
+
+        .nav-dropdown-item:hover {
+            background: rgba(102, 5, 199, 0.1);
+            border-left-color: #6605c7;
+            color: #6605c7;
+        }
+
+        .dark .nav-dropdown-item:hover {
+            background: rgba(102, 5, 199, 0.2);
+            color: #a855f7;
+        }
+
+        .nav-dropdown-item .material-symbols-outlined {
+            font-size: 1.25rem;
+            opacity: 0.7;
+        }
+
+        .nav-dropdown-item:hover .material-symbols-outlined {
+            opacity: 1;
+        }
+
+        .nav-dropdown-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            cursor: pointer;
+        }
+
+        .nav-dropdown-toggle .material-symbols-outlined {
+            font-size: 1rem;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-dropdown:hover .nav-dropdown-toggle .material-symbols-outlined {
+            transform: rotate(180deg);
+        }
     </style>
 </head>
 
@@ -86,33 +173,50 @@
                     <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
                         <span class="material-symbols-outlined text-2xl">school</span>
                     </div>
-                    <span
-                        class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero</span>
+                    <span class="font-bold text-2xl tracking-tight font-display text-white">LoanHero
+                        <span class="text-primary/80"></span></span>
                 </a>
 
                 <div class="hidden lg:flex items-center gap-8">
                     <a href="about-us.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">About</a>
-                    <a href="emi.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">EMI
-                        Calculator</a>
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">About</a>
+
+                    <!-- Loans Dropdown -->
+                    <div class="nav-dropdown">
+                        <div
+                            class="nav-dropdown-toggle nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">
+                            <span>Loans</span>
+                            <span class="material-symbols-outlined">expand_more</span>
+                        </div>
+                        <div class="nav-dropdown-content">
+                            <a href="emi.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">calculate</span>
+                                <span>EMI Calculator</span>
+                            </a>
+                            <a href="compare-loans.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">compare</span>
+                                <span>Compare Loans</span>
+                            </a>
+                        </div>
+                    </div>
+
                     <a href="blog.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Blog</a>
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Blog</a>
                     <a href="explore.html"
-                        class="nav-link text-sm font-bold text-primary transition-colors">Community</a>
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Community</a>
                     <a href="contact.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">Contact</a>
+                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Contact</a>
                 </div>
             </div>
 
             <div class="flex items-center gap-4">
                 <a href="login.html" id="loginLink"
-                    class="text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Login</a>
+                    class="px-6 py-2.5 text-sm font-bold bg-white text-primary rounded-full hover:bg-gray-100 transition-all shadow-lg hover:shadow-white/20 cursor-pointer">Login</a>
 
                 <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
-                    <button id="profileBtn" class="flex items-center gap-2 px-4 py-2 rounded-full transition-all">
-                        <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
-                        <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white"></span>
+                    <button id="profileBtn" class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-white/10 transition-all text-white border border-white/20">
+                        <span class="material-symbols-outlined text-2xl text-white">account_circle</span>
+                        <span id="userEmail" class="text-sm font-bold text-white"></span>
                     </button>
                 </div>
             </div>

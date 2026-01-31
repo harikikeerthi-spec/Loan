@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Admin Login - LoanHero</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                    },
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    },
+                    backgroundImage: {
+                        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(102, 5, 199, 0.4) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224, 195, 137, 0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139, 192, 232, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102, 5, 199, 0.3) 0px, transparent 50%)',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+
+        .dark .glass-card {
+            background: rgba(25, 15, 35, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none">
+        <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
+        <div class="absolute inset-0 opacity-30 mix-blend-overlay"
+            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="mainNav"
+        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
+        <div class="w-full max-w-7xl flex justify-between items-center">
+            <div class="flex items-center gap-12">
+                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+                        <span class="material-symbols-outlined text-2xl">school</span>
+                    </div>
+                    <span class="font-bold text-2xl tracking-tight font-display text-white">LoanHero
+                        <span class="text-primary/80">Admin</span></span>
+                </a>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <button id="themeToggle"
+                    class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white shadow-lg backdrop-blur-sm border border-white/20 hover:bg-white/20 transition-all">
+                    <span class="material-symbols-outlined text-xl">dark_mode</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Login Form -->
+    <main class="pt-32 pb-16 px-6">
+        <div class="max-w-md mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-3xl md:text-4xl font-bold font-display text-gray-900 dark:text-white mb-4">
+                    Admin Login
+                </h1>
+                <p class="text-gray-600 dark:text-gray-300">
+                    Access your blog management dashboard
+                </p>
+            </div>
+
+            <!-- Login Card -->
+            <div class="glass-card rounded-2xl p-8 shadow-xl">
+                <form id="loginForm" class="space-y-6">
+                    <!-- Email -->
+                    <div>
+                        <label for="email" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            Email Address
+                        </label>
+                        <input type="email" id="email" name="email" required
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                            placeholder="admin@loanhero.com">
+                    </div>
+
+                    <!-- Password -->
+                    <div>
+                        <label for="password" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                            Password
+                        </label>
+                        <input type="password" id="password" name="password" required
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                            placeholder="Enter your password">
+                    </div>
+
+                    <!-- Remember Me -->
+                    <div class="flex items-center">
+                        <input type="checkbox" id="remember" name="remember"
+                            class="w-4 h-4 text-primary border-gray-300 dark:border-gray-600 rounded focus:ring-primary">
+                        <label for="remember" class="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                            Remember me
+                        </label>
+                    </div>
+
+                    <!-- Login Button -->
+                    <button type="submit"
+                        class="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl">
+                        <span class="material-symbols-outlined text-lg mr-2">login</span>
+                        Sign In
+                    </button>
+                </form>
+
+                <!-- Demo Accounts -->
+                <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Demo Accounts:</h3>
+                    <div class="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+                        <div><strong>Admin 1:</strong> admin1@loanhero.com / password123</div>
+                        <div><strong>Admin 2:</strong> admin2@loanhero.com / password123</div>
+                        <div><strong>Admin 3:</strong> admin3@loanhero.com / password123</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="text-center mt-8">
+                <a href="index.html" class="text-primary hover:underline text-sm">
+                    ← Back to LoanHero
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- Success/Error Messages -->
+    <div id="messageToast" class="fixed bottom-6 right-6 z-50 hidden">
+        <div class="glass-card rounded-xl p-4 shadow-xl max-w-sm">
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-green-600" id="messageIcon">check_circle</span>
+                <p class="text-sm font-medium text-gray-900 dark:text-white" id="messageText"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/theme-toggle.js"></script>
+    <script>
+        // Check if already logged in
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentAdmin = JSON.parse(localStorage.getItem('currentAdmin'));
+            if (currentAdmin) {
+                // Already logged in, redirect to admin dashboard
+                window.location.href = 'admin-blogs.html';
+            }
+        });
+
+        // Initialize demo admins if not exists
+        function initializeDemoAdmins() {
+            const admins = JSON.parse(localStorage.getItem('adminUsers') || '[]');
+            if (admins.length === 0) {
+                const demoAdmins = [
+                    {
+                        id: 'admin1',
+                        name: 'John Admin',
+                        email: 'admin1@loanhero.com',
+                        password: 'password123',
+                        role: 'admin',
+                        createdAt: new Date().toISOString()
+                    },
+                    {
+                        id: 'admin2',
+                        name: 'Sarah Admin',
+                        email: 'admin2@loanhero.com',
+                        password: 'password123',
+                        role: 'admin',
+                        createdAt: new Date().toISOString()
+                    },
+                    {
+                        id: 'admin3',
+                        name: 'Mike Admin',
+                        email: 'admin3@loanhero.com',
+                        password: 'password123',
+                        role: 'admin',
+                        createdAt: new Date().toISOString()
+                    }
+                ];
+                localStorage.setItem('adminUsers', JSON.stringify(demoAdmins));
+            }
+        }
+
+        // Login form handler
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const remember = document.getElementById('remember').checked;
+
+            // Initialize demo admins
+            initializeDemoAdmins();
+
+            // Check credentials
+            const admins = JSON.parse(localStorage.getItem('adminUsers') || '[]');
+            const admin = admins.find(a => a.email === email && a.password === password);
+
+            if (admin) {
+                // Login successful
+                const currentAdmin = {
+                    id: admin.id,
+                    name: admin.name,
+                    email: admin.email,
+                    role: admin.role,
+                    loginTime: new Date().toISOString()
+                };
+
+                localStorage.setItem('currentAdmin', JSON.stringify(currentAdmin));
+
+                if (remember) {
+                    // Store for longer period (7 days)
+                    const expiry = new Date();
+                    expiry.setDate(expiry.getDate() + 7);
+                    currentAdmin.expiry = expiry.toISOString();
+                }
+
+                showMessage(`Welcome back, ${admin.name}!`, 'check_circle', 'green');
+
+                // Redirect to admin dashboard
+                setTimeout(() => {
+                    window.location.href = 'admin-blogs.html';
+                }, 1000);
+            } else {
+                showMessage('Invalid email or password', 'error', 'red');
+            }
+        });
+
+        // Show message toast
+        function showMessage(text, icon, color) {
+            const toast = document.getElementById('messageToast');
+            const iconEl = document.getElementById('messageIcon');
+            const textEl = document.getElementById('messageText');
+
+            iconEl.textContent = icon;
+            iconEl.className = `material-symbols-outlined text-${color}-600`;
+            textEl.textContent = text;
+
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+    </script>
+</body>
+
+</html>

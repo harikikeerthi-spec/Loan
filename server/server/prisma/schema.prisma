@@ -59,10 +59,28 @@ model Comment {
   blogId    String
   author    String
   content   String   @db.Text
+  parentId  String?  // For nested replies
+  likes     Int      @default(0) // Number of likes
   createdAt DateTime @default(now())
   blog      Blog     @relation(fields: [blogId], references: [id])
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
+  likesData CommentLike[]
 
   @@index([blogId])
+  @@index([parentId])
+}
+
+model CommentLike {
+  id        String   @id @default(uuid())
+  commentId String
+  userId    String   // IP address or user identifier for anonymous likes
+  createdAt DateTime @default(now())
+  comment   Comment  @relation(fields: [commentId], references: [id])
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
 }
 
 model Tag {

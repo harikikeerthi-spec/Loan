@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Comment Likes & Replies</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .test-section { border: 1px solid #ccc; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { border-color: green; background-color: #f0fff0; }
+        .error { border-color: red; background-color: #fff0f0; }
+        button { padding: 8px 12px; margin: 5px; cursor: pointer; }
+        input, textarea { width: 100%; padding: 8px; margin: 5px 0; box-sizing: border-box; }
+        .comment { border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 3px; }
+        .reply { margin-left: 20px; border-left: 2px solid #ccc; padding-left: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Comment Likes & Replies Test</h1>
+
+    <div class="test-section">
+        <h3>Test Blog ID: <span id="blogId">Loading...</span></h3>
+        <button onclick="loadBlogId()">Load Test Blog</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Add Comment</h3>
+        <input type="text" id="commentAuthor" placeholder="Author name" value="Test User">
+        <textarea id="commentContent" placeholder="Comment content" rows="3">This is a test comment</textarea>
+        <button onclick="addComment()">Add Comment</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Load Comments</h3>
+        <button onclick="loadComments()">Load Comments</button>
+        <div id="commentsDisplay"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>Add Reply</h3>
+        <input type="text" id="replyCommentId" placeholder="Comment ID to reply to">
+        <input type="text" id="replyAuthor" placeholder="Reply author" value="Reply User">
+        <textarea id="replyContent" placeholder="Reply content" rows="2">This is a test reply</textarea>
+        <button onclick="addReply()">Add Reply</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Like Comment</h3>
+        <input type="text" id="likeCommentId" placeholder="Comment ID to like">
+        <button onclick="likeComment()">Like/Unlike Comment</button>
+    </div>
+
+    <div class="test-section">
+        <h3>Results</h3>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+        let currentBlogId = null;
+
+        async function loadBlogId() {
+            try {
+                const response = await fetch(`${API_BASE}/blogs`);
+                const data = await response.json();
+                if (data.success && data.data.length > 0) {
+                    currentBlogId = data.data[0].id;
+                    document.getElementById('blogId').textContent = currentBlogId;
+                    logResult('Blog ID loaded: ' + currentBlogId, 'success');
+                } else {
+                    logResult('No blogs found', 'error');
+                }
+            } catch (error) {
+                logResult('Error loading blog: ' + error.message, 'error');
+            }
+        }
+
+        async function addComment() {
+            if (!currentBlogId) {
+                logResult('No blog ID loaded', 'error');
+                return;
+            }
+
+            const author = document.getElementById('commentAuthor').value;
+            const content = document.getElementById('commentContent').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/blogs/${currentBlogId}/comments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ author, content })
+                });
+                const data = await response.json();
+                logResult('Comment added: ' + JSON.stringify(data), data.success ? 'success' : 'error');
+            } catch (error) {
+                logResult('Error adding comment: ' + error.message, 'error');
+            }
+        }
+
+        async function loadComments() {
+            if (!currentBlogId) {
+                logResult('No blog ID loaded', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/blogs/${currentBlogId}/comments`);
+                const data = await response.json();
+
+                if (data.success) {
+                    displayComments(data.data);
+                    logResult('Comments loaded successfully', 'success');
+                } else {
+                    logResult('Error loading comments', 'error');
+                }
+            } catch (error) {
+                logResult('Error loading comments: ' + error.message, 'error');
+            }
+        }
+
+        function displayComments(comments) {
+            const container = document.getElementById('commentsDisplay');
+            container.innerHTML = '';
+
+            comments.forEach(comment => {
+                const div = document.createElement('div');
+                div.className = 'comment';
+                div.innerHTML = `
+                    <strong>${comment.author}</strong> (${comment.likes} likes)<br>
+                    ${comment.content}<br>
+                    <small>ID: ${comment.id}</small>
+                    <button onclick="setReplyId('${comment.id}')">Reply to this</button>
+                    <button onclick="setLikeId('${comment.id}')">Like this</button>
+                `;
+
+                if (comment.replies && comment.replies.length > 0) {
+                    comment.replies.forEach(reply => {
+                        const replyDiv = document.createElement('div');
+                        replyDiv.className = 'comment reply';
+                        replyDiv.innerHTML = `
+                            <strong>${reply.author}</strong> (${reply.likes} likes)<br>
+                            ${reply.content}<br>
+                            <small>ID: ${reply.id}</small>
+                            <button onclick="setLikeId('${reply.id}')">Like this</button>
+                        `;
+                        div.appendChild(replyDiv);
+                    });
+                }
+
+                container.appendChild(div);
+            });
+        }
+
+        function setReplyId(commentId) {
+            document.getElementById('replyCommentId').value = commentId;
+        }
+
+        function setLikeId(commentId) {
+            document.getElementById('likeCommentId').value = commentId;
+        }
+
+        async function addReply() {
+            const commentId = document.getElementById('replyCommentId').value;
+            const author = document.getElementById('replyAuthor').value;
+            const content = document.getElementById('replyContent').value;
+
+            if (!commentId) {
+                logResult('No comment ID specified', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/blogs/comments/${commentId}/replies`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ author, content })
+                });
+                const data = await response.json();
+                logResult('Reply added: ' + JSON.stringify(data), data.success ? 'success' : 'error');
+            } catch (error) {
+                logResult('Error adding reply: ' + error.message, 'error');
+            }
+        }
+
+        async function likeComment() {
+            const commentId = document.getElementById('likeCommentId').value;
+            const userId = 'test_user_' + Date.now();
+
+            if (!commentId) {
+                logResult('No comment ID specified', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/blogs/comments/${commentId}/like`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId })
+                });
+                const data = await response.json();
+                logResult('Like toggled: ' + JSON.stringify(data), data.success ? 'success' : 'error');
+            } catch (error) {
+                logResult('Error toggling like: ' + error.message, 'error');
+            }
+        }
+
+        function logResult(message, type) {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = type;
+            div.innerHTML = `${new Date().toLocaleTimeString()}: ${message}`;
+            results.appendChild(div);
+            results.scrollTop = results.scrollHeight;
+        }
+
+        // Auto-load blog ID on page load
+        window.onload = loadBlogId;
+    </script>
+</body>
+</html>
