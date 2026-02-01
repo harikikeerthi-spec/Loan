@@ -1036,6 +1036,7 @@ export class BlogService {
                 title: true,
                 slug: true,
                 excerpt: true,
+                content: true,  // <-- Added this line to include blog content
                 category: true,
                 authorName: true,
                 authorImage: true,

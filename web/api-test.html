@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+</head>
+
+<body>
+    <h1>Testing Blog API</h1>
+    <button onclick="testAPI()">Test API</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testAPI() {
+            const resultEl = document.getElementById('result');
+            resultEl.textContent = 'Loading...';
+
+            try {
+                const response = await fetch('http://localhost:3000/blogs/admin/all');
+                const data = await response.json();
+                resultEl.textContent = JSON.stringify(data, null, 2);
+                console.log('Success:', data);
+            } catch (error) {
+                resultEl.textContent = 'Error: ' + error.message;
+                console.error('Error:', error);
+            }
+        }
+
+        // Auto-run on load
+        window.addEventListener('load', testAPI);
+    </script>
+</body>
+
+</html>
