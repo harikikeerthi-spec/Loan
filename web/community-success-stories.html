@@ -50,11 +50,71 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
+        /* Initial nav text colors (black) */
+        .nav-link {
+            color: rgba(0, 0, 0, 0.9) !important;
+        }
+
+        .nav-link.active {
+            color: #a855f7 !important;
+        }
+
+        .font-display {
+            color: black !important;
+        }
+
+        #loginLink {
+            color: rgba(0, 0, 0, 0.9) !important;
+        }
+
+        .material-symbols-outlined {
+            color: black !important;
+        }
+
+        /* Keep dropdown icons purple initially */
+        #profileDropdown .material-symbols-outlined {
+            color: #6605c7 !important;
+        }
+
         .nav-scrolled {
             background: rgba(17, 8, 26, 0.95) !important;
             backdrop-filter: blur(12px);
             padding-top: 1rem !important;
             padding-bottom: 1rem !important;
+        }
+
+        .dark .nav-scrolled {
+            background: rgba(17, 8, 26, 0.8) !important;
+        }
+
+        /* White text when scrolled */
+        .nav-scrolled .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        .nav-scrolled .nav-link:hover {
+            color: #6605c7 !important;
+        }
+
+        .nav-scrolled .font-display {
+            color: white !important;
+        }
+
+        .nav-scrolled #loginLink {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        .nav-scrolled #loginLink:hover {
+            color: #6605c7 !important;
+        }
+
+        .nav-scrolled .material-symbols-outlined {
+            color: white !important;
+        }
+
+        /* Keep dropdown icons visible */
+        .nav-scrolled #profileDropdown .material-symbols-outlined {
+            color: #6605c7 !important;
         }
 
         body {
@@ -134,6 +194,11 @@
         .nav-dropdown-item .material-symbols-outlined {
             font-size: 1.25rem;
             opacity: 0.7;
+            color: #6605c7;
+        }
+
+        .dark .nav-dropdown-item .material-symbols-outlined {
+            color: #a855f7;
         }
 
         .nav-dropdown-item:hover .material-symbols-outlined {
@@ -154,6 +219,35 @@
 
         .nav-dropdown:hover .nav-dropdown-toggle .material-symbols-outlined {
             transform: rotate(180deg);
+        }
+
+        /* Active page indicator */
+        .nav-link.active,
+        .nav-dropdown-toggle.active {
+            color: #a855f7 !important;
+            position: relative;
+        }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(to right, #a855f7, #c084fc);
+            border-radius: 2px;
+        }
+
+        .nav-dropdown-item.active {
+            background: rgba(168, 85, 247, 0.15);
+            border-left-color: #a855f7;
+            color: #a855f7;
+        }
+
+        .nav-scrolled .nav-link.active,
+        .nav-scrolled .nav-dropdown-toggle.active {
+            color: #a855f7 !important;
         }
     </style>
 </head>
@@ -201,15 +295,35 @@
                                 <span class="material-symbols-outlined">compare</span>
                                 <span>Compare Loans</span>
                             </a>
+                            <a href="bank-reviews.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">rate_review</span>
+                                <span>Bank Reviews</span>
+                            </a>
                         </div>
                     </div>
 
-                    <a href="blog.html"
-                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Blog</a>
+                    <div class="nav-dropdown">
+                        <div
+                            class="nav-dropdown-toggle nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">
+                            <span>BLOGS</span>
+                            <span class="material-symbols-outlined">expand_more</span>
+                        </div>
+                        <div class="nav-dropdown-content">
+                            <a href="blog.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">article</span>
+                                <span>All Blogs</span>
+                            </a>
+                            <a href="admin-blogs.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">admin_panel_settings</span>
+                                <span>Admin Blogs</span>
+                            </a>
+                        </div>
+                    </div>
+
+
                     <a href="explore.html"
-                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Community</a>
-                    <a href="contact.html"
-                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Contact</a>
+                        class="nav-link active text-sm font-semibold text-white/90 hover:text-primary transition-colors">Community</a>
+
                 </div>
             </div>
 

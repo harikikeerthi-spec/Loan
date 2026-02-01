@@ -31,7 +31,7 @@ export class AdminGuard implements CanActivate {
 
         try {
             // Verify JWT token
-            const payload = this.jwtService.verify(token);
+            const payload = await this.jwtService.verifyAsync(token);
 
             // Get user from database
             const user = await this.usersService.findOne(payload.email);
@@ -50,10 +50,15 @@ export class AdminGuard implements CanActivate {
 
             return true;
         } catch (error) {
-            if (error instanceof ForbiddenException) {
+            if (error instanceof ForbiddenException || error instanceof UnauthorizedException) {
                 throw error;
             }
-            throw new UnauthorizedException('Invalid or expired token');
+            
+            if (error.name === 'TokenExpiredError') {
+                throw new UnauthorizedException('Token has expired');
+            }
+            
+            throw new UnauthorizedException('Invalid token');
         }
     }
 }

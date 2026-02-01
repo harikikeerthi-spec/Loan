@@ -8,18 +8,22 @@ function getUserEmail() {
     return localStorage.getItem('userEmail');
 }
 
-function getUsername() {
-    return localStorage.getItem('username');
+function getUserId() {
+    return localStorage.getItem('userId');
 }
 
-function saveUserData(email, accessToken) {
+function saveUserData(email, accessToken, userId) {
     localStorage.setItem('userEmail', email);
     localStorage.setItem('accessToken', accessToken);
+    if (userId) {
+        localStorage.setItem('userId', userId);
+    }
 }
 
 function logout() {
     localStorage.removeItem('userEmail');
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('userId');
     window.location.href = 'index.html';
 }
 

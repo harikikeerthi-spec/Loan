@@ -8,22 +8,71 @@ if (signupForm) {
     const otpSection = document.getElementById('otpSection');
     const signupEmailInput = document.getElementById('signupEmail');
     const resendSignupBtn = document.getElementById('resendSignupBtn');
-    let authMode = 'register'; // 'register' for new users, 'login' for existing users
+    
+    // Rate limiting state
+    let loginAttempts = 0;
+    const MAX_ATTEMPTS = 5;
+    const RATE_LIMIT_WINDOW = 60000; // 60 seconds
+    let rateLimitExpires = 0;
 
-    const setAuthMode = (mode) => {
-        authMode = mode;
-        signupForm.dataset.authMode = mode;
+    // Email validation
+    const validateEmail = (email) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
     };
 
-    const getAuthMode = () => signupForm.dataset.authMode || authMode;
+    // OTP validation: 6 digits
+    const validateOTP = (otp) => {
+        const otpRegex = /^\d{6}$/;
+        return otpRegex.test(otp);
+    };
+
+    // Check if rate limited
+    const checkRateLimit = () => {
+        const now = Date.now();
+        if (rateLimitExpires && now < rateLimitExpires) {
+            const secondsLeft = Math.ceil((rateLimitExpires - now) / 1000);
+            return { limited: true, secondsLeft };
+        }
+        return { limited: false };
+    };
+
+    // Record login attempt
+    const recordAttempt = () => {
+        loginAttempts++;
+        if (loginAttempts >= MAX_ATTEMPTS) {
+            rateLimitExpires = Date.now() + RATE_LIMIT_WINDOW;
+        }
+    };
+
+    // Reset rate limit
+    const resetRateLimit = () => {
+        loginAttempts = 0;
+        rateLimitExpires = 0;
+    };
 
     if (getOtpSignupBtn) {
         getOtpSignupBtn.addEventListener('click', async () => {
             const email = signupEmailInput.value.trim();
 
+            // Validate input
             if (!email) {
                 showToast('Please enter your email', 'error');
                 signupEmailInput.focus();
+                return;
+            }
+
+            if (!validateEmail(email)) {
+                showToast('Please enter a valid email address.', 'error');
+                signupEmailInput.focus();
+                return;
+            }
+
+            // Check rate limit
+            const rateLimitCheck = checkRateLimit();
+            if (rateLimitCheck.limited) {
+                showToast(`Too many attempts. Try again in ${rateLimitCheck.secondsLeft}s.`, 'error');
+                getOtpSignupBtn.disabled = true;
                 return;
             }
 
@@ -31,62 +80,43 @@ if (signupForm) {
             getOtpSignupBtn.textContent = 'Checking...';
 
             try {
-                // Determine whether this email already exists
-                let isExistingUser = false;
-                try {
-                    const checkResponse = await fetch(`${API_URL}/auth/check-user/${encodeURIComponent(email)}`);
-                    const checkData = await checkResponse.json();
-                    isExistingUser = !!checkData.exists;
-                } catch (checkError) {
-                    console.error('User lookup failed:', checkError);
-                    showToast('Could not check your account. Please try again.', 'error');
-                    getOtpSignupBtn.disabled = false;
-                    getOtpSignupBtn.textContent = 'Get OTP';
-                    return;
-                }
+                recordAttempt();
 
-                const mode = isExistingUser ? 'login' : 'register';
-                setAuthMode(mode);
-
-                console.log('Sending OTP request to:', `${API_URL}/auth/${mode}/send-otp`);
-                const response = await fetch(`${API_URL}/auth/${mode}/send-otp`, {
+                // Request OTP (unified endpoint)
+                const response = await fetch(`${API_URL}/auth/send-otp`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email }),
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Client-Version': '1.0'
+                    },
+                    body: JSON.stringify({ 
+                        email
+                    }),
+                    credentials: 'include' // Include cookies
                 });
 
-                console.log('Response status:', response.status);
                 const responseData = await response.json();
-                console.log('Response data:', responseData);
 
-                // Check for validation failure
                 if (responseData.success === false) {
-                    showToast(responseData.message, 'error');
-                    if (responseData.redirect === 'login' || responseData.redirect === 'signup') {
-                        setTimeout(() => {
-                            window.location.href = `${responseData.redirect}.html`;
-                        }, 1500);
-                        return;
-                    }
+                    showToast(responseData.message || 'Failed to send OTP', 'error');
                     getOtpSignupBtn.disabled = false;
                     getOtpSignupBtn.textContent = 'Get OTP';
                     return;
                 }
 
-                if (!response.ok) throw new Error('Failed to send OTP: ' + (responseData.message || response.statusText));
-
-                showToast(isExistingUser ? 'OTP sent! Enter it to sign in.' : 'OTP sent! Verify to continue.', 'success');
+                showToast('OTP sent to your email! Valid for 10 minutes.', 'success');
                 otpSection.classList.remove('hidden');
                 getOtpSignupBtn.classList.add('hidden');
                 submitBtn.classList.remove('hidden');
 
+                // Focus on first OTP input
                 const otpInputs = document.querySelectorAll('.otp-input');
                 if (otpInputs.length > 0) {
                     otpInputs[0].focus();
                 }
             } catch (error) {
-                console.error('Error details:', error);
-                showToast('Error sending OTP: ' + error.message, 'error');
+                console.error('Error requesting OTP:', error);
+                showToast('Network error. Please check your connection and try again.', 'error');
                 getOtpSignupBtn.disabled = false;
                 getOtpSignupBtn.textContent = 'Get OTP';
             }
@@ -97,25 +127,37 @@ if (signupForm) {
                 e.preventDefault();
                 const email = signupEmailInput.value.trim();
 
+                if (!validateEmail(email)) {
+                    showToast('Please enter a valid email address.', 'error');
+                    return;
+                }
+
                 try {
-                    const mode = getAuthMode();
-                    const response = await fetch(`${API_URL}/auth/${mode}/send-otp`, {
+                    const response = await fetch(`${API_URL}/auth/send-otp`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email }),
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-Client-Version': '1.0'
+                        },
+                        body: JSON.stringify({ 
+                            email
+                        }),
+                        credentials: 'include'
                     });
 
-                    if (!response.ok) throw new Error('Failed to resend OTP');
+                    const data = await response.json();
+                    if (!data.success) throw new Error(data.message);
 
                     showToast('OTP resent to your email!', 'success');
 
+                    // Clear OTP inputs
                     const otpInputs = document.querySelectorAll('.otp-input');
                     otpInputs.forEach(input => input.value = '');
                     if (otpInputs.length > 0) {
                         otpInputs[0].focus();
                     }
                 } catch (error) {
-                    showToast('Error resending OTP', 'error');
+                    showToast('Error resending OTP: ' + error.message, 'error');
                     console.error(error);
                 }
             });
@@ -129,52 +171,71 @@ if (signupForm) {
         let otp = '';
         otpInputs.forEach(input => otp += input.value);
 
-        if (otp.length !== 6) {
-            showToast('Please enter a valid 6-digit OTP', 'error');
+        // Validate OTP format
+        if (!validateOTP(otp)) {
+            showToast('OTP must be exactly 6 digits.', 'error');
             return;
         }
 
+        // Check rate limit
+        const rateLimitCheck = checkRateLimit();
+        if (rateLimitCheck.limited) {
+            showToast(`Too many attempts. Try again in ${rateLimitCheck.secondsLeft}s.`, 'error');
+            submitBtn.disabled = true;
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Verifying...';
+
         try {
-            const mode = getAuthMode();
-            console.log('Verifying OTP for auth mode:', mode);
+            recordAttempt();
 
-            const verifyResponse = await fetch(`${API_URL}/auth/${mode}/verify-otp`, {
+            // Verify OTP using login endpoint
+            const verifyResponse = await fetch(`${API_URL}/auth/verify-otp`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Client-Version': '1.0'
+                },
                 body: JSON.stringify({ email, otp }),
+                credentials: 'include'  // Include cookies for session token
             });
-
-            if (!verifyResponse.ok) throw new Error('Invalid OTP');
 
             const data = await verifyResponse.json();
 
+            if (!data.success) {
+                showToast(data.message || 'Invalid OTP or verification failed', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Verify';
+                return;
+            }
+
+            // Store user data in session/state (not credentials)
             localStorage.setItem('accessToken', data.access_token);
             localStorage.setItem('userEmail', email);
-            localStorage.setItem('firstName', data.firstName || '');
-            localStorage.setItem('lastName', data.lastName || '');
+            localStorage.setItem('userId', data.userId || '');
 
-            console.log('Auth successful! Data saved:', {
-                accessToken: localStorage.getItem('accessToken'),
-                userEmail: localStorage.getItem('userEmail'),
-                firstName: localStorage.getItem('firstName'),
-                lastName: localStorage.getItem('lastName'),
-                hasUserDetails: data.hasUserDetails
-            });
+            // Reset rate limit on success
+            resetRateLimit();
 
-            if (!data.hasUserDetails) {
-                showToast('Verified! Please finish your details.', 'success');
+            // Redirect based on user status
+            if (!data.userExists) {
+                showToast('Account verified! Please complete your profile.', 'success');
                 setTimeout(() => {
                     window.location.href = 'user-details.html';
                 }, 1500);
             } else {
-                showToast('Welcome back! Redirecting to dashboard...', 'success');
+                showToast('Welcome back! Redirecting home...', 'success');
                 setTimeout(() => {
-                    window.location.href = 'dashboard.html';
+                    window.location.href = 'index.html';
                 }, 1500);
             }
         } catch (error) {
-            console.error('Error details:', error);
-            showToast('Invalid OTP or verification failed: ' + error.message, 'error');
+            console.error('Error during verification:', error);
+            showToast('An error occurred. Please try again.', 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Verify';
         }
     });
 }

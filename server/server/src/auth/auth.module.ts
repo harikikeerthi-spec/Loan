@@ -11,7 +11,7 @@ import { AdminGuard } from './admin.guard';
     UsersModule,
     JwtModule.register({
       secret: 'secretKey', // Use env var in production
-      signOptions: { expiresIn: '60m' },
+      signOptions: { expiresIn: '24h' },
     }),
   ],
   controllers: [AuthController],

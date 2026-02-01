@@ -55,6 +55,10 @@
             color: rgba(0, 0, 0, 0.9) !important;
         }
 
+        .nav-link.active {
+            color: #a855f7 !important;
+        }
+
         .font-display {
             color: black !important;
         }
@@ -191,6 +195,27 @@
             cursor: pointer;
         }
 
+        /* Active page indicator */
+        .nav-link.active {
+            color: #a855f7 !important;
+            position: relative;
+        }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(to right, #a855f7, #c084fc);
+            border-radius: 2px;
+        }
+
+        .nav-scrolled .nav-link.active {
+            color: #a855f7 !important;
+        }
+
         body {
             background-attachment: fixed;
         }
@@ -213,7 +238,8 @@
         <div class="w-full max-w-7xl flex justify-between items-center">
             <div class="flex items-center gap-12">
                 <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
-                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+                    <div
+                        class="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white shadow-lg backdrop-blur-sm border border-white/20">
                         <span class="material-symbols-outlined text-2xl">school</span>
                     </div>
                     <span class="font-bold text-2xl tracking-tight font-display text-white">LoanHero
@@ -222,7 +248,7 @@
 
                 <div class="hidden lg:flex items-center gap-8">
                     <a href="about-us.html"
-                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">About</a>
+                        class="nav-link active text-sm font-semibold text-white/90 hover:text-primary transition-colors">About</a>
 
                     <!-- Loans Dropdown -->
                     <div class="nav-dropdown">
@@ -240,15 +266,35 @@
                                 <span class="material-symbols-outlined">compare</span>
                                 <span>Compare Loans</span>
                             </a>
+                            <a href="bank-reviews.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">rate_review</span>
+                                <span>Bank Reviews</span>
+                            </a>
                         </div>
                     </div>
 
-                    <a href="blog.html"
-                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Blog</a>
+                    <div class="nav-dropdown">
+                        <div
+                            class="nav-dropdown-toggle nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">
+                            <span>BLOGS</span>
+                            <span class="material-symbols-outlined">expand_more</span>
+                        </div>
+                        <div class="nav-dropdown-content">
+                            <a href="blog.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">article</span>
+                                <span>All Blogs</span>
+                            </a>
+                            <a href="admin-blogs.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">admin_panel_settings</span>
+                                <span>Admin Blogs</span>
+                            </a>
+                        </div>
+                    </div>
+
+
                     <a href="explore.html"
                         class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Community</a>
-                    <a href="contact.html"
-                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Contact</a>
+
                 </div>
             </div>
 
@@ -391,22 +437,22 @@
                     <div class="flex items-center gap-4">
                         <a href="#"
                             class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
-                            aria-label="Website">
+                            aria-label="LinkedIn">
                             <span class="material-symbols-outlined text-white">language</span>
                         </a>
                         <a href="#"
                             class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
-                            aria-label="Email">
+                            aria-label="Twitter">
                             <span class="material-symbols-outlined text-white">mail</span>
                         </a>
                         <a href="#"
                             class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
-                            aria-label="Message">
+                            aria-label="Facebook">
                             <span class="material-symbols-outlined text-white">forum</span>
                         </a>
                         <a href="#"
                             class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
-                            aria-label="Share">
+                            aria-label="Instagram">
                             <span class="material-symbols-outlined text-white">share</span>
                         </a>
                     </div>
@@ -420,6 +466,8 @@
                         </li>
                         <li><a href="faq.html" class="hover:text-primary transition-colors">FAQ</a></li>
                         <li><a href="emi.html" class="hover:text-primary transition-colors">EMI Calculator</a></li>
+                        <li><a href="bank-reviews.html" class="hover:text-primary transition-colors">Bank Reviews</a>
+                        </li>
                         <li><a href="contact.html" class="hover:text-primary transition-colors">Contact</a></li>
                     </ul>
                 </div>
@@ -437,7 +485,7 @@
             </div>
 
             <div class="pt-8 border-t border-white/10 text-center text-gray-500 text-xs font-sans">
-                <p>&copy; 2023 LoanHero Inc. All rights reserved.</p>
+                <p>&copy; 2026 LoanHero Inc. All rights reserved.</p>
             </div>
         </div>
     </footer>

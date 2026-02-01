@@ -121,7 +121,7 @@ const API_URL = 'http://localhost:3000';
       if (typeof updateNavbarAuth === 'function') updateNavbarAuth();
 
       // Route per flags
-      if (!data.userExists || !data.hasUserDetails) {
+      if (!data.userExists) {
         window.location.href = 'user-details.html';
       } else {
         window.location.href = 'index.html';
