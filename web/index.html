@@ -73,6 +73,10 @@
             background-attachment: fixed;
         }
 
+        html {
+            scroll-behavior: smooth;
+        }
+
         @keyframes scrollLeft {
             0% {
                 transform: translateX(0);
@@ -305,7 +309,25 @@
                         </div>
                     </div>
 
-                    
+                    <!-- AI Tools Dropdown -->
+                    <div class="nav-dropdown">
+                        <div
+                            class="nav-dropdown-toggle nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">
+                            <span>AI Tools</span>
+                            <span class="material-symbols-outlined">expand_more</span>
+                        </div>
+                        <div class="nav-dropdown-content">
+                            <a href="loan-eligibility.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">smart_toy</span>
+                                <span>Loan Eligibility Checker</span>
+                            </a>
+                            <a href="repayment-stress.html" class="nav-dropdown-item">
+                                <span class="material-symbols-outlined">monitoring</span>
+                                <span>Repayment Stress Simulator</span>
+                            </a>
+                        </div>
+                    </div>
+
                     <a href="explore.html"
                         class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">Community</a>
                     

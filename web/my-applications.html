@@ -424,14 +424,14 @@
                      onclick="showDetails(${applications.indexOf(app)})">
                     <div class="flex items-start justify-between mb-4">
                         <div class="w-12 h-12 ${getStatusBg(app.status)} rounded-xl flex items-center justify-center">
-                            <span class="material-symbols-outlined text-2xl ${getStatusColor(app.status)}">${getLoanIcon(app.type)}</span>
+                            <span class="material-symbols-outlined text-2xl ${getStatusColor(app.status)}">${getLoanIcon(app.loanType || app.type)}</span>
                         </div>
                         <span class="px-3 py-1 text-xs font-bold rounded-full ${getStatusClass(app.status)}">
                             ${formatStatus(app.status)}
                         </span>
                     </div>
                     
-                    <h3 class="text-lg font-bold mb-1">${formatLoanType(app.type)}</h3>
+                    <h3 class="text-lg font-bold mb-1">${formatLoanType(app.loanType || app.type)}</h3>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">${app.bank || 'Bank not specified'}</p>
                     
                     <div class="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-white/10">
@@ -474,10 +474,10 @@
             content.innerHTML = `
                 <div class="flex items-center gap-4 mb-6">
                     <div class="w-16 h-16 ${getStatusBg(app.status)} rounded-2xl flex items-center justify-center">
-                        <span class="material-symbols-outlined text-3xl ${getStatusColor(app.status)}">${getLoanIcon(app.type)}</span>
+                        <span class="material-symbols-outlined text-3xl ${getStatusColor(app.status)}">${getLoanIcon(app.loanType || app.type)}</span>
                     </div>
                     <div>
-                        <h2 class="text-2xl font-bold font-display">${formatLoanType(app.type)}</h2>
+                        <h2 class="text-2xl font-bold font-display">${formatLoanType(app.loanType || app.type)}</h2>
                         <p class="text-gray-500">${app.bank || 'Bank not specified'}</p>
                     </div>
                 </div>
@@ -551,26 +551,64 @@
         }
 
         // Delete application
-        function deleteApplication(index) {
+        async function deleteApplication(index) {
             if (confirm('Are you sure you want to delete this application?')) {
                 const dashboardData = JSON.parse(localStorage.getItem('dashboardData')) || { applications: [], activity: [] };
-                const deletedApp = dashboardData.applications[index];
+                const deletedApp = applications[index]; // Use global applications array which matches index
 
-                // Remove from applications
-                dashboardData.applications.splice(index, 1);
+                if (!deletedApp) return;
+
+                // Delete from server
+                const accessToken = localStorage.getItem('accessToken');
+                if (accessToken && deletedApp.id) {
+                    try {
+                        const response = await fetch(`${API_URL}/auth/application/${deletedApp.id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${accessToken}`
+                            }
+                        });
+
+                        if (!response.ok) {
+                            console.error('Failed to delete on server');
+                            alert('Failed to delete application on server');
+                            return;
+                        }
+                    } catch (e) {
+                        console.error('Error deleting:', e);
+                        alert('Error deleting application');
+                        return;
+                    }
+                }
+
+                // Remove from applications array (local state)
+                applications.splice(index, 1);
+
+                // Update localStorage
+                // We need to find the app in dashboardData.applications by ID if possible, or by matching index if aligned
+                // Since loadApplications refreshes both, we can just filter out by ID
+                if (deletedApp.id) {
+                    dashboardData.applications = dashboardData.applications.filter(a => a.id !== deletedApp.id);
+                } else {
+                    // Fallback if no ID (local only app?)
+                    dashboardData.applications.splice(index, 1);
+                }
 
                 // Add activity log
                 dashboardData.activity = dashboardData.activity || [];
                 dashboardData.activity.unshift({
                     type: 'delete',
-                    description: `Deleted ${formatLoanType(deletedApp.type)} application from ${deletedApp.bank}`,
+                    description: `Deleted ${formatLoanType(deletedApp.loanType || deletedApp.type)} application from ${deletedApp.bank}`,
                     date: new Date().toISOString()
                 });
 
                 localStorage.setItem('dashboardData', JSON.stringify(dashboardData));
 
                 closeDetailsModal();
-                loadApplications();
+                // Re-render
+                renderApplications();
+                updateStats();
             }
         }
 

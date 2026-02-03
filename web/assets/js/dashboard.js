@@ -128,6 +128,11 @@ async function loadDynamicDashboardData(userId) {
                 renderDashboard();
             }
 
+            // Update Progress Tracker
+            if (window.progressTracker && typeof window.progressTracker.updateFromDashboardData === 'function') {
+                window.progressTracker.updateFromDashboardData(window.dashboardData);
+            }
+
             console.log('Dashboard data loaded from database');
         }
     } catch (error) {
