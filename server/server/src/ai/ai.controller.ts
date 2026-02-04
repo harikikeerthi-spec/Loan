@@ -3,6 +3,7 @@ import { EligibilityService } from './services/eligibility.service';
 import { LoanRecommendationService } from './services/loan-recommendation.service';
 import { SopAnalysisService } from './services/sop-analysis.service';
 import { GradeConversionService } from './services/grade-conversion.service';
+import { UniversityComparisonService } from './services/university-comparison.service';
 
 @Controller('ai')
 export class AiController {
@@ -11,7 +12,8 @@ export class AiController {
     private readonly loanRecommendationService: LoanRecommendationService,
     private readonly sopAnalysisService: SopAnalysisService,
     private readonly gradeConversionService: GradeConversionService,
-  ) {}
+    private readonly universityComparisonService: UniversityComparisonService,
+  ) { }
 
   @Post('eligibility-check')
   async checkEligibility(
@@ -105,10 +107,10 @@ export class AiController {
       analysis: result.analysis,
       marksBreakdown: data.subjects
         ? data.subjects.map((subject, index) => ({
-            subject,
-            marks: data.marks?.[index] || 0,
-            outOf: (data.totalMarks || 100) / (data.marks?.length || 1),
-          }))
+          subject,
+          marks: data.marks?.[index] || 0,
+          outOf: (data.totalMarks || 100) / (data.marks?.length || 1),
+        }))
         : null,
     };
 
@@ -132,6 +134,21 @@ export class AiController {
     return {
       success: true,
       comparison: result,
+    };
+  }
+
+  @Post('compare-universities')
+  async compareUniversities(
+    @Body()
+    data: {
+      uni1: string;
+      uni2: string;
+    },
+  ) {
+    const result = this.universityComparisonService.compare(data.uni1, data.uni2);
+    return {
+      success: true,
+      data: result,
     };
   }
 }

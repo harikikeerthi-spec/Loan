@@ -26,7 +26,8 @@ class GradeConverterClient {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const json = await response.json();
+      return json.gradeConversion;
     } catch (error) {
       console.error('Grade conversion error:', error);
       throw error;
@@ -51,7 +52,8 @@ class GradeConverterClient {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const json = await response.json();
+      return json.gradeAnalysis;
     } catch (error) {
       console.error('Grade analysis error:', error);
       throw error;
@@ -76,7 +78,8 @@ class GradeConverterClient {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const json = await response.json();
+      return json.comparison;
     } catch (error) {
       console.error('Grade comparison error:', error);
       throw error;

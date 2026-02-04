@@ -119,8 +119,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
@@ -170,8 +175,10 @@
                         <span class="material-symbols-outlined text-4xl text-primary">calculation</span>
                     </div>
                     <div>
-                        <h1 class="text-4xl font-bold font-display text-gray-900 dark:text-white mb-2">Grade Converter</h1>
-                        <p class="text-gray-600 dark:text-gray-300">Convert grades between different formats and systems with AI-powered analysis</p>
+                        <h1 class="text-4xl font-bold font-display text-gray-900 dark:text-white mb-2">Grade Converter
+                        </h1>
+                        <p class="text-gray-600 dark:text-gray-300">Convert grades between different formats and systems
+                            with AI-powered analysis</p>
                     </div>
                 </div>
             </div>
@@ -185,13 +192,19 @@
 
                         <!-- Tabs -->
                         <div class="flex gap-4 border-b border-gray-200 dark:border-gray-700">
-                            <button class="tab-button active pb-4 px-2 border-b-2 border-primary font-semibold cursor-pointer" data-tab="single">
+                            <button
+                                class="tab-button active pb-4 px-2 border-b-2 border-primary font-semibold cursor-pointer"
+                                data-tab="single">
                                 Single Grade
                             </button>
-                            <button class="tab-button pb-4 px-2 border-b-2 border-transparent font-semibold cursor-pointer" data-tab="multiple">
+                            <button
+                                class="tab-button pb-4 px-2 border-b-2 border-transparent font-semibold cursor-pointer"
+                                data-tab="multiple">
                                 Multiple Grades
                             </button>
-                            <button class="tab-button pb-4 px-2 border-b-2 border-transparent font-semibold cursor-pointer" data-tab="compare">
+                            <button
+                                class="tab-button pb-4 px-2 border-b-2 border-transparent font-semibold cursor-pointer"
+                                data-tab="compare">
                                 Compare Performance
                             </button>
                         </div>
@@ -201,7 +214,8 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-semibold mb-2">Input Type</label>
-                                    <select id="inputType" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+                                    <select id="inputType"
+                                        class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
                                         <option value="marks">Marks (out of total)</option>
                                         <option value="percentage">Percentage (%)</option>
                                         <option value="gpa">GPA (4.0 scale)</option>
@@ -211,7 +225,8 @@
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold mb-2">Output Type</label>
-                                    <select id="outputType" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+                                    <select id="outputType"
+                                        class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
                                         <option value="percentage">Percentage (%)</option>
                                         <option value="gpa">GPA (4.0 scale)</option>
                                         <option value="cgpa">CGPA (10.0 scale)</option>
@@ -223,17 +238,20 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-semibold mb-2">Input Value</label>
-                                    <input type="number" id="inputValue" placeholder="e.g., 85" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
+                                    <input type="number" id="inputValue" placeholder="e.g., 85"
+                                        class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
                                 </div>
                                 <div>
                                     <label class="block text-sm font-semibold mb-2">Total Marks (if marks)</label>
-                                    <input type="number" id="totalMarks" placeholder="e.g., 100" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
+                                    <input type="number" id="totalMarks" placeholder="e.g., 100"
+                                        class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
                                 </div>
                             </div>
 
                             <div>
                                 <label class="block text-sm font-semibold mb-2">Grading System</label>
-                                <select id="gradingSystem" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+                                <select id="gradingSystem"
+                                    class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
                                     <option value="US">US (A+, A, A-, B+, B, B-, C+, C, C-, D+, D, F)</option>
                                     <option value="UK">UK (First Class, 2:1, 2:2, Third)</option>
                                     <option value="India">India (O, A+, A, B+, B, C)</option>
@@ -242,7 +260,8 @@
                                 </select>
                             </div>
 
-                            <button id="convertBtn" class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-lg transition-all">
+                            <button id="convertBtn"
+                                class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-lg transition-all">
                                 Convert Grade
                             </button>
                         </div>
@@ -251,21 +270,26 @@
                         <div id="multiple-tab" class="tab-content space-y-4 hidden">
                             <div>
                                 <label class="block text-sm font-semibold mb-2">Enter marks (comma-separated)</label>
-                                <input type="text" id="marksInput" placeholder="e.g., 85, 78, 92, 88" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
+                                <input type="text" id="marksInput" placeholder="e.g., 85, 78, 92, 88"
+                                    class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
                             </div>
 
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-semibold mb-2">Total Marks</label>
-                                    <input type="number" id="totalMarksMultiple" placeholder="100" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
+                                    <input type="number" id="totalMarksMultiple" placeholder="100"
+                                        class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
                                 </div>
                                 <div>
-                                    <label class="block text-sm font-semibold mb-2">Subjects (optional, comma-separated)</label>
-                                    <input type="text" id="subjectsInput" placeholder="e.g., Math, Physics, Chemistry" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
+                                    <label class="block text-sm font-semibold mb-2">Subjects (optional,
+                                        comma-separated)</label>
+                                    <input type="text" id="subjectsInput" placeholder="e.g., Math, Physics, Chemistry"
+                                        class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
                                 </div>
                             </div>
 
-                            <button id="analyzeBtn" class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-lg transition-all">
+                            <button id="analyzeBtn"
+                                class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-lg transition-all">
                                 Analyze Grades
                             </button>
                         </div>
@@ -274,8 +298,10 @@
                         <div id="compare-tab" class="tab-content space-y-4 hidden">
                             <div id="assessments-container" class="space-y-3">
                                 <div class="assessment-row flex gap-2">
-                                    <input type="text" placeholder="Assessment name (e.g., Sem 1)" class="assessment-name flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
-                                    <input type="number" placeholder="Percentage" class="assessment-percentage w-24 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
+                                    <input type="text" placeholder="Assessment name (e.g., Sem 1)"
+                                        class="assessment-name flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
+                                    <input type="number" placeholder="Percentage"
+                                        class="assessment-percentage w-24 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
                                     <button class="remove-assessment text-red-500 hover:text-red-700 px-2">✕</button>
                                 </div>
                             </div>
@@ -284,7 +310,8 @@
                                 + Add Assessment
                             </button>
 
-                            <button id="compareBtn" class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-lg transition-all">
+                            <button id="compareBtn"
+                                class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-lg transition-all">
                                 Compare Performance
                             </button>
                         </div>
@@ -297,7 +324,8 @@
                         <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Results</h2>
 
                         <div id="results-container" class="space-y-4">
-                            <p class="text-gray-500 dark:text-gray-400 text-center py-8">Enter your grades and click convert to see results</p>
+                            <p class="text-gray-500 dark:text-gray-400 text-center py-8">Enter your grades and click
+                                convert to see results</p>
                         </div>
 
                         <div id="loading" class="loading text-center py-8">
@@ -307,7 +335,8 @@
                             <p class="text-gray-500 dark:text-gray-400">Analyzing your grades...</p>
                         </div>
 
-                        <div id="analysis-section" class="hidden space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div id="analysis-section"
+                            class="hidden space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                             <h3 class="font-bold text-lg">AI Analysis</h3>
                             <div id="analysis-content" class="text-sm space-y-2"></div>
                         </div>
@@ -383,7 +412,8 @@
                     <p class="text-sm text-gray-600 dark:text-gray-400">support@loanhero.com</p>
                 </div>
             </div>
-            <div class="border-t border-gray-200 dark:border-gray-800 pt-8 text-center text-gray-600 dark:text-gray-400 text-sm">
+            <div
+                class="border-t border-gray-200 dark:border-gray-800 pt-8 text-center text-gray-600 dark:text-gray-400 text-sm">
                 <p>&copy; 2024 LoanHero. All rights reserved.</p>
             </div>
         </div>
@@ -393,7 +423,7 @@
     <script src="assets/js/theme-toggle.js"></script>
     <script src="assets/js/grade-converter-client.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const gradeConverter = new GradeConverterClient('http://localhost:3000/ai');
             const resultsContainer = document.getElementById('results-container');
             const loadingEl = document.getElementById('loading');
@@ -402,7 +432,7 @@
 
             // Tab functionality
             document.querySelectorAll('.tab-button').forEach(btn => {
-                btn.addEventListener('click', function() {
+                btn.addEventListener('click', function () {
                     document.querySelectorAll('.tab-button').forEach(b => b.classList.remove('active', 'border-primary'));
                     document.querySelectorAll('.tab-button').forEach(b => b.classList.add('border-transparent'));
                     this.classList.add('active', 'border-primary');
@@ -415,86 +445,86 @@
             // Single Grade Conversion
             const convertBtn = document.getElementById('convertBtn');
             if (convertBtn) {
-                convertBtn.addEventListener('click', async function() {
-            const inputType = document.getElementById('inputType').value;
-            const inputValue = parseFloat(document.getElementById('inputValue').value);
-            const totalMarks = document.getElementById('totalMarks').value ? parseInt(document.getElementById('totalMarks').value) : null;
-            const outputType = document.getElementById('outputType').value;
-            const gradingSystem = document.getElementById('gradingSystem').value;
+                convertBtn.addEventListener('click', async function () {
+                    const inputType = document.getElementById('inputType').value;
+                    const inputValue = parseFloat(document.getElementById('inputValue').value);
+                    const totalMarks = document.getElementById('totalMarks').value ? parseInt(document.getElementById('totalMarks').value) : null;
+                    const outputType = document.getElementById('outputType').value;
+                    const gradingSystem = document.getElementById('gradingSystem').value;
 
-            if (!inputValue) {
-                alert('Please enter a value');
-                return;
-            }
+                    if (!inputValue) {
+                        alert('Please enter a value');
+                        return;
+                    }
 
-            showLoading(true);
-            try {
-                const result = await gradeConverter.convertGrades({
-                    inputType,
-                    inputValue,
-                    totalMarks,
-                    outputType,
-                    gradingSystem
-                });
+                    showLoading(true);
+                    try {
+                        const result = await gradeConverter.convertGrades({
+                            inputType,
+                            inputValue,
+                            totalMarks,
+                            outputType,
+                            gradingSystem
+                        });
 
-                displaySingleResult(result);
-            } catch (error) {
-                resultsContainer.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
-                console.error('Conversion error:', error);
-            } finally {
-                showLoading(false);
-            }
+                        displaySingleResult(result);
+                    } catch (error) {
+                        resultsContainer.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+                        console.error('Conversion error:', error);
+                    } finally {
+                        showLoading(false);
+                    }
                 });
             }
 
             // Multiple Grades Analysis
             const analyzeBtn = document.getElementById('analyzeBtn');
             if (analyzeBtn) {
-                analyzeBtn.addEventListener('click', async function() {
-            const marksStr = document.getElementById('marksInput').value;
-            const totalMarks = parseInt(document.getElementById('totalMarksMultiple').value) || 100;
-            const subjectsStr = document.getElementById('subjectsInput').value;
+                analyzeBtn.addEventListener('click', async function () {
+                    const marksStr = document.getElementById('marksInput').value;
+                    const totalMarks = parseInt(document.getElementById('totalMarksMultiple').value) || 100;
+                    const subjectsStr = document.getElementById('subjectsInput').value;
 
-            const marks = marksStr.split(',').map(m => parseFloat(m.trim())).filter(m => !isNaN(m));
-            const subjects = subjectsStr ? subjectsStr.split(',').map(s => s.trim()) : null;
+                    const marks = marksStr.split(',').map(m => parseFloat(m.trim())).filter(m => !isNaN(m));
+                    const subjects = subjectsStr ? subjectsStr.split(',').map(s => s.trim()) : null;
 
-            if (marks.length === 0) {
-                alert('Please enter marks');
-                return;
-            }
+                    if (marks.length === 0) {
+                        alert('Please enter marks');
+                        return;
+                    }
 
-            showLoading(true);
-            try {
-                const result = await gradeConverter.analyzeGrades({
-                    marks,
-                    subjects,
-                    totalMarks
-                });
+                    showLoading(true);
+                    try {
+                        const result = await gradeConverter.analyzeGrades({
+                            marks,
+                            subjects,
+                            totalMarks
+                        });
 
-                displayAnalysisResult(result);
-            } catch (error) {
-                resultsContainer.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
-                console.error('Analysis error:', error);
-            } finally {
-                showLoading(false);
-            }
+                        displayAnalysisResult(result);
+                    } catch (error) {
+                        resultsContainer.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+                        console.error('Analysis error:', error);
+                    } finally {
+                        showLoading(false);
+                    }
                 });
             }
 
             // Compare Performance
             const addAssessmentBtn = document.getElementById('addAssessmentBtn');
             if (addAssessmentBtn) {
-                addAssessmentBtn.addEventListener('click', function() {
-            const container = document.getElementById('assessments-container');
-            const newRow = document.createElement('div');
-            newRow.className = 'assessment-row flex gap-2';
-            newRow.innerHTML = `
+                addAssessmentBtn.addEventListener('click', function () {
+                    const container = document.getElementById('assessments-container');
+                    const newRow = document.createElement('div');
+                    newRow.className = 'assessment-row flex gap-2';
+                    newRow.innerHTML = `
                 <input type="text" placeholder="Assessment name" class="assessment-name flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
                 <input type="number" placeholder="Percentage" class="assessment-percentage w-24 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700" />
                 <button class="remove-assessment text-red-500 hover:text-red-700 px-2">✕</button>
             `;
-            container.appendChild(newRow);
-            setupRemoveButtons();
+                    container.appendChild(newRow);
+                    setupRemoveButtons();
                 });
             }
 
@@ -506,31 +536,31 @@
 
             const compareBtn = document.getElementById('compareBtn');
             if (compareBtn) {
-                compareBtn.addEventListener('click', async function() {
-            const assessments = [];
-            document.querySelectorAll('.assessment-row').forEach(row => {
-                const name = row.querySelector('.assessment-name').value;
-                const percentage = parseFloat(row.querySelector('.assessment-percentage').value);
-                if (name && percentage) {
-                    assessments.push({ name, percentage });
-                }
-            });
+                compareBtn.addEventListener('click', async function () {
+                    const assessments = [];
+                    document.querySelectorAll('.assessment-row').forEach(row => {
+                        const name = row.querySelector('.assessment-name').value;
+                        const percentage = parseFloat(row.querySelector('.assessment-percentage').value);
+                        if (name && percentage) {
+                            assessments.push({ name, percentage });
+                        }
+                    });
 
-            if (assessments.length < 2) {
-                alert('Please add at least 2 assessments');
-                return;
-            }
+                    if (assessments.length < 2) {
+                        alert('Please add at least 2 assessments');
+                        return;
+                    }
 
-            showLoading(true);
-            try {
-                const result = await gradeConverter.compareGrades(assessments);
-                displayComparisonResult(result);
-            } catch (error) {
-                resultsContainer.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
-                console.error('Comparison error:', error);
-            } finally {
-                showLoading(false);
-            }
+                    showLoading(true);
+                    try {
+                        const result = await gradeConverter.compareGrades(assessments);
+                        displayComparisonResult(result);
+                    } catch (error) {
+                        resultsContainer.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+                        console.error('Comparison error:', error);
+                    } finally {
+                        showLoading(false);
+                    }
                 });
             }
 
@@ -542,8 +572,8 @@
                 }
             }
 
-        function displaySingleResult(result) {
-            let html = `
+            function displaySingleResult(result) {
+                let html = `
                 <div class="space-y-3">
                     <div class="result-card bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                         <div class="text-sm text-gray-600 dark:text-gray-300">Percentage</div>
@@ -563,8 +593,8 @@
                     </div>
             `;
 
-            if (result.internationalEquivalent) {
-                html += `
+                if (result.internationalEquivalent) {
+                    html += `
                     <div class="result-card bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg">
                         <div class="text-sm text-gray-600 dark:text-gray-300 mb-2">International Equivalents</div>
                         <div class="space-y-1 text-sm">
@@ -574,30 +604,30 @@
                         </div>
                     </div>
                 `;
+                }
+
+                html += '</div>';
+                resultsContainer.innerHTML = html;
+
+                if (result.analysis) {
+                    displayAnalysis(result.analysis);
+                }
             }
 
-            html += '</div>';
-            resultsContainer.innerHTML = html;
+            function displayAnalysisResult(result) {
+                let html = `<div class="space-y-3">`;
 
-            if (result.analysis) {
-                displayAnalysis(result.analysis);
-            }
-        }
-
-        function displayAnalysisResult(result) {
-            let html = `<div class="space-y-3">`;
-
-            if (result.percentage !== undefined) {
-                html += `
+                if (result.percentage !== undefined) {
+                    html += `
                     <div class="result-card bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                         <div class="text-sm text-gray-600 dark:text-gray-300">Average Percentage</div>
                         <div class="text-2xl font-bold text-primary">${result.percentage.toFixed(2)}%</div>
                     </div>
                 `;
-            }
+                }
 
-            if (result.marksBreakdown) {
-                html += `
+                if (result.marksBreakdown) {
+                    html += `
                     <div class="result-card bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                         <div class="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-2">Breakdown</div>
                         <div class="space-y-1 text-sm">
@@ -610,75 +640,75 @@
                         </div>
                     </div>
                 `;
+                }
+
+                html += '</div>';
+                resultsContainer.innerHTML = html;
+
+                if (result.analysis) {
+                    displayAnalysis(result.analysis);
+                }
             }
 
-            html += '</div>';
-            resultsContainer.innerHTML = html;
+            function displayComparisonResult(result) {
+                let html = `<div class="space-y-3">`;
 
-            if (result.analysis) {
-                displayAnalysis(result.analysis);
-            }
-        }
-
-        function displayComparisonResult(result) {
-            let html = `<div class="space-y-3">`;
-
-            if (result.trend) {
-                const trendColor = result.trend.includes('Upward') ? 'text-green-600' : result.trend.includes('Downward') ? 'text-red-600' : 'text-blue-600';
-                html += `
+                if (result.trend) {
+                    const trendColor = result.trend.includes('Upward') ? 'text-green-600' : result.trend.includes('Downward') ? 'text-red-600' : 'text-blue-600';
+                    html += `
                     <div class="result-card bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
                         <div class="text-sm text-gray-600 dark:text-gray-300">Trend</div>
                         <div class="text-lg font-bold ${trendColor}">${result.trend}</div>
                     </div>
                 `;
-            }
+                }
 
-            if (result.averagePerformance !== undefined) {
-                html += `
+                if (result.averagePerformance !== undefined) {
+                    html += `
                     <div class="result-card bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                         <div class="text-sm text-gray-600 dark:text-gray-300">Average</div>
                         <div class="text-2xl font-bold text-primary">${result.averagePerformance.toFixed(2)}%</div>
                     </div>
                 `;
-            }
+                }
 
-            if (result.bestPerformance !== undefined) {
-                html += `
+                if (result.bestPerformance !== undefined) {
+                    html += `
                     <div class="result-card bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
                         <div class="text-sm text-gray-600 dark:text-gray-300">Best</div>
-                        <div class="text-2xl font-bold text-green-600">${result.bestPerformance.toFixed(2)}%</div>
+                        <div class="text-2xl font-bold text-green-600">${result.bestPerformance}</div>
                     </div>
                 `;
+                }
+
+                html += '</div>';
+                resultsContainer.innerHTML = html;
+
+                if (result.analysis) {
+                    displayAnalysis(result.analysis);
+                }
             }
 
-            html += '</div>';
-            resultsContainer.innerHTML = html;
+            function displayAnalysis(analysis) {
+                if (!analysis) return;
 
-            if (result.analysis) {
-                displayAnalysis(result.analysis);
-            }
-        }
+                analysisSection.classList.remove('hidden');
+                let html = '';
 
-        function displayAnalysis(analysis) {
-            if (!analysis) return;
+                if (analysis.strength) {
+                    html += `<div><strong>Strength:</strong> ${analysis.strength}</div>`;
+                }
+                if (analysis.competitiveness) {
+                    html += `<div><strong>Competitiveness:</strong> ${analysis.competitiveness}</div>`;
+                }
+                if (analysis.scholarshipEligibility) {
+                    html += `<div><strong>Scholarship:</strong> ${analysis.scholarshipEligibility}</div>`;
+                }
+                if (analysis.recommendations && Array.isArray(analysis.recommendations)) {
+                    html += `<div><strong>Recommendations:</strong><ul class="list-disc list-inside mt-1">${analysis.recommendations.map(r => `<li class="text-xs">${r}</li>`).join('')}</ul></div>`;
+                }
 
-            analysisSection.classList.remove('hidden');
-            let html = '';
-
-            if (analysis.strength) {
-                html += `<div><strong>Strength:</strong> ${analysis.strength}</div>`;
-            }
-            if (analysis.competitiveness) {
-                html += `<div><strong>Competitiveness:</strong> ${analysis.competitiveness}</div>`;
-            }
-            if (analysis.scholarshipEligibility) {
-                html += `<div><strong>Scholarship:</strong> ${analysis.scholarshipEligibility}</div>`;
-            }
-            if (analysis.recommendations && Array.isArray(analysis.recommendations)) {
-                html += `<div><strong>Recommendations:</strong><ul class="list-disc list-inside mt-1">${analysis.recommendations.map(r => `<li class="text-xs">${r}</li>`).join('')}</ul></div>`;
-            }
-
-            analysisContent.innerHTML = html;
+                analysisContent.innerHTML = html;
             }
 
             setupRemoveButtons();

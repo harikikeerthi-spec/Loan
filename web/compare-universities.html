@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Compare Universities - LoanHero</title>
+
+    <!-- Meta Tags -->
+    <meta name="description" content="Compare global universities based on rankings, fees, scholarships, and more." />
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+
+    <!-- Styles & Config -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                    },
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    },
+                    backgroundImage: {
+                        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(102, 5, 199, 0.4) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224, 195, 137, 0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139, 192, 232, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102, 5, 199, 0.3) 0px, transparent 50%)',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        .dark .glass-card {
+            background: rgba(25, 15, 35, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-scrolled {
+            background: rgba(255, 255, 255, 0.8) !important;
+            backdrop-filter: blur(12px);
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+        }
+
+        .dark .nav-scrolled {
+            background: rgba(17, 8, 26, 0.8) !important;
+        }
+
+        body {
+            background-attachment: fixed;
+        }
+
+        .vs-circle {
+            background: #6605c7;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-family: 'Noto Serif', serif;
+            box-shadow: 0 4px 10px rgba(102, 5, 199, 0.3);
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+
+    <!-- Background Structure -->
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none">
+        <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
+        <div class="absolute inset-0 opacity-30 mix-blend-overlay"
+            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="mainNav"
+        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
+        <div class="w-full max-w-7xl flex justify-between items-center">
+            <div class="flex items-center gap-12">
+                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+                        <span class="material-symbols-outlined text-2xl">school</span>
+                    </div>
+                    <span class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero
+                        <span class="text-primary/80"></span></span>
+                </a>
+            </div>
+            <div class="flex items-center gap-8">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="dashboard.html" class="nav-link">Dashboard</a>
+                <a href="profile.html" class="nav-link">Profile</a>
+                <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <span class="material-symbols-outlined">light_mode</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="relative z-10 pt-32 pb-16">
+        <div class="max-w-6xl mx-auto px-6">
+            <!-- Header -->
+            <div class="mb-12 text-center">
+                <h1 class="text-4xl md:text-5xl font-bold font-display text-gray-900 dark:text-white mb-4">Compare
+                    Universities</h1>
+                <p class="text-xl text-gray-600 dark:text-gray-300">Make informed decisions for your global education
+                </p>
+            </div>
+
+            <!-- Comparison Builder -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+                <!-- University 1 Input -->
+                <div class="glass-card rounded-2xl p-6 relative">
+                    <div
+                        class="absolute -right-5 top-1/2 transform -translate-y-1/2 hidden lg:flex vs-circle justify-center items-center">
+                        VS</div>
+                    <h3 class="text-xl font-bold mb-4 font-display">University 1</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Select University</label>
+                            <select
+                                class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                                id="uni1">
+                                <option value="">Choose a university...</option>
+                                <option value="harvard">Harvard University</option>
+                                <option value="stanford">Stanford University</option>
+                                <option value="mit">MIT</option>
+                                <option value="oxford">University of Oxford</option>
+                                <option value="cambridge">University of Cambridge</option>
+                                <option value="toronto">University of Toronto</option>
+                                <option value="melbourne">University of Melbourne</option>
+                            </select>
+                        </div>
+                        <!-- Additional fields could serve as overrides or specific program selection -->
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Program</label>
+                            <select
+                                class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+                                <option>Computer Science</option>
+                                <option>Business Analytics</option>
+                                <option>MBA</option>
+                                <option>Data Science</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- University 2 Input -->
+                <div class="glass-card rounded-2xl p-6">
+                    <h3 class="text-xl font-bold mb-4 font-display">University 2</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Select University</label>
+                            <select
+                                class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
+                                id="uni2">
+                                <option value="">Choose a university...</option>
+                                <option value="harvard">Harvard University</option>
+                                <option value="stanford">Stanford University</option>
+                                <option value="mit">MIT</option>
+                                <option value="oxford">University of Oxford</option>
+                                <option value="cambridge">University of Cambridge</option>
+                                <option value="toronto">University of Toronto</option>
+                                <option value="melbourne">University of Melbourne</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Program</label>
+                            <select
+                                class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
+                                <option>Computer Science</option>
+                                <option>Business Analytics</option>
+                                <option>MBA</option>
+                                <option>Data Science</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Panel -->
+                <div class="lg:col-span-1 flex flex-col justify-center">
+                    <div class="glass-card rounded-2xl p-6 text-center">
+                        <span class="material-symbols-outlined text-6xl text-primary mb-4">compare_arrows</span>
+                        <h3 class="text-xl font-bold mb-2">Ready to Compare?</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-6">Get a detailed breakdown of tuition,
+                            rankings, and career outcomes.</p>
+                        <button id="compareBtn"
+                            class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3 rounded-lg transition-all shadow-lg hover:shadow-primary/30">
+                            Compare Now
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Comparison Results (Hidden initially) -->
+            <div id="resultsSection" class="mt-12 hidden">
+                <div class="glass-card rounded-2xl p-8 overflow-hidden">
+                    <h2 class="text-2xl font-bold font-display mb-6">Comparison Analysis</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b border-gray-200 dark:border-gray-700">
+                                    <th class="py-4 px-4 font-bold text-gray-500 dark:text-gray-400 w-1/4">Criteria</th>
+                                    <th class="py-4 px-4 font-bold text-primary w-1/3" id="th-uni1">University 1</th>
+                                    <th class="py-4 px-4 font-bold text-primary w-1/3" id="th-uni2">University 2</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                                <tr>
+                                    <td class="py-4 px-4 font-semibold">Global Ranking</td>
+                                    <td class="py-4 px-4" id="td-rank1">#5</td>
+                                    <td class="py-4 px-4" id="td-rank2">#8</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-4 px-4 font-semibold">Annual Tuition</td>
+                                    <td class="py-4 px-4" id="td-tuition1">$55,000</td>
+                                    <td class="py-4 px-4" id="td-tuition2">$62,000</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-4 px-4 font-semibold">Acceptance Rate</td>
+                                    <td class="py-4 px-4" id="td-rate1">4.5%</td>
+                                    <td class="py-4 px-4" id="td-rate2">6.2%</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-4 px-4 font-semibold">Avg. Salary (Post-Grad)</td>
+                                    <td class="py-4 px-4 font-bold text-green-600" id="td-salary1">$120,000</td>
+                                    <td class="py-4 px-4 font-bold text-green-600" id="td-salary2">$115,000</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-4 px-4 font-semibold">Location</td>
+                                    <td class="py-4 px-4" id="td-loc1">Cambridge, MA</td>
+                                    <td class="py-4 px-4" id="td-loc2">Oxford, UK</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/theme-toggle.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const compareBtn = document.getElementById('compareBtn');
+            const resultsSection = document.getElementById('resultsSection');
+
+            compareBtn.addEventListener('click', async () => {
+                const uni1Key = document.getElementById('uni1').value;
+                const uni2Key = document.getElementById('uni2').value;
+
+                if (!uni1Key || !uni2Key) {
+                    alert('Please select two universities to compare');
+                    return;
+                }
+
+                if (uni1Key === uni2Key) {
+                    alert('Please select different universities');
+                    return;
+                }
+
+                // Show loading state
+                compareBtn.textContent = 'Comparing...';
+                compareBtn.disabled = true;
+
+                try {
+                    const response = await fetch('http://localhost:3000/ai/compare-universities', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+                        },
+                        body: JSON.stringify({
+                            uni1: uni1Key,
+                            uni2: uni2Key
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch data');
+                    }
+
+                    const json = await response.json();
+                    const { uni1: u1, uni2: u2 } = json.data;
+
+                    document.getElementById('th-uni1').textContent = u1.name;
+                    document.getElementById('th-uni2').textContent = u2.name;
+
+                    document.getElementById('td-rank1').textContent = u1.rank;
+                    document.getElementById('td-rank2').textContent = u2.rank;
+
+                    document.getElementById('td-tuition1').textContent = u1.tuition;
+                    document.getElementById('td-tuition2').textContent = u2.tuition;
+
+                    document.getElementById('td-rate1').textContent = u1.rate;
+                    document.getElementById('td-rate2').textContent = u2.rate;
+
+                    document.getElementById('td-salary1').textContent = u1.salary;
+                    document.getElementById('td-salary2').textContent = u2.salary;
+
+                    document.getElementById('td-loc1').textContent = u1.loc;
+                    document.getElementById('td-loc2').textContent = u2.loc;
+
+                    // Show Results
+                    resultsSection.classList.remove('hidden');
+
+                    // Smooth scroll to results
+                    resultsSection.scrollIntoView({ behavior: 'smooth' });
+
+                } catch (error) {
+                    console.error('Comparison error:', error);
+                    alert('An error occurred while comparing universities. Please try again.');
+                } finally {
+                    compareBtn.textContent = 'Compare Now';
+                    compareBtn.disabled = false;
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

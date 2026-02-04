@@ -5,22 +5,22 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('aiEligibilityForm');
-  
+
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
       // Get form data
       const formData = new FormData(form);
       const data = {
         age: parseInt(formData.get('age')),
         credit: parseInt(formData.get('credit')),
         income: parseFloat(formData.get('income')),
-        loanAmount: parseFloat(formData.get('loan')),
+        loan: parseFloat(formData.get('loan')),
         employment: formData.get('employment'),
-        studyLevel: formData.get('study'),
-        hasCoApplicant: formData.get('coApplicant') === 'yes',
-        hasCollateral: formData.get('collateral') === 'yes',
+        study: formData.get('study'),
+        coApplicant: formData.get('coApplicant'),
+        collateral: formData.get('collateral'),
       };
 
       try {
@@ -32,13 +32,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Call backend API
         const result = await AI_API.checkEligibility(data);
-        
+
         // Format result
         const formatted = AI_API.formatEligibilityResult(result);
-        
+
         // Update UI with results
         updateEligibilityDisplay(formatted);
-        
+
         // Reset button
         submitButton.disabled = false;
         submitButton.textContent = originalText;
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch (error) {
         console.error('Eligibility check error:', error);
         alert('Error checking eligibility. Please try again or contact support.');
-        
+
         const submitButton = form.querySelector('button[type="submit"]');
         submitButton.disabled = false;
         submitButton.textContent = 'Check eligibility';
@@ -64,10 +64,10 @@ function updateEligibilityDisplay(result) {
   const scoreText = document.getElementById('aiScoreText');
   const scoreBar = document.getElementById('aiScoreBar');
   const resultBadge = document.getElementById('aiResultBadge');
-  
+
   if (scoreText) scoreText.textContent = `${Math.round(result.score)} / 100`;
   if (scoreBar) scoreBar.style.width = `${result.score}%`;
-  
+
   // Update badge color based on status
   let badgeClass = 'bg-gray-200/70 text-gray-700 dark:bg-white/10 dark:text-gray-200';
   if (result.status === 'eligible') {
@@ -77,12 +77,12 @@ function updateEligibilityDisplay(result) {
   } else if (result.status === 'unlikely') {
     badgeClass = 'bg-red-200/70 text-red-700 dark:bg-red-900/30 dark:text-red-300';
   }
-  
+
   if (resultBadge) {
     resultBadge.className = `text-xs font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full ${badgeClass}`;
     resultBadge.textContent = result.status.charAt(0).toUpperCase() + result.status.slice(1);
   }
-  
+
   // Update summary
   const summaryEl = document.getElementById('aiSummary');
   if (summaryEl) {
@@ -95,7 +95,7 @@ function updateEligibilityDisplay(result) {
       </div>
     `;
   }
-  
+
   // Update recommendations
   const recommendationsEl = document.getElementById('aiRecommendations');
   if (recommendationsEl && Array.isArray(result.recommendations)) {
@@ -106,12 +106,12 @@ function updateEligibilityDisplay(result) {
       </li>`)
       .join('');
   }
-  
+
   // Update recommended loans
   if (result.recommendations && result.recommendations.length > 0) {
     const loanFitEl = document.getElementById('aiLoanFit');
     if (loanFitEl) loanFitEl.textContent = 'Best Fit';
-    
+
     const primaryLoanEl = document.getElementById('aiLoanPrimary');
     if (primaryLoanEl) {
       primaryLoanEl.innerHTML = `
@@ -119,7 +119,7 @@ function updateEligibilityDisplay(result) {
         <div class="text-xs text-gray-500 dark:text-gray-400">Based on your profile</div>
       `;
     }
-    
+
     // Update alternatives (if available)
     const alternativesEl = document.getElementById('aiLoanAlternatives');
     if (alternativesEl) {

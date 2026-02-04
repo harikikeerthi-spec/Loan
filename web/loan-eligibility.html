@@ -162,7 +162,8 @@
     </style>
 </head>
 
-<body class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
     <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none overflow-hidden">
         <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
         <div class="absolute inset-0 opacity-30 mix-blend-overlay"
@@ -209,7 +210,8 @@
                     </div>
 
                     <div class="nav-dropdown">
-                        <div class="nav-dropdown-toggle nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">
+                        <div
+                            class="nav-dropdown-toggle nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">
                             <span>Blogs</span>
                             <span class="material-symbols-outlined">expand_more</span>
                         </div>
@@ -312,7 +314,8 @@
         <section id="ai-tools" class="max-w-7xl mx-auto px-6 pb-24">
             <div class="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-10 items-start">
                 <div>
-                    <span class="text-primary font-bold text-[11px] tracking-[0.2em] uppercase mb-3 block">AI Tools</span>
+                    <span class="text-primary font-bold text-[11px] tracking-[0.2em] uppercase mb-3 block">AI
+                        Tools</span>
                     <h1 class="text-4xl md:text-5xl font-display text-gray-900 dark:text-white mb-4">
                         Instant eligibility <br />
                         <span class="italic font-normal text-gray-600 dark:text-gray-400">check in minutes</span>
@@ -322,29 +325,39 @@
                         eligibility, rate range, and next best steps.
                     </p>
 
-                    <form id="aiEligibilityForm" class="grid grid-cols-1 md:grid-cols-2 gap-4 glass-card rounded-3xl p-6">
+                    <form id="aiEligibilityForm"
+                        class="grid grid-cols-1 md:grid-cols-2 gap-4 glass-card rounded-3xl p-6">
                         <div>
-                            <label for="aiAge" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Age</label>
+                            <label for="aiAge"
+                                class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Age</label>
                             <input id="aiAge" name="age" type="number" min="16" max="70" required
                                 class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/5 text-gray-900 dark:text-white" />
                         </div>
                         <div>
-                            <label for="aiCredit" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Credit score</label>
+                            <label for="aiCredit"
+                                class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Cibil
+                                score</label>
                             <input id="aiCredit" name="credit" type="number" min="300" max="850" required
                                 class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/5 text-gray-900 dark:text-white" />
                         </div>
                         <div>
-                            <label for="aiIncome" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Annual income (USD)</label>
+                            <label for="aiIncome"
+                                class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Annual income
+                                (USD)</label>
                             <input id="aiIncome" name="income" type="number" min="0" step="100" required
                                 class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/5 text-gray-900 dark:text-white" />
                         </div>
                         <div>
-                            <label for="aiLoan" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Loan amount needed (USD)</label>
+                            <label for="aiLoan"
+                                class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Loan amount
+                                needed (USD)</label>
                             <input id="aiLoan" name="loan" type="number" min="1000" step="500" required
                                 class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/5 text-gray-900 dark:text-white" />
                         </div>
                         <div>
-                            <label for="aiEmployment" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Employment status</label>
+                            <label for="aiEmployment"
+                                class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Employment
+                                status</label>
                             <select id="aiEmployment" name="employment" required
                                 class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/5 text-gray-900 dark:text-white">
                                 <option value="employed">Employed</option>
@@ -354,7 +367,9 @@
                             </select>
                         </div>
                         <div>
-                            <label for="aiStudy" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Study level</label>
+                            <label for="aiStudy"
+                                class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Study
+                                level</label>
                             <select id="aiStudy" name="study" required
                                 class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/5 text-gray-900 dark:text-white">
                                 <option value="undergrad">Undergraduate</option>
@@ -364,7 +379,8 @@
                             </select>
                         </div>
                         <div>
-                            <label for="aiCoApplicant" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Co-applicant</label>
+                            <label for="aiCoApplicant"
+                                class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Co-applicant</label>
                             <select id="aiCoApplicant" name="coApplicant" required
                                 class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/5 text-gray-900 dark:text-white">
                                 <option value="yes">Yes</option>
@@ -372,7 +388,8 @@
                             </select>
                         </div>
                         <div>
-                            <label for="aiCollateral" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Collateral</label>
+                            <label for="aiCollateral"
+                                class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Collateral</label>
                             <select id="aiCollateral" name="collateral" required
                                 class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/5 text-gray-900 dark:text-white">
                                 <option value="yes">Yes</option>
@@ -396,7 +413,8 @@
                     <div class="flex items-center justify-between mb-6">
                         <h3 class="text-2xl font-display text-gray-900 dark:text-white">AI eligibility snapshot</h3>
                         <span id="aiResultBadge"
-                            class="text-xs font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-gray-200/70 text-gray-700 dark:bg-white/10 dark:text-gray-200">Awaiting input</span>
+                            class="text-xs font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-gray-200/70 text-gray-700 dark:bg-white/10 dark:text-gray-200">Awaiting
+                            input</span>
                     </div>
                     <div class="mb-6">
                         <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300 mb-2">
@@ -411,10 +429,13 @@
                         <p id="aiSummary">Complete the form to see a personalized eligibility estimate.</p>
                         <ul id="aiRecommendations" class="space-y-3 text-sm"></ul>
                     </div>
-                    <div class="mt-6 rounded-2xl border border-gray-200/70 dark:border-white/10 p-5 bg-white/60 dark:bg-white/5">
+                    <div
+                        class="mt-6 rounded-2xl border border-gray-200/70 dark:border-white/10 p-5 bg-white/60 dark:bg-white/5">
                         <div class="flex items-center justify-between">
                             <h4 class="text-lg font-semibold text-gray-900 dark:text-white">Recommended loan</h4>
-                            <span id="aiLoanFit" class="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Awaiting input</span>
+                            <span id="aiLoanFit"
+                                class="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Awaiting
+                                input</span>
                         </div>
                         <div class="mt-3">
                             <p id="aiLoanPrimary" class="text-sm text-gray-700 dark:text-gray-200">
@@ -422,12 +443,16 @@
                             </p>
                         </div>
                         <div class="mt-4">
-                            <h5 class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-2">Alternatives</h5>
+                            <h5
+                                class="text-xs font-bold uppercase tracking-[0.2em] text-gray-500 dark:text-gray-400 mb-2">
+                                Alternatives</h5>
                             <ul id="aiLoanAlternatives" class="space-y-2 text-sm text-gray-600 dark:text-gray-300"></ul>
                         </div>
                     </div>
-                    <div class="mt-6 rounded-2xl border border-dashed border-gray-300 dark:border-white/10 p-4 text-xs text-gray-500 dark:text-gray-400">
-                        This AI tool provides a quick pre-check. Final approval depends on lender policies and document review.
+                    <div
+                        class="mt-6 rounded-2xl border border-dashed border-gray-300 dark:border-white/10 p-4 text-xs text-gray-500 dark:text-gray-400">
+                        This AI tool provides a quick pre-check. Final approval depends on lender policies and document
+                        review.
                     </div>
                 </div>
             </div>

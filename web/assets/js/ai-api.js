@@ -27,7 +27,7 @@ const AI_API = {
       }
 
       const result = await response.json();
-      return result.data;
+      return result;
     } catch (error) {
       console.error('Eligibility check failed:', error);
       throw error;
@@ -69,13 +69,13 @@ const AI_API = {
    */
   formatEligibilityResult(result) {
     return {
-      score: result.eligibilityScore?.score || 0,
-      status: result.eligibilityScore?.status || 'unknown',
-      summary: result.eligibilityScore?.summary || '',
-      rateRange: result.eligibilityScore?.rateRange || 'N/A',
-      coverage: result.eligibilityScore?.coverage || 'N/A',
+      score: result.eligibility?.score || 0,
+      status: result.eligibility?.status || 'unknown',
+      summary: result.eligibility?.summary || '',
+      rateRange: result.eligibility?.rateRange || 'N/A',
+      coverage: result.eligibility?.coverage || 'N/A',
       recommendations: result.recommendations || [],
-      ratio: result.eligibilityScore?.ratio || 0,
+      ratio: result.eligibility?.ratio || 0,
     };
   },
 
