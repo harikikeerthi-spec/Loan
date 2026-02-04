@@ -1,17 +1,69 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comment Debug Test</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                    },
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    }
+                }
+            }
+        };
+    </script>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
+        body { font-family: Arial, sans-serif; }
         .debug { background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; }
         .comment { border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 5px; }
         .error { color: red; }
         .success { color: green; }
     </style>
 </head>
-<body>
-    <h1>Comment Debug Test</h1>
+<body class="bg-background-light dark:bg-background-dark">
+    <!-- Navigation -->
+    <nav id="mainNav" class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500 bg-white dark:bg-zinc-900 shadow-sm">
+        <div class="w-full max-w-7xl flex justify-between items-center">
+            <div class="flex items-center gap-12">
+                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+                        <span class="material-symbols-outlined text-2xl">school</span>
+                    </div>
+                    <span class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero</span>
+                </a>
+
+                <div class="hidden lg:flex items-center gap-8">
+                    <a href="about-us.html" class="nav-link text-sm font-bold text-primary transition-colors font-sans">About</a>
+                    <a href="how-it-works.html" class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">How It Works</a>
+                    <a href="emi.html" class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">EMI Calculator</a>
+                    <a href="blog.html" class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Blog</a>
+                    <a href="faq.html" class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">FAQ</a>
+                    <a href="contact.html" class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">Contact</a>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <a href="login.html" id="loginLink" class="text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Login</a>
+                <a href="signup.html" class="px-6 py-2.5 text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 transition-all shadow-lg">Sign Up</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="pt-24 pb-20 px-6 max-w-4xl mx-auto">
+        <h1>Comment Debug Test</h1>
 
     <div class="debug">
         <h3>Step 1: Get Blog ID</h3>
@@ -140,5 +192,6 @@
             }
         }
     </script>
+    </main>
 </body>
 </html>

@@ -1,5 +1,20 @@
 // Login page email + OTP flow using unified auth endpoints
-const API_URL = 'http://localhost:3000';
+const API_URL = (() => {
+  if (window.APP_CONFIG && window.APP_CONFIG.apiBase) {
+    return window.APP_CONFIG.apiBase;
+  }
+
+  if (window.location.protocol === 'file:') {
+    return 'http://localhost:3000';
+  }
+
+  const host = window.location.hostname;
+  if (host === 'localhost' || host === '127.0.0.1') {
+    return 'http://localhost:3000';
+  }
+
+  return window.location.origin;
+})();
 
 (function initLogin() {
   const emailInput = document.getElementById('email');
@@ -21,12 +36,24 @@ const API_URL = 'http://localhost:3000';
   }
 
   async function sendOtp(email) {
-    const resp = await fetch(`${API_URL}/auth/send-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
-    });
-    const data = await resp.json();
+    let resp;
+    try {
+      resp = await fetch(`${API_URL}/auth/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+    } catch (error) {
+      throw new Error('Unable to reach the login server. Please check the API URL or start the backend.');
+    }
+
+    let data;
+    try {
+      data = await resp.json();
+    } catch (error) {
+      throw new Error('Unexpected server response while sending OTP.');
+    }
+
     if (!resp.ok || !data.success) {
       throw new Error(data.message || 'Failed to send OTP');
     }
@@ -34,12 +61,24 @@ const API_URL = 'http://localhost:3000';
   }
 
   async function verifyOtp(email, otp) {
-    const resp = await fetch(`${API_URL}/auth/verify-otp`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, otp })
-    });
-    const data = await resp.json();
+    let resp;
+    try {
+      resp = await fetch(`${API_URL}/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp })
+      });
+    } catch (error) {
+      throw new Error('Unable to reach the login server. Please check the API URL or start the backend.');
+    }
+
+    let data;
+    try {
+      data = await resp.json();
+    } catch (error) {
+      throw new Error('Unexpected server response while verifying OTP.');
+    }
+
     if (!resp.ok || !data.success) {
       throw new Error(data.message || 'Invalid OTP');
     }
