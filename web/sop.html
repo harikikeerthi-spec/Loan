@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Apply for Education Loan - LoanHero</title>
+
+    <!-- Meta Tags -->
+    <meta name="description"
+        content="Apply for transparent, flexible, and accessible education loans for your global journey." />
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+
+    <!-- Styles & Config -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                    },
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    },
+                    backgroundImage: {
+                        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(102, 5, 199, 0.4) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224, 195, 137, 0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139, 192, 232, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102, 5, 199, 0.3) 0px, transparent 50%)',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        .dark .glass-card {
+            background: rgba(25, 15, 35, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-scrolled {
+            background: rgba(255, 255, 255, 0.8) !important;
+            backdrop-filter: blur(12px);
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+        }
+
+        .dark .nav-scrolled {
+            background: rgba(17, 8, 26, 0.8) !important;
+        }
+
+        body {
+            background-attachment: fixed;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+
+    <!-- Background Structure -->
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none">
+        <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
+        <div class="absolute inset-0 opacity-30 mix-blend-overlay"
+            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="mainNav"
+        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
+        <div class="w-full max-w-7xl flex justify-between items-center">
+            <div class="flex items-center gap-12">
+                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+                        <span class="material-symbols-outlined text-2xl">school</span>
+                    </div>
+                    <span class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero
+                        <span class="text-primary/80"></span></span>
+                </a>
+
+                <div class="hidden lg:flex items-center gap-8">
+                    <a href="about-us.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">About</a>
+                    <a href="how-it-works.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">How
+                        It Works</a>
+                    <a href="emi.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">EMI
+                        Calculator</a>
+                    <a href="faq.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">FAQ</a>
+                    <a href="contact.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Contact</a>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <a href="login.html" id="loginLink"
+                    class="text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Sign
+                    In</a>
+
+
+                <!-- User Profile Dropdown (Hidden initially) -->
+                <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
+                    <button id="profileBtn"
+                        class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                        <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
+                        <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white"></span>
+                    </button>
+
+                    <!-- Dropdown Menu -->
+                    <div id="profileDropdown"
+                        class="hidden absolute top-12 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 w-48">
+                        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Logged in as</p>
+                            <p id="dropdownEmail" class="text-sm font-bold text-gray-900 dark:text-white truncate"></p>
+                        </div>
+                        <a href="index.html"
+                            class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Dashboard</a>
+                        <a href="#" id="logoutBtn"
+                            class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="relative z-10 pt-32 pb-24">
+        <section id="sop-scorer" class="max-w-7xl mx-auto px-6 py-24 border-t border-gray-200 dark:border-white/10">
+            <div class="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-10 items-start">
+                <div>
+                    <span class="text-primary font-bold text-[11px] tracking-[0.2em] uppercase mb-3 block">Document Quality</span>
+                    <h2 class="text-4xl md:text-5xl font-display text-gray-900 dark:text-white mb-4">
+                        SOP Quality <br />
+                        <span class="italic font-normal text-gray-600 dark:text-gray-400">Scorer for loan approval</span>
+                    </h2>
+                    <p class="text-gray-600 dark:text-gray-300 text-lg leading-relaxed mb-8">
+                        Get your Statement of Purpose evaluated specifically for loan approval. We analyze clarity, financial justification, career ROI, and originality to help you strengthen your application.
+                    </p>
+
+                    <form id="sopScorerForm" class="glass-card rounded-3xl p-6 space-y-4">
+                        <div>
+                            <label for="sopText" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Your Statement of Purpose (SOP)</label>
+                            <textarea id="sopText" name="sop" rows="10" placeholder="Paste your complete SOP here..." required
+                                class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/5 text-gray-900 dark:text-white resize-none"></textarea>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Minimum 100 words recommended for accurate analysis.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-3">
+                            <button type="submit"
+                                class="px-6 py-3 rounded-full bg-primary text-white font-semibold hover:bg-gold-accent hover:text-gray-900 transition-colors">
+                                Analyze SOP
+                            </button>
+                            <button type="reset"
+                                class="px-6 py-3 rounded-full border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:border-primary hover:text-primary transition-colors">
+                                Clear
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="glass-card rounded-3xl p-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-2xl font-display text-gray-900 dark:text-white">Quality assessment</h3>
+                        <span id="sopResultBadge"
+                            class="text-xs font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-gray-200/70 text-gray-700 dark:bg-white/10 dark:text-gray-200">Awaiting input</span>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300 mb-2">
+                            <span>Overall score</span>
+                            <span id="sopScoreText" class="font-semibold">-- / 100</span>
+                        </div>
+                        <div class="h-3 w-full bg-gray-200/80 dark:bg-white/10 rounded-full overflow-hidden">
+                            <div id="sopScoreBar" class="h-full w-0 bg-primary transition-all"></div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">Scoring breakdown</h4>
+                            <div id="sopCategoryScores" class="space-y-2 text-sm">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+
+                        <div class="mt-6 pt-6 border-t border-gray-200 dark:border-white/10">
+                            <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-base text-amber-500">warning</span>
+                                <span>Areas to improve</span>
+                            </h4>
+                            <ul id="sopWeakAreas" class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+
+                        <div class="mt-6 pt-6 border-t border-gray-200 dark:border-white/10">
+                            <p id="sopSummary" class="text-sm text-gray-600 dark:text-gray-400">
+                                Complete the form to see a comprehensive SOP evaluation for loan approval.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 rounded-2xl border border-dashed border-gray-300 dark:border-white/10 p-4 text-xs text-gray-500 dark:text-gray-400">
+                        This AI assessment evaluates your SOP specifically for loan approval criteria. Consider these recommendations to strengthen your application.
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-[#190f23] text-white py-20 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                <div class="col-span-1 md:col-span-2">
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
+                            <span class="material-symbols-outlined text-white">school</span>
+                        </div>
+                        <span class="text-2xl font-bold font-display tracking-tight text-white">LoanHero</span>
+                    </div>
+                    <p class="text-gray-400 max-w-sm font-sans leading-relaxed mb-8">
+                        Empowering students with transparent, flexible, and accessible education financing solutions.
+                        Join thousands of students pursuing their dreams.
+                    </p>
+                    <div class="flex items-center gap-4">
+                        <a href="#"
+                            class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
+                            aria-label="LinkedIn">
+                            <span class="material-symbols-outlined text-white">language</span>
+                        </a>
+                        <a href="#"
+                            class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
+                            aria-label="Twitter">
+                            <span class="material-symbols-outlined text-white">mail</span>
+                        </a>
+                        <a href="#"
+                            class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
+                            aria-label="Facebook">
+                            <span class="material-symbols-outlined text-white">forum</span>
+                        </a>
+                        <a href="#"
+                            class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
+                            aria-label="Instagram">
+                            <span class="material-symbols-outlined text-white">share</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-bold mb-6 font-display text-white">Quick Links</h4>
+                    <ul class="space-y-4 text-gray-400 font-sans">
+                        <li><a href="about-us.html" class="hover:text-primary transition-colors">About Us</a></li>
+                        <li><a href="emi.html" class="hover:text-primary transition-colors">EMI Calculator</a></li>
+                        <li><a href="contact.html" class="hover:text-primary transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-bold mb-6 font-display text-white">Legal</h4>
+                    <ul class="space-y-4 text-gray-400 font-sans">
+                        <li><a href="privacy-policy.html" class="hover:text-primary transition-colors">Privacy
+                                Policy</a></li>
+                        <li><a href="terms-conditions.html" class="hover:text-primary transition-colors">Terms of
+                                Service</a></li>
+                        <li><a href="cookies.html" class="hover:text-primary transition-colors">Cookie Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="pt-8 border-t border-white/10 text-center text-gray-500 text-xs font-sans">
+                <p>&copy; 2023 LoanHero Inc. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+        <div
+            class="relative bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl w-full max-w-md p-8 text-center animate-bounce-in">
+            <div
+                class="w-20 h-20 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+                <span class="material-symbols-outlined text-5xl text-green-600">check_circle</span>
+            </div>
+            <h2 class="text-2xl font-bold font-display mb-4 text-gray-900 dark:text-white">Application Submitted!</h2>
+            <p class="text-gray-500 dark:text-gray-400 mb-6">Your loan application has been submitted successfully. You
+                can track its status from your applications page.</p>
+            <div class="flex gap-3">
+                <a href="my-applications.html"
+                    class="flex-1 inline-block px-8 py-3 bg-primary text-white font-bold rounded-full hover:bg-primary/90 transition-all">
+                    View My Applications
+                </a>
+                <a href="dashboard.html"
+                    class="flex-1 inline-block px-8 py-3 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white font-bold rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition-all">
+                    Go to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        @keyframes bounce-in {
+            0% {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .animate-bounce-in {
+            animation: bounce-in 0.4s ease-out forwards;
+        }
+    </style>
+
+
+    <script src="assets/js/ai-api.js"></script>
+    <script src="assets/js/ai-sop-client.js"></script>
+    <script src="assets/js/theme-toggle.js"></script>
+    <script src="assets/js/dashboard.js"></script>
+    <script src="assets/js/auth.js"></script>
+</body>
+
+</html>
