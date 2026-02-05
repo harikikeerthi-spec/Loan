@@ -45,20 +45,7 @@
         };
     </script>
     <style>
-        .glass-card {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
-        }
-
-        .dark .glass-card {
-            background: rgba(25, 15, 35, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .nav-scrolled {
+.nav-scrolled {
             background: rgba(255, 255, 255, 0.8) !important;
             backdrop-filter: blur(12px);
             padding-top: 1rem !important;
@@ -87,64 +74,7 @@
     </div>
 
     <!-- Navigation -->
-    <nav id="mainNav"
-        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
-        <div class="w-full max-w-7xl flex justify-between items-center">
-            <div class="flex items-center gap-12">
-                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
-                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
-                        <span class="material-symbols-outlined text-2xl">school</span>
-                    </div>
-                    <span class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero
-                        <span class="text-primary/80"></span></span>
-                </a>
-
-                <div class="hidden lg:flex items-center gap-8">
-                    <a href="about-us.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">About</a>
-                    <a href="how-it-works.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">How
-                        It Works</a>
-                    <a href="emi.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">EMI
-                        Calculator</a>
-                    <a href="faq.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">FAQ</a>
-                    <a href="contact.html"
-                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Contact</a>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-4">
-                <a href="login.html" id="loginLink"
-                    class="text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Sign
-                    In</a>
-
-
-                <!-- User Profile Dropdown (Hidden initially) -->
-                <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
-                    <button id="profileBtn"
-                        class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
-                        <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
-                        <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white"></span>
-                    </button>
-
-                    <!-- Dropdown Menu -->
-                    <div id="profileDropdown"
-                        class="hidden absolute top-12 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 w-48">
-                        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-                            <p class="text-xs text-gray-500 dark:text-gray-400">Logged in as</p>
-                            <p id="dropdownEmail" class="text-sm font-bold text-gray-900 dark:text-white truncate"></p>
-                        </div>
-                        <a href="index.html"
-                            class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Dashboard</a>
-                        <a href="#" id="logoutBtn"
-                            class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700">Logout</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <div id="navbar-placeholder"></div>
 
     <main class="relative z-10 pt-32 pb-24">
         <section class="max-w-4xl mx-auto px-6">
@@ -262,70 +192,7 @@
         </section>
     </main>
 
-    <footer class="bg-[#190f23] text-white py-20 relative overflow-hidden">
-        <div class="max-w-7xl mx-auto px-6 relative z-10">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-                <div class="col-span-1 md:col-span-2">
-                    <div class="flex items-center gap-2 mb-6">
-                        <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
-                            <span class="material-symbols-outlined text-white">school</span>
-                        </div>
-                        <span class="text-2xl font-bold font-display tracking-tight text-white">LoanHero</span>
-                    </div>
-                    <p class="text-gray-400 max-w-sm font-sans leading-relaxed mb-8">
-                        Empowering students with transparent, flexible, and accessible education financing solutions.
-                        Join thousands of students pursuing their dreams.
-                    </p>
-                    <div class="flex items-center gap-4">
-                        <a href="#"
-                            class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
-                            aria-label="LinkedIn">
-                            <span class="material-symbols-outlined text-white">language</span>
-                        </a>
-                        <a href="#"
-                            class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
-                            aria-label="Twitter">
-                            <span class="material-symbols-outlined text-white">mail</span>
-                        </a>
-                        <a href="#"
-                            class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
-                            aria-label="Facebook">
-                            <span class="material-symbols-outlined text-white">forum</span>
-                        </a>
-                        <a href="#"
-                            class="w-10 h-10 bg-white/10 hover:bg-primary rounded-full flex items-center justify-center transition-colors"
-                            aria-label="Instagram">
-                            <span class="material-symbols-outlined text-white">share</span>
-                        </a>
-                    </div>
-                </div>
-
-                <div>
-                    <h4 class="text-lg font-bold mb-6 font-display text-white">Quick Links</h4>
-                    <ul class="space-y-4 text-gray-400 font-sans">
-                        <li><a href="about-us.html" class="hover:text-primary transition-colors">About Us</a></li>
-                        <li><a href="emi.html" class="hover:text-primary transition-colors">EMI Calculator</a></li>
-                        <li><a href="contact.html" class="hover:text-primary transition-colors">Contact</a></li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h4 class="text-lg font-bold mb-6 font-display text-white">Legal</h4>
-                    <ul class="space-y-4 text-gray-400 font-sans">
-                        <li><a href="privacy-policy.html" class="hover:text-primary transition-colors">Privacy
-                                Policy</a></li>
-                        <li><a href="terms-conditions.html" class="hover:text-primary transition-colors">Terms of
-                                Service</a></li>
-                        <li><a href="cookies.html" class="hover:text-primary transition-colors">Cookie Policy</a></li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="pt-8 border-t border-white/10 text-center text-gray-500 text-xs font-sans">
-                <p>&copy; 2023 LoanHero Inc. All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
+    <div id="footer-placeholder"></div>
 
     <!-- Success Modal -->
     <div id="successModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -377,17 +244,7 @@
     <script>
         const API_URL = 'http://localhost:3000';
 
-        // Nav scroll effect
-        window.addEventListener('scroll', () => {
-            const nav = document.getElementById('mainNav');
-            if (window.scrollY > 50) {
-                nav.classList.add('nav-scrolled');
-            } else {
-                nav.classList.remove('nav-scrolled');
-            }
-        });
-
-        // Form submission handler
+                // Form submission handler
         document.getElementById('loanApplicationForm').addEventListener('submit', async function (e) {
             e.preventDefault();
 
@@ -524,6 +381,7 @@
         }
     </script>
     <script src="assets/js/auth.js"></script>
+    <script src="assets/js/components-loader.js"></script>
 </body>
 
 </html>

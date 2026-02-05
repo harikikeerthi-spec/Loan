@@ -37,20 +37,7 @@
         };
     </script>
     <style>
-        .glass-card {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
-        }
-
-        .dark .glass-card {
-            background: rgba(25, 15, 35, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        /* Initial nav text colors (black) */
+/* Initial nav text colors (black) */
         .nav-link {
             color: rgba(0, 0, 0, 0.9) !important;
         }
@@ -75,19 +62,7 @@
         #profileDropdown .material-symbols-outlined {
             color: #6605c7 !important;
         }
-
-        .nav-scrolled {
-            background: rgba(17, 8, 26, 0.95) !important;
-            backdrop-filter: blur(12px);
-            padding-top: 1rem !important;
-            padding-bottom: 1rem !important;
-        }
-
-        .dark .nav-scrolled {
-            background: rgba(17, 8, 26, 0.8) !important;
-        }
-
-        /* White text when scrolled */
+/* White text when scrolled */
         .nav-scrolled .nav-link {
             color: rgba(255, 255, 255, 0.9) !important;
         }
@@ -124,100 +99,7 @@
         .mentor-image {
             transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
-
-        /* Dropdown Navigation Styles */
-        .nav-dropdown {
-            position: relative;
-        }
-
-        .nav-dropdown-content {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            margin-top: 0.5rem;
-            min-width: 200px;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(12px);
-            border-radius: 1rem;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-10px);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 100;
-            overflow: hidden;
-        }
-
-        .dark .nav-dropdown-content {
-            background: rgba(25, 15, 35, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .nav-dropdown:hover .nav-dropdown-content,
-        .nav-dropdown-content:hover {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-
-        .nav-dropdown-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.875rem 1.25rem;
-            color: #374151;
-            font-size: 0.875rem;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            border-left: 3px solid transparent;
-        }
-
-        .dark .nav-dropdown-item {
-            color: #e5e7eb;
-        }
-
-        .nav-dropdown-item:hover {
-            background: rgba(102, 5, 199, 0.1);
-            border-left-color: #6605c7;
-            color: #6605c7;
-        }
-
-        .dark .nav-dropdown-item:hover {
-            background: rgba(102, 5, 199, 0.2);
-            color: #a855f7;
-        }
-
-        .nav-dropdown-item .material-symbols-outlined {
-            font-size: 1.25rem;
-            opacity: 0.7;
-            color: #6605c7;
-        }
-
-        .dark .nav-dropdown-item .material-symbols-outlined {
-            color: #a855f7;
-        }
-
-        .nav-dropdown-item:hover .material-symbols-outlined {
-            opacity: 1;
-        }
-
-        .nav-dropdown-toggle {
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            cursor: pointer;
-        }
-
-        .nav-dropdown-toggle .material-symbols-outlined {
-            font-size: 1rem;
-            transition: transform 0.3s ease;
-        }
-
-        .nav-dropdown:hover .nav-dropdown-toggle .material-symbols-outlined {
-            transform: rotate(180deg);
-        }
-
-        /* Active page indicator */
+/* Active page indicator */
         .nav-link.active,
         .nav-dropdown-toggle.active {
             color: #a855f7 !important;
@@ -259,84 +141,7 @@
     </div>
 
     <!-- Navigation -->
-    <nav id="mainNav"
-        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
-        <div class="w-full max-w-7xl flex justify-between items-center">
-            <div class="flex items-center gap-12">
-                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
-                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
-                        <span class="material-symbols-outlined text-2xl">school</span>
-                    </div>
-                    <span class="font-bold text-2xl tracking-tight font-display text-white">LoanHero
-                        <span class="text-primary/80"></span></span>
-                </a>
-
-                <div class="hidden lg:flex items-center gap-8">
-                    <a href="about-us.html"
-                        class="nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">About</a>
-
-                    <!-- Loans Dropdown -->
-                    <div class="nav-dropdown">
-                        <div
-                            class="nav-dropdown-toggle nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">
-                            <span>Loans</span>
-                            <span class="material-symbols-outlined">expand_more</span>
-                        </div>
-                        <div class="nav-dropdown-content">
-                            <a href="emi.html" class="nav-dropdown-item">
-                                <span class="material-symbols-outlined">calculate</span>
-                                <span>EMI Calculator</span>
-                            </a>
-                            <a href="compare-loans.html" class="nav-dropdown-item">
-                                <span class="material-symbols-outlined">compare</span>
-                                <span>Compare Loans</span>
-                            </a>
-                            <a href="bank-reviews.html" class="nav-dropdown-item">
-                                <span class="material-symbols-outlined">rate_review</span>
-                                <span>Bank Reviews</span>
-                            </a>
-                        </div>
-                    </div>
-
-                    <div class="nav-dropdown">
-                        <div
-                            class="nav-dropdown-toggle nav-link text-sm font-semibold text-white/90 hover:text-primary transition-colors">
-                            <span>Blogs</span>
-                            <span class="material-symbols-outlined">expand_more</span>
-                        </div>
-                        <div class="nav-dropdown-content">
-                            <a href="blog.html" class="nav-dropdown-item">
-                                <span class="material-symbols-outlined">article</span>
-                                <span>All Blogs</span>
-                            </a>
-                            <a href="admin-blogs.html" class="nav-dropdown-item">
-                                <span class="material-symbols-outlined">admin_panel_settings</span>
-                                <span>Admin Blogs</span>
-                            </a>
-                        </div>
-                    </div>
-
-
-                    <a href="explore.html"
-                        class="nav-link active text-sm font-semibold text-white/90 hover:text-primary transition-colors">Community</a>
-
-                </div>
-            </div>
-
-            <div class="flex items-center gap-4">
-                <a href="login.html" id="loginLink"
-                    class="px-6 py-2.5 text-sm font-bold bg-white text-primary rounded-full hover:bg-gray-100 transition-all shadow-lg hover:shadow-white/20 cursor-pointer">Login</a>
-
-                <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
-                    <button id="profileBtn"
-                        class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-white/10 transition-all text-white border border-white/20">
-                        <span class="material-symbols-outlined text-2xl text-white">account_circle</span>
-                        <span id="userEmail" class="text-sm font-bold text-white"></span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <div id="navbar-placeholder"></div>
 
     <main class="relative z-10 pt-32 pb-24">
         <div class="max-w-7xl mx-auto px-6">
@@ -769,77 +574,11 @@
         </div>
     </main>
 
-    <footer class="bg-[#190f23] text-white py-20 relative overflow-hidden">
-        <div class="max-w-7xl mx-auto px-6 relative z-10">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-                <div class="col-span-1 md:col-span-2">
-                    <div class="flex items-center gap-2 mb-6">
-                        <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
-                            <span class="material-symbols-outlined text-white">school</span>
-                        </div>
-                        <span class="text-2xl font-bold font-display tracking-tight text-white">LoanHero</span>
-                    </div>
-                    <p class="text-gray-400 max-w-sm font-sans leading-relaxed mb-8">
-                        Empowering students with transparent, flexible, and accessible education financing solutions.
-                    </p>
-                </div>
+    <div id="footer-placeholder"></div>
 
-                <div>
-                    <h4 class="text-lg font-bold mb-6 font-display text-white">Quick Links</h4>
-                    <ul class="space-y-4 text-gray-400 font-sans">
-                        <li><a href="about-us.html" class="hover:text-primary transition-colors">About Us</a></li>
-                        <li><a href="explore.html" class="hover:text-primary transition-colors">Community</a></li>
-                        <li><a href="contact.html" class="hover:text-primary transition-colors">Contact</a></li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h4 class="text-lg font-bold mb-6 font-display text-white">Legal</h4>
-                    <ul class="space-y-4 text-gray-400 font-sans">
-                        <li><a href="privacy-policy.html" class="hover:text-primary transition-colors">Privacy
-                                Policy</a></li>
-                        <li><a href="terms-conditions.html" class="hover:text-primary transition-colors">Terms of
-                                Service</a></li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="pt-8 border-t border-white/10 text-center text-gray-500 text-xs font-sans">
-                <p>&copy; 2026 LoanHero Inc. All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
-
-    <script>
-        window.addEventListener('scroll', () => {
-            const nav = document.getElementById('mainNav');
-            if (window.scrollY > 50) {
-                nav.classList.add('nav-scrolled');
-            } else {
-                nav.classList.remove('nav-scrolled');
-            }
-        });
-
-        // Add 'Online Now' indicators randomly
-        document.addEventListener('DOMContentLoaded', () => {
-            const images = document.querySelectorAll('.mentor-image');
-            images.forEach(img => {
-                // 50% chance to be online
-                if (Math.random() > 0.5) {
-                    const wrapper = document.createElement('div');
-                    wrapper.className = 'relative';
-                    img.parentNode.insertBefore(wrapper, img);
-                    wrapper.appendChild(img);
-
-                    const onlineBadge = document.createElement('div');
-                    onlineBadge.className = 'absolute bottom-1 right-1 w-4 h-4 bg-green-500 border-2 border-white dark:border-zinc-800 rounded-full z-10 animate-pulse';
-                    onlineBadge.title = "Online Now";
-                    wrapper.appendChild(onlineBadge);
-                }
-            });
-        });
-    </script>
+    
     <script src="assets/js/auth.js"></script>
+    <script src="assets/js/components-loader.js"></script>
 </body>
 
 </html>

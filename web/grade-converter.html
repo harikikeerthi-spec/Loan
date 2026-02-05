@@ -45,20 +45,7 @@
         };
     </script>
     <style>
-        .glass-card {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
-        }
-
-        .dark .glass-card {
-            background: rgba(25, 15, 35, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .nav-scrolled {
+.nav-scrolled {
             background: rgba(255, 255, 255, 0.8) !important;
             backdrop-filter: blur(12px);
             padding-top: 1rem !important;
@@ -142,28 +129,7 @@
     </div>
 
     <!-- Navigation -->
-    <nav id="mainNav"
-        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
-        <div class="w-full max-w-7xl flex justify-between items-center">
-            <div class="flex items-center gap-12">
-                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
-                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
-                        <span class="material-symbols-outlined text-2xl">school</span>
-                    </div>
-                    <span class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero
-                        <span class="text-primary/80"></span></span>
-                </a>
-            </div>
-            <div class="flex items-center gap-8">
-                <a href="index.html" class="nav-link">Home</a>
-                <a href="dashboard.html" class="nav-link">Dashboard</a>
-                <a href="profile.html" class="nav-link">Profile</a>
-                <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
-                    <span class="material-symbols-outlined">light_mode</span>
-                </button>
-            </div>
-        </div>
-    </nav>
+    <div id="navbar-placeholder"></div>
 
     <!-- Main Content -->
     <div class="relative z-10 pt-32 pb-16">
@@ -172,7 +138,7 @@
             <div class="mb-12">
                 <div class="flex items-center gap-4 mb-6">
                     <div class="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center">
-                        <span class="material-symbols-outlined text-4xl text-primary">calculation</span>
+                        <span class="material-symbols-outlined text-4xl text-primary">grade</span>
                     </div>
                     <div>
                         <h1 class="text-4xl font-bold font-display text-gray-900 dark:text-white mb-2">Grade Converter
@@ -714,6 +680,7 @@
             setupRemoveButtons();
         });
     </script>
+    <script src="assets/js/components-loader.js"></script>
 </body>
 
 </html>

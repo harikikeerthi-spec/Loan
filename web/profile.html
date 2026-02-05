@@ -37,20 +37,7 @@
         };
     </script>
     <style>
-        .glass-card {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
-        }
-
-        .dark .glass-card {
-            background: rgba(25, 15, 35, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .form-input {
+.form-input {
             background: rgba(255, 255, 255, 0.5);
             border: 1px solid rgba(168, 85, 247, 0.1);
             transition: all 0.3s ease;
@@ -90,25 +77,7 @@
     </div>
 
     <!-- Navigation -->
-    <nav id="mainNav"
-        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500 glass-card">
-        <div class="w-full max-w-7xl flex justify-between items-center">
-            <a href="index.html" class="flex items-center gap-2">
-                <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
-                    <span class="material-symbols-outlined text-2xl">school</span>
-                </div>
-                <span class="font-bold text-2xl tracking-tight font-display">LoanHero</span>
-            </a>
-
-            <div class="flex items-center gap-4">
-                <a href="dashboard.html"
-                    class="px-4 py-2 text-sm font-semibold hover:text-primary transition-colors flex items-center gap-2">
-                    <span class="material-symbols-outlined">arrow_back</span>
-                    Back to Dashboard
-                </a>
-            </div>
-        </div>
-    </nav>
+    <div id="navbar-placeholder"></div>
 
     <main class="relative z-10 pt-32 pb-24 px-6 max-w-4xl mx-auto">
         <div class="glass-card rounded-3xl p-8 md:p-12">
@@ -192,6 +161,7 @@
     <script src="assets/js/dob-validation.js"></script>
     <script src="assets/js/name-validation.js"></script>
     <script src="assets/js/profile.js"></script>
+    <script src="assets/js/components-loader.js"></script>
 </body>
 
 </html>

@@ -4,7 +4,6 @@ import { LoanRecommendationService } from './services/loan-recommendation.servic
 import { SopAnalysisService } from './services/sop-analysis.service';
 import { GradeConversionService } from './services/grade-conversion.service';
 import { UniversityComparisonService } from './services/university-comparison.service';
-import { AdmitPredictorService } from './services/admit-predictor.service';
 
 @Controller('ai')
 export class AiController {
@@ -14,7 +13,6 @@ export class AiController {
     private readonly sopAnalysisService: SopAnalysisService,
     private readonly gradeConversionService: GradeConversionService,
     private readonly universityComparisonService: UniversityComparisonService,
-    private readonly admitPredictorService: AdmitPredictorService,
   ) { }
 
   @Post('eligibility-check')
@@ -153,29 +151,6 @@ export class AiController {
     return {
       success: true,
       data: result,
-    };
-  }
-
-  @Post('predict-admission')
-  async predictAdmission(
-    @Body()
-    data: {
-      targetUniversity: string;
-      gpa: number;
-      gpaScale: 4 | 10;
-      testScoreType: 'GRE' | 'GMAT' | 'SAT' | 'ACT' | 'None';
-      testScore: number;
-      englishTestType: 'IELTS' | 'TOEFL' | 'PTE' | 'None';
-      englishTestScore: number;
-      experienceYears: number;
-      researchPapers: number;
-      programLevel: 'Undergraduate' | 'Masters' | 'PhD' | 'MBA';
-    },
-  ) {
-    const result = this.admitPredictorService.predict(data);
-    return {
-      success: true,
-      prediction: result,
     };
   }
 }

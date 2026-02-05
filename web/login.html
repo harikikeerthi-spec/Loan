@@ -37,20 +37,7 @@
         };
     </script>
     <style>
-        .glass-card {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.6);
-            box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
-        }
-
-        .dark .glass-card {
-            background: rgba(25, 15, 35, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .form-input {
+.form-input {
             background: rgba(255, 255, 255, 0.5);
             border: 1px solid rgba(168, 85, 247, 0.1);
             transition: all 0.3s ease;
@@ -85,83 +72,7 @@
     </div>
 
     <!-- Navigation -->
-    <nav id="mainNav"
-        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
-        <div class="w-full max-w-7xl flex justify-between items-center">
-            <div class="flex items-center gap-12">
-                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
-                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
-                        <span class="material-symbols-outlined text-2xl">school</span>
-                    </div>
-                    <span
-                        class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero</span>
-                </a>
-            </div>
-            <div class="flex items-center gap-4">
-                <!-- Login only: no signup link -->
-
-                <!-- User Profile Dropdown (Hidden initially) -->
-                <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
-                    <button id="profileBtn"
-                        class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
-                        <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
-                        <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white"></span>
-                    </button>
-
-                    <!-- Dropdown Menu -->
-                    <div id="profileDropdown"
-                        class="hidden absolute top-12 right-0 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 w-64 overflow-hidden">
-                        <div
-                            class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-primary/5 to-purple-500/5">
-                            <p class="text-xs text-gray-500 dark:text-gray-400 font-sans">Logged in as</p>
-                            <p id="dropdownEmail" class="text-sm font-bold text-gray-900 dark:text-white truncate"></p>
-                        </div>
-
-                        <div class="py-2">
-                            <a href="index.html"
-                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                                <span class="material-symbols-outlined text-lg text-primary">dashboard</span>
-                                <span class="font-semibold">Dashboard</span>
-                            </a>
-                            <a href="profile.html"
-                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                                <span class="material-symbols-outlined text-lg text-primary">person</span>
-                                <span class="font-semibold">My Profile</span>
-                            </a>
-                            <a href="my-applications.html"
-                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                                <span class="material-symbols-outlined text-lg text-primary">description</span>
-                                <span class="font-semibold">My Applications</span>
-                            </a>
-                            <a href="vault.html"
-                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                                <span class="material-symbols-outlined text-lg text-primary">folder_open</span>
-                                <span class="font-semibold">Document Vault</span>
-                            </a>
-                            <a href="settings.html"
-                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                                <span class="material-symbols-outlined text-lg text-primary">settings</span>
-                                <span class="font-semibold">Settings</span>
-                            </a>
-                            <a href="help.html"
-                                class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                                <span class="material-symbols-outlined text-lg text-primary">help</span>
-                                <span class="font-semibold">Help & Support</span>
-                            </a>
-                        </div>
-
-                        <div class="border-t border-gray-200 dark:border-gray-700">
-                            <a href="#" id="logoutBtn"
-                                class="flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-semibold">
-                                <span class="material-symbols-outlined text-lg">logout</span>
-                                <span>Logout</span>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
+    <div id="navbar-placeholder"></div>
 
     <main class="relative z-10 w-full max-w-md px-6">
         <div class="glass-card p-12 rounded-[3.5rem] border-white/50 shadow-2xl">
@@ -240,21 +151,13 @@
                 }
             });
         });
-
-        window.addEventListener('scroll', () => {
-            const nav = document.getElementById('mainNav');
-            if (window.scrollY > 50) {
-                nav.classList.add('nav-scrolled');
-            } else {
-                nav.classList.remove('nav-scrolled');
-            }
-        });
     </script>
     <script src="assets/js/email-validation.js"></script>
     <script src="assets/js/login.js"></script>
     <script src="assets/js/otp-focus.js"></script>
     <script src="assets/js/auth.js"></script>
     <script src="assets/js/dashboard.js"></script>
+    <script src="assets/js/components-loader.js"></script>
 </body>
 
 </html>

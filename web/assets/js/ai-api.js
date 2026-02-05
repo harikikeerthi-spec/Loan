@@ -64,34 +64,6 @@ const AI_API = {
   },
 
   /**
-   * Predict admission probability
-   * @param {Object} data - Student profile data
-   * @returns {Promise<Object>} - Prediction result
-   */
-  async predictAdmission(data) {
-    try {
-      const response = await fetch(`${this.BASE_URL}/predict-admission`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        throw new Error(`API Error: ${response.status} ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      console.error('Admission prediction failed:', error);
-      throw error;
-    }
-  },
-
-  /**
    * Format eligibility result for display
    * @param {Object} result - Eligibility result from API
    * @returns {Object} - Formatted display data
@@ -144,12 +116,12 @@ const AI_API = {
 
     const weakAreas = Array.isArray(raw.weakAreas)
       ? raw.weakAreas.map((area) => {
-        if (!area) return '';
-        if (typeof area === 'string') return area;
-        const issue = area.issue ? String(area.issue) : 'Issue';
-        const recommendation = area.recommendation ? String(area.recommendation) : '';
-        return recommendation ? `${issue}: ${recommendation}` : issue;
-      }).filter(Boolean)
+          if (!area) return '';
+          if (typeof area === 'string') return area;
+          const issue = area.issue ? String(area.issue) : 'Issue';
+          const recommendation = area.recommendation ? String(area.recommendation) : '';
+          return recommendation ? `${issue}: ${recommendation}` : issue;
+        }).filter(Boolean)
       : [];
 
     const qualityMap = {
