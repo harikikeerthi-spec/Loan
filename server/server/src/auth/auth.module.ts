@@ -5,6 +5,10 @@ import { EmailService } from './email.service';
 import { AuthController } from './auth.controller';
 import { JwtModule } from '@nestjs/jwt';
 import { AdminGuard } from './admin.guard';
+import { SuperAdminGuard } from './super-admin.guard';
+import { AuthorizationService } from './authorization.service';
+import { AuditLogService } from './audit-log.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Module({
   imports: [
@@ -15,7 +19,23 @@ import { AdminGuard } from './admin.guard';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, EmailService, AdminGuard],
-  exports: [AuthService, JwtModule, UsersModule, AdminGuard],
+  providers: [
+    AuthService,
+    EmailService,
+    AdminGuard,
+    SuperAdminGuard,
+    AuthorizationService,
+    AuditLogService,
+    PrismaService,
+  ],
+  exports: [
+    AuthService,
+    JwtModule,
+    UsersModule,
+    AdminGuard,
+    SuperAdminGuard,
+    AuthorizationService,
+    AuditLogService,
+  ],
 })
-export class AuthModule { }
+export class AuthModule {}

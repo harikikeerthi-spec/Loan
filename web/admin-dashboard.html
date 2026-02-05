@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Admin Dashboard - LoanHero</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+    <link href="assets/css/design-tokens.css" rel="stylesheet" />
+    <link href="assets/css/admin-dashboard.css" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                    },
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    },
+                    backgroundImage: {
+                        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(102, 5, 199, 0.4) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224, 195, 137, 0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139, 192, 232, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102, 5, 199, 0.3) 0px, transparent 50%)',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        .dark .glass-card {
+            background: rgba(25, 15, 35, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .admin-sidebar {
+            background: linear-gradient(135deg, rgba(102, 5, 199, 0.1) 0%, rgba(139, 192, 232, 0.05) 100%);
+            border-right: 1px solid rgba(102, 5, 199, 0.2);
+        }
+
+        .dark .admin-sidebar {
+            background: linear-gradient(135deg, rgba(102, 5, 199, 0.15) 0%, rgba(139, 192, 232, 0.08) 100%);
+        }
+
+        .admin-nav-item {
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            position: relative;
+        }
+
+        .admin-nav-item:hover {
+            background: rgba(102, 5, 199, 0.1);
+            border-left-color: #6605c7;
+            transform: translateX(4px);
+        }
+
+        .admin-nav-item.active {
+            background: rgba(102, 5, 199, 0.2);
+            border-left-color: #6605c7;
+            color: #6605c7;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, rgba(102, 5, 199, 0.05) 0%, rgba(139, 192, 232, 0.05) 100%);
+            border: 1px solid rgba(102, 5, 199, 0.1);
+        }
+
+        .stat-card:hover {
+            border-color: #6605c7;
+            background: linear-gradient(135deg, rgba(102, 5, 199, 0.1) 0%, rgba(139, 192, 232, 0.08) 100%);
+        }
+
+        .admin-btn-primary {
+            background: linear-gradient(135deg, #6605c7 0%, #7c3aed 100%);
+            transition: all 0.3s ease;
+        }
+
+        .admin-btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 5, 199, 0.3);
+        }
+
+        .admin-table {
+            border-collapse: collapse;
+        }
+
+        .admin-table th {
+            background: rgba(102, 5, 199, 0.1);
+            color: #6605c7;
+            font-weight: 600;
+        }
+
+        .admin-table tbody tr:hover {
+            background: rgba(102, 5, 199, 0.05);
+        }
+
+        .dark .admin-table th {
+            background: rgba(102, 5, 199, 0.2);
+            color: #a855f7;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-published {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+        }
+
+        .status-draft {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+
+        .status-pending {
+            background: rgba(251, 146, 60, 0.2);
+            color: #fb923c;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 1rem;
+            max-width: 800px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        .dark .modal-content {
+            background: #1a1a2e;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid rgba(102, 5, 199, 0.2);
+            border-top-color: #6605c7;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .tab-container {
+            display: none;
+        }
+
+        .tab-container.active {
+            display: block;
+        }
+
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .tab-button.active {
+            border-bottom-color: #6605c7;
+            color: #6605c7;
+        }
+    </style>
+</head>
+
+<body class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100">
+    <!-- Admin Container -->
+    <div class="min-h-screen flex">
+        <!-- Sidebar -->
+        <div id="sidebar" class="w-64 admin-sidebar hidden lg:block shadow-lg">
+            <div class="p-6 border-b border-gray-300 dark:border-gray-700">
+                <h2 class="text-2xl font-display font-bold text-primary">Admin Panel</h2>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-1" id="adminName">Admin</p>
+            </div>
+
+            <!-- Navigation Menu -->
+            <nav class="p-4 space-y-2">
+                <button onclick="switchTab('dashboard')"
+                    class="admin-nav-item active w-full text-left px-4 py-3 rounded-lg flex items-center gap-3">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    <span>Dashboard</span>
+                </button>
+                <button onclick="switchTab('blogs')"
+                    class="admin-nav-item w-full text-left px-4 py-3 rounded-lg flex items-center gap-3">
+                    <span class="material-symbols-outlined">article</span>
+                    <span>Blog Management</span>
+                </button>
+                <button onclick="switchTab('create')"
+                    class="admin-nav-item w-full text-left px-4 py-3 rounded-lg flex items-center gap-3">
+                    <span class="material-symbols-outlined">add_circle</span>
+                    <span>Create Blog</span>
+                </button>
+                <button onclick="switchTab('users')"
+                    class="admin-nav-item w-full text-left px-4 py-3 rounded-lg flex items-center gap-3">
+                    <span class="material-symbols-outlined">people</span>
+                    <span>User Management</span>
+                </button>
+                <button onclick="switchTab('settings')"
+                    class="admin-nav-item w-full text-left px-4 py-3 rounded-lg flex items-center gap-3">
+                    <span class="material-symbols-outlined">settings</span>
+                    <span>Settings</span>
+                </button>
+                <hr class="my-4 border-gray-300 dark:border-gray-700">
+                <button onclick="logoutAdmin()"
+                    class="admin-nav-item w-full text-left px-4 py-3 rounded-lg flex items-center gap-3 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                    <span class="material-symbols-outlined">logout</span>
+                    <span>Logout</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col">
+            <!-- Top Navigation Bar -->
+            <div class="glass-card border-b border-gray-300 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <button id="sidebarToggle" class="lg:hidden material-symbols-outlined text-2xl cursor-pointer">
+                        menu
+                    </button>
+                    <h1 id="pageTitle" class="text-2xl font-display font-bold">Dashboard</h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleTheme()" class="material-symbols-outlined text-2xl cursor-pointer hover:text-primary">
+                        light_mode
+                    </button>
+                    <img id="profileImage" src="https://api.dicebear.com/7.x/avataaars/svg?seed=admin"
+                        alt="Profile" class="w-10 h-10 rounded-full cursor-pointer">
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="flex-1 overflow-auto p-6">
+                <!-- Dashboard Tab -->
+                <div id="dashboard" class="tab-container active">
+                    <h2 class="text-3xl font-bold mb-6">Welcome to Admin Dashboard</h2>
+
+                    <!-- Statistics Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                        <div class="stat-card glass-card p-6 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Total Blogs</p>
+                                    <p class="text-3xl font-bold" id="totalBlogs">0</p>
+                                </div>
+                                <span class="material-symbols-outlined text-3xl text-primary opacity-30">article</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-card p-6 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Published</p>
+                                    <p class="text-3xl font-bold text-green-600" id="publishedBlogs">0</p>
+                                </div>
+                                <span class="material-symbols-outlined text-3xl text-green-600 opacity-30">check_circle</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-card p-6 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Drafts</p>
+                                    <p class="text-3xl font-bold text-blue-600" id="draftBlogs">0</p>
+                                </div>
+                                <span class="material-symbols-outlined text-3xl text-blue-600 opacity-30">edit_note</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-card p-6 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Total Views</p>
+                                    <p class="text-3xl font-bold text-purple-600" id="totalViews">0</p>
+                                </div>
+                                <span class="material-symbols-outlined text-3xl text-purple-600 opacity-30">visibility</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="glass-card p-6 rounded-lg">
+                        <h3 class="text-xl font-bold mb-4">Quick Actions</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <button onclick="switchTab('create')"
+                                class="admin-btn-primary text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:shadow-lg">
+                                <span class="material-symbols-outlined">add</span>
+                                Create New Blog
+                            </button>
+                            <button onclick="switchTab('blogs')"
+                                class="admin-btn-primary text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:shadow-lg">
+                                <span class="material-symbols-outlined">list</span>
+                                Manage Blogs
+                            </button>
+                            <button onclick="switchTab('users')"
+                                class="admin-btn-primary text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:shadow-lg">
+                                <span class="material-symbols-outlined">people</span>
+                                View Users
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Blog Management Tab -->
+                <div id="blogs" class="tab-container">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold">Blog Management</h2>
+                        <button onclick="switchTab('create')"
+                            class="admin-btn-primary text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2">
+                            <span class="material-symbols-outlined">add</span>
+                            Create Blog
+                        </button>
+                    </div>
+
+                    <!-- Filter Options -->
+                    <div class="glass-card p-4 rounded-lg mb-6 flex flex-col md:flex-row gap-4">
+                        <input type="text" id="searchBlogs" placeholder="Search blogs..."
+                            class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                        <select id="filterStatus" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                            <option value="">All Status</option>
+                            <option value="published">Published</option>
+                            <option value="draft">Draft</option>
+                        </select>
+                        <button onclick="loadBlogs()"
+                            class="admin-btn-primary text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2">
+                            <span class="material-symbols-outlined">search</span>
+                            Search
+                        </button>
+                    </div>
+
+                    <!-- Blogs Table -->
+                    <div class="glass-card rounded-lg overflow-hidden">
+                        <table class="admin-table w-full">
+                            <thead>
+                                <tr>
+                                    <th class="px-6 py-4 text-left">Title</th>
+                                    <th class="px-6 py-4 text-left">Author</th>
+                                    <th class="px-6 py-4 text-left">Status</th>
+                                    <th class="px-6 py-4 text-left">Views</th>
+                                    <th class="px-6 py-4 text-left">Date</th>
+                                    <th class="px-6 py-4 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="blogsList">
+                                <tr>
+                                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                                        <div class="flex justify-center">
+                                            <div class="loading-spinner"></div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Create Blog Tab -->
+                <div id="create" class="tab-container">
+                    <h2 class="text-3xl font-bold mb-6">Create New Blog Post</h2>
+
+                    <form id="createBlogForm" class="glass-card p-8 rounded-lg space-y-6" onsubmit="handleCreateBlog(event)">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Blog Title *</label>
+                                <input type="text" id="blogTitle" placeholder="Enter blog title" required
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Blog Slug *</label>
+                                <input type="text" id="blogSlug" placeholder="blog-title" required
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Author Name *</label>
+                                <input type="text" id="authorName" placeholder="Your name" required
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Category *</label>
+                                <select id="category" required
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                                    <option value="">Select Category</option>
+                                    <option value="Finance">Finance</option>
+                                    <option value="Education">Education</option>
+                                    <option value="Technology">Technology</option>
+                                    <option value="News">News</option>
+                                    <option value="Tips">Tips & Guides</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Excerpt *</label>
+                            <textarea id="excerpt" placeholder="Short description of the blog post" rows="3" required
+                                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary resize-none"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Blog Content *</label>
+                            <textarea id="content" placeholder="Write your blog content here..." rows="8" required
+                                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary resize-none font-mono"></textarea>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Featured Image URL</label>
+                                <input type="url" id="featuredImage" placeholder="https://example.com/image.jpg"
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Read Time (minutes)</label>
+                                <input type="number" id="readTime" placeholder="5" min="1"
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Tags (comma-separated)</label>
+                                <input type="text" id="tags" placeholder="tag1, tag2, tag3"
+                                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                            </div>
+                            <div class="flex items-end gap-4">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="isFeatured" class="w-4 h-4">
+                                    <span class="text-sm font-medium">Featured</span>
+                                </label>
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input type="checkbox" id="isPublished" class="w-4 h-4">
+                                    <span class="text-sm font-medium">Publish Now</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-4 pt-4">
+                            <button type="submit" class="admin-btn-primary text-white px-8 py-3 rounded-lg font-medium flex-1">
+                                Create Blog
+                            </button>
+                            <button type="reset" class="px-8 py-3 rounded-lg font-medium border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800">
+                                Clear
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- User Management Tab -->
+                <div id="users" class="tab-container">
+                    <h2 class="text-3xl font-bold mb-6">User Management</h2>
+
+                    <div class="glass-card rounded-lg overflow-hidden">
+                        <table class="admin-table w-full">
+                            <thead>
+                                <tr>
+                                    <th class="px-6 py-4 text-left">User</th>
+                                    <th class="px-6 py-4 text-left">Email</th>
+                                    <th class="px-6 py-4 text-left">Role</th>
+                                    <th class="px-6 py-4 text-left">Joined</th>
+                                    <th class="px-6 py-4 text-center">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usersList">
+                                <tr>
+                                    <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                                        <div class="flex justify-center">
+                                            <div class="loading-spinner"></div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div id="settings" class="tab-container">
+                    <h2 class="text-3xl font-bold mb-6">Admin Settings</h2>
+
+                    <div class="space-y-6">
+                        <!-- Profile Settings -->
+                        <div class="glass-card p-8 rounded-lg">
+                            <h3 class="text-xl font-bold mb-4">Profile Settings</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Admin Email</label>
+                                    <input type="email" id="settingsEmail" disabled
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-800">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Admin Role</label>
+                                    <input type="text" value="Administrator" disabled
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-800">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Last Login</label>
+                                    <input type="text" id="lastLogin" disabled
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-800">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- System Settings -->
+                        <div class="glass-card p-8 rounded-lg">
+                            <h3 class="text-xl font-bold mb-4">System Settings</h3>
+                            <div class="space-y-4">
+                                <label class="flex items-center gap-4 cursor-pointer">
+                                    <input type="checkbox" checked class="w-4 h-4">
+                                    <span class="font-medium">Enable Blog Comments</span>
+                                </label>
+                                <label class="flex items-center gap-4 cursor-pointer">
+                                    <input type="checkbox" checked class="w-4 h-4">
+                                    <span class="font-medium">Email Notifications</span>
+                                </label>
+                                <label class="flex items-center gap-4 cursor-pointer">
+                                    <input type="checkbox" class="w-4 h-4">
+                                    <span class="font-medium">Maintenance Mode</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Danger Zone -->
+                        <div class="glass-card p-8 rounded-lg border-2 border-red-200 dark:border-red-900">
+                            <h3 class="text-xl font-bold mb-4 text-red-600">Danger Zone</h3>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">These actions cannot be undone.</p>
+                            <div class="flex gap-4">
+                                <button onclick="clearCache()"
+                                    class="px-6 py-2 border-2 border-red-600 text-red-600 rounded-lg font-medium hover:bg-red-50 dark:hover:bg-red-900/20">
+                                    Clear Cache
+                                </button>
+                                <button onclick="resetSettings()"
+                                    class="px-6 py-2 border-2 border-red-600 text-red-600 rounded-lg font-medium hover:bg-red-50 dark:hover:bg-red-900/20">
+                                    Reset Settings
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Blog Modal -->
+    <div id="editBlogModal" class="modal-overlay">
+        <div class="modal-content p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Edit Blog Post</h2>
+                <button onclick="closeEditModal()" class="material-symbols-outlined text-2xl cursor-pointer hover:text-primary">
+                    close
+                </button>
+            </div>
+
+            <form id="editBlogForm" onsubmit="handleEditBlog(event)" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Blog Title</label>
+                        <input type="text" id="editBlogTitle"
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Category</label>
+                        <select id="editCategory"
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                            <option value="Finance">Finance</option>
+                            <option value="Education">Education</option>
+                            <option value="Technology">Technology</option>
+                            <option value="News">News</option>
+                            <option value="Tips">Tips & Guides</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium mb-2">Excerpt</label>
+                    <textarea id="editExcerpt" rows="3"
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary resize-none"></textarea>
+                </div>
+
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="editIsFeatured" class="w-4 h-4">
+                        <span class="text-sm font-medium">Featured</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="editIsPublished" class="w-4 h-4">
+                        <span class="text-sm font-medium">Published</span>
+                    </label>
+                </div>
+
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="admin-btn-primary text-white px-8 py-2 rounded-lg font-medium flex-1">
+                        Save Changes
+                    </button>
+                    <button type="button" onclick="closeEditModal()"
+                        class="px-8 py-2 rounded-lg font-medium border-2 border-gray-300 dark:border-gray-600">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="assets/js/theme-manager.js"></script>
+    <script src="assets/js/auth-guard.js"></script>
+    <script src="assets/js/blog-api.js"></script>
+    <script src="assets/js/admin-dashboard.js"></script>
+</body>
+
+</html>

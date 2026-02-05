@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>University Admission Predictor - LoanHero AI</title>
+
+    <!-- Meta Tags -->
+    <meta name="description" content="Predict your admission chances to top global universities using AI." />
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+
+    <!-- Styles & Config -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                    },
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    },
+                    backgroundImage: {
+                        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(102, 5, 199, 0.4) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224, 195, 137, 0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139, 192, 232, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102, 5, 199, 0.3) 0px, transparent 50%)',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        .dark .glass-card {
+            background: rgba(25, 15, 35, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-scrolled {
+            background: rgba(255, 255, 255, 0.8) !important;
+            backdrop-filter: blur(12px);
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+        }
+
+        .dark .nav-scrolled {
+            background: rgba(17, 8, 26, 0.8) !important;
+        }
+
+        body {
+            background-attachment: fixed;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+
+    <!-- Background Structure -->
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none">
+        <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
+        <div class="absolute inset-0 opacity-30 mix-blend-overlay"
+            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="mainNav"
+        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
+        <div class="w-full max-w-7xl flex justify-between items-center">
+            <div class="flex items-center gap-12">
+                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white shadow-lg">
+                        <span class="material-symbols-outlined text-2xl">school</span>
+                    </div>
+                    <span class="font-bold text-2xl tracking-tight font-display text-gray-900 dark:text-white">LoanHero
+                        <span class="text-primary/80"></span></span>
+                </a>
+
+                <div class="hidden lg:flex items-center gap-8">
+                    <a href="about-us.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">About</a>
+                    <a href="how-it-works.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">How
+                        It Works</a>
+                    <a href="emi.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors font-sans">EMI
+                        Calculator</a>
+                    <a href="faq.html"
+                        class="nav-link text-sm font-semibold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">FAQ</a>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <a href="login.html" id="loginLink"
+                    class="text-sm font-bold text-gray-600 dark:text-gray-400 hover:text-primary transition-colors">Sign
+                    In</a>
+
+                <!-- User Profile Dropdown (Hidden initially) -->
+                <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
+                    <button id="profileBtn"
+                        class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
+                        <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
+                        <span id="userEmail" class="text-sm font-bold text-gray-900 dark:text-white"></span>
+                    </button>
+
+                    <!-- Dropdown Menu -->
+                    <div id="profileDropdown"
+                        class="hidden absolute top-12 right-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 w-48">
+                        <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Logged in as</p>
+                            <p id="dropdownEmail" class="text-sm font-bold text-gray-900 dark:text-white truncate"></p>
+                        </div>
+                        <a href="index.html"
+                            class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Dashboard</a>
+                        <a href="#" id="logoutBtn"
+                            class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700 border-t border-gray-200 dark:border-gray-700">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="relative z-10 pt-32 pb-24">
+        <section class="max-w-7xl mx-auto px-6 py-12">
+            <div class="text-center mb-16">
+                <span class="text-primary font-bold text-[11px] tracking-[0.2em] uppercase mb-3 block">AI-Powered
+                    Insights</span>
+                <h1 class="text-4xl md:text-6xl font-display font-medium text-gray-900 dark:text-white mb-6">
+                    Admission <span class="italic text-gray-500">Predictor</span>
+                </h1>
+                <p class="text-gray-600 dark:text-gray-300 text-lg max-w-2xl mx-auto leading-relaxed">
+                    Estimate your chances of getting into your dream university. Our AI analyzes your profile against
+                    historical data to provide a detailed probability score.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-10 items-start">
+
+                <!-- Input Form -->
+                <div class="glass-card rounded-3xl p-8">
+                    <form id="admitPredictorForm" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                            <!-- Target Uni & Program -->
+                            <div class="col-span-full">
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Target
+                                    University</label>
+                                <input type="text" id="targetUniversity" name="targetUniversity"
+                                    placeholder="e.g. Stanford University, University of Toronto" required
+                                    class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/5 text-gray-900 dark:text-white focus:ring-primary focus:border-primary">
+                            </div>
+
+                            <div class="col-span-full md:col-span-1">
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Program
+                                    Level</label>
+                                <select id="programLevel" name="programLevel"
+                                    class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/5 text-gray-900 dark:text-white focus:ring-primary focus:border-primary">
+                                    <option value="Undergraduate">Undergraduate</option>
+                                    <option value="Masters">Masters (MS/MA)</option>
+                                    <option value="MBA">MBA</option>
+                                    <option value="PhD">PhD</option>
+                                </select>
+                            </div>
+
+                            <!-- GPA -->
+                            <div class="col-span-full md:col-span-1">
+                                <div class="flex gap-2">
+                                    <div class="flex-1">
+                                        <label
+                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">GPA</label>
+                                        <input type="number" id="gpa" name="gpa" step="0.01" placeholder="3.8" required
+                                            class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/5 text-gray-900 dark:text-white focus:ring-primary focus:border-primary">
+                                    </div>
+                                    <div class="w-24">
+                                        <label
+                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Scale</label>
+                                        <select id="gpaScale" name="gpaScale"
+                                            class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/5 text-gray-900 dark:text-white focus:ring-primary focus:border-primary">
+                                            <option value="4">4.0</option>
+                                            <option value="10">10.0</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Test Scores -->
+                            <div class="col-span-full md:col-span-1">
+                                <div class="flex gap-2">
+                                    <div class="w-24">
+                                        <label
+                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Test</label>
+                                        <select id="testScoreType" name="testScoreType"
+                                            class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/5 text-gray-900 dark:text-white focus:ring-primary focus:border-primary">
+                                            <option value="None">None</option>
+                                            <option value="GRE">GRE</option>
+                                            <option value="GMAT">GMAT</option>
+                                            <option value="SAT">SAT</option>
+                                            <option value="ACT">ACT</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex-1">
+                                        <label
+                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Score</label>
+                                        <input type="number" id="testScore" name="testScore" placeholder="e.g. 320"
+                                            class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/5 text-gray-900 dark:text-white focus:ring-primary focus:border-primary">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- English Proficiency -->
+                            <div class="col-span-full md:col-span-1">
+                                <div class="flex gap-2">
+                                    <div class="w-24">
+                                        <label
+                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">English</label>
+                                        <select id="englishTestType" name="englishTestType"
+                                            class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/5 text-gray-900 dark:text-white focus:ring-primary focus:border-primary">
+                                            <option value="IELTS">IELTS</option>
+                                            <option value="TOEFL">TOEFL</option>
+                                            <option value="PTE">PTE</option>
+                                            <option value="None">None</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex-1">
+                                        <label
+                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Score</label>
+                                        <input type="number" id="englishTestScore" name="englishTestScore" step="0.5"
+                                            placeholder="e.g. 7.5"
+                                            class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/5 text-gray-900 dark:text-white focus:ring-primary focus:border-primary">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Experience & Papers -->
+                            <div class="col-span-full md:col-span-1">
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Work
+                                    Experience (Years)</label>
+                                <input type="number" id="experienceYears" name="experienceYears" placeholder="e.g. 2"
+                                    value="0"
+                                    class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/5 text-gray-900 dark:text-white focus:ring-primary focus:border-primary">
+                            </div>
+
+                            <div class="col-span-full md:col-span-1">
+                                <label
+                                    class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Research
+                                    Papers</label>
+                                <input type="number" id="researchPapers" name="researchPapers" placeholder="e.g. 1"
+                                    value="0"
+                                    class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/50 dark:bg-white/5 text-gray-900 dark:text-white focus:ring-primary focus:border-primary">
+                            </div>
+
+                        </div>
+
+                        <div class="pt-4 flex items-center justify-end">
+                            <button type="submit"
+                                class="px-8 py-4 rounded-full bg-primary text-white font-bold hover:bg-gold-accent hover:text-gray-900 transition-colors shadow-lg shadow-primary/20 flex items-center gap-2">
+                                <span class="material-symbols-outlined">analytics</span>
+                                Predict Chance
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Results Section -->
+                <div id="resultsSection" class="hidden">
+                    <div class="glass-card rounded-3xl p-8 mb-6 sticky top-28">
+                        <div class="text-center mb-8">
+                            <h3 class="text-gray-500 dark:text-gray-400 font-medium mb-1">Admission Probability</h3>
+                            <div class="relative inline-flex items-center justify-center">
+                                <svg class="transform -rotate-90 w-32 h-32">
+                                    <circle cx="64" cy="64" r="56" stroke="currentColor" stroke-width="8"
+                                        fill="transparent" class="text-gray-200 dark:text-white/10" />
+                                    <circle id="probabilityRing" cx="64" cy="64" r="56" stroke="currentColor"
+                                        stroke-width="8" fill="transparent" :stroke-dasharray="circumference"
+                                        :stroke-dashoffset="circumference - percent / 100 * circumference"
+                                        class="text-primary transition-all duration-1000 ease-out" />
+                                </svg>
+                                <span id="probabilityText"
+                                    class="absolute text-3xl font-bold text-gray-900 dark:text-white">0%</span>
+                            </div>
+                            <p id="uniNameResult"
+                                class="text-xl font-display font-bold text-gray-900 dark:text-white mt-2">Stanford</p>
+                        </div>
+
+                        <div class="space-y-4">
+                            <h4
+                                class="font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-white/10 pb-2">
+                                Analysis & Feedback</h4>
+                            <ul id="feedbackList" class="space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+
+                        <div
+                            class="mt-6 p-4 rounded-xl bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-900/30">
+                            <p class="text-xs text-orange-700 dark:text-orange-400 flex gap-2">
+                                <span class="material-symbols-outlined text-base">info</span>
+                                <span>This prediction is based on historical data trends and is not an official
+                                    guarantee.</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Initial Placeholder -->
+                <div id="resultsPlaceholder"
+                    class="glass-card rounded-3xl p-12 text-center h-full flex flex-col items-center justify-center">
+                    <div
+                        class="w-16 h-16 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
+                        <span class="material-symbols-outlined text-3xl text-gray-400">query_stats</span>
+                    </div>
+                    <h3 class="text-xl font-display font-semibold text-gray-900 dark:text-white mb-2">Ready to crunch
+                        numbers</h3>
+                    <p class="text-gray-500 dark:text-gray-400 text-sm">Fill out your profile details to see your
+                        admission chances.</p>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-[#190f23] text-white py-20 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                <!-- Footer content same as other pages -->
+                <div class="col-span-1 md:col-span-2">
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
+                            <span class="material-symbols-outlined text-white">school</span>
+                        </div>
+                        <span class="text-2xl font-bold font-display tracking-tight text-white">LoanHero</span>
+                    </div>
+                    <p class="text-gray-400 max-w-sm font-sans leading-relaxed mb-8">
+                        Empowering students with transparent, flexible, and accessible education financing solutions.
+                    </p>
+                </div>
+                <div>
+                    <h4 class="text-lg font-bold mb-6 font-display text-white">Quick Links</h4>
+                    <ul class="space-y-4 text-gray-400 font-sans">
+                        <li><a href="about-us.html" class="hover:text-primary transition-colors">About Us</a></li>
+                        <li><a href="emi.html" class="hover:text-primary transition-colors">EMI Calculator</a></li>
+                        <li><a href="contact.html" class="hover:text-primary transition-colors">Contact</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-bold mb-6 font-display text-white">Legal</h4>
+                    <ul class="space-y-4 text-gray-400 font-sans">
+                        <li><a href="privacy.html" class="hover:text-primary transition-colors">Privacy Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="pt-8 border-t border-white/10 text-center text-gray-500 text-xs font-sans">
+                <p>&copy; 2026 LoanHero Inc. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="assets/js/ai-api.js"></script>
+    <script src="assets/js/ai-admit-client.js"></script>
+    <script src="assets/js/theme-toggle.js"></script>
+    <script src="assets/js/auth.js"></script>
+</body>
+
+</html>

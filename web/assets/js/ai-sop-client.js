@@ -4,14 +4,14 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('aiSOPForm');
+  const form = document.getElementById('sopScorerForm');
   
   if (form) {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       
       // Get SOP text from form
-      const sopText = document.getElementById('aiSOPText')?.value || '';
+      const sopText = document.getElementById('sopText')?.value || '';
       
       if (!sopText.trim()) {
         alert('Please enter your Statement of Purpose before analyzing.');

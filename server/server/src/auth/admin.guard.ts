@@ -40,8 +40,8 @@ export class AdminGuard implements CanActivate {
                 throw new UnauthorizedException('User not found');
             }
 
-            // Check if user is admin
-            if (user.role !== 'admin') {
+            // Check if user is admin or super_admin
+            if (user.role !== 'admin' && user.role !== 'super_admin') {
                 throw new ForbiddenException('Access denied. Admin privileges required.');
             }
 

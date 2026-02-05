@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Admin - Blog Management - LoanHero</title>
+    <title>Blog Management - Admin Dashboard</title>
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link
@@ -247,6 +246,178 @@
         .dark .admin-form {
             background: rgba(25, 15, 35, 0.8);
         }
+
+        /* Font Style Preview Classes */
+        .font-style-formal {
+            font-family: 'Noto Serif', Georgia, serif;
+            letter-spacing: 0.3px;
+            line-height: 1.8;
+        }
+
+        .font-style-modern {
+            font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            letter-spacing: 0.2px;
+            line-height: 1.6;
+        }
+
+        .font-style-casual {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 0px;
+            line-height: 1.5;
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 4px;
+        }
+
+        .dark .font-style-casual {
+            background: #2a2a2a;
+        }
+
+        .template-preview {
+            background: #f9fafb;
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 12px 0;
+            font-size: 0.875rem;
+            color: #6b7280;
+            line-height: 1.5;
+        }
+
+        .dark .template-preview {
+            background: #1f2937;
+            border-color: #4b5563;
+            color: #d1d5db;
+        }
+
+        /* Template Gallery Card Styles */
+        .template-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(245,245,245,0.95) 100%);
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 24px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .template-card:hover {
+            border-color: #6605c7;
+            box-shadow: 0 12px 30px rgba(102, 5, 199, 0.15);
+            transform: translateY(-4px);
+        }
+
+        .dark .template-card {
+            background: linear-gradient(135deg, rgba(31, 41, 55, 0.8) 0%, rgba(17, 24, 39, 0.9) 100%);
+            border-color: #4b5563;
+        }
+
+        .dark .template-card:hover {
+            border-color: #a855f7;
+            box-shadow: 0 12px 30px rgba(168, 85, 247, 0.2);
+        }
+
+        .template-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .template-card-icon {
+            font-size: 32px;
+        }
+
+        .template-card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        .dark .template-card-title {
+            color: #f3f4f6;
+        }
+
+        .template-card-description {
+            font-size: 13px;
+            color: #6b7280;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+
+        .dark .template-card-description {
+            color: #d1d5db;
+        }
+
+        .template-card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .template-tag {
+            display: inline-block;
+            padding: 4px 8px;
+            background: rgba(102, 5, 199, 0.1);
+            color: #6605c7;
+            font-size: 11px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .dark .template-tag {
+            background: rgba(168, 85, 247, 0.2);
+            color: #c084fc;
+        }
+
+        .template-select-btn {
+            width: 100%;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, #6605c7 0%, #8b2be2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .template-select-btn:hover {
+            box-shadow: 0 8px 16px rgba(102, 5, 199, 0.3);
+            transform: scale(1.02);
+        }
+
+        /* Image Upload Styles */
+        #imagePreview {
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 300px;
+        }
+
+        #imageUpload::-webkit-file-upload-button {
+            display: none;
+        }
+
+        /* File input label hover effect */
+        label[for="imageUpload"]:hover {
+            background-color: rgba(102, 5, 199, 0.05);
+            border-color: #6605c7;
+        }
+
+        .dark label[for="imageUpload"]:hover {
+            background-color: rgba(102, 5, 199, 0.15);
+        }
+
+        /* Color scheme button active state */
+        button[onclick*="setColorScheme"].active {
+            box-shadow: 0 0 12px rgba(102, 5, 199, 0.4);
+            transform: scale(1.05);
+        }
     </style>
 </head>
 
@@ -473,165 +644,223 @@
                 </div>
             </div>
 
+            <!-- Template Gallery Modal -->
+            <div id="templateGalleryModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                <div class="admin-form rounded-2xl shadow-2xl max-w-6xl w-full max-h-[95vh] overflow-y-auto">
+                    <div class="sticky top-0 bg-white dark:bg-gray-900 p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                        <h2 class="text-2xl font-bold font-display text-gray-900 dark:text-white">✨ Choose Blog Template</h2>
+                        <button onclick="closeTemplateGallery()" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+                            <span class="material-symbols-outlined text-2xl">close</span>
+                        </button>
+                    </div>
+                    <div class="p-6">
+                        <div id="templateGalleryContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <!-- Templates will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Blog Form Modal (Hidden by default) -->
             <div id="blogFormModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                <div class="admin-form rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-                    <div
-                        class="sticky top-0 bg-white dark:bg-gray-900 p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                <div class="admin-form rounded-2xl shadow-2xl max-w-7xl w-full max-h-[95vh] overflow-y-auto">
+                    <div class="sticky top-0 bg-white dark:bg-gray-900 p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between z-10">
                         <h2 class="text-2xl font-bold font-display text-gray-900 dark:text-white flex items-center">
                             <span class="material-symbols-outlined text-primary mr-2">edit</span>
-                            <span id="formTitle">Write New Blog</span>
+                            <span id="formTitle">✨ Create Your Blog</span>
                         </h2>
                         <button id="closeModal" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
                             <span class="material-symbols-outlined text-2xl">close</span>
                         </button>
                     </div>
 
-                    <form id="blogForm" class="p-6 space-y-6">
-                        <input type="hidden" id="blogId" name="id">
-
-                        <!-- Title -->
-                        <div>
-                            <label for="blogTitle"
-                                class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                Blog Title *
-                            </label>
-                            <input type="text" id="blogTitle" name="title" required
-                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                                placeholder="Enter an engaging title for your blog post">
-                        </div>
-
-                        <!-- Slug -->
-                        <div>
-                            <label for="blogSlug"
-                                class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                URL Slug *
-                            </label>
-                            <input type="text" id="blogSlug" name="slug" required
-                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                                placeholder="url-friendly-slug">
-                            <p class="text-xs text-gray-500 mt-1">This will be auto-generated from the title if left
-                                empty</p>
-                        </div>
-
-                        <!-- Category & Author -->
-                        <div class="grid md:grid-cols-2 gap-4">
+                    <div class="grid grid-cols-1 lg:grid-cols-5 gap-0 h-full">
+                        <!-- Left Sidebar: Design Panel -->
+                        <div class="lg:col-span-1 bg-gray-50 dark:bg-gray-800/50 p-6 border-r border-gray-200 dark:border-gray-700 space-y-6 overflow-y-auto max-h-[85vh]">
                             <div>
-                                <label for="blogCategory"
-                                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    Category *
-                                </label>
-                                <select id="blogCategory" name="category" required
-                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all">
-                                    <option value="">Select Category</option>
-                                    <option value="education">Education</option>
-                                    <option value="finance">Finance</option>
-                                    <option value="loans">Loans</option>
-                                    <option value="student-life">Student Life</option>
-                                    <option value="career">Career</option>
-                                    <option value="tips">Tips & Tricks</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="blogAuthor"
-                                    class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    Author Name *
-                                </label>
-                                <input type="text" id="blogAuthor" name="authorName" required
-                                    class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                                    placeholder="Author name">
-                            </div>
-                        </div>
+                                <h3 class="text-sm font-bold font-display text-gray-900 dark:text-white mb-4">🎨 DESIGN TOOLS</h3>
+                                
+                                <!-- Quick Templates -->
+                                <div class="mb-6">
+                                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 uppercase">Template</label>
+                                    <button type="button" onclick="openTemplateGallery()" class="w-full px-3 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-semibold text-sm transition-all">
+                                        Browse All
+                                    </button>
+                                </div>
 
-                        <!-- Tags -->
-                        <div>
-                            <label for="blogTags"
-                                class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                Tags (comma-separated)
-                            </label>
-                            <input type="text" id="blogTags" name="tags"
-                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                                placeholder="e.g., education, loans, tips">
-                        </div>
+                                <!-- Layout Selection -->
+                                <div class="mb-6">
+                                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 uppercase">Layout</label>
+                                    <select id="layoutSelect" onchange="updateLayout(this.value)" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-primary">
+                                        <option value="">Auto</option>
+                                        <option value="structured">📊 Structured</option>
+                                        <option value="modern">🎨 Modern</option>
+                                        <option value="minimal">⚪ Minimal</option>
+                                        <option value="comprehensive">📚 Comprehensive</option>
+                                        <option value="professional">💼 Professional</option>
+                                    </select>
+                                </div>
 
-                        <!-- Featured Image URL -->
-                        <div>
-                            <label for="blogImage"
-                                class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                Featured Image URL
-                            </label>
-                            <input type="url" id="blogImage" name="featuredImage"
-                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                                placeholder="https://example.com/image.jpg">
-                        </div>
+                                <!-- Color Scheme -->
+                                <div class="mb-6">
+                                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-3 uppercase">Color</label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <button type="button" onclick="setColorScheme('purple')" class="p-2 rounded-lg border-2 border-purple-500 bg-purple-100 dark:bg-purple-900/30 text-xs font-medium text-purple-700 dark:text-purple-300 hover:shadow-md transition-all" title="Purple">🟣</button>
+                                        <button type="button" onclick="setColorScheme('blue')" class="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:border-blue-500 bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-300 hover:shadow-md transition-all" title="Blue">🔵</button>
+                                        <button type="button" onclick="setColorScheme('green')" class="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:border-green-500 bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-300 hover:shadow-md transition-all" title="Green">🟢</button>
+                                        <button type="button" onclick="setColorScheme('amber')" class="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:border-amber-500 bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-300 hover:shadow-md transition-all" title="Amber">🟠</button>
+                                        <button type="button" onclick="setColorScheme('rose')" class="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:border-rose-500 bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-300 hover:shadow-md transition-all" title="Rose">🌹</button>
+                                    </div>
+                                </div>
 
-                        <!-- Excerpt -->
-                        <div>
-                            <label for="blogExcerpt"
-                                class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                Excerpt (Short Summary) *
-                            </label>
-                            <textarea id="blogExcerpt" name="excerpt" rows="3" required
-                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
-                                placeholder="Write a brief summary of your blog post..."></textarea>
-                        </div>
-
-                        <!-- Content -->
-                        <div>
-                            <label for="blogContent"
-                                class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                Content *
-                            </label>
-                            <textarea id="blogContent" name="content" rows="12" required
-                                class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
-                                placeholder="Write your blog content here..."></textarea>
-                        </div>
-
-                        <!-- Status & Featured -->
-                        <div class="grid md:grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                                    Status
-                                </label>
-                                <div class="flex gap-4">
-                                    <label class="flex items-center">
-                                        <input type="radio" name="isPublished" value="false" checked
-                                            class="w-4 h-4 text-primary border-gray-300 focus:ring-primary">
-                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Draft</span>
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="radio" name="isPublished" value="true"
-                                            class="w-4 h-4 text-primary border-gray-300 focus:ring-primary">
-                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Published</span>
-                                    </label>
+                                <!-- Font Style -->
+                                <div>
+                                    <label class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 uppercase">Typography</label>
+                                    <select id="fontStyle" onchange="updateFontStyle(this.value)" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-primary">
+                                        <option value="formal">📖 Formal</option>
+                                        <option value="modern">💻 Modern</option>
+                                        <option value="casual">✍️ Casual</option>
+                                    </select>
                                 </div>
                             </div>
-                            <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                                    Featured
-                                </label>
-                                <label class="flex items-center">
-                                    <input type="checkbox" id="blogFeatured" name="isFeatured"
-                                        class="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary">
-                                    <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Mark as featured
-                                        blog</span>
-                                </label>
-                            </div>
                         </div>
 
-                        <!-- Submit Buttons -->
-                        <div class="flex gap-4 pt-4">
-                            <button type="submit"
-                                class="flex-1 bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-xl transition-all shadow-lg hover:shadow-xl">
-                                <span class="material-symbols-outlined text-lg mr-2">save</span>
-                                Save Blog
-                            </button>
-                            <button type="button" id="clearForm"
-                                class="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
-                                Clear
-                            </button>
+                        <!-- Right Content: Form -->
+                        <div class="lg:col-span-4 p-6 overflow-y-auto max-h-[85vh]">
+                            <form id="blogForm" class="space-y-6">
+                                <input type="hidden" id="blogId" name="id">
+
+                                <!-- Title -->
+                                <div>
+                                    <label for="blogTitle" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">📝 Title *</label>
+                                    <input type="text" id="blogTitle" name="title" required
+                                        class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent" 
+                                        placeholder="Enter your blog title..." />
+                                </div>
+
+                                <!-- Slug -->
+                                <div>
+                                    <label for="blogSlug" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">🔗 URL Slug *</label>
+                                    <input type="text" id="blogSlug" name="slug" required
+                                        class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent" 
+                                        placeholder="url-friendly-slug">
+                                    <p class="text-xs text-gray-500 mt-1">Auto-generated from title if empty</p>
+                                </div>
+
+                                <!-- Category & Author -->
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label for="blogCategory" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Category *</label>
+                                        <select id="blogCategory" name="category" required
+                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                                            <option value="">Select</option>
+                                            <option value="education">Education</option>
+                                            <option value="finance">Finance</option>
+                                            <option value="loans">Loans</option>
+                                            <option value="student-life">Student Life</option>
+                                            <option value="career">Career</option>
+                                            <option value="tips">Tips & Tricks</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label for="blogAuthor" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Author *</label>
+                                        <input type="text" id="blogAuthor" name="authorName" required
+                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent" 
+                                            placeholder="Author name">
+                                    </div>
+                                </div>
+
+                                <!-- Tags -->
+                                <div>
+                                    <label for="blogTags" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">🏷️ Tags</label>
+                                    <input type="text" id="blogTags" name="tags"
+                                        class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent" 
+                                        placeholder="education, loans, tips...">
+                                </div>
+
+                                <!-- Featured Image -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">🖼️ Featured Image</label>
+                                    <div class="space-y-3">
+                                        <div class="flex gap-2">
+                                            <label class="flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-primary hover:bg-primary/5 transition-all" for="imageUpload">
+                                                <span class="material-symbols-outlined text-primary">upload</span>
+                                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Upload</span>
+                                                <input type="file" id="imageUpload" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                                            </label>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
+                                            <span class="text-xs text-gray-500">OR</span>
+                                            <div class="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
+                                        </div>
+                                        <input type="url" id="blogImage" placeholder="https://example.com/image.jpg"
+                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent" 
+                                            onchange="updateImagePreview()">
+                                        <div id="imagePreviewContainer" class="hidden">
+                                            <div class="relative rounded-lg overflow-hidden">
+                                                <img id="imagePreview" src="" alt="Preview" class="w-full h-40 object-cover rounded-lg">
+                                                <button type="button" class="absolute top-2 right-2 bg-red-500 text-white p-1 rounded" onclick="removeImage()">
+                                                    <span class="material-symbols-outlined text-lg">close</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Excerpt -->
+                                <div>
+                                    <label for="blogExcerpt" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">📄 Excerpt *</label>
+                                    <textarea id="blogExcerpt" name="excerpt" rows="3" required
+                                        class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent resize-none" 
+                                        placeholder="Brief summary..."></textarea>
+                                </div>
+
+                                <!-- Content -->
+                                <div>
+                                    <label for="blogContent" class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">✍️ Content *</label>
+                                    <textarea id="blogContent" name="content" rows="10" required
+                                        class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent resize-none" 
+                                        placeholder="Write your content..."></textarea>
+                                </div>
+
+                                <!-- Status & Featured -->
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">📊 Status</label>
+                                        <div class="flex gap-4">
+                                            <label class="flex items-center">
+                                                <input type="radio" name="isPublished" value="false" checked class="w-4 h-4">
+                                                <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Draft</span>
+                                            </label>
+                                            <label class="flex items-center">
+                                                <input type="radio" name="isPublished" value="true" class="w-4 h-4">
+                                                <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Published</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">⭐ Featured</label>
+                                        <label class="flex items-center">
+                                            <input type="checkbox" id="blogFeatured" class="w-4 h-4">
+                                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Mark featured</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <!-- Submit Buttons -->
+                                <div class="flex gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
+                                    <button type="submit" class="flex-1 bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                                        <span class="material-symbols-outlined">save</span>
+                                        Save Blog
+                                    </button>
+                                    <button type="button" id="clearForm" class="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
+                                        Clear
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
 
@@ -682,9 +911,321 @@
     <script src="assets/js/auth.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
     <script>
+        // Blog Templates with Enhanced Design
+        const blogTemplates = {
+            'how-to': {
+                title: 'How-To Guide Template',
+                excerpt: 'A comprehensive guide on how to accomplish a specific task or achieve a goal.',
+                content: `## Introduction
+Start with an engaging introduction that explains what readers will learn from this guide.
+
+## What You'll Need
+List any prerequisites, tools, or materials needed to complete the task.
+
+## Step-by-Step Instructions
+
+### Step 1: [First Action]
+Provide clear, detailed instructions for the first step. Include any important tips or common mistakes to avoid.
+
+### Step 2: [Second Action]
+Continue with the next step. Use numbered sections for clarity.
+
+### Step 3: [Third Action]
+Add more steps as needed.
+
+## Tips & Tricks
+Share pro tips and best practices learned from experience.
+
+## Common Mistakes to Avoid
+List potential pitfalls and how to avoid them.
+
+## Conclusion
+Wrap up with a summary and encourage readers to try the steps themselves.`,
+                color: '#6605c7',
+                layout: 'structured'
+            },
+            'news': {
+                title: 'News Article Template',
+                excerpt: 'Report on the latest news, updates, and industry insights relevant to your audience.',
+                content: `## Headline Summary
+Provide a brief, compelling summary of the news or announcement in the first paragraph.
+
+## Key Details
+### What Happened
+Explain the main event or news story in detail.
+
+### When Did It Happen
+Provide specific dates and timeline information.
+
+### Why It Matters
+Explain the significance and impact of this news for your readers.
+
+## Expert Insights
+Include relevant quotes or perspectives from industry experts or key stakeholders.
+
+## What's Next
+Discuss the expected outcomes and what readers should expect moving forward.
+
+## Related Resources
+Link to related articles or resources for readers interested in learning more.
+
+## Conclusion
+Summarize the key takeaways and implications.`,
+                color: '#e0c389',
+                layout: 'modern'
+            },
+            'opinion': {
+                title: 'Opinion Piece Template',
+                excerpt: 'Share your thoughts, perspectives, and insights on a relevant topic.',
+                content: `## The Issue at Hand
+Start by clearly stating the topic or issue you're discussing and why it matters now.
+
+## My Perspective
+Present your main viewpoint and the reasoning behind it. Be clear and confident in your position.
+
+## Supporting Arguments
+
+### Argument 1
+Provide the first supporting argument with evidence or examples.
+
+### Argument 2
+Present additional supporting points that strengthen your perspective.
+
+### Argument 3
+Add more arguments as needed to build your case.
+
+## Addressing Counterarguments
+Acknowledge opposing views and respectfully explain why you believe your perspective is stronger.
+
+## Call to Action
+End with a clear call to action or invitation for readers to share their thoughts.
+
+## Conclusion
+Summarize your main points and reaffirm your position.`,
+                color: '#3b82f6',
+                layout: 'minimal'
+            },
+            'tutorial': {
+                title: 'Tutorial Template',
+                excerpt: 'Step-by-step tutorial with visual demonstrations and code examples.',
+                content: `## Overview
+Brief overview of what this tutorial covers and what users will learn.
+
+## Prerequisites
+- Requirement 1
+- Requirement 2
+- Requirement 3
+
+## Getting Started
+Introduction and setup instructions.
+
+## Main Content
+
+### Part 1: [Section]
+First major section with detailed explanations.
+
+### Part 2: [Section]
+Second section building on previous knowledge.
+
+### Part 3: [Section]
+Final section with advanced concepts.
+
+## Best Practices
+Key takeaways and recommended approaches.
+
+## Troubleshooting
+Common issues and solutions.
+
+## Resources
+Additional links and references.`,
+                color: '#10b981',
+                layout: 'comprehensive'
+            },
+            'case-study': {
+                title: 'Case Study Template',
+                excerpt: 'In-depth analysis of a real-world project or scenario with results.',
+                content: `## Executive Summary
+Brief overview of the case study and key results.
+
+## Background
+Context and situation before the solution was implemented.
+
+## Challenge
+The main problem that needed to be solved.
+
+## Solution
+How the problem was addressed and what approach was taken.
+
+## Implementation
+Steps taken to execute the solution.
+
+## Results
+Measurable outcomes and impact.
+
+## Lessons Learned
+Key takeaways and insights from this project.
+
+## Conclusion
+Final thoughts and recommendations for similar situations.`,
+                color: '#f59e0b',
+                layout: 'professional'
+            }
+        };
+
+        // Design Layouts
+        const designLayouts = {
+            structured: { name: '📊 Structured', desc: 'Organized with clear sections' },
+            modern: { name: '🎨 Modern', desc: 'Contemporary and bold' },
+            minimal: { name: '⚪ Minimal', desc: 'Clean and simple' },
+            comprehensive: { name: '📚 Comprehensive', desc: 'Detailed with depth' },
+            professional: { name: '💼 Professional', desc: 'Corporate and formal' }
+        };
+
+        // Color Schemes
+        const colorSchemes = {
+            purple: { name: '🟣 Purple', primary: '#6605c7', secondary: '#a855f7', accent: '#e0c389' },
+            blue: { name: '🔵 Blue', primary: '#3b82f6', secondary: '#60a5fa', accent: '#fbbf24' },
+            green: { name: '🟢 Green', primary: '#10b981', secondary: '#34d399', accent: '#fbbf24' },
+            amber: { name: '🟠 Amber', primary: '#f59e0b', secondary: '#fbbf24', accent: '#3b82f6' },
+            rose: { name: '🌹 Rose', primary: '#ec4899', secondary: '#f472b6', accent: '#60a5fa' }
+        };
+
+        // Font Styles Configuration
+        const fontStyles = {
+            formal: { name: 'Formal (Serif)', class: 'font-style-formal' },
+            modern: { name: 'Modern (Sans-Serif)', class: 'font-style-modern' },
+            casual: { name: 'Casual (Monospace)', class: 'font-style-casual' }
+        };
+
         // API Configuration
         const API_BASE_URL = 'http://localhost:3000';
         let authToken = localStorage.getItem('authToken') || '';
+        let currentFontStyle = 'formal';
+        let currentColorScheme = 'purple';
+        let currentLayout = '';
+
+        // Template Gallery Functions
+        function openTemplateGallery() {
+            renderTemplateGallery();
+            document.getElementById('templateGalleryModal').classList.remove('hidden');
+        }
+
+        function closeTemplateGallery() {
+            document.getElementById('templateGalleryModal').classList.add('hidden');
+        }
+
+        function renderTemplateGallery() {
+            const container = document.getElementById('templateGalleryContainer');
+            const templates = Object.entries(blogTemplates);
+
+            container.innerHTML = templates.map(([key, template]) => `
+                <div class="template-card">
+                    <div class="template-card-header">
+                        <div class="template-card-icon">
+                            ${getTemplateIcon(key)}
+                        </div>
+                        <div style="color: ${template.color}; font-size: 20px;">●</div>
+                    </div>
+                    <h3 class="template-card-title">${template.title}</h3>
+                    <p class="template-card-description">${template.excerpt}</p>
+                    <div class="template-card-tags">
+                        <span class="template-tag">${designLayouts[template.layout].name}</span>
+                    </div>
+                    <button type="button" onclick="selectTemplate('${key}')" class="template-select-btn">
+                        Use This Template
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function getTemplateIcon(templateKey) {
+            const icons = {
+                'how-to': '📘',
+                'news': '📰',
+                'opinion': '💭',
+                'tutorial': '🎓',
+                'case-study': '📊'
+            };
+            return icons[templateKey] || '📄';
+        }
+
+        function selectTemplate(templateKey) {
+            const template = blogTemplates[templateKey];
+            if (!template) return;
+
+            // Populate form fields
+            document.getElementById('blogExcerpt').value = template.excerpt;
+            document.getElementById('blogContent').value = template.content;
+            
+            // Set layout if available
+            if (template.layout) {
+                document.getElementById('layoutSelect').value = template.layout;
+                currentLayout = template.layout;
+            }
+
+            // Update content color
+            const contentField = document.getElementById('blogContent');
+            contentField.style.borderColor = template.color;
+
+            // Show success message
+            showMessage(`✨ Template "${template.title}" applied! Customize as needed.`, 'check_circle', 'green');
+
+            // Close gallery
+            closeTemplateGallery();
+
+            // Scroll to content
+            setTimeout(() => {
+                document.getElementById('blogContent').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        }
+
+        function updateLayout(layoutValue) {
+            currentLayout = layoutValue;
+            if (layoutValue) {
+                showMessage(`Layout changed to: ${designLayouts[layoutValue].name}`, 'check_circle', 'blue');
+            }
+        }
+
+        function setColorScheme(scheme) {
+            currentColorScheme = scheme;
+            
+            // Update button states
+            document.querySelectorAll('button[onclick*="setColorScheme"]').forEach(btn => {
+                btn.classList.remove('active');
+                btn.style.borderWidth = '1px';
+            });
+            
+            const activeBtn = document.querySelector(`button[onclick="setColorScheme('${scheme}')"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+                activeBtn.style.borderWidth = '2px';
+            }
+
+            // Update form styling
+            const contentField = document.getElementById('blogContent');
+            const schemeConfig = colorSchemes[scheme];
+            contentField.style.borderColor = schemeConfig.primary;
+            contentField.style.boxShadow = `0 0 0 3px ${schemeConfig.primary}10`;
+
+            showMessage(`Color scheme: ${schemeConfig.name}`, 'palette', 'green');
+        }
+
+        function updateFontStyle(style) {
+            currentFontStyle = style;
+            const contentField = document.getElementById('blogContent');
+            
+            // Remove all font style classes
+            Object.values(fontStyles).forEach(s => {
+                contentField.classList.remove(s.class);
+            });
+            
+            // Add selected font style
+            if (fontStyles[style]) {
+                contentField.classList.add(fontStyles[style].class);
+            }
+
+            showMessage(`Typography: ${fontStyles[style].name}`, 'text_fields', 'green');
+        }
 
         // Navigation scroll effect
         window.addEventListener('scroll', function () {
@@ -695,6 +1236,78 @@
                 nav.classList.remove('nav-scrolled');
             }
         });
+
+        // Image Handling Functions
+        let uploadedImageData = null;
+
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Validate file size (5MB max)
+            const maxSize = 5 * 1024 * 1024; // 5MB
+            if (file.size > maxSize) {
+                showMessage('Image size must be less than 5MB', 'error', 'red');
+                return;
+            }
+
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+            if (!validTypes.includes(file.type)) {
+                showMessage('Only JPG, PNG, and WebP formats are supported', 'error', 'red');
+                return;
+            }
+
+            // Read file as data URL
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                uploadedImageData = e.target.result;
+                document.getElementById('blogImage').value = uploadedImageData;
+                updateImagePreview();
+                showMessage('Image uploaded successfully!', 'check_circle', 'green');
+            };
+            reader.onerror = function () {
+                showMessage('Error reading image file', 'error', 'red');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function updateImagePreview() {
+            const imageUrl = document.getElementById('blogImage').value;
+            const previewContainer = document.getElementById('imagePreviewContainer');
+            const imagePreview = document.getElementById('imagePreview');
+            const imageSizeInfo = document.getElementById('imageSizeInfo');
+
+            if (imageUrl && imageUrl.trim() !== '') {
+                // Validate if it's a valid data URL or HTTP URL
+                if (imageUrl.startsWith('data:') || imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+                    imagePreview.src = imageUrl;
+                    imagePreview.onload = function () {
+                        const sizeInBytes = imageUrl.length;
+                        const sizeInKB = (sizeInBytes / 1024).toFixed(2);
+                        imageSizeInfo.textContent = `Image Size: ${sizeInKB} KB`;
+                        previewContainer.classList.remove('hidden');
+                    };
+                    imagePreview.onerror = function () {
+                        showMessage('Failed to load image. Check the URL.', 'error', 'red');
+                        previewContainer.classList.add('hidden');
+                    };
+                } else {
+                    previewContainer.classList.add('hidden');
+                }
+            } else {
+                previewContainer.classList.add('hidden');
+                uploadedImageData = null;
+            }
+        }
+
+        function removeImage() {
+            document.getElementById('blogImage').value = '';
+            document.getElementById('imageUpload').value = '';
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+            uploadedImageData = null;
+            showMessage('Image removed', 'delete', 'blue');
+        }
 
         // Helper function to generate slug from title
         function generateSlug(title) {
@@ -1020,6 +1633,18 @@
             // Set featured status
             document.getElementById('blogFeatured').checked = blog.isFeatured || false;
 
+            // Apply font style class
+            const contentField = document.getElementById('blogContent');
+            Object.values(fontStyles).forEach(style => {
+                contentField.classList.remove(style.class);
+            });
+            contentField.classList.add(fontStyles[currentFontStyle].class);
+
+            // Update image preview
+            if (blog.featuredImage) {
+                updateImagePreview();
+            }
+
             // Update modal title
             document.getElementById('formTitle').textContent = 'Edit Blog';
 
@@ -1125,7 +1750,30 @@
             document.getElementById('blogForm').reset();
             document.getElementById('blogId').value = '';
             document.getElementById('blogSlug').dataset.userEdited = '';
-            document.getElementById('formTitle').textContent = 'Write New Blog';
+            document.getElementById('formTitle').textContent = '✨ Create Your Blog';
+            
+            // Reset design panel
+            document.getElementById('layoutSelect').value = '';
+            document.getElementById('fontStyle').value = 'formal';
+            currentLayout = '';
+            currentFontStyle = 'formal';
+            currentColorScheme = 'purple';
+            
+            // Reset image
+            document.getElementById('imageUpload').value = '';
+            document.getElementById('blogImage').value = '';
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+            uploadedImageData = null;
+            
+            // Apply initial font style
+            const contentField = document.getElementById('blogContent');
+            Object.values(fontStyles).forEach(style => {
+                contentField.classList.remove(style.class);
+            });
+            contentField.classList.add(fontStyles['formal'].class);
+            contentField.style.borderColor = '#e5e7eb';
+            contentField.style.boxShadow = 'none';
+            
             document.getElementById('blogFormModal').classList.remove('hidden');
         });
 

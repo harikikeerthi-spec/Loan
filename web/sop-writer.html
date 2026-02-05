@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>SOP Writer - AI Standard Operating Procedure Generator</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#6605c7",
+                        secondary: "#a855f7",
+                        accent: "#e0c389",
+                        background: {
+                            light: "#ffffff",
+                            dark: "#0a0e27"
+                        }
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            box-shadow: 0 4px 20px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        .dark .glass-card {
+            background: rgba(25, 15, 35, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .nav-link {
+            color: rgba(0, 0, 0, 0.9) !important;
+        }
+
+        .nav-link.active {
+            color: #a855f7 !important;
+        }
+
+        #loginLink {
+            color: rgba(0, 0, 0, 0.9) !important;
+        }
+
+        .material-symbols-outlined {
+            color: black !important;
+        }
+
+        #profileDropdown .material-symbols-outlined {
+            color: #6605c7 !important;
+        }
+
+        .nav-scrolled {
+            background: rgba(17, 8, 26, 0.95) !important;
+            backdrop-filter: blur(12px);
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+        }
+
+        .dark .nav-scrolled {
+            background: rgba(17, 8, 26, 0.8) !important;
+        }
+
+        .nav-scrolled .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        .nav-scrolled .nav-link:hover {
+            color: #6605c7 !important;
+        }
+
+        .nav-scrolled .font-display {
+            color: white !important;
+        }
+
+        .nav-scrolled #loginLink {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        .nav-scrolled #loginLink:hover {
+            color: #6605c7 !important;
+        }
+
+        .nav-scrolled .material-symbols-outlined {
+            color: white !important;
+        }
+
+        .nav-scrolled #profileDropdown .material-symbols-outlined {
+            color: #6605c7 !important;
+        }
+
+        .nav-dropdown {
+            position: relative;
+        }
+
+        .nav-dropdown-content {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 0.5rem;
+            min-width: 200px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border-radius: 1rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        .dark .nav-dropdown-content {
+            background: rgba(25, 15, 35, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-dropdown:hover .nav-dropdown-content,
+        .nav-dropdown-content:hover {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .nav-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.875rem 1.25rem;
+            color: #374151;
+            font-size: 0.875rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+
+        .dark .nav-dropdown-item {
+            color: #e5e7eb;
+        }
+
+        .nav-dropdown-item:hover {
+            background: rgba(102, 5, 199, 0.1);
+            border-left-color: #6605c7;
+            color: #6605c7;
+        }
+
+        .dark .nav-dropdown-item:hover {
+            background: rgba(102, 5, 199, 0.2);
+            color: #a855f7;
+        }
+
+        .nav-dropdown-item .material-symbols-outlined {
+            font-size: 1.25rem;
+            opacity: 0.7;
+            color: #6605c7;
+        }
+
+        .dark .nav-dropdown-item .material-symbols-outlined {
+            color: #a855f7;
+        }
+
+        .nav-dropdown-item:hover .material-symbols-outlined {
+            opacity: 1;
+        }
+
+        .sop-preview {
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 32px;
+            line-height: 1.8;
+            color: #1f2937;
+        }
+
+        .dark .sop-preview {
+            background: rgba(31, 41, 55, 0.8);
+            border-color: #4b5563;
+            color: #e5e7eb;
+        }
+
+        .sop-section {
+            margin-bottom: 24px;
+            page-break-inside: avoid;
+        }
+
+        .sop-section h2 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #6605c7;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #a855f7;
+            padding-bottom: 8px;
+        }
+
+        .sop-section h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #6605c7;
+            margin-top: 16px;
+            margin-bottom: 8px;
+        }
+
+        .sop-section ol, .sop-section ul {
+            margin-left: 24px;
+            margin-bottom: 16px;
+        }
+
+        .sop-section li {
+            margin-bottom: 8px;
+        }
+
+        .sop-section table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+        }
+
+        .sop-section th, .sop-section td {
+            border: 1px solid #d1d5db;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .dark .sop-section th, .dark .sop-section td {
+            border-color: #4b5563;
+        }
+
+        .sop-section th {
+            background: #f3f4f6;
+            color: #111827;
+            font-weight: 600;
+        }
+
+        .dark .sop-section th {
+            background: #1f2937;
+            color: #f3f4f6;
+        }
+
+        .complexity-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .complexity-beginner {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .complexity-intermediate {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .complexity-advanced {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .dark .complexity-beginner {
+            background: #064e3b;
+            color: #86efac;
+        }
+
+        .dark .complexity-intermediate {
+            background: #78350f;
+            color: #fcd34d;
+        }
+
+        .dark .complexity-advanced {
+            background: #7f1d1d;
+            color: #fca5a5;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #e5e7eb;
+            border-top-color: #6605c7;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media print {
+            .sop-controls, .sidebar, .nav { display: none; }
+            .sop-preview { border: none; box-shadow: none; }
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none">
+        <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
+        <div class="absolute inset-0 opacity-30 mix-blend-overlay"
+            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav id="mainNav"
+        class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
+        <div class="w-full max-w-7xl flex justify-between items-center">
+            <div class="flex items-center gap-12">
+                <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10">
+                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white group-hover:shadow-lg transition-all">
+                        <span class="material-symbols-outlined">school</span>
+                    </div>
+                    <span class="font-display font-bold text-xl text-black dark:text-white">LoanHero</span>
+                </a>
+
+                <div class="hidden lg:flex items-center gap-8">
+                    <a href="index.html" class="nav-link hover:text-primary transition-colors">Home</a>
+                    <a href="blog.html" class="nav-link hover:text-primary transition-colors">Blog</a>
+                    <a href="sop-writer.html" class="nav-link active hover:text-primary transition-colors">SOP Writer</a>
+                    <a href="grade-converter.html" class="nav-link hover:text-primary transition-colors">Grade Converter</a>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <a href="login.html" id="loginLink"
+                    class="px-6 py-2 rounded-lg font-semibold hover:text-primary transition-colors">
+                    Login
+                </a>
+
+                <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
+                    <button id="profileBtn" class="flex items-center gap-2">
+                        <span class="material-symbols-outlined">account_circle</span>
+                    </button>
+                    <div id="profileDropdown"
+                        class="nav-dropdown-content">
+                        <a href="profile.html" class="nav-dropdown-item">
+                            <span class="material-symbols-outlined">person</span>
+                            Profile
+                        </a>
+                        <a href="dashboard.html" class="nav-dropdown-item">
+                            <span class="material-symbols-outlined">dashboard</span>
+                            Dashboard
+                        </a>
+                        <a href="admin-blogs.html" class="nav-dropdown-item">
+                            <span class="material-symbols-outlined">edit</span>
+                            Manage Blogs
+                        </a>
+                        <a href="#" onclick="logout()" class="nav-dropdown-item">
+                            <span class="material-symbols-outlined">logout</span>
+                            Logout
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="pt-32 pb-16 px-6 relative z-10">
+        <div class="max-w-7xl mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-12">
+                <h1 class="text-4xl md:text-5xl font-bold font-display text-gray-900 dark:text-white mb-4">
+                    ✍️ AI SOP Writer
+                </h1>
+                <p class="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                    Generate professional Standard Operating Procedures in seconds using AI. Perfect for documenting processes, workflows, and best practices.
+                </p>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-6">
+                <!-- Left Sidebar: Input Form -->
+                <div class="lg:col-span-1">
+                    <div class="glass-card rounded-2xl shadow-xl p-6 sticky top-32 space-y-6">
+                        <h2 class="text-xl font-bold font-display text-gray-900 dark:text-white">📝 Generate SOP</h2>
+
+                        <form id="sopForm" class="space-y-4">
+                            <!-- Process Name -->
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    📌 Process Name *
+                                </label>
+                                <input type="text" id="processName" name="processName" required
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    placeholder="e.g., Customer Onboarding">
+                            </div>
+
+                            <!-- Department/Team -->
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    🏢 Department/Team
+                                </label>
+                                <input type="text" id="department" name="department"
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    placeholder="e.g., Customer Success">
+                            </div>
+
+                            <!-- Process Description -->
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    📄 Process Description *
+                                </label>
+                                <textarea id="processDescription" name="processDescription" rows="4" required
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                                    placeholder="Describe the process, its purpose, and key objectives..."></textarea>
+                            </div>
+
+                            <!-- Key Steps -->
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    🔢 Number of Steps *
+                                </label>
+                                <select id="numSteps" name="numSteps" required
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="">Select number of steps</option>
+                                    <option value="3">3 Steps (Simple)</option>
+                                    <option value="5">5 Steps (Standard)</option>
+                                    <option value="7">7 Steps (Detailed)</option>
+                                    <option value="10">10 Steps (Comprehensive)</option>
+                                </select>
+                            </div>
+
+                            <!-- Complexity Level -->
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    ⚡ Complexity Level
+                                </label>
+                                <select id="complexity" name="complexity"
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="beginner">🟢 Beginner (Simple)</option>
+                                    <option value="intermediate" selected>🟡 Intermediate (Standard)</option>
+                                    <option value="advanced">🔴 Advanced (Complex)</option>
+                                </select>
+                            </div>
+
+                            <!-- Include Sections -->
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                                    📋 Include Sections
+                                </label>
+                                <div class="space-y-2">
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="includeObjectives" name="includeObjectives" checked
+                                            class="w-4 h-4 text-primary rounded focus:ring-primary">
+                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Objectives</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="includeScope" name="includeScope" checked
+                                            class="w-4 h-4 text-primary rounded focus:ring-primary">
+                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Scope & Requirements</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="includeRoles" name="includeRoles" checked
+                                            class="w-4 h-4 text-primary rounded focus:ring-primary">
+                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Roles & Responsibilities</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="includeProcedure" name="includeProcedure" checked
+                                            class="w-4 h-4 text-primary rounded focus:ring-primary">
+                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Step-by-Step Procedure</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="includeTroubleshooting" name="includeTroubleshooting"
+                                            class="w-4 h-4 text-primary rounded focus:ring-primary">
+                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Troubleshooting Guide</span>
+                                    </label>
+                                    <label class="flex items-center">
+                                        <input type="checkbox" id="includeAppendix" name="includeAppendix"
+                                            class="w-4 h-4 text-primary rounded focus:ring-primary">
+                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Appendix & Forms</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Additional Notes -->
+                            <div>
+                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                                    💡 Additional Notes (Optional)
+                                </label>
+                                <textarea id="additionalNotes" name="additionalNotes" rows="3"
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                                    placeholder="Any specific requirements or considerations..."></textarea>
+                            </div>
+
+                            <!-- Generate Button -->
+                            <button type="submit"
+                                class="w-full bg-gradient-to-r from-primary to-secondary hover:shadow-lg text-white font-semibold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">
+                                <span class="material-symbols-outlined">auto_awesome</span>
+                                Generate SOP
+                            </button>
+
+                            <!-- Info -->
+                            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                <p class="text-xs text-blue-800 dark:text-blue-200">
+                                    <strong>✨ Tip:</strong> Be specific about your process for better SOP generation. The more details you provide, the more tailored the result will be.
+                                </p>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Right Content: SOP Preview -->
+                <div class="lg:col-span-2">
+                    <div id="sopContainer" class="hidden">
+                        <!-- SOP Controls -->
+                        <div class="glass-card rounded-2xl shadow-xl p-6 mb-6 flex flex-wrap items-center gap-4 sop-controls">
+                            <button onclick="copySOP()" 
+                                class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-semibold transition-all">
+                                <span class="material-symbols-outlined">content_copy</span>
+                                Copy
+                            </button>
+                            <button onclick="downloadSOP()" 
+                                class="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/90 text-white rounded-lg font-semibold transition-all">
+                                <span class="material-symbols-outlined">download</span>
+                                Download PDF
+                            </button>
+                            <button onclick="printSOP()" 
+                                class="flex items-center gap-2 px-4 py-2 border-2 border-primary text-primary hover:bg-primary/10 rounded-lg font-semibold transition-all">
+                                <span class="material-symbols-outlined">print</span>
+                                Print
+                            </button>
+                            <button onclick="editSOP()" 
+                                class="flex items-center gap-2 px-4 py-2 border-2 border-primary text-primary hover:bg-primary/10 rounded-lg font-semibold transition-all">
+                                <span class="material-symbols-outlined">edit</span>
+                                Edit
+                            </button>
+                            <button onclick="hideSOP()" 
+                                class="ml-auto flex items-center gap-2 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg font-semibold transition-all">
+                                <span class="material-symbols-outlined">close</span>
+                                Close
+                            </button>
+                        </div>
+
+                        <!-- SOP Content -->
+                        <div id="sopContent" class="sop-preview prose dark:prose-invert max-w-none">
+                            <!-- Generated SOP will be displayed here -->
+                        </div>
+
+                        <!-- Hidden textarea for copy functionality -->
+                        <textarea id="sopText" class="hidden"></textarea>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div id="emptyState" class="glass-card rounded-2xl shadow-xl p-12 text-center">
+                        <div class="mb-6">
+                            <span class="text-6xl">📝</span>
+                        </div>
+                        <h3 class="text-2xl font-bold font-display text-gray-900 dark:text-white mb-3">
+                            Generate Your First SOP
+                        </h3>
+                        <p class="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                            Fill in the form on the left with your process details and click "Generate SOP" to create a professional Standard Operating Procedure instantly.
+                        </p>
+                        <div class="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+                            <p>✓ AI-powered generation</p>
+                            <p>✓ Professional formatting</p>
+                            <p>✓ Customizable sections</p>
+                            <p>✓ Ready to download & print</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Success/Error Messages -->
+    <div id="messageToast" class="fixed bottom-6 right-6 z-50 hidden">
+        <div class="glass-card rounded-xl p-4 shadow-xl max-w-sm">
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-green-600" id="messageIcon">check_circle</span>
+                <p class="text-sm font-medium text-gray-900 dark:text-white" id="messageText"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-[#190f23] text-white py-20 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 relative z-10">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                <div class="col-span-1 md:col-span-2">
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
+                            <span class="material-symbols-outlined text-white">school</span>
+                        </div>
+                        <span class="text-2xl font-bold font-display tracking-tight text-white">LoanHero</span>
+                    </div>
+                    <p class="text-gray-400 max-w-sm font-sans leading-relaxed mb-8">
+                        Empowering students with transparent, flexible, and accessible education financing solutions.
+                    </p>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-bold mb-6 font-display text-white">Quick Links</h4>
+                    <ul class="space-y-4 text-gray-400 font-sans">
+                        <li><a href="index.html" class="hover:text-primary transition-colors">Home</a></li>
+                        <li><a href="blog.html" class="hover:text-primary transition-colors">Blog</a></li>
+                        <li><a href="sop-writer.html" class="hover:text-primary transition-colors">SOP Writer</a></li>
+                        <li><a href="grade-converter.html" class="hover:text-primary transition-colors">Grade Converter</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-lg font-bold mb-6 font-display text-white">Legal</h4>
+                    <ul class="space-y-4 text-gray-400 font-sans">
+                        <li><a href="privacy-policy.html" class="hover:text-primary transition-colors">Privacy Policy</a></li>
+                        <li><a href="terms-conditions.html" class="hover:text-primary transition-colors">Terms of Service</a></li>
+                        <li><a href="cookies.html" class="hover:text-primary transition-colors">Cookie Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="pt-8 border-t border-white/10 text-center text-gray-500 text-xs font-sans">
+                <p>&copy; 2026 LoanHero Inc. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/theme-toggle.js"></script>
+    <script>
+        // Navigation scroll effect
+        window.addEventListener('scroll', function () {
+            const nav = document.getElementById('mainNav');
+            if (window.scrollY > 50) {
+                nav.classList.add('nav-scrolled');
+            } else {
+                nav.classList.remove('nav-scrolled');
+            }
+        });
+
+        // SOP Generation Function
+        function generateSOP(e) {
+            e.preventDefault();
+
+            // Get form data
+            const formData = {
+                processName: document.getElementById('processName').value,
+                department: document.getElementById('department').value || 'General',
+                processDescription: document.getElementById('processDescription').value,
+                numSteps: parseInt(document.getElementById('numSteps').value),
+                complexity: document.getElementById('complexity').value,
+                includeObjectives: document.getElementById('includeObjectives').checked,
+                includeScope: document.getElementById('includeScope').checked,
+                includeRoles: document.getElementById('includeRoles').checked,
+                includeProcedure: document.getElementById('includeProcedure').checked,
+                includeTroubleshooting: document.getElementById('includeTroubleshooting').checked,
+                includeAppendix: document.getElementById('includeAppendix').checked,
+                additionalNotes: document.getElementById('additionalNotes').value || ''
+            };
+
+            try {
+                // Validate form data
+                if (!formData.processName || !formData.processDescription || !formData.numSteps) {
+                    showMessage('Please fill in all required fields', 'warning', 'orange');
+                    return;
+                }
+
+                // Show loading state
+                const btn = e.target.querySelector('button[type="submit"]');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<span class="loading-spinner"></span> Generating...';
+                btn.disabled = true;
+
+                // Generate SOP (simulate API call)
+                const sopContent = generateSOPContent(formData);
+
+                // Display SOP
+                displaySOP(sopContent, formData);
+
+                // Restore button
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+
+                showMessage('✨ SOP generated successfully!', 'check_circle', 'green');
+            } catch (error) {
+                console.error('Error generating SOP:', error);
+                showMessage('Error generating SOP: ' + error.message, 'error', 'red');
+                const btn = e.target.querySelector('button[type="submit"]');
+                if (btn) {
+                    btn.innerHTML = '<span class="material-symbols-outlined">auto_awesome</span> Generate SOP';
+                    btn.disabled = false;
+                }
+            }
+        }
+
+        function generateSOPContent(data) {
+            let html = `
+                <div class="sop-section">
+                    <h1 style="font-size: 2rem; color: #6605c7; margin-bottom: 16px; border-bottom: 3px solid #a855f7; padding-bottom: 12px;">
+                        ${data.processName} - Standard Operating Procedure
+                    </h1>
+                    <p style="margin-bottom: 8px;"><strong>Department:</strong> ${data.department}</p>
+                    <p style="margin-bottom: 8px;"><strong>Complexity Level:</strong> 
+                        <span class="complexity-badge complexity-${data.complexity}">
+                            ${data.complexity.charAt(0).toUpperCase() + data.complexity.slice(1)}
+                        </span>
+                    </p>
+                    <p style="margin-bottom: 8px;"><strong>Last Updated:</strong> ${new Date().toLocaleDateString()}</p>
+                    <p style="margin-bottom: 8px;"><strong>Version:</strong> 1.0</p>
+                </div>
+            `;
+
+            if (data.includeObjectives) {
+                html += `
+                    <div class="sop-section">
+                        <h2>1. Objectives</h2>
+                        <p>${data.processDescription}</p>
+                        <h3>Key Goals:</h3>
+                        <ul>
+                            <li>Ensure consistent and efficient execution of the ${data.processName} process</li>
+                            <li>Provide clear guidelines for all team members</li>
+                            <li>Maintain quality standards and compliance requirements</li>
+                            <li>Document best practices and lessons learned</li>
+                        </ul>
+                    </div>
+                `;
+            }
+
+            if (data.includeScope) {
+                html += `
+                    <div class="sop-section">
+                        <h2>2. Scope & Requirements</h2>
+                        <h3>Scope:</h3>
+                        <p>This procedure applies to all team members in the ${data.department} department responsible for executing the ${data.processName} process.</p>
+                        <h3>Requirements:</h3>
+                        <ul>
+                            <li>Adherence to this SOP is mandatory for all applicable team members</li>
+                            <li>Regular training and competency assessments required</li>
+                            <li>Documentation of all process activities</li>
+                            <li>Compliance with organizational policies and regulatory requirements</li>
+                        </ul>
+                    </div>
+                `;
+            }
+
+            if (data.includeRoles) {
+                html += `
+                    <div class="sop-section">
+                        <h2>3. Roles & Responsibilities</h2>
+                        <table>
+                            <tr>
+                                <th>Role</th>
+                                <th>Responsibilities</th>
+                            </tr>
+                            <tr>
+                                <td>Process Owner</td>
+                                <td>Overall accountability for process execution, quality, and compliance</td>
+                            </tr>
+                            <tr>
+                                <td>Team Members</td>
+                                <td>Execute assigned tasks following this SOP and report any issues</td>
+                            </tr>
+                            <tr>
+                                <td>Quality Reviewer</td>
+                                <td>Verify process execution and ensure compliance with this SOP</td>
+                            </tr>
+                            <tr>
+                                <td>Supervisor</td>
+                                <td>Oversee process execution and ensure team adherence</td>
+                            </tr>
+                        </table>
+                    </div>
+                `;
+            }
+
+            if (data.includeProcedure) {
+                html += `
+                    <div class="sop-section">
+                        <h2>4. Step-by-Step Procedure</h2>
+                `;
+
+                // Generate steps based on complexity and number
+                const stepDetails = generateStepDetails(data.processName, data.numSteps, data.complexity);
+                
+                html += `
+                        <ol>
+                            ${stepDetails.map((step, idx) => `
+                                <li>
+                                    <strong>${step.title}</strong>
+                                    <ul>
+                                        ${step.details.map(detail => `<li>${detail}</li>`).join('')}
+                                    </ul>
+                                </li>
+                            `).join('')}
+                        </ol>
+                    </div>
+                `;
+            }
+
+            if (data.includeTroubleshooting) {
+                html += `
+                    <div class="sop-section">
+                        <h2>5. Troubleshooting Guide</h2>
+                        <table>
+                            <tr>
+                                <th>Issue</th>
+                                <th>Possible Cause</th>
+                                <th>Solution</th>
+                            </tr>
+                            <tr>
+                                <td>Process delays</td>
+                                <td>Insufficient resources or unclear instructions</td>
+                                <td>Review resource allocation and communicate with supervisor</td>
+                            </tr>
+                            <tr>
+                                <td>Quality issues</td>
+                                <td>Deviation from SOP or lack of training</td>
+                                <td>Reconfirm training and review SOP with team</td>
+                            </tr>
+                            <tr>
+                                <td>Documentation errors</td>
+                                <td>Incomplete or inaccurate data entry</td>
+                                <td>Double-check entries and use provided templates</td>
+                            </tr>
+                            <tr>
+                                <td>Resource conflicts</td>
+                                <td>Multiple processes competing for same resources</td>
+                                <td>Coordinate with other process owners and management</td>
+                            </tr>
+                        </table>
+                    </div>
+                `;
+            }
+
+            if (data.includeAppendix) {
+                html += `
+                    <div class="sop-section">
+                        <h2>6. Appendix & Forms</h2>
+                        <h3>A. Related Documents</h3>
+                        <ul>
+                            <li>Process flowchart and diagrams</li>
+                            <li>Template forms and checklists</li>
+                            <li>Supporting policies and procedures</li>
+                            <li>Training materials and resources</li>
+                        </ul>
+                        <h3>B. Quick Reference Checklist</h3>
+                        <ul>
+                            <li>☐ Review current SOP version</li>
+                            <li>☐ Confirm all required resources available</li>
+                            <li>☐ Complete required training</li>
+                            <li>☐ Understand quality standards</li>
+                            <li>☐ Know escalation procedures</li>
+                            <li>☐ Document all activities</li>
+                        </ul>
+                    </div>
+                `;
+            }
+
+            if (data.additionalNotes) {
+                html += `
+                    <div class="sop-section">
+                        <h2>Additional Notes</h2>
+                        <p>${data.additionalNotes}</p>
+                    </div>
+                `;
+            }
+
+            html += `
+                <div class="sop-section" style="border-top: 2px solid #d1d5db; padding-top: 24px; margin-top: 32px;">
+                    <h2>Approval & Sign-Off</h2>
+                    <table style="margin-top: 24px;">
+                        <tr>
+                            <td style="width: 50%; padding: 16px;">
+                                <strong>Prepared By:</strong>
+                                <p style="margin-top: 32px;">_____________________</p>
+                                <p>Signature / Date</p>
+                            </td>
+                            <td style="width: 50%; padding: 16px;">
+                                <strong>Approved By:</strong>
+                                <p style="margin-top: 32px;">_____________________</p>
+                                <p>Signature / Date</p>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            `;
+
+            return html;
+        }
+
+        function generateStepDetails(processName, numSteps, complexity) {
+            const stepTemplates = {
+                beginner: {
+                    3: [
+                        { title: 'Preparation', details: ['Gather all necessary materials and tools', 'Review the process requirements', 'Verify you have access to all needed resources'] },
+                        { title: 'Execution', details: ['Follow each step in the prescribed order', 'Document your progress', 'Maintain quality standards throughout'] },
+                        { title: 'Completion & Verification', details: ['Verify all steps are complete', 'Conduct final quality check', 'Document completion and sign off'] }
+                    ],
+                    5: [
+                        { title: 'Setup & Preparation', details: ['Gather required materials', 'Prepare workspace', 'Verify access permissions'] },
+                        { title: 'Initial Assessment', details: ['Review current status', 'Identify any issues or blockers', 'Document baseline state'] },
+                        { title: 'Core Process Execution', details: ['Execute main process steps', 'Follow guidelines precisely', 'Record all actions'] },
+                        { title: 'Quality Assurance', details: ['Verify work quality', 'Check for compliance', 'Make corrections if needed'] },
+                        { title: 'Closure & Documentation', details: ['Complete final documentation', 'Archive records', 'Notify stakeholders'] }
+                    ]
+                },
+                intermediate: {
+                    5: [
+                        { title: 'Initiation Phase', details: ['Receive request or trigger event', 'Validate request completeness', 'Assign to appropriate team member', 'Create tracking documentation'] },
+                        { title: 'Preparation Phase', details: ['Gather necessary data and tools', 'Review relevant policies and procedures', 'Prepare required templates or forms', 'Set up working environment'] },
+                        { title: 'Processing Phase', details: ['Execute primary process steps', 'Perform calculations or assessments as needed', 'Apply business rules and logic', 'Document all decisions and changes'] },
+                        { title: 'Verification Phase', details: ['Review output for accuracy', 'Validate against acceptance criteria', 'Identify and correct any errors', 'Obtain necessary approvals'] },
+                        { title: 'Completion Phase', details: ['Archive all documentation', 'Update relevant systems and records', 'Notify all stakeholders', 'Close process record'] }
+                    ],
+                    7: [
+                        { title: 'Request Reception', details: ['Receive process request', 'Verify request format and completeness', 'Log in system with timestamp', 'Initial triage and routing'] },
+                        { title: 'Validation', details: ['Confirm request legitimacy', 'Check for required information', 'Validate requester authority', 'Flag any discrepancies'] },
+                        { title: 'Preparation', details: ['Allocate resources', 'Gather supporting documentation', 'Set up necessary tools and systems', 'Brief team members if needed'] },
+                        { title: 'Execution', details: ['Begin main process workflow', 'Execute defined steps in order', 'Monitor progress and quality', 'Make documented decisions'] },
+                        { title: 'Review & Approval', details: ['Self-review for compliance', 'Request manager/stakeholder review if needed', 'Address feedback and corrections', 'Obtain required sign-offs'] },
+                        { title: 'Implementation', details: ['Apply approved changes to systems', 'Update affected records', 'Communicate results to stakeholders', 'Archive supporting documentation'] },
+                        { title: 'Follow-up & Closure', details: ['Monitor for any issues', 'Provide support if needed', 'Gather feedback for improvements', 'Close process formally'] }
+                    ]
+                },
+                advanced: {
+                    7: [
+                        { title: 'Requirements Analysis', details: ['Conduct thorough requirements gathering', 'Document all specifications', 'Identify dependencies and constraints', 'Create detailed project plan'] },
+                        { title: 'Resource Allocation', details: ['Identify required resources and expertise', 'Coordinate cross-functional teams', 'Establish communication protocols', 'Set up monitoring and reporting'] },
+                        { title: 'Implementation Planning', details: ['Develop detailed implementation roadmap', 'Create risk mitigation strategies', 'Prepare rollback procedures', 'Schedule activities and milestones'] },
+                        { title: 'Execution & Monitoring', details: ['Execute according to plan', 'Continuously monitor metrics and KPIs', 'Log all activities and decisions', 'Manage scope and changes'] },
+                        { title: 'Quality Assurance & Testing', details: ['Conduct comprehensive testing', 'Verify all requirements are met', 'Perform compliance checks', 'Document test results'] },
+                        { title: 'Review, Approval & Sign-Off', details: ['Present results to stakeholders', 'Address feedback and concerns', 'Obtain formal approvals', 'Document all sign-offs'] },
+                        { title: 'Closure, Handover & Evaluation', details: ['Transition to ongoing management', 'Provide training and documentation', 'Conduct post-implementation review', 'Document lessons learned'] }
+                    ],
+                    10: [
+                        { title: 'Strategic Planning', details: ['Define strategic objectives', 'Conduct stakeholder analysis', 'Perform gap analysis', 'Create strategic roadmap'] },
+                        { title: 'Detailed Requirements', details: ['Gather comprehensive requirements', 'Document functional specifications', 'Identify integration points', 'Create requirements matrix'] },
+                        { title: 'Resource & Team Setup', details: ['Identify required expertise', 'Assemble project team', 'Define roles and responsibilities', 'Establish governance structure'] },
+                        { title: 'Design & Planning', details: ['Create detailed process design', 'Develop technical specifications', 'Plan implementation approach', 'Create contingency plans'] },
+                        { title: 'Development & Preparation', details: ['Develop required tools and systems', 'Prepare documentation and training', 'Set up testing environments', 'Configure systems and access'] },
+                        { title: 'Testing & Validation', details: ['Conduct unit testing', 'Perform integration testing', 'Execute user acceptance testing', 'Document test findings'] },
+                        { title: 'Risk Management & Mitigation', details: ['Identify potential risks', 'Develop mitigation strategies', 'Establish contingency plans', 'Brief team on risk protocols'] },
+                        { title: 'Training & Communication', details: ['Develop training materials', 'Conduct training sessions', 'Communicate changes to all stakeholders', 'Address questions and concerns'] },
+                        { title: 'Deployment & Cutover', details: ['Execute go-live plan', 'Monitor system performance', 'Support users during transition', 'Log all activities and issues'] },
+                        { title: 'Post-Implementation Review', details: ['Evaluate success metrics', 'Gather stakeholder feedback', 'Document lessons learned', 'Identify improvement opportunities'] }
+                    ]
+                }
+            };
+
+            const templates = stepTemplates[complexity] || stepTemplates['intermediate'];
+            return templates[numSteps] || templates[5];
+        }
+
+        function displaySOP(sopContent, formData) {
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('sopContainer').classList.remove('hidden');
+            
+            const sopDiv = document.getElementById('sopContent');
+            sopDiv.innerHTML = sopContent;
+            
+            // Store plain text version for copying
+            document.getElementById('sopText').value = `
+${formData.processName} - Standard Operating Procedure
+
+Department: ${formData.department}
+Complexity Level: ${formData.complexity}
+Last Updated: ${new Date().toLocaleDateString()}
+Version: 1.0
+
+${sopDiv.innerText}
+            `;
+
+            // Scroll to SOP
+            setTimeout(() => {
+                document.getElementById('sopContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 300);
+        }
+
+        function copySOP() {
+            const text = document.getElementById('sopText').value;
+            navigator.clipboard.writeText(text).then(() => {
+                showMessage('✅ SOP copied to clipboard!', 'check_circle', 'green');
+            }).catch(err => {
+                showMessage('Failed to copy SOP', 'error', 'red');
+            });
+        }
+
+        function downloadSOP() {
+            const content = document.getElementById('sopContent').innerText;
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
+            element.setAttribute('download', 'SOP_' + new Date().getTime() + '.txt');
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+            showMessage('📥 SOP downloaded successfully!', 'download', 'green');
+        }
+
+        function printSOP() {
+            window.print();
+            showMessage('🖨️ Print dialog opened!', 'print', 'green');
+        }
+
+        function editSOP() {
+            showMessage('✏️ Edit mode - Modify the content and save your changes', 'edit', 'blue');
+            // Allow inline editing
+            document.getElementById('sopContent').contentEditable = true;
+            document.getElementById('sopContent').focus();
+        }
+
+        function hideSOP() {
+            document.getElementById('sopContainer').classList.add('hidden');
+            document.getElementById('emptyState').classList.remove('hidden');
+            showMessage('🔄 SOP hidden - Fill the form to generate again', 'info', 'blue');
+        }
+
+        function showMessage(text, icon, color) {
+            const toast = document.getElementById('messageToast');
+            const iconEl = document.getElementById('messageIcon');
+            const textEl = document.getElementById('messageText');
+
+            iconEl.textContent = icon;
+            iconEl.className = `material-symbols-outlined text-${color}-600`;
+            textEl.textContent = text;
+
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 4000);
+        }
+
+        // Form submission
+        document.getElementById('sopForm').addEventListener('submit', generateSOP);
+
+        // Navigation scroll effect
+        window.addEventListener('scroll', function () {
+            const nav = document.getElementById('mainNav');
+            if (window.scrollY > 50) {
+                nav.classList.add('nav-scrolled');
+            } else {
+                nav.classList.remove('nav-scrolled');
+            }
+        });
+    </script>
+</body>
+
+</html>

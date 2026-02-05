@@ -16,58 +16,104 @@ model User {
   dateOfBirth       DateTime?
   mobile            String
   password          String
-  role              String              @default("user")  // user, admin
+  role              String              @default("user")  // user, admin, super_admin
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @default(now()) @updatedAt
   blogs             Blog[]              @relation("AuthorBlogs")
   loanApplications  LoanApplication[]
   documents         UserDocument[]
+  adminProfile      AdminProfile?       @relation("AdminUser")
+  comments          Comment[]           @relation("CommentAuthor")
+  auditLogs         AuditLog[]          @relation("AuditInitiator")
+}
+
+model AdminProfile {
+  id              String    @id @default(uuid())
+  userId          String    @unique
+  user            User      @relation("AdminUser", fields: [userId], references: [id], onDelete: Cascade)
+  
+  adminTitle      String?
+  department      String?
+  bio             String?
+  profileImage    String?
+  
+  canApproveBlogs Boolean   @default(false)
+  canManageUsers  Boolean   @default(false)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
 }
 
 model Blog {
-  id            String    @id @default(uuid())
-  title         String                          // H1 title of the blog
-  slug          String    @unique               // URL-friendly slug
-  excerpt       String                          // Short summary/description
-  content       String    @db.Text              // Full HTML content
-  category      String                          // Blog category
-  authorName    String                          // Author's display name
-  authorImage   String?                         // Author's profile image URL
-  authorRole    String?                         // Author's role/title
-  featuredImage String?                         // Main blog image URL
-  readTime      Int       @default(5)           // Estimated read time in minutes
-  views         Int       @default(0)           // View count
-  isFeatured    Boolean   @default(false)        // Featured blog flag
-  isPublished   Boolean   @default(false)        // Publication status
-  publishedAt   DateTime?                       // Publication date
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  comments      Comment[]
-  tags          BlogTag[]
+  id              String    @id @default(uuid())
+  title           String
+  slug            String    @unique
+  excerpt         String
+  content         String    @db.Text
+  category        String
   
-  // Optional relation to User (author)
-  authorId      String?
-  author        User?     @relation("AuthorBlogs", fields: [authorId], references: [id])
+  authorId        String?
+  author          User?     @relation("AuthorBlogs", fields: [authorId], references: [id], onDelete: SetNull)
+  authorName      String
+  authorImage     String?
+  authorRole      String?
   
-  @@index([category])
+  featuredImage   String?
+  readTime        Int       @default(5)
+  views           Int       @default(0)
+  isFeatured      Boolean   @default(false)
+  
+  status          String    @default("draft")  // draft, pending, published
+  visibility      String    @default("private")  // private, public
+  isPublished     Boolean   @default(false)
+  publishedAt     DateTime?
+  
+  submittedAt     DateTime?
+  approvedAt      DateTime?
+  approvedBy      String?
+  rejectionReason String?
+  
+  comments        Comment[]
+  tags            BlogTag[]
+  auditLogs       AuditLog[]  @relation("BlogAuditLogs")
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([authorId])
+  @@index([status])
+  @@index([visibility])
   @@index([isPublished])
   @@index([isFeatured])
+  @@index([category])
+  @@index([publishedAt])
 }
 
 model Comment {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   blogId    String
+  blog      Blog      @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  
+  userId    String?
+  user      User?     @relation("CommentAuthor", fields: [userId], references: [id], onDelete: SetNull)
+  
   author    String
-  content   String   @db.Text
-  parentId  String?  // For nested replies
-  likes     Int      @default(0) // Number of likes
-  createdAt DateTime @default(now())
-  blog      Blog     @relation(fields: [blogId], references: [id])
-  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  content   String    @db.Text
+  parentId  String?
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
   replies   Comment[] @relation("CommentReplies")
+  
+  status    String    @default("approved")  // pending, approved, spam
+  likes     Int       @default(0)
   likesData CommentLike[]
-
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
+  
   @@index([blogId])
+  @@index([userId])
   @@index([parentId])
 }
 
@@ -134,4 +180,27 @@ model UserDocument {
   @@unique([userId, docType])
   @@index([userId])
   @@index([docType])
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  action        String   // create, update, publish, delete
+  entityType    String   // blog, user, comment
+  entityId      String
+  
+  initiatedBy   String
+  initiator     User     @relation("AuditInitiator", fields: [initiatedBy], references: [id], onDelete: SetNull)
+  
+  changes       Json
+  ipAddress     String?
+  userAgent     String?
+  
+  blog          Blog?    @relation("BlogAuditLogs", fields: [entityId], references: [id], onDelete: SetNull)
+  
+  createdAt     DateTime @default(now())
+  
+  @@index([entityType])
+  @@index([entityId])
+  @@index([initiatedBy])
+  @@index([createdAt])
 }

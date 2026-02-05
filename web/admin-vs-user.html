@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Admin vs User - Quick Guide</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <style>
+        body {
+            font-family: 'Noto Sans', sans-serif;
+        }
+
+        .section-title {
+            border-bottom: 3px solid #6605c7;
+            padding-bottom: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .role-section {
+            background: linear-gradient(135deg, rgba(102, 5, 199, 0.05) 0%, rgba(139, 192, 232, 0.05) 100%);
+            padding: 2rem;
+            border-radius: 1rem;
+            border-left: 4px solid;
+        }
+
+        .admin-section {
+            border-left-color: #6605c7;
+        }
+
+        .user-section {
+            border-left-color: #3b82f6;
+        }
+
+        .role-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .admin-title {
+            color: #6605c7;
+        }
+
+        .user-title {
+            color: #3b82f6;
+        }
+
+        .capability-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .capability-list li {
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            background: white;
+            border-radius: 0.5rem;
+            border-left: 3px solid;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .admin-section .capability-list li {
+            border-left-color: #6605c7;
+        }
+
+        .user-section .capability-list li {
+            border-left-color: #3b82f6;
+        }
+
+        .icon-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: white;
+        }
+
+        .admin-section .icon-badge {
+            background: #6605c7;
+        }
+
+        .user-section .icon-badge {
+            background: #3b82f6;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            border: 1px solid #e5e7eb;
+            margin: 1rem 0;
+        }
+
+        .feature-card h3 {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #111;
+        }
+
+        .feature-card p {
+            font-size: 0.875rem;
+            color: #666;
+            margin: 0;
+        }
+
+        @media (max-width: 768px) {
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-6 py-6">
+            <div class="flex justify-between items-center">
+                <h1 class="text-3xl font-bold text-primary">Admin vs User Roles</h1>
+                <a href="welcome.html" class="text-primary hover:underline">← Back to Welcome</a>
+            </div>
+            <p class="text-gray-600 mt-2">Complete guide to admin and user capabilities</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto px-6 py-12">
+
+        <!-- Quick Overview -->
+        <section class="mb-12">
+            <h2 class="section-title text-2xl">Quick Overview</h2>
+            <div class="comparison-grid">
+                <div class="role-section admin-section">
+                    <div class="role-title admin-title">
+                        <span class="material-symbols-outlined">admin_panel_settings</span>
+                        Admin Portal
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                        Complete control over platform content and management. Create, edit, and delete blogs. Manage
+                        system settings and users.
+                    </p>
+                    <p class="text-sm text-gray-600">
+                        <strong>Access:</strong> /admin-dashboard.html<br>
+                        <strong>Requires:</strong> Admin role in database
+                    </p>
+                </div>
+
+                <div class="role-section user-section">
+                    <div class="role-title user-title">
+                        <span class="material-symbols-outlined">person</span>
+                        User Portal
+                    </div>
+                    <p class="text-gray-700 mb-4">
+                        Access published content, tools, and resources. Browse blogs, use calculators, and apply for
+                        loans.
+                    </p>
+                    <p class="text-sm text-gray-600">
+                        <strong>Access:</strong> /index.html<br>
+                        <strong>Requires:</strong> User account (any role)
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Detailed Capabilities -->
+        <section class="mb-12">
+            <h2 class="section-title text-2xl">Detailed Capabilities</h2>
+
+            <div class="comparison-grid">
+                <!-- Admin Capabilities -->
+                <div>
+                    <h3 class="text-xl font-bold text-primary mb-6">What Admins Can Do</h3>
+
+                    <div class="feature-card">
+                        <h4 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary">dashboard</span>
+                            Dashboard
+                        </h4>
+                        <ul class="capability-list">
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                View total blogs count
+                            </li>
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                Monitor published & draft blogs
+                            </li>
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                Track total views
+                            </li>
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                View quick statistics
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="feature-card">
+                        <h4 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary">article</span>
+                            Blog Management
+                        </h4>
+                        <ul class="capability-list">
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                Search blogs by title
+                            </li>
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                Filter by status (Published/Draft)
+                            </li>
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                Edit existing blogs
+                            </li>
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                Delete blogs permanently
+                            </li>
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                Change publish status
+                            </li>
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                View all metadata
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="feature-card">
+                        <h4 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary">add_circle</span>
+                            Create Content
+                        </h4>
+                        <ul class="capability-list">
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                Create new blog posts
+                            </li>
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                Auto-generate slug
+                            </li>
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                Upload featured images
+                            </li>
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                Add tags & categories
+                            </li>
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                Write rich content
+                            </li>
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                Publish or save as draft
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="feature-card">
+                        <h4 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary">settings</span>
+                            System Management
+                        </h4>
+                        <ul class="capability-list">
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                Manage users
+                            </li>
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                View analytics
+                            </li>
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                System settings
+                            </li>
+                            <li>
+                                <span class="icon-badge">✓</span>
+                                Admin profile
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- User Capabilities -->
+                <div>
+                    <h3 class="text-xl font-bold text-blue-600 mb-6">What Users Can Do</h3>
+
+                    <div class="feature-card">
+                        <h4 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-blue-600">article</span>
+                            Browse Content
+                        </h4>
+                        <ul class="capability-list">
+                            <li>
+                                <span class="icon-badge" style="background: #3b82f6;">✓</span>
+                                Read published blogs
+                            </li>
+                            <li>
+                                <span class="icon-badge" style="background: #3b82f6;">✓</span>
+                                View articles
+                            </li>
+                            <li>
+                                <span class="icon-badge" style="background: #3b82f6;">✓</span>
+                                Access educational content
+                            </li>
+                            <li>
+                                <span class="icon-badge" style="background: #3b82f6;">✓</span>
+                                Search and filter
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="feature-card">
+                        <h4 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-blue-600">calculate</span>
+                            Tools & Calculators
+                        </h4>
+                        <ul class="capability-list">
+                            <li>
+                                <span class="icon-badge" style="background: #3b82f6;">✓</span>
+                                Grade converter
+                            </li>
+                            <li>
+                                <span class="icon-badge" style="background: #3b82f6;">✓</span>
+                                EMI calculator
+                            </li>
+                            <li>
+                                <span class="icon-badge" style="background: #3b82f6;">✓</span>
+                                Eligibility checker
+                            </li>
+                            <li>
+                                <span class="icon-badge" style="background: #3b82f6;">✓</span>
+                                Loan comparator
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="feature-card">
+                        <h4 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-blue-600">account_circle</span>
+                            Account & Profile
+                        </h4>
+                        <ul class="capability-list">
+                            <li>
+                                <span class="icon-badge" style="background: #3b82f6;">✓</span>
+                                Create account
+                            </li>
+                            <li>
+                                <span class="icon-badge" style="background: #3b82f6;">✓</span>
+                                Manage profile
+                            </li>
+                            <li>
+                                <span class="icon-badge" style="background: #3b82f6;">✓</span>
+                                View dashboard
+                            </li>
+                            <li>
+                                <span class="icon-badge" style="background: #3b82f6;">✓</span>
+                                Track applications
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="feature-card">
+                        <h4 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-blue-600">request_quote</span>
+                            Loan Services
+                        </h4>
+                        <ul class="capability-list">
+                            <li>
+                                <span class="icon-badge" style="background: #3b82f6;">✓</span>
+                                Apply for loans
+                            </li>
+                            <li>
+                                <span class="icon-badge" style="background: #3b82f6;">✓</span>
+                                Upload documents
+                            </li>
+                            <li>
+                                <span class="icon-badge" style="background: #3b82f6;">✓</span>
+                                Track status
+                            </li>
+                            <li>
+                                <span class="icon-badge" style="background: #3b82f6;">✓</span>
+                                Get recommendations
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- What They Can't Do -->
+        <section class="mb-12">
+            <h2 class="section-title text-2xl">Access Restrictions</h2>
+
+            <div class="comparison-grid">
+                <div class="role-section admin-section">
+                    <h3 class="text-lg font-bold mb-4">What Admins CAN'T Do</h3>
+                    <ul class="capability-list">
+                        <li>
+                            <span class="icon-badge">✗</span>
+                            Access user personal data (loans, documents)
+                        </li>
+                        <li>
+                            <span class="icon-badge">✗</span>
+                            View user-to-user messages
+                        </li>
+                        <li>
+                            <span class="icon-badge">✗</span>
+                            Modify user passwords directly
+                        </li>
+                        <li>
+                            <span class="icon-badge">✗</span>
+                            Access payment information
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="role-section user-section">
+                    <h3 class="text-lg font-bold mb-4">What Users CAN'T Do</h3>
+                    <ul class="capability-list">
+                        <li>
+                            <span class="icon-badge" style="background: #3b82f6;">✗</span>
+                            Create or edit blogs
+                        </li>
+                        <li>
+                            <span class="icon-badge" style="background: #3b82f6;">✗</span>
+                            Access admin dashboard
+                        </li>
+                        <li>
+                            <span class="icon-badge" style="background: #3b82f6;">✗</span>
+                            See draft/unpublished content
+                        </li>
+                        <li>
+                            <span class="icon-badge" style="background: #3b82f6;">✗</span>
+                            Modify system settings
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Access Points -->
+        <section class="mb-12">
+            <h2 class="section-title text-2xl">Access Points</h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-purple-50 p-6 rounded-lg border-l-4 border-purple-600">
+                    <h3 class="text-lg font-bold text-purple-900 mb-4">👨‍💼 Admin Entry Point</h3>
+                    <div class="bg-white p-4 rounded border border-purple-200 mb-4">
+                        <code class="text-sm">http://localhost:3000/admin-dashboard.html</code>
+                    </div>
+                    <p class="text-gray-700 mb-2"><strong>Steps:</strong></p>
+                    <ol class="text-sm text-gray-700 list-decimal list-inside space-y-1">
+                        <li>Go to welcome.html</li>
+                        <li>Click "Go to Admin Dashboard"</li>
+                        <li>Login with admin credentials</li>
+                        <li>Access management tools</li>
+                    </ol>
+                </div>
+
+                <div class="bg-blue-50 p-6 rounded-lg border-l-4 border-blue-600">
+                    <h3 class="text-lg font-bold text-blue-900 mb-4">👤 User Entry Point</h3>
+                    <div class="bg-white p-4 rounded border border-blue-200 mb-4">
+                        <code class="text-sm">http://localhost:3000/index.html</code>
+                    </div>
+                    <p class="text-gray-700 mb-2"><strong>Steps:</strong></p>
+                    <ol class="text-sm text-gray-700 list-decimal list-inside space-y-1">
+                        <li>Go to welcome.html</li>
+                        <li>Click "Go to Main Website"</li>
+                        <li>Browse blogs and tools</li>
+                        <li>Create account or apply for loans</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <!-- Summary Table -->
+        <section>
+            <h2 class="section-title text-2xl">Quick Reference Table</h2>
+
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100">
+                            <th class="border border-gray-300 p-3 text-left font-bold">Feature</th>
+                            <th class="border border-gray-300 p-3 text-center font-bold">Admin</th>
+                            <th class="border border-gray-300 p-3 text-center font-bold">User</th>
+                            <th class="border border-gray-300 p-3 text-center font-bold">Public</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="border border-gray-300 p-3">Welcome Page</td>
+                            <td class="border border-gray-300 p-3 text-center">✓</td>
+                            <td class="border border-gray-300 p-3 text-center">✓</td>
+                            <td class="border border-gray-300 p-3 text-center">✓</td>
+                        </tr>
+                        <tr class="bg-gray-50">
+                            <td class="border border-gray-300 p-3">Admin Dashboard</td>
+                            <td class="border border-gray-300 p-3 text-center text-green-600 font-bold">✓</td>
+                            <td class="border border-gray-300 p-3 text-center text-red-600">✗</td>
+                            <td class="border border-gray-300 p-3 text-center text-red-600">✗</td>
+                        </tr>
+                        <tr>
+                            <td class="border border-gray-300 p-3">Create Blog</td>
+                            <td class="border border-gray-300 p-3 text-center text-green-600 font-bold">✓</td>
+                            <td class="border border-gray-300 p-3 text-center text-red-600">✗</td>
+                            <td class="border border-gray-300 p-3 text-center text-red-600">✗</td>
+                        </tr>
+                        <tr class="bg-gray-50">
+                            <td class="border border-gray-300 p-3">Edit Blog</td>
+                            <td class="border border-gray-300 p-3 text-center text-green-600 font-bold">✓</td>
+                            <td class="border border-gray-300 p-3 text-center text-red-600">✗</td>
+                            <td class="border border-gray-300 p-3 text-center text-red-600">✗</td>
+                        </tr>
+                        <tr>
+                            <td class="border border-gray-300 p-3">Delete Blog</td>
+                            <td class="border border-gray-300 p-3 text-center text-green-600 font-bold">✓</td>
+                            <td class="border border-gray-300 p-3 text-center text-red-600">✗</td>
+                            <td class="border border-gray-300 p-3 text-center text-red-600">✗</td>
+                        </tr>
+                        <tr class="bg-gray-50">
+                            <td class="border border-gray-300 p-3">View Stats</td>
+                            <td class="border border-gray-300 p-3 text-center text-green-600 font-bold">✓</td>
+                            <td class="border border-gray-300 p-3 text-center text-red-600">✗</td>
+                            <td class="border border-gray-300 p-3 text-center text-red-600">✗</td>
+                        </tr>
+                        <tr>
+                            <td class="border border-gray-300 p-3">Read Published Blogs</td>
+                            <td class="border border-gray-300 p-3 text-center">✓</td>
+                            <td class="border border-gray-300 p-3 text-center">✓</td>
+                            <td class="border border-gray-300 p-3 text-center">✓</td>
+                        </tr>
+                        <tr class="bg-gray-50">
+                            <td class="border border-gray-300 p-3">Use Tools</td>
+                            <td class="border border-gray-300 p-3 text-center">✓</td>
+                            <td class="border border-gray-300 p-3 text-center">✓</td>
+                            <td class="border border-gray-300 p-3 text-center">✓</td>
+                        </tr>
+                        <tr>
+                            <td class="border border-gray-300 p-3">Apply for Loan</td>
+                            <td class="border border-gray-300 p-3 text-center">✓</td>
+                            <td class="border border-gray-300 p-3 text-center">✓</td>
+                            <td class="border border-gray-300 p-3 text-center text-red-600">✗</td>
+                        </tr>
+                        <tr class="bg-gray-50">
+                            <td class="border border-gray-300 p-3">View Dashboard</td>
+                            <td class="border border-gray-300 p-3 text-center">✓</td>
+                            <td class="border border-gray-300 p-3 text-center">✓</td>
+                            <td class="border border-gray-300 p-3 text-center text-red-600">✗</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-12 py-8">
+        <div class="max-w-6xl mx-auto px-6 text-center text-gray-600">
+            <p>&copy; 2026 LoanHero | <a href="welcome.html" class="text-primary hover:underline">Back to Welcome</a>
+            </p>
+        </div>
+    </footer>
+</body>
+
+</html>

@@ -1207,4 +1207,207 @@ export class BlogService {
             };
         }
     }
+
+    /**
+     * Submit blog for approval (admin workflow)
+     */
+    async submitForApproval(blogId: string, notes?: string) {
+        const blog = await this.prisma.blog.findUnique({
+            where: { id: blogId },
+        });
+
+        if (!blog) {
+            throw new Error('Blog not found');
+        }
+
+        if (blog.status !== 'draft') {
+            throw new Error('Only draft blogs can be submitted for approval');
+        }
+
+        return this.prisma.blog.update({
+            where: { id: blogId },
+            data: {
+                status: 'pending',
+                submittedAt: new Date(),
+            },
+        });
+    }
+
+    /**
+     * Publish blog with visibility setting (admin or super admin)
+     */
+    async publishBlog(blogId: string, visibility: 'private' | 'public' = 'public') {
+        const blog = await this.prisma.blog.findUnique({
+            where: { id: blogId },
+        });
+
+        if (!blog) {
+            throw new Error('Blog not found');
+        }
+
+        const isPublished = visibility === 'public';
+
+        return this.prisma.blog.update({
+            where: { id: blogId },
+            data: {
+                status: 'published',
+                visibility,
+                isPublished,
+                publishedAt: new Date(),
+            },
+        });
+    }
+
+    /**
+     * Unpublish a blog (revert to draft)
+     */
+    async unpublishBlog(blogId: string, reason?: string) {
+        const blog = await this.prisma.blog.findUnique({
+            where: { id: blogId },
+        });
+
+        if (!blog) {
+            throw new Error('Blog not found');
+        }
+
+        if (blog.status !== 'published') {
+            throw new Error('Only published blogs can be unpublished');
+        }
+
+        return this.prisma.blog.update({
+            where: { id: blogId },
+            data: {
+                status: 'draft',
+                isPublished: false,
+                publishedAt: null,
+            },
+        });
+    }
+
+    /**
+     * Approve a blog (super admin only)
+     */
+    async approveBlog(blogId: string, approvedBy: string, notes?: string) {
+        return this.prisma.blog.update({
+            where: { id: blogId },
+            data: {
+                approvedAt: new Date(),
+                approvedBy,
+            },
+        });
+    }
+
+    /**
+     * Reject a blog (super admin only)
+     */
+    async rejectBlog(blogId: string, reason: string) {
+        return this.prisma.blog.update({
+            where: { id: blogId },
+            data: {
+                status: 'draft',
+                rejectionReason: reason,
+                approvedAt: null,
+                approvedBy: null,
+            },
+        });
+    }
+
+    /**
+     * Get blogs with admin filtering (ownership-aware)
+     */
+    async getAdminBlogs(filter: any, options: { limit?: number; offset?: number } = {}) {
+        const { limit = 20, offset = 0 } = options;
+
+        const blogs = await this.prisma.blog.findMany({
+            where: filter,
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                excerpt: true,
+                category: true,
+                authorName: true,
+                authorImage: true,
+                authorRole: true,
+                authorId: true,
+                featuredImage: true,
+                status: true,
+                visibility: true,
+                isPublished: true,
+                readTime: true,
+                views: true,
+                publishedAt: true,
+                createdAt: true,
+                updatedAt: true,
+                tags: {
+                    select: {
+                        tag: {
+                            select: { name: true },
+                        },
+                    },
+                },
+            },
+            orderBy: {
+                updatedAt: 'desc',
+            },
+            take: limit,
+            skip: offset,
+        });
+
+        const total = await this.prisma.blog.count({ where: filter });
+
+        return {
+            success: true,
+            data: blogs.map(blog => this.mapTags(blog)),
+            pagination: {
+                total,
+                limit,
+                offset,
+                hasMore: offset + blogs.length < total,
+            },
+        };
+    }
+
+    /**
+     * Get single blog for admin (with full details)
+     */
+    async getAdminBlogDetail(blogId: string) {
+        return this.prisma.blog.findUnique({
+            where: { id: blogId },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                excerpt: true,
+                content: true,
+                category: true,
+                authorName: true,
+                authorImage: true,
+                authorRole: true,
+                authorId: true,
+                featuredImage: true,
+                status: true,
+                visibility: true,
+                isPublished: true,
+                readTime: true,
+                views: true,
+                isFeatured: true,
+                publishedAt: true,
+                submittedAt: true,
+                approvedAt: true,
+                approvedBy: true,
+                rejectionReason: true,
+                createdAt: true,
+                updatedAt: true,
+                tags: {
+                    select: {
+                        tag: {
+                            select: { name: true },
+                        },
+                    },
+                },
+            },
+        });
+    }
 }
+

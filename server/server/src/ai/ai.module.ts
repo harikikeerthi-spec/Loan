@@ -5,6 +5,7 @@ import { LoanRecommendationService } from './services/loan-recommendation.servic
 import { SopAnalysisService } from './services/sop-analysis.service';
 import { GradeConversionService } from './services/grade-conversion.service';
 import { UniversityComparisonService } from './services/university-comparison.service';
+import { AdmitPredictorService } from './services/admit-predictor.service';
 
 @Module({
   controllers: [AiController],
@@ -14,6 +15,7 @@ import { UniversityComparisonService } from './services/university-comparison.se
     SopAnalysisService,
     GradeConversionService,
     UniversityComparisonService,
+    AdmitPredictorService,
   ],
   exports: [
     EligibilityService,
@@ -21,6 +23,7 @@ import { UniversityComparisonService } from './services/university-comparison.se
     SopAnalysisService,
     GradeConversionService,
     UniversityComparisonService,
+    AdmitPredictorService,
   ],
 })
 export class AiModule { }

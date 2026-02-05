@@ -22,7 +22,8 @@ export interface SopAnalysisResult {
 @Injectable()
 export class SopAnalysisService {
   analyzeSop(text: string): SopAnalysisResult {
-    if (text.trim().length < 100) {
+    const safeText = text || '';
+    if (safeText.trim().length < 100) {
       return {
         totalScore: 0,
         quality: 'needs-work',
@@ -32,11 +33,11 @@ export class SopAnalysisService {
       };
     }
 
-    const clarity = this.analyzeSopClarity(text);
-    const financial = this.analyzeFinancialJustification(text);
-    const careerROI = this.analyzeCareerROI(text);
-    const originality = this.analyzeOriginality(text);
-    const postIncome = this.analyzePostStudyIncome(text);
+    const clarity = this.analyzeSopClarity(safeText);
+    const financial = this.analyzeFinancialJustification(safeText);
+    const careerROI = this.analyzeCareerROI(safeText);
+    const originality = this.analyzeOriginality(safeText);
+    const postIncome = this.analyzePostStudyIncome(safeText);
 
     const categories: SopAnalysisCategory[] = [
       { name: 'Clarity', score: Math.max(0, Math.min(20, clarity.score)), weight: 0.15 },
