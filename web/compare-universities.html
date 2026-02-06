@@ -44,7 +44,7 @@
         };
     </script>
     <style>
-.nav-scrolled {
+        .nav-scrolled {
             background: rgba(255, 255, 255, 0.8) !important;
             backdrop-filter: blur(12px);
             padding-top: 1rem !important;
@@ -112,30 +112,14 @@
                     <h3 class="text-xl font-bold mb-4 font-display">University 1</h3>
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold mb-1">Select University</label>
-                            <select
-                                class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
-                                id="uni1">
-                                <option value="">Choose a university...</option>
-                                <option value="harvard">Harvard University</option>
-                                <option value="stanford">Stanford University</option>
-                                <option value="mit">MIT</option>
-                                <option value="oxford">University of Oxford</option>
-                                <option value="cambridge">University of Cambridge</option>
-                                <option value="toronto">University of Toronto</option>
-                                <option value="melbourne">University of Melbourne</option>
-                            </select>
-                        </div>
-                        <!-- Additional fields could serve as overrides or specific program selection -->
-                        <div>
-                            <label class="block text-sm font-semibold mb-1">Program</label>
-                            <select
+                            <label class="block text-sm font-semibold mb-1">University Name</label>
+                            <input type="text" id="uni1" placeholder="e.g. Harvard University"
                                 class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
-                                <option>Computer Science</option>
-                                <option>Business Analytics</option>
-                                <option>MBA</option>
-                                <option>Data Science</option>
-                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Program (Optional)</label>
+                            <input type="text" placeholder="e.g. Computer Science"
+                                class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
                         </div>
                     </div>
                 </div>
@@ -145,29 +129,14 @@
                     <h3 class="text-xl font-bold mb-4 font-display">University 2</h3>
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-semibold mb-1">Select University</label>
-                            <select
-                                class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
-                                id="uni2">
-                                <option value="">Choose a university...</option>
-                                <option value="harvard">Harvard University</option>
-                                <option value="stanford">Stanford University</option>
-                                <option value="mit">MIT</option>
-                                <option value="oxford">University of Oxford</option>
-                                <option value="cambridge">University of Cambridge</option>
-                                <option value="toronto">University of Toronto</option>
-                                <option value="melbourne">University of Melbourne</option>
-                            </select>
+                            <label class="block text-sm font-semibold mb-1">University Name</label>
+                            <input type="text" id="uni2" placeholder="e.g. Stanford University"
+                                class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
                         </div>
                         <div>
-                            <label class="block text-sm font-semibold mb-1">Program</label>
-                            <select
+                            <label class="block text-sm font-semibold mb-1">Program (Optional)</label>
+                            <input type="text" placeholder="e.g. Computer Science"
                                 class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700">
-                                <option>Computer Science</option>
-                                <option>Business Analytics</option>
-                                <option>MBA</option>
-                                <option>Data Science</option>
-                            </select>
                         </div>
                     </div>
                 </div>
@@ -239,6 +208,7 @@
     <!-- Scripts -->
     <script src="assets/js/components-loader.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
+    <script src="assets/js/ai-api.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const compareBtn = document.getElementById('compareBtn');
@@ -263,23 +233,7 @@
                 compareBtn.disabled = true;
 
                 try {
-                    const response = await fetch('http://localhost:3000/ai/compare-universities', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-                        },
-                        body: JSON.stringify({
-                            uni1: uni1Key,
-                            uni2: uni2Key
-                        })
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('Failed to fetch data');
-                    }
-
-                    const json = await response.json();
+                    const json = await AI_API.compareUniversities(uni1Key, uni2Key);
                     const { uni1: u1, uni2: u2 } = json.data;
 
                     document.getElementById('th-uni1').textContent = u1.name;

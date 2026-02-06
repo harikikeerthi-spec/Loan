@@ -1,9 +1,10 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
 import { EligibilityService } from './services/eligibility.service';
 import { LoanRecommendationService } from './services/loan-recommendation.service';
 import { SopAnalysisService } from './services/sop-analysis.service';
 import { GradeConversionService } from './services/grade-conversion.service';
 import { UniversityComparisonService } from './services/university-comparison.service';
+import { AdmitPredictorService } from './services/admit-predictor.service';
 
 @Controller('ai')
 export class AiController {
@@ -13,6 +14,7 @@ export class AiController {
     private readonly sopAnalysisService: SopAnalysisService,
     private readonly gradeConversionService: GradeConversionService,
     private readonly universityComparisonService: UniversityComparisonService,
+    private readonly admitPredictorService: AdmitPredictorService,
   ) { }
 
   @Post('eligibility-check')
@@ -29,9 +31,9 @@ export class AiController {
       collateral: 'yes' | 'no';
     },
   ) {
-    const eligibilityResult = this.eligibilityService.calculateEligibilityScore(data);
+    const eligibilityResult = await this.eligibilityService.calculateEligibilityScore(data);
 
-    const loanRecommendations = this.loanRecommendationService.recommendLoans(
+    const loanRecommendations = await this.loanRecommendationService.recommendLoans(
       eligibilityResult.score,
       data.credit,
       eligibilityResult.ratio,
@@ -57,7 +59,7 @@ export class AiController {
     },
   ) {
     const sopText = data.text || data.sop || '';
-    const result = this.sopAnalysisService.analyzeSop(sopText);
+    const result = await this.sopAnalysisService.analyzeSop(sopText);
     return {
       success: true,
       analysis: result,
@@ -75,7 +77,7 @@ export class AiController {
       gradingSystem?: 'US' | 'UK' | 'India' | 'Canada' | 'Australia';
     },
   ): Promise<any> {
-    const result = this.gradeConversionService.convertGrade(data);
+    const result = await this.gradeConversionService.convertGrade(data);
     return {
       success: true,
       gradeConversion: result,
@@ -93,10 +95,25 @@ export class AiController {
       percentage?: number;
     },
   ): Promise<any> {
-    const result = this.gradeConversionService.convertGrade({
-      inputType: data.percentage ? 'percentage' : 'marks',
-      inputValue: data.percentage || data.marks?.reduce((a, b) => a + b, 0) || 0,
-      totalMarks: data.totalMarks || 100,
+    // Validate marks if provided and compute overall percentage safely
+    const marks = data.marks || [];
+    const totalPerSubject = data.totalMarks || 100;
+
+    if (marks.length > 0) {
+      for (const m of marks) {
+        if (typeof m !== 'number' || isNaN(m) || m < 0 || m > totalPerSubject) {
+          throw new BadRequestException(`Each mark must be a number between 0 and ${totalPerSubject}`);
+        }
+      }
+    }
+
+    const percentage = marks.length
+      ? (marks.reduce((a, b) => a + b, 0) / (marks.length * totalPerSubject)) * 100
+      : (data.percentage ?? 0);
+
+    const result = await this.gradeConversionService.convertGrade({
+      inputType: 'percentage',
+      inputValue: percentage,
       outputType: 'percentage',
     });
 
@@ -111,7 +128,7 @@ export class AiController {
         ? data.subjects.map((subject, index) => ({
           subject,
           marks: data.marks?.[index] || 0,
-          outOf: (data.totalMarks || 100) / (data.marks?.length || 1),
+          outOf: totalPerSubject,
         }))
         : null,
     };
@@ -132,7 +149,7 @@ export class AiController {
       }>;
     },
   ): Promise<any> {
-    const result = this.gradeConversionService.comparePerformance(data.assessments);
+    const result = await this.gradeConversionService.comparePerformance(data.assessments);
     return {
       success: true,
       comparison: result,
@@ -147,10 +164,19 @@ export class AiController {
       uni2: string;
     },
   ) {
-    const result = this.universityComparisonService.compare(data.uni1, data.uni2);
+    const result = await this.universityComparisonService.compare(data.uni1, data.uni2);
     return {
       success: true,
       data: result,
+    };
+  }
+
+  @Post('predict-admission')
+  async predictAdmission(@Body() body: any) {
+    const result = await this.admitPredictorService.predict(body);
+    return {
+      success: true,
+      prediction: result
     };
   }
 }

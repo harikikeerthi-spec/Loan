@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { OpenRouterService } from './open-router.service';
 
 export interface LoanOffer {
   id: string;
@@ -22,80 +23,9 @@ export interface LoanRecommendationResult {
 
 @Injectable()
 export class LoanRecommendationService {
-  private readonly loanOffers: LoanOffer[] = [
-    {
-      id: 'aurora-student-core',
-      bank: 'Aurora Bank',
-      name: 'Global Scholar Starter Loan',
-      minScore: 55,
-      minCredit: 640,
-      minRatio: 0.8,
-      maxLoan: 85000,
-      requiresCoApplicant: true,
-      requiresCollateral: false,
-      apr: '10.2% - 12.9%',
-      coverage: 'Up to 85% of course cost',
-      bestFor: 'Undergraduate and masters students with co-applicant support.',
-    },
-    {
-      id: 'veridian-secured',
-      bank: 'Veridian Capital',
-      name: 'Secure Path Education Loan',
-      minScore: 60,
-      minCredit: 670,
-      minRatio: 0.9,
-      maxLoan: 180000,
-      requiresCoApplicant: false,
-      requiresCollateral: true,
-      apr: '8.8% - 11.4%',
-      coverage: 'Up to 95% of course cost',
-      bestFor: 'Higher loan amounts backed by collateral.',
-    },
-    {
-      id: 'summit-premier',
-      bank: 'Summit Federal',
-      name: 'Premier International Student Loan',
-      minScore: 70,
-      minCredit: 720,
-      minRatio: 1.1,
-      maxLoan: 220000,
-      requiresCoApplicant: false,
-      requiresCollateral: false,
-      apr: '8.1% - 10.5%',
-      coverage: 'Up to 90% of course cost',
-      bestFor: 'Strong credit profiles seeking competitive rates.',
-    },
-    {
-      id: 'nova-flex',
-      bank: 'Nova Learners Bank',
-      name: 'Flexi Study Loan',
-      minScore: 48,
-      minCredit: 610,
-      minRatio: 0.7,
-      maxLoan: 60000,
-      requiresCoApplicant: false,
-      requiresCollateral: false,
-      apr: '12.0% - 15.8%',
-      coverage: 'Up to 70% of course cost',
-      bestFor: 'Students needing smaller loan sizes with quick approvals.',
-    },
-    {
-      id: 'harbor-support',
-      bank: 'Harbor Trust',
-      name: 'Co-Applicant Advantage Loan',
-      minScore: 50,
-      minCredit: 630,
-      minRatio: 0.75,
-      maxLoan: 120000,
-      requiresCoApplicant: true,
-      requiresCollateral: false,
-      apr: '9.9% - 12.6%',
-      coverage: 'Up to 88% of course cost',
-      bestFor: 'Applicants with a reliable co-applicant and stable income.',
-    },
-  ];
+  constructor(private readonly openRouter: OpenRouterService) { }
 
-  recommendLoans(
+  async recommendLoans(
     score: number,
     credit: number,
     ratio: number,
@@ -103,68 +33,61 @@ export class LoanRecommendationService {
     coApplicant: 'yes' | 'no',
     collateral: 'yes' | 'no',
     study: string,
-  ): LoanRecommendationResult {
-    const scored = this.loanOffers.map((offer) => ({
-      offer,
-      fit: this.calculateOfferFit(offer, score, credit, ratio, loan, coApplicant, collateral, study),
-    }));
+  ): Promise<LoanRecommendationResult> {
+    const profile = `
+      Validation Score: ${score}
+      Credit Score: ${credit}
+      Income Ratio: ${ratio}
+      Loan Amount: ${loan}
+      Co-Applicant: ${coApplicant}
+      Collateral: ${collateral}
+      Study Level: ${study}
+    `;
 
-    scored.sort((a, b) => b.fit - a.fit);
+    const prompt = `
+    Based on the following student loan applicant profile, GENERATE 3 realistic and competitive loan offers.
+    Do not use a predefined list. Create offers that would be suitable from major banks or fintech lenders.
 
-    return {
-      primary: scored[0],
-      alternatives: scored.slice(1, 3),
-    };
-  }
+    Applicant Profile:
+    ${profile}
 
-  private calculateOfferFit(
-    offer: LoanOffer,
-    score: number,
-    credit: number,
-    ratio: number,
-    loan: number,
-    coApplicant: 'yes' | 'no',
-    collateral: 'yes' | 'no',
-    study: string,
-  ): number {
-    let fit = 0;
+    Task:
+    1. Generate a "Primary" loan offer that is the best fit.
+    2. Generate 2 "Alternative" offers with slightly different terms (e.g. lower rate but requires collateral, or flexibility but higher rate).
+    3. Calculate a "fit" score (0-100) for each.
 
-    if (score >= offer.minScore) {
-      fit += 25;
-    } else {
-      fit -= offer.minScore - score;
+    Return JSON format:
+    {
+      "primary": { 
+        "offer": {
+          "id": "generated-id-1",
+          "bank": "Bank Name",
+          "name": "Loan Product Name",
+          "minScore": number,
+          "minCredit": number,
+          "minRatio": number,
+          "maxLoan": number,
+          "requiresCoApplicant": boolean,
+          "requiresCollateral": boolean,
+          "apr": "string range (e.g. 9.5% - 11.0%)",
+          "coverage": "string (e.g. Up to 100%)",
+          "bestFor": "string reason"
+        }, 
+        "fit": number 
+      },
+      "alternatives": [
+        { "offer": { ...same structure... }, "fit": number }
+      ]
     }
+    
+    Ensure the terms are realistic for the credit variance and profile provided.
+    `;
 
-    if (credit >= offer.minCredit) {
-      fit += 20;
-    } else {
-      fit -= (offer.minCredit - credit) / 5;
+    try {
+      return await this.openRouter.getJson<LoanRecommendationResult>(prompt);
+    } catch (error) {
+      console.error('Loan recommendation failed', error);
+      throw error;
     }
-
-    if (ratio >= offer.minRatio) {
-      fit += 20;
-    } else {
-      fit -= (offer.minRatio - ratio) * 40;
-    }
-
-    if (loan <= offer.maxLoan) {
-      fit += 15;
-    } else {
-      fit -= (loan - offer.maxLoan) / 2000;
-    }
-
-    if (offer.requiresCoApplicant) {
-      fit += coApplicant === 'yes' ? 10 : -20;
-    }
-
-    if (offer.requiresCollateral) {
-      fit += collateral === 'yes' ? 10 : -20;
-    }
-
-    if (study === 'doctoral' || study === 'masters') {
-      fit += 5;
-    }
-
-    return fit;
   }
 }

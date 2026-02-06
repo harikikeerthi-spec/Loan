@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { OpenRouterService } from './open-router.service';
 
 export interface EligibilityCheckDto {
   age: number;
@@ -18,103 +19,61 @@ export interface EligibilityResult {
   rateRange: string;
   coverage: string;
   summary: string;
+  recommendations: string[];
 }
 
 @Injectable()
 export class EligibilityService {
-  calculateEligibilityScore(data: EligibilityCheckDto): EligibilityResult {
-    let score = 0;
+  constructor(private readonly openRouter: OpenRouterService) { }
 
-    // Age factor (15 points max)
-    if (data.age >= 18 && data.age <= 60) {
-      score += 15;
-    } else {
-      score -= 20;
+  async calculateEligibilityScore(data: EligibilityCheckDto): Promise<EligibilityResult> {
+    const prompt = `
+    Evaluate the loan eligibility for the following applicant:
+    - Age: ${data.age}
+    - Credit Score: ${data.credit}
+    - Annual Income: ${data.income}
+    - Loan Amount Requested: ${data.loan}
+    - Employment: ${data.employment}
+    - Study Level: ${data.study}
+    - Co-Applicant: ${data.coApplicant}
+    - Collateral: ${data.collateral}
+
+    Perform a strict risk assessment.
+    1. Calculate a risk score (0-100), where 100 is perfectly safe and 0 is high risk.
+    2. Determine status (eligible, borderline, unlikely).
+    3. Calculate Income-to-Loan Ratio.
+    4. Estimate Rate Range and Coverage based on risk.
+    5. Provide a professional summary explaining the decision.
+    6. Provide 3 actionable recommendations to improve eligibility (e.g. "Increase credit score", "Add co-applicant").
+
+    Return JSON format:
+    {
+      "score": number,
+      "status": "eligible" | "borderline" | "unlikely",
+      "ratio": number,
+      "rateRange": "string",
+      "coverage": "string",
+      "summary": "string",
+      "recommendations": ["string"]
     }
 
-    // Credit score (25 points max)
-    if (data.credit >= 750) {
-      score += 25;
-    } else if (data.credit >= 700) {
-      score += 15;
-    } else if (data.credit >= 650) {
-      score += 8;
-    } else if (data.credit >= 600) {
-      score += 2;
-    } else {
-      score -= 15;
+    Note: Credit score < 600 is generally risky. High loan vs low income is risky.
+    `;
+
+    try {
+      return await this.openRouter.getJson<EligibilityResult>(prompt);
+    } catch (error) {
+      console.error('Eligibility check failed', error);
+      // Fallback
+      return {
+        score: 50,
+        status: 'borderline',
+        ratio: 0,
+        rateRange: '10-15%',
+        coverage: 'Unknown',
+        summary: 'AI Service Unavailable. Please try again later.',
+        recommendations: ['Check internet connection', 'Try again later']
+      };
     }
-
-    // Employment status (10 points max)
-    if (data.employment === 'employed') {
-      score += 10;
-    } else if (data.employment === 'self') {
-      score += 7;
-    } else if (data.employment === 'student') {
-      score += 4;
-    } else {
-      score -= 10;
-    }
-
-    // Education level (7 points max)
-    if (data.study === 'doctoral') {
-      score += 7;
-    } else if (data.study === 'masters') {
-      score += 6;
-    } else if (data.study === 'undergrad') {
-      score += 4;
-    } else {
-      score += 2;
-    }
-
-    // Co-applicant (8 points max)
-    if (data.coApplicant === 'yes') {
-      score += 8;
-    }
-
-    // Collateral (10 points max)
-    if (data.collateral === 'yes') {
-      score += 10;
-    }
-
-    // Income-to-Loan Ratio (20 points max)
-    const ratio = data.income / Math.max(1, data.loan);
-    if (ratio >= 1.5) {
-      score += 20;
-    } else if (ratio >= 1) {
-      score += 12;
-    } else if (ratio >= 0.6) {
-      score += 6;
-    } else {
-      score -= 10;
-    }
-
-    const normalized = Math.max(0, Math.min(100, score));
-
-    let status: 'eligible' | 'borderline' | 'unlikely' = 'unlikely';
-    if (normalized >= 70) {
-      status = 'eligible';
-    } else if (normalized >= 50) {
-      status = 'borderline';
-    }
-
-    const rateRange =
-      normalized >= 70 ? '8.5% - 10.9%' : normalized >= 50 ? '10.5% - 13.5%' : '12.5% - 16.5%';
-    const coverage =
-      normalized >= 70 ? 'Up to 95% of course cost' : normalized >= 50 ? 'Up to 80% of course cost' : 'Up to 60% of course cost';
-
-    const summary =
-      normalized >= 70
-        ? `Based on your profile, estimated coverage is ${coverage}. Expected rate range: ${rateRange}. Your affordability ratio is ${ratio.toFixed(2)} with an annual income of $${data.income.toLocaleString()}.`
-        : `Your profile shows moderate eligibility. Consider improving your credit score or increasing co-applicant support. Coverage: ${coverage}, Rate: ${rateRange}`;
-
-    return {
-      score: normalized,
-      status,
-      ratio,
-      rateRange,
-      coverage,
-      summary,
-    };
   }
 }

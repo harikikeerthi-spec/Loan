@@ -418,8 +418,8 @@
                     const outputType = document.getElementById('outputType').value;
                     const gradingSystem = document.getElementById('gradingSystem').value;
 
-                    if (!inputValue) {
-                        alert('Please enter a value');
+                    if (isNaN(inputValue)) {
+                        alert('Please enter a valid numeric value');
                         return;
                     }
 
@@ -456,6 +456,12 @@
 
                     if (marks.length === 0) {
                         alert('Please enter marks');
+                        return;
+                    }
+
+                    // Validate each mark against totalMarks per subject
+                    if (marks.some(m => m < 0 || m > totalMarks)) {
+                        alert(`Each mark must be between 0 and ${totalMarks}`);
                         return;
                     }
 
@@ -507,7 +513,7 @@
                     document.querySelectorAll('.assessment-row').forEach(row => {
                         const name = row.querySelector('.assessment-name').value;
                         const percentage = parseFloat(row.querySelector('.assessment-percentage').value);
-                        if (name && percentage) {
+                        if (name && !isNaN(percentage)) {
                             assessments.push({ name, percentage });
                         }
                     });

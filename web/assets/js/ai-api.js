@@ -63,6 +63,52 @@ const AI_API = {
     }
   },
 
+  async predictAdmission(data) {
+    try {
+      const response = await fetch(`${this.BASE_URL}/predict-admission`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('Admission prediction failed:', error);
+      throw error;
+    }
+  },
+
+  async compareUniversities(uni1, uni2) {
+    try {
+      const response = await fetch(`${this.BASE_URL}/compare-universities`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
+        },
+        body: JSON.stringify({ uni1, uni2 }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('University comparison failed:', error);
+      throw error;
+    }
+  },
+
   /**
    * Format eligibility result for display
    * @param {Object} result - Eligibility result from API
@@ -75,7 +121,8 @@ const AI_API = {
       summary: result.eligibility?.summary || '',
       rateRange: result.eligibility?.rateRange || 'N/A',
       coverage: result.eligibility?.coverage || 'N/A',
-      recommendations: result.recommendations || [],
+      tips: result.eligibility?.recommendations || [],
+      loanOffers: result.recommendations || null,
       ratio: result.eligibility?.ratio || 0,
     };
   },
@@ -116,12 +163,12 @@ const AI_API = {
 
     const weakAreas = Array.isArray(raw.weakAreas)
       ? raw.weakAreas.map((area) => {
-          if (!area) return '';
-          if (typeof area === 'string') return area;
-          const issue = area.issue ? String(area.issue) : 'Issue';
-          const recommendation = area.recommendation ? String(area.recommendation) : '';
-          return recommendation ? `${issue}: ${recommendation}` : issue;
-        }).filter(Boolean)
+        if (!area) return '';
+        if (typeof area === 'string') return area;
+        const issue = area.issue ? String(area.issue) : 'Issue';
+        const recommendation = area.recommendation ? String(area.recommendation) : '';
+        return recommendation ? `${issue}: ${recommendation}` : issue;
+      }).filter(Boolean)
       : [];
 
     const qualityMap = {

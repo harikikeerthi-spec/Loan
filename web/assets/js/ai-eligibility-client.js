@@ -96,10 +96,10 @@ function updateEligibilityDisplay(result) {
     `;
   }
 
-  // Update recommendations
+  // Update recommendations (Tips)
   const recommendationsEl = document.getElementById('aiRecommendations');
-  if (recommendationsEl && Array.isArray(result.recommendations)) {
-    recommendationsEl.innerHTML = result.recommendations
+  if (recommendationsEl && Array.isArray(result.tips)) {
+    recommendationsEl.innerHTML = result.tips
       .map(rec => `<li class="flex items-start gap-3">
         <span class="material-symbols-outlined text-primary flex-shrink-0 mt-0.5">check_circle</span>
         <span>${rec}</span>
@@ -108,30 +108,49 @@ function updateEligibilityDisplay(result) {
   }
 
   // Update recommended loans
-  if (result.recommendations && result.recommendations.length > 0) {
+  if (result.loanOffers && result.loanOffers.primary) {
     const loanFitEl = document.getElementById('aiLoanFit');
-    if (loanFitEl) loanFitEl.textContent = 'Best Fit';
+    if (loanFitEl) loanFitEl.textContent = `${result.loanOffers.primary.fit}% Match`;
 
     const primaryLoanEl = document.getElementById('aiLoanPrimary');
-    if (primaryLoanEl) {
+    const primary = result.loanOffers.primary.offer;
+
+    if (primaryLoanEl && primary) {
       primaryLoanEl.innerHTML = `
-        <div class="font-semibold text-gray-900 dark:text-white mb-1">${result.recommendations[0]}</div>
-        <div class="text-xs text-gray-500 dark:text-gray-400">Based on your profile</div>
+        <div class="font-semibold text-gray-900 dark:text-white mb-1">${primary.bank} - ${primary.name}</div>
+        <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">Based on your profile</div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+           <div class="bg-gray-100 dark:bg-gray-700 p-1.5 rounded">
+             <span class="block text-gray-500">APR</span>
+             <span class="font-bold text-primary">${primary.apr}</span>
+           </div>
+           <div class="bg-gray-100 dark:bg-gray-700 p-1.5 rounded">
+             <span class="block text-gray-500">Coverage</span>
+             <span class="font-bold text-gray-800 dark:text-gray-200">${primary.coverage}</span>
+           </div>
+        </div>
       `;
     }
 
     // Update alternatives (if available)
     const alternativesEl = document.getElementById('aiLoanAlternatives');
     if (alternativesEl) {
-      if (result.recommendations.length > 1) {
-        alternativesEl.innerHTML = result.recommendations.slice(1, 3)
-          .map(rec => `<li class="flex items-start gap-2">
-            <span class="material-symbols-outlined text-gold-accent flex-shrink-0 text-base">star</span>
-            <span>${rec}</span>
-          </li>`)
+      const alts = result.loanOffers.alternatives || [];
+      if (alts.length > 0) {
+        alternativesEl.innerHTML = alts
+          .map(item => {
+            const offer = item.offer;
+            return `<li class="flex flex-col gap-1 p-2 rounded hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-gold-accent flex-shrink-0 text-base">star</span>
+                    <span class="font-semibold text-sm">${offer.bank}</span>
+                </div>
+                <div class="text-xs text-gray-500 pl-6">${offer.name} • ${offer.apr}</div>
+              </li>`;
+          })
           .join('');
       } else {
-        alternativesEl.innerHTML = '<li class="text-gray-500">No alternatives available</li>';
+        alternativesEl.innerHTML = '<li class="text-gray-500 text-sm pl-2">No specific alternatives found.</li>';
       }
     }
   }
