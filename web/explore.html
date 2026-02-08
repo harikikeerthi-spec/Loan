@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Explore Community - LoanHero</title>
+    <title>Community Hub - LoanHero</title>
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link
@@ -37,297 +37,376 @@
         };
     </script>
     <style>
-/* Initial nav text colors (black) */
-        .nav-link {
-            color: rgba(0, 0, 0, 0.9) !important;
+        .category-item {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        /* .font-display {
-            color: black !important;
-        } */
-
-        #loginLink {
-            color: rgba(0, 0, 0, 0.9) !important;
+        .category-item:hover {
+            transform: scale(1.02);
         }
 
-        .material-symbols-outlined {
-            color: black !important;
+        .category-image {
+            transition: transform 0.8s ease;
         }
 
-        /* Keep dropdown icons purple initially */
-        #profileDropdown .material-symbols-outlined {
-            color: #6605c7 !important;
-        }
-/* White text when scrolled */
-        .nav-scrolled .nav-link {
-            color: rgba(255, 255, 255, 0.9) !important;
+        .category-item:hover .category-image {
+            transform: scale(1.1);
         }
 
-        .nav-scrolled .nav-link:hover {
-            color: #6605c7 !important;
+        .category-overlay {
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.2) 60%, transparent 100%);
         }
 
-        .nav-scrolled .font-display {
-            color: white !important;
+        .animated-text {
+            background: linear-gradient(90deg, #6605c7, #a855f7, #6605c7);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shine 3s linear infinite;
         }
 
-        .nav-scrolled #loginLink {
-            color: rgba(255, 255, 255, 0.9) !important;
+        @keyframes shine {
+            to {
+                background-position: 200% center;
+            }
         }
-
-        .nav-scrolled #loginLink:hover {
-            color: #6605c7 !important;
-        }
-
-        .nav-scrolled .material-symbols-outlined {
-            color: white !important;
-        }
-
-        /* Keep dropdown icons visible */
-        .nav-scrolled #profileDropdown .material-symbols-outlined {
-            color: #6605c7 !important;
-        }
-
-        body {
-            background-attachment: fixed;
-        }
-</style>
+    </style>
 </head>
 
 <body
     class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
-
+    <!-- Background Particles -->
     <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none">
         <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
-        <div class="absolute inset-0 opacity-30 mix-blend-overlay"
-            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
-        </div>
     </div>
 
-    <!-- Navigation -->
     <div id="navbar-placeholder"></div>
 
     <main class="relative z-10 pt-32 pb-24">
         <div class="max-w-7xl mx-auto px-6">
-            <header class="text-center mb-16">
+            <!-- Hero Section -->
+            <section class="text-center mb-20">
                 <span
-                    class="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-[0.2em] mb-4">Explore
-                    Community</span>
-                <h1 class="text-4xl md:text-6xl font-bold font-display text-gray-900 dark:text-white mb-6">Choose Your
-                    <span class="text-primary italic">Topic</span>
+                    class="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-[0.2em] mb-4">The
+                    Global Hub</span>
+                <h1 class="text-5xl md:text-7xl font-bold font-display text-gray-900 dark:text-white mb-6">
+                    Join the <span class="animated-text">Community</span>
                 </h1>
-                <p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed">
-                    Dive into specific discussions, share your knowledge, and find answers to your most pressing
-                    questions about student life and financing.
+                <p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto text-xl leading-relaxed mb-12">
+                    Connect with thousands of students, alumni, and experts worldwide. Your journey is better with
+                    company.
                 </p>
-            </header>
 
-            <!-- Featured Community Resources -->
-            <div class="mb-16">
-                <h2 class="text-2xl font-bold font-display text-gray-900 dark:text-white mb-8">Community Resources</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <!-- Success Stories -->
-                    <a href="community-success-stories.html"
-                        class="glass-card p-6 rounded-3xl group hover:-translate-y-2 transition-all duration-500">
-                        <div
-                            class="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined text-3xl">emoji_events</span>
-                        </div>
-                        <h3 class="text-lg font-bold font-display mb-2 text-gray-900 dark:text-white">Success Stories
+                <!-- Stats Bar -->
+                <div
+                    class="flex flex-wrap justify-center gap-8 md:gap-16 py-8 px-10 glass-card rounded-[2.5rem] max-w-5xl mx-auto mb-20 border-white/40 dark:border-white/5">
+                    <div class="text-center group">
+                        <p class="text-[10px] font-bold text-primary uppercase tracking-[0.2em] mb-1">Total Members</p>
+                        <h3 class="text-3xl font-bold font-display group-hover:scale-110 transition-transform">12.5k+
                         </h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">
-                            Real students, real dreams achieved
+                    </div>
+                    <div class="text-center group">
+                        <p class="text-[10px] font-bold text-primary uppercase tracking-[0.2em] mb-1">Daily Topics</p>
+                        <h3 class="text-3xl font-bold font-display group-hover:scale-110 transition-transform">450+</h3>
+                    </div>
+                    <div class="text-center group">
+                        <p class="text-[10px] font-bold text-primary uppercase tracking-[0.2em] mb-1">Verified Mentors
                         </p>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-primary">Read
-                                Stories</span>
-                            <span
-                                class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                        </div>
-                    </a>
-
-                    <!-- Events -->
-                    <a href="community-events.html"
-                        class="glass-card p-6 rounded-3xl group hover:-translate-y-2 transition-all duration-500">
-                        <div
-                            class="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined text-3xl">event</span>
-                        </div>
-                        <h3 class="text-lg font-bold font-display mb-2 text-gray-900 dark:text-white">Events & Webinars
+                        <h3 class="text-3xl font-bold font-display group-hover:scale-110 transition-transform">85+</h3>
+                    </div>
+                    <div class="text-center group">
+                        <p class="text-[10px] font-bold text-primary uppercase tracking-[0.2em] mb-1">Success Stories
+                        </p>
+                        <h3 class="text-3xl font-bold font-display group-hover:scale-110 transition-transform">2.1k+
                         </h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">
-                            Join live sessions & Q&As
-                        </p>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-primary">View
-                                Events</span>
-                            <span
-                                class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                        </div>
-                    </a>
+                    </div>
+                </div>
+            </section>
 
-                    <!-- Resources Hub -->
-                    <a href="community-resources.html"
-                        class="glass-card p-6 rounded-3xl group hover:-translate-y-2 transition-all duration-500">
-                        <div
-                            class="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined text-3xl">folder_open</span>
+            <!-- Highlights (Trending & Popular) -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-24">
+                <!-- Trending Now -->
+                <div class="glass-card p-10 rounded-[3rem] relative overflow-hidden h-full">
+                    <div class="absolute -top-10 -right-10 w-40 h-40 bg-red-500/5 rounded-full blur-3xl"></div>
+                    <div class="flex items-center justify-between mb-8">
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center text-red-500">
+                                <span class="material-symbols-outlined">trending_up</span>
+                            </div>
+                            <h2 class="text-2xl font-bold font-display text-gray-900 dark:text-white">Trending Now</h2>
                         </div>
-                        <h3 class="text-lg font-bold font-display mb-2 text-gray-900 dark:text-white">Resources Hub</h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">
-                            Free guides, templates & tools
-                        </p>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-primary">Download
-                                Free</span>
-                            <span
-                                class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                        </div>
-                    </a>
+                        <span
+                            class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 text-red-500 text-[9px] font-bold uppercase tracking-widest animate-pulse">
+                            Live
+                        </span>
+                    </div>
 
-                    <!-- Mentorship -->
-                    <a href="community-mentorship.html"
-                        class="glass-card p-6 rounded-3xl group hover:-translate-y-2 transition-all duration-500">
+                    <div class="space-y-6">
+                        <a href="engage.html?topic=visa-slots" class="block group">
+                            <div class="flex items-start gap-5">
+                                <div
+                                    class="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center font-display font-bold text-xl text-gray-400 group-hover:bg-primary group-hover:text-white transition-all">
+                                    01</div>
+                                <div class="flex-1 border-b border-gray-100 dark:border-white/5 pb-6">
+                                    <h4
+                                        class="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors mb-1">
+                                        Massive Visa Slot Opening - Mumbai Consulate</h4>
+                                    <div class="flex items-center gap-4 text-[10px] font-bold text-gray-400">
+                                        <span class="flex items-center gap-1"><span
+                                                class="material-symbols-outlined text-sm">groups</span> 1.2k
+                                            Active</span>
+                                        <span class="flex items-center gap-1"><span
+                                                class="material-symbols-outlined text-sm">chat_bubble</span> 85+
+                                            New</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                        <a href="engage.html?topic=bank-rejection" class="block group">
+                            <div class="flex items-start gap-5">
+                                <div
+                                    class="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center font-display font-bold text-xl text-gray-400 group-hover:bg-primary group-hover:text-white transition-all">
+                                    02</div>
+                                <div class="flex-1 border-b border-gray-100 dark:border-white/5 pb-6">
+                                    <h4
+                                        class="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors mb-1">
+                                        Avoiding Loan Rejection: Top 5 Mistakes</h4>
+                                    <div class="flex items-center gap-4 text-[10px] font-bold text-gray-400">
+                                        <span class="flex items-center gap-1"><span
+                                                class="material-symbols-outlined text-sm">visibility</span> 4.5k
+                                            Views</span>
+                                        <span class="flex items-center gap-1"><span
+                                                class="material-symbols-outlined text-sm">history</span> 2m ago</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                        <a href="engage.html?topic=ielts-leak" class="block group">
+                            <div class="flex items-start gap-5">
+                                <div
+                                    class="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center font-display font-bold text-xl text-gray-400 group-hover:bg-primary group-hover:text-white transition-all">
+                                    03</div>
+                                <div class="flex-1 pb-2">
+                                    <h4
+                                        class="font-bold text-gray-900 dark:text-white group-hover:text-primary transition-colors mb-1">
+                                        IELTS Speaking Topics - Feb 2026 Collection</h4>
+                                    <div class="flex items-center gap-2 text-[10px] font-bold text-gray-400">
+                                        <span class="material-symbols-outlined text-sm text-amber-500">star</span>
+                                        Featured Topic
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Most Popular / Spotlight -->
+                <div
+                    class="glass-card p-10 rounded-[3rem] relative overflow-hidden flex flex-col justify-between h-full">
+                    <div class="flex items-center gap-3 mb-8">
+                        <div class="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500">
+                            <span class="material-symbols-outlined">star</span>
+                        </div>
+                        <h2 class="text-2xl font-bold font-display text-gray-900 dark:text-white">Most Popular</h2>
+                    </div>
+
+                    <div class="space-y-4">
                         <div
-                            class="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined text-3xl">groups</span>
+                            class="p-6 rounded-2xl bg-white/50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5 hover:border-primary/30 transition-all cursor-pointer group">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex -space-x-2">
+                                    <img src="assets/img/avatar_1.png"
+                                        class="w-8 h-8 rounded-full border-2 border-white dark:border-zinc-900"
+                                        alt="User">
+                                    <img src="assets/img/avatar_2.png"
+                                        class="w-8 h-8 rounded-full border-2 border-white dark:border-zinc-900"
+                                        alt="User">
+                                    <img src="assets/img/avatar_3.png"
+                                        class="w-8 h-8 rounded-full border-2 border-white dark:border-zinc-900"
+                                        alt="User">
+                                </div>
+                                <span
+                                    class="text-[10px] font-bold text-primary uppercase tracking-widest">Essential</span>
+                            </div>
+                            <h4
+                                class="font-bold text-gray-900 dark:text-white mb-2 group-hover:text-primary transition-colors">
+                                The Ultimate Pre-Departure Checklist</h4>
+                            <p class="text-xs text-gray-500 leading-relaxed line-clamp-2">Pack, carry, and prepare with
+                                confidence. Verified by 500+ alumni.</p>
                         </div>
-                        <h3 class="text-lg font-bold font-display mb-2 text-gray-900 dark:text-white">Mentorship</h3>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">
-                            Connect with alumni mentors
-                        </p>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-primary">Find
-                                Mentor</span>
-                            <span
-                                class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
+
+                        <div
+                            class="p-6 rounded-2xl bg-white/50 dark:bg-zinc-800/50 border border-gray-100 dark:border-white/5 hover:border-primary/30 transition-all cursor-pointer group">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-sm text-amber-500">emoji_events</span>
+                                    <span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Top
+                                        Rated</span>
+                                </div>
+                            </div>
+                            <h4
+                                class="font-bold text-gray-900 dark:text-white mb-2 group-hover:text-primary transition-colors">
+                                Full-Ride Scholarship Guide for STEM</h4>
+                            <p class="text-xs text-gray-500 leading-relaxed line-clamp-2">Winning strategies for MS CS
+                                and data science applicants.</p>
                         </div>
-                    </a>
+                    </div>
                 </div>
             </div>
 
-            <!-- Discussion Topics -->
-            <div>
-                <h2 class="text-2xl font-bold font-display text-gray-900 dark:text-white mb-8">Discussion Topics</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    <!-- Loan Types -->
-                    <a href="engage.html?topic=loan-types"
-                        class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500">
-                        <div
-                            class="w-14 h-14 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 mb-6 group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined text-3xl">account_balance_wallet</span>
-                        </div>
-                        <h3 class="text-xl font-bold font-display mb-3 text-gray-900 dark:text-white">Loan Types</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
-                            Compare education loans, personal loans for students, and secured vs unsecured options.
-                        </p>
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-primary">420 Active</span>
-                            <span
-                                class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                        </div>
-                    </a>
-
-                    <!-- Interest Rates -->
-                    <a href="engage.html?topic=interest-rates"
-                        class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500">
-                        <div
-                            class="w-14 h-14 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-500 mb-6 group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined text-3xl">trending_up</span>
-                        </div>
-                        <h3 class="text-xl font-bold font-display mb-3 text-gray-900 dark:text-white">Interest Rates
-                        </h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
-                            Discuss latest Repo rates, MCLR, and how to negotiate for lower interest rates with banks.
-                        </p>
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-primary">150 Active</span>
-                            <span
-                                class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                        </div>
-                    </a>
-
-                    <!-- Repayment Options -->
-                    <a href="engage.html?topic=repayment"
-                        class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500">
-                        <div
-                            class="w-14 h-14 bg-green-500/10 rounded-2xl flex items-center justify-center text-green-500 mb-6 group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined text-3xl">payments</span>
-                        </div>
-                        <h3 class="text-xl font-bold font-display mb-3 text-gray-900 dark:text-white">Repayment Options
-                        </h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
-                            Strategies for early repayment, moratorium periods, and managing EMIs after graduation.
-                        </p>
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-primary">280 Active</span>
-                            <span
-                                class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                        </div>
-                    </a>
-
-                    <!-- Discussions on Banks -->
-                    <a href="engage.html?topic=banks"
-                        class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500">
-                        <div
-                            class="w-14 h-14 bg-orange-500/10 rounded-2xl flex items-center justify-center text-orange-500 mb-6 group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined text-3xl">account_balance</span>
-                        </div>
-                        <h3 class="text-xl font-bold font-display mb-3 text-gray-900 dark:text-white">Bank Reviews</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
-                            Honest reviews about SBI, HDFC, ICICI, and international lenders like Prodigy.
-                        </p>
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-primary">890 Active</span>
-                            <span
-                                class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                        </div>
-                    </a>
-
-                    <!-- Government Schemes -->
-                    <a href="engage.html?topic=schemes"
-                        class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500">
-                        <div
-                            class="w-14 h-14 bg-red-500/10 rounded-2xl flex items-center justify-center text-red-500 mb-6 group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined text-3xl">gavel</span>
-                        </div>
-                        <h3 class="text-xl font-bold font-display mb-3 text-gray-900 dark:text-white">Govt. Schemes</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
-                            Stay updated on interest subvention schemes like CSIS and education subsidies.
-                        </p>
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-primary">120 Active</span>
-                            <span
-                                class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                        </div>
-                    </a>
-
-                    <!-- Accommodations -->
-                    <a href="engage.html?topic=accommodation"
-                        class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500">
-                        <div
-                            class="w-14 h-14 bg-teal-500/10 rounded-2xl flex items-center justify-center text-teal-500 mb-6 group-hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined text-3xl">home_work</span>
-                        </div>
-                        <h3 class="text-xl font-bold font-display mb-3 text-gray-900 dark:text-white">Accommodation</h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
-                            Find roommates, discuss student housing in UK, USA, Canada, and Australia.
-                        </p>
-                        <div class="flex items-center justify-between">
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-primary">2.1k
-                                Active</span>
-                            <span
-                                class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                        </div>
-                    </a>
+            <!-- Categories Section -->
+            <div class="flex justify-between items-end mb-12">
+                <div>
+                    <h2 class="text-4xl font-bold font-display text-gray-900 dark:text-white mb-2">Explore Hubs</h2>
+                    <p class="text-gray-500">Find your tribe in specialized communities</p>
                 </div>
+                <a href="community-categories.html"
+                    class="flex items-center gap-2 text-primary font-bold text-sm hover:underline">
+                    View Full Directory <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                </a>
             </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-24">
+                <!-- Loans Category -->
+                <a href="engage.html?topic=eligibility"
+                    class="category-item group h-[400px] rounded-[2.5rem] overflow-hidden glass-card">
+                    <img src="https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&fit=crop&w=800&q=80"
+                        class="category-image absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+                        alt="Loans">
+                    <div class="category-overlay absolute inset-0"></div>
+                    <div class="absolute bottom-0 left-0 p-10 w-full">
+                        <div
+                            class="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-white mb-4 shadow-lg">
+                            <span class="material-symbols-outlined">payments</span>
+                        </div>
+                        <h3 class="text-3xl font-bold font-display text-white mb-2">Loans & Finance</h3>
+                        <p class="text-gray-200 text-sm">Interest rates, banks, and eligibility guides.</p>
+                        <div class="mt-6 flex items-center gap-2 text-primary font-bold text-sm">
+                            <span>Explore Discussions</span>
+                            <span class="material-symbols-outlined">arrow_forward</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Universities Category -->
+                <a href="engage.html?topic=universities"
+                    class="category-item group h-[400px] rounded-[2.5rem] overflow-hidden glass-card">
+                    <img src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80"
+                        class="category-image absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+                        alt="Universities">
+                    <div class="category-overlay absolute inset-0"></div>
+                    <div class="absolute bottom-0 left-0 p-10 w-full">
+                        <div
+                            class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center text-white mb-4 shadow-lg">
+                            <span class="material-symbols-outlined">school</span>
+                        </div>
+                        <h3 class="text-3xl font-bold font-display text-white mb-2">Universities</h3>
+                        <p class="text-gray-200 text-sm">Target schools, rankings, and campus life.</p>
+                        <div class="mt-6 flex items-center gap-2 text-blue-400 font-bold text-sm">
+                            <span>Join the Network</span>
+                            <span class="material-symbols-outlined">arrow_forward</span>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Success Stories -->
+                <a href="community-success-stories.html"
+                    class="category-item group h-[400px] rounded-[2.5rem] overflow-hidden glass-card">
+                    <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80"
+                        class="category-image absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+                        alt="Stories">
+                    <div class="category-overlay absolute inset-0"></div>
+                    <div class="absolute bottom-0 left-0 p-10 w-full">
+                        <div
+                            class="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center text-white mb-4 shadow-lg">
+                            <span class="material-symbols-outlined">stars</span>
+                        </div>
+                        <h3 class="text-3xl font-bold font-display text-white mb-2">Success Stories</h3>
+                        <p class="text-gray-200 text-sm">Real stories from students who already made it.</p>
+                        <div class="mt-6 flex items-center gap-2 text-amber-400 font-bold text-sm">
+                            <span>Read Experiences</span>
+                            <span class="material-symbols-outlined">arrow_forward</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <!-- Browse by Topic -->
+            <section
+                class="mt-24 p-10 md:p-16 glass-card rounded-[4rem] border-white/40 dark:border-white/5 relative overflow-hidden">
+                <div class="absolute -bottom-20 -left-20 w-64 h-64 bg-primary/5 rounded-full blur-[100px]"></div>
+                <div class="flex items-center gap-3 mb-12">
+                    <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                        <span class="material-symbols-outlined text-primary">tag</span>
+                    </div>
+                    <div>
+                        <h2 class="text-3xl font-bold font-display text-gray-900 dark:text-white">Quick Topics</h2>
+                        <p class="text-sm text-gray-500">Jump directly to specific discussion points</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 relative z-10">
+                    <div class="space-y-4">
+                        <h4 class="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-primary"></span> Financial
+                        </h4>
+                        <div class="flex flex-wrap gap-2">
+                            <a href="engage.html?topic=eligibility"
+                                class="px-4 py-2 rounded-xl bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 text-xs font-bold hover:border-primary hover:text-primary transition-all">EMI
+                                Planning</a>
+                            <a href="engage.html?topic=banks"
+                                class="px-4 py-2 rounded-xl bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 text-xs font-bold hover:border-primary hover:text-primary transition-all">Bank
+                                Reviews</a>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <h4 class="text-xs font-bold uppercase tracking-widest text-blue-500 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> Academic
+                        </h4>
+                        <div class="flex flex-wrap gap-2">
+                            <a href="engage.html?topic=gre"
+                                class="px-4 py-2 rounded-xl bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs font-bold hover:border-blue-500 hover:text-blue-500 transition-all">GRE
+                                Tips</a>
+                            <a href="engage.html?topic=sop"
+                                class="px-4 py-2 rounded-xl bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 text-xs font-bold hover:border-blue-500 hover:text-blue-500 transition-all">SOP
+                                Review</a>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <h4 class="text-xs font-bold uppercase tracking-widest text-rose-500 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Logistics
+                        </h4>
+                        <div class="flex flex-wrap gap-2">
+                            <a href="engage.html?topic=visa"
+                                class="px-4 py-2 rounded-xl bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 text-xs font-bold hover:border-rose-500 hover:text-rose-500 transition-all">Visa
+                                Slots</a>
+                            <a href="engage.html?topic=housing"
+                                class="px-4 py-2 rounded-xl bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 text-xs font-bold hover:border-rose-500 hover:text-rose-500 transition-all">Housing</a>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <h4 class="text-xs font-bold uppercase tracking-widest text-amber-500 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Social
+                        </h4>
+                        <div class="flex flex-wrap gap-2">
+                            <a href="engage.html?topic=meetups"
+                                class="px-4 py-2 rounded-xl bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 text-xs font-bold hover:border-amber-500 hover:text-amber-500 transition-all">Meetups</a>
+                            <a href="engage.html?topic=jobs"
+                                class="px-4 py-2 rounded-xl bg-white dark:bg-zinc-800 border border-gray-100 dark:border-zinc-700 text-xs font-bold hover:border-amber-500 hover:text-amber-500 transition-all">Part-time</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
     </main>
 
     <div id="footer-placeholder"></div>
 
     <script src="assets/js/auth.js"></script>
-    <script src="assets/js/dashboard.js"></script>
     <script src="assets/js/components-loader.js"></script>
 </body>
 

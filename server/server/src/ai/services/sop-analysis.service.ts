@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { OpenRouterService } from './open-router.service';
+import { GroqService } from './groq.service';
 
 export interface SopAnalysisCategory {
   name: string;
@@ -22,7 +22,7 @@ export interface SopAnalysisResult {
 
 @Injectable()
 export class SopAnalysisService {
-  constructor(private readonly openRouter: OpenRouterService) { }
+  constructor(private readonly groq: GroqService) { }
 
   async analyzeSop(text: string): Promise<SopAnalysisResult> {
     const safeText = text || '';
@@ -64,7 +64,7 @@ export class SopAnalysisService {
     `;
 
     try {
-      return await this.openRouter.getJson<SopAnalysisResult>(prompt);
+      return await this.groq.getJson<SopAnalysisResult>(prompt);
     } catch (error) {
       console.error('SOP Analysis failed', error);
       // Fallback or error rethrow

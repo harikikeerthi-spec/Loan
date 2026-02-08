@@ -25,6 +25,8 @@ model User {
   adminProfile      AdminProfile?       @relation("AdminUser")
   comments          Comment[]           @relation("CommentAuthor")
   auditLogs         AuditLog[]          @relation("AuditInitiator")
+  forumPosts        ForumPost[]
+  forumComments     ForumComment[]
 }
 
 model AdminProfile {
@@ -203,4 +205,367 @@ model AuditLog {
   @@index([entityId])
   @@index([initiatedBy])
   @@index([createdAt])
+}
+
+model ForumPost {
+  id          String   @id @default(uuid())
+  title       String?
+  content     String   @db.Text
+  category    String   // loan, visa, universities, gre, accommodation, etc.
+  tags        String[]
+  
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  likes       Int      @default(0)
+  views       Int      @default(0)
+  isMentorOnly Boolean @default(false)
+  
+  comments    ForumComment[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([category])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+model ForumComment {
+  id        String    @id @default(uuid())
+  postId    String
+  post      ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  
+  content   String    @db.Text
+  likes     Int       @default(0)
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  @@index([postId])
+  @@index([authorId])
+}
+
+// ==================== COMMUNITY MODELS ====================
+
+model Mentor {
+  id                String           @id @default(uuid())
+  name              String
+  email             String           @unique
+  phone             String?
+  
+  university        String
+  degree            String
+  country           String
+  category          String?          // MBA, Engineering, Medical, etc.
+  
+  loanBank          String
+  loanAmount        String
+  loanType          String?
+  interestRate      String?
+  
+  bio               String           @db.Text
+  expertise         String[]         // Array of expertise areas
+  linkedIn          String?
+  image             String?
+  
+  rating            Float            @default(0)
+  studentsMentored  Int              @default(0)
+  
+  isActive          Boolean          @default(true)
+  isApproved        Boolean          @default(false)
+  rejectionReason   String?
+  
+  bookings          MentorBooking[]
+  
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  
+  @@index([country])
+  @@index([university])
+  @@index([isActive])
+  @@index([isApproved])
+  @@index([rating])
+}
+
+model MentorBooking {
+  id              String   @id @default(uuid())
+  mentorId        String
+  mentor          Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  
+  studentName     String
+  studentEmail    String
+  studentPhone    String?
+  preferredDate   String
+  preferredTime   String
+  message         String?  @db.Text
+  
+  status          String   @default("pending")  // pending, confirmed, cancelled, completed
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([mentorId])
+  @@index([status])
+  @@index([studentEmail])
+}
+
+model CommunityEvent {
+  id              String              @id @default(uuid())
+  title           String
+  description     String              @db.Text
+  type            String              // webinar, qa, networking, workshop
+  
+  date            String
+  time            String
+  duration        Int                 // in minutes
+  
+  speaker         String?
+  speakerTitle    String?
+  
+  maxAttendees    Int?
+  attendeesCount  Int                 @default(0)
+  isFree          Boolean             @default(true)
+  
+  recordingUrl    String?
+  isFeatured      Boolean             @default(false)
+  
+  registrations   EventRegistration[]
+  
+  category        String?             // loan, visa, universities, etc.
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  
+  @@index([type])
+  @@index([category])
+  @@index([date])
+  @@index([isFeatured])
+}
+
+model EventRegistration {
+  id        String         @id @default(uuid())
+  eventId   String
+  event     CommunityEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  name      String
+  email     String
+  phone     String?
+  
+  createdAt DateTime       @default(now())
+  
+  @@unique([eventId, email])
+  @@index([eventId])
+  @@index([email])
+}
+
+model SuccessStory {
+  id            String   @id @default(uuid())
+  name          String
+  email         String
+  
+  university    String
+  country       String
+  degree        String
+  category      String?  // MBA, Engineering, Medical, etc.
+  
+  loanAmount    String
+  bank          String
+  interestRate  String?
+  
+  story         String   @db.Text
+  tips          String?  @db.Text
+  image         String?
+  
+  isApproved    Boolean  @default(false)
+  isFeatured    Boolean  @default(false)
+  rejectionReason String?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([country])
+  @@index([category])
+  @@index([isApproved])
+  @@index([isFeatured])
+}
+
+model CommunityResource {
+  id            String   @id @default(uuid())
+  title         String
+  description   String   @db.Text
+  type          String   // guide, template, checklist, video
+  category      String
+  
+  fileUrl       String?
+  downloadUrl   String?
+  thumbnailUrl  String?
+  
+  downloads     Int      @default(0)
+  isFeatured    Boolean  @default(false)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([type])
+  @@index([category])
+  @@index([downloads])
+  @@index([isFeatured])
+}
+
+// ==================== REFERENCE DATA MODELS ====================
+
+model LoanType {
+  id                String   @id @default(uuid())
+  name              String   @unique  // e.g., "Education Loan", "Personal Loan"
+  category          String              // e.g., "Secured", "Unsecured"
+  description       String   @db.Text
+  features          String[]            // Array of key features
+  eligibility       String   @db.Text
+  documentsRequired String[]
+  interestRateMin   Float
+  interestRateMax   Float
+  loanAmountMin     String
+  loanAmountMax     String
+  repaymentPeriod   String              // e.g., "5-15 years"
+  processingTime    String              // e.g., "7-14 days"
+  isPopular         Boolean  @default(false)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([category])
+  @@index([isPopular])
+}
+
+model University {
+  id              String   @id @default(uuid())
+  name            String
+  country         String
+  city            String?
+  state           String?
+  ranking         Int?
+  worldRanking    Int?
+  type            String              // e.g., "Public", "Private"
+  established     Int?
+  website         String?
+  description     String?  @db.Text
+  popularCourses  String[]
+  averageFees     String?
+  acceptanceRate  Float?
+  scholarships    Boolean  @default(false)
+  logoUrl         String?
+  imageUrl        String?
+  isFeatured      Boolean  @default(false)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([country])
+  @@index([ranking])
+  @@index([isFeatured])
+  @@unique([name, country])
+}
+
+model Bank {
+  id                    String   @id @default(uuid())
+  name                  String   @unique
+  shortName             String?
+  country               String   @default("India")
+  type                  String              // e.g., "Public", "Private", "NBFC"
+  loanTypes             String[]            // Types of loans offered
+  educationLoan         Boolean  @default(true)
+  interestRateMin       Float
+  interestRateMax       Float
+  maxLoanAmount         String
+  collateralRequired    Boolean
+  collateralFreeLimit   String?
+  processingFee         String
+  processingTime        String
+  features              String[]
+  website               String?
+  contactNumber         String?
+  email                 String?
+  logoUrl               String?
+  isPopular             Boolean  @default(false)
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@index([country])
+  @@index([type])
+  @@index([isPopular])
+}
+
+model Country {
+  id                    String   @id @default(uuid())
+  name                  String   @unique
+  code                  String   @unique  // e.g., "US", "UK"
+  region                String              // e.g., "North America", "Europe"
+  popularForStudy       Boolean  @default(false)
+  universities          Int      @default(0)
+  averageTuitionFee     String?
+  averageLivingCost     String?
+  studyDuration         String?             // e.g., "1-2 years for Masters"
+  visaType              String?
+  visaProcessingTime    String?
+  workPermit            Boolean  @default(false)
+  postStudyWorkVisa     String?
+  popularCities         String[]
+  currency              String
+  language              String[]
+  flagUrl               String?
+  description           String?  @db.Text
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  @@index([region])
+  @@index([popularForStudy])
+}
+
+model Scholarship {
+  id                String   @id @default(uuid())
+  name              String
+  provider          String
+  country           String
+  eligibleCountries String[]            // Countries students can be from
+  amount            String
+  type              String              // e.g., "Merit-based", "Need-based", "Sports"
+  description       String   @db.Text
+  eligibility       String   @db.Text
+  applicationProcess String  @db.Text
+  deadline          String?
+  website           String?
+  isActive          Boolean  @default(true)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  @@index([country])
+  @@index([isActive])
+}
+
+model Course {
+  id              String   @id @default(uuid())
+  name            String
+  level           String              // e.g., "Undergraduate", "Masters", "PhD"
+  field           String              // e.g., "Engineering", "Business", "Medicine"
+  duration        String
+  description     String?  @db.Text
+  averageFees     String?
+  popularCountries String[]
+  careerProspects String[]
+  averageSalary   String?
+  isPopular       Boolean  @default(false)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([level])
+  @@index([field])
+  @@index([isPopular])
 }

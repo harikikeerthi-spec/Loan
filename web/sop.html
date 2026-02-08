@@ -44,22 +44,7 @@
             },
         };
     </script>
-    <style>
-.nav-scrolled {
-            background: rgba(255, 255, 255, 0.8) !important;
-            backdrop-filter: blur(12px);
-            padding-top: 1rem !important;
-            padding-bottom: 1rem !important;
-        }
 
-        .dark .nav-scrolled {
-            background: rgba(17, 8, 26, 0.8) !important;
-        }
-
-        body {
-            background-attachment: fixed;
-        }
-    </style>
 </head>
 
 <body
@@ -80,21 +65,28 @@
         <section id="sop-scorer" class="max-w-7xl mx-auto px-6 py-24 border-t border-gray-200 dark:border-white/10">
             <div class="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-10 items-start">
                 <div>
-                    <span class="text-primary font-bold text-[11px] tracking-[0.2em] uppercase mb-3 block">Document Quality</span>
+                    <span class="text-primary font-bold text-[11px] tracking-[0.2em] uppercase mb-3 block">Document
+                        Quality</span>
                     <h2 class="text-4xl md:text-5xl font-display text-gray-900 dark:text-white mb-4">
                         SOP Quality <br />
-                        <span class="italic font-normal text-gray-600 dark:text-gray-400">Scorer for loan approval</span>
+                        <span class="italic font-normal text-gray-600 dark:text-gray-400">Scorer for loan
+                            approval</span>
                     </h2>
                     <p class="text-gray-600 dark:text-gray-300 text-lg leading-relaxed mb-8">
-                        Get your Statement of Purpose evaluated specifically for loan approval. We analyze clarity, financial justification, career ROI, and originality to help you strengthen your application.
+                        Get your Statement of Purpose evaluated specifically for loan approval. We analyze clarity,
+                        financial justification, career ROI, and originality to help you strengthen your application.
                     </p>
 
                     <form id="sopScorerForm" class="glass-card rounded-3xl p-6 space-y-4">
                         <div>
-                            <label for="sopText" class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Your Statement of Purpose (SOP)</label>
-                            <textarea id="sopText" name="sop" rows="10" placeholder="Paste your complete SOP here..." required
+                            <label for="sopText"
+                                class="block text-sm font-semibold text-gray-700 dark:text-gray-200 mb-2">Your Statement
+                                of Purpose (SOP)</label>
+                            <textarea id="sopText" name="sop" rows="10" placeholder="Paste your complete SOP here..."
+                                required
                                 class="w-full rounded-xl border-gray-200 dark:border-white/10 bg-white/80 dark:bg-white/5 text-gray-900 dark:text-white resize-none"></textarea>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Minimum 100 words recommended for accurate analysis.</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Minimum 100 words recommended for
+                                accurate analysis.</p>
                         </div>
                         <div class="flex flex-wrap gap-3">
                             <button type="submit"
@@ -113,9 +105,10 @@
                     <div class="flex items-center justify-between mb-6">
                         <h3 class="text-2xl font-display text-gray-900 dark:text-white">Quality assessment</h3>
                         <span id="sopResultBadge"
-                            class="text-xs font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-gray-200/70 text-gray-700 dark:bg-white/10 dark:text-gray-200">Awaiting input</span>
+                            class="text-xs font-bold uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-gray-200/70 text-gray-700 dark:bg-white/10 dark:text-gray-200">Awaiting
+                            input</span>
                     </div>
-                    
+
                     <div class="mb-6">
                         <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300 mb-2">
                             <span>Overall score</span>
@@ -135,7 +128,8 @@
                         </div>
 
                         <div class="mt-6 pt-6 border-t border-gray-200 dark:border-white/10">
-                            <h4 class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                            <h4
+                                class="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                                 <span class="material-symbols-outlined text-base text-amber-500">warning</span>
                                 <span>Areas to improve</span>
                             </h4>
@@ -151,8 +145,10 @@
                         </div>
                     </div>
 
-                    <div class="mt-6 rounded-2xl border border-dashed border-gray-300 dark:border-white/10 p-4 text-xs text-gray-500 dark:text-gray-400">
-                        This AI assessment evaluates your SOP specifically for loan approval criteria. Consider these recommendations to strengthen your application.
+                    <div
+                        class="mt-6 rounded-2xl border border-dashed border-gray-300 dark:border-white/10 p-4 text-xs text-gray-500 dark:text-gray-400">
+                        This AI assessment evaluates your SOP specifically for loan approval criteria. Consider these
+                        recommendations to strengthen your application.
                     </div>
                 </div>
             </div>

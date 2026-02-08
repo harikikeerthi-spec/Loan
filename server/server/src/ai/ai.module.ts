@@ -6,12 +6,12 @@ import { SopAnalysisService } from './services/sop-analysis.service';
 import { GradeConversionService } from './services/grade-conversion.service';
 import { UniversityComparisonService } from './services/university-comparison.service';
 import { AdmitPredictorService } from './services/admit-predictor.service';
-import { OpenRouterService } from './services/open-router.service';
+import { GroqService } from './services/groq.service';
 
 @Module({
   controllers: [AiController],
   providers: [
-    OpenRouterService,
+    GroqService,
     EligibilityService,
     LoanRecommendationService,
     SopAnalysisService,
@@ -20,7 +20,7 @@ import { OpenRouterService } from './services/open-router.service';
     AdmitPredictorService,
   ],
   exports: [
-    OpenRouterService,
+    GroqService,
     EligibilityService,
     LoanRecommendationService,
     SopAnalysisService,

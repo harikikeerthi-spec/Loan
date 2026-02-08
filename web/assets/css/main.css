@@ -1,5 +1,78 @@
-/* Global Styles & Animations */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap');
 
+/* Global Font Settings matching sop-writer.html */
+body {
+    font-family: 'Noto Sans', sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.font-display {
+    font-family: 'Noto Serif', serif;
+}
+
+/* Global Scroll & Scrollbar Styling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Custom Scrollbar for a premium feel (applied to all pages) */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(102, 5, 199, 0.2);
+    border-radius: 20px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(102, 5, 199, 0.4);
+    background-clip: content-box;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background: rgba(168, 85, 247, 0.2);
+    background-clip: content-box;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: rgba(168, 85, 247, 0.4);
+    background-clip: content-box;
+}
+
+/* Specific exclusions for Index if needed */
+[data-page="index"] {
+    scroll-behavior: auto;
+    /* Index might use GSAP or have specific section-based scroll requirements */
+}
+
+/* Fixed background for all sub-pages for premium mesh-gradient effect */
+body:not(.home-page) {
+    background-attachment: fixed;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Global Core Styles */
 .glass-card {
     background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(12px);
@@ -31,93 +104,20 @@
     animation: float 6s ease-in-out infinite;
 }
 
-.no-scrollbar::-webkit-scrollbar {
-    display: none;
-}
-
-.no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-
-/* Background Mesh & Noise */
-.bg-mesh-container {
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-}
-
-.bg-noise-overlay {
-    position: absolute;
-    inset: 0;
-    opacity: 0.1;
-    /* Reduced from 0.3 for a cleaner look */
-    mix-blend-mode: overlay;
-    /* Correct property name is mix-blend-mode */
-    background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');
-}
-
-/* Navigation Scrolled State */
-.nav-scrolled {
-    background: rgba(17, 8, 26, 0.95) !important;
-    backdrop-filter: blur(12px);
-    padding-top: 1rem !important;
-    padding-bottom: 1rem !important;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
-}
-
-.dark .nav-scrolled {
-    background: rgba(17, 8, 26, 0.8) !important;
-}
-
-@keyframes scroll {
-    0% {
-        transform: translateX(0);
-    }
-
-    100% {
-        transform: translateX(-50%);
-    }
-}
-
-.animate-scroll {
-    animation: scroll 30s linear infinite;
-    display: flex;
-    width: max-content;
-}
-
-/* Hover Effects & Transitions */
-a,
-button,
-input,
-.glass-card {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-a:hover {
-    color: #6605c7;
-}
-
-button:hover {
-    transform: translateY(-2px);
-    filter: brightness(1.1);
-}
-
-button:active {
-    transform: translateY(0);
-}
-
-.glass-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
-}
-
-.dark .glass-card:hover {
-    box-shadow: 0 12px 40px rgba(102, 5, 199, 0.1);
+/* Navigation Styles */
+#mainNav {
+    transition: all 0.5s ease;
 }
 
 .nav-link {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
     position: relative;
 }
 
@@ -136,16 +136,60 @@ button:active {
     width: 100%;
 }
 
-.input-focus-effect:focus {
-    transform: scale(1.01);
+.nav-link:hover {
+    color: #6605c7;
 }
 
-/* Gradient Text Utilities (Standard CSS instead of @apply) */
-.text-gradient-primary {
-    background: linear-gradient(to right, #a855f7, #c084fc);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+.logo-text,
+.email-text,
+.profile-button,
+.account-icon {
+    color: white;
+    transition: all 0.3s ease;
+}
+
+/* Scrolled State */
+.nav-scrolled {
+    background: rgba(17, 8, 26, 0.9) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.nav-scrolled .nav-link,
+.nav-scrolled .logo-text,
+.nav-scrolled .email-text,
+.nav-scrolled .profile-button,
+.nav-scrolled .account-icon {
+    color: white !important;
+}
+
+/* Adaptive state for Sub-pages (Light Background initially) */
+.nav-on-light:not(.nav-scrolled) {
+    background: rgba(255, 255, 255, 0.5);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.nav-on-light:not(.nav-scrolled) .nav-link,
+.nav-on-light:not(.nav-scrolled) .logo-text,
+.nav-on-light:not(.nav-scrolled) .email-text,
+.nav-on-light:not(.nav-scrolled) .profile-button,
+.nav-on-light:not(.nav-scrolled) .account-icon {
+    color: #190f23 !important;
+}
+
+.nav-on-light:not(.nav-scrolled) .logo-icon {
+    background: rgba(102, 5, 199, 0.1);
+    color: #6605c7 !important;
+    border-color: rgba(102, 5, 199, 0.2);
+}
+
+.nav-on-light:not(.nav-scrolled) .profile-button {
+    border-color: rgba(0, 0, 0, 0.1);
 }
 
 /* Dropdown Navigation Styles */
@@ -158,26 +202,26 @@ button:active {
     top: 100%;
     left: 0;
     margin-top: 0.5rem;
-    min-width: 200px;
-    background: rgba(255, 255, 255, 0.95);
+    min-width: 220px;
+    background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(12px);
-    border-radius: 1rem;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    border-radius: 1.25rem;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
     opacity: 0;
     visibility: hidden;
     transform: translateY(-10px);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 100;
     overflow: hidden;
+    padding: 0.5rem;
 }
 
 .dark .nav-dropdown-content {
-    background: rgba(25, 15, 35, 0.95);
+    background: rgba(25, 15, 35, 0.98);
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.nav-dropdown:hover .nav-dropdown-content,
-.nav-dropdown-content:hover {
+.nav-dropdown:hover .nav-dropdown-content {
     opacity: 1;
     visibility: visible;
     transform: translateY(0);
@@ -187,12 +231,12 @@ button:active {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.875rem 1.25rem;
+    padding: 0.75rem 1rem;
     color: #374151;
     font-size: 0.875rem;
     font-weight: 600;
     transition: all 0.2s ease;
-    border-left: 3px solid transparent;
+    border-radius: 0.75rem;
 }
 
 .dark .nav-dropdown-item {
@@ -200,34 +244,12 @@ button:active {
 }
 
 .nav-dropdown-item:hover {
-    background: rgba(102, 5, 199, 0.1);
-    border-left-color: #6605c7;
+    background: rgba(102, 5, 199, 0.08);
     color: #6605c7;
 }
 
-.dark .nav-dropdown-item:hover {
-    background: rgba(102, 5, 199, 0.2);
-    color: #a855f7;
-}
-
-.nav-dropdown-item .material-symbols-outlined {
-    font-size: 1.25rem;
-    opacity: 0.7;
-}
-
-.nav-dropdown-item:hover .material-symbols-outlined {
-    opacity: 1;
-}
-
-.nav-dropdown-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    cursor: pointer;
-}
-
 .nav-dropdown-toggle .material-symbols-outlined {
-    font-size: 1rem;
+    font-size: 1.25rem;
     transition: transform 0.3s ease;
 }
 
@@ -235,50 +257,61 @@ button:active {
     transform: rotate(180deg);
 }
 
-/* Drop from top animation - starts off-screen at top */
-@keyframes dropFromTop {
-    0% {
-        opacity: 0;
-        transform: translateY(-300px);
-    }
-
-    50% {
-        opacity: 1;
-        transform: translateY(20px);
-    }
-
-    75% {
-        transform: translateY(-10px);
-    }
-
-    100% {
-        opacity: 1;
-        transform: translateY(0);
-    }
+/* Partner Ticker Styles */
+.bank-row {
+    display: flex;
+    align-items: center;
+    gap: 4rem;
+    padding: 1rem 0;
+    transition: transform 0.3s ease;
 }
 
-
-.drop-from-top {
-    animation: dropFromTop 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+.bank-row:hover {
+    animation-play-state: paused !important;
 }
 
-/* Bank Items & Scroll Animations */
 .bank-item {
     display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 0 3rem;
-    opacity: 0.6;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    white-space: nowrap;
+    gap: 2rem;
+    font-size: 2.25rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: rgba(156, 163, 175, 0.4);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .bank-item {
+    color: rgba(113, 113, 122, 0.3);
 }
 
 .bank-item:hover {
-    opacity: 1;
-    transform: scale(1.1);
+    color: #6605c7;
+    transform: scale(1.05);
+    filter: drop-shadow(0 0 15px rgba(102, 5, 199, 0.2));
 }
 
+.dark .bank-item:hover {
+    color: white;
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.15));
+}
+
+.bank-divider {
+    width: 8px;
+    height: 8px;
+    background: #e0c389;
+    border-radius: 50%;
+    opacity: 0.3;
+}
+
+.bank-item:hover+.bank-divider,
+.bank-item:hover .bank-divider {
+    opacity: 1;
+    transform: scale(1.5);
+    background: #6605c7;
+}
+
+/* Animations */
 @keyframes scrollLeft {
     0% {
         transform: translateX(0);
@@ -309,4 +342,27 @@ button:active {
 
 .paused {
     animation-play-state: paused !important;
+}
+
+@keyframes dropFromTop {
+    0% {
+        opacity: 0;
+        transform: translateY(-100px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.drop-from-top {
+    animation: dropFromTop 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* Hover Global */
+a,
+button,
+input {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }

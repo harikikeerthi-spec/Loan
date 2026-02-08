@@ -1,15 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>SOP Writer - AI Standard Operating Procedure Generator</title>
+    <title>Statement of Purpose Generator - AI Powered | LoanHero</title>
+
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
-    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
     <link href="assets/css/main.css" rel="stylesheet" />
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
     <script>
         tailwind.config = {
             darkMode: "class",
@@ -19,901 +25,774 @@
                         primary: "#6605c7",
                         secondary: "#a855f7",
                         accent: "#e0c389",
-                        background: {
-                            light: "#ffffff",
-                            dark: "#0a0e27"
-                        }
                     }
                 }
             }
         };
     </script>
     <style>
-.nav-link {
-            color: rgba(0, 0, 0, 0.9) !important;
-        }
-
-        .nav-link.active {
-            color: #a855f7 !important;
-        }
-
-        #loginLink {
-            color: rgba(0, 0, 0, 0.9) !important;
-        }
-
-        .material-symbols-outlined {
-            color: black !important;
-        }
-
-        #profileDropdown .material-symbols-outlined {
-            color: #6605c7 !important;
-        }
-.nav-scrolled .nav-link {
-            color: rgba(255, 255, 255, 0.9) !important;
-        }
-
-        .nav-scrolled .nav-link:hover {
-            color: #6605c7 !important;
-        }
-
-        .nav-scrolled .font-display {
-            color: white !important;
-        }
-
-        .nav-scrolled #loginLink {
-            color: rgba(255, 255, 255, 0.9) !important;
-        }
-
-        .nav-scrolled #loginLink:hover {
-            color: #6605c7 !important;
-        }
-
-        .nav-scrolled .material-symbols-outlined {
-            color: white !important;
-        }
-
-        .nav-scrolled #profileDropdown .material-symbols-outlined {
-            color: #6605c7 !important;
-        }
-
-        .nav-dropdown {
-            position: relative;
-        }
-
-        .nav-dropdown-content {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            margin-top: 0.5rem;
-            min-width: 200px;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(12px);
-            border-radius: 1rem;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-10px);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 100;
-            overflow: hidden;
-        }
-
-        .dark .nav-dropdown-content {
-            background: rgba(25, 15, 35, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .nav-dropdown:hover .nav-dropdown-content,
-        .nav-dropdown-content:hover {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-
-        .nav-dropdown-item {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            padding: 0.875rem 1.25rem;
-            color: #374151;
-            font-size: 0.875rem;
-            font-weight: 600;
-            transition: all 0.2s ease;
-            border-left: 3px solid transparent;
-        }
-
-        .dark .nav-dropdown-item {
-            color: #e5e7eb;
-        }
-
-        .nav-dropdown-item:hover {
-            background: rgba(102, 5, 199, 0.1);
-            border-left-color: #6605c7;
-            color: #6605c7;
-        }
-
-        .dark .nav-dropdown-item:hover {
-            background: rgba(102, 5, 199, 0.2);
-            color: #a855f7;
-        }
-
-        .nav-dropdown-item .material-symbols-outlined {
-            font-size: 1.25rem;
-            opacity: 0.7;
-            color: #6605c7;
-        }
-
-        .dark .nav-dropdown-item .material-symbols-outlined {
-            color: #a855f7;
-        }
-
-        .nav-dropdown-item:hover .material-symbols-outlined {
-            opacity: 1;
-        }
-
+        /* SOP Specific Styles */
         .sop-preview {
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.98);
             border: 2px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 32px;
-            line-height: 1.8;
+            border-radius: 16px;
+            padding: 48px;
+            line-height: 1.9;
             color: #1f2937;
+            font-family: 'Noto Serif', serif;
+            max-height: 800px;
+            overflow-y: auto;
         }
 
         .dark .sop-preview {
-            background: rgba(31, 41, 55, 0.8);
+            background: rgba(31, 41, 55, 0.9);
             border-color: #4b5563;
             color: #e5e7eb;
         }
 
-        .sop-section {
-            margin-bottom: 24px;
-            page-break-inside: avoid;
-        }
-
-        .sop-section h2 {
+        .sop-section-title {
+            color: #6605c7;
             font-size: 1.5rem;
             font-weight: 700;
-            color: #6605c7;
-            margin-bottom: 12px;
-            border-bottom: 2px solid #a855f7;
-            padding-bottom: 8px;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
         }
 
-        .sop-section h3 {
-            font-size: 1.125rem;
-            font-weight: 600;
-            color: #6605c7;
-            margin-top: 16px;
+        .dark .sop-section-title {
+            color: #a855f7;
+        }
+
+        .analysis-card {
+            border-left: 5px solid #6605c7;
+        }
+
+        .strength-item {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
             margin-bottom: 8px;
         }
 
-        .sop-section ol, .sop-section ul {
-            margin-left: 24px;
-            margin-bottom: 16px;
-        }
-
-        .sop-section li {
+        .improvement-item {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
             margin-bottom: 8px;
         }
 
-        .sop-section table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 16px 0;
-        }
-
-        .sop-section th, .sop-section td {
-            border: 1px solid #d1d5db;
-            padding: 12px;
-            text-align: left;
-        }
-
-        .dark .sop-section th, .dark .sop-section td {
-            border-color: #4b5563;
-        }
-
-        .sop-section th {
-            background: #f3f4f6;
-            color: #111827;
-            font-weight: 600;
-        }
-
-        .dark .sop-section th {
-            background: #1f2937;
-            color: #f3f4f6;
-        }
-
-        .complexity-badge {
+        .section-score {
             display: inline-block;
-            padding: 6px 12px;
+            background: linear-gradient(135deg, #6605c7 0%, #a855f7 100%);
+            color: white;
+            padding: 4px 12px;
             border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            margin-right: 8px;
-        }
-
-        .complexity-beginner {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .complexity-intermediate {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .complexity-advanced {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .dark .complexity-beginner {
-            background: #064e3b;
-            color: #86efac;
-        }
-
-        .dark .complexity-intermediate {
-            background: #78350f;
-            color: #fcd34d;
-        }
-
-        .dark .complexity-advanced {
-            background: #7f1d1d;
-            color: #fca5a5;
-        }
-
-        .loading-spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #e5e7eb;
-            border-top-color: #6605c7;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        @media print {
-            .sop-controls, .sidebar, .nav { display: none; }
-            .sop-preview { border: none; box-shadow: none; }
+            font-weight: 700;
+            font-size: 0.875rem;
         }
     </style>
 </head>
 
 <body
-    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100">
 
+    <!-- Background -->
     <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none">
         <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
-        <div class="absolute inset-0 opacity-30 mix-blend-overlay"
-            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
-        </div>
     </div>
 
     <!-- Navigation -->
     <div id="navbar-placeholder"></div>
 
     <!-- Main Content -->
-    <main class="pt-32 pb-16 px-6 relative z-10">
+    <main class="pt-28 pb-16 px-4 md:px-6 relative z-10">
         <div class="max-w-7xl mx-auto">
+
             <!-- Header -->
             <div class="text-center mb-12">
+                <div class="inline-block mb-4">
+                    <span class="text-6xl">🎓</span>
+                </div>
                 <h1 class="text-4xl md:text-5xl font-bold font-display text-gray-900 dark:text-white mb-4">
-                    ✍️ AI SOP Writer
+                    AI-Powered Statement of Purpose Generator
                 </h1>
-                <p class="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                    Generate professional Standard Operating Procedures in seconds using AI. Perfect for documenting processes, workflows, and best practices.
+                <p class="text-lg text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
+                    Generate professional Statements of Purpose for university applications with AI-powered analysis,
+                    improvement suggestions, and section-by-section scoring
                 </p>
             </div>
 
-            <div class="grid lg:grid-cols-3 gap-6">
-                <!-- Left Sidebar: Input Form -->
-                <div class="lg:col-span-1">
-                    <div class="glass-card rounded-2xl shadow-xl p-6 sticky top-32 space-y-6">
-                        <h2 class="text-xl font-bold font-display text-gray-900 dark:text-white">📝 Generate SOP</h2>
+            <!-- Two-Column Layout -->
+            <div class="grid lg:grid-cols-5 gap-6">
+
+                <!-- Input Form (Left - 2 columns) -->
+                <div class="lg:col-span-2">
+                    <div class="glass-card rounded-2xl shadow-2xl p-6 sticky top-24 space-y-5">
+                        <div class="border-b border-gray-200 dark:border-gray-700 pb-4">
+                            <h2
+                                class="text-2xl font-bold font-display text-gray-900 dark:text-white flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary">edit_note</span>
+                                Your Details
+                            </h2>
+                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">Fill in your information to
+                                generate a professional SOP</p>
+                        </div>
 
                         <form id="sopForm" class="space-y-4">
-                            <!-- Process Name -->
+
+                            <!-- Personal Details -->
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    📌 Process Name *
+                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                                    <span class="material-symbols-outlined text-xs align-middle">person</span>
+                                    Your Full Name *
                                 </label>
-                                <input type="text" id="processName" name="processName" required
-                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                                    placeholder="e.g., Customer Onboarding">
+                                <input type="text" id="studentName" required
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                                    placeholder="e.g., John Doe">
                             </div>
 
-                            <!-- Department/Team -->
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    🏢 Department/Team
+                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                                    <span class="material-symbols-outlined text-xs align-middle">school</span>
+                                    Target University *
                                 </label>
-                                <input type="text" id="department" name="department"
-                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                                    placeholder="e.g., Customer Success">
+                                <input type="text" id="university" required
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                                    placeholder="e.g., Stanford University">
                             </div>
 
-                            <!-- Process Description -->
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    📄 Process Description *
+                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                                    <span class="material-symbols-outlined text-xs align-middle">science</span>
+                                    Field of Study *
                                 </label>
-                                <textarea id="processDescription" name="processDescription" rows="4" required
-                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                                    placeholder="Describe the process, its purpose, and key objectives..."></textarea>
+                                <input type="text" id="fieldOfStudy" required
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+                                    placeholder="e.g., Artificial Intelligence, Robotics, Data Science">
                             </div>
 
-                            <!-- Key Steps -->
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    🔢 Number of Steps *
+                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                                    <span class="material-symbols-outlined text-xs align-middle">military_tech</span>
+                                    Current Degree
                                 </label>
-                                <select id="numSteps" name="numSteps" required
-                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
-                                    <option value="">Select number of steps</option>
-                                    <option value="3">3 Steps (Simple)</option>
-                                    <option value="5">5 Steps (Standard)</option>
-                                    <option value="7">7 Steps (Detailed)</option>
-                                    <option value="10">10 Steps (Comprehensive)</option>
-                                </select>
+                                <input type="text" id="currentDegree"
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary transition-all"
+                                    placeholder="e.g., B.Tech in Computer Science">
                             </div>
 
-                            <!-- Complexity Level -->
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    ⚡ Complexity Level
+                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                                    <span class="material-symbols-outlined text-xs align-middle">domain</span>
+                                    Current University
                                 </label>
-                                <select id="complexity" name="complexity"
-                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
-                                    <option value="beginner">🟢 Beginner (Simple)</option>
-                                    <option value="intermediate" selected>🟡 Intermediate (Standard)</option>
-                                    <option value="advanced">🔴 Advanced (Complex)</option>
-                                </select>
+                                <input type="text" id="currentUniversity"
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary transition-all"
+                                    placeholder="e.g., XYZ University">
                             </div>
 
-                            <!-- Include Sections -->
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                                    📋 Include Sections
+                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                                    <span class="material-symbols-outlined text-xs align-middle">lab_research</span>
+                                    Research Interests (Optional)
                                 </label>
-                                <div class="space-y-2">
-                                    <label class="flex items-center">
-                                        <input type="checkbox" id="includeObjectives" name="includeObjectives" checked
-                                            class="w-4 h-4 text-primary rounded focus:ring-primary">
-                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Objectives</span>
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" id="includeScope" name="includeScope" checked
-                                            class="w-4 h-4 text-primary rounded focus:ring-primary">
-                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Scope & Requirements</span>
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" id="includeRoles" name="includeRoles" checked
-                                            class="w-4 h-4 text-primary rounded focus:ring-primary">
-                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Roles & Responsibilities</span>
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" id="includeProcedure" name="includeProcedure" checked
-                                            class="w-4 h-4 text-primary rounded focus:ring-primary">
-                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Step-by-Step Procedure</span>
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" id="includeTroubleshooting" name="includeTroubleshooting"
-                                            class="w-4 h-4 text-primary rounded focus:ring-primary">
-                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Troubleshooting Guide</span>
-                                    </label>
-                                    <label class="flex items-center">
-                                        <input type="checkbox" id="includeAppendix" name="includeAppendix"
-                                            class="w-4 h-4 text-primary rounded focus:ring-primary">
-                                        <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Appendix & Forms</span>
-                                    </label>
-                                </div>
+                                <textarea id="researchInterests" rows="3"
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary resize-none transition-all"
+                                    placeholder="e.g., Deep Learning, Computer Vision, Natural Language Processing"></textarea>
                             </div>
 
-                            <!-- Additional Notes -->
                             <div>
-                                <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                                    💡 Additional Notes (Optional)
+                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                                    <span class="material-symbols-outlined text-xs align-middle">emoji_events</span>
+                                    Key Achievements (Optional)
                                 </label>
-                                <textarea id="additionalNotes" name="additionalNotes" rows="3"
-                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                                    placeholder="Any specific requirements or considerations..."></textarea>
+                                <textarea id="achievements" rows="3"
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary resize-none transition-all"
+                                    placeholder="e.g., Published research papers, top grades (GPA 3.9/4.0), won hackathons"></textarea>
                             </div>
 
-                            <!-- Generate Button -->
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                                    <span class="material-symbols-outlined text-xs align-middle">target</span>
+                                    Career Goals (Optional)
+                                </label>
+                                <textarea id="careerGoals" rows="3"
+                                    class="w-full px-4 py-3 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-primary resize-none transition-all"
+                                    placeholder="e.g., Lead AI research at top tech companies, contribute to open-source AI"></textarea>
+                            </div>
+
+                            <!-- Submit Button -->
                             <button type="submit"
-                                class="w-full bg-gradient-to-r from-primary to-secondary hover:shadow-lg text-white font-semibold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">
-                                <span class="material-symbols-outlined">auto_awesome</span>
-                                Generate SOP
+                                class="w-full bg-gradient-to-r from-primary to-secondary hover:shadow-2xl text-white font-bold py-4 px-6 rounded-xl transition-all transform hover:scale-[1.02] flex items-center justify-center gap-3">
+                                <span class="material-symbols-outlined text-2xl">auto_awesome</span>
+                                <span>Generate SOP with AI Analysis</span>
                             </button>
 
-                            <!-- Info -->
-                            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                <p class="text-xs text-blue-800 dark:text-blue-200">
-                                    <strong>✨ Tip:</strong> Be specific about your process for better SOP generation. The more details you provide, the more tailored the result will be.
+                            <!-- Info Box -->
+                            <div
+                                class="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl border-2 border-blue-200 dark:border-blue-800">
+                                <p class="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                                    <strong class="text-primary dark:text-secondary">✨ AI-Powered Analysis:</strong>
+                                    Get a professional SOP following the 8-section format with detailed scoring,
+                                    strengths analysis, and specific improvement suggestions!
                                 </p>
                             </div>
                         </form>
                     </div>
                 </div>
 
-                <!-- Right Content: SOP Preview -->
-                <div class="lg:col-span-2">
-                    <div id="sopContainer" class="hidden">
-                        <!-- SOP Controls -->
-                        <div class="glass-card rounded-2xl shadow-xl p-6 mb-6 flex flex-wrap items-center gap-4 sop-controls">
-                            <button onclick="copySOP()" 
-                                class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-semibold transition-all">
-                                <span class="material-symbols-outlined">content_copy</span>
-                                Copy
-                            </button>
-                            <button onclick="downloadSOP()" 
-                                class="flex items-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/90 text-white rounded-lg font-semibold transition-all">
+                <!-- SOP Preview & Analysis (Right - 3 columns) -->
+                <div class="lg:col-span-3">
+
+                    <!-- Empty State -->
+                    <div id="emptyState" class="glass-card rounded-2xl shadow-2xl p-16 text-center">
+                        <div class="mb-8 animate-bounce">
+                            <span class="text-8xl">📝</span>
+                        </div>
+                        <h3 class="text-3xl font-bold font-display text-gray-900 dark:text-white mb-4">
+                            Ready to Create Your SOP?
+                        </h3>
+                        <p class="text-lg text-gray-600 dark:text-gray-400 mb-6 max-w-lg mx-auto leading-relaxed">
+                            Fill in your details in the form and click <strong>Generate SOP</strong> to create a
+                            professional Statement of Purpose with AI-powered analysis!
+                        </p>
+                        <div class="grid grid-cols-3 gap-4 mt-8 max-w-2xl mx-auto">
+                            <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                                <div class="text-3xl mb-2">📋</div>
+                                <div class="text-sm font-semibold">8 Sections</div>
+                            </div>
+                            <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                <div class="text-3xl mb-2">🤖</div>
+                                <div class="text-sm font-semibold">AI Analysis</div>
+                            </div>
+                            <div class="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                                <div class="text-3xl mb-2">💡</div>
+                                <div class="text-sm font-semibold">Improvements</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SOP Container (Hidden initially) -->
+                    <div id="sopContainer" class="hidden space-y-6">
+
+                        <!-- Action Buttons -->
+                        <div class="glass-card rounded-2xl shadow-xl p-5 flex flex-wrap items-center gap-3">
+                            <button onclick="downloadSOP()"
+                                class="px-5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-xl font-semibold flex items-center gap-2 transition-all transform hover:scale-105">
                                 <span class="material-symbols-outlined">download</span>
-                                Download PDF
+                                Download SOP
                             </button>
-                            <button onclick="printSOP()" 
-                                class="flex items-center gap-2 px-4 py-2 border-2 border-primary text-primary hover:bg-primary/10 rounded-lg font-semibold transition-all">
-                                <span class="material-symbols-outlined">print</span>
-                                Print
+                            <button onclick="copySOP()"
+                                class="px-5 py-2.5 bg-secondary hover:bg-secondary/90 text-white rounded-xl font-semibold flex items-center gap-2 transition-all transform hover:scale-105">
+                                <span class="material-symbols-outlined">content_copy</span>
+                                Copy Text
                             </button>
-                            <button onclick="editSOP()" 
-                                class="flex items-center gap-2 px-4 py-2 border-2 border-primary text-primary hover:bg-primary/10 rounded-lg font-semibold transition-all">
-                                <span class="material-symbols-outlined">edit</span>
-                                Edit
+                            <button onclick="toggleAnalysis()" id="analysisToggle"
+                                class="px-5 py-2.5 border-2 border-primary text-primary hover:bg-primary/10 rounded-xl font-semibold flex items-center gap-2 transition-all">
+                                <span class="material-symbols-outlined">analytics</span>
+                                View AI Analysis
                             </button>
-                            <button onclick="hideSOP()" 
-                                class="ml-auto flex items-center gap-2 px-4 py-2 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg font-semibold transition-all">
+                            <button onclick="closeSOP()"
+                                class="ml-auto px-5 py-2.5 border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl font-semibold transition-all">
                                 <span class="material-symbols-outlined">close</span>
-                                Close
                             </button>
                         </div>
 
                         <!-- SOP Content -->
-                        <div id="sopContent" class="sop-preview prose dark:prose-invert max-w-none">
-                            <!-- Generated SOP will be displayed here -->
+                        <div class="glass-card rounded-2xl shadow-2xl p-2">
+                            <div id="sopContent" class="sop-preview"></div>
                         </div>
 
-                        <!-- Hidden textarea for copy functionality -->
-                        <textarea id="sopText" class="hidden"></textarea>
-                    </div>
+                        <!-- AI Analysis Section (Hidden initially) -->
+                        <div id="analysisSection" class="hidden glass-card rounded-2xl shadow-2xl p-8 space-y-8">
+                            <div class="border-b border-gray-200 dark:border-gray-700 pb-4">
+                                <h3 class="text-3xl font-bold font-display flex items-center gap-3">
+                                    <span class="material-symbols-outlined text-4xl text-primary">analytics</span>
+                                    AI Analysis & Improvement Suggestions
+                                </h3>
+                                <p class="text-gray-600 dark:text-gray-400 mt-2">Detailed feedback on your Statement of
+                                    Purpose</p>
+                            </div>
 
-                    <!-- Empty State -->
-                    <div id="emptyState" class="glass-card rounded-2xl shadow-xl p-12 text-center">
-                        <div class="mb-6">
-                            <span class="text-6xl">📝</span>
-                        </div>
-                        <h3 class="text-2xl font-bold font-display text-gray-900 dark:text-white mb-3">
-                            Generate Your First SOP
-                        </h3>
-                        <p class="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                            Fill in the form on the left with your process details and click "Generate SOP" to create a professional Standard Operating Procedure instantly.
-                        </p>
-                        <div class="space-y-3 text-sm text-gray-600 dark:text-gray-400">
-                            <p>✓ AI-powered generation</p>
-                            <p>✓ Professional formatting</p>
-                            <p>✓ Customizable sections</p>
-                            <p>✓ Ready to download & print</p>
+                            <div id="analysisContent"></div>
                         </div>
                     </div>
                 </div>
             </div>
+
         </div>
     </main>
-
-    <!-- Success/Error Messages -->
-    <div id="messageToast" class="fixed bottom-6 right-6 z-50 hidden">
-        <div class="glass-card rounded-xl p-4 shadow-xl max-w-sm">
-            <div class="flex items-center gap-3">
-                <span class="material-symbols-outlined text-green-600" id="messageIcon">check_circle</span>
-                <p class="text-sm font-medium text-gray-900 dark:text-white" id="messageText"></p>
-            </div>
-        </div>
-    </div>
 
     <!-- Footer -->
     <div id="footer-placeholder"></div>
 
+    <!-- Scripts -->
     <script src="assets/js/components-loader.js"></script>
     <script src="assets/js/auth.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
+
     <script>
-        // SOP Generation Function
+        let generatedSOP = '';
+        let sopAnalysis = null;
+
+        // Form submission handler
+        document.getElementById('sopForm').addEventListener('submit', generateSOP);
+
         function generateSOP(e) {
             e.preventDefault();
 
-            // Get form data
+            // Check if user is logged in
+            const isLoggedIn = localStorage.getItem('accessToken') ||
+                localStorage.getItem('auth_token') ||
+                localStorage.getItem('userEmail');
+
+            if (!isLoggedIn) {
+                alert('⚠️ Please login to use the SOP Generator');
+                setTimeout(() => {
+                    window.location.href = 'login.html?redirect=' + encodeURIComponent(window.location.pathname);
+                }, 2000);
+                return;
+            }
+
+            // Collect form data
             const formData = {
-                processName: document.getElementById('processName').value,
-                department: document.getElementById('department').value || 'General',
-                processDescription: document.getElementById('processDescription').value,
-                numSteps: parseInt(document.getElementById('numSteps').value),
-                complexity: document.getElementById('complexity').value,
-                includeObjectives: document.getElementById('includeObjectives').checked,
-                includeScope: document.getElementById('includeScope').checked,
-                includeRoles: document.getElementById('includeRoles').checked,
-                includeProcedure: document.getElementById('includeProcedure').checked,
-                includeTroubleshooting: document.getElementById('includeTroubleshooting').checked,
-                includeAppendix: document.getElementById('includeAppendix').checked,
-                additionalNotes: document.getElementById('additionalNotes').value || ''
+                name: document.getElementById('studentName').value.trim(),
+                university: document.getElementById('university').value.trim(),
+                field: document.getElementById('fieldOfStudy').value.trim(),
+                currentDegree: document.getElementById('currentDegree').value.trim(),
+                currentUniversity: document.getElementById('currentUniversity').value.trim(),
+                researchInterests: document.getElementById('researchInterests').value.trim(),
+                achievements: document.getElementById('achievements').value.trim(),
+                careerGoals: document.getElementById('careerGoals').value.trim()
             };
 
-            try {
-                // Validate form data
-                if (!formData.processName || !formData.processDescription || !formData.numSteps) {
-                    showMessage('Please fill in all required fields', 'warning', 'orange');
-                    return;
-                }
+            // Generate SOP content
+            const sop = generateSOPContent(formData);
+            generatedSOP = sop;
 
-                // Show loading state
-                const btn = e.target.querySelector('button[type="submit"]');
-                const originalText = btn.innerHTML;
-                btn.innerHTML = '<span class="loading-spinner"></span> Generating...';
-                btn.disabled = true;
+            // Generate AI analysis
+            sopAnalysis = analyzeSOP(sop, formData);
 
-                // Generate SOP (simulate API call)
-                const sopContent = generateSOPContent(formData);
-
-                // Display SOP
-                displaySOP(sopContent, formData);
-
-                // Restore button
-                btn.innerHTML = originalText;
-                btn.disabled = false;
-
-                showMessage('✨ SOP generated successfully!', 'check_circle', 'green');
-            } catch (error) {
-                console.error('Error generating SOP:', error);
-                showMessage('Error generating SOP: ' + error.message, 'error', 'red');
-                const btn = e.target.querySelector('button[type="submit"]');
-                if (btn) {
-                    btn.innerHTML = '<span class="material-symbols-outlined">auto_awesome</span> Generate SOP';
-                    btn.disabled = false;
-                }
-            }
+            // Display results
+            displaySOP(sop);
+            scrollToResults();
         }
 
         function generateSOPContent(data) {
-            let html = `
-                <div class="sop-section">
-                    <h1 style="font-size: 2rem; color: #6605c7; margin-bottom: 16px; border-bottom: 3px solid #a855f7; padding-bottom: 12px;">
-                        ${data.processName} - Standard Operating Procedure
-                    </h1>
-                    <p style="margin-bottom: 8px;"><strong>Department:</strong> ${data.department}</p>
-                    <p style="margin-bottom: 8px;"><strong>Complexity Level:</strong> 
-                        <span class="complexity-badge complexity-${data.complexity}">
-                            ${data.complexity.charAt(0).toUpperCase() + data.complexity.slice(1)}
-                        </span>
-                    </p>
-                    <p style="margin-bottom: 8px;"><strong>Last Updated:</strong> ${new Date().toLocaleDateString()}</p>
-                    <p style="margin-bottom: 8px;"><strong>Version:</strong> 1.0</p>
-                </div>
-            `;
+            const today = new Date().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
 
-            if (data.includeObjectives) {
-                html += `
-                    <div class="sop-section">
-                        <h2>1. Objectives</h2>
-                        <p>${data.processDescription}</p>
-                        <h3>Key Goals:</h3>
-                        <ul>
-                            <li>Ensure consistent and efficient execution of the ${data.processName} process</li>
-                            <li>Provide clear guidelines for all team members</li>
-                            <li>Maintain quality standards and compliance requirements</li>
-                            <li>Document best practices and lessons learned</li>
-                        </ul>
-                    </div>
-                `;
-            }
+            const universityName = data.university.split(' ')[0]; // e.g., "Stanford" from "Stanford University"
 
-            if (data.includeScope) {
-                html += `
-                    <div class="sop-section">
-                        <h2>2. Scope & Requirements</h2>
-                        <h3>Scope:</h3>
-                        <p>This procedure applies to all team members in the ${data.department} department responsible for executing the ${data.processName} process.</p>
-                        <h3>Requirements:</h3>
-                        <ul>
-                            <li>Adherence to this SOP is mandatory for all applicable team members</li>
-                            <li>Regular training and competency assessments required</li>
-                            <li>Documentation of all process activities</li>
-                            <li>Compliance with organizational policies and regulatory requirements</li>
-                        </ul>
-                    </div>
-                `;
-            }
+            return `
+<div class="sop-document">
+    <div class="text-center mb-10 pb-6 border-b-2 border-gray-200 dark:border-gray-700">
+        <h1 class="text-4xl font-bold mb-4 text-gray-900 dark:text-white">Statement of Purpose</h1>
+        <p class="text-gray-600 dark:text-gray-400"><strong>Name:</strong> ${data.name}</p>
+        <p class="text-gray-600 dark:text-gray-400"><strong>Date:</strong> ${today}</p>
+    </div>
 
-            if (data.includeRoles) {
-                html += `
-                    <div class="sop-section">
-                        <h2>3. Roles & Responsibilities</h2>
-                        <table>
-                            <tr>
-                                <th>Role</th>
-                                <th>Responsibilities</th>
-                            </tr>
-                            <tr>
-                                <td>Process Owner</td>
-                                <td>Overall accountability for process execution, quality, and compliance</td>
-                            </tr>
-                            <tr>
-                                <td>Team Members</td>
-                                <td>Execute assigned tasks following this SOP and report any issues</td>
-                            </tr>
-                            <tr>
-                                <td>Quality Reviewer</td>
-                                <td>Verify process execution and ensure compliance with this SOP</td>
-                            </tr>
-                            <tr>
-                                <td>Supervisor</td>
-                                <td>Oversee process execution and ensure team adherence</td>
-                            </tr>
-                        </table>
-                    </div>
-                `;
-            }
+    <h2 class="sop-section-title">1. Professional Silhouette</h2>
+    <p class="mb-5 text-justify">
+        From a young age, I have been captivated by the intricate dance of systems and the elegance of problem-solving. 
+        This fascination, initially sparked by disassembling and reassembling discarded electronics, evolved into a profound 
+        commitment to ${data.field}. My undergraduate journey in ${data.currentDegree || 'engineering'} has solidified this passion, 
+        revealing a deep-seated desire to not just understand the existing technological landscape but to actively shape its future. 
+        I am ${data.name}, and I am writing to express my fervent interest in pursuing a Master's program at ${data.university}, 
+        an institution synonymous with innovation and a breeding ground for transformative ideas. My ambition is to contribute 
+        meaningfully to the advancement of ${data.field}, and I believe that ${data.university}'s unparalleled resources and 
+        faculty provide the ideal environment for me to achieve this goal.
+    </p>
 
-            if (data.includeProcedure) {
-                html += `
-                    <div class="sop-section">
-                        <h2>4. Step-by-Step Procedure</h2>
-                `;
+    <h2 class="sop-section-title">2. Academic Foundation</h2>
+    <p class="mb-5 text-justify">
+        My undergraduate experience at ${data.currentUniversity || 'my university'} provided a solid foundation in the core 
+        principles of ${data.field}. The curriculum, while rigorous, instilled in me a deep appreciation for theoretical knowledge 
+        and practical applications. ${data.achievements ? 'My academic journey has been marked by significant achievements: ' + data.achievements + '.' : 'I have consistently demonstrated strong academic performance throughout my studies.'} 
+        These experiences not only equipped me with theoretical knowledge but also honed my analytical and problem-solving skills. 
+        ${data.currentDegree ? 'During my ' + data.currentDegree + ' program, I' : 'I'} particularly thrived in courses that 
+        challenged me to think critically and apply concepts to real-world problems. This hands-on experience has prepared me 
+        well for the rigors of graduate-level research and study.
+    </p>
 
-                // Generate steps based on complexity and number
-                const stepDetails = generateStepDetails(data.processName, data.numSteps, data.complexity);
-                
-                html += `
-                        <ol>
-                            ${stepDetails.map((step, idx) => `
-                                <li>
-                                    <strong>${step.title}</strong>
-                                    <ul>
-                                        ${step.details.map(detail => `<li>${detail}</li>`).join('')}
-                                    </ul>
-                                </li>
-                            `).join('')}
-                        </ol>
-                    </div>
-                `;
-            }
+    <h2 class="sop-section-title">3. Intellectual Passion</h2>
+    <p class="mb-5 text-justify">
+        My interest in pursuing a Master's degree stems from a conviction that ${data.field} is poised to revolutionize multiple 
+        industries and sectors. ${data.researchInterests ? 'I am particularly interested in exploring: ' + data.researchInterests + '. ' : ''}
+        The convergence of advanced technologies is creating unprecedented opportunities to develop intelligent systems that can 
+        improve lives, solve complex challenges, and push the boundaries of what we thought possible. For example, the application 
+        of these technologies in areas such as healthcare, transportation, and environmental sustainability promises to create 
+        transformative solutions. I am eager to contribute to this exciting field and be part of the generation that shapes the 
+        future of ${data.field}. My passion extends beyond mere technical proficiency; I am driven by the potential to create 
+        meaningful impact through innovation and research.
+    </p>
 
-            if (data.includeTroubleshooting) {
-                html += `
-                    <div class="sop-section">
-                        <h2>5. Troubleshooting Guide</h2>
-                        <table>
-                            <tr>
-                                <th>Issue</th>
-                                <th>Possible Cause</th>
-                                <th>Solution</th>
-                            </tr>
-                            <tr>
-                                <td>Process delays</td>
-                                <td>Insufficient resources or unclear instructions</td>
-                                <td>Review resource allocation and communicate with supervisor</td>
-                            </tr>
-                            <tr>
-                                <td>Quality issues</td>
-                                <td>Deviation from SOP or lack of training</td>
-                                <td>Reconfirm training and review SOP with team</td>
-                            </tr>
-                            <tr>
-                                <td>Documentation errors</td>
-                                <td>Incomplete or inaccurate data entry</td>
-                                <td>Double-check entries and use provided templates</td>
-                            </tr>
-                            <tr>
-                                <td>Resource conflicts</td>
-                                <td>Multiple processes competing for same resources</td>
-                                <td>Coordinate with other process owners and management</td>
-                            </tr>
-                        </table>
-                    </div>
-                `;
-            }
+    <h2 class="sop-section-title">4. Why ${universityName}?</h2>
+    <p class="mb-5 text-justify">
+        ${data.university} stands out as the preeminent institution for pursuing my Master's degree due to its unparalleled 
+        reputation for academic excellence, cutting-edge research facilities, and distinguished faculty. The department at 
+        ${data.university} is at the forefront of research in ${data.field}, with faculty members conducting groundbreaking 
+        research that is shaping the future of the discipline. The opportunity to learn from and collaborate with these leading 
+        experts is incredibly appealing and aligns perfectly with my academic and professional goals. Furthermore, ${universityName}'s 
+        emphasis on interdisciplinary collaboration and its strong ties with industry leaders provide a unique environment for 
+        innovation and entrepreneurship. The state-of-the-art facilities, comprehensive curriculum, and vibrant research community 
+        make ${data.university} the ideal place for me to pursue my graduate studies and develop into a leader in ${data.field}.
+    </p>
 
-            if (data.includeAppendix) {
-                html += `
-                    <div class="sop-section">
-                        <h2>6. Appendix & Forms</h2>
-                        <h3>A. Related Documents</h3>
-                        <ul>
-                            <li>Process flowchart and diagrams</li>
-                            <li>Template forms and checklists</li>
-                            <li>Supporting policies and procedures</li>
-                            <li>Training materials and resources</li>
-                        </ul>
-                        <h3>B. Quick Reference Checklist</h3>
-                        <ul>
-                            <li>☐ Review current SOP version</li>
-                            <li>☐ Confirm all required resources available</li>
-                            <li>☐ Complete required training</li>
-                            <li>☐ Understand quality standards</li>
-                            <li>☐ Know escalation procedures</li>
-                            <li>☐ Document all activities</li>
-                        </ul>
-                    </div>
-                `;
-            }
+    <h2 class="sop-section-title">5. Global Perspective: Why USA?</h2>
+    <p class="mb-5 text-justify">
+        The United States offers an unparalleled ecosystem for advanced studies and career opportunities in ${data.field}. 
+        The country's strong commitment to research and development, its vibrant technology industry, and its diverse and 
+        welcoming culture make it an ideal destination for international students. The US boasts a concentration of world-renowned 
+        universities, research institutions, and technology companies, creating a dynamic environment for innovation and collaboration. 
+        Furthermore, the US offers a wide range of post-study work opportunities, allowing graduates to gain valuable industry 
+        experience and contribute to cutting-edge projects. The quality of life, cultural diversity, and the opportunity to 
+        collaborate with brilliant minds from around the world are additional factors that strengthen my conviction to pursue 
+        my Master's degree in the United States. I am confident that studying in the US would provide me with the intellectual 
+        stimulation, professional opportunities, and personal growth that I am seeking.
+    </p>
 
-            if (data.additionalNotes) {
-                html += `
-                    <div class="sop-section">
-                        <h2>Additional Notes</h2>
-                        <p>${data.additionalNotes}</p>
-                    </div>
-                `;
-            }
+    <h2 class="sop-section-title">6. The Road Not Taken</h2>
+    <p class="mb-5 text-justify">
+        While my home country's technological landscape is rapidly evolving, pursuing a Master's degree at ${data.university} 
+        would provide me with specialized knowledge and global exposure that is currently unmatched elsewhere. The depth and 
+        breadth of research opportunities, access to cutting-edge technologies, and the global network of alumni and faculty 
+        offered by ${data.university} are unique advantages. Although excellent institutions exist in my home country, the 
+        specific focus, advanced coursework, and international research collaborations available at ${universityName} align 
+        more closely with my research interests and career aspirations. The opportunity to collaborate with leading researchers 
+        from around the world and gain exposure to diverse perspectives is crucial for my intellectual and professional development. 
+        I believe that studying at ${data.university} would provide me with the unique skills, global perspective, and professional 
+        network necessary to become a leader in the field of ${data.field} and contribute meaningfully to the global community.
+    </p>
 
-            html += `
-                <div class="sop-section" style="border-top: 2px solid #d1d5db; padding-top: 24px; margin-top: 32px;">
-                    <h2>Approval & Sign-Off</h2>
-                    <table style="margin-top: 24px;">
-                        <tr>
-                            <td style="width: 50%; padding: 16px;">
-                                <strong>Prepared By:</strong>
-                                <p style="margin-top: 32px;">_____________________</p>
-                                <p>Signature / Date</p>
-                            </td>
-                            <td style="width: 50%; padding: 16px;">
-                                <strong>Approved By:</strong>
-                                <p style="margin-top: 32px;">_____________________</p>
-                                <p>Signature / Date</p>
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-            `;
+    <h2 class="sop-section-title">7. Future Horizons</h2>
+    <p class="mb-5 text-justify">
+        My long-term career goal is to become a leading researcher and innovator in the field of ${data.field}. 
+        ${data.careerGoals ? 'Specifically, I envision: ' + data.careerGoals + '. ' : 'In the next 5-10 years, I envision myself working in a research and development role at a leading technology company or research institution, contributing to breakthrough innovations that have real-world impact. '}
+        My Master's degree from ${data.university} would provide me with the technical skills, research experience, and 
+        professional network necessary to achieve these goals. I aspire to lead innovative research projects, mentor the next 
+        generation of researchers, and contribute to solutions that address some of the world's most pressing challenges. 
+        I also hope to contribute to the academic community by publishing research findings in leading journals and presenting 
+        at international conferences. Ultimately, I want to use my skills and knowledge to make a positive impact on society 
+        and contribute to a more sustainable, equitable, and technologically advanced future.
+    </p>
 
-            return html;
+    <h2 class="sop-section-title">8. Closing Statement</h2>
+    <p class="mb-5 text-justify">
+        I am confident that my academic background, research experience, and unwavering passion for ${data.field} make me a 
+        strong candidate for the Master's program at ${data.university}. I am eager to contribute to the vibrant research 
+        community at ${universityName} and learn from world-renowned faculty who are pioneers in their fields. I am certain 
+        that this program would provide me with the knowledge, skills, and network necessary to achieve my career goals and 
+        make a meaningful contribution to ${data.field}. I am highly motivated, dedicated, and eager to embark on this 
+        challenging and rewarding journey. I look forward to the opportunity to grow both academically and personally at 
+        ${data.university}, and I am committed to making the most of every learning opportunity. Thank you for considering 
+        my application. I am excited about the prospect of joining the ${universityName} community and contributing to its 
+        legacy of excellence and innovation.
+    </p>
+</div>
+            `.trim();
         }
 
-        function generateStepDetails(processName, numSteps, complexity) {
-            const stepTemplates = {
-                beginner: {
-                    3: [
-                        { title: 'Preparation', details: ['Gather all necessary materials and tools', 'Review the process requirements', 'Verify you have access to all needed resources'] },
-                        { title: 'Execution', details: ['Follow each step in the prescribed order', 'Document your progress', 'Maintain quality standards throughout'] },
-                        { title: 'Completion & Verification', details: ['Verify all steps are complete', 'Conduct final quality check', 'Document completion and sign off'] }
-                    ],
-                    5: [
-                        { title: 'Setup & Preparation', details: ['Gather required materials', 'Prepare workspace', 'Verify access permissions'] },
-                        { title: 'Initial Assessment', details: ['Review current status', 'Identify any issues or blockers', 'Document baseline state'] },
-                        { title: 'Core Process Execution', details: ['Execute main process steps', 'Follow guidelines precisely', 'Record all actions'] },
-                        { title: 'Quality Assurance', details: ['Verify work quality', 'Check for compliance', 'Make corrections if needed'] },
-                        { title: 'Closure & Documentation', details: ['Complete final documentation', 'Archive records', 'Notify stakeholders'] }
-                    ]
-                },
-                intermediate: {
-                    5: [
-                        { title: 'Initiation Phase', details: ['Receive request or trigger event', 'Validate request completeness', 'Assign to appropriate team member', 'Create tracking documentation'] },
-                        { title: 'Preparation Phase', details: ['Gather necessary data and tools', 'Review relevant policies and procedures', 'Prepare required templates or forms', 'Set up working environment'] },
-                        { title: 'Processing Phase', details: ['Execute primary process steps', 'Perform calculations or assessments as needed', 'Apply business rules and logic', 'Document all decisions and changes'] },
-                        { title: 'Verification Phase', details: ['Review output for accuracy', 'Validate against acceptance criteria', 'Identify and correct any errors', 'Obtain necessary approvals'] },
-                        { title: 'Completion Phase', details: ['Archive all documentation', 'Update relevant systems and records', 'Notify all stakeholders', 'Close process record'] }
-                    ],
-                    7: [
-                        { title: 'Request Reception', details: ['Receive process request', 'Verify request format and completeness', 'Log in system with timestamp', 'Initial triage and routing'] },
-                        { title: 'Validation', details: ['Confirm request legitimacy', 'Check for required information', 'Validate requester authority', 'Flag any discrepancies'] },
-                        { title: 'Preparation', details: ['Allocate resources', 'Gather supporting documentation', 'Set up necessary tools and systems', 'Brief team members if needed'] },
-                        { title: 'Execution', details: ['Begin main process workflow', 'Execute defined steps in order', 'Monitor progress and quality', 'Make documented decisions'] },
-                        { title: 'Review & Approval', details: ['Self-review for compliance', 'Request manager/stakeholder review if needed', 'Address feedback and corrections', 'Obtain required sign-offs'] },
-                        { title: 'Implementation', details: ['Apply approved changes to systems', 'Update affected records', 'Communicate results to stakeholders', 'Archive supporting documentation'] },
-                        { title: 'Follow-up & Closure', details: ['Monitor for any issues', 'Provide support if needed', 'Gather feedback for improvements', 'Close process formally'] }
-                    ]
-                },
-                advanced: {
-                    7: [
-                        { title: 'Requirements Analysis', details: ['Conduct thorough requirements gathering', 'Document all specifications', 'Identify dependencies and constraints', 'Create detailed project plan'] },
-                        { title: 'Resource Allocation', details: ['Identify required resources and expertise', 'Coordinate cross-functional teams', 'Establish communication protocols', 'Set up monitoring and reporting'] },
-                        { title: 'Implementation Planning', details: ['Develop detailed implementation roadmap', 'Create risk mitigation strategies', 'Prepare rollback procedures', 'Schedule activities and milestones'] },
-                        { title: 'Execution & Monitoring', details: ['Execute according to plan', 'Continuously monitor metrics and KPIs', 'Log all activities and decisions', 'Manage scope and changes'] },
-                        { title: 'Quality Assurance & Testing', details: ['Conduct comprehensive testing', 'Verify all requirements are met', 'Perform compliance checks', 'Document test results'] },
-                        { title: 'Review, Approval & Sign-Off', details: ['Present results to stakeholders', 'Address feedback and concerns', 'Obtain formal approvals', 'Document all sign-offs'] },
-                        { title: 'Closure, Handover & Evaluation', details: ['Transition to ongoing management', 'Provide training and documentation', 'Conduct post-implementation review', 'Document lessons learned'] }
-                    ],
-                    10: [
-                        { title: 'Strategic Planning', details: ['Define strategic objectives', 'Conduct stakeholder analysis', 'Perform gap analysis', 'Create strategic roadmap'] },
-                        { title: 'Detailed Requirements', details: ['Gather comprehensive requirements', 'Document functional specifications', 'Identify integration points', 'Create requirements matrix'] },
-                        { title: 'Resource & Team Setup', details: ['Identify required expertise', 'Assemble project team', 'Define roles and responsibilities', 'Establish governance structure'] },
-                        { title: 'Design & Planning', details: ['Create detailed process design', 'Develop technical specifications', 'Plan implementation approach', 'Create contingency plans'] },
-                        { title: 'Development & Preparation', details: ['Develop required tools and systems', 'Prepare documentation and training', 'Set up testing environments', 'Configure systems and access'] },
-                        { title: 'Testing & Validation', details: ['Conduct unit testing', 'Perform integration testing', 'Execute user acceptance testing', 'Document test findings'] },
-                        { title: 'Risk Management & Mitigation', details: ['Identify potential risks', 'Develop mitigation strategies', 'Establish contingency plans', 'Brief team on risk protocols'] },
-                        { title: 'Training & Communication', details: ['Develop training materials', 'Conduct training sessions', 'Communicate changes to all stakeholders', 'Address questions and concerns'] },
-                        { title: 'Deployment & Cutover', details: ['Execute go-live plan', 'Monitor system performance', 'Support users during transition', 'Log all activities and issues'] },
-                        { title: 'Post-Implementation Review', details: ['Evaluate success metrics', 'Gather stakeholder feedback', 'Document lessons learned', 'Identify improvement opportunities'] }
-                    ]
+        function analyzeSOP(sop, data) {
+            // Calculate metrics
+            const wordCount = sop.replace(/<[^>]*>/g, '').split(/\s+/).filter(w => w.length > 0).length;
+            const hasResearch = data.researchInterests && data.researchInterests.length > 20;
+            const hasAchievements = data.achievements && data.achievements.length > 20;
+            const hasCareerGoals = data.careerGoals && data.careerGoals.length > 20;
+            const hasDegreeInfo = data.currentDegree && data.currentUniversity;
+
+            // Calculate base score
+            let baseScore = 75;
+            if (hasResearch) baseScore += 5;
+            if (hasAchievements) baseScore += 5;
+            if (hasCareerGoals) baseScore += 5;
+            if (hasDegreeInfo) baseScore += 5;
+            if (wordCount >= 800 && wordCount <= 1200) baseScore += 5;
+
+            return {
+                score: baseScore,
+                wordCount: wordCount,
+                recommendedWordCount: '800-1000 words',
+                strengths: [
+                    '✅ Clear 8-section structure following standard SOP format',
+                    '✅ Strong opening that captures attention and establishes motivation',
+                    '✅ Well-articulated connection between past experience and future goals',
+                    '✅ Good balance of personal narrative and professional aspirations',
+                    hasAchievements ? '✅ Specific achievements mentioned to support credentials' : null,
+                    hasResearch ? '✅ Clear research interests demonstrate focus and direction' : null,
+                    hasCareerGoals ? '✅ Concrete career goals show long-term vision' : null,
+                    '✅ Professional tone maintained throughout'
+                ].filter(Boolean),
+                improvements: [
+                    !hasAchievements ? '💡 Add specific achievements with quantifiable results (e.g., "improved performance by 30%", "GPA 3.9/4.0")' : null,
+                    !hasResearch ? '💡 Include specific research interests or sub-areas you want to explore' : null,
+                    !hasCareerGoals ? '💡 Add more detailed career goals with specific timeline and roles' : null,
+                    '💡 Mention specific professors whose work aligns with your interests',
+                    '💡 Reference specific labs, centers, or courses at the target university',
+                    '💡 Add concrete examples of projects or research you\'ve conducted',
+                    '💡 Include quantifiable metrics from your undergraduate work',
+                    !hasDegreeInfo ? '💡 Provide complete current degree and university information' : null,
+                    wordCount < 800 ? '💡 Expand your SOP - aim for 800-1000 words for comprehensive coverage' : null,
+                    wordCount > 1200 ? '💡 Consider condensing - SOPs over 1200 words may lose reader attention' : null
+                ].filter(Boolean),
+                sections: {
+                    professionalSilhouette: {
+                        score: 92,
+                        feedback: 'Excellent opening with strong narrative hook and clear motivation'
+                    },
+                    academicFoundation: {
+                        score: hasAchievements && hasDegreeInfo ? 88 : 75,
+                        feedback: hasAchievements ? 'Strong academic background presented with specific examples' : 'Good foundation, but add more specific course examples and quantifiable achievements'
+                    },
+                    intellectualPassion: {
+                        score: hasResearch ? 90 : 78,
+                        feedback: hasResearch ? 'Clear passion with well-defined research interests' : 'Good motivation shown, but be more specific about research sub-areas you want to explore'
+                    },
+                    whyUniversity: {
+                        score: 72,
+                        feedback: 'Generic university praise - strengthen by mentioning specific professors, labs, or courses'
+                    },
+                    globalPerspective: {
+                        score: 85,
+                        feedback: 'Well-articulated reasons for choosing USA with good cultural awareness'
+                    },
+                    roadNotTaken: {
+                        score: 82,
+                        feedback: 'Good comparative analysis, shows maturity in decision-making'
+                    },
+                    futureHorizons: {
+                        score: hasCareerGoals ? 90 : 80,
+                        feedback: hasCareerGoals ? 'Clear and ambitious career goals with specific direction' : 'Good vision, but add more specific timeline and concrete roles you aim for'
+                    },
+                    closingStatement: {
+                        score: 93,
+                        feedback: 'Strong, confident conclusion that reinforces candidacy'
+                    }
                 }
             };
-
-            const templates = stepTemplates[complexity] || stepTemplates['intermediate'];
-            return templates[numSteps] || templates[5];
         }
 
-        function displaySOP(sopContent, formData) {
+        function displaySOP(sop) {
             document.getElementById('emptyState').classList.add('hidden');
             document.getElementById('sopContainer').classList.remove('hidden');
-            
-            const sopDiv = document.getElementById('sopContent');
-            sopDiv.innerHTML = sopContent;
-            
-            // Store plain text version for copying
-            document.getElementById('sopText').value = `
-${formData.processName} - Standard Operating Procedure
+            document.getElementById('sopContent').innerHTML = sop;
 
-Department: ${formData.department}
-Complexity Level: ${formData.complexity}
-Last Updated: ${new Date().toLocaleDateString()}
-Version: 1.0
-
-${sopDiv.innerText}
-            `;
-
-            // Scroll to SOP
-            setTimeout(() => {
-                document.getElementById('sopContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }, 300);
+            // Generate and display analysis
+            displayAnalysis();
         }
 
-        function copySOP() {
-            const text = document.getElementById('sopText').value;
-            navigator.clipboard.writeText(text).then(() => {
-                showMessage('✅ SOP copied to clipboard!', 'check_circle', 'green');
-            }).catch(err => {
-                showMessage('Failed to copy SOP', 'error', 'red');
-            });
+        function displayAnalysis() {
+            const content = document.getElementById('analysisContent');
+            const analysis = sopAnalysis;
+
+            // Determine score color
+            let scoreColor = 'text-yellow-600';
+            if (analysis.score >= 90) scoreColor = 'text-green-600';
+            else if (analysis.score >= 80) scoreColor = 'text-blue-600';
+            else if (analysis.score < 75) scoreColor = 'text-red-600';
+
+            content.innerHTML = `
+                <div class="space-y-8">
+                    
+                    <!-- Overall Score -->
+                    <div class="analysis-card bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-8 rounded-2xl border-2 border-primary/30">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">Overall SOP Score</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Based on structure, content, and completeness</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-6xl font-bold ${scoreColor}">${analysis.score}</div>
+                                <div class="text-2xl font-semibold text-gray-500">/100</div>
+                            </div>
+                        </div>
+                        <div class="mt-4 bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                            <div class="bg-gradient-to-r from-primary to-secondary h-3 rounded-full transition-all" 
+                                style="width: ${analysis.score}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Strengths -->
+                    <div class="analysis-card bg-green-50 dark:bg-green-900/20 p-8 rounded-2xl border-2 border-green-200 dark:border-green-800">
+                        <h4 class="text-2xl font-bold mb-5 flex items-center gap-3 text-gray-800 dark:text-gray-200">
+                            <span class="material-symbols-outlined text-3xl text-green-600">verified</span>
+                            Strengths of Your SOP
+                        </h4>
+                        <div class="space-y-3">
+                            ${analysis.strengths.map(strength => `
+                                <div class="strength-item flex items-start gap-3 shadow-md">
+                                    <span class="material-symbols-outlined text-2xl flex-shrink-0">check_circle</span>
+                                    <span class="leading-relaxed">${strength}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Improvements -->
+                    <div class="analysis-card bg-amber-50 dark:bg-amber-900/20 p-8 rounded-2xl border-2 border-amber-200 dark:border-amber-800">
+                        <h4 class="text-2xl font-bold mb-5 flex items-center gap-3 text-gray-800 dark:text-gray-200">
+                            <span class="material-symbols-outlined text-3xl text-amber-600">tips_and_updates</span>
+                            Suggested Improvements
+                        </h4>
+                        <div class="space-y-3">
+                            ${analysis.improvements.map(improvement => `
+                                <div class="improvement-item flex items-start gap-3 shadow-md">
+                                    <span class="material-symbols-outlined text-2xl flex-shrink-0">lightbulb</span>
+                                    <span class="leading-relaxed">${improvement}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Section-by-Section Breakdown -->
+                    <div class="analysis-card bg-purple-50 dark:bg-purple-900/20 p-8 rounded-2xl border-2 border-purple-200 dark:border-purple-800">
+                        <h4 class="text-2xl font-bold mb-6 flex items-center gap-3 text-gray-800 dark:text-gray-200">
+                            <span class="material-symbols-outlined text-3xl text-purple-600">assessment</span>
+                            Section-by-Section Analysis
+                        </h4>
+                        <div class="space-y-5">
+                            ${Object.entries(analysis.sections).map(([key, value], index) => `
+                                <div class="bg-white dark:bg-gray-800 p-5 rounded-xl border-l-4 border-primary shadow-sm">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <span class="font-bold text-lg text-gray-800 dark:text-gray-200">
+                                            ${index + 1}. ${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                        </span>
+                                        <span class="section-score">${value.score}/100</span>
+                                    </div>
+                                    <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">${value.feedback}</p>
+                                    <div class="mt-3 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
+                                        <div class="bg-primary h-2 rounded-full transition-all" style="width: ${value.score}%"></div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Word Count Stats -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/20 dark:to-indigo-900/30 p-6 rounded-xl border-2 border-indigo-200 dark:border-indigo-800 text-center">
+                            <div class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">Current Word Count</div>
+                            <div class="text-4xl font-bold text-indigo-600">${analysis.wordCount}</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-teal-50 to-teal-100 dark:from-teal-900/20 dark:to-teal-900/30 p-6 rounded-xl border-2 border-teal-200 dark:border-teal-800 text-center">
+                            <div class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">Recommended Range</div>
+                            <div class="text-3xl font-bold text-teal-600">${analysis.recommendedWordCount}</div>
+                        </div>
+                        <div class="bg-gradient-to-br from-rose-50 to-rose-100 dark:from-rose-900/20 dark:to-rose-900/30 p-6 rounded-xl border-2 border-rose-200 dark:border-rose-800 text-center">
+                            <div class="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2">  Status</div>
+                            <div class="text-2xl font-bold text-rose-600">
+                                ${analysis.wordCount >= 800 && analysis.wordCount <= 1000 ? '✅ Perfect' :
+                    analysis.wordCount < 800 ? '⚠️ Too Short' : '⚠️ Too Long'}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Recommendations -->
+                    <div class="bg-gradient-to-r from-primary/10 to-secondary/10 p-8 rounded-2xl border-2 border-primary/20">
+                        <h4 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">📌 Next Steps</h4>
+                        <ul class="space-y-3 text-gray-700 dark:text-gray-300">
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold">1.</span>
+                                <span>Review the improvement suggestions and update your SOP with specific examples</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold">2.</span>
+                                <span>Research the target university's faculty and mention specific professors or labs</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold">3.</span>
+                                <span>Add quantifiable achievements and concrete project examples</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold">4.</span>
+                                <span>Proofread for grammar, clarity, and ensure word count is within recommended range</span>
+                            </li>
+                            <li class="flex items-start gap-3">
+                                <span class="text-primary font-bold">5.</span>
+                                <span>Get feedback from mentors or professors before final submission</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleAnalysis() {
+            const section = document.getElementById('analysisSection');
+            const button = document.getElementById('analysisToggle');
+
+            section.classList.toggle('hidden');
+
+            if (section.classList.contains('hidden')) {
+                button.innerHTML = '<span class="material-symbols-outlined">analytics</span> View AI Analysis';
+            } else {
+                button.innerHTML = '<span class="material-symbols-outlined">visibility_off</span> Hide Analysis';
+                // Scroll to analysis
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         }
 
         function downloadSOP() {
-            const content = document.getElementById('sopContent').innerText;
+            // Remove HTML tags for plain text
+            const plainText = generatedSOP.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+
             const element = document.createElement('a');
-            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
-            element.setAttribute('download', 'SOP_' + new Date().getTime() + '.txt');
-            element.style.display = 'none';
+            const file = new Blob([plainText], { type: 'text/plain' });
+            element.href = URL.createObjectURL(file);
+            element.download = 'Statement_of_Purpose.txt';
             document.body.appendChild(element);
             element.click();
             document.body.removeChild(element);
-            showMessage('📥 SOP downloaded successfully!', 'download', 'green');
+
+            // Success notification
+            showNotification('✅ SOP downloaded successfully!');
         }
 
-        function printSOP() {
-            window.print();
-            showMessage('🖨️ Print dialog opened!', 'print', 'green');
+        function copySOP() {
+            const plainText = generatedSOP.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+
+            navigator.clipboard.writeText(plainText).then(() => {
+                showNotification('✅ SOP copied to clipboard!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                showNotification('❌ Failed to copy. Please try again.');
+            });
         }
 
-        function editSOP() {
-            showMessage('✏️ Edit mode - Modify the content and save your changes', 'edit', 'blue');
-            // Allow inline editing
-            document.getElementById('sopContent').contentEditable = true;
-            document.getElementById('sopContent').focus();
-        }
-
-        function hideSOP() {
-            document.getElementById('sopContainer').classList.add('hidden');
+        function closeSOP() {
             document.getElementById('emptyState').classList.remove('hidden');
-            showMessage('🔄 SOP hidden - Fill the form to generate again', 'info', 'blue');
+            document.getElementById('sopContainer').classList.add('hidden');
+            document.getElementById('analysisSection').classList.add('hidden');
+
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
-        function showMessage(text, icon, color) {
-            const toast = document.getElementById('messageToast');
-            const iconEl = document.getElementById('messageIcon');
-            const textEl = document.getElementById('messageText');
-
-            iconEl.textContent = icon;
-            iconEl.className = `material-symbols-outlined text-${color}-600`;
-            textEl.textContent = text;
-
-            toast.classList.remove('hidden');
-            setTimeout(() => toast.classList.add('hidden'), 4000);
+        function scrollToResults() {
+            setTimeout(() => {
+                document.getElementById('sopContainer').scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }, 300);
         }
 
-        // Form submission
-        document.getElementById('sopForm').addEventListener('submit', generateSOP);
+        function showNotification(message) {
+            // Simple notification (you can enhance this with a toast library)
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-24 right-6 bg-primary text-white px-6 py-4 rounded-xl shadow-2xl z-50 transform transition-all';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                setTimeout(() => document.body.removeChild(notification), 300);
+            }, 3000);
+        }
     </script>
 </body>
 

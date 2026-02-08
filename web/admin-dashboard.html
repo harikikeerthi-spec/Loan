@@ -39,7 +39,7 @@
         };
     </script>
     <style>
-.admin-sidebar {
+        .admin-sidebar {
             background: linear-gradient(135deg, rgba(102, 5, 199, 0.1) 0%, rgba(139, 192, 232, 0.05) 100%);
             border-right: 1px solid rgba(102, 5, 199, 0.2);
         }
@@ -253,6 +253,11 @@
                     <span class="material-symbols-outlined">people</span>
                     <span>User Management</span>
                 </button>
+                <button onclick="switchTab('community')"
+                    class="admin-nav-item w-full text-left px-4 py-3 rounded-lg flex items-center gap-3">
+                    <span class="material-symbols-outlined">groups</span>
+                    <span>Community Management</span>
+                </button>
                 <button onclick="switchTab('settings')"
                     class="admin-nav-item w-full text-left px-4 py-3 rounded-lg flex items-center gap-3">
                     <span class="material-symbols-outlined">settings</span>
@@ -270,7 +275,8 @@
         <!-- Main Content -->
         <div class="flex-1 flex flex-col">
             <!-- Top Navigation Bar -->
-            <div class="glass-card border-b border-gray-300 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
+            <div
+                class="glass-card border-b border-gray-300 dark:border-gray-700 px-6 py-4 flex justify-between items-center">
                 <div class="flex items-center gap-4">
                     <button id="sidebarToggle" class="lg:hidden material-symbols-outlined text-2xl cursor-pointer">
                         menu
@@ -278,11 +284,12 @@
                     <h1 id="pageTitle" class="text-2xl font-display font-bold">Dashboard</h1>
                 </div>
                 <div class="flex items-center gap-4">
-                    <button onclick="toggleTheme()" class="material-symbols-outlined text-2xl cursor-pointer hover:text-primary">
+                    <button onclick="toggleTheme()"
+                        class="material-symbols-outlined text-2xl cursor-pointer hover:text-primary">
                         light_mode
                     </button>
-                    <img id="profileImage" src="https://api.dicebear.com/7.x/avataaars/svg?seed=admin"
-                        alt="Profile" class="w-10 h-10 rounded-full cursor-pointer">
+                    <img id="profileImage" src="https://api.dicebear.com/7.x/avataaars/svg?seed=admin" alt="Profile"
+                        class="w-10 h-10 rounded-full cursor-pointer">
                 </div>
             </div>
 
@@ -309,7 +316,8 @@
                                     <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Published</p>
                                     <p class="text-3xl font-bold text-green-600" id="publishedBlogs">0</p>
                                 </div>
-                                <span class="material-symbols-outlined text-3xl text-green-600 opacity-30">check_circle</span>
+                                <span
+                                    class="material-symbols-outlined text-3xl text-green-600 opacity-30">check_circle</span>
                             </div>
                         </div>
                         <div class="stat-card glass-card p-6 rounded-lg">
@@ -318,7 +326,8 @@
                                     <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Drafts</p>
                                     <p class="text-3xl font-bold text-blue-600" id="draftBlogs">0</p>
                                 </div>
-                                <span class="material-symbols-outlined text-3xl text-blue-600 opacity-30">edit_note</span>
+                                <span
+                                    class="material-symbols-outlined text-3xl text-blue-600 opacity-30">edit_note</span>
                             </div>
                         </div>
                         <div class="stat-card glass-card p-6 rounded-lg">
@@ -327,7 +336,8 @@
                                     <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Total Views</p>
                                     <p class="text-3xl font-bold text-purple-600" id="totalViews">0</p>
                                 </div>
-                                <span class="material-symbols-outlined text-3xl text-purple-600 opacity-30">visibility</span>
+                                <span
+                                    class="material-symbols-outlined text-3xl text-purple-600 opacity-30">visibility</span>
                             </div>
                         </div>
                     </div>
@@ -370,7 +380,8 @@
                     <div class="glass-card p-4 rounded-lg mb-6 flex flex-col md:flex-row gap-4">
                         <input type="text" id="searchBlogs" placeholder="Search blogs..."
                             class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
-                        <select id="filterStatus" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                        <select id="filterStatus"
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
                             <option value="">All Status</option>
                             <option value="published">Published</option>
                             <option value="draft">Draft</option>
@@ -412,7 +423,8 @@
                 <div id="create" class="tab-container">
                     <h2 class="text-3xl font-bold mb-6">Create New Blog Post</h2>
 
-                    <form id="createBlogForm" class="glass-card p-8 rounded-lg space-y-6" onsubmit="handleCreateBlog(event)">
+                    <form id="createBlogForm" class="glass-card p-8 rounded-lg space-y-6"
+                        onsubmit="handleCreateBlog(event)">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label class="block text-sm font-medium mb-2">Blog Title *</label>
@@ -471,6 +483,59 @@
                             </div>
                         </div>
 
+                        <!-- Template & Font Style Section -->
+                        <div class="glass-card p-6 rounded-lg mb-6">
+                            <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary">palette</span>
+                                Blog Customization
+                            </h3>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <!-- Template Selection -->
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Blog Template</label>
+                                    <select id="blogTemplate"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                                        <option value="default">Default - Clean & Simple</option>
+                                        <option value="modern">Modern - Bold & Colorful</option>
+                                        <option value="minimal">Minimal - Typography Focused</option>
+                                        <option value="magazine">Magazine - Rich Media</option>
+                                        <option value="tech">Tech - Code Friendly</option>
+                                        <option value="creative">Creative - Artistic</option>
+                                    </select>
+                                    <p class="text-xs text-gray-500 mt-1">Choose a layout style for your blog post</p>
+                                </div>
+
+                                <!-- Font Style -->
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Font Style</label>
+                                    <select id="fontStyle"
+                                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                                        <option value="default">Default (Noto Sans & Serif)</option>
+                                        <option value="modern">Modern (Inter & Outfit)</option>
+                                        <option value="classic">Classic (Georgia & Arial)</option>
+                                        <option value="tech">Tech (Roboto Mono)</option>
+                                        <option value="elegant">Elegant (Playfair & Lato)</option>
+                                        <option value="bold">Bold (Montserrat)</option>
+                                    </select>
+                                    <p class="text-xs text-gray-500 mt-1">Choose typography for your content</p>
+                                </div>
+                            </div>
+
+                            <!-- Template Preview -->
+                            <div class="mt-4 flex gap-2">
+                                <button type="button" onclick="previewBlogTemplate()"
+                                    class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-sm">visibility</span>
+                                    Preview Template
+                                </button>
+                                <button type="button" onclick="resetTemplate()"
+                                    class="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700">
+                                    Reset to Default
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label class="block text-sm font-medium mb-2">Tags (comma-separated)</label>
@@ -490,10 +555,17 @@
                         </div>
 
                         <div class="flex gap-4 pt-4">
-                            <button type="submit" class="admin-btn-primary text-white px-8 py-3 rounded-lg font-medium flex-1">
+                            <button type="button" onclick="previewFullBlog()"
+                                class="px-8 py-3 rounded-lg font-medium border-2 border-primary text-primary hover:bg-primary hover:text-white flex items-center gap-2">
+                                <span class="material-symbols-outlined">visibility</span>
+                                Preview Blog
+                            </button>
+                            <button type="submit"
+                                class="admin-btn-primary text-white px-8 py-3 rounded-lg font-medium flex-1">
                                 Create Blog
                             </button>
-                            <button type="reset" class="px-8 py-3 rounded-lg font-medium border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800">
+                            <button type="reset"
+                                class="px-8 py-3 rounded-lg font-medium border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800">
                                 Clear
                             </button>
                         </div>
@@ -525,6 +597,214 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <!-- Community Management Tab -->
+                <div id="community" class="tab-container">
+                    <h2 class="text-3xl font-bold mb-6">Community Management</h2>
+
+                    <!-- Community Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                        <div class="stat-card glass-card p-6 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Mentors</p>
+                                    <p class="text-3xl font-bold" id="totalMentors">0</p>
+                                </div>
+                                <span class="material-symbols-outlined text-3xl text-primary opacity-30">person</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-card p-6 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Events</p>
+                                    <p class="text-3xl font-bold text-blue-600" id="totalEvents">0</p>
+                                </div>
+                                <span class="material-symbols-outlined text-3xl text-blue-600 opacity-30">event</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-card p-6 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Success Stories
+                                    </p>
+                                    <p class="text-3xl font-bold text-green-600" id="totalStories">0</p>
+                                </div>
+                                <span class="material-symbols-outlined text-3xl text-green-600 opacity-30">stars</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-card p-6 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Resources</p>
+                                    <p class="text-3xl font-bold text-orange-600" id="totalResources">0</p>
+                                </div>
+                                <span
+                                    class="material-symbols-outlined text-3xl text-orange-600 opacity-30">library_books</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Community Sub-tabs -->
+                    <div class="flex gap-2 mb-6 border-b border-gray-300 dark:border-gray-700">
+                        <button onclick="switchCommunityTab('mentorship')"
+                            class="community-tab-button tab-button active">
+                            <span class="material-symbols-outlined text-sm">person</span>
+                            Mentorship
+                        </button>
+                        <button onclick="switchCommunityTab('events')" class="community-tab-button tab-button">
+                            <span class="material-symbols-outlined text-sm">event</span>
+                            Events
+                        </button>
+                        <button onclick="switchCommunityTab('stories')" class="community-tab-button tab-button">
+                            <span class="material-symbols-outlined text-sm">stars</span>
+                            Success Stories
+                        </button>
+                        <button onclick="switchCommunityTab('resources')" class="community-tab-button tab-button">
+                            <span class="material-symbols-outlined text-sm">library_books</span>
+                            Resources
+                        </button>
+                    </div>
+
+                    <!-- Mentorship Sub-tab -->
+                    <div id="mentorship-tab" class="community-sub-tab active">
+                        <div class="glass-card rounded-lg overflow-hidden">
+                            <div
+                                class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                                <h3 class="text-xl font-bold">Mentorship Programs</h3>
+                                <button
+                                    class="admin-btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+                                    <span class="material-symbols-outlined">add</span>
+                                    Add Mentor
+                                </button>
+                            </div>
+                            <table class="admin-table w-full">
+                                <thead>
+                                    <tr>
+                                        <th class="px-6 py-4 text-left">Mentor Name</th>
+                                        <th class="px-6 py-4 text-left">Expertise</th>
+                                        <th class="px-6 py-4 text-left">Sessions</th>
+                                        <th class="px-6 py-4 text-left">Status</th>
+                                        <th class="px-6 py-4 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mentorsList">
+                                    <tr>
+                                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                                            <div class="flex justify-center">
+                                                <div class="loading-spinner"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Events Sub-tab -->
+                    <div id="events-tab" class="community-sub-tab" style="display: none;">
+                        <div class="glass-card rounded-lg overflow-hidden">
+                            <div
+                                class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                                <h3 class="text-xl font-bold">Community Events</h3>
+                                <button
+                                    class="admin-btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+                                    <span class="material-symbols-outlined">add</span>
+                                    Add Event
+                                </button>
+                            </div>
+                            <table class="admin-table w-full">
+                                <thead>
+                                    <tr>
+                                        <th class="px-6 py-4 text-left">Event Name</th>
+                                        <th class="px-6 py-4 text-left">Date</th>
+                                        <th class="px-6 py-4 text-left">Registrations</th>
+                                        <th class="px-6 py-4 text-left">Status</th>
+                                        <th class="px-6 py-4 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="eventsList">
+                                    <tr>
+                                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                                            <div class="flex justify-center">
+                                                <div class="loading-spinner"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Success Stories Sub-tab -->
+                    <div id="stories-tab" class="community-sub-tab" style="display: none;">
+                        <div class="glass-card rounded-lg overflow-hidden">
+                            <div
+                                class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                                <h3 class="text-xl font-bold">Success Stories</h3>
+                                <button
+                                    class="admin-btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+                                    <span class="material-symbols-outlined">add</span>
+                                    Add Story
+                                </button>
+                            </div>
+                            <table class="admin-table w-full">
+                                <thead>
+                                    <tr>
+                                        <th class="px-6 py-4 text-left">Student Name</th>
+                                        <th class="px-6 py-4 text-left">University</th>
+                                        <th class="px-6 py-4 text-left">Loan Amount</th>
+                                        <th class="px-6 py-4 text-left">Status</th>
+                                        <th class="px-6 py-4 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="storiesList">
+                                    <tr>
+                                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                                            <div class="flex justify-center">
+                                                <div class="loading-spinner"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Resources Sub-tab -->
+                    <div id="resources-tab" class="community-sub-tab" style="display: none;">
+                        <div class="glass-card rounded-lg overflow-hidden">
+                            <div
+                                class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                                <h3 class="text-xl font-bold">Community Resources</h3>
+                                <button
+                                    class="admin-btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
+                                    <span class="material-symbols-outlined">add</span>
+                                    Add Resource
+                                </button>
+                            </div>
+                            <table class="admin-table w-full">
+                                <thead>
+                                    <tr>
+                                        <th class="px-6 py-4 text-left">Resource Title</th>
+                                        <th class="px-6 py-4 text-left">Type</th>
+                                        <th class="px-6 py-4 text-left">Downloads</th>
+                                        <th class="px-6 py-4 text-left">Status</th>
+                                        <th class="px-6 py-4 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="resourcesList">
+                                    <tr>
+                                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                                            <div class="flex justify-center">
+                                                <div class="loading-spinner"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -600,7 +880,8 @@
         <div class="modal-content p-8">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold">Edit Blog Post</h2>
-                <button onclick="closeEditModal()" class="material-symbols-outlined text-2xl cursor-pointer hover:text-primary">
+                <button onclick="closeEditModal()"
+                    class="material-symbols-outlined text-2xl cursor-pointer hover:text-primary">
                     close
                 </button>
             </div>
@@ -658,6 +939,7 @@
     <script src="assets/js/theme-manager.js"></script>
     <script src="assets/js/auth-guard.js"></script>
     <script src="assets/js/blog-api.js"></script>
+    <script src="assets/js/admin-community-crud.js"></script>
     <script src="assets/js/admin-dashboard.js"></script>
 </body>
 

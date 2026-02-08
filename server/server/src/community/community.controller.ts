@@ -1,0 +1,593 @@
+import {
+    Controller,
+    Get,
+    Post,
+    Put,
+    Delete,
+    Body,
+    Param,
+    Query,
+    UseGuards,
+    Request,
+} from '@nestjs/common';
+import { CommunityService } from './community.service';
+import { AdminGuard } from '../auth/admin.guard';
+import { UserGuard } from '../auth/user.guard';
+
+@Controller('community')
+export class CommunityController {
+    constructor(private communityService: CommunityService) { }
+
+    // ==================== MENTORSHIP ENDPOINTS ====================
+
+    /**
+     * Get all active mentors with filters
+     * GET /community/mentors
+     * @query university - Filter by university (optional)
+     * @query country - Filter by country (optional)
+     * @query loanType - Filter by loan type (optional)
+     * @query category - Filter by category (optional)
+     * @query limit - Number of mentors (default: 10)
+     * @query offset - Skip mentors (default: 0)
+     */
+    @Get('mentors')
+    async getAllMentors(
+        @Query('university') university?: string,
+        @Query('country') country?: string,
+        @Query('loanType') loanType?: string,
+        @Query('category') category?: string,
+        @Query('limit') limit?: string,
+        @Query('offset') offset?: string,
+    ) {
+        return this.communityService.getAllMentors({
+            university,
+            country,
+            loanType,
+            category,
+            limit: limit ? parseInt(limit, 10) : 10,
+            offset: offset ? parseInt(offset, 10) : 0,
+        });
+    }
+
+    /**
+     * Get featured mentors (top-rated)
+     * GET /community/mentors/featured
+     * @query limit - Number of mentors (default: 6)
+     */
+    @Get('mentors/featured')
+    async getFeaturedMentors(@Query('limit') limit?: string) {
+        return this.communityService.getFeaturedMentors(
+            limit ? parseInt(limit, 10) : 6,
+        );
+    }
+
+    /**
+     * Get mentor by ID
+     * GET /community/mentors/:id
+     */
+    @Get('mentors/:id')
+    async getMentorById(@Param('id') id: string) {
+        return this.communityService.getMentorById(id);
+    }
+
+    /**
+     * Book a mentorship session
+     * POST /community/mentors/:id/book
+     * @param id - Mentor ID
+     * @body studentName, studentEmail, preferredDate, preferredTime, message
+     */
+    @Post('mentors/:id/book')
+    async bookMentorSession(
+        @Param('id') mentorId: string,
+        @Body()
+        body: {
+            studentName: string;
+            studentEmail: string;
+            studentPhone?: string;
+            preferredDate: string;
+            preferredTime: string;
+            message?: string;
+        },
+    ) {
+        return this.communityService.bookMentorSession(mentorId, body);
+    }
+
+    /**
+     * Submit mentor application
+     * POST /community/mentors/apply
+     * @body name, email, university, degree, country, loanBank, loanAmount, bio, expertise
+     */
+    @Post('mentors/apply')
+    async applyAsMentor(
+        @Body()
+        body: {
+            name: string;
+            email: string;
+            phone?: string;
+            university: string;
+            degree: string;
+            country: string;
+            loanBank: string;
+            loanAmount: string;
+            bio: string;
+            expertise: string[];
+            linkedIn?: string;
+        },
+    ) {
+        return this.communityService.applyAsMentor(body);
+    }
+
+    /**
+     * Get mentor statistics
+     * GET /community/mentors/stats
+     */
+    @Get('mentors/stats')
+    async getMentorStats() {
+        return this.communityService.getMentorStats();
+    }
+
+    // ==================== EVENTS ENDPOINTS ====================
+
+    /**
+     * Get all upcoming events
+     * GET /community/events
+     * @query type - Filter by type (webinar, qa, networking, workshop)
+     * @query featured - Filter featured events
+     * @query limit - Number of events (default: 10)
+     * @query offset - Skip events (default: 0)
+     */
+    @Get('events')
+    async getAllEvents(
+        @Query('type') type?: string,
+        @Query('category') category?: string,
+        @Query('featured') featured?: string,
+        @Query('limit') limit?: string,
+        @Query('offset') offset?: string,
+    ) {
+        return this.communityService.getAllEvents({
+            type,
+            category,
+            featured: featured === 'true' ? true : undefined,
+            limit: limit ? parseInt(limit, 10) : 10,
+            offset: offset ? parseInt(offset, 10) : 0,
+        });
+    }
+
+    /**
+     * Get upcoming events only
+     * GET /community/events/upcoming
+     * @query limit - Number of events (default: 5)
+     */
+    @Get('events/upcoming')
+    async getUpcomingEvents(@Query('limit') limit?: string) {
+        return this.communityService.getUpcomingEvents(
+            limit ? parseInt(limit, 10) : 5,
+        );
+    }
+
+    /**
+     * Get past events / recordings
+     * GET /community/events/past
+     * @query limit - Number of events (default: 10)
+     * @query offset - Skip events (default: 0)
+     */
+    @Get('events/past')
+    async getPastEvents(
+        @Query('limit') limit?: string,
+        @Query('offset') offset?: string,
+    ) {
+        return this.communityService.getPastEvents(
+            limit ? parseInt(limit, 10) : 10,
+            offset ? parseInt(offset, 10) : 0,
+        );
+    }
+
+    /**
+     * Get event by ID
+     * GET /community/events/:id
+     */
+    @Get('events/:id')
+    async getEventById(@Param('id') id: string) {
+        return this.communityService.getEventById(id);
+    }
+
+    /**
+     * Register for an event
+     * POST /community/events/:id/register
+     * @param id - Event ID
+     * @body name, email, phone
+     */
+    @Post('events/:id/register')
+    async registerForEvent(
+        @Param('id') eventId: string,
+        @Body()
+        body: {
+            name: string;
+            email: string;
+            phone?: string;
+        },
+    ) {
+        return this.communityService.registerForEvent(eventId, body);
+    }
+
+    // ==================== SUCCESS STORIES ENDPOINTS ====================
+
+    /**
+     * Get all success stories
+     * GET /community/stories
+     * @query country - Filter by country
+     * @query category - Filter by category (MBA, Engineering, Medical, etc.)
+     * @query limit - Number of stories (default: 10)
+     * @query offset - Skip stories (default: 0)
+     */
+    @Get('stories')
+    async getAllStories(
+        @Query('country') country?: string,
+        @Query('category') category?: string,
+        @Query('limit') limit?: string,
+        @Query('offset') offset?: string,
+    ) {
+        return this.communityService.getAllStories({
+            country,
+            category,
+            limit: limit ? parseInt(limit, 10) : 10,
+            offset: offset ? parseInt(offset, 10) : 0,
+        });
+    }
+
+    /**
+     * Get featured success stories
+     * GET /community/stories/featured
+     * @query limit - Number of stories (default: 6)
+     */
+    @Get('stories/featured')
+    async getFeaturedStories(@Query('limit') limit?: string) {
+        return this.communityService.getFeaturedStories(
+            limit ? parseInt(limit, 10) : 6,
+        );
+    }
+
+    /**
+     * Get story by ID
+     * GET /community/stories/:id
+     */
+    @Get('stories/:id')
+    async getStoryById(@Param('id') id: string) {
+        return this.communityService.getStoryById(id);
+    }
+
+    /**
+     * Submit a success story
+     * POST /community/stories/submit
+     * @body name, email, university, country, degree, loanAmount, bank, story, tips
+     */
+    @Post('stories/submit')
+    async submitStory(
+        @Body()
+        body: {
+            name: string;
+            email: string;
+            university: string;
+            country: string;
+            degree: string;
+            loanAmount: string;
+            bank: string;
+            interestRate?: string;
+            story: string;
+            tips?: string;
+            image?: string;
+        },
+    ) {
+        return this.communityService.submitStory(body);
+    }
+
+    // ==================== RESOURCES ENDPOINTS ====================
+
+    /**
+     * Get all community resources
+     * GET /community/resources
+     * @query type - Filter by type (guide, template, checklist, video)
+     * @query category - Filter by category
+     * @query limit - Number of resources (default: 10)
+     * @query offset - Skip resources (default: 0)
+     */
+    @Get('resources')
+    async getAllResources(
+        @Query('type') type?: string,
+        @Query('category') category?: string,
+        @Query('limit') limit?: string,
+        @Query('offset') offset?: string,
+    ) {
+        return this.communityService.getAllResources({
+            type,
+            category,
+            limit: limit ? parseInt(limit, 10) : 10,
+            offset: offset ? parseInt(offset, 10) : 0,
+        });
+    }
+
+    /**
+     * Get popular resources
+     * GET /community/resources/popular
+     * @query limit - Number of resources (default: 5)
+     */
+    @Get('resources/popular')
+    async getPopularResources(@Query('limit') limit?: string) {
+        return this.communityService.getPopularResources(
+            limit ? parseInt(limit, 10) : 5,
+        );
+    }
+
+    /**
+     * Get resource by ID
+     * GET /community/resources/:id
+     */
+    @Get('resources/:id')
+    async getResourceById(@Param('id') id: string) {
+        return this.communityService.getResourceById(id);
+    }
+
+    /**
+     * Track resource download/view
+     * POST /community/resources/:id/track
+     */
+    @Post('resources/:id/track')
+    async trackResourceView(@Param('id') resourceId: string) {
+        return this.communityService.trackResourceView(resourceId);
+    }
+
+    // ==================== ADMIN ENDPOINTS ====================
+
+    /**
+     * Create a new mentor (Admin)
+     * POST /community/admin/mentors
+     */
+    @Post('admin/mentors')
+    @UseGuards(AdminGuard)
+    async createMentor(
+        @Body()
+        body: {
+            name: string;
+            email: string;
+            university: string;
+            degree: string;
+            country: string;
+            loanBank: string;
+            loanAmount: string;
+            interestRate?: string;
+            bio: string;
+            expertise: string[];
+            rating?: number;
+            studentsMentored?: number;
+            image?: string;
+            isActive?: boolean;
+        },
+    ) {
+        return this.communityService.createMentor(body);
+    }
+
+    /**
+     * Update mentor (Admin)
+     * PUT /community/admin/mentors/:id
+     */
+    @Put('admin/mentors/:id')
+    @UseGuards(AdminGuard)
+    async updateMentor(@Param('id') id: string, @Body() body: any) {
+        return this.communityService.updateMentor(id, body);
+    }
+
+    /**
+     * Delete mentor (Admin)
+     * DELETE /community/admin/mentors/:id
+     */
+    @Delete('admin/mentors/:id')
+    @UseGuards(AdminGuard)
+    async deleteMentor(@Param('id') id: string) {
+        return this.communityService.deleteMentor(id);
+    }
+
+    /**
+     * Create event (Admin)
+     * POST /community/admin/events
+     */
+    @Post('admin/events')
+    @UseGuards(AdminGuard)
+    async createEvent(
+        @Body()
+        body: {
+            title: string;
+            description: string;
+            type: string;
+            category?: string;
+            date: string;
+            time: string;
+            duration: number;
+            speaker?: string;
+            speakerTitle?: string;
+            maxAttendees?: number;
+            isFree?: boolean;
+            recordingUrl?: string;
+            isFeatured?: boolean;
+        },
+    ) {
+        return this.communityService.createEvent(body);
+    }
+
+    /**
+     * Update event (Admin)
+     * PUT /community/admin/events/:id
+     */
+    @Put('admin/events/:id')
+    @UseGuards(AdminGuard)
+    async updateEvent(@Param('id') id: string, @Body() body: any) {
+        return this.communityService.updateEvent(id, body);
+    }
+
+    /**
+     * Delete event (Admin)
+     * DELETE /community/admin/events/:id
+     */
+    @Delete('admin/events/:id')
+    @UseGuards(AdminGuard)
+    async deleteEvent(@Param('id') id: string) {
+        return this.communityService.deleteEvent(id);
+    }
+
+    /**
+     * Create resource (Admin)
+     * POST /community/admin/resources
+     */
+    @Post('admin/resources')
+    @UseGuards(AdminGuard)
+    async createResource(
+        @Body()
+        body: {
+            title: string;
+            description: string;
+            type: string;
+            category: string;
+            fileUrl?: string;
+            downloadUrl?: string;
+            thumbnailUrl?: string;
+            isFeatured?: boolean;
+        },
+    ) {
+        return this.communityService.createResource(body);
+    }
+
+    /**
+     * Update resource (Admin)
+     * PUT /community/admin/resources/:id
+     */
+    @Put('admin/resources/:id')
+    @UseGuards(AdminGuard)
+    async updateResource(@Param('id') id: string, @Body() body: any) {
+        return this.communityService.updateResource(id, body);
+    }
+
+    /**
+     * Delete resource (Admin)
+     * DELETE /community/admin/resources/:id
+     */
+    @Delete('admin/resources/:id')
+    @UseGuards(AdminGuard)
+    async deleteResource(@Param('id') id: string) {
+        return this.communityService.deleteResource(id);
+    }
+
+    /**
+     * Approve/Reject mentor application (Admin)
+     * PUT /community/admin/mentors/:id/approve
+     */
+    @Put('admin/mentors/:id/approve')
+    @UseGuards(AdminGuard)
+    async approveMentor(
+        @Param('id') id: string,
+        @Body() body: { approved: boolean; reason?: string },
+    ) {
+        return this.communityService.approveMentor(id, body.approved, body.reason);
+    }
+
+    /**
+     * Approve/Reject success story (Admin)
+     * PUT /community/admin/stories/:id/approve
+     */
+    @Put('admin/stories/:id/approve')
+    @UseGuards(AdminGuard)
+    async approveStory(
+        @Param('id') id: string,
+        @Body() body: { approved: boolean; reason?: string },
+    ) {
+        return this.communityService.approveStory(id, body.approved, body.reason);
+    }
+
+    /**
+     * Get all mentor bookings (Admin)
+     * GET /community/admin/bookings
+     */
+    @Get('admin/bookings')
+    @UseGuards(AdminGuard)
+    async getAllBookings(
+        @Query('status') status?: string,
+        @Query('mentorId') mentorId?: string,
+        @Query('limit') limit?: string,
+        @Query('offset') offset?: string,
+    ) {
+        return this.communityService.getAllBookings({
+            status,
+            mentorId,
+            limit: limit ? parseInt(limit, 10) : 20,
+            offset: offset ? parseInt(offset, 10) : 0,
+        });
+    }
+
+    /**
+     * Get all event registrations (Admin)
+     * GET /community/admin/registrations
+     */
+    @Get('admin/registrations')
+    @UseGuards(AdminGuard)
+    async getAllRegistrations(
+        @Query('eventId') eventId?: string,
+        @Query('limit') limit?: string,
+        @Query('offset') offset?: string,
+    ) {
+        return this.communityService.getAllRegistrations({
+            eventId,
+            limit: limit ? parseInt(limit, 10) : 50,
+            offset: offset ? parseInt(offset, 10) : 0,
+        });
+    }
+
+    /**
+     * Get community statistics (Admin)
+     * GET /community/admin/stats
+     */
+    @Get('admin/stats')
+    @UseGuards(AdminGuard)
+    async getCommunityStats() {
+        return this.communityService.getCommunityStats();
+    }
+
+    // ==================== FORUM ENDPOINTS ====================
+
+    @Get('forum')
+    async getForumPosts(
+        @Query('category') category?: string,
+        @Query('tag') tag?: string,
+        @Query('limit') limit?: string,
+        @Query('offset') offset?: string,
+        @Query('sort') sort?: string,
+    ) {
+        return this.communityService.getForumPosts({
+            category,
+            tag,
+            limit: limit ? parseInt(limit, 10) : 10,
+            offset: offset ? parseInt(offset, 10) : 0,
+            sort
+        });
+    }
+
+    @Post('forum')
+    @UseGuards(UserGuard)
+    async createForumPost(@Request() req, @Body() body: any) {
+        return this.communityService.createForumPost(req.user.id, body);
+    }
+
+    @Get('forum/:id')
+    async getForumPostById(@Param('id') id: string) {
+        return this.communityService.getForumPostById(id);
+    }
+
+    @Post('forum/:id/comment')
+    @UseGuards(UserGuard)
+    async createForumComment(@Request() req, @Param('id') id: string, @Body() body: { content: string }) {
+        return this.communityService.createForumComment(req.user.id, id, body.content);
+    }
+
+    @Post('forum/:id/like')
+    @UseGuards(UserGuard)
+    async likeForumPost(@Param('id') id: string) {
+        return this.communityService.likeForumPost(id);
+    }
+}

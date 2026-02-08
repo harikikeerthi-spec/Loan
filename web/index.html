@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-page="index">
 
 <head>
     <meta charset="utf-8" />
@@ -49,7 +49,7 @@
 </head>
 
 <body
-    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+    class="home-page bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
 
     <!-- Background Structure -->
     <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none overflow-hidden">
@@ -543,7 +543,104 @@
                 </div>
             </div>
         </section>
-        <!-- Community Section -->
+        <!-- Trending Discussions Section -->
+        <section id="trending-discussions" class="max-w-7xl mx-auto px-6 py-24 scroll-mt-24">
+            <div class="flex justify-between items-end mb-12">
+                <div>
+                    <span class="text-primary font-bold text-[11px] tracking-[0.2em] uppercase mb-2 block">Live
+                        Community</span>
+                    <h2 class="text-4xl md:text-5xl font-display text-gray-900 dark:text-white">
+                        Trending <br />
+                        <span class="italic font-normal text-gray-600 dark:text-gray-400">Discussions</span>
+                    </h2>
+                </div>
+                <a href="explore.html"
+                    class="hidden md:flex items-center gap-2 text-primary font-bold text-sm hover:underline">
+                    View All Topics <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Discussion 1 -->
+                <a href="engage.html?topic=usa-visa"
+                    class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-6">
+                        <span
+                            class="flex items-center gap-1 text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-1 rounded-full uppercase tracking-wider">
+                            <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> Hot
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-4 mb-6">
+                        <div
+                            class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600">
+                            <span class="material-symbols-outlined">flight_takeoff</span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Visa & Travel</p>
+                            <h4 class="font-bold text-gray-900 dark:text-white">USA F-1 Interview Slots</h4>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm mb-6 line-clamp-2">"Is anyone else seeing bulk
+                        slots opening for Mumbai Consulate in June? Just booked mine!"</p>
+                    <div
+                        class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5 text-xs text-gray-500 font-bold">
+                        <span class="flex items-center gap-1.5"><span
+                                class="material-symbols-outlined text-sm">chat_bubble</span> 142 Comments</span>
+                        <span class="flex items-center gap-1.5"><span
+                                class="material-symbols-outlined text-sm">visibility</span> 2.4k Views</span>
+                    </div>
+                </a>
+
+                <!-- Discussion 2 -->
+                <a href="engage.html?topic=loan-strategy"
+                    class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div
+                            class="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center text-green-600">
+                            <span class="material-symbols-outlined">account_balance</span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Loans</p>
+                            <h4 class="font-bold text-gray-900 dark:text-white">SBI vs Prodigy Finance</h4>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm mb-6 line-clamp-2">"Comparing 8.5% with
+                        collateral vs 11% non-collateral. What makes sense for a 2-year masters?"</p>
+                    <div
+                        class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5 text-xs text-gray-500 font-bold">
+                        <span class="flex items-center gap-1.5"><span
+                                class="material-symbols-outlined text-sm">chat_bubble</span> 89 Comments</span>
+                        <span class="flex items-center gap-1.5"><span
+                                class="material-symbols-outlined text-sm">visibility</span> 1.8k Views</span>
+                    </div>
+                </a>
+
+                <!-- Discussion 3 -->
+                <a href="engage.html?topic=accommodation-uk"
+                    class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500">
+                    <div class="flex items-center gap-4 mb-6">
+                        <div
+                            class="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600">
+                            <span class="material-symbols-outlined">home</span>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Housing</p>
+                            <h4 class="font-bold text-gray-900 dark:text-white">London Zone 2 Sharing</h4>
+                        </div>
+                    </div>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm mb-6 line-clamp-2">"Looking for 2 female
+                        roommates for a 3BHK near Canary Wharf. Available from August."</p>
+                    <div
+                        class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5 text-xs text-gray-500 font-bold">
+                        <span class="flex items-center gap-1.5"><span
+                                class="material-symbols-outlined text-sm">chat_bubble</span> 34 Comments</span>
+                        <span class="flex items-center gap-1.5"><span
+                                class="material-symbols-outlined text-sm">visibility</span> 950 Views</span>
+                    </div>
+                </a>
+            </div>
+        </section>
+
         <section class="max-w-7xl mx-auto px-6 py-24 relative overflow-hidden">
             <div
                 class="glass-card p-12 md:p-20 rounded-[4rem] overflow-hidden relative shadow-2xl border-white/40 dark:border-white/5">

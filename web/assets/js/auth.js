@@ -23,14 +23,16 @@ function saveUserData(email, accessToken, userId) {
 function logout() {
     localStorage.removeItem('userEmail');
     localStorage.removeItem('accessToken');
+    localStorage.removeItem('token');
     localStorage.removeItem('userId');
+    localStorage.removeItem('userRole');
+    localStorage.removeItem('firstName');
+    localStorage.removeItem('lastName');
     window.location.href = 'index.html';
 }
 
 function updateNavbarAuth() {
-    const signupLink = document.getElementById('signupLink');
     const loginLink = document.getElementById('loginLink');
-    const registerLink = document.getElementById('registerLink');
     const userProfileSection = document.getElementById('userProfileSection');
     const userEmail = document.getElementById('userEmail');
     const dropdownEmail = document.getElementById('dropdownEmail');
@@ -38,65 +40,61 @@ function updateNavbarAuth() {
     const profileDropdown = document.getElementById('profileDropdown');
     const logoutBtn = document.getElementById('logoutBtn');
 
-    console.log('Auth check - isLoggedIn:', isUserLoggedIn(), 'email:', getUserEmail());
-
-    if (isUserLoggedIn()) {
-        // User is logged in - hide auth links, show profile
-        if (signupLink) signupLink.style.display = 'none';
-        if (loginLink) loginLink.style.display = 'none';
-        if (userProfileSection) {
-            userProfileSection.classList.remove('hidden');
-            userProfileSection.style.display = 'flex';
-        }
-        if (registerLink) registerLink.style.display = 'none';
-
-        const email = getUserEmail();
-        if (userEmail) userEmail.textContent = email;
-        if (dropdownEmail) dropdownEmail.textContent = email;
-        console.log('User logged in, showing profile for:', email);
-    } else {
-        // User is not logged in - show auth links, hide profile
-        if (signupLink) signupLink.style.display = '';
-        if (loginLink) loginLink.style.display = '';
-        if (userProfileSection) {
-            userProfileSection.classList.add('hidden');
-            userProfileSection.style.display = 'none';
-        }
-        if (registerLink) registerLink.style.display = '';
-        console.log('User not logged in, showing auth links');
+    if (!loginLink && !userProfileSection) {
+        console.warn('[Auth] Navbar elements not found. Will retry or wait for components-loader.');
+        return;
     }
 
-    // Setup dropdown toggle (only if not already set up)
+    const loggedIn = isUserLoggedIn();
+    const email = getUserEmail();
+
+    if (loggedIn && email) {
+        // User is logged in
+        if (loginLink) loginLink.classList.add('hidden');
+        if (userProfileSection) {
+            userProfileSection.classList.remove('hidden');
+            userProfileSection.classList.add('flex');
+        }
+        if (userEmail) userEmail.textContent = email;
+        if (dropdownEmail) dropdownEmail.textContent = email;
+    } else {
+        // User is not logged in
+        if (loginLink) loginLink.classList.remove('hidden');
+        if (userProfileSection) {
+            userProfileSection.classList.add('hidden');
+            userProfileSection.classList.remove('flex');
+        }
+    }
+
+    // Setup dropdown toggle
     if (profileBtn && profileDropdown && !profileBtn.dataset.listenerAdded) {
         profileBtn.dataset.listenerAdded = 'true';
-
         profileBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            console.log('Profile button clicked, toggling dropdown');
             profileDropdown.classList.toggle('hidden');
         });
 
         // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
-            if (!profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
-                profileDropdown.classList.add('hidden');
+            if (profileDropdown && !profileDropdown.classList.contains('hidden')) {
+                if (!profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
+                    profileDropdown.classList.add('hidden');
+                }
             }
         });
     }
 
-    // Setup logout functionality (only if not already set up)
+    // Setup logout functionality
     if (logoutBtn && !logoutBtn.dataset.listenerAdded) {
         logoutBtn.dataset.listenerAdded = 'true';
-
         logoutBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            console.log('Logout clicked');
             logout();
         });
     }
 }
 
-// Initialize on page load
+// Initialize on page load (standard non-component fallback)
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', updateNavbarAuth);
 } else {

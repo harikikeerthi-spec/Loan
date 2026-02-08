@@ -33,58 +33,7 @@
             },
         };
     </script>
-    <style>
-/* Initial nav text colors (black) */
-        .nav-link {
-            color: rgba(0, 0, 0, 0.9) !important;
-        }
-
-        .font-display {
-            color: black !important;
-        }
-
-        #loginLink {
-            color: rgba(0, 0, 0, 0.9) !important;
-        }
-
-        .material-symbols-outlined {
-            color: black !important;
-        }
-
-        /* Keep dropdown icons purple initially */
-        #profileDropdown .material-symbols-outlined {
-            color: #6605c7 !important;
-        }
-/* White text when scrolled */
-        .nav-scrolled .nav-link {
-            color: rgba(255, 255, 255, 0.9) !important;
-        }
-
-        .nav-scrolled .nav-link:hover {
-            color: #6605c7 !important;
-        }
-
-        .nav-scrolled .font-display {
-            color: white !important;
-        }
-
-        .nav-scrolled #loginLink {
-            color: rgba(255, 255, 255, 0.9) !important;
-        }
-
-        .nav-scrolled #loginLink:hover {
-            color: #6605c7 !important;
-        }
-
-        .nav-scrolled .material-symbols-outlined {
-            color: white !important;
-        }
-
-        /* Keep dropdown icons visible */
-        .nav-scrolled #profileDropdown .material-symbols-outlined {
-            color: #6605c7 !important;
-        }
-</style>
+    </style>
 </head>
 
 <body
@@ -103,8 +52,8 @@
     <div id="navbar-placeholder"></div>
 
     <main class="relative z-10 pt-32 pb-24">
-        <div class="max-w-4xl mx-auto px-6">
-            <div class="mb-12">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="mb-8">
                 <span id="topicBadge"
                     class="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-[0.2em] mb-4">Topic</span>
                 <h1 id="topicTitle"
@@ -112,373 +61,205 @@
                     Topic...</h1>
             </div>
 
-            <!-- Trending & Filters -->
-            <div class="flex flex-col md:flex-row gap-6 mb-8">
-                <!-- Trending Now -->
-                <div class="glass-card p-6 rounded-3xl flex-1">
-                    <div class="flex items-center gap-2 mb-4">
-                        <span class="material-symbols-outlined text-primary">trending_up</span>
-                        <h3 class="font-bold text-sm uppercase tracking-wider text-gray-900 dark:text-white">Trending
-                            Now</h3>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <!-- Main Feed -->
+                <div class="lg:col-span-8 space-y-6">
+
+                    <!-- Sort & Filter -->
+                    <div class="glass-card p-4 rounded-2xl flex justify-between items-center">
+                        <h2 class="font-bold text-lg text-gray-800 dark:text-white flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary">forum</span>
+                            Discussions
+                        </h2>
+                        <div class="flex items-center gap-4">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-gray-500 text-sm">sort</span>
+                                <span class="text-xs font-bold text-gray-500 uppercase tracking-wider">Sort:</span>
+                            </div>
+                            <select
+                                class="bg-transparent text-sm font-bold text-primary border-none focus:ring-0 cursor-pointer p-0">
+                                <option>Latest</option>
+                                <option>Most Liked</option>
+                                <option>Most Discussed</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="flex flex-wrap gap-2">
-                        <span
-                            class="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold cursor-pointer hover:bg-primary hover:text-white transition-all">#SBILoans</span>
-                        <span
-                            class="px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 text-xs font-bold cursor-pointer hover:bg-blue-500 hover:text-white transition-all">#UKVisa</span>
-                        <span
-                            class="px-3 py-1 rounded-full bg-green-500/10 text-green-600 text-xs font-bold cursor-pointer hover:bg-green-500 hover:text-white transition-all">#InterestRates</span>
-                        <span
-                            class="px-3 py-1 rounded-full bg-orange-500/10 text-orange-600 text-xs font-bold cursor-pointer hover:bg-orange-500 hover:text-white transition-all">#Scholarships</span>
+
+                    <!-- Create Post Box -->
+                    <div class="glass-card p-6 rounded-3xl border-primary/20 shadow-lg">
+                        <div class="flex gap-4">
+                            <div
+                                class="w-12 h-12 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-500">
+                                <span class="material-symbols-outlined">person</span>
+                            </div>
+                            <div class="flex-1">
+                                <textarea placeholder="Share your thoughts or ask a question..."
+                                    class="w-full bg-zinc-100/50 dark:bg-zinc-900/50 border-none rounded-2xl p-4 text-sm focus:ring-1 focus:ring-primary outline-none transition-all dark:text-white min-h-[100px]"></textarea>
+                                <div class="flex justify-between items-center mt-4">
+                                    <div class="flex gap-2">
+                                        <button
+                                            class="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-gray-500 transition-colors">
+                                            <span class="material-symbols-outlined text-xl">image</span>
+                                        </button>
+                                        <button
+                                            class="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-gray-500 transition-colors">
+                                            <span class="material-symbols-outlined text-xl">link</span>
+                                        </button>
+                                    </div>
+                                    <button
+                                        class="px-8 py-2.5 bg-primary text-white rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20">Post</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Featured "Ask Mentor" Post - Topic Specific -->
+                    <div id="mentorPost"
+                        class="glass-card p-8 rounded-3xl border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-purple-500/5 shadow-xl">
+                        <div class="flex items-center gap-3 mb-4">
+                            <span class="material-symbols-outlined text-3xl text-primary">verified</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold uppercase tracking-[0.2em] text-primary">Featured</span>
+                                <span class="text-xs font-bold uppercase tracking-[0.2em] text-gray-400">•</span>
+                                <span class="text-xs font-bold uppercase tracking-[0.2em] text-amber-600">Mentor Only
+                                    Replies</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start justify-between mb-6">
+                            <div class="flex gap-4">
+                                <div
+                                    class="w-14 h-14 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                                    🎓
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h4 class="font-bold text-gray-900 dark:text-white text-lg">LoanHero Mentor Team
+                                        </h4>
+                                        <span class="material-symbols-outlined text-primary text-lg"
+                                            title="Verified Mentor">verified</span>
+                                    </div>
+                                    <p class="text-xs text-gray-500">Official Mentor Post • Mentor-Only Replies</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 p-4 rounded-lg mb-6">
+                            <div class="flex items-start gap-3">
+                                <span class="material-symbols-outlined text-amber-600">info</span>
+                                <div>
+                                    <h4 class="font-bold text-amber-900 dark:text-amber-200 mb-1 text-sm">Ask Our
+                                        Mentors
+                                    </h4>
+                                    <p class="text-xs text-amber-800 dark:text-amber-300" id="mentorAdvice">Our verified
+                                        mentors and alumni are here to help you navigate this topic.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white/80 dark:bg-gray-800/80 rounded-2xl p-6 mb-6">
+                            <h3 class="font-bold text-lg text-gray-900 dark:text-white mb-4" id="mentorQuestion">What
+                                questions do you have about this topic?</h3>
+                            <p class="text-gray-700 dark:text-gray-300 leading-relaxed text-sm" id="mentorDescription">
+                                Drop your questions below, and our verified mentors will provide expert guidance based
+                                on
+                                real experiences.
+                            </p>
+                        </div>
+
+                        <div class="flex items-center gap-6 pt-6 border-t border-gray-200 dark:border-white/10">
+                            <button onclick="showMentorInfo()"
+                                class="flex items-center gap-2 text-sm font-bold text-primary hover:text-purple-600 transition-colors">
+                                <span class="material-symbols-outlined text-lg">forum</span>
+                                <span id="mentorReplyCount">Ask a Mentor</span>
+                            </button>
+                            <button class="flex items-center gap-2 text-sm font-bold text-gray-500">
+                                <span class="material-symbols-outlined text-lg">people</span>
+                                <span id="activeMentors">24 Active Mentors</span>
+                            </button>
+                            <button
+                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
+                                <span class="material-symbols-outlined text-lg">bookmark</span> Save
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Discussion Posts -->
+                    <div id="postsContainer" class="space-y-6">
+                        <!-- Posts will be loaded here -->
+                        <div class="text-center py-12">
+                            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                            <p class="mt-2 text-gray-500">Loading discussions...</p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Sort & Filter -->
-                <div class="glass-card p-6 rounded-3xl">
-                    <div class="flex items-center gap-4">
-                        <div class="flex items-center gap-2">
-                            <span class="material-symbols-outlined text-gray-500">sort</span>
-                            <span class="text-sm font-bold text-gray-700 dark:text-gray-300">Sort by:</span>
+                <!-- Right Sidebar -->
+                <div class="lg:col-span-4 space-y-6">
+                    <!-- Trending Now -->
+                    <div class="glass-card p-6 rounded-3xl">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="material-symbols-outlined text-primary">trending_up</span>
+                            <h3 class="font-bold text-sm uppercase tracking-wider text-gray-900 dark:text-white">
+                                Trending
+                                Now</h3>
                         </div>
-                        <select
-                            class="bg-transparent text-sm font-semibold text-primary border-none focus:ring-0 cursor-pointer">
-                            <option>Latest</option>
-                            <option>Most Liked</option>
-                            <option>Most Discussed</option>
-                        </select>
+                        <div class="flex flex-wrap gap-2">
+                            <span
+                                class="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold cursor-pointer hover:bg-primary hover:text-white transition-all">#SBILoans</span>
+                            <span
+                                class="px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 text-xs font-bold cursor-pointer hover:bg-blue-500 hover:text-white transition-all">#UKVisa</span>
+                            <span
+                                class="px-3 py-1 rounded-full bg-green-500/10 text-green-600 text-xs font-bold cursor-pointer hover:bg-green-500 hover:text-white transition-all">#InterestRates</span>
+                            <span
+                                class="px-3 py-1 rounded-full bg-orange-500/10 text-orange-600 text-xs font-bold cursor-pointer hover:bg-orange-500 hover:text-white transition-all">#Scholarships</span>
+                        </div>
+                    </div>
+
+                    <!-- Resources Widget -->
+                    <div id="topicResourcesWidget" class="hidden glass-card p-6 rounded-3xl">
+                        <h3 class="font-bold text-lg mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+                            <span class="material-symbols-outlined text-pink-500">inventory_2</span>
+                            Helpful Resources
+                        </h3>
+                        <div id="resourcesList" class="space-y-4">
+                            <!-- Populated by JS -->
+                        </div>
+                        <a href="community-resources.html"
+                            class="block mt-4 text-center text-xs font-bold text-primary uppercase tracking-widest hover:underline">View
+                            All Resources</a>
+                    </div>
+
+                    <!-- Events Widget -->
+                    <div id="topicEventsWidget" class="hidden glass-card p-6 rounded-3xl">
+                        <h3 class="font-bold text-lg mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+                            <span class="material-symbols-outlined text-orange-500">event</span>
+                            Upcoming Events
+                        </h3>
+                        <div id="eventsList" class="space-y-4">
+                            <!-- Populated by JS -->
+                        </div>
+                        <a href="community-events.html"
+                            class="block mt-4 text-center text-xs font-bold text-primary uppercase tracking-widest hover:underline">Full
+                            Calendar</a>
+                    </div>
+
+                    <!-- Mentors Widget -->
+                    <div id="topicMentorsWidget" class="hidden glass-card p-6 rounded-3xl">
+                        <h3 class="font-bold text-lg mb-4 text-gray-900 dark:text-white flex items-center gap-2">
+                            <span class="material-symbols-outlined text-indigo-500">groups</span>
+                            Top Mentors
+                        </h3>
+                        <div id="mentorsList" class="space-y-4">
+                            <!-- Populated by JS -->
+                        </div>
+                        <a href="community-mentorship.html"
+                            class="block mt-4 text-center text-xs font-bold text-primary uppercase tracking-widest hover:underline">Find
+                            a Mentor</a>
                     </div>
                 </div>
             </div>
-
-            <div class="space-y-6">
-                <!-- Create Post Box -->
-                <div class="glass-card p-6 rounded-3xl border-primary/20 shadow-lg">
-                    <div class="flex gap-4">
-                        <div
-                            class="w-12 h-12 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-500">
-                            <span class="material-symbols-outlined">person</span>
-                        </div>
-                        <div class="flex-1">
-                            <textarea placeholder="Share your thoughts or ask a question..."
-                                class="w-full bg-zinc-100/50 dark:bg-zinc-900/50 border-none rounded-2xl p-4 text-sm focus:ring-1 focus:ring-primary outline-none transition-all dark:text-white min-h-[100px]"></textarea>
-                            <div class="flex justify-between items-center mt-4">
-                                <div class="flex gap-2">
-                                    <button
-                                        class="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-gray-500 transition-colors">
-                                        <span class="material-symbols-outlined text-xl">image</span>
-                                    </button>
-                                    <button
-                                        class="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-gray-500 transition-colors">
-                                        <span class="material-symbols-outlined text-xl">link</span>
-                                    </button>
-                                </div>
-                                <button
-                                    class="px-8 py-2.5 bg-primary text-white rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20">Post</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Sample Discussion Posts -->
-                <div id="postsContainer" class="space-y-6">
-                    <!-- Post 1 -->
-                    <div class="glass-card p-8 rounded-3xl group">
-                        <div class="flex items-start justify-between mb-6">
-                            <div class="flex gap-4">
-                                <img src="assets/img/avatar_3.png" class="w-12 h-12 rounded-full object-cover"
-                                    alt="User">
-                                <div>
-                                    <h4 class="font-bold text-gray-900 dark:text-white">Arun Kumar</h4>
-                                    <p class="text-xs text-gray-500"><span class="post-time">2 hours ago</span> • MSc
-                                        Data Science @ London</p>
-                                </div>
-                            </div>
-                            <button class="text-gray-400 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined">more_vert</span>
-                            </button>
-                        </div>
-                        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 font-sans">
-                            Has anyone recently applied for an SBI education loan for the UK? I heard they've
-                            streamlined the collateral process for top universities. Any tips on how to speed up the
-                            sanction letter?
-                        </p>
-                        <div class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">arrow_upward</span> 24 Likes
-                            </button>
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">chat_bubble</span> 12 Comments
-                            </button>
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">share</span> Share
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Post 2 -->
-                    <div class="glass-card p-8 rounded-3xl group">
-                        <div class="flex items-start justify-between mb-6">
-                            <div class="flex gap-4">
-                                <img src="assets/img/avatar_2.png" class="w-12 h-12 rounded-full object-cover"
-                                    alt="User">
-                                <div>
-                                    <h4 class="font-bold text-gray-900 dark:text-white">Priya Sharma</h4>
-                                    <p class="text-xs text-gray-500"><span class="post-time">5 hours ago</span> •
-                                        Engineering @ Berlin</p>
-                                </div>
-                            </div>
-                            <button class="text-gray-400 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined">more_vert</span>
-                            </button>
-                        </div>
-                        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 font-sans">
-                            Friendly reminder for everyone looking for accommodation in Germany: Start searching at
-                            least 4 months in advance! The WG market is very competitive right now.
-                        </p>
-                        <div class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">arrow_upward</span> 56 Likes
-                            </button>
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">chat_bubble</span> 8 Comments
-                            </button>
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">share</span> Share
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Post 3 -->
-                    <div class="glass-card p-8 rounded-3xl group">
-                        <div class="flex items-start justify-between mb-6">
-                            <div class="flex gap-4">
-                                <img src="assets/img/avatar_1.png" class="w-12 h-12 rounded-full object-cover"
-                                    alt="User">
-                                <div>
-                                    <h4 class="font-bold text-gray-900 dark:text-white">Vikram Reddy</h4>
-                                    <p class="text-xs text-gray-500"><span class="post-time">1 day ago</span> • PhD
-                                        Physics @ Cambridge</p>
-                                </div>
-                            </div>
-                            <button class="text-gray-400 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined">more_vert</span>
-                            </button>
-                        </div>
-                        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 font-sans">
-                            Just got my loan approved! For anyone applying to ICICI: they're now offering a 0.5% rate
-                            discount
-                            if you opt for auto-debit from a salary account. Saved me 40k over the loan tenure!
-                        </p>
-                        <div class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">arrow_upward</span> 89 Likes
-                            </button>
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">chat_bubble</span> 34 Comments
-                            </button>
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">share</span> Share
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Post 4 -->
-                    <div class="glass-card p-8 rounded-3xl group">
-                        <div class="flex items-start justify-between mb-6">
-                            <div class="flex gap-4">
-                                <img src="assets/img/avatar_2.png" class="w-12 h-12 rounded-full object-cover"
-                                    alt="User">
-                                <div>
-                                    <h4 class="font-bold text-gray-900 dark:text-white">Kavita Menon</h4>
-                                    <p class="text-xs text-gray-500"><span class="post-time">3 days ago</span> • MBA @
-                                        INSEAD</p>
-                                </div>
-                            </div>
-                            <button class="text-gray-400 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined">more_vert</span>
-                            </button>
-                        </div>
-                        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 font-sans">
-                            Pro tip: If you're planning to apply for a loan, get your CIBIL score corrected FIRST.
-                            I wasted 2 months because of an error in my credit report that I didn't know about.
-                        </p>
-                        <div class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">arrow_upward</span> 142 Likes
-                            </button>
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">chat_bubble</span> 28 Comments
-                            </button>
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">share</span> Share
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Post 5 -->
-                    <div class="glass-card p-8 rounded-3xl group">
-                        <div class="flex items-start justify-between mb-6">
-                            <div class="flex gap-4">
-                                <img src="assets/img/avatar_3.png" class="w-12 h-12 rounded-full object-cover"
-                                    alt="User">
-                                <div>
-                                    <h4 class="font-bold text-gray-900 dark:text-white">Ankit Joshi</h4>
-                                    <p class="text-xs text-gray-500"><span class="post-time">1 week ago</span> • MS CS @
-                                        Carnegie Mellon</p>
-                                </div>
-                            </div>
-                            <button class="text-gray-400 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined">more_vert</span>
-                            </button>
-                        </div>
-                        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 font-sans">
-                            Question: Has anyone used Prodigy Finance for USA? How does their interest rate compare to
-                            Indian banks? I'm comparing between SBI 8.5% vs Prodigy 9.2% but without collateral
-                            requirement.
-                        </p>
-                        <div class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">arrow_upward</span> 67 Likes
-                            </button>
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">chat_bubble</span> 45 Comments
-                            </button>
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">share</span> Share
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Post 6: Northeastern University & I-20 Issue -->
-                    <div class="glass-card p-8 rounded-3xl group">
-                        <div class="flex items-start justify-between mb-6">
-                            <div class="flex gap-4">
-                                <img src="assets/img/avatar_2.png" class="w-12 h-12 rounded-full object-cover"
-                                    alt="User">
-                                <div>
-                                    <h4 class="font-bold text-gray-900 dark:text-white">Rahul Verma</h4>
-                                    <p class="text-xs text-gray-500"><span class="post-time">4 hours ago</span> • MS
-                                        Info Systems @ Northeastern</p>
-                                </div>
-                            </div>
-                            <button class="text-gray-400 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined">more_vert</span>
-                            </button>
-                        </div>
-                        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 font-sans">
-                            🚨 <strong>Urgent I-20 Help:</strong> Has anyone who got into Northeastern (Boston campus)
-                            successfully used a loan sanction letter from <strong>Auxilo</strong> for their financial
-                            docs? NEU portal says they need "liquid funds" proof. Does the loan letter count as liquid
-                            or do I need a separate bank solvency certificate? Stressing out! 😰
-                        </p>
-                        <div class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">arrow_upward</span> 31 Likes
-                            </button>
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">chat_bubble</span> 18 Comments
-                            </button>
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">share</span> Share
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Post 7: Germany Blocked Account -->
-                    <div class="glass-card p-8 rounded-3xl group">
-                        <div class="flex items-start justify-between mb-6">
-                            <div class="flex gap-4">
-                                <img src="assets/img/avatar_1.png" class="w-12 h-12 rounded-full object-cover"
-                                    alt="User">
-                                <div>
-                                    <h4 class="font-bold text-gray-900 dark:text-white">Sneha Dubey</h4>
-                                    <p class="text-xs text-gray-500"><span class="post-time">6 hours ago</span> •
-                                        Masters @ TU Munich</p>
-                                </div>
-                            </div>
-                            <button class="text-gray-400 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined">more_vert</span>
-                            </button>
-                        </div>
-                        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 font-sans">
-                            For Germany students 🇩🇪: I just transferred my loan amount from SBI directly to
-                            <strong>Expatrio</strong> for the Blocked Account. The exchange rate hit was brutal (₹91 per
-                            Euro!). If you haven't transferred yet, try using a forex card or checking if your bank has
-                            a tie-up with Coracle. Might save you like ₹15k-20k.
-                        </p>
-                        <div class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">arrow_upward</span> 94 Likes
-                            </button>
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">chat_bubble</span> 42 Comments
-                            </button>
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">share</span> Share
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Post 8: Australia Living Expenses -->
-                    <div class="glass-card p-8 rounded-3xl group">
-                        <div class="flex items-start justify-between mb-6">
-                            <div class="flex gap-4">
-                                <img src="assets/img/avatar_3.png" class="w-12 h-12 rounded-full object-cover"
-                                    alt="User">
-                                <div>
-                                    <h4 class="font-bold text-gray-900 dark:text-white">Chris D'Souza</h4>
-                                    <p class="text-xs text-gray-500"><span class="post-time">12 hours ago</span> •
-                                        Commerce @ Uni of Melbourne</p>
-                                </div>
-                            </div>
-                            <button class="text-gray-400 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined">more_vert</span>
-                            </button>
-                        </div>
-                        <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 font-sans">
-                            Hey guys, slight panic. My loan disbursal for <strong>University of Melbourne</strong>
-                            tuition is sorted, but HDFC is saying they will only release "Living Expenses" monthly? Rent
-                            in Melbourne is crazy and landlords ask for bond + 4 weeks upfront. Has anyone negotiated a
-                            lump sum release for living expenses?
-                        </p>
-                        <div class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">arrow_upward</span> 45 Likes
-                            </button>
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">chat_bubble</span> 23 Comments
-                            </button>
-                            <button
-                                class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined text-lg">share</span> Share
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        </div>
         </div>
     </main>
 
@@ -533,6 +314,104 @@
             });
         });
     </script>
+    <script>
+        // Update mentor post based on topic
+        function updateMentorPostForTopic() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const topic = urlParams.get('topic') || 'general';
+
+            const mentorContent = {
+                'eligibility': {
+                    title: 'Loan Eligibility & Finance',
+                    question: 'What challenges are you facing with loan eligibility?',
+                    description: 'Our mentor team includes bank relationship managers and students who successfully secured education loans. Ask us about credit scores, collateral requirements, or improving your eligibility.',
+                    advice: 'Get expert guidance on loan eligibility, documentation, and approval strategies from those who've been through it.',
+                    mentors: 18
+                },
+                'universities': {
+                    title: 'University Selection',
+                    question: 'Need help choosing the right university?',
+                    description: 'Our mentors are alumni from top global universities. Ask about rankings, program quality, campus life, ROI, or specific university comparisons.',
+                    advice: 'Connect with alumni from top universities worldwide for insider perspectives on university life and academics.',
+                    mentors: 32
+                },
+                'courses': {
+                    title: 'Course & Program Guidance',
+                    question: 'Confused about which program to choose?',
+                    description: 'Ask mentors about MS vs MBA, specialized programs, curriculum details, career outcomes, or switching fields.',
+                    advice: 'Our mentors have pursued diverse programs - from STEM to Business. Get advice on course selection aligned with your career goals.',
+                    mentors: 24
+                },
+                'scholarships': {
+                    title: 'Scholarships & Funding',
+                    question: 'Looking for scholarship opportunities?',
+                    description: 'Mentors who won scholarships share tips on finding opportunities, writing winning applications, and maximizing financial aid.',
+                    advice: 'Learn from scholarship recipients about deadlines, application strategies, and lesser-known funding sources.',
+                    mentors: 15
+                },
+                'accommodation': {
+                    title: 'Housing & Accommodation',
+                    question: 'Worried about finding housing abroad?',
+                    description: 'Current students and alumni share tips on finding accommodation, navigating lease agreements, roommate searches, and budget-friendly living.',
+                    advice: 'Get practical advice on housing markets, safe neighborhoods, and avoiding common rental pitfalls in different countries.',
+                    mentors: 28
+                },
+                'gre': {
+                    title: 'Test Preparation (GRE/IELTS/TOEFL)',
+                    question: 'Need test prep strategies and resources?',
+                    description: 'High scorers share study plans, resources, test-taking strategies, and tips to improve your scores.',
+                    advice: 'Learn from students who scored 320+ on GRE, 8+ on IELTS, and 110+ on TOEFL about effective preparation methods.',
+                    mentors: 21
+                },
+                'visa': {
+                    title: 'Visa Application Support',
+                    question: 'Visa application got you stressed?',
+                    description: 'Mentors share their visa interview experiences, document preparation tips, and how to handle common visa officer questions.',
+                    advice: 'Get insights on visa success stories, rejection reasons to avoid, and country-specific visa nuances.',
+                    mentors: 19
+                }
+            };
+
+            const content = mentorContent[topic] || mentorContent['eligibility'];
+
+            // Update title
+            const titleEl = document.getElementById('topicTitle');
+            const badgeEl = document.getElementById('topicBadge');
+            if (titleEl) titleEl.textContent = content.title;
+            if (badgeEl) badgeEl.textContent = topic.toUpperCase();
+
+            // Update mentor post
+            const questionEl = document.getElementById('mentorQuestion');
+            const descEl = document.getElementById('mentorDescription');
+            const adviceEl = document.getElementById('mentorAdvice');
+            const mentorsEl = document.getElementById('activeMentors');
+
+            if (questionEl) questionEl.textContent = content.question;
+            if (descEl) descEl.textContent = content.description;
+            if (adviceEl) adviceEl.textContent = content.advice;
+            if (mentorsEl) mentorsEl.textContent = content.mentors + ' Active Mentors';
+        }
+
+        // Show mentor info modal/alert
+        function showMentorInfo() {
+            alert('🎓 Mentor-Only Reply Feature\n\n' +
+                'This is a special post where only verified mentors and alumni can provide answers.\n\n' +
+                '✅ Mentors have:\n' +
+                '• Verified student/alumni status\n' +
+                '• Real experience with this topic\n' +
+                '• Expert knowledge to share\n\n' +
+                '💡 Post your question below and our mentors will respond with personalized guidance!\n\n' +
+                'Want to become a mentor? Contact us at mentors@loanhero.com');
+        }
+
+        // Call on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', updateMentorPostForTopic);
+        } else {
+            updateMentorPostForTopic();
+        }
+    </script>
+    <script src="assets/js/community-forum.js"></script>
     <script src="assets/js/auth.js"></script>
     <script src="assets/js/components-loader.js"></script>
 </body>

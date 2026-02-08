@@ -162,9 +162,16 @@ export class AiController {
     data: {
       uni1: string;
       uni2: string;
+      program1?: string;
+      program2?: string;
     },
   ) {
-    const result = await this.universityComparisonService.compare(data.uni1, data.uni2);
+    const result = await this.universityComparisonService.compare(
+      data.uni1,
+      data.uni2,
+      data.program1,
+      data.program2
+    );
     return {
       success: true,
       data: result,

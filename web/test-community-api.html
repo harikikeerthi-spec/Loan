@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community API Test Page</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .success {
+            background: #10b981;
+            color: white;
+        }
+
+        .error {
+            background: #ef4444;
+            color: white;
+        }
+
+        .loading {
+            background: #f59e0b;
+            color: white;
+        }
+
+        pre {
+            background: #1f2937;
+            color: #10b981;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-size: 0.875rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        button {
+            background: #6366f1;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        button:hover {
+            background: #4f46e5;
+        }
+
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 0.5rem;
+        }
+
+        .status {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="max-w-6xl mx-auto">
+        <div class="card">
+            <h1 class="text-3xl font-bold mb-2 text-gray-800">🧪 Community API Test Dashboard</h1>
+            <p class="text-gray-600 mb-4">Test all community endpoints to verify integration</p>
+
+            <div id="status" class="status loading">
+                ⏳ Ready to test API endpoints
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-sm font-bold text-gray-500 uppercase mb-3">Quick Actions</h3>
+                <button onclick="testAllEndpoints()">🚀 Test All Endpoints</button>
+                <button onclick="clearResults()">🗑️ Clear Results</button>
+                <button onclick="location.reload()">🔄 Refresh Page</button>
+            </div>
+        </div>
+
+        <!-- Mentorship Tests -->
+        <div class="card">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">
+                👥 Mentorship Endpoints
+                <span class="badge bg-blue-500 text-white">6 endpoints</span>
+            </h2>
+            <div class="space-x-2 mb-4">
+                <button onclick="testEndpoint('/mentors', 'GET', 'mentors-list')">Get All Mentors</button>
+                <button onclick="testEndpoint('/mentors/featured', 'GET', 'mentors-featured')">Featured Mentors</button>
+                <button onclick="testEndpoint('/mentors/stats', 'GET', 'mentors-stats')">Mentor Stats</button>
+            </div>
+            <div id="mentors-list" class="result"></div>
+            <div id="mentors-featured" class="result"></div>
+            <div id="mentors-stats" class="result"></div>
+        </div>
+
+        <!-- Events Tests -->
+        <div class="card">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">
+                📅 Events Endpoints
+                <span class="badge bg-green-500 text-white">5 endpoints</span>
+            </h2>
+            <div class="space-x-2 mb-4">
+                <button onclick="testEndpoint('/events', 'GET', 'events-all')">All Events</button>
+                <button onclick="testEndpoint('/events/upcoming', 'GET', 'events-upcoming')">Upcoming Events</button>
+                <button onclick="testEndpoint('/events/past', 'GET', 'events-past')">Past Events</button>
+            </div>
+            <div id="events-all" class="result"></div>
+            <div id="events-upcoming" class="result"></div>
+            <div id="events-past" class="result"></div>
+        </div>
+
+        <!-- Success Stories Tests -->
+        <div class="card">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">
+                ⭐ Success Stories Endpoints
+                <span class="badge bg-purple-500 text-white">4 endpoints</span>
+            </h2>
+            <div class="space-x-2 mb-4">
+                <button onclick="testEndpoint('/stories', 'GET', 'stories-all')">All Stories</button>
+                <button onclick="testEndpoint('/stories/featured', 'GET', 'stories-featured')">Featured Stories</button>
+                <button onclick="testEndpoint('/stories?country=USA', 'GET', 'stories-usa')">Stories (USA)</button>
+                <button onclick="testEndpoint('/stories?category=MBA', 'GET', 'stories-mba')">Stories (MBA)</button>
+            </div>
+            <div id="stories-all" class="result"></div>
+            <div id="stories-featured" class="result"></div>
+            <div id="stories-usa" class="result"></div>
+            <div id="stories-mba" class="result"></div>
+        </div>
+
+        <!-- Resources Tests -->
+        <div class="card">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">
+                📚 Resources Endpoints
+                <span class="badge bg-orange-500 text-white">4 endpoints</span>
+            </h2>
+            <div class="space-x-2 mb-4">
+                <button onclick="testEndpoint('/resources', 'GET', 'resources-all')">All Resources</button>
+                <button onclick="testEndpoint('/resources/popular', 'GET', 'resources-popular')">Popular
+                    Resources</button>
+                <button onclick="testEndpoint('/resources?type=guide', 'GET', 'resources-guides')">Guides Only</button>
+                <button onclick="testEndpoint('/resources?type=template', 'GET', 'resources-templates')">Templates
+                    Only</button>
+            </div>
+            <div id="resources-all" class="result"></div>
+            <div id="resources-popular" class="result"></div>
+            <div id="resources-guides" class="result"></div>
+            <div id="resources-templates" class="result"></div>
+        </div>
+
+        <!-- Test Summary -->
+        <div class="card">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">📊 Test Summary</h2>
+            <div id="summary" class="text-gray-600">
+                Run tests to see summary
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/community';
+        let testResults = {
+            total: 0,
+            passed: 0,
+            failed: 0
+        };
+
+        async function testEndpoint(path, method = 'GET', resultId) {
+            const container = document.getElementById(resultId);
+            if (!container) return;
+
+            container.innerHTML = `<div class="status loading">⏳ Testing ${path}...</div>`;
+
+            try {
+                const startTime = Date.now();
+                const response = await fetch(`${API_BASE}${path}`);
+                const duration = Date.now() - startTime;
+                const data = await response.json();
+
+                testResults.total++;
+
+                if (response.ok && data.success) {
+                    testResults.passed++;
+                    const count = Array.isArray(data.data) ? data.data.length : 1;
+                    container.innerHTML = `
+                        <div class="status success">
+                            ✅ Success (${duration}ms)
+                            <span class="badge bg-white text-green-600">${response.status}</span>
+                            <span class="badge bg-white text-green-600">${count} items</span>
+                        </div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    testResults.failed++;
+                    container.innerHTML = `
+                        <div class="status error">
+                            ❌ Failed (${duration}ms)
+                            <span class="badge bg-white text-red-600">${response.status}</span>
+                        </div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                testResults.total++;
+                testResults.failed++;
+                container.innerHTML = `
+                    <div class="status error">
+                        ❌ Error: ${error.message}
+                    </div>
+                    <pre>${error.stack}</pre>
+                `;
+            }
+
+            updateSummary();
+            updateStatus();
+        }
+
+        async function testAllEndpoints() {
+            testResults = { total: 0, passed: 0, failed: 0 };
+
+            // Mentorship
+            await testEndpoint('/mentors', 'GET', 'mentors-list');
+            await testEndpoint('/mentors/featured', 'GET', 'mentors-featured');
+            await testEndpoint('/mentors/stats', 'GET', 'mentors-stats');
+
+            // Events
+            await testEndpoint('/events', 'GET', 'events-all');
+            await testEndpoint('/events/upcoming', 'GET', 'events-upcoming');
+            await testEndpoint('/events/past', 'GET', 'events-past');
+
+            // Stories
+            await testEndpoint('/stories', 'GET', 'stories-all');
+            await testEndpoint('/stories/featured', 'GET', 'stories-featured');
+            await testEndpoint('/stories?country=USA', 'GET', 'stories-usa');
+            await testEndpoint('/stories?category=MBA', 'GET', 'stories-mba');
+
+            // Resources
+            await testEndpoint('/resources', 'GET', 'resources-all');
+            await testEndpoint('/resources/popular', 'GET', 'resources-popular');
+            await testEndpoint('/resources?type=guide', 'GET', 'resources-guides');
+            await testEndpoint('/resources?type=template', 'GET', 'resources-templates');
+        }
+
+        function updateSummary() {
+            const summary = document.getElementById('summary');
+            const passRate = testResults.total > 0
+                ? Math.round((testResults.passed / testResults.total) * 100)
+                : 0;
+
+            summary.innerHTML = `
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-blue-600">${testResults.total}</div>
+                        <div class="text-sm text-gray-500">Total Tests</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-green-600">${testResults.passed}</div>
+                        <div class="text-sm text-gray-500">Passed</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-red-600">${testResults.failed}</div>
+                        <div class="text-sm text-gray-500">Failed</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-3xl font-bold text-purple-600">${passRate}%</div>
+                        <div class="text-sm text-gray-500">Pass Rate</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateStatus() {
+            const status = document.getElementById('status');
+            if (testResults.total === 0) {
+                status.className = 'status loading';
+                status.textContent = '⏳ Ready to test API endpoints';
+            } else if (testResults.failed === 0) {
+                status.className = 'status success';
+                status.textContent = `✅ All ${testResults.passed} tests passed!`;
+            } else {
+                status.className = 'status error';
+                status.textContent = `⚠️ ${testResults.failed} of ${testResults.total} tests failed`;
+            }
+        }
+
+        function clearResults() {
+            document.querySelectorAll('.result').forEach(el => el.innerHTML = '');
+            testResults = { total: 0, passed: 0, failed: 0 };
+            updateSummary();
+            updateStatus();
+        }
+
+        // Auto-test on load (optional)
+        // window.onload = () => testAllEndpoints();
+    </script>
+</body>
+
+</html>

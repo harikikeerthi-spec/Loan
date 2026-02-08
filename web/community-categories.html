@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Categories - LoanHero Community</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                    },
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    },
+                    backgroundImage: {
+                        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(102, 5, 199, 0.4) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224, 195, 137, 0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139, 192, 232, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102, 5, 199, 0.3) 0px, transparent 50%)',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        .nav-link {
+            color: rgba(0, 0, 0, 0.9) !important;
+        }
+
+        .nav-scrolled .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        .nav-scrolled .nav-link:hover {
+            color: #6605c7 !important;
+        }
+
+        .nav-scrolled .material-symbols-outlined {
+            color: white !important;
+        }
+
+        .category-card {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .category-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(102, 5, 199, 0.15);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .dark .glass-card {
+            background: rgba(25, 15, 35, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none">
+        <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
+    </div>
+
+    <div id="navbar-placeholder"></div>
+
+    <main class="relative z-10 pt-32 pb-24">
+        <div class="max-w-7xl mx-auto px-6">
+            <header class="text-center mb-16">
+                <h1 class="text-4xl md:text-6xl font-bold font-display text-gray-900 dark:text-white mb-6">Explore <span
+                        class="italic text-primary">Categories</span></h1>
+                <p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed">Choose a category
+                    to dive deep into discussions and resources.</p>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <!-- Loans Category -->
+                <a href="engage.html?topic=loan" class="category-card glass-card p-8 rounded-[2.5rem]">
+                    <div
+                        class="w-16 h-16 bg-green-500/10 rounded-2xl flex items-center justify-center text-green-600 mb-6">
+                        <span class="material-symbols-outlined text-4xl">account_balance_wallet</span>
+                    </div>
+                    <h3 class="text-2xl font-bold font-display mb-4">Loans & Finance</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">Interest rates, banks, eligibility, and EMI
+                        planning.</p>
+                    <span class="text-primary font-bold text-sm">Explore Section →</span>
+                </a>
+
+                <!-- Universities Category -->
+                <a href="engage.html?topic=universities" class="category-card glass-card p-8 rounded-[2.5rem]">
+                    <div
+                        class="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-600 mb-6">
+                        <span class="material-symbols-outlined text-4xl">school</span>
+                    </div>
+                    <h3 class="text-2xl font-bold font-display mb-4">Universities</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">Country filters, rank insights, and university
+                        discussions.</p>
+                    <span class="text-primary font-bold text-sm">Explore Section →</span>
+                </a>
+
+                <!-- Courses Category -->
+                <a href="engage.html?topic=courses" class="category-card glass-card p-8 rounded-[2.5rem]">
+                    <div
+                        class="w-16 h-16 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-600 mb-6">
+                        <span class="material-symbols-outlined text-4xl">menu_book</span>
+                    </div>
+                    <h3 class="text-2xl font-bold font-display mb-4">Courses</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">MS, MBA, PhD, and specialized international
+                        programs.</p>
+                    <span class="text-primary font-bold text-sm">Explore Section →</span>
+                </a>
+
+                <!-- Stories Category -->
+                <a href="community-success-stories.html" class="category-card glass-card p-8 rounded-[2.5rem]">
+                    <div
+                        class="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-600 mb-6">
+                        <span class="material-symbols-outlined text-4xl">lightbulb</span>
+                    </div>
+                    <h3 class="text-2xl font-bold font-display mb-4">Success Stories</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">Real student journeys, mistakes, and triumph
+                        reports.</p>
+                    <span class="text-primary font-bold text-sm">Explore Section →</span>
+                </a>
+
+                <!-- Mentorship Category -->
+                <a href="community-mentorship.html" class="category-card glass-card p-8 rounded-[2.5rem]">
+                    <div
+                        class="w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-600 mb-6">
+                        <span class="material-symbols-outlined text-4xl">groups</span>
+                    </div>
+                    <h3 class="text-2xl font-bold font-display mb-4">Alumni & Mentors</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">Verified advisors and successful student mentors.
+                    </p>
+                    <span class="text-primary font-bold text-sm">Explore Section →</span>
+                </a>
+
+                <!-- Scholarships Category -->
+                <a href="engage.html?topic=scholarships" class="category-card glass-card p-8 rounded-[2.5rem]">
+                    <div
+                        class="w-16 h-16 bg-teal-500/10 rounded-2xl flex items-center justify-center text-teal-600 mb-6">
+                        <span class="material-symbols-outlined text-4xl">savings</span>
+                    </div>
+                    <h3 class="text-2xl font-bold font-display mb-4">Scholarships</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">Deadlines, alerts, and matching tailored to your
+                        profile.</p>
+                    <span class="text-primary font-bold text-sm">Explore Section →</span>
+                </a>
+
+                <!-- Housing Category -->
+                <a href="engage.html?topic=accommodation" class="category-card glass-card p-8 rounded-[2.5rem]">
+                    <div
+                        class="w-16 h-16 bg-rose-500/10 rounded-2xl flex items-center justify-center text-rose-600 mb-6">
+                        <span class="material-symbols-outlined text-4xl">home</span>
+                    </div>
+                    <h3 class="text-2xl font-bold font-display mb-4">Accommodation</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">Find housing, roommates, and local living tips.</p>
+                    <span class="text-primary font-bold text-sm">Explore Section →</span>
+                </a>
+
+                <!-- Test Prep Category -->
+                <a href="engage.html?topic=gre" class="category-card glass-card p-8 rounded-[2.5rem]">
+                    <div
+                        class="w-16 h-16 bg-cyan-500/10 rounded-2xl flex items-center justify-center text-cyan-600 mb-6">
+                        <span class="material-symbols-outlined text-4xl">quiz</span>
+                    </div>
+                    <h3 class="text-2xl font-bold font-display mb-4">Test Preparation</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">GRE, IELTS, TOEFL, GMAT, and SAT strategies.</p>
+                    <span class="text-primary font-bold text-sm">Explore Section →</span>
+                </a>
+
+                <!-- Events Category -->
+                <a href="community-events.html" class="category-card glass-card p-8 rounded-[2.5rem]">
+                    <div
+                        class="w-16 h-16 bg-orange-500/10 rounded-2xl flex items-center justify-center text-orange-600 mb-6">
+                        <span class="material-symbols-outlined text-4xl">event</span>
+                    </div>
+                    <h3 class="text-2xl font-bold font-display mb-4">Events & AMAs</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">Live sessions with banks, alumni, and industry
+                        experts.</p>
+                    <span class="text-primary font-bold text-sm">Explore Section →</span>
+                </a>
+
+                <!-- Visa Category -->
+                <a href="engage.html?topic=visa" class="category-card glass-card p-8 rounded-[2.5rem]">
+                    <div class="w-16 h-16 bg-sky-500/10 rounded-2xl flex items-center justify-center text-sky-600 mb-6">
+                        <span class="material-symbols-outlined text-4xl">flight_takeoff</span>
+                    </div>
+                    <h3 class="text-2xl font-bold font-display mb-4">Visa Support</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">Application guides, interview tips, and checklists.
+                    </p>
+                    <span class="text-primary font-bold text-sm">Explore Section →</span>
+                </a>
+
+                <!-- AI Tools Category -->
+                <a href="sop-writer.html" class="category-card glass-card p-8 rounded-[2.5rem]">
+                    <div
+                        class="w-16 h-16 bg-violet-500/10 rounded-2xl flex items-center justify-center text-violet-600 mb-6">
+                        <span class="material-symbols-outlined text-4xl">smart_toy</span>
+                    </div>
+                    <h3 class="text-2xl font-bold font-display mb-4">AI Tools</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">AI SOP writer, admit predictor, and loan advisors.
+                    </p>
+                    <span class="text-primary font-bold text-sm">Explore Section →</span>
+                </a>
+
+                <!-- Resources Category -->
+                <a href="community-resources.html" class="category-card glass-card p-8 rounded-[2.5rem]">
+                    <div
+                        class="w-16 h-16 bg-pink-500/10 rounded-2xl flex items-center justify-center text-pink-600 mb-6">
+                        <span class="material-symbols-outlined text-4xl">inventory_2</span>
+                    </div>
+                    <h3 class="text-2xl font-bold font-display mb-4">Resources</h3>
+                    <p class="text-gray-500 dark:text-gray-400 mb-6">Download free guides, checklists, and templates.
+                    </p>
+                    <span class="text-primary font-bold text-sm">Explore Section →</span>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <div id="footer-placeholder"></div>
+
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/components-loader.js"></script>
+</body>
+
+</html>

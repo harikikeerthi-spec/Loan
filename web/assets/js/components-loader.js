@@ -39,75 +39,30 @@
 
         // After components are loaded, initialize any scripts that depend on them
         initializeComponentScripts();
+
+        // Call auth navbar update if available
+        if (typeof updateNavbarAuth === 'function') {
+            updateNavbarAuth();
+        }
     }
 
     function initializeComponentScripts() {
         // Initialize navigation scroll effect
         const nav = document.getElementById('mainNav');
         if (nav) {
+            // Check if page has a hero section (like index.html)
+            // If not, add a class to make navbar readable on light backgrounds
+            const hasHero = !!document.getElementById('heroVideo') || !!document.querySelector('.pt-48');
+            if (!hasHero) {
+                nav.classList.add('nav-on-light');
+            }
+
             window.addEventListener('scroll', () => {
                 if (window.scrollY > 50) {
                     nav.classList.add('nav-scrolled');
                 } else {
                     nav.classList.remove('nav-scrolled');
                 }
-            });
-        }
-
-        // Initialize profile dropdown
-        const profileBtn = document.getElementById('profileBtn');
-        const profileDropdown = document.getElementById('profileDropdown');
-        if (profileBtn && profileDropdown) {
-            profileBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                profileDropdown.classList.toggle('hidden');
-            });
-
-            // Close dropdown when clicking outside
-            document.addEventListener('click', () => {
-                if (profileDropdown && !profileDropdown.classList.contains('hidden')) {
-                    profileDropdown.classList.add('hidden');
-                }
-            });
-
-            // Prevent dropdown from closing when clicking inside it
-            profileDropdown.addEventListener('click', (e) => {
-                e.stopPropagation();
-            });
-        }
-
-        // Check if user is logged in and update UI accordingly
-        checkAuthStatus();
-    }
-
-    function checkAuthStatus() {
-        // Get user data from localStorage
-        const user = JSON.parse(localStorage.getItem('user') || 'null');
-        const loginLink = document.getElementById('loginLink');
-        const userProfileSection = document.getElementById('userProfileSection');
-        const userEmailSpan = document.getElementById('userEmail');
-        const dropdownEmail = document.getElementById('dropdownEmail');
-
-        if (user && user.email) {
-            // User is logged in
-            if (loginLink) loginLink.classList.add('hidden');
-            if (userProfileSection) userProfileSection.classList.remove('hidden');
-            if (userEmailSpan) userEmailSpan.textContent = user.email;
-            if (dropdownEmail) dropdownEmail.textContent = user.email;
-        } else {
-            // User is not logged in
-            if (loginLink) loginLink.classList.remove('hidden');
-            if (userProfileSection) userProfileSection.classList.add('hidden');
-        }
-
-        // Setup logout button
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                localStorage.removeItem('user');
-                localStorage.removeItem('token');
-                window.location.href = 'index.html';
             });
         }
     }

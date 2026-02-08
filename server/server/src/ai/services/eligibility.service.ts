@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { OpenRouterService } from './open-router.service';
+import { GroqService } from './groq.service';
 
 export interface EligibilityCheckDto {
   age: number;
@@ -24,7 +24,7 @@ export interface EligibilityResult {
 
 @Injectable()
 export class EligibilityService {
-  constructor(private readonly openRouter: OpenRouterService) { }
+  constructor(private readonly groq: GroqService) { }
 
   async calculateEligibilityScore(data: EligibilityCheckDto): Promise<EligibilityResult> {
     const prompt = `
@@ -61,7 +61,7 @@ export class EligibilityService {
     `;
 
     try {
-      return await this.openRouter.getJson<EligibilityResult>(prompt);
+      return await this.groq.getJson<EligibilityResult>(prompt);
     } catch (error) {
       console.error('Eligibility check failed', error);
       // Fallback

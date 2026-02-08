@@ -9,6 +9,7 @@ import { SuperAdminGuard } from './super-admin.guard';
 import { AuthorizationService } from './authorization.service';
 import { AuditLogService } from './audit-log.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { UserGuard } from './user.guard';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { PrismaService } from '../prisma/prisma.service';
     AuthorizationService,
     AuditLogService,
     PrismaService,
+    UserGuard,
   ],
   exports: [
     AuthService,
@@ -36,6 +38,7 @@ import { PrismaService } from '../prisma/prisma.service';
     SuperAdminGuard,
     AuthorizationService,
     AuditLogService,
+    UserGuard,
   ],
 })
-export class AuthModule {}
+export class AuthModule { }

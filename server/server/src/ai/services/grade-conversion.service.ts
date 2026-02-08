@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { OpenRouterService } from './open-router.service';
+import { GroqService } from './groq.service';
 
 interface GradeConversionInput {
   inputType: 'letterGrade' | 'percentage' | 'gpa' | 'cgpa' | 'marks';
@@ -31,7 +31,7 @@ interface GradeConversionResult {
 
 @Injectable()
 export class GradeConversionService {
-  constructor(private readonly openRouter: OpenRouterService) { }
+  constructor(private readonly groq: GroqService) { }
 
   async convertGrade(input: GradeConversionInput): Promise<GradeConversionResult> {
     // Input validation to enforce limits and return clear errors on bad input
@@ -114,7 +114,7 @@ export class GradeConversionService {
     `;
 
     try {
-      return await this.openRouter.getJson<GradeConversionResult>(prompt);
+      return await this.groq.getJson<GradeConversionResult>(prompt);
     } catch (error) {
       console.error('Grade conversion failed', error);
       // Fallback to simple zero-value object if AI fails, to prevent crash
@@ -148,7 +148,7 @@ export class GradeConversionService {
       `;
 
     try {
-      return await this.openRouter.getJson(prompt);
+      return await this.groq.getJson(prompt);
     } catch (error) {
       console.error('Performance comparison failed', error);
       return {

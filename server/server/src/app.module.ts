@@ -7,10 +7,12 @@ import { PrismaModule } from './prisma/prisma.module';
 import { BlogModule } from './blog/blog.module';
 import { DocumentModule } from './document/document.module';
 import { AiModule } from './ai/ai.module';
+import { CommunityModule } from './community/community.module';
+import { ReferenceModule } from './reference/reference.module';
 
 
 @Module({
-  imports: [PrismaModule, AuthModule, UsersModule, BlogModule, DocumentModule, AiModule],
+  imports: [PrismaModule, AuthModule, UsersModule, BlogModule, DocumentModule, AiModule, CommunityModule, ReferenceModule],
   controllers: [AppController],
   providers: [AppService],
 })

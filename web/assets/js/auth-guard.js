@@ -5,7 +5,7 @@
 class AuthGuard {
   static TOKEN_KEY = 'auth_token';
   static USER_KEY = 'current_user';
-  static API_BASE = process.env.VITE_API_BASE_URL || 'http://localhost:3000';
+  static API_BASE = 'http://localhost:3000'; // Browser-compatible (process.env doesn't work in browsers)
 
   /**
    * Check if user is authenticated
@@ -200,13 +200,13 @@ class AuthGuard {
 
 // Protect admin routes on page load
 document.addEventListener('DOMContentLoaded', async () => {
-  const isAdminRoute = window.location.pathname.startsWith('/admin') || 
-                       window.location.pathname.startsWith('/super-admin');
-  
+  const isAdminRoute = window.location.pathname.startsWith('/admin') ||
+    window.location.pathname.startsWith('/super-admin');
+
   if (isAdminRoute) {
     const requiredRole = window.location.pathname.startsWith('/super-admin') ? 'super_admin' : 'admin';
     const isProtected = await AuthGuard.protectRoute(requiredRole);
-    
+
     if (!isProtected) {
       // Route protection will handle redirect
     }

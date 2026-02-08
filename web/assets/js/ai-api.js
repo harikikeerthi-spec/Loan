@@ -86,7 +86,7 @@ const AI_API = {
     }
   },
 
-  async compareUniversities(uni1, uni2) {
+  async compareUniversities(data) {
     try {
       const response = await fetch(`${this.BASE_URL}/compare-universities`, {
         method: 'POST',
@@ -94,7 +94,7 @@ const AI_API = {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
         },
-        body: JSON.stringify({ uni1, uni2 }),
+        body: JSON.stringify(data),
       });
 
       if (!response.ok) {
