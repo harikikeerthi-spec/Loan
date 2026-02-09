@@ -1,28 +1,41 @@
 const API_BASE_URL = 'http://localhost:3000/community';
+const AUTH_TOKEN_KEY = 'accessToken'; // Matching auth.js
 
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const topic = urlParams.get('topic') || 'general';
 
     updateTopicHeader(topic);
+    checkAuthAndSetupUI(topic);
     loadForumPosts(topic);
     loadTopicResources(topic);
     loadTopicEvents(topic);
     loadTopicMentors(topic);
-
-    // Setup post button
-    const postBtn = document.querySelector('button.bg-primary.text-white');
-    if (postBtn && postBtn.textContent === 'Post') {
-        postBtn.addEventListener('click', () => createPost(topic));
-    }
 });
+
+function checkAuthAndSetupUI(topic) {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    const createContainer = document.getElementById('createPostContainer');
+    const loginMsg = document.getElementById('loginToPostMsg');
+    const submitBtn = document.getElementById('submitPostBtn');
+
+    if (token) {
+        if (createContainer) createContainer.classList.remove('hidden');
+        if (loginMsg) loginMsg.classList.add('hidden');
+        if (submitBtn) {
+            submitBtn.addEventListener('click', () => createPost(topic));
+        }
+    } else {
+        if (createContainer) createContainer.classList.add('hidden');
+        if (loginMsg) loginMsg.classList.remove('hidden');
+    }
+}
 
 function updateTopicHeader(topic) {
     const topicTitle = document.getElementById('topicTitle');
     const topicBadge = document.getElementById('topicBadge');
 
     if (topicTitle) {
-        // Simple mapping or capitalize
         const displayNames = {
             'loan': 'Loans & Finance',
             'eligibility': 'Loans & Eligibility',
@@ -47,23 +60,12 @@ async function loadForumPosts(topic) {
     if (!postsContainer) return;
 
     try {
-        // Show loading state (or keep skeleton)
-        // postsContainer.innerHTML = '<div class="text-center py-12">Loading discussions...</div>';
-
-        const token = localStorage.getItem('token');
-        const response = await fetch(`${API_BASE_URL}/forum?category=${topic}&limit=10`, {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
+        const response = await fetch(`${API_BASE_URL}/forum?category=${topic}&limit=10`);
         const result = await response.json();
 
         if (result.success && result.data.length > 0) {
             displayPosts(result.data);
         } else {
-            // If no API posts, maybe keep default/sample ones or show empty message?
-            // For now, let's prepend API posts to sample ones or replace them.
-            // Replacing is better for real app.
             postsContainer.innerHTML = `
                 <div class="glass-card p-8 rounded-3xl text-center">
                     <p class="text-gray-500">No discussions yet in this topic. Be the first to start one!</p>
@@ -72,6 +74,7 @@ async function loadForumPosts(topic) {
         }
     } catch (error) {
         console.error('Error loading forum posts:', error);
+        postsContainer.innerHTML = '<div class="text-center text-red-500">Failed to load posts.</div>';
     }
 }
 
@@ -79,8 +82,10 @@ function displayPosts(posts) {
     const postsContainer = document.getElementById('postsContainer');
     if (!postsContainer) return;
 
+    const isLoggedIn = !!localStorage.getItem(AUTH_TOKEN_KEY);
+
     postsContainer.innerHTML = posts.map(post => `
-        <div class="glass-card p-8 rounded-3xl group">
+        <div class="glass-card p-8 rounded-3xl group mb-6">
             <div class="flex items-start justify-between mb-6">
                 <div class="flex gap-4">
                     <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl uppercase">
@@ -94,7 +99,6 @@ function displayPosts(posts) {
                         </p>
                     </div>
                 </div>
-                <!-- Options menu could go here -->
             </div>
             <p class="text-gray-700 dark:text-gray-300 leading-relaxed mb-6 font-sans">
                 ${post.content}
@@ -102,9 +106,9 @@ function displayPosts(posts) {
             <div class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5">
                 <button onclick="likePost('${post.id}')" 
                         class="flex items-center gap-2 text-sm font-bold ${post.likes > 0 ? 'text-primary' : 'text-gray-500'} hover:text-primary transition-colors">
-                    <span class="material-symbols-outlined text-lg">arrow_upward</span> ${post.likes} Likes
+                    <span class="material-symbols-outlined text-lg">favorite</span> ${post.likes || 0} Likes
                 </button>
-                <button onclick="window.location.href='forum-post.html?id=${post.id}'"
+                <button onclick="toggleComments('${post.id}')"
                         class="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-primary transition-colors">
                     <span class="material-symbols-outlined text-lg">chat_bubble</span> ${post.commentCount || 0} Comments
                 </button>
@@ -112,19 +116,47 @@ function displayPosts(posts) {
                     <span class="material-symbols-outlined text-lg">share</span> Share
                 </button>
             </div>
+
+            <!-- Inline Comments Section -->
+            <div id="comments-${post.id}" class="hidden mt-6 pt-6 border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 rounded-xl p-4">
+                <div class="comments-list space-y-4 mb-4">
+                    <!-- Comments loaded here -->
+                    <div class="text-center text-gray-500 text-xs">Loading comments...</div>
+                </div>
+                
+                ${isLoggedIn ? `
+                <div class="flex gap-2">
+                    <input type="text" id="input-${post.id}" placeholder="Write a comment..." 
+                        class="flex-1 bg-white dark:bg-black/20 border-none rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-primary">
+                    <button onclick="submitComment('${post.id}')" 
+                        class="p-2 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors">
+                        <span class="material-symbols-outlined text-sm">send</span>
+                    </button>
+                </div>
+                ` : `
+                <div class="text-center text-xs text-gray-500">
+                    <a href="login.html" class="text-primary font-bold hover:underline">Login</a> to comment
+                </div>
+                `}
+            </div>
         </div>
     `).join('');
 }
 
 async function createPost(topic) {
-    const textarea = document.querySelector('textarea');
+    const textarea = document.getElementById('postContent');
     if (!textarea) return;
 
     const content = textarea.value.trim();
     if (!content) return alert('Please write something first.');
 
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (!token) return alert('Please login to post.');
+
+    const submitBtn = document.getElementById('submitPostBtn');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = 'Posting...';
+    submitBtn.disabled = true;
 
     try {
         const response = await fetch(`${API_BASE_URL}/forum`, {
@@ -136,7 +168,7 @@ async function createPost(topic) {
             body: JSON.stringify({
                 content,
                 category: topic,
-                title: 'Discussion' // Optional, simplified for now
+                title: 'Discussion'
             })
         });
 
@@ -149,12 +181,100 @@ async function createPost(topic) {
         }
     } catch (error) {
         console.error('Error creating post:', error);
-        alert('Failed to create post');
+        alert('Failed to connect to server');
+    } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+    }
+}
+
+async function toggleComments(postId) {
+    const section = document.getElementById(`comments-${postId}`);
+    if (!section) return;
+
+    if (section.classList.contains('hidden')) {
+        section.classList.remove('hidden');
+        // Load comments logic
+        await loadComments(postId);
+    } else {
+        section.classList.add('hidden');
+    }
+}
+
+async function loadComments(postId) {
+    const section = document.getElementById(`comments-${postId}`);
+    const list = section.querySelector('.comments-list');
+
+    try {
+        // Assuming GET /forum/:id returns post with comments populated
+        const response = await fetch(`${API_BASE_URL}/forum/${postId}`);
+        const result = await response.json();
+
+        if (result.success && result.data && result.data.comments) {
+            const comments = result.data.comments;
+            if (comments.length === 0) {
+                list.innerHTML = '<div class="text-center text-gray-400 text-xs italic">No comments yet.</div>';
+            } else {
+                list.innerHTML = comments.map(c => `
+                    <div class="flex gap-3">
+                        <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-300">
+                            ${c.author?.firstName?.[0] || 'U'}
+                        </div>
+                        <div class="flex-1">
+                            <div class="bg-white dark:bg-white/10 p-3 rounded-lg rounded-tl-none">
+                                <p class="text-xs font-bold text-gray-900 dark:text-white mb-1">${c.author?.firstName || 'User'}</p>
+                                <p class="text-sm text-gray-700 dark:text-gray-200">${c.content}</p>
+                            </div>
+                            <span class="text-[10px] text-gray-400 ml-2">${getTimeAgo(c.createdAt)}</span>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading comments:', error);
+        list.innerHTML = '<div class="text-red-500 text-xs">Error loading comments</div>';
+    }
+}
+
+async function submitComment(postId) {
+    const input = document.getElementById(`input-${postId}`);
+    if (!input) return;
+
+    const content = input.value.trim();
+    if (!content) return;
+
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) return alert('Please login to comment');
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/forum/${postId}/comment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ content })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            input.value = '';
+            loadComments(postId); // Reload comments
+
+            // Update comment count UI optionally
+            // const countBtn = document.querySelector(`button[onclick="toggleComments('${postId}')"]`);
+            // if(countBtn) ...
+        } else {
+            alert(result.message || 'Failed to post comment');
+        }
+    } catch (error) {
+        console.error('Error posting comment:', error);
     }
 }
 
 async function likePost(postId) {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
     if (!token) return alert('Please login to like posts.');
 
     try {
@@ -166,7 +286,7 @@ async function likePost(postId) {
         });
 
         if (response.ok) {
-            // Reload just to refresh specific post ideally, but full reload for simplicity
+            // Reload posts to update count (or update locally for better UX)
             const urlParams = new URLSearchParams(window.location.search);
             loadForumPosts(urlParams.get('topic') || 'general');
         }
@@ -190,15 +310,14 @@ function getTimeAgo(dateString) {
     return date.toLocaleDateString();
 }
 
+// ... Resource loaders can remain same or be copied ...
 async function loadTopicResources(topic) {
     const list = document.getElementById('resourcesList');
     const widget = document.getElementById('topicResourcesWidget');
     if (!list || !widget) return;
-
     try {
         const response = await fetch(`${API_BASE_URL}/resources?category=${topic}&limit=3`);
         const result = await response.json();
-
         if (result.success && result.data.length > 0) {
             widget.classList.remove('hidden');
             list.innerHTML = result.data.map(res => `
@@ -213,20 +332,16 @@ async function loadTopicResources(topic) {
                 </div>
             `).join('');
         }
-    } catch (error) {
-        console.error('Error loading resources:', error);
-    }
+    } catch (error) { console.error(error); }
 }
 
 async function loadTopicEvents(topic) {
     const list = document.getElementById('eventsList');
     const widget = document.getElementById('topicEventsWidget');
     if (!list || !widget) return;
-
     try {
         const response = await fetch(`${API_BASE_URL}/events?category=${topic}&limit=2`);
         const result = await response.json();
-
         if (result.success && result.data.length > 0) {
             widget.classList.remove('hidden');
             list.innerHTML = result.data.map(event => `
@@ -238,26 +353,20 @@ async function loadTopicEvents(topic) {
                         <span class="text-xs font-bold text-gray-500">${event.time}</span>
                     </div>
                     <h4 class="font-bold text-gray-900 dark:text-white mb-1 group-hover:text-orange-600 transition-colors">${event.title}</h4>
-                    <button class="w-full mt-2 py-2 rounded-xl bg-orange-500/10 text-orange-600 text-xs font-bold uppercase hover:bg-orange-500 hover:text-white transition-all">
-                        Register
-                    </button>
+                    <button class="w-full mt-2 py-2 rounded-xl bg-orange-500/10 text-orange-600 text-xs font-bold uppercase hover:bg-orange-500 hover:text-white transition-all">Register</button>
                 </div>
             `).join('');
         }
-    } catch (error) {
-        console.error('Error loading events:', error);
-    }
+    } catch (error) { console.error(error); }
 }
 
 async function loadTopicMentors(topic) {
     const list = document.getElementById('mentorsList');
     const widget = document.getElementById('topicMentorsWidget');
     if (!list || !widget) return;
-
     try {
         const response = await fetch(`${API_BASE_URL}/mentors?category=${topic}&limit=3`);
         const result = await response.json();
-
         if (result.success && result.data.length > 0) {
             widget.classList.remove('hidden');
             list.innerHTML = result.data.map(mentor => `
@@ -267,13 +376,9 @@ async function loadTopicMentors(topic) {
                         <h4 class="font-bold text-sm text-gray-900 dark:text-white group-hover:text-indigo-500 transition-colors">${mentor.name}</h4>
                         <p class="text-xs text-gray-500 truncate">${mentor.degree} @ ${mentor.university}</p>
                     </div>
-                    <button class="p-2 rounded-full hover:bg-indigo-50 text-indigo-500">
-                        <span class="material-symbols-outlined text-lg">calendar_add_on</span>
-                    </button>
+                    <button class="p-2 rounded-full hover:bg-indigo-50 text-indigo-500"><span class="material-symbols-outlined text-lg">calendar_add_on</span></button>
                 </div>
             `).join('');
         }
-    } catch (error) {
-        console.error('Error loading mentors:', error);
-    }
+    } catch (error) { console.error(error); }
 }

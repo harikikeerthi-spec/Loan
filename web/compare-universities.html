@@ -363,13 +363,19 @@
     </div>
 
     <!-- Scripts -->
-    <script src="assets/js/components-loader.js"></script>
+    <!-- Scripts -->
+    <script src="assets/js/theme-manager.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/components-loader.js"></script>
     <script src="assets/js/ai-api.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const compareBtn = document.getElementById('compareBtn');
             const resultsSection = document.getElementById('resultsSection');
+
+            // Wait for components to load if necessary, but this script is simple enough
+            if (!compareBtn) return;
 
             compareBtn.addEventListener('click', async () => {
                 const uni1Key = document.getElementById('uni1').value;
@@ -382,6 +388,10 @@
                     return;
                 }
 
+                // Simple client-side auth check before making API call? 
+                // Not strictly required for public tool, but good practice if API is protected.
+                // For now, we allow public access as per other tools, but navbar will show login state.
+
                 if (!program1 || !program2) {
                     alert('Please specify programs for both universities');
                     return;
@@ -393,47 +403,71 @@
                 }
 
                 // Show loading state
+                const originalBtnText = compareBtn.textContent;
                 compareBtn.textContent = 'Comparing...';
                 compareBtn.disabled = true;
 
                 try {
-                    const json = await AI_API.compareUniversities({
-                        uni1: uni1Key,
-                        uni2: uni2Key,
-                        program1: program1,
-                        program2: program2
+                    // Using the AI_API wrapper which should handle endpoints
+                    // Note: Ensure AI_API.compareUniversities is defined in ai-api.js
+                    // If not, we might need to fetch directly. 
+                    // Assuming AI_API is valid based on previous file content.
+
+                    const response = await fetch('http://localhost:3000/ai/compare-universities', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('accessToken')}` // Add auth token if available
+                        },
+                        body: JSON.stringify({
+                            uni1: uni1Key,
+                            uni2: uni2Key,
+                            program1: program1,
+                            program2: program2
+                        })
                     });
+
+                    if (!response.ok) throw new Error('API request failed');
+
+                    const json = await response.json();
+
+                    if (!json.success || !json.data) {
+                        throw new Error(json.message || 'No data received');
+                    }
+
                     const { uni1: u1, uni2: u2 } = json.data;
 
+                    // Update UI (same as before)
                     document.getElementById('th-uni1').textContent = u1.name;
                     document.getElementById('th-uni2').textContent = u2.name;
 
-                    document.getElementById('td-rank1').textContent = u1.rank;
-                    document.getElementById('td-rank2').textContent = u2.rank;
+                    const safeSet = (id, val) => {
+                        const el = document.getElementById(id);
+                        if (el) el.textContent = val || 'N/A';
+                    };
 
-                    document.getElementById('td-tuition1').textContent = u1.tuition;
-                    document.getElementById('td-tuition2').textContent = u2.tuition;
-
-                    document.getElementById('td-rate1').textContent = u1.rate;
-                    document.getElementById('td-rate2').textContent = u2.rate;
-
-                    document.getElementById('td-salary1').textContent = u1.salary;
-                    document.getElementById('td-salary2').textContent = u2.salary;
-
-                    document.getElementById('td-loc1').textContent = u1.loc;
-                    document.getElementById('td-loc2').textContent = u2.loc;
+                    safeSet('td-rank1', u1.rank);
+                    safeSet('td-rank2', u2.rank);
+                    safeSet('td-tuition1', u1.tuition);
+                    safeSet('td-tuition2', u2.tuition);
+                    safeSet('td-rate1', u1.rate);
+                    safeSet('td-rate2', u2.rate);
+                    safeSet('td-salary1', u1.salary);
+                    safeSet('td-salary2', u2.salary);
+                    safeSet('td-loc1', u1.location || u1.loc); // Handle potential key variation
+                    safeSet('td-loc2', u2.location || u2.loc);
 
                     // Show Results
-                    resultsSection.classList.remove('hidden');
-
-                    // Smooth scroll to results
-                    resultsSection.scrollIntoView({ behavior: 'smooth' });
+                    if (resultsSection) {
+                        resultsSection.classList.remove('hidden');
+                        resultsSection.scrollIntoView({ behavior: 'smooth' });
+                    }
 
                 } catch (error) {
                     console.error('Comparison error:', error);
                     alert('An error occurred while comparing universities. Please try again.');
                 } finally {
-                    compareBtn.textContent = 'Compare Now';
+                    compareBtn.textContent = originalBtnText;
                     compareBtn.disabled = false;
                 }
             });

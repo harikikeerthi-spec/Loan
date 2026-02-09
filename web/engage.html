@@ -86,14 +86,14 @@
                     </div>
 
                     <!-- Create Post Box -->
-                    <div class="glass-card p-6 rounded-3xl border-primary/20 shadow-lg">
+                    <div id="createPostContainer" class="hidden glass-card p-6 rounded-3xl border-primary/20 shadow-lg">
                         <div class="flex gap-4">
                             <div
                                 class="w-12 h-12 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-500">
                                 <span class="material-symbols-outlined">person</span>
                             </div>
                             <div class="flex-1">
-                                <textarea placeholder="Share your thoughts or ask a question..."
+                                <textarea id="postContent" placeholder="Share your thoughts or ask a question..."
                                     class="w-full bg-zinc-100/50 dark:bg-zinc-900/50 border-none rounded-2xl p-4 text-sm focus:ring-1 focus:ring-primary outline-none transition-all dark:text-white min-h-[100px]"></textarea>
                                 <div class="flex justify-between items-center mt-4">
                                     <div class="flex gap-2">
@@ -106,11 +106,21 @@
                                             <span class="material-symbols-outlined text-xl">link</span>
                                         </button>
                                     </div>
-                                    <button
+                                    <button id="submitPostBtn"
                                         class="px-8 py-2.5 bg-primary text-white rounded-full text-xs font-bold uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20">Post</button>
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <div id="loginToPostMsg"
+                        class="hidden glass-card p-8 rounded-3xl text-center border-dashed border-2 border-gray-300 dark:border-gray-700">
+                        <span class="material-symbols-outlined text-4xl text-gray-400 mb-2">lock</span>
+                        <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-2">Join the Conversation</h3>
+                        <p class="text-gray-500 text-sm mb-4">You must be logged in to post and comment.</p>
+                        <a href="login.html"
+                            class="inline-block px-6 py-2 bg-primary text-white rounded-full text-sm font-bold hover:bg-primary/90 transition-colors">Login
+                            Now</a>
                     </div>
 
                     <!-- Featured "Ask Mentor" Post - Topic Specific -->
@@ -325,7 +335,7 @@
                     title: 'Loan Eligibility & Finance',
                     question: 'What challenges are you facing with loan eligibility?',
                     description: 'Our mentor team includes bank relationship managers and students who successfully secured education loans. Ask us about credit scores, collateral requirements, or improving your eligibility.',
-                    advice: 'Get expert guidance on loan eligibility, documentation, and approval strategies from those who've been through it.',
+                    advice: 'Get expert guidance on loan eligibility, documentation, and approval strategies from those who\'ve been through it.',
                     mentors: 18
                 },
                 'universities': {
