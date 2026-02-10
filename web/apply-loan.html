@@ -78,18 +78,22 @@
 
             <div class="glass-card rounded-3xl p-8 md:p-12 shadow-xl">
                 <form id="loanApplicationForm" class="space-y-8">
+                    <!-- Personal Details -->
+                    <h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 border-b pb-2">Personal Details</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
                             <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">First Name
                                 *</label>
-                            <input type="text" id="firstName" required
+                            <input type="text" id="firstName" required pattern="[A-Za-z\s]+"
+                                title="Only alphabets are allowed"
                                 class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3"
                                 placeholder="Enter your first name">
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Last Name
                                 *</label>
-                            <input type="text" id="lastName" required
+                            <input type="text" id="lastName" required pattern="[A-Za-z\s]+"
+                                title="Only alphabets are allowed"
                                 class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3"
                                 placeholder="Enter your last name">
                         </div>
@@ -106,41 +110,101 @@
                         <div>
                             <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Phone Number
                                 *</label>
-                            <input type="tel" id="phone" required
+                            <input type="tel" id="phone" required pattern="[0-9]{10}"
+                                title="Please enter a valid 10-digit phone number"
                                 class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3"
-                                placeholder="+91 98765 43210">
+                                placeholder="9876543210">
                         </div>
                     </div>
 
+                    <!-- Loan Details -->
+                    <h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 border-b pb-2">Loan Details</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <div>
                             <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Preferred Bank
                                 *</label>
-                            <select id="bankName" required
-                                class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3">
-                                <option value="">Select a bank</option>
-                                <option value="SBI">State Bank of India</option>
-                                <option value="HDFC">HDFC Bank</option>
-                                <option value="ICICI">ICICI Bank</option>
-                                <option value="Axis">Axis Bank</option>
-                                <option value="Kotak">Kotak Mahindra Bank</option>
-                                <option value="BOB">Bank of Baroda</option>
-                                <option value="PNB">Punjab National Bank</option>
-                            </select>
+                            <input type="text" id="bankName" required
+                                class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3"
+                                placeholder="Enter preferred bank name">
                         </div>
                         <div>
                             <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Loan Type
                                 *</label>
-                            <select id="loanType" required
-                                class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3">
-                                <option value="">Select loan type</option>
-                                <option value="education" selected>Education Loan</option>
-                                <option value="home">Home Loan</option>
-                                <option value="personal">Personal Loan</option>
-                                <option value="business">Business Loan</option>
-                                <option value="vehicle">Vehicle Loan</option>
-                            </select>
+                            <input type="text" id="loanType" value="Education Loan" readonly
+                                class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-gray-100 dark:bg-zinc-900 cursor-not-allowed text-gray-500 focus:border-primary focus:ring-primary px-4 py-3">
                         </div>
+                    </div>
+
+                    <!-- Parent Details -->
+                    <h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 border-b pb-2">Parent Details</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Father's Name
+                                *</label>
+                            <input type="text" id="fatherName" required pattern="[A-Za-z\s]+"
+                                title="Only alphabets are allowed"
+                                class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3"
+                                placeholder="Father's Name">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Father's Phone
+                                *</label>
+                            <input type="tel" id="fatherPhone" required pattern="[0-9]{10}"
+                                title="Please enter a valid 10-digit phone number"
+                                class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3"
+                                placeholder="Father's Phone">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Father's Email
+                                *</label>
+                            <input type="email" id="fatherEmail" required
+                                class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3"
+                                placeholder="Father's Email">
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Mother's Name
+                                *</label>
+                            <input type="text" id="motherName" required pattern="[A-Za-z\s]+"
+                                title="Only alphabets are allowed"
+                                class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3"
+                                placeholder="Mother's Name">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Mother's Phone
+                                *</label>
+                            <input type="tel" id="motherPhone" required pattern="[0-9]{10}"
+                                title="Please enter a valid 10-digit phone number"
+                                class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3"
+                                placeholder="Mother's Phone">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Mother's Email
+                                *</label>
+                            <input type="email" id="motherEmail" required
+                                class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3"
+                                placeholder="Mother's Email">
+                        </div>
+                    </div>
+
+                    <!-- Collateral -->
+                    <h3 class="text-xl font-bold text-gray-800 dark:text-gray-200 border-b pb-2">Collateral Information
+                    </h3>
+                    <div>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="hasCollateral"
+                                class="form-checkbox h-5 w-5 text-primary rounded border-gray-300 focus:ring-primary transition duration-150 ease-in-out">
+                            <span class="ml-2 text-gray-700 dark:text-gray-300 font-medium">Do you have
+                                collateral?</span>
+                        </label>
+                    </div>
+                    <div id="collateralSection" class="hidden animate-fade-in-down transition-all duration-300">
+                        <label class="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Collateral Details
+                            *</label>
+                        <textarea id="collateralDetails" rows="3"
+                            class="w-full rounded-xl border-gray-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 focus:border-primary focus:ring-primary px-4 py-3"
+                            placeholder="Describe your collateral (e.g., Property type, location, estimated value)"></textarea>
                     </div>
 
                     <div>
@@ -228,10 +292,40 @@
         .animate-bounce-in {
             animation: bounce-in 0.4s ease-out forwards;
         }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translate3d(0, -20px, 0);
+            }
+
+            to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0);
+            }
+        }
+
+        .animate-fade-in-down {
+            animation: fadeInDown 0.3s ease-out;
+        }
     </style>
 
     <script>
         const API_URL = 'http://localhost:3000';
+
+        // Collateral toggle
+        document.getElementById('hasCollateral').addEventListener('change', function () {
+            const section = document.getElementById('collateralSection');
+            const details = document.getElementById('collateralDetails');
+            if (this.checked) {
+                section.classList.remove('hidden');
+                details.required = true;
+            } else {
+                section.classList.add('hidden');
+                details.required = false;
+                details.value = '';
+            }
+        });
 
         // Form submission handler
         document.getElementById('loanApplicationForm').addEventListener('submit', async function (e) {
@@ -255,10 +349,26 @@
             }
 
             // Gather form data
-            const loanType = document.getElementById('loanType').value;
+            const loanType = 'education'; // Hardcoded
             const bank = document.getElementById('bankName').value;
             const amount = parseFloat(document.getElementById('loanAmount').value);
             const purpose = document.getElementById('courseDetails').value;
+
+            // New fields
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            const fatherName = document.getElementById('fatherName').value;
+            const fatherPhone = document.getElementById('fatherPhone').value;
+            const fatherEmail = document.getElementById('fatherEmail').value;
+            const motherName = document.getElementById('motherName').value;
+            const motherPhone = document.getElementById('motherPhone').value;
+            const motherEmail = document.getElementById('motherEmail').value;
+
+            const hasCollateral = document.getElementById('hasCollateral').checked;
+            const collateralDetails = document.getElementById('collateralDetails').value;
+            const university = document.getElementById('university').value;
 
             try {
                 // Call backend API to create application
@@ -270,10 +380,18 @@
                     },
                     body: JSON.stringify({
                         userId,
+                        firstName,
+                        lastName,
+                        email,
+                        phone,
                         bank,
                         loanType,
                         amount,
-                        purpose
+                        purpose,
+                        universityName: university,
+                        fatherName, fatherPhone, fatherEmail,
+                        motherName, motherPhone, motherEmail,
+                        hasCollateral, collateralDetails
                     })
                 });
 

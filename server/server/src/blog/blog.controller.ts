@@ -24,7 +24,20 @@ export class BlogController {
         private blogService: BlogService,
         private authService: AuthorizationService,
         private auditLog: AuditLogService,
-    ) {}
+    ) { }
+
+    // ==================== ADMIN ENDPOINTS (High Priority) ====================
+
+    /**
+     * Get blog statistics - ADMIN ONLY
+     * GET /blogs/admin/stats
+     * @returns { success: boolean, data: { total, published, draft, featured } }
+     */
+    @Get('admin/stats')
+    @UseGuards(AdminGuard)
+    async getBlogStatistics() {
+        return this.blogService.getBlogStatistics();
+    }
 
     // ==================== PUBLIC ENDPOINTS ====================
 
@@ -300,16 +313,7 @@ export class BlogController {
         });
     }
 
-    /**
-     * Get blog statistics - ADMIN ONLY
-     * GET /blogs/admin/stats
-     * @returns { success: boolean, data: { total, published, draft, featured } }
-     */
-    @Get('admin/stats')
-    @UseGuards(AdminGuard)
-    async getBlogStatistics() {
-        return this.blogService.getBlogStatistics();
-    }
+
 
     /**
      * Create a new blog post - ADMIN ONLY

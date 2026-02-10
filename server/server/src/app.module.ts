@@ -9,11 +9,13 @@ import { DocumentModule } from './document/document.module';
 import { AiModule } from './ai/ai.module';
 import { CommunityModule } from './community/community.module';
 import { ReferenceModule } from './reference/reference.module';
+import { ApplicationModule } from './application/application.module';
 
 
 @Module({
-  imports: [PrismaModule, AuthModule, UsersModule, BlogModule, DocumentModule, AiModule, CommunityModule, ReferenceModule],
+  imports: [PrismaModule, AuthModule, UsersModule, BlogModule, DocumentModule, AiModule, CommunityModule, ReferenceModule, ApplicationModule],
   controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule { }
+

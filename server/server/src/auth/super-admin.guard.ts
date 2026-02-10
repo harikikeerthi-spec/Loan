@@ -55,7 +55,12 @@ export class SuperAdminGuard implements CanActivate {
       }
 
       if (error.name === 'TokenExpiredError') {
-        throw new UnauthorizedException('Token has expired');
+        throw new UnauthorizedException({
+          message: 'Token has expired',
+          error: 'Unauthorized',
+          statusCode: 401,
+          hint: 'Please use the /auth/refresh endpoint with your refresh_token to get a new access token'
+        });
       }
 
       throw new UnauthorizedException('Invalid token');

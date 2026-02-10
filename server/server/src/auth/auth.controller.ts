@@ -55,6 +55,28 @@ export class AuthController {
     return this.authService.verifyOtpUnified(body.email, body.otp);
   }
 
+  /**
+   * Refresh access token using refresh token
+   * POST /auth/refresh
+   * @body refresh_token: string (required)
+   * @returns { success: boolean, access_token: string, refresh_token: string, message: string }
+   */
+  @Post('refresh')
+  async refreshToken(@Body() body: { refresh_token: string }) {
+    return this.authService.refreshTokens(body.refresh_token);
+  }
+
+  /**
+   * Logout user by invalidating refresh token
+   * POST /auth/logout
+   * @body email: string (required)
+   * @returns { success: boolean, message: string }
+   */
+  @Post('logout')
+  async logout(@Body() body: { email: string }) {
+    return this.authService.logout(body.email);
+  }
+
   // ==================== USER DASHBOARD ====================
 
   /**

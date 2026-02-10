@@ -1,0 +1,1345 @@
+{
+    "info": {
+        "_postman_id": "community-api-collection-2026",
+        "name": "LoanHero Community API - Events, Stories & Resources",
+        "description": "Complete API collection for the LoanHero Community section.\n\nBase URL: http://localhost:3000\n\nThis collection covers:\n- 🎯 Events (webinars, workshops, Q&A, networking)\n- 📖 Success Stories (submissions, featured, filtering)\n- 📚 Resources (guides, templates, checklists, videos)\n- 🔧 Admin endpoints (create, update, delete)\n\nSetup:\n1. Import this collection into Postman\n2. Ensure the server is running: `npm run start`\n3. Start testing the endpoints!",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "baseUrl",
+            "value": "http://localhost:3000",
+            "type": "string"
+        },
+        {
+            "key": "eventId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "storyId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "resourceId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "mentorId",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "adminToken",
+            "value": "",
+            "type": "string"
+        }
+    ],
+    "item": [
+        {
+            "name": "🎯 Events",
+            "description": "API endpoints for community events — webinars, workshops, Q&A sessions, and networking events.",
+            "item": [
+                {
+                    "name": "Get All Events",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/events?limit=10&offset=0",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "events"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "10",
+                                    "description": "Number of events to return (default: 10)"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0",
+                                    "description": "Number of events to skip (default: 0)"
+                                }
+                            ]
+                        },
+                        "description": "Fetch all community events with pagination."
+                    }
+                },
+                {
+                    "name": "Get Events by Type (Webinar)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/events?type=webinar&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "events"
+                            ],
+                            "query": [
+                                {
+                                    "key": "type",
+                                    "value": "webinar",
+                                    "description": "Filter by type: webinar, qa, networking, workshop"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Fetch events filtered by type. Options: webinar, qa, networking, workshop."
+                    }
+                },
+                {
+                    "name": "Get Events by Type (Workshop)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/events?type=workshop&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "events"
+                            ],
+                            "query": [
+                                {
+                                    "key": "type",
+                                    "value": "workshop",
+                                    "description": "Filter by type: workshop"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Fetch workshop events."
+                    }
+                },
+                {
+                    "name": "Get Events by Category",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/events?category=loan&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "events"
+                            ],
+                            "query": [
+                                {
+                                    "key": "category",
+                                    "value": "loan",
+                                    "description": "Filter by category: loan, visa, scholarship, universities, accommodation"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Fetch events filtered by category."
+                    }
+                },
+                {
+                    "name": "Get Featured Events",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/events?featured=true&limit=5",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "events"
+                            ],
+                            "query": [
+                                {
+                                    "key": "featured",
+                                    "value": "true",
+                                    "description": "Only return featured events"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "5"
+                                }
+                            ]
+                        },
+                        "description": "Fetch only featured events."
+                    }
+                },
+                {
+                    "name": "Get Upcoming Events",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/events/upcoming?limit=5",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "events",
+                                "upcoming"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "5",
+                                    "description": "Number of upcoming events (default: 5)"
+                                }
+                            ]
+                        },
+                        "description": "Fetch only upcoming events (future dates)."
+                    }
+                },
+                {
+                    "name": "Get Past Events",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/events/past?limit=10&offset=0",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "events",
+                                "past"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                }
+                            ]
+                        },
+                        "description": "Fetch past events with recordings."
+                    }
+                },
+                {
+                    "name": "Get Event by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/events/{{eventId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "events",
+                                "{{eventId}}"
+                            ]
+                        },
+                        "description": "Fetch a single event by its ID. First run 'Get All Events' and copy an event ID."
+                    }
+                },
+                {
+                    "name": "Register for Event",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"John Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"phone\": \"+91-9876543210\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/community/events/{{eventId}}/register",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "events",
+                                "{{eventId}}",
+                                "register"
+                            ]
+                        },
+                        "description": "Register a student for an event. Replace {{eventId}} with a valid event ID."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📖 Success Stories",
+            "description": "API endpoints for community success stories from students who secured education loans.",
+            "item": [
+                {
+                    "name": "Get All Stories",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/stories?limit=10&offset=0",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "stories"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "10",
+                                    "description": "Number of stories (default: 10)"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0",
+                                    "description": "Skip stories (default: 0)"
+                                }
+                            ]
+                        },
+                        "description": "Fetch all approved success stories with pagination."
+                    }
+                },
+                {
+                    "name": "Get Stories by Country (UK)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/stories?country=UK&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "stories"
+                            ],
+                            "query": [
+                                {
+                                    "key": "country",
+                                    "value": "UK",
+                                    "description": "Filter by country: USA, UK, Canada, Australia, Germany, Singapore"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Fetch stories filtered by country."
+                    }
+                },
+                {
+                    "name": "Get Stories by Country (USA)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/stories?country=USA&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "stories"
+                            ],
+                            "query": [
+                                {
+                                    "key": "country",
+                                    "value": "USA"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Fetch success stories from USA."
+                    }
+                },
+                {
+                    "name": "Get Stories by Category (MBA)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/stories?category=MBA&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "stories"
+                            ],
+                            "query": [
+                                {
+                                    "key": "category",
+                                    "value": "MBA",
+                                    "description": "Filter by category: MBA, Engineering, Medical, Computer Science, Finance, Public Policy"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Fetch stories filtered by field of study category."
+                    }
+                },
+                {
+                    "name": "Get Stories by Category (Engineering)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/stories?category=Engineering&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "stories"
+                            ],
+                            "query": [
+                                {
+                                    "key": "category",
+                                    "value": "Engineering"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Fetch Engineering success stories."
+                    }
+                },
+                {
+                    "name": "Get Featured Stories",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/stories/featured?limit=6",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "stories",
+                                "featured"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "6",
+                                    "description": "Number of featured stories (default: 6)"
+                                }
+                            ]
+                        },
+                        "description": "Fetch only featured/highlighted success stories."
+                    }
+                },
+                {
+                    "name": "Get Story by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/stories/{{storyId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "stories",
+                                "{{storyId}}"
+                            ]
+                        },
+                        "description": "Fetch a single story by ID. First run 'Get All Stories' and copy a story ID."
+                    }
+                },
+                {
+                    "name": "Submit a Success Story",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Ravi Shankar\",\n    \"email\": \"ravi.shankar@example.com\",\n    \"university\": \"ETH Zurich\",\n    \"country\": \"Switzerland\",\n    \"degree\": \"MSc Robotics\",\n    \"loanAmount\": \"₹25,00,000\",\n    \"bank\": \"SBI\",\n    \"interestRate\": \"7.5%\",\n    \"story\": \"ETH Zurich was my dream university. With SBI's education loan, I was able to pursue my passion for robotics. The process was smooth, and I'm now working at a top robotics company in Zurich!\",\n    \"tips\": \"Apply early and keep all documents ready. Swiss universities have earlier deadlines than US/UK.\",\n    \"image\": \"assets/img/avatar_3.png\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/community/stories/submit",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "stories",
+                                "submit"
+                            ]
+                        },
+                        "description": "Submit a new success story. Stories require admin approval before appearing publicly."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "📚 Resources",
+            "description": "API endpoints for community resources — guides, templates, checklists, and video tutorials.",
+            "item": [
+                {
+                    "name": "Get All Resources",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/resources?limit=10&offset=0",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "resources"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "10",
+                                    "description": "Number of resources (default: 10)"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0",
+                                    "description": "Skip resources (default: 0)"
+                                }
+                            ]
+                        },
+                        "description": "Fetch all community resources with pagination."
+                    }
+                },
+                {
+                    "name": "Get Resources by Type (Guide)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/resources?type=guide&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "resources"
+                            ],
+                            "query": [
+                                {
+                                    "key": "type",
+                                    "value": "guide",
+                                    "description": "Filter by type: guide, template, checklist, video"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Fetch resources filtered by type."
+                    }
+                },
+                {
+                    "name": "Get Resources by Type (Template)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/resources?type=template&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "resources"
+                            ],
+                            "query": [
+                                {
+                                    "key": "type",
+                                    "value": "template"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Fetch template resources."
+                    }
+                },
+                {
+                    "name": "Get Resources by Type (Checklist)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/resources?type=checklist&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "resources"
+                            ],
+                            "query": [
+                                {
+                                    "key": "type",
+                                    "value": "checklist"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Fetch checklist resources."
+                    }
+                },
+                {
+                    "name": "Get Resources by Type (Video)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/resources?type=video&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "resources"
+                            ],
+                            "query": [
+                                {
+                                    "key": "type",
+                                    "value": "video"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Fetch video resources."
+                    }
+                },
+                {
+                    "name": "Get Resources by Category (Documentation)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/resources?category=Documentation&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "resources"
+                            ],
+                            "query": [
+                                {
+                                    "key": "category",
+                                    "value": "Documentation",
+                                    "description": "Filter by category: Documentation, Application, Loan Types, Repayment, Loan Comparison, Tax & Finance, Travel & Preparation"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Fetch resources by category."
+                    }
+                },
+                {
+                    "name": "Get Resources by Category (Application)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/resources?category=Application&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "resources"
+                            ],
+                            "query": [
+                                {
+                                    "key": "category",
+                                    "value": "Application"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Fetch application-related resources."
+                    }
+                },
+                {
+                    "name": "Get Popular Resources",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/resources/popular?limit=5",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "resources",
+                                "popular"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "5",
+                                    "description": "Number of popular resources (default: 5)"
+                                }
+                            ]
+                        },
+                        "description": "Fetch the most downloaded resources."
+                    }
+                },
+                {
+                    "name": "Get Resource by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/resources/{{resourceId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "resources",
+                                "{{resourceId}}"
+                            ]
+                        },
+                        "description": "Fetch a single resource by ID. First run 'Get All Resources' and copy a resource ID."
+                    }
+                },
+                {
+                    "name": "Track Resource Download/View",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/resources/{{resourceId}}/track",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "resources",
+                                "{{resourceId}}",
+                                "track"
+                            ]
+                        },
+                        "description": "Increment the download/view count for a resource."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🧑‍🏫 Mentors",
+            "description": "API endpoints for community mentors.",
+            "item": [
+                {
+                    "name": "Get All Mentors",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/mentors?limit=10&offset=0",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "mentors"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                }
+                            ]
+                        },
+                        "description": "Fetch all active mentors."
+                    }
+                },
+                {
+                    "name": "Get Mentors by Country (USA)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/mentors?country=USA&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "mentors"
+                            ],
+                            "query": [
+                                {
+                                    "key": "country",
+                                    "value": "USA"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Fetch mentors filtered by country."
+                    }
+                },
+                {
+                    "name": "Get Mentors by Category (MBA)",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/mentors?category=MBA&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "mentors"
+                            ],
+                            "query": [
+                                {
+                                    "key": "category",
+                                    "value": "MBA"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Fetch mentors filtered by field category."
+                    }
+                },
+                {
+                    "name": "Get Featured Mentors",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/mentors/featured?limit=6",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "mentors",
+                                "featured"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "6"
+                                }
+                            ]
+                        },
+                        "description": "Fetch top-rated featured mentors."
+                    }
+                },
+                {
+                    "name": "Get Mentor Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/mentors/stats",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "mentors",
+                                "stats"
+                            ]
+                        },
+                        "description": "Get mentor statistics (total mentors, avg rating, etc.)."
+                    }
+                },
+                {
+                    "name": "Get Mentor by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/mentors/{{mentorId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "mentors",
+                                "{{mentorId}}"
+                            ]
+                        },
+                        "description": "Fetch a single mentor by ID."
+                    }
+                },
+                {
+                    "name": "Book Mentor Session",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"studentName\": \"Amit Sharma\",\n    \"studentEmail\": \"amit.sharma@example.com\",\n    \"studentPhone\": \"+91-9988776655\",\n    \"preferredDate\": \"2026-03-01\",\n    \"preferredTime\": \"6:00 PM IST\",\n    \"message\": \"I need guidance on applying for an education loan for my MS in Computer Science at Stanford. I have some questions about collateral requirements.\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/community/mentors/{{mentorId}}/book",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "mentors",
+                                "{{mentorId}}",
+                                "book"
+                            ]
+                        },
+                        "description": "Book a mentorship session with a mentor."
+                    }
+                },
+                {
+                    "name": "Apply as Mentor",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Pooja Agarwal\",\n    \"email\": \"pooja.agarwal@example.com\",\n    \"phone\": \"+91-8877665544\",\n    \"university\": \"Columbia University\",\n    \"degree\": \"MS Data Science\",\n    \"country\": \"USA\",\n    \"loanBank\": \"HDFC Bank\",\n    \"loanAmount\": \"₹55,00,000\",\n    \"bio\": \"Data Science graduate from Columbia University. Successfully secured an HDFC education loan and completed my degree with distinction. Now working as a Senior Data Scientist at Google NYC. Happy to guide students on loans and study-abroad applications.\",\n    \"expertise\": [\"Data Science\", \"USA\", \"HDFC\", \"Non-Collateral Loans\", \"NYC Living Costs\"],\n    \"linkedIn\": \"https://linkedin.com/in/pooja-agarwal\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/community/mentors/apply",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "mentors",
+                                "apply"
+                            ]
+                        },
+                        "description": "Submit a mentor application. Requires admin approval before the mentor appears publicly."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "💬 Forum",
+            "description": "API endpoints for the community forum (discussions).",
+            "item": [
+                {
+                    "name": "Get Forum Posts",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/forum?limit=10&offset=0",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "forum"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                },
+                                {
+                                    "key": "offset",
+                                    "value": "0"
+                                }
+                            ]
+                        },
+                        "description": "Fetch all forum posts with pagination."
+                    }
+                },
+                {
+                    "name": "Get Forum Posts by Category",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/forum?category=loan&limit=10",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "forum"
+                            ],
+                            "query": [
+                                {
+                                    "key": "category",
+                                    "value": "loan",
+                                    "description": "Filter: loan, visa, universities, gre, accommodation"
+                                },
+                                {
+                                    "key": "limit",
+                                    "value": "10"
+                                }
+                            ]
+                        },
+                        "description": "Fetch forum posts filtered by category."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🔧 Admin - Events",
+            "description": "Admin-only endpoints for managing events. Requires admin JWT token in Authorization header.",
+            "item": [
+                {
+                    "name": "Create Event (Admin)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}",
+                                "description": "Admin JWT token"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"title\": \"How to Choose Between SBI, HDFC, and ICICI for Education Loans\",\n    \"description\": \"A comprehensive comparison webinar covering interest rates, processing times, collateral requirements, and hidden charges across India's top 3 education loan providers.\",\n    \"type\": \"webinar\",\n    \"category\": \"loan\",\n    \"date\": \"2026-04-15\",\n    \"time\": \"7:00 PM - 8:30 PM IST\",\n    \"duration\": 90,\n    \"speaker\": \"Rajesh Kumar\",\n    \"speakerTitle\": \"Senior Banking Consultant\",\n    \"maxAttendees\": 500,\n    \"isFree\": true,\n    \"isFeatured\": true\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/community/admin/events",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "admin",
+                                "events"
+                            ]
+                        },
+                        "description": "Create a new community event. Requires admin authorization."
+                    }
+                },
+                {
+                    "name": "Update Event (Admin)",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"title\": \"Updated: How to Choose the Best Education Loan Bank\",\n    \"isFeatured\": true,\n    \"maxAttendees\": 750\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/community/admin/events/{{eventId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "admin",
+                                "events",
+                                "{{eventId}}"
+                            ]
+                        },
+                        "description": "Update an existing event. Requires admin authorization."
+                    }
+                },
+                {
+                    "name": "Delete Event (Admin)",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/admin/events/{{eventId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "admin",
+                                "events",
+                                "{{eventId}}"
+                            ]
+                        },
+                        "description": "Delete an event. Requires admin authorization."
+                    }
+                },
+                {
+                    "name": "Get All Registrations (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/admin/registrations?limit=50",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "admin",
+                                "registrations"
+                            ],
+                            "query": [
+                                {
+                                    "key": "limit",
+                                    "value": "50"
+                                }
+                            ]
+                        },
+                        "description": "Get all event registrations. Requires admin authorization."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "🔧 Admin - Stories & Resources",
+            "description": "Admin endpoints for managing stories and resources.",
+            "item": [
+                {
+                    "name": "Approve/Reject Story (Admin)",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"approved\": true,\n    \"reason\": \"Great story, very inspiring!\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/community/admin/stories/{{storyId}}/approve",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "admin",
+                                "stories",
+                                "{{storyId}}",
+                                "approve"
+                            ]
+                        },
+                        "description": "Approve or reject a submitted success story."
+                    }
+                },
+                {
+                    "name": "Create Resource (Admin)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"title\": \"Visa Interview Preparation Flashcards\",\n    \"description\": \"50 most commonly asked visa interview questions with ideal answers. Printable flashcard format for easy practice.\",\n    \"type\": \"template\",\n    \"category\": \"Visa & Travel\",\n    \"fileUrl\": \"https://resources.loanhero.com/visa-flashcards.pdf\",\n    \"downloadUrl\": \"https://resources.loanhero.com/download/visa-flashcards.pdf\",\n    \"isFeatured\": true\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/community/admin/resources",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "admin",
+                                "resources"
+                            ]
+                        },
+                        "description": "Create a new community resource."
+                    }
+                },
+                {
+                    "name": "Update Resource (Admin)",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"title\": \"Updated: Visa Interview Prep Guide 2026\",\n    \"isFeatured\": true\n}"
+                        },
+                        "url": {
+                            "raw": "{{baseUrl}}/community/admin/resources/{{resourceId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "admin",
+                                "resources",
+                                "{{resourceId}}"
+                            ]
+                        },
+                        "description": "Update an existing resource."
+                    }
+                },
+                {
+                    "name": "Delete Resource (Admin)",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/admin/resources/{{resourceId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "admin",
+                                "resources",
+                                "{{resourceId}}"
+                            ]
+                        },
+                        "description": "Delete a resource."
+                    }
+                },
+                {
+                    "name": "Get Community Stats (Admin)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{adminToken}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/community/admin/stats",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "community",
+                                "admin",
+                                "stats"
+                            ]
+                        },
+                        "description": "Get overall community statistics."
+                    }
+                }
+            ]
+        }
+    ]
+}

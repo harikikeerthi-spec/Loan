@@ -31,8 +31,8 @@ export class EligibilityService {
     Evaluate the loan eligibility for the following applicant:
     - Age: ${data.age}
     - Credit Score: ${data.credit}
-    - Annual Income: ${data.income}
-    - Loan Amount Requested: ${data.loan}
+    - Annual Income: ${data.income} (in INR)
+    - Loan Amount Requested: ${data.loan} (in INR)
     - Employment: ${data.employment}
     - Study Level: ${data.study}
     - Co-Applicant: ${data.coApplicant}

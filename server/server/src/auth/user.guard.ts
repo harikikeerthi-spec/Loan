@@ -39,6 +39,19 @@ export class UserGuard implements CanActivate {
             request.user = user;
             return true;
         } catch (error) {
+            if (error instanceof UnauthorizedException) {
+                throw error;
+            }
+
+            if (error.name === 'TokenExpiredError') {
+                throw new UnauthorizedException({
+                    message: 'Token has expired',
+                    error: 'Unauthorized',
+                    statusCode: 401,
+                    hint: 'Please use the /auth/refresh endpoint with your refresh_token to get a new access token'
+                });
+            }
+
             throw new UnauthorizedException('Invalid token');
         }
     }

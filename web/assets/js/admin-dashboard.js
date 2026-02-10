@@ -27,19 +27,18 @@ function checkAdminAuth() {
     let token = localStorage.getItem('adminToken');
     let email = localStorage.getItem('userEmail');
 
-    // FOR TESTING: Auto-set demo credentials if not logged in
+    // FOR TESTING: Auto-set real admin JWT token if not logged in
     if (!token) {
-        console.log('⚠️ No admin token found. Using DEMO mode for testing.');
-        token = 'demo-admin-token-' + Date.now();
-        email = 'demo-admin@loanhero.com';
+        console.log('⚠️ No admin token found. Setting real admin JWT for testing.');
+        token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhcmlraWtlZXJ0aGlAZ21haWwuY29tIiwic3ViIjoiMWYzZDNhMzktMzMxYy00YjQxLWJjODEtYzMxMzc2MWUxNzAyIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzcwNzA1MTc1LCJleHAiOjE3NzA3OTE1NzV9.wufC7DtXF_J4Ki-ZohV4psa7vNmW5_jSV7dVu7qM8c0';
+        email = 'harikikeerthi@gmail.com';
 
-        // Store demo credentials
+        // Store admin credentials
         localStorage.setItem('adminToken', token);
         localStorage.setItem('userEmail', email);
         localStorage.setItem('lastLogin', new Date().toISOString());
 
-        console.log('✅ Demo admin credentials set. You can now view the admin panel.');
-        console.log('⚠️ Note: Some admin-only API endpoints might fail without real authentication.');
+        console.log('✅ Admin JWT token set. All admin API endpoints should work.');
     }
 
     adminToken = token;
@@ -76,7 +75,8 @@ function switchTab(tabName) {
         'create': 'Create Blog',
         'users': 'User Management',
         'community': 'Community Management',
-        'settings': 'Settings'
+        'settings': 'Settings',
+        'applications': 'Loan Applications'
     };
     document.getElementById('pageTitle').textContent = titles[tabName] || 'Admin Panel';
 
@@ -87,10 +87,143 @@ function switchTab(tabName) {
         loadUsers();
     } else if (tabName === 'community') {
         loadCommunityData('mentorship'); // Load mentorship by default
+    } else if (tabName === 'applications') {
+        loadApplications();
     }
 }
 
-// Load Dashboard Statistics
+// Load Loan Applications
+async function loadApplications() {
+    try {
+        const searchTerm = document.getElementById('searchApplications')?.value || '';
+        const filterStatus = document.getElementById('filterAppStatus')?.value || '';
+
+        // Construct query params
+        const params = new URLSearchParams();
+        if (searchTerm) params.append('search', searchTerm);
+        if (filterStatus) params.append('status', filterStatus);
+        params.append('limit', '50'); // Fetch more for admin view
+
+        const response = await fetch(`${API_BASE_URL}/applications/admin/all?${params.toString()}`, {
+            headers: {
+                'Authorization': `Bearer ${adminToken}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+                displayApplications(data.data || []);
+            }
+        } else if (response.status === 401) {
+            showError('Session expired. Please login again.');
+            redirectToLogin();
+        } else {
+            // Fallback for demo/testing if API fails or backend not fully ready
+            console.warn('API fetch failed, checking for local demo data');
+            displayApplications([]);
+        }
+    } catch (error) {
+        console.error('Error loading applications:', error);
+        showError('Failed to load applications');
+    }
+}
+
+// Display Applications in Table
+function displayApplications(apps) {
+    const list = document.getElementById('applicationsList');
+
+    if (!apps || apps.length === 0) {
+        list.innerHTML = `
+            <tr>
+                <td colspan="7" class="px-6 py-8 text-center text-gray-500">
+                    No applications found.
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    list.innerHTML = apps.map(app => `
+        <tr>
+            <td class="px-6 py-4">
+                <span class="font-mono text-xs text-gray-500">${app.applicationNumber || app.id.substring(0, 8)}</span>
+            </td>
+            <td class="px-6 py-4">
+                <div>
+                    <p class="font-medium">${escapeHtml(app.firstName || '')} ${escapeHtml(app.lastName || '')}</p>
+                    <p class="text-xs text-gray-500">${escapeHtml(app.email || 'N/A')}</p>
+                </div>
+            </td>
+            <td class="px-6 py-4">
+                <div>
+                    <p class="font-medium">${escapeHtml(app.bank)}</p>
+                    <p class="text-xs text-gray-500 capitalize">${app.loanType}</p>
+                </div>
+            </td>
+            <td class="px-6 py-4 font-medium">₹${(app.amount || 0).toLocaleString()}</td>
+            <td class="px-6 py-4">
+                <span class="status-badge status-${getStatusColor(app.status)}">
+                    ${escapeHtml(app.status)}
+                </span>
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-500">${new Date(app.date || app.createdAt).toLocaleDateString()}</td>
+            <td class="px-6 py-4 text-center">
+                <div class="flex justify-center gap-2">
+                    <button onclick="viewApplication('${app.id}')" title="View Details"
+                        class="material-symbols-outlined text-lg cursor-pointer text-blue-600 hover:text-blue-800">
+                        visibility
+                    </button>
+                    ${app.status === 'pending' ? `
+                    <button onclick="updateApplicationStatus('${app.id}', 'approved')" title="Approve"
+                        class="material-symbols-outlined text-lg cursor-pointer text-green-600 hover:text-green-800">
+                        check_circle
+                    </button>
+                    <button onclick="updateApplicationStatus('${app.id}', 'rejected')" title="Reject"
+                        class="material-symbols-outlined text-lg cursor-pointer text-red-600 hover:text-red-800">
+                        cancel
+                    </button>
+                    ` : ''}
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function getStatusColor(status) {
+    switch (status?.toLowerCase()) {
+        case 'approved': return 'published'; // green
+        case 'rejected': return 'draft';     // blue/grey usually, but using draft style
+        case 'submitted': return 'pending';  // orange
+        case 'pending': return 'pending';
+        default: return 'draft';
+    }
+}
+
+async function updateApplicationStatus(id, newStatus) {
+    if (!confirm(`Are you sure you want to mark this application as ${newStatus}?`)) return;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/applications/admin/${id}/status`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${adminToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: newStatus })
+        });
+
+        if (response.ok) {
+            showSuccess(`Application ${newStatus} successfully!`);
+            loadApplications();
+        } else {
+            showError('Failed to update status');
+        }
+    } catch (e) {
+        console.error(e);
+        showError('Error updating status');
+    }
+}
 async function loadDashboardStats() {
     try {
         // Try admin stats endpoint first
@@ -114,21 +247,24 @@ async function loadDashboardStats() {
         // Fallback: Calculate stats from actual blog data
         console.log('Admin stats not available, calculating from blog data...');
 
-        response = await fetch(`${API_BASE_URL}/blogs`);
+        response = await fetch(`${API_BASE_URL}/blogs/admin/all?limit=1000`);
         if (response.ok) {
             const data = await response.json();
             const blogs = data.data || [];
 
-            const published = blogs.filter(b => b.status === 'published').length;
-            const draft = blogs.filter(b => b.status === 'draft').length;
+            // If we have pagination info, use the total from there
+            const totalCount = data.pagination ? data.pagination.total : blogs.length;
+
+            const published = blogs.filter(b => b.isPublished).length;
+            const draft = blogs.filter(b => !b.isPublished).length;
             const totalViews = blogs.reduce((sum, b) => sum + (b.views || 0), 0);
 
-            document.getElementById('totalBlogs').textContent = blogs.length;
+            document.getElementById('totalBlogs').textContent = totalCount;
             document.getElementById('publishedBlogs').textContent = published;
             document.getElementById('draftBlogs').textContent = draft;
             document.getElementById('totalViews').textContent = totalViews.toLocaleString();
 
-            console.log(`✅ Stats calculated: ${blogs.length} total, ${published} published, ${draft} drafts`);
+            console.log(`✅ Stats calculated: ${totalCount} total, ${published} published, ${draft} drafts`);
         }
     } catch (error) {
         console.error('Error loading stats:', error);

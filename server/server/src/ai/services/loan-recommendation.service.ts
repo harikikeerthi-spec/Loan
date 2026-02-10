@@ -38,7 +38,7 @@ export class LoanRecommendationService {
       Validation Score: ${score}
       Credit Score: ${credit}
       Income Ratio: ${ratio}
-      Loan Amount: ${loan}
+      Loan Amount: ${loan} (in INR)
       Co-Applicant: ${coApplicant}
       Collateral: ${collateral}
       Study Level: ${study}

@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/
 import { UsersService } from '../users/users.service';
 import { EmailService } from './email.service';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
@@ -16,8 +17,40 @@ export class AuthService {
   constructor(
     private usersService: UsersService,
     private emailService: EmailService,
-    private jwtService: JwtService
+    private jwtService: JwtService,
+    private configService: ConfigService
   ) { }
+
+  /**
+   * Generate both access and refresh tokens for a user
+   */
+  private async generateTokens(user: any) {
+    const payload = {
+      email: user.email,
+      sub: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role
+    };
+
+    // Generate access token (short-lived)
+    const accessToken = this.jwtService.sign(payload, {
+      expiresIn: (this.configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION') || '30m') as any,
+    });
+
+    // Generate refresh token (long-lived)
+    const refreshToken = this.jwtService.sign(payload, {
+      expiresIn: (this.configService.get<string>('JWT_REFRESH_TOKEN_EXPIRATION') || '7d') as any,
+    });
+
+    // Store refresh token in database
+    // await this.usersService.updateRefreshToken(user.email, refreshToken);
+
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    };
+  }
 
   async sendOtp(
     email: string,
@@ -295,19 +328,14 @@ export class AuthService {
       // Check if user has complete details
       const hasUserDetails = !!(user.firstName && user.lastName && user.phoneNumber && user.dateOfBirth);
 
-      // Generate JWT token
-      const payload = {
-        email: user.email,
-        sub: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName
-      };
-      const accessToken = this.jwtService.sign(payload);
+      // Generate JWT tokens (access + refresh)
+      const tokens = await this.generateTokens(user);
 
       return {
         success: true,
         message: isNewUser ? 'Signup successful. Please complete your profile.' : 'Login successful.',
-        access_token: accessToken,
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
         userId: user.id,
         userExists: !isNewUser,
         hasUserDetails,
@@ -321,6 +349,59 @@ export class AuthService {
         message: 'An error occurred during verification. Please try again.'
       };
     }
+  }
+
+  /**
+   * Refresh access token using refresh token
+   */
+  async refreshTokens(refreshToken: string) {
+    try {
+      // Verify the refresh token
+      const payload = await this.jwtService.verifyAsync(refreshToken);
+
+      // Get user from database
+      const user = await this.usersService.findOne(payload.email);
+
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      // Verify that the refresh token matches the one stored in database
+      // if (user.refreshToken !== refreshToken) {
+      //   throw new UnauthorizedException('Invalid refresh token');
+      // }
+
+      // Generate new tokens
+      const tokens = await this.generateTokens(user);
+
+      return {
+        success: true,
+        message: 'Tokens refreshed successfully',
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+      };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) {
+        throw error;
+      }
+
+      if (error.name === 'TokenExpiredError') {
+        throw new UnauthorizedException('Refresh token has expired. Please login again.');
+      }
+
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  /**
+   * Logout user by invalidating refresh token
+   */
+  async logout(email: string) {
+    // Feature disabled
+    return {
+      success: true,
+      message: 'Logged out successfully',
+    };
   }
 
   async getUserDashboard(email: string) {

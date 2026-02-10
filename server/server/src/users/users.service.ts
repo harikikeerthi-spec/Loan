@@ -85,6 +85,15 @@ export class UsersService {
     });
   }
 
+  async updateRefreshToken(email: string, refreshToken: string | null) {
+    return this.prisma.user.update({
+      where: { email },
+      data: {
+        refreshToken,
+      },
+    });
+  }
+
   // Loan Application Methods
   async createLoanApplication(userId: string, data: {
     bank: string;

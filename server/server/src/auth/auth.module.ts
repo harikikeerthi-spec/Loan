@@ -4,6 +4,7 @@ import { UsersModule } from '../users/users.module';
 import { EmailService } from './email.service';
 import { AuthController } from './auth.controller';
 import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AdminGuard } from './admin.guard';
 import { SuperAdminGuard } from './super-admin.guard';
 import { AuthorizationService } from './authorization.service';
@@ -14,9 +15,16 @@ import { UserGuard } from './user.guard';
 @Module({
   imports: [
     UsersModule,
-    JwtModule.register({
-      secret: 'secretKey', // Use env var in production
-      signOptions: { expiresIn: '24h' },
+    ConfigModule,
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        secret: (configService.get<string>('JWT_SECRET') || 'secretKey') as any,
+        signOptions: {
+          expiresIn: (configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION') || '30m') as any,
+        },
+      }),
+      inject: [ConfigService],
     }),
   ],
   controllers: [AuthController],
