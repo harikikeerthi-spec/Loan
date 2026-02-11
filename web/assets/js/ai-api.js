@@ -17,7 +17,7 @@ const AI_API = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
+          'Authorization': `Bearer ${localStorage.getItem('accessToken') || localStorage.getItem('token') || ''}`,
         },
         body: JSON.stringify(data),
       });
@@ -45,7 +45,7 @@ const AI_API = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
+          'Authorization': `Bearer ${localStorage.getItem('accessToken') || localStorage.getItem('token') || ''}`,
         },
         body: JSON.stringify({ text }),
       });
@@ -63,13 +63,36 @@ const AI_API = {
     }
   },
 
+  async humanizeSOP(text) {
+    try {
+      const response = await fetch(`${this.BASE_URL}/humanize-sop`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken') || localStorage.getItem('token') || ''}`,
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error('SOP humanization failed:', error);
+      throw error;
+    }
+  },
+
   async predictAdmission(data) {
     try {
       const response = await fetch(`${this.BASE_URL}/predict-admission`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
+          'Authorization': `Bearer ${localStorage.getItem('accessToken') || localStorage.getItem('token') || ''}`,
         },
         body: JSON.stringify(data),
       });
@@ -92,7 +115,7 @@ const AI_API = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`,
+          'Authorization': `Bearer ${localStorage.getItem('accessToken') || localStorage.getItem('token') || ''}`,
         },
         body: JSON.stringify(data),
       });
@@ -139,10 +162,10 @@ const AI_API = {
     // Convert each category score to a percentage based on its max score.
     const maxByName = {
       'Clarity': 20,
-      'Financial Justification': 25,
-      'Career ROI': 25,
+      'Financial Justification': 20,
+      'Career ROI': 20,
       'Originality': 20,
-      'Post-Study Income Clarity': 10,
+      'Structure': 20,
     };
 
     const categoriesObject = {};
@@ -150,14 +173,14 @@ const AI_API = {
       for (const category of raw.categories) {
         const name = category?.name;
         const score = Number(category?.score ?? 0);
-        const maxScore = Number(maxByName[name] ?? 100);
+        const maxScore = Number(maxByName[name] ?? 20);
         const pct = maxScore > 0 ? Math.max(0, Math.min(100, (score / maxScore) * 100)) : 0;
 
         if (name === 'Clarity') categoriesObject.clarity = pct;
         else if (name === 'Financial Justification') categoriesObject.financialJustification = pct;
         else if (name === 'Career ROI') categoriesObject.careerROI = pct;
         else if (name === 'Originality') categoriesObject.originality = pct;
-        else if (name === 'Post-Study Income Clarity') categoriesObject.postStudyIncome = pct;
+        else if (name === 'Structure') categoriesObject.structure = pct;
       }
     }
 
@@ -178,6 +201,10 @@ const AI_API = {
     return {
       score: Number(raw.totalScore ?? raw.score ?? 0),
       quality: qualityMap[raw.quality] || raw.qualityLevel || raw.quality || 'unknown',
+      humanizeScore: Number(raw.humanizeScore ?? 0),
+      humanizeFeedback: raw.humanizeFeedback || '',
+      plagiarismScore: Number(raw.plagiarismScore ?? 0),
+      plagiarismFeedback: raw.plagiarismFeedback || '',
       categories: Object.keys(categoriesObject).length ? categoriesObject : (raw.categories || {}),
       weakAreas,
       actionableSummary: raw.actionableSummary || raw.summary || '',

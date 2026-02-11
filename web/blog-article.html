@@ -52,17 +52,6 @@
         };
     </script>
     <style>
-        .nav-scrolled {
-            background: rgba(255, 255, 255, 0.8) !important;
-            backdrop-filter: blur(12px);
-            padding-top: 1rem !important;
-            padding-bottom: 1rem !important;
-        }
-
-        .dark .nav-scrolled {
-            background: rgba(17, 8, 26, 0.8) !important;
-        }
-
         body {
             background-attachment: fixed;
         }
@@ -697,15 +686,7 @@
     <div id="footer-placeholder"></div>
 
     <script>
-        // Navigation scroll effect
-        window.addEventListener('scroll', () => {
-            const nav = document.getElementById('mainNav');
-            if (window.scrollY > 50) {
-                nav.classList.add('nav-scrolled');
-            } else {
-                nav.classList.remove('nav-scrolled');
-            }
-        });
+
 
         // Reading progress bar
         window.addEventListener('scroll', () => {

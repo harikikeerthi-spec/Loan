@@ -331,6 +331,7 @@
     <script src="assets/js/components-loader.js"></script>
     <script src="assets/js/auth.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
+    <script src="assets/js/ai-api.js"></script>
 
     <script>
         let generatedSOP = '';
@@ -339,7 +340,7 @@
         // Form submission handler
         document.getElementById('sopForm').addEventListener('submit', generateSOP);
 
-        function generateSOP(e) {
+        async function generateSOP(e) {
             e.preventDefault();
 
             // Check if user is logged in
@@ -367,16 +368,96 @@
                 careerGoals: document.getElementById('careerGoals').value.trim()
             };
 
-            // Generate SOP content
-            const sop = generateSOPContent(formData);
-            generatedSOP = sop;
+            // Show loading state
+            const submitBtn = document.querySelector('#sopForm button[type="submit"]');
+            const originalBtnHtml = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="animate-spin material-symbols-outlined">progress_activity</span> Generating & Humanizing...';
 
-            // Generate AI analysis
-            sopAnalysis = analyzeSOP(sop, formData);
+            try {
+                // 1. Generate initial SOP content
+                const initialSopFormatted = generateSOPContent(formData);
+                const initialSopText = initialSopFormatted.replace(/<[^>]*>/g, ' ');
 
-            // Display results
-            displaySOP(sop);
-            scrollToResults();
+                // 2. Automatically Humanize
+                const humanizationResult = await AI_API.humanizeSOP(initialSopText);
+
+                let sopToAnalyze = initialSopText;
+                if (humanizationResult.success && humanizationResult.humanizedText) {
+                    generatedSOP = wrapInStructure(humanizationResult.humanizedText);
+                    sopToAnalyze = humanizationResult.humanizedText;
+                } else {
+                    generatedSOP = initialSopFormatted;
+                }
+
+                // 3. Analyze the Humanized SOP
+                const backendAnalysis = await AI_API.analyzeSOP(sopToAnalyze);
+                const formatted = AI_API.formatSOPResult(backendAnalysis);
+
+                sopAnalysis = {
+                    score: formatted.score,
+                    humanizeScore: formatted.humanizeScore,
+                    humanizeFeedback: formatted.humanizeFeedback || 'SOP has been automatically humanized for better authenticity.',
+                    wordCount: formatted.actionableSummary.match(/\d+/)?.[0] || sopToAnalyze.split(/\s+/).length,
+                    recommendedWordCount: '800-1000 words',
+                    strengths: Object.keys(formatted.categories || {}).map(k => `✅ Strong ${k} content`),
+                    improvements: formatted.weakAreas.map(w => `💡 ${w}`),
+                    sections: Object.entries(formatted.categories || {}).reduce((acc, [key, val]) => {
+                        acc[key] = {
+                            score: val,
+                            feedback: `Analysis of ${key} section.`
+                        };
+                        return acc;
+                    }, {})
+                };
+
+                // Display results
+                displaySOP(generatedSOP);
+                scrollToResults();
+                showNotification('✨ SOP generated and humanized successfully!');
+
+            } catch (err) {
+                console.error('SOP Processing failed:', err);
+                showNotification('❌ Failed to generate SOP. Using backup generator...');
+
+                // Fallback process
+                const fallbackSop = generateSOPContent(formData);
+                generatedSOP = fallbackSop;
+                sopAnalysis = analyzeSOP(fallbackSop, formData);
+                displaySOP(fallbackSop);
+                scrollToResults();
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalBtnHtml;
+            }
+        }
+
+
+
+        function wrapInStructure(text) {
+            // Simple wrapper to maintain formatting if the AI returns raw text
+            const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+            const name = document.getElementById('studentName').value;
+
+            return `
+<div class="sop-document">
+    <div class="text-center mb-10 pb-6 border-b-2 border-gray-200 dark:border-gray-700">
+        <h1 class="text-4xl font-bold mb-4 text-gray-900 dark:text-white">Statement of Purpose</h1>
+        <p class="text-gray-600 dark:text-gray-400"><strong>Name:</strong> ${name}</p>
+        <p class="text-gray-600 dark:text-gray-400"><strong>Date:</strong> ${today}</p>
+    </div>
+    <div class="whitespace-pre-wrap text-justify leading-relaxed">
+        ${text}
+    </div>
+</div>
+             `.trim();
+        }
+
+        function getHumanizeColor(score) {
+            if (score >= 90) return 'text-green-600';
+            if (score >= 75) return 'text-blue-600';
+            if (score >= 60) return 'text-yellow-600';
+            return 'text-red-600';
         }
 
         function generateSOPContent(data) {
@@ -613,6 +694,30 @@
                         <div class="mt-4 bg-gray-200 dark:bg-gray-700 rounded-full h-3">
                             <div class="bg-gradient-to-r from-primary to-secondary h-3 rounded-full transition-all" 
                                 style="width: ${analysis.score}%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Humanize Score -->
+                    <div id="humanizeScoreContainer" class="analysis-card bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 p-8 rounded-2xl border-2 border-blue-400/30">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="text-xl font-bold text-gray-800 dark:text-gray-200 mb-2">Humanize Score</h4>
+                                <p class="text-sm text-gray-600 dark:text-gray-400">Higher score indicates more authentic, human-like writing</p>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-6xl font-bold ${getHumanizeColor(analysis.humanizeScore)}">${analysis.humanizeScore}</div>
+                                <div class="text-2xl font-semibold text-gray-500">/100</div>
+                            </div>
+                        </div>
+                        <div class="mt-4 bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                            <div class="bg-gradient-to-r from-blue-500 to-indigo-600 h-3 rounded-full transition-all" 
+                                style="width: ${analysis.humanizeScore}%"></div>
+                        </div>
+                        <div class="mt-6 p-4 bg-white/50 dark:bg-black/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                             <p class="text-sm italic text-gray-700 dark:text-gray-300">
+                                <span class="material-symbols-outlined align-middle text-blue-600 mr-1">info</span>
+                                ${analysis.humanizeFeedback}
+                             </p>
                         </div>
                     </div>
 

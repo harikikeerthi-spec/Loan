@@ -66,6 +66,20 @@ export class AiController {
     };
   }
 
+  @Post('humanize-sop')
+  async humanizeSop(
+    @Body()
+    data: {
+      text: string;
+    },
+  ) {
+    const result = await this.sopAnalysisService.humanizeSop(data.text);
+    return {
+      success: true,
+      ...result,
+    };
+  }
+
   @Post('convert-grades')
   async convertGrades(
     @Body()

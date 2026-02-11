@@ -938,4 +938,222 @@ export class CommunityService {
             throw new NotFoundException('Post not found');
         }
     }
+
+    // ==================== MENTOR AUTH & DASHBOARD METHODS ====================
+
+    // In-memory OTP storage (in production, use Redis or database)
+    private otpStore = new Map<string, { otp: string; expiresAt: Date }>();
+
+    async requestMentorOTP(email: string) {
+        const mentor = await this.prisma.mentor.findUnique({
+            where: { email },
+        });
+
+        if (!mentor) {
+            throw new NotFoundException('Mentor not found with this email');
+        }
+
+        if (!mentor.isApproved) {
+            throw new BadRequestException('Your mentor application is pending approval');
+        }
+
+        if (!mentor.isActive) {
+            throw new BadRequestException('Your mentor account is not active');
+        }
+
+        // Generate 6-digit OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Store OTP with 5-minute expiry
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+        this.otpStore.set(email, { otp, expiresAt });
+
+        // In production, send OTP via email service (SendGrid, AWS SES, etc.)
+        console.log(`\n🔐 OTP for ${email}: ${otp}\n`);
+        console.log(`OTP expires at: ${expiresAt.toLocaleTimeString()}\n`);
+
+        // TODO: Send email with OTP
+        // await this.emailService.sendOTP(email, otp);
+
+        return {
+            success: true,
+            message: 'OTP sent to your email. Please check your inbox.',
+            data: {
+                email,
+                expiresIn: 300, // seconds
+            },
+        };
+    }
+
+    async verifyMentorOTP(email: string, otp: string) {
+        const mentor = await this.prisma.mentor.findUnique({
+            where: { email },
+        });
+
+        if (!mentor) {
+            throw new NotFoundException('Mentor not found');
+        }
+
+        // Check if OTP exists
+        const storedOTP = this.otpStore.get(email);
+        if (!storedOTP) {
+            throw new BadRequestException('OTP not found. Please request a new OTP.');
+        }
+
+        // Check if OTP is expired
+        if (new Date() > storedOTP.expiresAt) {
+            this.otpStore.delete(email);
+            throw new BadRequestException('OTP has expired. Please request a new OTP.');
+        }
+
+        // Verify OTP
+        if (storedOTP.otp !== otp) {
+            throw new BadRequestException('Invalid OTP. Please try again.');
+        }
+
+        // Clear OTP after successful verification
+        this.otpStore.delete(email);
+
+        return {
+            success: true,
+            message: 'Login successful',
+            data: {
+                id: mentor.id,
+                name: mentor.name,
+                email: mentor.email,
+                university: mentor.university,
+                isApproved: mentor.isApproved,
+                isActive: mentor.isActive,
+            },
+        };
+    }
+
+    async getMentorProfile(mentorId: string) {
+        const mentor = await this.prisma.mentor.findUnique({
+            where: { id: mentorId },
+        });
+
+        if (!mentor) {
+            throw new NotFoundException('Mentor not found');
+        }
+
+        // Get booking statistics
+        const bookingStats = await this.prisma.mentorBooking.groupBy({
+            by: ['status'],
+            where: { mentorId },
+            _count: true,
+        });
+
+        const stats = {
+            total: 0,
+            pending: 0,
+            approved: 0,
+            rejected: 0,
+            completed: 0,
+        };
+
+        bookingStats.forEach(stat => {
+            stats.total += stat._count;
+            stats[stat.status] = stat._count;
+        });
+
+        return {
+            success: true,
+            data: {
+                mentor,
+                stats,
+            },
+        };
+    }
+
+    async getMentorBookings(mentorId: string, filters: any) {
+        const { status, limit, offset } = filters;
+
+        const where: any = { mentorId };
+
+        if (status) {
+            where.status = status;
+        }
+
+        const [bookings, total] = await Promise.all([
+            this.prisma.mentorBooking.findMany({
+                where,
+                take: limit || 20,
+                skip: offset || 0,
+                orderBy: { createdAt: 'desc' },
+            }),
+            this.prisma.mentorBooking.count({ where }),
+        ]);
+
+        return {
+            success: true,
+            data: bookings,
+            pagination: {
+                total,
+                limit: limit || 20,
+                offset: offset || 0,
+                hasMore: (offset || 0) + bookings.length < total,
+            },
+        };
+    }
+
+    async updateBookingStatus(
+        mentorId: string,
+        bookingId: string,
+        status: string,
+    ) {
+        // Verify booking belongs to mentor
+        const booking = await this.prisma.mentorBooking.findFirst({
+            where: {
+                id: bookingId,
+                mentorId,
+            },
+        });
+
+        if (!booking) {
+            throw new NotFoundException('Booking not found or not authorized');
+        }
+
+        const updatedBooking = await this.prisma.mentorBooking.update({
+            where: { id: bookingId },
+            data: {
+                status,
+            },
+        });
+
+        return {
+            success: true,
+            message: `Booking ${status} successfully`,
+            data: updatedBooking,
+        };
+    }
+
+    async updateMentorProfile(mentorId: string, updateData: any) {
+        const allowedFields = [
+            'phone',
+            'bio',
+            'expertise',
+            'linkedIn',
+            'image',
+            'isActive',
+        ];
+
+        const dataToUpdate = {};
+        Object.keys(updateData).forEach(key => {
+            if (allowedFields.includes(key)) {
+                dataToUpdate[key] = updateData[key];
+            }
+        });
+
+        const mentor = await this.prisma.mentor.update({
+            where: { id: mentorId },
+            data: dataToUpdate,
+        });
+
+        return {
+            success: true,
+            message: 'Profile updated successfully',
+            data: mentor,
+        };
+    }
 }

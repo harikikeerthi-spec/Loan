@@ -1,0 +1,241 @@
+/**
+ * Blog Builder - Styles
+ */
+
+#blog-canvas {
+    background-image:
+        linear-gradient(#f5f5f5 1px, transparent 1px),
+        linear-gradient(90deg, #f5f5f5 1px, transparent 1px);
+    background-size: 20px 20px;
+    background-attachment: local;
+}
+
+#blog-canvas.drag-over {
+    background-color: rgba(102, 5, 199, 0.05);
+    border-color: #6605c7;
+}
+
+.canvas-element {
+    transition: all 0.2s ease;
+}
+
+.canvas-element:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.canvas-element.selected {
+    border-color: #6605c7 !important;
+    box-shadow: 0 0 0 3px rgba(102, 5, 199, 0.1);
+}
+
+.element-controls {
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.canvas-element:hover .element-controls {
+    opacity: 1;
+}
+
+.draggable-element {
+    cursor: grab;
+    transition: all 0.2s;
+}
+
+.draggable-element:active {
+    cursor: grabbing;
+}
+
+.draggable-element:hover {
+    border-color: #6605c7;
+    box-shadow: 0 4px 12px rgba(102, 5, 199, 0.15);
+}
+
+/* Tooltip styles */
+.tooltip {
+    position: relative;
+}
+
+.tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    margin-bottom: 4px;
+}
+
+/* Toast message */
+#builder-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1000;
+}
+
+/* Grid background pattern */
+.grid-background {
+    background-image:
+        linear-gradient(0deg, transparent 24%, rgba(255, 0, 0, .05) 25%, rgba(255, 0, 0, .05) 26%, transparent 27%, transparent 74%, rgba(255, 0, 0, .05) 75%, rgba(255, 0, 0, .05) 76%, transparent 77%, transparent),
+        linear-gradient(90deg, transparent 24%, rgba(255, 0, 0, .05) 25%, rgba(255, 0, 0, .05) 26%, transparent 27%, transparent 74%, rgba(255, 0, 0, .05) 75%, rgba(255, 0, 0, .05) 76%, transparent 77%, transparent);
+    background-size: 50px 50px;
+}
+
+/* Resizable handles */
+.resize-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #6605c7;
+    border: 2px solid white;
+    border-radius: 50%;
+    cursor: nwse-resize;
+}
+
+.resize-handle.top-left {
+    top: -5px;
+    left: -5px;
+    cursor: nwse-resize;
+}
+
+.resize-handle.top-right {
+    top: -5px;
+    right: -5px;
+    cursor: nesw-resize;
+}
+
+.resize-handle.bottom-left {
+    bottom: -5px;
+    left: -5px;
+    cursor: nesw-resize;
+}
+
+.resize-handle.bottom-right {
+    bottom: -5px;
+    right: -5px;
+    cursor: nwse-resize;
+}
+
+/* Animation for saving */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.saving {
+    animation: pulse 1s infinite;
+}
+
+/* Smooth transitions */
+.smooth-scroll {
+    scroll-behavior: smooth;
+}
+
+/* Disabled state */
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Color picker styling */
+input[type="color"] {
+    width: 100%;
+    height: 40px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 2px;
+}
+
+input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 4px;
+}
+
+/* Select styling */
+select {
+    cursor: pointer;
+}
+
+/* Overflow handling */
+.overflow-auto-y {
+    overflow-y: auto;
+}
+
+/* Flex utilities */
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flex-colu mn {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Canvas specific */
+.canvas-wrapper {
+    position: relative;
+    background: white;
+    border: 3px dashed #cccccc;
+    border-radius: 8px;
+}
+
+.element-label {
+    position: absolute;
+    top: -25px;
+    left: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6605c7;
+    background: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid #6605c7;
+}
+
+/* Responsive design for builder */
+@media (max-width: 1400px) {
+    #builderCanvasContainer {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+}
+
+/* Dark mode overrides */
+.dark #blog-canvas {
+    background-color: #1f2937;
+}
+
+.dark .canvas-element {
+    background: #374151;
+}
+
+.dark .draggable-element {
+    background: #374151;
+    border-color: #4b5563;
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

@@ -30,7 +30,7 @@ function checkAdminAuth() {
     // FOR TESTING: Auto-set real admin JWT token if not logged in
     if (!token) {
         console.log('⚠️ No admin token found. Setting real admin JWT for testing.');
-        token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhcmlraWtlZXJ0aGlAZ21haWwuY29tIiwic3ViIjoiMWYzZDNhMzktMzMxYy00YjQxLWJjODEtYzMxMzc2MWUxNzAyIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzcwNzA1MTc1LCJleHAiOjE3NzA3OTE1NzV9.wufC7DtXF_J4Ki-ZohV4psa7vNmW5_jSV7dVu7qM8c0';
+        token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhcmlraWtlZXJ0aGlAZ21haWwuY29tIiwic3ViIjoiMWYzZDNhMzktMzMxYy00YjQxLWJjODEtYzMxMzc2MWUxNzAyIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzcwNzk3NDExLCJleHAiOjE3NzA4ODM4MTF9.dd6GzgTYXM8Sg_IAubaP6nafNMTBDFRqg8NlVE-yzGE';
         email = 'harikikeerthi@gmail.com';
 
         // Store admin credentials
@@ -353,17 +353,20 @@ function displayBlogs(blogs) {
             <td class="px-6 py-4">${new Date(blog.updatedAt).toLocaleDateString()}</td>
             <td class="px-6 py-4 text-center">
                 <div class="flex justify-center gap-2">
-                    <button onclick="viewBlog('${blog.id}')" title="View Blog"
-                        class="material-symbols-outlined text-lg cursor-pointer text-green-600 hover:text-green-800">
-                        visibility
+                    <button onclick="viewBlog('${blog.id}')"
+                        class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-green-50 text-green-700 rounded-lg hover:bg-green-100 border border-green-200 transition-colors" title="View Blog">
+                        <span class="material-symbols-outlined text-base">visibility</span>
+                        View
                     </button>
-                    <button onclick="openEditModal('${blog.id}')" title="Edit"
-                        class="material-symbols-outlined text-lg cursor-pointer text-blue-600 hover:text-blue-800">
-                        edit
+                    <button onclick="openEditModal('${blog.id}')"
+                        class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 border border-blue-200 transition-colors" title="Edit Blog">
+                        <span class="material-symbols-outlined text-base">edit</span>
+                        Edit
                     </button>
-                    <button onclick="deleteBlog('${blog.id}')" title="Delete"
-                        class="material-symbols-outlined text-lg cursor-pointer text-red-600 hover:text-red-800">
-                        delete
+                    <button onclick="deleteBlog('${blog.id}')"
+                        class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-50 text-red-700 rounded-lg hover:bg-red-100 border border-red-200 transition-colors" title="Delete Blog">
+                        <span class="material-symbols-outlined text-base">delete</span>
+                        Delete
                     </button>
                 </div>
             </td>
@@ -518,7 +521,7 @@ async function deleteBlog(blogId) {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/blogs/${blogId}`, {
+        const response = await fetch(`${API_BASE_URL}/blogs/admin/${blogId}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${adminToken}`

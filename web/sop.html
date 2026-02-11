@@ -69,8 +69,8 @@
                         Quality</span>
                     <h2 class="text-4xl md:text-5xl font-display text-gray-900 dark:text-white mb-4">
                         SOP Quality <br />
-                        <span class="italic font-normal text-gray-600 dark:text-gray-400">Scorer for loan
-                            approval</span>
+                        <!-- <span class="italic font-normal text-gray-600 dark:text-gray-400">Scorer for loan
+                            approval</span> -->
                     </h2>
                     <p class="text-gray-600 dark:text-gray-300 text-lg leading-relaxed mb-8">
                         Get your Statement of Purpose evaluated specifically for loan approval. We analyze clarity,
@@ -92,6 +92,11 @@
                             <button type="submit"
                                 class="px-6 py-3 rounded-full bg-primary text-white font-semibold hover:bg-gold-accent hover:text-gray-900 transition-colors">
                                 Analyze SOP
+                            </button>
+                            <button type="button" id="humanizeBtn" onclick="humanizeSOPInScorer()"
+                                class="hidden px-6 py-3 rounded-full bg-gold-accent text-gray-900 font-semibold hover:bg-primary hover:text-white transition-all shadow-lg flex items-center gap-2">
+                                <span class="material-symbols-outlined text-sm">person_check</span>
+                                Humanize SOP
                             </button>
                             <button type="reset"
                                 class="px-6 py-3 rounded-full border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:border-primary hover:text-primary transition-colors">
@@ -116,6 +121,56 @@
                         </div>
                         <div class="h-3 w-full bg-gray-200/80 dark:bg-white/10 rounded-full overflow-hidden">
                             <div id="sopScoreBar" class="h-full w-0 bg-primary transition-all"></div>
+                        </div>
+                    </div>
+
+                    <!-- Humanize Score Section -->
+                    <div
+                        class="mb-6 p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border border-blue-200 dark:border-blue-800">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="material-symbols-outlined text-blue-600 dark:text-blue-400 text-base">person</span>
+                                <span class="text-sm font-semibold text-blue-900 dark:text-blue-200">Humanize
+                                    Score</span>
+                            </div>
+                            <span id="humanizeScoreText" class="text-sm font-bold text-blue-700 dark:text-blue-300">-- /
+                                100</span>
+                        </div>
+                        <div class="h-2 w-full bg-blue-200/50 dark:bg-blue-900/30 rounded-full overflow-hidden mb-2">
+                            <div id="humanizeScoreBar"
+                                class="h-full w-0 bg-gradient-to-r from-blue-500 to-blue-600 transition-all"></div>
+                        </div>
+                        <p class="text-xs text-blue-700 dark:text-blue-300 mb-2">Higher score means more authentic,
+                            human-written quality</p>
+                        <div id="humanizeFeedback"
+                            class="text-xs text-blue-800 dark:text-blue-200 bg-white/50 dark:bg-white/5 rounded-lg p-2 hidden">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Plagiarism Score Section -->
+                    <div
+                        class="mb-6 p-4 bg-green-50/50 dark:bg-green-900/10 rounded-xl border border-green-200 dark:border-green-800">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span
+                                    class="material-symbols-outlined text-green-600 dark:text-green-400 text-base">verified</span>
+                                <span class="text-sm font-semibold text-green-900 dark:text-green-200">Originality
+                                    Score</span>
+                            </div>
+                            <span id="plagiarismScoreText"
+                                class="text-sm font-bold text-green-700 dark:text-green-300">-- / 100</span>
+                        </div>
+                        <div class="h-2 w-full bg-green-200/50 dark:bg-green-900/30 rounded-full overflow-hidden mb-2">
+                            <div id="plagiarismScoreBar"
+                                class="h-full w-0 bg-gradient-to-r from-green-500 to-green-600 transition-all"></div>
+                        </div>
+                        <p class="text-xs text-green-700 dark:text-green-300 mb-2">Lower plagiarism score indicates
+                            higher originality (0-15% is excellent)</p>
+                        <div id="plagiarismFeedback"
+                            class="text-xs text-green-800 dark:text-green-200 bg-white/50 dark:bg-white/5 rounded-lg p-2 hidden">
+                            <!-- Populated by JS -->
                         </div>
                     </div>
 

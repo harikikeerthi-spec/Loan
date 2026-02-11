@@ -10,10 +10,11 @@ import { AiModule } from './ai/ai.module';
 import { CommunityModule } from './community/community.module';
 import { ReferenceModule } from './reference/reference.module';
 import { ApplicationModule } from './application/application.module';
+import { ExploreModule } from './explore/explore.module';
 
 
 @Module({
-  imports: [PrismaModule, AuthModule, UsersModule, BlogModule, DocumentModule, AiModule, CommunityModule, ReferenceModule, ApplicationModule],
+  imports: [PrismaModule, AuthModule, UsersModule, BlogModule, DocumentModule, AiModule, CommunityModule, ReferenceModule, ApplicationModule, ExploreModule],
   controllers: [AppController],
   providers: [AppService],
 })

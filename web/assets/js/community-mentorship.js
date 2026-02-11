@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
     loadFeaturedMentors();
     setupFilterListeners();
     setupBookingModal();
-    setupApplicationModal();
 });
 
 // Load mentor statistics
@@ -303,15 +302,6 @@ async function handleBookingSubmit(e) {
     }
 }
 
-// Setup application modal
-function setupApplicationModal() {
-    const applyButtons = Array.from(document.querySelectorAll('button'));
-    const applyButton = applyButtons.find(btn => btn.textContent.trim().includes('Apply to Mentor'));
-
-    if (applyButton) {
-        applyButton.addEventListener('click', openApplicationModal);
-    }
-}
 
 // Utility functions
 function showLoading() {

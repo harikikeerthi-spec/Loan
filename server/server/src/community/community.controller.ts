@@ -590,4 +590,82 @@ export class CommunityController {
     async likeForumPost(@Param('id') id: string) {
         return this.communityService.likeForumPost(id);
     }
+
+    // ==================== MENTOR DASHBOARD ENDPOINTS ====================
+
+    /**
+     * Request Mentor OTP
+     * POST /community/mentor/request-otp
+     * @body email
+     */
+    @Post('mentor/request-otp')
+    async requestMentorOTP(@Body() body: { email: string }) {
+        return this.communityService.requestMentorOTP(body.email);
+    }
+
+    /**
+     * Verify Mentor OTP & Login
+     * POST /community/mentor/verify-otp
+     * @body email, otp
+     */
+    @Post('mentor/verify-otp')
+    async verifyMentorOTP(@Body() body: { email: string; otp: string }) {
+        return this.communityService.verifyMentorOTP(body.email, body.otp);
+    }
+
+    /**
+     * Get Mentor Profile & Stats
+     * GET /community/mentor/profile/:id
+     */
+    @Get('mentor/profile/:id')
+    async getMentorProfile(@Param('id') mentorId: string) {
+        return this.communityService.getMentorProfile(mentorId);
+    }
+
+    /**
+     * Get Mentor's Bookings
+     * GET /community/mentor/:id/bookings
+     */
+    @Get('mentor/:id/bookings')
+    async getMentorBookings(
+        @Param('id') mentorId: string,
+        @Query('status') status?: string,
+        @Query('limit') limit?: string,
+        @Query('offset') offset?: string,
+    ) {
+        return this.communityService.getMentorBookings(mentorId, {
+            status,
+            limit: limit ? parseInt(limit, 10) : 20,
+            offset: offset ? parseInt(offset, 10) : 0,
+        });
+    }
+
+    /**
+     * Update Booking Status (Mentor)
+     * PUT /community/mentor/:mentorId/bookings/:bookingId
+     */
+    @Put('mentor/:mentorId/bookings/:bookingId')
+    async updateBookingStatus(
+        @Param('mentorId') mentorId: string,
+        @Param('bookingId') bookingId: string,
+        @Body() body: { status: string },
+    ) {
+        return this.communityService.updateBookingStatus(
+            mentorId,
+            bookingId,
+            body.status,
+        );
+    }
+
+    /**
+     * Update Mentor Profile
+     * PUT /community/mentor/:id/profile
+     */
+    @Put('mentor/:id/profile')
+    async updateMentorProfile(
+        @Param('id') mentorId: string,
+        @Body() body: any,
+    ) {
+        return this.communityService.updateMentorProfile(mentorId, body);
+    }
 }

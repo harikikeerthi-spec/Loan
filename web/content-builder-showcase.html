@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Content Builder - Feature Showcase</title>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .feature-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(102, 5, 199, 0.15);
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50">
+    <!-- Header -->
+    <div class="gradient-bg text-white py-16">
+        <div class="container mx-auto px-6 text-center">
+            <h1 class="text-5xl font-bold mb-4">🎨 Visual Content Builder</h1>
+            <p class="text-xl opacity-90">Canva-Inspired Drag & Drop Blog Creation System</p>
+            <p class="text-lg mt-4 opacity-75">Create stunning blog content without writing code</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-6 py-12">
+        <!-- Features Grid -->
+        <div class="grid md:grid-cols-2 gap-8 mb-12">
+            <!-- Feature 1: Image Upload -->
+            <div class="feature-card bg-white rounded-2xl shadow-lg p-8">
+                <div class="text-4xl mb-4">🖼️</div>
+                <h2 class="text-2xl font-bold mb-4">Drag & Drop Image Upload</h2>
+                <ul class="space-y-2 text-gray-700">
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-600 font-bold">✓</span>
+                        <span>Drag images directly from file explorer</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-600 font-bold">✓</span>
+                        <span>Click to browse files</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-600 font-bold">✓</span>
+                        <span>Live preview with remove/change options</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-600 font-bold">✓</span>
+                        <span>File validation (JPG, PNG, GIF, WebP, Max 5MB)</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Feature 2: Visual Builder -->
+            <div class="feature-card bg-white rounded-2xl shadow-lg p-8">
+                <div class="text-4xl mb-4">🎨</div>
+                <h2 class="text-2xl font-bold mb-4">Visual Page Builder</h2>
+                <ul class="space-y-2 text-gray-700">
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-600 font-bold">✓</span>
+                        <span>7 content block types</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-600 font-bold">✓</span>
+                        <span>Drag & drop interface</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-600 font-bold">✓</span>
+                        <span>Edit, duplicate, reorder, delete blocks</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <span class="text-green-600 font-bold">✓</span>
+                        <span>Live preview and instant updates</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Content Blocks -->
+        <div class="bg-white rounded-2xl shadow-lg p-8 mb-12">
+            <h2 class="text-3xl font-bold mb-6 text-center">Available Content Blocks</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                <div
+                    class="text-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors cursor-pointer">
+                    <span class="material-symbols-outlined text-4xl text-purple-600">view_agenda</span>
+                    <p class="mt-2 font-medium text-sm">Container</p>
+                </div>
+                <div class="text-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors cursor-pointer">
+                    <span class="material-symbols-outlined text-4xl text-blue-600">grid_view</span>
+                    <p class="mt-2 font-medium text-sm">Grid</p>
+                </div>
+                <div class="text-center p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors cursor-pointer">
+                    <span class="material-symbols-outlined text-4xl text-green-600">title</span>
+                    <p class="mt-2 font-medium text-sm">Heading</p>
+                </div>
+                <div
+                    class="text-center p-4 bg-orange-50 rounded-lg hover:bg-orange-100 transition-colors cursor-pointer">
+                    <span class="material-symbols-outlined text-4xl text-orange-600">image</span>
+                    <p class="mt-2 font-medium text-sm">Image</p>
+                </div>
+                <div class="text-center p-4 bg-red-50 rounded-lg hover:bg-red-100 transition-colors cursor-pointer">
+                    <span class="material-symbols-outlined text-4xl text-red-600">videocam</span>
+                    <p class="mt-2 font-medium text-sm">Video</p>
+                </div>
+                <div
+                    class="text-center p-4 bg-yellow-50 rounded-lg hover:bg-yellow-100 transition-colors cursor-pointer">
+                    <span class="material-symbols-outlined text-4xl text-yellow-600">smart_button</span>
+                    <p class="mt-2 font-medium text-sm">Button</p>
+                </div>
+                <div class="text-center p-4 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors cursor-pointer">
+                    <span class="material-symbols-outlined text-4xl text-teal-600">text_fields</span>
+                    <p class="mt-2 font-medium text-sm">Text</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- How It Works -->
+        <div class="bg-white rounded-2xl shadow-lg p-8 mb-12">
+            <h2 class="text-3xl font-bold mb-8 text-center">How It Works</h2>
+            <div class="grid md:grid-cols-3 gap-8">
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-3xl">1️⃣</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Drag Blocks</h3>
+                    <p class="text-gray-600">Choose from 7 content blocks and drag them to the canvas</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-3xl">2️⃣</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Customize</h3>
+                    <p class="text-gray-600">Edit each block's content, reorder, duplicate, or delete</p>
+                </div>
+                <div class="text-center">
+                    <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="text-3xl">3️⃣</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Publish</h3>
+                    <p class="text-gray-600">Save to form and publish your beautiful blog post</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Benefits -->
+        <div class="bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl shadow-lg p-8 text-white mb-12">
+            <h2 class="text-3xl font-bold mb-6 text-center">Key Benefits</h2>
+            <div class="grid md:grid-cols-2 gap-6">
+                <div class="flex items-start gap-4">
+                    <span class="text-2xl">🚀</span>
+                    <div>
+                        <h3 class="font-bold text-lg mb-1">No Coding Required</h3>
+                        <p class="opacity-90">Create rich content without writing HTML or CSS</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4">
+                    <span class="text-2xl">👁️</span>
+                    <div>
+                        <h3 class="font-bold text-lg mb-1">Visual Feedback</h3>
+                        <p class="opacity-90">See exactly how your content will look</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4">
+                    <span class="text-2xl">⚡</span>
+                    <div>
+                        <h3 class="font-bold text-lg mb-1">Fast Creation</h3>
+                        <p class="opacity-90">Build professional blogs in minutes, not hours</p>
+                    </div>
+                </div>
+                <div class="flex items-start gap-4">
+                    <span class="text-2xl">🎨</span>
+                    <div>
+                        <h3 class="font-bold text-lg mb-1">Professional Results</h3>
+                        <p class="opacity-90">Consistent, beautiful formatting every time</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA -->
+        <div class="text-center bg-white rounded-2xl shadow-lg p-12">
+            <h2 class="text-3xl font-bold mb-4">Ready to Create?</h2>
+            <p class="text-xl text-gray-600 mb-8">Open your admin dashboard and start building beautiful blog content!
+            </p>
+            <div class="flex gap-4 justify-center flex-wrap">
+                <a href="/admin-dashboard.html"
+                    class="px-8 py-4 bg-purple-600 text-white rounded-lg font-bold text-lg hover:bg-purple-700 transition-colors inline-flex items-center gap-2">
+                    <span class="material-symbols-outlined">dashboard</span>
+                    Open Admin Dashboard
+                </a>
+                <a href="#docs"
+                    class="px-8 py-4 border-2 border-purple-600 text-purple-600 rounded-lg font-bold text-lg hover:bg-purple-50 transition-colors inline-flex items-center gap-2">
+                    <span class="material-symbols-outlined">description</span>
+                    View Documentation
+                </a>
+            </div>
+        </div>
+
+        <!-- Documentation Links -->
+        <div id="docs" class="mt-12 grid md:grid-cols-3 gap-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="font-bold text-lg mb-2">📸 Image Upload Guide</h3>
+                <p class="text-gray-600 text-sm mb-4">Learn how to use drag-and-drop image uploads</p>
+                <code class="text-xs bg-gray-100 px-2 py-1 rounded">DRAG_DROP_IMAGE_UPLOAD_GUIDE.md</code>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="font-bold text-lg mb-2">🎨 Builder Guide</h3>
+                <p class="text-gray-600 text-sm mb-4">Master the visual page builder</p>
+                <code class="text-xs bg-gray-100 px-2 py-1 rounded">VISUAL_CONTENT_BUILDER_GUIDE.md</code>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="font-bold text-lg mb-2">🎬 Demo & Tutorial</h3>
+                <p class="text-gray-600 text-sm mb-4">Step-by-step examples and demos</p>
+                <code class="text-xs bg-gray-100 px-2 py-1 rounded">CONTENT_BUILDER_DEMO.md</code>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="bg-gray-800 text-white py-8 mt-12">
+        <div class="container mx-auto px-6 text-center">
+            <p class="text-lg mb-2">🎉 Blog Creation System - v1.0</p>
+            <p class="text-sm opacity-75">Powered by Drag & Drop • Inspired by Canva • Built with ❤️</p>
+        </div>
+    </div>
+</body>
+
+</html>

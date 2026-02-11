@@ -34,6 +34,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update UI with results
         updateSOPDisplay(formatted);
 
+        // Show humanize button if humanize score is below 85
+        const humanizeBtn = document.getElementById('humanizeBtn');
+        if (humanizeBtn) {
+          if (formatted.humanizeScore < 85) {
+            humanizeBtn.classList.remove('hidden');
+          } else {
+            humanizeBtn.classList.add('hidden');
+          }
+        }
+
         // Reset button
         submitButton.disabled = false;
         submitButton.textContent = originalText;
@@ -49,6 +59,41 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+/**
+ * Humanize SOP functionality for the Evaluation page
+ */
+async function humanizeSOPInScorer() {
+  const sopTextarea = document.getElementById('sopText');
+  const humanizeBtn = document.getElementById('humanizeBtn');
+
+  if (!sopTextarea || !sopTextarea.value.trim()) return;
+
+  const originalHtml = humanizeBtn.innerHTML;
+  humanizeBtn.disabled = true;
+  humanizeBtn.innerHTML = '<span class="animate-spin material-symbols-outlined text-sm">progress_activity</span> Humanizing...';
+
+  try {
+    const result = await AI_API.humanizeSOP(sopTextarea.value);
+    if (result.success && result.humanizedText) {
+      // Update the textarea with humanized text
+      sopTextarea.value = result.humanizedText;
+
+      // Re-analyze automatically
+      const analyzeBtn = document.querySelector('#sopScorerForm button[type="submit"]');
+      if (analyzeBtn) analyzeBtn.click();
+
+      // Notification or visual feedback
+      alert('✨ SOP has been humanized! Review the changes and the updated scores.');
+    }
+  } catch (error) {
+    console.error('Humanization failed:', error);
+    alert('Error humanizing SOP. Please try again.');
+  } finally {
+    humanizeBtn.disabled = false;
+    humanizeBtn.innerHTML = originalHtml;
+  }
+}
 
 /**
  * Update the SOP analysis display section with results
@@ -82,6 +127,12 @@ function updateSOPDisplay(result) {
     qualityBadge.textContent = badgeText;
   }
 
+  // Update Humanize Score
+  updateHumanizeScore(result.humanizeScore, result.humanizeFeedback);
+
+  // Update Plagiarism Score  
+  updatePlagiarismScore(result.plagiarismScore, result.plagiarismFeedback);
+
   // Update category breakdown
   updateCategoryBreakdown(result.categories);
 
@@ -91,6 +142,94 @@ function updateSOPDisplay(result) {
   // Update summary
   updateActionableSummary(result.actionableSummary);
 }
+
+/**
+ * Update humanize score display
+ * @param {number} score - Humanize score (0-100, higher is better)
+ * @param {string} feedback - Feedback on humanization
+ */
+function updateHumanizeScore(score, feedback) {
+  const scoreText = document.getElementById('humanizeScoreText');
+  const scoreBar = document.getElementById('humanizeScoreBar');
+  const feedbackEl = document.getElementById('humanizeFeedback');
+  const humanizeSection = feedbackEl?.parentElement;
+
+  const roundedScore = Math.round(score || 0);
+
+  // Determine quality level and color coding
+  let qualityClass = '';
+  let borderClass = '';
+  let warningMessage = '';
+
+  if (roundedScore >= 90) {
+    qualityClass = 'text-green-700 dark:text-green-300';
+    borderClass = 'border-green-500';
+    warningMessage = '✅ Excellent! Your SOP sounds genuinely human-written.';
+  } else if (roundedScore >= 75) {
+    qualityClass = 'text-yellow-700 dark:text-yellow-300';
+    borderClass = 'border-yellow-500';
+    warningMessage = '⚠️ Warning: Your SOP may be detected as AI-generated. Improve authenticity!';
+  } else {
+    qualityClass = 'text-red-700 dark:text-red-300';
+    borderClass = 'border-red-500';
+    warningMessage = '❌ Critical: This SOP appears AI-generated. Rewrite with personal stories!';
+  }
+
+  if (scoreText) {
+    scoreText.className = `text-sm font-bold ${qualityClass}`;
+    scoreText.textContent = `${roundedScore} / 100`;
+  }
+
+  if (scoreBar) scoreBar.style.width = `${roundedScore}%`;
+
+  // Update section border for visual emphasis
+  if (humanizeSection) {
+    humanizeSection.className = `mb-6 p-4 bg-blue-50/50 dark:bg-blue-900/10 rounded-xl border-2 ${borderClass}`;
+  }
+
+  if (feedbackEl && feedback) {
+    feedbackEl.innerHTML = `
+      <div class="mb-2 font-bold ${qualityClass}">${warningMessage}</div>
+      <div class="mt-2"><strong>💡 How to Improve:</strong> ${feedback}</div>
+    `;
+    feedbackEl.classList.remove('hidden');
+  }
+}
+
+/**
+ * Update plagiarism score display
+ * @param {number} score - Plagiarism score (0-100, lower is better)
+ * @param {string} feedback - Feedback on originality
+ */
+function updatePlagiarismScore(score, feedback) {
+  const scoreText = document.getElementById('plagiarismScoreText');
+  const scoreBar = document.getElementById('plagiarismScoreBar');
+  const feedbackEl = document.getElementById('plagiarismFeedback');
+
+  const roundedScore = Math.round(score || 0);
+
+  // For plagiarism, we want to show the inverse (originality %)
+  const originalityScore = 100 - roundedScore;
+
+  if (scoreText) {
+    // Show plagiarism percentage with quality indicator
+    let qualityText = '';
+    if (roundedScore <= 15) qualityText = '✅ Excellent';
+    else if (roundedScore <= 30) qualityText = '👍 Good';
+    else if (roundedScore <= 50) qualityText = '⚠️ Fair';
+    else qualityText = '❌ Needs Work';
+
+    scoreText.textContent = `${roundedScore}% ${qualityText}`;
+  }
+
+  if (scoreBar) scoreBar.style.width = `${originalityScore}%`;
+
+  if (feedbackEl && feedback) {
+    feedbackEl.innerHTML = `<strong>📝 Originality:</strong> ${feedback}`;
+    feedbackEl.classList.remove('hidden');
+  }
+}
+
 
 /**
  * Update the category breakdown display

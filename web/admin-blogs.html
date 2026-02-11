@@ -14,6 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
     <link href="assets/css/main.css" rel="stylesheet" />
+    <link href="assets/css/blog-builder.css" rel="stylesheet" />
     <script>
         tailwind.config = {
             darkMode: "class",
@@ -420,125 +421,134 @@
                 </div>
             </div>
 
-            <!-- Blog Form Modal (Hidden by default) -->
+            <!-- Blog Builder Modal (Canvas-like interface) -->
             <div id="blogFormModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                <div class="admin-form rounded-2xl shadow-2xl max-w-7xl w-full max-h-[95vh] overflow-y-auto">
-                    <div
-                        class="sticky top-0 bg-white dark:bg-gray-900 p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between z-10">
-                        <h2 class="text-2xl font-bold font-display text-gray-900 dark:text-white flex items-center">
-                            <span class="material-symbols-outlined text-primary mr-2">edit</span>
-                            <span id="formTitle">✨ Create Your Blog</span>
-                        </h2>
-                        <button id="closeModal" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
-                            <span class="material-symbols-outlined text-2xl">close</span>
-                        </button>
+                <div class="admin-form rounded-2xl shadow-2xl max-w-full w-full max-h-[95vh] overflow-hidden flex flex-col">
+                    <!-- Header with toolbar -->
+                    <div class="sticky top-0 bg-white dark:bg-gray-900 p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between z-10">
+                        <div class="flex items-center gap-4">
+                            <h2 class="text-2xl font-bold font-display text-gray-900 dark:text-white flex items-center">
+                                <span class="material-symbols-outlined text-primary mr-2">edit</span>
+                                <span id="formTitle">✨ Blog Builder</span>
+                            </h2>
+                            <span id="autoSaveIndicator" class="text-xs text-gray-500 dark:text-gray-400">• Auto-saving...</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="undoBtn" class="p-2 text-gray-600 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="Undo">
+                                <span class="material-symbols-outlined">undo</span>
+                            </button>
+                            <button id="redoBtn" class="p-2 text-gray-600 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="Redo">
+                                <span class="material-symbols-outlined">redo</span>
+                            </button>
+                            <div class="border-l border-gray-200 dark:border-gray-700 mx-2 h-6"></div>
+                            <button id="previewBtn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm" title="Preview">
+                                <span class="material-symbols-outlined text-lg">visibility</span>
+                                Preview
+                            </button>
+                            <button id="closeModal" class="p-2 text-gray-600 hover:text-gray-800 dark:hover:text-gray-400">
+                                <span class="material-symbols-outlined text-2xl">close</span>
+                            </button>
+                        </div>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-5 gap-0 h-full">
-                        <!-- Left Sidebar: Design Panel -->
-                        <div
-                            class="lg:col-span-1 bg-gray-50 dark:bg-gray-800/50 p-6 border-r border-gray-200 dark:border-gray-700 space-y-6 overflow-y-auto max-h-[85vh]">
-                            <div>
-                                <h3 class="text-sm font-bold font-display text-gray-900 dark:text-white mb-4">🎨 DESIGN
-                                    TOOLS</h3>
-
-                                <!-- Quick Templates -->
-                                <div class="mb-6">
-                                    <label
-                                        class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 uppercase">Template</label>
-                                    <button type="button" onclick="openTemplateGallery()"
-                                        class="w-full px-3 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-semibold text-sm transition-all">
-                                        Browse All
-                                    </button>
-                                </div>
-
-                                <!-- Layout Selection -->
-                                <div class="mb-6">
-                                    <label
-                                        class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 uppercase">Layout</label>
-                                    <select id="layoutSelect" onchange="updateLayout(this.value)"
-                                        class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-primary">
-                                        <option value="">Auto</option>
-                                        <option value="structured">📊 Structured</option>
-                                        <option value="modern">🎨 Modern</option>
-                                        <option value="minimal">⚪ Minimal</option>
-                                        <option value="comprehensive">📚 Comprehensive</option>
-                                        <option value="professional">💼 Professional</option>
-                                    </select>
-                                </div>
-
-                                <!-- Color Scheme -->
-                                <div class="mb-6">
-                                    <label
-                                        class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-3 uppercase">Color</label>
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <button type="button" onclick="setColorScheme('purple')"
-                                            class="p-2 rounded-lg border-2 border-purple-500 bg-purple-100 dark:bg-purple-900/30 text-xs font-medium text-purple-700 dark:text-purple-300 hover:shadow-md transition-all"
-                                            title="Purple">🟣</button>
-                                        <button type="button" onclick="setColorScheme('blue')"
-                                            class="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:border-blue-500 bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-300 hover:shadow-md transition-all"
-                                            title="Blue">🔵</button>
-                                        <button type="button" onclick="setColorScheme('green')"
-                                            class="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:border-green-500 bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-300 hover:shadow-md transition-all"
-                                            title="Green">🟢</button>
-                                        <button type="button" onclick="setColorScheme('amber')"
-                                            class="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:border-amber-500 bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-300 hover:shadow-md transition-all"
-                                            title="Amber">🟠</button>
-                                        <button type="button" onclick="setColorScheme('rose')"
-                                            class="p-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:border-rose-500 bg-gray-100 dark:bg-gray-700 text-xs font-medium text-gray-700 dark:text-gray-300 hover:shadow-md transition-all"
-                                            title="Rose">🌹</button>
+                    <div class="flex flex-1 overflow-hidden">
+                        <!-- Left Sidebar: Element Palette -->
+                        <div class="w-64 bg-gray-50 dark:bg-gray-800/50 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
+                            <div class="p-4 space-y-6">
+                                <!-- Elements Section -->
+                                <div>
+                                    <h3 class="text-sm font-bold font-display text-gray-900 dark:text-white mb-3">📦 ELEMENTS</h3>
+                                    <div class="space-y-2">
+                                        <div class="draggable-element" data-type="heading" draggable="true" class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
+                                            <span class="material-symbols-outlined text-sm text-primary">title</span>
+                                            <span class="text-sm font-medium">Heading</span>
+                                        </div>
+                                        <div class="draggable-element" data-type="text" draggable="true" class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
+                                            <span class="material-symbols-outlined text-sm text-primary">text_fields</span>
+                                            <span class="text-sm font-medium">Text</span>
+                                        </div>
+                                        <div class="draggable-element" data-type="image" draggable="true" class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
+                                            <span class="material-symbols-outlined text-sm text-primary">image</span>
+                                            <span class="text-sm font-medium">Image</span>
+                                        </div>
+                                        <div class="draggable-element" data-type="video" draggable="true" class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
+                                            <span class="material-symbols-outlined text-sm text-primary">video_camera</span>
+                                            <span class="text-sm font-medium">Video</span>
+                                        </div>
+                                        <div class="draggable-element" data-type="button" draggable="true" class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
+                                            <span class="material-symbols-outlined text-sm text-primary">smart_button</span>
+                                            <span class="text-sm font-medium">Button</span>
+                                        </div>
+                                        <div class="draggable-element" data-type="divider" draggable="true" class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
+                                            <span class="material-symbols-outlined text-sm text-primary">remove</span>
+                                            <span class="text-sm font-medium">Divider</span>
+                                        </div>
+                                        <div class="draggable-element" data-type="grid" draggable="true" class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
+                                            <span class="material-symbols-outlined text-sm text-primary">dashboard</span>
+                                            <span class="text-sm font-medium">Grid</span>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <!-- Font Style -->
+                                <!-- Design Tools Section -->
                                 <div>
-                                    <label
-                                        class="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 uppercase">Typography</label>
-                                    <select id="fontStyle" onchange="updateFontStyle(this.value)"
-                                        class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-primary">
-                                        <option value="formal">📖 Formal</option>
-                                        <option value="modern">💻 Modern</option>
-                                        <option value="casual">✍️ Casual</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Right Content: Form -->
-                        <div class="lg:col-span-4 p-6 overflow-y-auto max-h-[85vh]">
-                            <form id="blogForm" class="space-y-6">
-                                <input type="hidden" id="blogId" name="id">
-
-                                <!-- Title -->
-                                <div>
-                                    <label for="blogTitle"
-                                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">📝
-                                        Title *</label>
-                                    <input type="text" id="blogTitle" name="title" required
-                                        class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                                        placeholder="Enter your blog title..." />
-                                </div>
-
-                                <!-- Slug -->
-                                <div>
-                                    <label for="blogSlug"
-                                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">🔗 URL
-                                        Slug *</label>
-                                    <input type="text" id="blogSlug" name="slug" required
-                                        class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                                        placeholder="url-friendly-slug">
-                                    <p class="text-xs text-gray-500 mt-1">Auto-generated from title if empty</p>
+                                    <h3 class="text-sm font-bold font-display text-gray-900 dark:text-white mb-3">🎨 DESIGN</h3>
+                                    <div class="space-y-3">
+                                        <div>
+                                            <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">Color</label>
+                                            <input type="color" id="fontColorPicker" data-property="fontColor" class="w-full h-10 rounded-lg cursor-pointer border border-gray-300 dark:border-gray-600">
+                                        </div>
+                                        <div>
+                                            <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">Background</label>
+                                            <input type="color" id="bgColorPicker" data-property="backgroundColor" class="w-full h-10 rounded-lg cursor-pointer border border-gray-300 dark:border-gray-600">
+                                        </div>
+                                        <div>
+                                            <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">Font Size</label>
+                                            <input type="number" id="fontSizeInput" data-tool="fontSize" min="8" max="72" value="16" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm">
+                                        </div>
+                                        <div>
+                                            <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">Font Weight</label>
+                                            <select id="fontWeightSelect" data-tool="fontWeight" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm">
+                                                <option value="normal">Normal</option>
+                                                <option value="bold">Bold</option>
+                                                <option value="lighter">Lighter</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">Font Family</label>
+                                            <select id="fontFamilySelect" data-tool="fontFamily" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm">
+                                                <option value="serif">Serif</option>
+                                                <option value="sans-serif">Sans-serif</option>
+                                                <option value="monospace">Monospace</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <!-- Category & Author -->
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label for="blogCategory"
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Category
-                                            *</label>
-                                        <select id="blogCategory" name="category" required
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent">
-                                            <option value="">Select</option>
+                                <!-- Layer Tools -->
+                                <div>
+                                    <h3 class="text-sm font-bold font-display text-gray-900 dark:text-white mb-3">📚 LAYERS</h3>
+                                    <div class="space-y-2">
+                                        <button id="bringToFrontBtn" data-tool="bringToFront" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-medium flex items-center gap-2 hover:bg-primary/10 transition-colors">
+                                            <span class="material-symbols-outlined text-sm">arrow_upward</span>
+                                            Bring Forward
+                                        </button>
+                                        <button id="sendToBackBtn" data-tool="sendToBack" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-medium flex items-center gap-2 hover:bg-primary/10 transition-colors">
+                                            <span class="material-symbols-outlined text-sm">arrow_downward</span>
+                                            Send Backward
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Blog Metadata -->
+                                <div>
+                                    <h3 class="text-sm font-bold font-display text-gray-900 dark:text-white mb-3">📋 METADATA</h3>
+                                    <div class="space-y-3">
+                                        <input type="hidden" id="blogId" value="">
+                                        <input type="text" id="blogTitle" placeholder="Blog Title" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
+                                        <input type="text" id="blogSlug" placeholder="URL Slug" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
+                                        <select id="blogCategory" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
+                                            <option value="">Category</option>
                                             <option value="education">Education</option>
                                             <option value="finance">Finance</option>
                                             <option value="loans">Loans</option>
@@ -546,129 +556,37 @@
                                             <option value="career">Career</option>
                                             <option value="tips">Tips & Tricks</option>
                                         </select>
-                                    </div>
-                                    <div>
-                                        <label for="blogAuthor"
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Author
-                                            *</label>
-                                        <input type="text" id="blogAuthor" name="authorName" required
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                                            placeholder="Author name">
-                                    </div>
-                                </div>
-
-                                <!-- Tags -->
-                                <div>
-                                    <label for="blogTags"
-                                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">🏷️
-                                        Tags</label>
-                                    <input type="text" id="blogTags" name="tags"
-                                        class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                                        placeholder="education, loans, tips...">
-                                </div>
-
-                                <!-- Featured Image -->
-                                <div>
-                                    <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">🖼️
-                                        Featured Image</label>
-                                    <div class="space-y-3">
-                                        <div class="flex gap-2">
-                                            <label
-                                                class="flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:border-primary hover:bg-primary/5 transition-all"
-                                                for="imageUpload">
-                                                <span class="material-symbols-outlined text-primary">upload</span>
-                                                <span
-                                                    class="text-sm font-medium text-gray-700 dark:text-gray-300">Upload</span>
-                                                <input type="file" id="imageUpload" accept="image/*" class="hidden"
-                                                    onchange="handleImageUpload(event)">
-                                            </label>
+                                        <input type="text" id="blogAuthor" placeholder="Author Name" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
+                                        <input type="text" id="blogExcerpt" placeholder="Excerpt" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
+                                        <input type="text" id="blogTags" placeholder="Tags (comma separated)" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
+                                        <div class="flex items-center gap-2">
+                                            <input type="checkbox" id="blogPublished" class="w-4 h-4">
+                                            <label for="blogPublished" class="text-xs font-medium text-gray-700 dark:text-gray-300">Publish</label>
                                         </div>
-                                        <div class="flex items-center gap-3">
-                                            <div class="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
-                                            <span class="text-xs text-gray-500">OR</span>
-                                            <div class="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
-                                        </div>
-                                        <input type="url" id="blogImage" placeholder="https://example.com/image.jpg"
-                                            class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent"
-                                            onchange="updateImagePreview()">
-                                        <div id="imagePreviewContainer" class="hidden">
-                                            <div class="relative rounded-lg overflow-hidden">
-                                                <img id="imagePreview" src="" alt="Preview"
-                                                    class="w-full h-40 object-cover rounded-lg">
-                                                <button type="button"
-                                                    class="absolute top-2 right-2 bg-red-500 text-white p-1 rounded"
-                                                    onclick="removeImage()">
-                                                    <span class="material-symbols-outlined text-lg">close</span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Excerpt -->
-                                <div>
-                                    <label for="blogExcerpt"
-                                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">📄
-                                        Excerpt *</label>
-                                    <textarea id="blogExcerpt" name="excerpt" rows="3" required
-                                        class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                                        placeholder="Brief summary..."></textarea>
-                                </div>
-
-                                <!-- Content -->
-                                <div>
-                                    <label for="blogContent"
-                                        class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">✍️
-                                        Content *</label>
-                                    <textarea id="blogContent" name="content" rows="10" required
-                                        class="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                                        placeholder="Write your content..."></textarea>
-                                </div>
-
-                                <!-- Status & Featured -->
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">📊
-                                            Status</label>
-                                        <div class="flex gap-4">
-                                            <label class="flex items-center">
-                                                <input type="radio" name="isPublished" value="false" checked
-                                                    class="w-4 h-4">
-                                                <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Draft</span>
-                                            </label>
-                                            <label class="flex items-center">
-                                                <input type="radio" name="isPublished" value="true" class="w-4 h-4">
-                                                <span
-                                                    class="ml-2 text-sm text-gray-700 dark:text-gray-300">Published</span>
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label
-                                            class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">⭐
-                                            Featured</label>
-                                        <label class="flex items-center">
+                                        <div class="flex items-center gap-2">
                                             <input type="checkbox" id="blogFeatured" class="w-4 h-4">
-                                            <span class="ml-2 text-sm text-gray-700 dark:text-gray-300">Mark
-                                                featured</span>
-                                        </label>
+                                            <label for="blogFeatured" class="text-xs font-medium text-gray-700 dark:text-gray-300">Featured</label>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <!-- Submit Buttons -->
-                                <div class="flex gap-4 pt-6 border-t border-gray-200 dark:border-gray-700">
-                                    <button type="submit"
-                                        class="flex-1 bg-primary hover:bg-primary/90 text-white font-semibold py-3 px-6 rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                                <!-- Action Buttons -->
+                                <div class="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                                    <button id="saveBtn" class="w-full px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2">
                                         <span class="material-symbols-outlined">save</span>
                                         Save Blog
                                     </button>
-                                    <button type="button" id="clearForm"
-                                        class="px-6 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-all">
-                                        Clear
+                                    <button id="clearCanvasBtn" class="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2">
+                                        <span class="material-symbols-outlined">delete</span>
+                                        Clear Canvas
                                     </button>
                                 </div>
-                            </form>
+                            </div>
+                        </div>
+
+                        <!-- Center: Canvas Area -->
+                        <div class="flex-1 flex flex-col overflow-hidden bg-gray-100 dark:bg-gray-900">
+                            <div id="builderCanvasContainer" class="flex-1 p-6 overflow-auto"></div>
                         </div>
                     </div>
                 </div>
@@ -721,6 +639,15 @@
     <script src="assets/js/components-loader.js"></script>
     <script src="assets/js/auth.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
+    <!-- Blog Builder Scripts -->
+    <script src="assets/js/blog-builder/utils.js"></script>
+    <script src="assets/js/blog-builder/element-manager.js"></script>
+    <script src="assets/js/blog-builder/undo-redo.js"></script>
+    <script src="assets/js/blog-builder/auto-save.js"></script>
+    <script src="assets/js/blog-builder/export-engine.js"></script>
+    <script src="assets/js/blog-builder/design-tools.js"></script>
+    <script src="assets/js/blog-builder/canvas-manager.js"></script>
+    <script src="assets/js/blog-builder/drag-drop-handler.js"></script>
     <script>
         // Blog Templates with Enhanced Design
         const blogTemplates = {
@@ -1624,10 +1551,333 @@ Final thoughts and recommendations for similar situations.`,
         window.editBlog = editBlog;
         window.deleteBlog = deleteBlog;
 
+        // ==========================================
+        // BLOG BUILDER INITIALIZATION
+        // ==========================================
+
+        let builderInitialized = false;
+
+        /**
+         * Initialize Blog Builder
+         */
+        function initializeBlogBuilder() {
+            if (builderInitialized) return;
+
+            console.log('🚀 Initializing Blog Builder...');
+
+            try {
+                builderInitialized = true;
+
+                const canvasContainer = document.getElementById('builderCanvasContainer');
+                const toolsPanel = document.querySelector('[id="fontColorPicker"]')?.closest('.w-64'); // Left sidebar
+
+                if (!canvasContainer) {
+                    console.error('❌ Canvas container not found!');
+                    return;
+                }
+
+                console.log('✅ Canvas container found');
+
+                // Initialize canvas
+                CanvasManager.init(canvasContainer);
+                console.log('✅ Canvas Manager initialized');
+
+                // Initialize design tools
+                const buildArea = document.querySelector('.flex-1.flex.flex-col');
+                if (buildArea) {
+                    DesignToolsManager.init(buildArea);
+                    console.log('✅ Design Tools initialized');
+                }
+
+                // Setup undo/redo listener
+                UndoRedoManager.addListener((state) => {
+                    const undoBtn = document.getElementById('undoBtn');
+                    const redoBtn = document.getElementById('redoBtn');
+                    if (undoBtn) undoBtn.disabled = !state.canUndo;
+                    if (redoBtn) redoBtn.disabled = !state.canRedo;
+                });
+                console.log('✅ Undo/Redo listener added');
+
+                // Setup auto-save listener
+                AutoSaveManager.addListener((event) => {
+                    const indicator = document.getElementById('autoSaveIndicator');
+                    if (indicator) {
+                        if (event.saved) {
+                            indicator.textContent = '✓ Saved';
+                            indicator.classList.add('text-green-600');
+                            setTimeout(() => {
+                                indicator.textContent = '• Auto-saving...';
+                                indicator.classList.remove('text-green-600');
+                            }, 2000);
+                        }
+                    }
+                });
+                console.log('✅ Auto-save listener added');
+
+                // Setup button event listeners
+                setupBuilderButtonListeners();
+                console.log('✅ Button listeners setup');
+
+                // Load auto-saved data if exists
+                const savedData = AutoSaveManager.load();
+                if (savedData && savedData.elements && savedData.elements.length > 0) {
+                    setTimeout(() => {
+                        CanvasManager.render();
+                        BuilderUtils.showToast('Previous work restored', 'info');
+                        console.log('✅ Previous work restored');
+                    }, 200);
+                }
+
+                console.log('🎉 Blog Builder fully initialized!');
+            } catch (error) {
+                console.error('❌ Error initializing Blog Builder:', error);
+                BuilderUtils.showToast('Error initializing builder: ' + error.message, 'error');
+            }
+        }
+
+        /**
+         * Setup builder button event listeners
+         */
+        function setupBuilderButtonListeners() {
+            // Undo button
+            document.getElementById('undoBtn')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                UndoRedoManager.undo();
+                CanvasManager.render();
+            });
+
+            // Redo button
+            document.getElementById('redoBtn')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                UndoRedoManager.redo();
+                CanvasManager.render();
+            });
+
+            // Preview button
+            document.getElementById('previewBtn')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                const metadata = getBuilderMetadata();
+                const html = ExportEngine.generateCompleteBlogHTML(ElementManager.getElementsData(), metadata);
+
+                const previewWindow = window.open('', 'BlogPreview', 'width=900,height=700');
+                previewWindow.document.write(html);
+                previewWindow.document.close();
+            });
+
+            // Save button
+            document.getElementById('saveBtn')?.addEventListener('click', async (e) => {
+                e.preventDefault();
+                await saveBlogFromBuilder();
+            });
+
+            // Clear canvas button
+            document.getElementById('clearCanvasBtn')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (confirm('Clear all elements from canvas? This cannot be undone!')) {
+                    CanvasManager.clear();
+                    UndoRedoManager.clear();
+                    BuilderUtils.showToast('Canvas cleared', 'info');
+                }
+            });
+
+            // Close modal
+            document.getElementById('closeModal')?.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (confirm('Close without saving? Any unsaved changes will be lost.')) {
+                    document.getElementById('blogFormModal').classList.add('hidden');
+                    CanvasManager.clear();
+                    UndoRedoManager.clear();
+                }
+            });
+        }
+
+        /**
+         * Get metadata from sidebar inputs
+         */
+        function getBuilderMetadata() {
+            return {
+                title: document.getElementById('blogTitle').value,
+                slug: document.getElementById('blogSlug').value || BuilderUtils.generateSlug(document.getElementById('blogTitle').value),
+                category: document.getElementById('blogCategory').value,
+                authorName: document.getElementById('blogAuthor').value,
+                tags: document.getElementById('blogTags').value.split(',').map(t => t.trim()).filter(t => t),
+                excerpt: document.getElementById('blogExcerpt').value,
+                isPublished: document.getElementById('blogPublished').checked,
+                isFeatured: document.getElementById('blogFeatured').checked,
+                featuredImage: '' // TODO: add featured image input
+            };
+        }
+
+        /**
+         * Save blog from builder
+         */
+        async function saveBlogFromBuilder() {
+            const metadata = getBuilderMetadata();
+            const blogId = document.getElementById('blogId').value;
+            const token = localStorage.getItem('authToken') || authToken;
+
+            // Validate required fields
+            if (!metadata.title || !metadata.category || !metadata.authorName) {
+                BuilderUtils.showToast('Please fill in title, category, and author', 'error');
+                return;
+            }
+
+            // Validate token
+            if (!token) {
+                BuilderUtils.showToast('Not authenticated. Please login first.', 'error');
+                return;
+            }
+
+            // Generate content from canvas
+            const content = ExportEngine.exportToHTML(ElementManager.getElementsData());
+
+            const blogData = {
+                title: metadata.title,
+                slug: metadata.slug,
+                category: metadata.category,
+                authorName: metadata.authorName,
+                tags: metadata.tags,
+                excerpt: metadata.excerpt || metadata.title.substring(0, 100),
+                content: content,
+                isPublished: metadata.isPublished,
+                isFeatured: metadata.isFeatured,
+                featuredImage: metadata.featuredImage
+            };
+
+            try {
+                const saveBtn = document.getElementById('saveBtn');
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<span class="material-symbols-outlined">hourglass_empty</span> Saving...';
+
+                let response;
+                if (blogId) {
+                    // Update existing
+                    response = await fetch(`${API_BASE_URL}/blogs/${blogId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(blogData)
+                    });
+                } else {
+                    // Create new
+                    response = await fetch(`${API_BASE_URL}/blogs`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(blogData)
+                    });
+                }
+
+                if (!response.ok) {
+                    throw new Error('Failed to save blog');
+                }
+
+                BuilderUtils.showToast(blogId ? 'Blog updated!' : 'Blog created!', 'success');
+                AutoSaveManager.clear();
+                document.getElementById('blogFormModal').classList.add('hidden');
+                CanvasManager.clear();
+                UndoRedoManager.clear();
+                loadBlogs();
+
+            } catch (error) {
+                console.error('Error saving blog:', error);
+                BuilderUtils.showToast('Error: ' + error.message, 'error');
+            } finally {
+                const saveBtn = document.getElementById('saveBtn');
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<span class="material-symbols-outlined">save</span> Save Blog';
+            }
+        }
+
+        /**
+         * Open blog builder
+         */
+        function openBlogBuilder(blogData = null) {
+            console.log('🎨 Opening Blog Builder...');
+
+            // Check if builder scripts are loaded
+            if (!window.CanvasManager) {
+                console.error('❌ CanvasManager not loaded. Check if blog-builder scripts are available.');
+                BuilderUtils?.showToast('Builder scripts not loaded. Please refresh the page.', 'error') || alert('Builder scripts not loaded');
+                return;
+            }
+
+            if (!document.getElementById('blogFormModal')) {
+                console.error('❌ Blog Form Modal not found in DOM');
+                return;
+            }
+
+            initializeBlogBuilder();
+
+            // Reset builder
+            CanvasManager.clear();
+            UndoRedoManager.clear();
+            AutoSaveManager.forceSave();
+
+            // Set metadata
+            document.getElementById('blogId').value = blogData?.id || '';
+            document.getElementById('blogTitle').value = blogData?.title || '';
+            document.getElementById('blogSlug').value = blogData?.slug || '';
+            document.getElementById('blogCategory').value = blogData?.category || '';
+            document.getElementById('blogAuthor').value = blogData?.authorName || '';
+            document.getElementById('blogExcerpt').value = blogData?.excerpt || '';
+            document.getElementById('blogTags').value = (blogData?.tags || []).join(', ');
+            document.getElementById('blogPublished').checked = blogData?.isPublished || false;
+            document.getElementById('blogFeatured').checked = blogData?.isFeatured || false;
+
+            if (blogData) {
+                document.getElementById('formTitle').textContent = '✎ Edit Blog';
+            } else {
+                document.getElementById('formTitle').textContent = '✨ Create New Blog';
+            }
+
+            document.getElementById('blogFormModal').classList.remove('hidden');
+
+            // Render canvas
+            setTimeout(() => {
+                CanvasManager.render();
+                console.log('✅ Canvas rendered');
+            }, 100);
+        }
+
+        // Update create new button
+        function attachCreateBlogHandler() {
+            const createBtn = document.getElementById('createNewBtn');
+            if (createBtn) {
+                console.log('✅ Create blog button found, attaching handler');
+                createBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    console.log('🎬 Create New Blog clicked');
+                    openBlogBuilder();
+                });
+            } else {
+                console.warn('⚠️ Create blog button not found');
+            }
+        }
+
+        // Update edit blog function
+        const originalEditBlog = window.editBlog;
+        window.editBlog = function(blog) {
+            console.log('📝 Editing blog:', blog);
+            openBlogBuilder(blog);
+        };
+
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function () {
+            console.log('📄 Page loaded, loading blogs...');
             loadBlogs();
+            console.log('✅ Attaching create blog button handler');
+            attachCreateBlogHandler();
         });
+
+        // Also attach in a setTimeout to be safe
+        setTimeout(() => {
+            attachCreateBlogHandler();
+        }, 500);
     </script>
 
     <div id="footer-placeholder"></div>
