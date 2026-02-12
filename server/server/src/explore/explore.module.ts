@@ -5,8 +5,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { CommunityModule } from '../community/community.module';
 import { ReferenceModule } from '../reference/reference.module';
 
+import { AuthModule } from '../auth/auth.module';
+
 @Module({
-    imports: [PrismaModule, CommunityModule, ReferenceModule],
+    imports: [PrismaModule, CommunityModule, ReferenceModule, AuthModule],
     controllers: [ExploreController],
     providers: [ExploreService],
 })

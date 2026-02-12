@@ -152,6 +152,7 @@ const API_URL = (() => {
 
       // Save user state
       localStorage.setItem('accessToken', data.access_token);
+      if (data.refresh_token) localStorage.setItem('refreshToken', data.refresh_token);
       localStorage.setItem('userEmail', email);
       if (data.firstName) localStorage.setItem('firstName', data.firstName);
       if (data.lastName) localStorage.setItem('lastName', data.lastName);
@@ -163,7 +164,10 @@ const API_URL = (() => {
       if (!data.userExists) {
         window.location.href = 'user-details.html';
       } else {
-        window.location.href = 'index.html';
+        // Check for redirect parameter from page guard
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectTo = urlParams.get('redirect');
+        window.location.href = redirectTo ? decodeURIComponent(redirectTo) : 'index.html';
       }
     } catch (err) {
       alert(err.message);

@@ -8,7 +8,7 @@ if (signupForm) {
     const otpSection = document.getElementById('otpSection');
     const signupEmailInput = document.getElementById('signupEmail');
     const resendSignupBtn = document.getElementById('resendSignupBtn');
-    
+
     // Rate limiting state
     let loginAttempts = 0;
     const MAX_ATTEMPTS = 5;
@@ -85,11 +85,11 @@ if (signupForm) {
                 // Request OTP (unified endpoint)
                 const response = await fetch(`${API_URL}/auth/send-otp`, {
                     method: 'POST',
-                    headers: { 
+                    headers: {
                         'Content-Type': 'application/json',
                         'X-Client-Version': '1.0'
                     },
-                    body: JSON.stringify({ 
+                    body: JSON.stringify({
                         email
                     }),
                     credentials: 'include' // Include cookies
@@ -135,11 +135,11 @@ if (signupForm) {
                 try {
                     const response = await fetch(`${API_URL}/auth/send-otp`, {
                         method: 'POST',
-                        headers: { 
+                        headers: {
                             'Content-Type': 'application/json',
                             'X-Client-Version': '1.0'
                         },
-                        body: JSON.stringify({ 
+                        body: JSON.stringify({
                             email
                         }),
                         credentials: 'include'
@@ -194,7 +194,7 @@ if (signupForm) {
             // Verify OTP using login endpoint
             const verifyResponse = await fetch(`${API_URL}/auth/verify-otp`, {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'X-Client-Version': '1.0'
                 },
@@ -213,6 +213,7 @@ if (signupForm) {
 
             // Store user data in session/state (not credentials)
             localStorage.setItem('accessToken', data.access_token);
+            if (data.refresh_token) localStorage.setItem('refreshToken', data.refresh_token);
             localStorage.setItem('userEmail', email);
             localStorage.setItem('userId', data.userId || '');
 

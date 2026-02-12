@@ -202,4 +202,31 @@ export class ExploreService {
             }))
         };
     }
+
+    async getHubPosts(topic: string, sort?: string, userId?: string) {
+        let category = topic;
+        if (topic === 'loan') category = 'eligibility';
+
+        // Ensure category is valid or at least one of our hubs? 
+        // For now, we trust the topic or map it if needed.
+
+        return this.communityService.getForumPosts({
+            category: category,
+            sort: sort || 'newest',
+            limit: 20
+        }, userId);
+    }
+
+    async createHubPost(userId: string, topic: string, data: any) {
+        let category = topic;
+        if (topic === 'loan') category = 'eligibility';
+
+        // Override category in data with the hub topic
+        const postData = {
+            ...data,
+            category: category
+        };
+
+        return this.communityService.createForumPost(userId, postData);
+    }
 }

@@ -63,6 +63,13 @@ export class AuthController {
    */
   @Post('refresh')
   async refreshToken(@Body() body: { refresh_token: string }) {
+    if (!body?.refresh_token) {
+      return {
+        success: false,
+        message: 'refresh_token is required in the request body',
+        statusCode: 400,
+      };
+    }
     return this.authService.refreshTokens(body.refresh_token);
   }
 

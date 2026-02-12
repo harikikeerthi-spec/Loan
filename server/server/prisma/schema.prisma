@@ -1,0 +1,666 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model AdminProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  adminTitle      String?
+  department      String?
+  bio             String?
+  profileImage    String?
+  canApproveBlogs Boolean  @default(false)
+  canManageUsers  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model ApplicationDocument {
+  id              String          @id @default(uuid())
+  applicationId   String
+  docType         String
+  docName         String
+  fileName        String
+  filePath        String
+  fileSize        Int?
+  mimeType        String?
+  status          String          @default("pending")
+  verifiedAt      DateTime?
+  verifiedBy      String?
+  rejectionReason String?
+  expiryDate      DateTime?
+  isRequired      Boolean         @default(true)
+  uploadedAt      DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  application     LoanApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([docType])
+  @@index([status])
+}
+
+model ApplicationNote {
+  id              String          @id @default(uuid())
+  applicationId   String
+  authorId        String?
+  authorName      String
+  content         String
+  type            String          @default("general")
+  isInternal      Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  application     LoanApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([createdAt])
+}
+
+model ApplicationStatusHistory {
+  id              String          @id @default(uuid())
+  applicationId   String
+  fromStatus      String?
+  toStatus        String
+  fromStage       String?
+  toStage         String?
+  changedBy       String?
+  changedByName   String?
+  changeReason    String?
+  notes           String?
+  isAutomatic     Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  application     LoanApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  action      String
+  entityType  String
+  entityId    String
+  initiatedBy String
+  changes     Json
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  blog        Blog     @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  initiator   User     @relation(fields: [initiatedBy], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([entityId])
+  @@index([entityType])
+  @@index([initiatedBy])
+}
+
+model Bank {
+  id                  String   @id @default(uuid())
+  name                String   @unique
+  shortName           String?
+  country             String   @default("India")
+  type                String
+  loanTypes           String[]
+  educationLoan       Boolean  @default(true)
+  interestRateMin     Float
+  interestRateMax     Float
+  maxLoanAmount       String
+  collateralRequired  Boolean
+  collateralFreeLimit String?
+  processingFee       String
+  processingTime      String
+  features            String[]
+  website             String?
+  contactNumber       String?
+  email               String?
+  logoUrl             String?
+  isPopular           Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([country])
+  @@index([isPopular])
+  @@index([type])
+}
+
+model Blog {
+  id              String     @id @default(uuid())
+  title           String
+  slug            String     @unique
+  excerpt         String
+  content         String
+  category        String
+  authorName      String
+  authorImage     String?
+  authorRole      String?
+  featuredImage   String?
+  readTime        Int        @default(5)
+  views           Int        @default(0)
+  isFeatured      Boolean    @default(false)
+  isPublished     Boolean    @default(false)
+  publishedAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  authorId        String?
+  approvedAt      DateTime?
+  approvedBy      String?
+  rejectionReason String?
+  status          String     @default("draft")
+  submittedAt     DateTime?
+  visibility      String     @default("private")
+  auditLogs       AuditLog[]
+  author          User?      @relation(fields: [authorId], references: [id])
+  tags            BlogTag[]
+  comments        Comment[]
+
+  @@index([authorId])
+  @@index([category])
+  @@index([isFeatured])
+  @@index([isPublished])
+  @@index([publishedAt])
+  @@index([status])
+  @@index([visibility])
+}
+
+model BlogTag {
+  blogId String
+  tagId  String
+  blog   Blog   @relation(fields: [blogId], references: [id])
+  tag    Tag    @relation(fields: [tagId], references: [id])
+
+  @@id([blogId, tagId])
+  @@index([tagId])
+}
+
+model Comment {
+  id            String        @id @default(uuid())
+  blogId        String
+  author        String
+  content       String
+  createdAt     DateTime      @default(now())
+  likes         Int           @default(0)
+  parentId      String?
+  status        String        @default("approved")
+  updatedAt     DateTime      @updatedAt
+  userId        String?
+  blog          Blog          @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  parent        Comment?      @relation("CommentToComment", fields: [parentId], references: [id])
+  replies       Comment[]     @relation("CommentToComment")
+  user          User?         @relation(fields: [userId], references: [id])
+  commentLikes  CommentLike[]
+
+  @@index([blogId])
+  @@index([parentId])
+  @@index([userId])
+}
+
+model CommentLike {
+  id        String   @id @default(uuid())
+  commentId String
+  userId    String
+  createdAt DateTime @default(now())
+  comment   Comment  @relation(fields: [commentId], references: [id])
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
+}
+
+model CommunityEvent {
+  id                String              @id @default(uuid())
+  title             String
+  description       String
+  type              String
+  date              String
+  time              String
+  duration          Int
+  speaker           String?
+  speakerTitle      String?
+  maxAttendees      Int?
+  attendeesCount    Int                 @default(0)
+  isFree            Boolean             @default(true)
+  recordingUrl      String?
+  isFeatured        Boolean             @default(false)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  category          String?
+  registrations     EventRegistration[]
+
+  @@index([category])
+  @@index([date])
+  @@index([isFeatured])
+  @@index([type])
+}
+
+model CommunityResource {
+  id           String   @id @default(uuid())
+  title        String
+  description  String
+  type         String
+  category     String
+  fileUrl      String?
+  downloadUrl  String?
+  thumbnailUrl String?
+  downloads    Int      @default(0)
+  isFeatured   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([category])
+  @@index([downloads])
+  @@index([isFeatured])
+  @@index([type])
+}
+
+model Country {
+  id                 String   @id @default(uuid())
+  name               String   @unique
+  code               String   @unique
+  region             String
+  popularForStudy    Boolean  @default(false)
+  universities       Int      @default(0)
+  averageTuitionFee  String?
+  averageLivingCost  String?
+  studyDuration      String?
+  visaType           String?
+  visaProcessingTime String?
+  workPermit         Boolean  @default(false)
+  postStudyWorkVisa  String?
+  popularCities      String[]
+  currency           String
+  language           String[]
+  flagUrl            String?
+  description        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([popularForStudy])
+  @@index([region])
+}
+
+model Course {
+  id               String   @id @default(uuid())
+  name             String
+  level            String
+  field            String
+  duration         String
+  description      String?
+  averageFees      String?
+  popularCountries String[]
+  careerProspects  String[]
+  averageSalary    String?
+  isPopular        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([field])
+  @@index([isPopular])
+  @@index([level])
+}
+
+model EventRegistration {
+  id             String         @id @default(uuid())
+  eventId        String
+  name           String
+  email          String
+  phone          String?
+  createdAt      DateTime       @default(now())
+  event          CommunityEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, email])
+  @@index([email])
+  @@index([eventId])
+}
+
+model PostLike {
+  id        String    @id @default(uuid())
+  postId    String
+  userId    String
+  createdAt DateTime  @default(now())
+  post      ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model ForumCommentLike {
+  id        String       @id @default(uuid())
+  commentId String
+  userId    String
+  createdAt DateTime     @default(now())
+  comment   ForumComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
+}
+model ForumComment {
+  id        String         @id @default(uuid())
+  postId    String
+  authorId  String
+  content   String
+  likes     Int            @default(0)
+  parentId  String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  post      ForumPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent    ForumComment?  @relation("ForumCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   ForumComment[]     @relation("ForumCommentReplies")
+  commentLikes ForumCommentLike[]
+
+  @@index([authorId])
+  @@index([postId])
+  @@index([parentId])
+}
+
+model ForumPost {
+  id           String         @id @default(uuid())
+  title        String?
+  content      String
+  category     String
+  tags         String[]
+  authorId     String
+  likes        Int            @default(0)
+  views        Int            @default(0)
+  isMentorOnly Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  comments     ForumComment[]
+  postLikes    PostLike[]
+  author       User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model LoanApplication {
+  id                       String                     @id @default(uuid())
+  userId                   String
+  bank                     String
+  loanType                 String
+  amount                   Float
+  purpose                  String?
+  status                   String                     @default("draft")
+  date                     DateTime                   @default(now())
+  updatedAt                DateTime                   @updatedAt
+  applicationNumber        String                     @unique
+  address                  String?
+  admissionStatus          String?
+  annualIncome             Float?
+  approvedAt               DateTime?
+  assignedTo               String?
+  city                     String?
+  coApplicantEmail         String?
+  coApplicantIncome        Float?
+  coApplicantName          String?
+  coApplicantPhone         String?
+  coApplicantRelation      String?
+  collateralType           String?
+  collateralValue          Float?
+  country                  String?
+  courseDuration           Int?
+  courseName               String?
+  courseStartDate          DateTime?
+  dateOfBirth              DateTime?
+  disbursedAmount          Float?
+  disbursedAt              DateTime?
+  email                    String?
+  employerName             String?
+  employmentType           String?
+  estimatedCompletionAt    DateTime?
+  firstName                String?
+  gender                   String?
+  hasCoApplicant           Boolean                    @default(false)
+  hasCollateral            Boolean                    @default(false)
+  interestRate             Float?
+  jobTitle                 String?
+  lastName                 String?
+  nationality              String?
+  phone                    String?
+  pincode                  String?
+  priorityLevel            String                     @default("normal")
+  processingFee            Float?
+  progress                 Int                        @default(0)
+  rejectedAt               DateTime?
+  rejectionReason          String?
+  remarks                  String?
+  reviewStartedAt          DateTime?
+  sanctionAmount           Float?
+  sanctionedInterestRate   Float?
+  stage                    String                     @default("application_submitted")
+  state                    String?
+  submittedAt              DateTime?
+  tenure                   Int?
+  universityName           String?
+  workExperience           Int?
+  collateralDetails        String?
+  fatherEmail              String?
+  fatherName               String?
+  fatherPhone              String?
+  motherEmail              String?
+  motherName               String?
+  motherPhone              String?
+  documents                ApplicationDocument[]
+  notes                    ApplicationNote[]
+  statusHistory            ApplicationStatusHistory[]
+  user                     User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([applicationNumber])
+  @@index([bank])
+  @@index([loanType])
+  @@index([stage])
+  @@index([status])
+  @@index([submittedAt])
+  @@index([userId])
+}
+
+model LoanType {
+  id                String   @id @default(uuid())
+  name              String   @unique
+  category          String
+  description       String
+  features          String[]
+  eligibility       String
+  documentsRequired String[]
+  interestRateMin   Float
+  interestRateMax   Float
+  loanAmountMin     String
+  loanAmountMax     String
+  repaymentPeriod   String
+  processingTime    String
+  isPopular         Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([category])
+  @@index([isPopular])
+}
+
+model Mentor {
+  id               String          @id @default(uuid())
+  name             String
+  email            String          @unique
+  phone            String?
+  university       String
+  degree           String
+  country          String
+  category         String?
+  loanBank         String
+  loanAmount       String
+  loanType         String?
+  interestRate     String?
+  bio              String
+  expertise        String[]
+  linkedIn         String?
+  image            String?
+  rating           Float           @default(0)
+  studentsMentored Int             @default(0)
+  isActive         Boolean         @default(true)
+  isApproved       Boolean         @default(false)
+  rejectionReason  String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  bookings         MentorBooking[]
+
+  @@index([country])
+  @@index([isActive])
+  @@index([isApproved])
+  @@index([rating])
+  @@index([university])
+}
+
+model MentorBooking {
+  id            String   @id @default(uuid())
+  mentorId      String
+  studentName   String
+  studentEmail  String
+  studentPhone  String?
+  preferredDate String
+  preferredTime String
+  message       String?
+  status        String   @default("pending")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  mentor        Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId])
+  @@index([status])
+  @@index([studentEmail])
+}
+
+model Scholarship {
+  id                 String   @id @default(uuid())
+  name               String
+  provider           String
+  country            String
+  eligibleCountries  String[]
+  amount             String
+  type               String
+  description        String
+  eligibility        String
+  applicationProcess String
+  deadline           String?
+  website            String?
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([country])
+  @@index([isActive])
+}
+
+model SuccessStory {
+  id              String   @id @default(uuid())
+  name            String
+  email           String
+  university      String
+  country         String
+  degree          String
+  category        String?
+  loanAmount      String
+  bank            String
+  interestRate    String?
+  story           String
+  tips            String?
+  image           String?
+  isApproved      Boolean  @default(false)
+  isFeatured      Boolean  @default(false)
+  rejectionReason String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([category])
+  @@index([country])
+  @@index([isApproved])
+  @@index([isFeatured])
+}
+
+model Tag {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  blogTags  BlogTag[]
+}
+
+model University {
+  id             String   @id @default(uuid())
+  name           String
+  country        String
+  city           String?
+  state          String?
+  ranking        Int?
+  worldRanking   Int?
+  type           String
+  established    Int?
+  website        String?
+  description    String?
+  popularCourses String[]
+  averageFees    String?
+  acceptanceRate Float?
+  scholarships   Boolean  @default(false)
+  logoUrl        String?
+  imageUrl       String?
+  isFeatured     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([name, country])
+  @@index([country])
+  @@index([isFeatured])
+  @@index([ranking])
+}
+
+model User {
+  id              String            @id @default(uuid())
+  email           String            @unique
+  mobile          String
+  password        String
+  createdAt       DateTime          @default(now())
+  dateOfBirth     DateTime?
+  firstName       String?
+  lastName        String?
+  phoneNumber     String?
+  updatedAt       DateTime          @updatedAt
+  role            String            @default("user")
+  refreshToken    String?
+  adminProfile    AdminProfile?
+  auditLogs       AuditLog[]
+  blogs           Blog[]
+  comments        Comment[]
+  forumComments   ForumComment[]
+  forumPosts      ForumPost[]
+  postLikes       PostLike[]
+  forumCommentLikes ForumCommentLike[]
+  loanApplications LoanApplication[]
+  documents       UserDocument[]
+}
+
+model UserDocument {
+  id         String    @id @default(uuid())
+  userId     String
+  docType    String
+  uploaded   Boolean   @default(false)
+  status     String    @default("pending")
+  filePath   String?
+  uploadedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, docType])
+  @@index([docType])
+  @@index([userId])
+}

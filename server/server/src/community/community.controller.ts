@@ -13,10 +13,14 @@ import {
 import { CommunityService } from './community.service';
 import { AdminGuard } from '../auth/admin.guard';
 import { UserGuard } from '../auth/user.guard';
+import { JwtService } from '@nestjs/jwt';
 
 @Controller('community')
 export class CommunityController {
-    constructor(private communityService: CommunityService) { }
+    constructor(
+        private communityService: CommunityService,
+        private jwtService: JwtService
+    ) { }
 
     // ==================== MENTORSHIP ENDPOINTS ====================
 
@@ -551,44 +555,63 @@ export class CommunityController {
 
     // ==================== FORUM ENDPOINTS ====================
 
-    @Get('forum')
-    async getForumPosts(
-        @Query('category') category?: string,
-        @Query('tag') tag?: string,
-        @Query('limit') limit?: string,
-        @Query('offset') offset?: string,
-        @Query('sort') sort?: string,
-    ) {
-        return this.communityService.getForumPosts({
-            category,
-            tag,
-            limit: limit ? parseInt(limit, 10) : 10,
-            offset: offset ? parseInt(offset, 10) : 0,
-            sort
-        });
-    }
-
-    @Post('forum')
-    @UseGuards(UserGuard)
-    async createForumPost(@Request() req, @Body() body: any) {
-        return this.communityService.createForumPost(req.user.id, body);
-    }
+    // ==================== FORUM ENDPOINTS ====================
 
     @Get('forum/:id')
-    async getForumPostById(@Param('id') id: string) {
-        return this.communityService.getForumPostById(id);
+    async getForumPostById(@Param('id') id: string, @Request() req) {
+        let userId: string | undefined;
+        try {
+            const authHeader = req.headers.authorization;
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.split(' ')[1];
+                const decoded = this.jwtService.decode(token) as any;
+                if (decoded && decoded.id) {
+                    userId = decoded.id;
+                }
+            }
+        } catch (e) {
+            // ignore token errors
+        }
+        return this.communityService.getForumPostById(id, userId);
     }
 
     @Post('forum/:id/comment')
     @UseGuards(UserGuard)
-    async createForumComment(@Request() req, @Param('id') id: string, @Body() body: { content: string }) {
-        return this.communityService.createForumComment(req.user.id, id, body.content);
+    async createForumComment(
+        @Request() req,
+        @Param('id') id: string,
+        @Body() body: { content: string; parentId?: string },
+    ) {
+        return this.communityService.createForumComment(
+            req.user.id,
+            id,
+            body.content,
+            body.parentId,
+        );
+    }
+
+    @Post('forum/comments/:id/like')
+    @UseGuards(UserGuard)
+    async likeForumComment(
+        @Request() req,
+        @Param('id') id: string
+    ) {
+        return this.communityService.likeForumComment(req.user.id, id);
     }
 
     @Post('forum/:id/like')
     @UseGuards(UserGuard)
-    async likeForumPost(@Param('id') id: string) {
-        return this.communityService.likeForumPost(id);
+    async likeForumPost(
+        @Request() req,
+        @Param('id') id: string
+    ) {
+        return this.communityService.likeForumPost(req.user.id, id);
+    }
+
+    @Post('forum/:id/share')
+    @UseGuards(UserGuard)
+    async shareForumPost(@Param('id') id: string) {
+        return this.communityService.shareForumPost(id);
     }
 
     // ==================== MENTOR DASHBOARD ENDPOINTS ====================

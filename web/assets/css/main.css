@@ -192,6 +192,26 @@ body:not(.home-page) {
     border-color: rgba(0, 0, 0, 0.1);
 }
 
+/* Dark mode override for nav-on-light */
+.dark .nav-on-light:not(.nav-scrolled) {
+    background: rgba(17, 8, 26, 0.6);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dark .nav-on-light:not(.nav-scrolled) .nav-link,
+.dark .nav-on-light:not(.nav-scrolled) .logo-text,
+.dark .nav-on-light:not(.nav-scrolled) .email-text,
+.dark .nav-on-light:not(.nav-scrolled) .profile-button,
+.dark .nav-on-light:not(.nav-scrolled) .account-icon {
+    color: white !important;
+}
+
+.dark .nav-on-light:not(.nav-scrolled) .logo-icon {
+    background: rgba(255, 255, 255, 0.1);
+    color: white !important;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
 /* Dropdown Navigation Styles */
 .nav-dropdown {
     position: relative;
@@ -365,4 +385,20 @@ a,
 button,
 input {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translate3d(0, 20px, 0);
+    }
+
+    to {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.5s ease-out forwards;
 }

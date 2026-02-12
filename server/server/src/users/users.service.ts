@@ -55,6 +55,13 @@ export class UsersService {
     return this.prisma.user.findMany();
   }
 
+  async updateUserRole(email: string, role: 'admin' | 'user') {
+    return this.prisma.user.update({
+      where: { email },
+      data: { role },
+    });
+  }
+
   async updateUserDetails(
     email: string,
     firstName: string,
@@ -108,6 +115,7 @@ export class UsersService {
         loanType: data.loanType,
         amount: data.amount,
         purpose: data.purpose || null,
+        applicationNumber: 'APP' + Date.now() + Math.floor(Math.random() * 1000),
       },
     });
   }
@@ -189,4 +197,5 @@ export class UsersService {
       applications,
       documents,
     };
-  }}
+  }
+}

@@ -40,4 +40,36 @@ export class UsersController {
             },
         };
     }
+
+    @Post('make-admin')
+    async makeAdmin(@Body() body: { email: string; role: string }) {
+        const allowedRoles = ['admin', 'user'];
+        if (!allowedRoles.includes(body.role)) {
+            return {
+                success: false,
+                message: `Invalid role. Allowed roles: ${allowedRoles.join(', ')}`,
+            };
+        }
+
+        const user = await this.usersService.findOne(body.email);
+        if (!user) {
+            return {
+                success: false,
+                message: 'User not found',
+            };
+        }
+
+        const updated = await this.usersService.updateUserRole(body.email, body.role as 'admin' | 'user');
+        return {
+            success: true,
+            message: `User ${body.email} role updated to '${body.role}'`,
+            user: {
+                id: updated.id,
+                email: updated.email,
+                firstName: updated.firstName,
+                lastName: updated.lastName,
+                role: updated.role,
+            },
+        };
+    }
 }

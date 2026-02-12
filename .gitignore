@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+
+# Production
+dist/
+build/
+.next/
+out/
+
+# Environment and Sensitive
+.env
+.env.*
+*.txt
+!README.md
+!*.html
+!*.css
+!*.js
+!*.json
+!*.md
+
+# Specific sensitive files
+admin-token.txt
+admin_token*.txt
+final_token.txt
+*token.txt
+
+# Database
+*.db
+*.db-journal
+
+# OS/Editor
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db
+*.log
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+.pytest_cache/
+
+# Temporary and backups
+*.tmp
+*.bak
+~$*
+*~
+
+# Uploads and artifacts
+uploads/
+coverage/
+.nyc_output/
+

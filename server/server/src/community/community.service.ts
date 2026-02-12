@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class CommunityService {
@@ -786,7 +788,7 @@ export class CommunityService {
     }
     // ==================== FORUM/TOPIC METHODS ====================
 
-    async getForumPosts(filters: any) {
+    async getForumPosts(filters: any, userId?: string) {
         const { category, tag, limit, offset, sort } = filters;
         const where: any = {};
 
@@ -821,11 +823,28 @@ export class CommunityService {
             this.prisma.forumPost.count({ where }),
         ]);
 
+        // If userId is provided, check for likes
+        let likedPostIds = new Set<string>();
+        if (userId && posts.length > 0) {
+            try {
+                // Use raw query as fallback
+                const userLikes: any[] = await this.prisma.$queryRaw`
+                    SELECT "postId" FROM "PostLike" 
+                    WHERE "userId" = ${userId} 
+                    AND "postId" IN (${Prisma.join(posts.map(p => p.id))})
+                `;
+                likedPostIds = new Set(userLikes.map(l => l.postId));
+            } catch (e) {
+                console.error('Failed to fetch likes via raw query:', e);
+            }
+        }
+
         return {
             success: true,
             data: posts.map(post => ({
                 ...post,
-                commentCount: post._count.comments
+                commentCount: post._count.comments,
+                liked: likedPostIds.has(post.id)
             })),
             pagination: {
                 total,
@@ -836,7 +855,7 @@ export class CommunityService {
         };
     }
 
-    async getForumPostById(id: string) {
+    async getForumPostById(id: string, userId?: string) {
         const post = await this.prisma.forumPost.findUnique({
             where: { id },
             include: {
@@ -849,6 +868,7 @@ export class CommunityService {
                     }
                 },
                 comments: {
+                    where: { parentId: null },
                     include: {
                         author: {
                             select: {
@@ -856,14 +876,27 @@ export class CommunityService {
                                 lastName: true,
                                 id: true,
                                 role: true,
-                            }
-                        }
+                            },
+                        },
+                        replies: {
+                            include: {
+                                author: {
+                                    select: {
+                                        firstName: true,
+                                        lastName: true,
+                                        id: true,
+                                        role: true,
+                                    },
+                                },
+                            },
+                            orderBy: { createdAt: 'asc' },
+                        },
                     },
-                    orderBy: { createdAt: 'asc' }
+                    orderBy: { createdAt: 'asc' },
                 },
                 _count: {
-                    select: { comments: true }
-                }
+                    select: { comments: true },
+                },
             }
         });
 
@@ -875,9 +908,54 @@ export class CommunityService {
             data: { views: { increment: 1 } }
         });
 
+        let liked = false;
+        const likedCommentIds = new Set<string>();
+
+        if (userId) {
+            try {
+                // Check if post is liked
+                const postLikes: any[] = await this.prisma.$queryRaw`
+                    SELECT * FROM "PostLike" WHERE "postId" = ${id} AND "userId" = ${userId} LIMIT 1
+                `;
+                liked = postLikes.length > 0;
+
+                // Check for liked comments
+                const allCommentIds: string[] = [];
+                post.comments.forEach(c => {
+                    allCommentIds.push(c.id);
+                    if (c.replies) c.replies.forEach(r => allCommentIds.push(r.id));
+                });
+
+                if (allCommentIds.length > 0) {
+                    const commentLikes: any[] = await this.prisma.$queryRaw`
+                        SELECT "commentId" FROM "ForumCommentLike" 
+                        WHERE "userId" = ${userId} 
+                        AND "commentId" IN (${Prisma.join(allCommentIds)})
+                    `;
+                    commentLikes.forEach(l => likedCommentIds.add(l.commentId));
+                }
+            } catch (e) {
+                console.error('Failed to fetch likes via raw query:', e);
+            }
+        }
+
+        // Map comments to include liked status
+        const commentsWithLikes = post.comments.map(c => ({
+            ...c,
+            liked: likedCommentIds.has(c.id),
+            replies: c.replies.map(r => ({
+                ...r,
+                liked: likedCommentIds.has(r.id)
+            }))
+        }));
+
         return {
             success: true,
-            data: post
+            data: {
+                ...post,
+                comments: commentsWithLikes,
+                liked
+            }
         };
     }
 
@@ -893,6 +971,16 @@ export class CommunityService {
                 tags: data.tags || [],
                 authorId: userId,
                 isMentorOnly: data.isMentorOnly || false
+            },
+            include: {
+                author: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        role: true,
+                        id: true
+                    }
+                }
             }
         });
 
@@ -903,37 +991,147 @@ export class CommunityService {
         };
     }
 
-    async createForumComment(userId: string, postId: string, content: string) {
-        const post = await this.prisma.forumPost.findUnique({ where: { id: postId } });
+    async createForumComment(
+        userId: string,
+        postId: string,
+        content: string,
+        parentId?: string,
+    ) {
+        const post = await this.prisma.forumPost.findUnique({
+            where: { id: postId },
+        });
         if (!post) throw new NotFoundException('Post not found');
 
         const comment = await this.prisma.forumComment.create({
             data: {
                 content,
                 postId,
-                authorId: userId
+                authorId: userId,
+                parentId: parentId || null,
             },
             include: {
                 author: {
-                    select: { firstName: true, lastName: true, role: true }
-                }
-            }
+                    select: { firstName: true, lastName: true, role: true },
+                },
+            },
         });
 
         return {
             success: true,
             message: 'Comment added successfully',
-            data: comment
+            data: comment,
         };
     }
 
-    async likeForumPost(id: string) {
+    async likeForumComment(userId: string, id: string) {
         try {
-            const post = await this.prisma.forumPost.update({
+            // Use raw query checks
+            const existingLikes: any[] = await this.prisma.$queryRaw`
+                SELECT id FROM "ForumCommentLike" 
+                WHERE "commentId" = ${id} AND "userId" = ${userId}
+                LIMIT 1
+            `;
+            const existingLike = existingLikes[0];
+
+            if (existingLike) {
+                // Un-like: remove the like record and decrement count
+                await this.prisma.$transaction([
+                    this.prisma.$executeRaw`DELETE FROM "ForumCommentLike" WHERE id = ${existingLike.id}`,
+                    this.prisma.forumComment.update({
+                        where: { id },
+                        data: { likes: { decrement: 1 } }
+                    })
+                ]);
+
+                const updatedComment = await this.prisma.forumComment.findUnique({
+                    where: { id },
+                    select: { likes: true }
+                });
+
+                return { success: true, likes: updatedComment?.likes || 0, liked: false };
+            } else {
+                // Like: create a new like record and increment count
+                const newId = randomUUID();
+                await this.prisma.$transaction([
+                    this.prisma.$executeRaw`
+                        INSERT INTO "ForumCommentLike" (id, "commentId", "userId", "createdAt") 
+                        VALUES (${newId}, ${id}, ${userId}, ${new Date()})
+                    `,
+                    this.prisma.forumComment.update({
+                        where: { id },
+                        data: { likes: { increment: 1 } }
+                    })
+                ]);
+
+                const updatedComment = await this.prisma.forumComment.findUnique({
+                    where: { id },
+                    select: { likes: true }
+                });
+
+                return { success: true, likes: updatedComment?.likes || 0, liked: true };
+            }
+        } catch (error) {
+            console.error('[CommunityService] likeForumComment failed:', error);
+            throw new BadRequestException('Failed to process like action on comment');
+        }
+    }
+
+    async likeForumPost(userId: string, id: string) {
+        console.log(`[CommunityService] likeForumPost called for user ${userId} and post ${id}`);
+        try {
+            // Use raw query to bypass stale Prisma Client
+            const existingLikes: any[] = await this.prisma.$queryRaw`
+                SELECT id FROM "PostLike" 
+                WHERE "postId" = ${id} AND "userId" = ${userId}
+                LIMIT 1
+            `;
+            const existingLike = existingLikes[0];
+
+            if (existingLike) {
+                await this.prisma.$transaction([
+                    this.prisma.$executeRaw`DELETE FROM "PostLike" WHERE id = ${existingLike.id}`,
+                    this.prisma.forumPost.update({
+                        where: { id },
+                        data: { likes: { decrement: 1 } }
+                    })
+                ]);
+                const updatedPost = await this.prisma.forumPost.findUnique({
+                    where: { id },
+                    select: { likes: true }
+                });
+                return { success: true, likes: updatedPost?.likes || 0, liked: false };
+            } else {
+                const newId = randomUUID();
+                await this.prisma.$transaction([
+                    this.prisma.$executeRaw`
+                        INSERT INTO "PostLike" (id, "postId", "userId", "createdAt") 
+                        VALUES (${newId}, ${id}, ${userId}, ${new Date()})
+                    `,
+                    this.prisma.forumPost.update({
+                        where: { id },
+                        data: { likes: { increment: 1 } }
+                    })
+                ]);
+                const updatedPost = await this.prisma.forumPost.findUnique({
+                    where: { id },
+                    select: { likes: true }
+                });
+                return { success: true, likes: updatedPost?.likes || 0, liked: true };
+            }
+        } catch (error) {
+            console.error('[CommunityService] likeForumPost failed:', error);
+            throw new BadRequestException('Failed to process like action on post');
+        }
+    }
+
+    async shareForumPost(id: string) {
+        // Increment views as a proxy for share engagement since we track shares on client side mostly
+        try {
+            await this.prisma.forumPost.update({
                 where: { id },
-                data: { likes: { increment: 1 } }
+                data: { views: { increment: 1 } }
             });
-            return { success: true, likes: post.likes };
+            return { success: true, message: 'Post shared' };
         } catch (error) {
             throw new NotFoundException('Post not found');
         }
