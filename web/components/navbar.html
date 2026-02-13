@@ -2,6 +2,7 @@
 <nav id="mainNav"
     class="fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500">
     <div class="w-full max-w-7xl flex justify-between items-center">
+        <!-- Logo -->
         <div class="flex items-center gap-12">
             <a href="index.html" class="flex items-center gap-2 group cursor-pointer relative z-10 logo-container">
                 <div
@@ -12,155 +13,464 @@
                     <span class="text-primary/80"></span></span>
             </a>
 
-            <div id="navLinks" class="hidden lg:flex items-center gap-8">
+            <!-- Mega Menu Links -->
+            <div id="navLinks" class="hidden lg:flex items-center gap-2">
 
-
-                <!-- Loans Dropdown -->
-                <div class="nav-dropdown">
-                    <div class="nav-dropdown-toggle nav-link">
+                <!-- Loans Mega Menu -->
+                <div class="group/nav relative px-3 py-4">
+                    <button
+                        class="nav-link flex items-center gap-1 text-sm font-bold uppercase tracking-wider transition-colors">
                         <span>Loans</span>
-                        <span class="material-symbols-outlined">expand_more</span>
-                    </div>
-                    <div class="nav-dropdown-content">
-                        <a href="emi.html" class="nav-dropdown-item">
-                            <span class="material-symbols-outlined">calculate</span>
-                            <span>EMI Calculator</span>
-                        </a>
-                        <a href="compare-loans.html" class="nav-dropdown-item">
-                            <span class="material-symbols-outlined">compare</span>
-                            <span>Compare Loans</span>
-                        </a>
-                        <a href="bank-reviews.html" class="nav-dropdown-item">
-                            <span class="material-symbols-outlined">rate_review</span>
-                            <span>Bank Reviews</span>
-                        </a>
+                        <span
+                            class="material-symbols-outlined text-sm transition-transform duration-300 group-hover/nav:rotate-180">expand_more</span>
+                    </button>
+                    <!-- Mega Menu Dropdown -->
+                    <div
+                        class="absolute top-full -left-4 w-[600px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
+                        <div
+                            class="bg-white/95 dark:bg-[#1a0f2e]/95 backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden p-6 ring-1 ring-black/5">
+                            <div class="grid grid-cols-2 gap-8">
+                                <div>
+                                    <h3 class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4 pl-3">
+                                        Calculators</h3>
+                                    <div class="space-y-1">
+                                        <a href="emi.html"
+                                            class="flex items-start gap-4 p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/5 transition-all group/item">
+                                            <div
+                                                class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover/item:bg-primary group-hover/item:text-white transition-all shadow-sm">
+                                                <span class="material-symbols-outlined text-xl">calculate</span>
+                                            </div>
+                                            <div>
+                                                <div
+                                                    class="font-bold text-gray-900 dark:text-gray-100 text-sm group-hover/item:text-primary transition-colors">
+                                                    EMI Calculator</div>
+                                                <div class="text-[11px] text-gray-500 leading-tight mt-1">Plan your
+                                                    monthly repayments accurately</div>
+                                            </div>
+                                        </a>
+                                        <a href="loan-eligibility.html"
+                                            class="flex items-start gap-4 p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/5 transition-all group/item">
+                                            <div
+                                                class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 group-hover/item:bg-blue-500 group-hover/item:text-white transition-all shadow-sm">
+                                                <span class="material-symbols-outlined text-xl">smart_toy</span>
+                                            </div>
+                                            <div>
+                                                <div
+                                                    class="font-bold text-gray-900 dark:text-gray-100 text-sm group-hover/item:text-blue-500 transition-colors">
+                                                    Eligibility Checker</div>
+                                                <div class="text-[11px] text-gray-500 leading-tight mt-1">Check your
+                                                    loan approval chances</div>
+                                            </div>
+                                        </a>
+                                    </div>
+                                </div>
+                                <div
+                                    class="bg-gray-50/50 dark:bg-white/5 -m-6 p-6 border-l border-gray-100 dark:border-white/5 flex flex-col justify-between">
+                                    <div>
+                                        <h3
+                                            class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4 pl-3">
+                                            Compare & Apply</h3>
+                                        <div class="space-y-1">
+                                            <a href="compare-loans.html"
+                                                class="flex items-start gap-4 p-3 rounded-2xl hover:bg-white dark:hover:bg-white/5 transition-all group/item">
+                                                <div
+                                                    class="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 group-hover/item:bg-orange-500 group-hover/item:text-white transition-all shadow-sm">
+                                                    <span class="material-symbols-outlined text-xl">compare</span>
+                                                </div>
+                                                <div>
+                                                    <div
+                                                        class="font-bold text-gray-900 dark:text-gray-100 text-sm group-hover/item:text-orange-500 transition-colors">
+                                                        Compare Loans</div>
+                                                    <div class="text-[11px] text-gray-500 leading-tight mt-1">Find the
+                                                        best interest rates</div>
+                                                </div>
+                                            </a>
+                                            <a href="bank-reviews.html"
+                                                class="flex items-start gap-4 p-3 rounded-2xl hover:bg-white dark:hover:bg-white/5 transition-all group/item">
+                                                <div
+                                                    class="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500 group-hover/item:bg-green-500 group-hover/item:text-white transition-all shadow-sm">
+                                                    <span class="material-symbols-outlined text-xl">rate_review</span>
+                                                </div>
+                                                <div>
+                                                    <div
+                                                        class="font-bold text-gray-900 dark:text-gray-100 text-sm group-hover/item:text-green-500 transition-colors">
+                                                        Bank Reviews</div>
+                                                    <div class="text-[11px] text-gray-500 leading-tight mt-1">Real
+                                                        feedback from students</div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <a href="apply-loan.html"
+                                        class="mt-4 flex items-center justify-center w-full py-3 bg-gradient-to-r from-primary to-purple-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:shadow-lg hover:shadow-primary/30 transition-all hover:-translate-y-0.5">
+                                        Apply Now <span
+                                            class="material-symbols-outlined text-sm ml-1">arrow_forward</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <a href="" class="nav-link">Scholarships</a>
-
-                <div class="nav-dropdown">
-                    <div class="nav-dropdown-toggle nav-link">
+                <!-- Services Mega Menu -->
+                <div class="group/nav relative px-3 py-4">
+                    <button
+                        class="nav-link flex items-center gap-1 text-sm font-bold uppercase tracking-wider transition-colors">
                         <span>Services</span>
-                        <span class="material-symbols-outlined">expand_more</span>
-                    </div>
-                    <div class="nav-dropdown-content">
-                        <a href="loan-eligibility.html" class="nav-dropdown-item">
-                            <span class="material-symbols-outlined">smart_toy</span>
-                            <span>Loan Eligibility Checker</span>
-                        </a>
-                        <a href="repayment-stress.html" class="nav-dropdown-item">
-                            <span class="material-symbols-outlined">monitoring</span>
-                            <span>Repayment Stress Simulator</span>
-                        </a>
-                        <a href="sop.html" class="nav-dropdown-item">
-                            <span class="material-symbols-outlined">description</span>
-                            <span>SOP Generator</span>
-                        </a>
-                        <a href="grade-converter.html" class="nav-dropdown-item">
-                            <span class="material-symbols-outlined">grade</span>
-                            <span>Grade Converter</span>
-                        </a>
-                        <a href="compare-universities.html" class="nav-dropdown-item">
-                            <span class="material-symbols-outlined">school</span>
-                            <span>Compare Universities</span>
-                        </a>
-                        <a href="sop-writer.html" class="nav-dropdown-item">
-                            <span class="material-symbols-outlined">edit</span>
-                            <span>SOP Writer</span>
-                        </a>
-                        <a href="admit-predictor.html" class="nav-dropdown-item">
-                            <span class="material-symbols-outlined">insights</span>
-                            <span>Admit Predictor</span>
-                        </a>
+                        <span
+                            class="material-symbols-outlined text-sm transition-transform duration-300 group-hover/nav:rotate-180">expand_more</span>
+                    </button>
+                    <!-- Mega Menu Dropdown -->
+                    <div
+                        class="absolute top-full left-1/2 -translate-x-1/2 w-[850px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
+                        <div
+                            class="bg-white/95 dark:bg-[#1a0f2e]/95 backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden p-8 ring-1 ring-black/5">
+                            <div class="grid grid-cols-3 gap-10">
+                                <!-- Col 1: Planning -->
+                                <div>
+                                    <h3
+                                        class="text-[10px] font-bold uppercase tracking-widest text-primary mb-6 flex items-center gap-2 border-b border-primary/20 pb-2">
+                                        <span class="material-symbols-outlined text-lg">event_note</span> Planning
+                                    </h3>
+                                    <div class="space-y-4">
+                                        <a href="onboarding.html"
+                                            class="flex items-center gap-3 group/link p-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                                            <div class="text-gray-400 group-hover/link:text-primary transition-colors">
+                                                <span class="material-symbols-outlined">rocket_launch</span>
+                                            </div>
+                                            <div>
+                                                <div
+                                                    class="font-bold text-gray-900 dark:text-gray-100 text-sm group-hover/link:text-primary transition-colors">
+                                                    Get Started <span
+                                                        class="text-[9px] bg-gradient-to-r from-primary to-purple-600 text-white px-1.5 py-0.5 rounded ml-1 font-bold">NEW</span>
+                                                </div>
+                                                <div class="text-[11px] text-gray-500 mt-0.5">Personalized loan journey
+                                                </div>
+                                            </div>
+                                        </a>
+                                        <a href="repayment-stress.html"
+                                            class="flex items-center gap-3 group/link p-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                                            <div class="text-gray-400 group-hover/link:text-primary transition-colors">
+                                                <span class="material-symbols-outlined">monitoring</span>
+                                            </div>
+                                            <div>
+                                                <div
+                                                    class="font-bold text-gray-900 dark:text-gray-100 text-sm group-hover/link:text-primary transition-colors">
+                                                    Stress Simulator</div>
+                                                <div class="text-[11px] text-gray-500 mt-0.5">Test repayment scenarios
+                                                </div>
+                                            </div>
+                                        </a>
+                                        <a href="grade-converter.html"
+                                            class="flex items-center gap-3 group/link p-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                                            <div class="text-gray-400 group-hover/link:text-primary transition-colors">
+                                                <span class="material-symbols-outlined">grade</span>
+                                            </div>
+                                            <div>
+                                                <div
+                                                    class="font-bold text-gray-900 dark:text-gray-100 text-sm group-hover/link:text-primary transition-colors">
+                                                    Grade Converter</div>
+                                                <div class="text-[11px] text-gray-500 mt-0.5">Convert GPA to percentage
+                                                </div>
+                                            </div>
+                                        </a>
+                                        <a href="#"
+                                            class="flex items-center gap-3 group/link p-2 -mx-2 rounded-lg opacity-60 cursor-not-allowed">
+                                            <div class="text-gray-400">
+                                                <span class="material-symbols-outlined">account_balance_wallet</span>
+                                            </div>
+                                            <div>
+                                                <div class="font-bold text-gray-900 dark:text-gray-100 text-sm">
+                                                    Finance Planner <span
+                                                        class="text-[9px] bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded ml-1 font-bold">SOON</span>
+                                                </div>
+                                                <div class="text-[11px] text-gray-500 mt-0.5">Budget your studies</div>
+                                            </div>
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <!-- Col 2: Application -->
+                                <div>
+                                    <h3
+                                        class="text-[10px] font-bold uppercase tracking-widest text-pink-500 mb-6 flex items-center gap-2 border-b border-pink-500/20 pb-2">
+                                        <span class="material-symbols-outlined text-lg">edit_document</span> Application
+                                    </h3>
+                                    <div class="space-y-4">
+                                        <a href="sop-writer.html"
+                                            class="flex items-center gap-3 group/link p-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                                            <div class="text-gray-400 group-hover/link:text-pink-500 transition-colors">
+                                                <span class="material-symbols-outlined">auto_fix_high</span>
+                                            </div>
+                                            <div>
+                                                <div
+                                                    class="font-bold text-gray-900 dark:text-gray-100 text-sm group-hover/link:text-pink-500 transition-colors">
+                                                    AI SOP Writer</div>
+                                                <div class="text-[11px] text-gray-500 mt-0.5">Generate statements
+                                                    instantly</div>
+                                            </div>
+                                        </a>
+                                        <a href="sop.html"
+                                            class="flex items-center gap-3 group/link p-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                                            <div class="text-gray-400 group-hover/link:text-pink-500 transition-colors">
+                                                <span class="material-symbols-outlined">description</span>
+                                            </div>
+                                            <div>
+                                                <div
+                                                    class="font-bold text-gray-900 dark:text-gray-100 text-sm group-hover/link:text-pink-500 transition-colors">
+                                                    SOP Templates</div>
+                                                <div class="text-[11px] text-gray-500 mt-0.5">Standard formatting guide
+                                                </div>
+                                            </div>
+                                        </a>
+                                        <a href="admit-predictor.html"
+                                            class="flex items-center gap-3 group/link p-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                                            <div class="text-gray-400 group-hover/link:text-pink-500 transition-colors">
+                                                <span class="material-symbols-outlined">insights</span>
+                                            </div>
+                                            <div>
+                                                <div
+                                                    class="font-bold text-gray-900 dark:text-gray-100 text-sm group-hover/link:text-pink-500 transition-colors">
+                                                    Admit Predictor</div>
+                                                <div class="text-[11px] text-gray-500 mt-0.5">Chance of acceptance</div>
+                                            </div>
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <!-- Col 3: Research -->
+                                <div class="relative">
+                                    <h3
+                                        class="text-[10px] font-bold uppercase tracking-widest text-purple-500 mb-6 flex items-center gap-2 border-b border-purple-500/20 pb-2">
+                                        <span class="material-symbols-outlined text-lg">manage_search</span> Research
+                                    </h3>
+                                    <div class="space-y-4">
+                                        <a href="compare-universities.html"
+                                            class="flex items-center gap-3 group/link p-2 -mx-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                                            <div
+                                                class="text-gray-400 group-hover/link:text-purple-500 transition-colors">
+                                                <span class="material-symbols-outlined">school</span>
+                                            </div>
+                                            <div>
+                                                <div
+                                                    class="font-bold text-gray-900 dark:text-gray-100 text-sm group-hover/link:text-purple-500 transition-colors">
+                                                    Compare Universities</div>
+                                                <div class="text-[11px] text-gray-500 mt-0.5">Find your best fit</div>
+                                            </div>
+                                        </a>
+                                        <a href="#"
+                                            class="flex items-center gap-3 group/link p-2 -mx-2 rounded-lg opacity-60 cursor-not-allowed">
+                                            <div class="text-gray-400">
+                                                <span class="material-symbols-outlined">paid</span>
+                                            </div>
+                                            <div>
+                                                <div class="font-bold text-gray-900 dark:text-gray-100 text-sm">
+                                                    Scholarships <span
+                                                        class="text-[9px] bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 py-0.5 rounded ml-1 font-bold">SOON</span>
+                                                </div>
+                                                <div class="text-[11px] text-gray-500 mt-0.5">Funding opportunities
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </div>
+
+                                    <div
+                                        class="mt-8 p-5 rounded-2xl bg-gradient-to-br from-primary/10 to-purple-500/10 border border-primary/10 relative overflow-hidden group/promo">
+                                        <div
+                                            class="absolute -right-4 -top-4 w-20 h-20 bg-primary/20 blur-2xl rounded-full group-hover/promo:bg-primary/30 transition-all">
+                                        </div>
+                                        <div class="relative z-10">
+                                            <div class="flex items-center gap-2 mb-2">
+                                                <span
+                                                    class="material-symbols-outlined text-primary text-xl">rocket_launch</span>
+                                                <span
+                                                    class="text-[10px] font-bold text-primary uppercase tracking-wider">New
+                                                    Feature</span>
+                                            </div>
+                                            <p class="text-xs text-gray-600 dark:text-gray-300 mb-3 font-medium">Try our
+                                                new AI Application Assistant to boost your acceptance chance.</p>
+                                            <a href="sop-writer.html"
+                                                class="inline-flex items-center gap-1 text-xs font-bold text-primary hover:text-primary-dark hover:underline transition-all">Try
+                                                Now <span
+                                                    class="material-symbols-outlined text-sm">arrow_forward</span></a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="nav-dropdown">
-                    <div class="nav-dropdown-toggle nav-link">
-                        <span>Blogs</span>
-                        <span class="material-symbols-outlined">expand_more</span>
-                    </div>
-                    <div class="nav-dropdown-content">
-                        <a href="blog.html" class="nav-dropdown-item">
-                            <span class="material-symbols-outlined">article</span>
-                            <span>All Blogs</span>
-                        </a>
+                <!-- Community Mega Menu -->
+                <div class="group/nav relative px-3 py-4">
+                    <button
+                        class="nav-link flex items-center gap-1 text-sm font-bold uppercase tracking-wider transition-colors">
+                        <span>Community</span>
+                        <span
+                            class="material-symbols-outlined text-sm transition-transform duration-300 group-hover/nav:rotate-180">expand_more</span>
+                    </button>
+                    <!-- Mega Menu Dropdown -->
+                    <div
+                        class="absolute top-full -left-20 w-[650px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
+                        <div
+                            class="bg-white/95 dark:bg-[#1a0f2e]/95 backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden ring-1 ring-black/5">
+                            <div class="grid grid-cols-5 h-full">
+                                <!-- Side Banner -->
+                                <div
+                                    class="col-span-2 bg-gradient-to-br from-primary to-purple-800 p-6 flex flex-col justify-between relative overflow-hidden">
+                                    <div
+                                        class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-1.2.1&auto=format&fit=crop&w=500&q=60')] opacity-20 bg-cover bg-center mix-blend-overlay">
+                                    </div>
+                                    <div class="relative z-10">
+                                        <div
+                                            class="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white mb-4 border border-white/20">
+                                            <span class="material-symbols-outlined text-xl">groups</span>
+                                        </div>
+                                        <h3 class="text-white font-display text-xl font-bold mb-2">Join the Club</h3>
+                                        <p class="text-blue-100 text-xs leading-relaxed">Connect with 10k+ students
+                                            worldwide. Share stories, get advice.</p>
+                                    </div>
+                                    <a href="#" id="joinCommunityBtn"
+                                        class="relative z-10 mt-6 px-4 py-2.5 bg-white text-primary rounded-xl text-xs font-bold transition-all text-center hover:bg-gray-50 hover:shadow-lg shadow-black/20">
+                                        Join Community
+                                    </a>
+                                </div>
+
+                                <!-- Links -->
+                                <div class="col-span-3 p-6 bg-white/50 dark:bg-transparent">
+                                    <div class="grid grid-cols-1 gap-2">
+                                        <a href="explore.html"
+                                            class="flex items-center gap-4 group/item p-3 rounded-2xl hover:bg-white dark:hover:bg-white/5 transition-colors">
+                                            <div
+                                                class="w-10 h-10 rounded-full bg-yellow-500/10 flex items-center justify-center text-yellow-500 group-hover/item:scale-110 group-hover/item:bg-yellow-500 group-hover/item:text-white transition-all">
+                                                <span class="material-symbols-outlined text-lg">forum</span>
+                                            </div>
+                                            <div>
+                                                <div
+                                                    class="font-bold text-gray-900 dark:text-gray-100 text-sm group-hover/item:text-yellow-500 transition-colors">
+                                                    Discussions</div>
+                                                <div class="text-[11px] text-gray-500 leading-tight mt-0.5">Ask
+                                                    questions, get answers</div>
+                                            </div>
+                                        </a>
+                                        <a href="blog.html"
+                                            class="flex items-center gap-4 group/item p-3 rounded-2xl hover:bg-white dark:hover:bg-white/5 transition-colors">
+                                            <div
+                                                class="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500 group-hover/item:scale-110 group-hover/item:bg-blue-500 group-hover/item:text-white transition-all">
+                                                <span class="material-symbols-outlined text-lg">article</span>
+                                            </div>
+                                            <div>
+                                                <div
+                                                    class="font-bold text-gray-900 dark:text-gray-100 text-sm group-hover/item:text-blue-500 transition-colors">
+                                                    LoanHero Blog</div>
+                                                <div class="text-[11px] text-gray-500 leading-tight mt-0.5">Latest news
+                                                    and guides</div>
+                                            </div>
+                                        </a>
+                                        <a href="community-events.html"
+                                            class="flex items-center gap-4 group/item p-3 rounded-2xl hover:bg-white dark:hover:bg-white/5 transition-colors">
+                                            <div
+                                                class="w-10 h-10 rounded-full bg-red-500/10 flex items-center justify-center text-red-500 group-hover/item:scale-110 group-hover/item:bg-red-500 group-hover/item:text-white transition-all">
+                                                <span class="material-symbols-outlined text-lg">event</span>
+                                            </div>
+                                            <div>
+                                                <div
+                                                    class="font-bold text-gray-900 dark:text-gray-100 text-sm group-hover/item:text-red-500 transition-colors">
+                                                    Events & Webinars</div>
+                                                <div class="text-[11px] text-gray-500 leading-tight mt-0.5">Upcoming
+                                                    sessions</div>
+                                            </div>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <a href="about-us.html" class="nav-link">Company</a>
-                <!-- AI Tools Dropdown -->
 
-
-                <a href="explore.html" class="nav-link">Community</a>
+                <a href="about-us.html"
+                    class="nav-link px-3 py-4 text-sm font-bold uppercase tracking-wider transition-colors">Company</a>
 
             </div>
         </div>
 
         <div id="navAuth" class="flex items-center gap-4">
             <a href="login.html" id="loginLink"
-                class="px-6 py-2.5 text-sm font-bold bg-white text-primary rounded-full hover:bg-gray-100 transition-all shadow-lg hover:shadow-white/20 cursor-pointer">Login</a>
+                class="px-6 py-2.5 text-xs font-bold bg-white text-primary uppercase tracking-wider rounded-full hover:bg-gray-100 transition-all shadow-lg hover:shadow-white/20 cursor-pointer">Login</a>
 
             <!-- User Profile Dropdown (Hidden initially) -->
             <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
                 <button id="profileBtn"
-                    class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-white/10 transition-all border border-white/20 profile-button">
+                    class="flex items-center gap-2 px-2 py-1 rounded-full hover:bg-white/10 transition-all border border-white/20 profile-button">
                     <img id="userAvatar" src="assets/img/avatar_placeholder.png" alt="User"
-                        class="w-8 h-8 rounded-full object-cover border-2 border-white/20 account-icon">
-                    <span id="userEmail" class="text-sm font-bold email-text"></span>
+                        class="w-8 h-8 rounded-full object-cover border border-white/20 account-icon">
+                    <span id="userEmail" class="text-xs font-bold email-text px-2 hidden md:block"></span>
                 </button>
 
                 <!-- Dropdown Menu -->
                 <div id="profileDropdown"
-                    class="hidden absolute top-12 right-0 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 w-64 overflow-hidden">
+                    class="hidden absolute top-14 right-0 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 w-64 overflow-hidden transform origin-top-right transition-all duration-200 scale-95 opacity-0">
                     <div
                         class="p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-primary/5 to-purple-500/5">
-                        <p class="text-xs text-gray-500 dark:text-gray-400 font-sans">Logged in as</p>
+                        <p class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-bold mb-1">
+                            Logged in as</p>
                         <p id="dropdownEmail" class="text-sm font-bold text-gray-900 dark:text-white truncate"></p>
                     </div>
 
                     <div class="py-2">
                         <a href="dashboard.html"
-                            class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                             <span class="material-symbols-outlined text-lg text-primary">dashboard</span>
                             <span class="font-semibold">Dashboard</span>
                         </a>
                         <a href="profile.html"
-                            class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                             <span class="material-symbols-outlined text-lg text-primary">person</span>
                             <span class="font-semibold">My Profile</span>
                         </a>
                         <a href="my-applications.html"
-                            class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                             <span class="material-symbols-outlined text-lg text-primary">description</span>
                             <span class="font-semibold">My Applications</span>
                         </a>
                         <a href="vault.html"
-                            class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                            class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                             <span class="material-symbols-outlined text-lg text-primary">folder_open</span>
                             <span class="font-semibold">Document Vault</span>
                         </a>
-                        <a href="settings.html"
-                            class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <span class="material-symbols-outlined text-lg text-primary">settings</span>
-                            <span class="font-semibold">Settings</span>
-                        </a>
-                        <a href="help.html"
-                            class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                            <span class="material-symbols-outlined text-lg text-primary">help</span>
-                            <span class="font-semibold">Help & Support</span>
-                        </a>
+                        <!-- <a href="saved-loans.html"
+                            class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <span class="material-symbols-outlined text-lg text-orange-500">bookmark</span>
+                            <span class="font-semibold">Saved Loans</span>
+                        </a> -->
                     </div>
 
-                    <div class="border-t border-gray-200 dark:border-gray-700">
+                    <!-- <div class="border-t border-gray-200 dark:border-gray-700 py-2"> -->
+                    <!-- <a href="engage.html?topic=loan"
+                            class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <span class="material-symbols-outlined text-lg text-purple-500">forum</span>
+                            <span class="font-semibold">Community</span>
+                        </a> -->
+                    <a href="settings.html"
+                        class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                        <span class="material-symbols-outlined text-lg text-gray-500">settings</span>
+                        <span class="font-semibold">Settings</span>
+                    </a>
+                    <a href="help.html"
+                        class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                        <span class="material-symbols-outlined text-lg text-blue-500">help</span>
+                        <span class="font-semibold">Help Center</span>
+                    </a>
+
+
+                    <div class="border-t border-gray-200 dark:border-gray-700 p-2">
                         <a href="#" id="logoutBtn"
-                            class="flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-semibold">
-                            <span class="material-symbols-outlined text-lg">logout</span>
-                            <span>Logout</span>
+                            class="flex items-center justify-center gap-2 w-full px-4 py-2 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors uppercase tracking-wider shadow-md hover:shadow-red-500/20">
+                            <span class="material-symbols-outlined text-sm">logout</span>
+                            <span>Sign Out</span>
                         </a>
                     </div>
                 </div>
-                <a href="apply-loan.html" class="nav-link">Loan</a>
             </div>
         </div>
     </div>

@@ -11,10 +11,11 @@ import { CommunityModule } from './community/community.module';
 import { ReferenceModule } from './reference/reference.module';
 import { ApplicationModule } from './application/application.module';
 import { ExploreModule } from './explore/explore.module';
+import { OnboardingModule } from './onboarding/onboarding.module';
 
 
 @Module({
-  imports: [PrismaModule, AuthModule, UsersModule, BlogModule, DocumentModule, AiModule, CommunityModule, ReferenceModule, ApplicationModule, ExploreModule],
+  imports: [PrismaModule, AuthModule, UsersModule, BlogModule, DocumentModule, AiModule, CommunityModule, ReferenceModule, ApplicationModule, ExploreModule, OnboardingModule],
   controllers: [AppController],
   providers: [AppService],
 })

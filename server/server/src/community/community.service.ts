@@ -1,11 +1,15 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { GroqService } from '../ai/services/groq.service';
 
 @Injectable()
 export class CommunityService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private groqService: GroqService
+    ) { }
 
     // ==================== MENTORSHIP METHODS ====================
 
@@ -1137,6 +1141,41 @@ export class CommunityService {
         }
     }
 
+    async deleteForumPost(id: string) {
+        try {
+            // Delete the post (cascade will delete comments and likes)
+            await this.prisma.forumPost.delete({
+                where: { id }
+            });
+            return { success: true, message: 'Post deleted successfully' };
+        } catch (error) {
+            throw new NotFoundException('Post not found');
+        }
+    }
+
+    async deleteForumComment(userId: string, userRole: string, commentId: string) {
+        // Find the comment
+        const comment = await this.prisma.forumComment.findUnique({
+            where: { id: commentId }
+        });
+
+        if (!comment) {
+            throw new NotFoundException('Comment not found');
+        }
+
+        // Check if user is the author or admin
+        if (comment.authorId !== userId && userRole !== 'admin') {
+            throw new HttpException('You can only delete your own comments', HttpStatus.FORBIDDEN);
+        }
+
+        // Delete the comment (cascade will delete replies and likes)
+        await this.prisma.forumComment.delete({
+            where: { id: commentId }
+        });
+
+        return { success: true, message: 'Comment deleted successfully' };
+    }
+
     // ==================== MENTOR AUTH & DASHBOARD METHODS ====================
 
     // In-memory OTP storage (in production, use Redis or database)
@@ -1353,5 +1392,106 @@ export class CommunityService {
             message: 'Profile updated successfully',
             data: mentor,
         };
+    }
+
+    // ==================== AI DUPLICATE QUESTION DETECTION ====================
+
+    async checkDuplicateQuestion(questionData: {
+        title: string;
+        content: string;
+        category: string;
+    }) {
+        try {
+            // 1. Fetch recent questions from the same category
+            const existingQuestions = await this.prisma.forumPost.findMany({
+                where: { category: { contains: questionData.category, mode: 'insensitive' } },
+                orderBy: { createdAt: 'desc' },
+                take: 100,
+                select: { id: true, title: true, content: true, createdAt: true }
+            });
+
+            if (existingQuestions.length === 0) {
+                return {
+                    isDuplicate: false,
+                    similarQuestions: [],
+                    message: 'No similar questions found'
+                };
+            }
+
+            // 2. Prepare AI prompt for duplicate detection
+            const existingQuestionsText = existingQuestions
+                .map((q, i) => `${i + 1}. ID: ${q.id}\n   Title: "${q.title}"\n   Preview: ${q.content.substring(0, 150)}...`)
+                .join('\n\n');
+
+            const prompt = `You are an expert at detecting duplicate or highly similar questions in a community forum.
+
+New Question:
+Title: "${questionData.title}"
+Content: ${questionData.content}
+
+Existing Questions in the ${questionData.category} category:
+${existingQuestionsText}
+
+Task: Identify if the new question is substantially similar to any existing questions. Questions are considered similar if they ask for the same information, even if worded differently.
+
+Provide your analysis in JSON format with the following structure:
+{
+  "matches": [
+    {
+      "id": "question_id",
+      "title": "question title",
+      "similarity": 0.0-1.0,
+      "reason": "brief explanation of why they're similar"
+    }
+  ]
+}
+
+IMPORTANT RULES:
+1. Only include questions with similarity >= 0.7
+2. Similarity of 1.0 means essentially the same question
+3. Similarity of 0.7-0.8 means very similar intent
+4. Maximum 5 matches
+5. Respond ONLY with valid JSON, no markdown formatting`;
+
+            // 3. Call Groq AI service
+            const aiResponse = await this.groqService.getJson<{
+                matches: Array<{
+                    id: string;
+                    title: string;
+                    similarity: number;
+                    reason: string;
+                }>
+            }>(prompt);
+
+            // 4. Filter and validate matches
+            const validMatches = (aiResponse.matches || [])
+                .filter(m => m.similarity >= 0.7)
+                .slice(0, 5)
+                .map(m => ({
+                    id: m.id,
+                    title: m.title,
+                    similarity: m.similarity,
+                    reason: m.reason,
+                    url: `/question-discussion.html?id=${m.id}&topic=${questionData.category}`
+                }));
+
+            return {
+                isDuplicate: validMatches.length > 0,
+                similarQuestions: validMatches,
+                message: validMatches.length > 0
+                    ? `Found ${validMatches.length} similar question(s)`
+                    : 'No similar questions found'
+            };
+
+        } catch (error) {
+            console.error('Error in duplicate question detection:', error);
+            // Fail gracefully - don't block question posting if AI fails
+            return {
+                isDuplicate: false,
+                similarQuestions: [],
+                message: 'Duplicate check unavailable, but you can still post your question',
+                error: error.message
+            };
+        }
     }
 }

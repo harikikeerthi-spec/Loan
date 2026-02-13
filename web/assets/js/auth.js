@@ -71,14 +71,34 @@ function updateNavbarAuth() {
         profileBtn.dataset.listenerAdded = 'true';
         profileBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            profileDropdown.classList.toggle('hidden');
+            const isHidden = profileDropdown.classList.contains('hidden');
+
+            if (isHidden) {
+                // Show dropdown
+                profileDropdown.classList.remove('hidden');
+                setTimeout(() => {
+                    profileDropdown.classList.remove('scale-95', 'opacity-0');
+                    profileDropdown.classList.add('scale-100', 'opacity-100');
+                }, 10);
+            } else {
+                // Hide dropdown
+                profileDropdown.classList.remove('scale-100', 'opacity-100');
+                profileDropdown.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => {
+                    profileDropdown.classList.add('hidden');
+                }, 200);
+            }
         });
 
         // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
             if (profileDropdown && !profileDropdown.classList.contains('hidden')) {
                 if (!profileBtn.contains(e.target) && !profileDropdown.contains(e.target)) {
-                    profileDropdown.classList.add('hidden');
+                    profileDropdown.classList.remove('scale-100', 'opacity-100');
+                    profileDropdown.classList.add('scale-95', 'opacity-0');
+                    setTimeout(() => {
+                        profileDropdown.classList.add('hidden');
+                    }, 200);
                 }
             }
         });
@@ -90,6 +110,23 @@ function updateNavbarAuth() {
         logoutBtn.addEventListener('click', (e) => {
             e.preventDefault();
             logout();
+        });
+    }
+
+    // Setup "Join Community" button
+    const joinCommunityBtn = document.getElementById('joinCommunityBtn');
+    if (joinCommunityBtn && !joinCommunityBtn.dataset.listenerAdded) {
+        joinCommunityBtn.dataset.listenerAdded = 'true';
+        joinCommunityBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            // Check if user is logged in
+            if (isUserLoggedIn()) {
+                // Redirect to community/explore page
+                window.location.href = 'explore.html';
+            } else {
+                // Redirect to signup page
+                window.location.href = 'signup.html';
+            }
         });
     }
 }

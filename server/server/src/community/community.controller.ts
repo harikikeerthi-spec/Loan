@@ -9,6 +9,8 @@ import {
     Query,
     UseGuards,
     Request,
+    HttpException,
+    HttpStatus,
 } from '@nestjs/common';
 import { CommunityService } from './community.service';
 import { AdminGuard } from '../auth/admin.guard';
@@ -612,6 +614,56 @@ export class CommunityController {
     @UseGuards(UserGuard)
     async shareForumPost(@Param('id') id: string) {
         return this.communityService.shareForumPost(id);
+    }
+
+    /**
+     * Delete a forum post (Admin only)
+     * DELETE /community/forum/:id
+     */
+    @Delete('forum/:id')
+    @UseGuards(UserGuard)
+    async deleteForumPost(
+        @Request() req,
+        @Param('id') id: string
+    ) {
+        // Only admins can delete posts
+        if (req.user.role !== 'admin') {
+            throw new HttpException('Only admins can delete posts', HttpStatus.FORBIDDEN);
+        }
+        return this.communityService.deleteForumPost(id);
+    }
+
+    /**
+     * Delete a forum comment (Comment author or Admin)
+     * DELETE /community/forum/comments/:id
+     */
+    @Delete('forum/comments/:id')
+    @UseGuards(UserGuard)
+    async deleteForumComment(
+        @Request() req,
+        @Param('id') id: string
+    ) {
+        return this.communityService.deleteForumComment(req.user.id, req.user.role, id);
+    }
+
+    /**
+     * Check for duplicate questions using AI
+     * POST /community/forum/check-duplicate
+     * @body title, content, category
+     */
+    @Post('forum/check-duplicate')
+    async checkDuplicateQuestion(
+        @Body() body: {
+            title: string;
+            content: string;
+            category: string;
+        }
+    ) {
+        const result = await this.communityService.checkDuplicateQuestion(body);
+        return {
+            success: true,
+            ...result
+        };
     }
 
     // ==================== MENTOR DASHBOARD ENDPOINTS ====================

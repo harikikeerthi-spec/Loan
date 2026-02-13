@@ -111,9 +111,18 @@ function createPostHTML(post) {
     // Ensure likes and commentCount are numbers
     const likes = post.likes || 0;
     const commentCount = post.commentCount || 0;
+    const views = post.views || 0;
+
+    // Get current topic from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const topic = urlParams.get('topic') || 'general';
+
+    // Check if current user is admin
+    const currentUserRole = localStorage.getItem('userRole');
+    const isAdmin = currentUserRole === 'admin';
 
     return `
-        <div id="post-${post.id}" class="glass-panel p-6 rounded-3xl transition-all duration-300 hover:shadow-lg hover:shadow-brand-900/5 group mb-6">
+        <div id="post-${post.id}" class="glass-panel p-6 rounded-3xl transition-all duration-300 hover:shadow-lg hover:shadow-brand-900/5 group mb-6 cursor-pointer" data-post-id="${post.id}">
             <div class="flex items-start gap-4">
                 <div class="flex-shrink-0">
                     <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brand-100 to-accent-100 dark:from-brand-900/50 dark:to-accent-900/50 flex items-center justify-center text-brand-700 dark:text-brand-300 font-bold text-lg shadow-inner">
@@ -127,40 +136,37 @@ function createPostHTML(post) {
                             ${post.author?.role === 'admin' ? '<span class="ml-2 px-2 py-0.5 rounded-full bg-brand-100 text-brand-700 text-[10px] font-bold uppercase">Admin</span>' : ''}
                             ${post.author?.role === 'mentor' ? '<span class="ml-2 px-2 py-0.5 rounded-full bg-accent-100 text-accent-700 text-[10px] font-bold uppercase">Mentor</span>' : ''}
                         </h4>
-                        <span class="text-xs text-gray-500">${timeAgo}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-gray-500">${timeAgo}</span>
+                            ${isAdmin ? `
+                                <button data-action="delete-post" data-id="${post.id}" 
+                                        class="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors z-10 relative"
+                                        title="Delete Post">
+                                    <span class="material-symbols-rounded text-lg">delete</span>
+                                </button>
+                            ` : ''}
+                        </div>
                     </div>
-                    <h3 class="font-display font-bold text-lg text-gray-900 dark:text-gray-100 mb-2 leading-tight">${post.title || 'Discussion'}</h3>
-                    <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-4 whitespace-pre-wrap">${post.content}</p>
+                    <h3 class="font-display font-bold text-lg text-gray-900 dark:text-gray-100 mb-2 leading-tight hover:text-brand-600 dark:hover:text-brand-400 transition-colors">${post.title || 'Discussion'}</h3>
+                    <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-4 whitespace-pre-wrap line-clamp-3">${post.content}</p>
 
                     <div class="flex items-center gap-6 border-t border-gray-100 dark:border-white/5 pt-4">
-                        <button data-action="like-post" data-id="${post.id}" class="flex items-center gap-2 text-xs font-bold ${post.liked ? 'text-pink-500' : 'text-gray-500'} hover:text-pink-500 transition-colors group/btn">
+                        <button data-action="like-post" data-id="${post.id}" class="flex items-center gap-2 text-xs font-bold ${post.liked ? 'text-pink-500' : 'text-gray-500'} hover:text-pink-500 transition-colors group/btn z-10 relative">
                             <span class="material-symbols-rounded text-lg ${post.liked ? 'fill-current' : ''}">favorite</span>
                             <span class="likes-count">${likes}</span>
                         </button>
-                        <button data-action="toggle-comments" data-id="${post.id}" class="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-brand-500 transition-colors group/btn">
+                        <button data-action="view-discussion" data-id="${post.id}" data-topic="${topic}" class="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-brand-500 transition-colors group/btn z-10 relative">
                             <span class="material-symbols-rounded text-lg">chat_bubble</span>
-                            <span class="comments-count">${commentCount}</span> Comments
+                            <span class="comments-count">${commentCount}</span> Answers
                         </button>
-                        <button data-action="share-post" data-id="${post.id}" class="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-blue-500 transition-colors group/btn">
+                        <div class="flex items-center gap-2 text-xs font-bold text-gray-500">
+                            <span class="material-symbols-rounded text-lg">visibility</span>
+                            <span>${views}</span> Views
+                        </div>
+                        <button data-action="share-post" data-id="${post.id}" class="flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-blue-500 transition-colors group/btn z-10 relative">
                             <span class="material-symbols-rounded text-lg">share</span>
                             Share
                         </button>
-                    </div>
-
-                    <div id="comments-${post.id}" class="hidden mt-6 pt-6 border-t border-gray-100 dark:border-white/5 animate-fade-in-up">
-                        <div class="comments-list space-y-4 mb-4"></div>
-                        <div class="comment-input-area hidden flex gap-3">
-                            <img src="assets/img/avatar_placeholder.png" class="w-8 h-8 rounded-full bg-gray-200 object-cover current-user-avatar">
-                            <div class="flex-grow relative">
-                                <textarea id="input-root-${post.id}" placeholder="Write a reply..." class="w-full bg-gray-50 dark:bg-white/5 border-0 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-brand-500 resize-none h-[46px] focus:h-[80px] transition-all"></textarea>
-                                <button data-action="submit-comment" data-id="${post.id}" class="absolute bottom-2 right-2 p-1.5 bg-brand-500 text-white rounded-lg shadow-md hover:bg-brand-600 transition-colors">
-                                    <span class="material-symbols-rounded text-lg block">send</span>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="login-prompt hidden p-4 bg-gray-50 rounded-xl text-center text-xs text-gray-500">
-                            <a href="login.html" class="text-brand-600 font-bold hover:underline">Log in</a> to join.
-                        </div>
                     </div>
                 </div>
             </div>
@@ -169,17 +175,35 @@ function createPostHTML(post) {
 
 async function handleFeedInteractions(e) {
     const btn = e.target.closest('button');
-    if (!btn) return;
-    const action = btn.dataset.action;
-    const id = btn.dataset.id;
-    const parentId = btn.dataset.parentid; // for nested replies
 
-    if (action === 'like-post') handleLikePost(id, btn);
-    if (action === 'like-comment') handleLikeComment(id, btn);
-    if (action === 'toggle-comments') toggleComments(id);
-    if (action === 'submit-comment') submitComment(id, parentId, btn);
-    if (action === 'reply-to-comment') showReplyInput(id);
-    if (action === 'share-post') handleSharePost(id);
+    // If clicking on a button, handle button action
+    if (btn) {
+        e.stopPropagation(); // Prevent card click
+        const action = btn.dataset.action;
+        const id = btn.dataset.id;
+        const topic = btn.dataset.topic;
+        const parentId = btn.dataset.parentid; // for nested replies
+
+        if (action === 'like-post') handleLikePost(id, btn);
+        if (action === 'like-comment') handleLikeComment(id, btn);
+        if (action === 'view-discussion') {
+            window.location.href = `question-discussion.html?id=${id}&topic=${topic}`;
+        }
+        if (action === 'delete-post') handleDeletePost(id);
+        if (action === 'submit-comment') submitComment(id, parentId, btn);
+        if (action === 'reply-to-comment') showReplyInput(id);
+        if (action === 'share-post') handleSharePost(id);
+        return;
+    }
+
+    // If clicking on the card itself (not a button), navigate to discussion
+    const card = e.target.closest('[data-post-id]');
+    if (card && !e.target.closest('button')) {
+        const postId = card.dataset.postId;
+        const urlParams = new URLSearchParams(window.location.search);
+        const topic = urlParams.get('topic') || 'general';
+        window.location.href = `question-discussion.html?id=${postId}&topic=${topic}`;
+    }
 }
 
 // --- Interactions ---
@@ -256,8 +280,43 @@ async function handleLikeComment(commentId, btn) {
     }
 }
 
+async function handleDeletePost(postId) {
+    // Confirm deletion
+    if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const response = await authFetch(`${API_BASE_URL}/forum/${postId}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            showToast('Post deleted successfully');
+            // Remove the post from DOM
+            const postElement = document.getElementById(`post-${postId}`);
+            if (postElement) {
+                postElement.style.animation = 'fade-out 0.3s ease-out';
+                setTimeout(() => postElement.remove(), 300);
+            }
+        } else if (response.status === 401) {
+            showToast('Session expired. Please login again.', 'error');
+            setTimeout(() => window.location.href = 'login.html', 2000);
+        } else if (response.status === 403) {
+            showToast('You do not have permission to delete this post', 'error');
+        } else {
+            showToast('Failed to delete post', 'error');
+        }
+    } catch (e) {
+        console.error('Delete error:', e);
+        showToast('Error deleting post', 'error');
+    }
+}
+
 async function handleSharePost(postId) {
-    const shareUrl = `${window.location.origin}/engage.html?post=${postId}`;
+    const urlParams = new URLSearchParams(window.location.search);
+    const topic = urlParams.get('topic') || 'general';
+    const shareUrl = `${window.location.origin}/question-discussion.html?id=${postId}&topic=${topic}`;
 
     // Copy to clipboard
     try {
@@ -524,9 +583,47 @@ function setupAuthUI(topic) {
 
                 // Basic title extraction (first 50 chars) if title is needed by backend but UI only has content
                 const title = content.length > 50 ? content.substring(0, 50) + '...' : content;
-                console.log(`Sending post to: ${API_BASE_URL}/explore/hub/${topic}/forum`);
+                console.log(`Checking for duplicates in topic: ${topic}`);
+
+                // Disable button to prevent double submission
+                submitBtn.disabled = true;
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = '<span class="material-symbols-rounded animate-spin">refresh</span> Checking...';
 
                 try {
+                    // Step 1: Check for duplicate posts using AI
+                    const duplicateCheckResponse = await fetch(`${API_BASE_URL}/forum/check-duplicate`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ title, content, category: topic })
+                    });
+
+                    const duplicateResult = await duplicateCheckResponse.json();
+
+                    // Step 2: If duplicates found, show warning modal
+                    if (duplicateResult.success && duplicateResult.isDuplicate && duplicateResult.similarQuestions.length > 0) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+
+                        // Show duplicate warning and wait for user decision
+                        const userDecision = await showDuplicateWarningModal(duplicateResult.similarQuestions, topic);
+
+                        if (userDecision === 'view') {
+                            // User chose to view existing discussion - navigate to first match
+                            const firstMatch = duplicateResult.similarQuestions[0];
+                            window.location.href = `question-discussion.html?id=${firstMatch.id}&topic=${topic}`;
+                            return;
+                        } else if (userDecision === 'cancel') {
+                            // User cancelled
+                            return;
+                        }
+                        // If userDecision === 'post', continue with posting below
+                    }
+
+                    // Step 3: Post the question (either no duplicates or user chose to post anyway)
+                    submitBtn.innerHTML = '<span class="material-symbols-rounded animate-spin">refresh</span> Posting...';
+
+                    console.log(`Sending post to: ${API_BASE_URL}/explore/hub/${topic}/forum`);
                     const response = await authFetch(`${API_BASE_URL}/explore/hub/${topic}/forum`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -543,7 +640,6 @@ function setupAuthUI(topic) {
                         const newPostHTML = createPostHTML(result.data);
 
                         // Only clear if the container shows the "No discussions yet" empty state
-                        // Check for direct child with the empty state structure (not nested .text-center inside posts)
                         const emptyState = container.querySelector(':scope > .glass-panel.text-center');
                         if (emptyState && container.children.length === 1) {
                             container.innerHTML = newPostHTML;
@@ -563,12 +659,137 @@ function setupAuthUI(topic) {
                 } catch (e) {
                     console.error('Post creation error:', e);
                     showToast('Failed to create post. See console for details.', 'error');
+                } finally {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
                 }
             };
         } else {
             console.error('submitPostBtn not found');
         }
     }
+}
+
+// --- Duplicate Detection Modal ---
+
+function showDuplicateWarningModal(similarQuestions, topic) {
+    return new Promise((resolve) => {
+        // Remove any existing modal
+        const existing = document.getElementById('duplicateModal');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'duplicateModal';
+        modal.className = 'fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 animate-fade-in';
+
+        modal.innerHTML = `
+            <div class="bg-white dark:bg-gray-900 rounded-3xl max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl animate-scale-in border border-gray-200 dark:border-gray-700">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-yellow-500 to-orange-500 p-6 text-white">
+                    <div class="flex items-start gap-4">
+                        <div class="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center flex-shrink-0">
+                            <span class="material-symbols-rounded text-3xl">warning</span>
+                        </div>
+                        <div class="flex-grow">
+                            <h2 class="text-2xl font-display font-bold mb-2">Similar Questions Found!</h2>
+                            <p class="text-white/90 text-sm">We found ${similarQuestions.length} similar question${similarQuestions.length > 1 ? 's' : ''} that might already have answers. Would you like to check them first?</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Similar Questions List -->
+                <div class="p-6 max-h-[400px] overflow-y-auto">
+                    <div class="space-y-3">
+                        ${similarQuestions.slice(0, 5).map((q, index) => `
+                            <div class="group p-4 rounded-2xl border-2 border-gray-200 dark:border-gray-700 hover:border-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/10 transition-all cursor-pointer"
+                                 onclick="document.getElementById('duplicateModal').dataset.selectedId='${q.id}';">
+                                <div class="flex items-start gap-3">
+                                    <div class="flex-shrink-0 w-8 h-8 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center text-yellow-700 dark:text-yellow-400 font-bold text-sm">
+                                        ${index + 1}
+                                    </div>
+                                    <div class="flex-grow">
+                                        <h3 class="font-bold text-gray-900 dark:text-white text-base mb-1 group-hover:text-yellow-700 dark:group-hover:text-yellow-400 transition-colors">
+                                            ${q.title}
+                                        </h3>
+                                        <div class="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                            <span class="flex items-center gap-1">
+                                                <span class="material-symbols-rounded text-sm">analytics</span>
+                                                ${Math.round(q.similarity * 100)}% similar
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-gray-600 dark:text-gray-300 italic">${q.reason}</p>
+                                    </div>
+                                    <span class="material-symbols-rounded text-gray-400 group-hover:text-yellow-500 transition-colors">
+                                        arrow_forward
+                                    </span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="p-6 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700">
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button id="viewExistingBtn" 
+                                class="flex-1 px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-xl font-bold text-sm shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-rounded text-lg">visibility</span>
+                            View Top Match
+                        </button>
+                        <button id="postAnywayBtn" 
+                                class="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-bold text-sm hover:bg-gray-300 dark:hover:bg-gray-600 transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-rounded text-lg">send</span>
+                            Post Anyway
+                        </button>
+                        <button id="cancelBtn" 
+                                class="px-6 py-3 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 rounded-xl font-bold text-sm border-2 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">
+                            Cancel
+                        </button>
+                    </div>
+                    <p class="text-center text-xs text-gray-500 dark:text-gray-400 mt-3">
+                        💡 Tip: Checking existing discussions helps avoid duplicate content
+                    </p>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Add event listeners
+        document.getElementById('viewExistingBtn').onclick = () => {
+            const selectedId = modal.dataset.selectedId || similarQuestions[0].id;
+            modal.remove();
+            resolve('view');
+        };
+
+        document.getElementById('postAnywayBtn').onclick = () => {
+            modal.remove();
+            resolve('post');
+        };
+
+        document.getElementById('cancelBtn').onclick = () => {
+            modal.remove();
+            resolve('cancel');
+        };
+
+        // Close on backdrop click
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                modal.remove();
+                resolve('cancel');
+            }
+        };
+
+        // ESC key to close
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                modal.remove();
+                document.removeEventListener('keydown', escHandler);
+                resolve('cancel');
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+    });
 }
 
 // --- Utilities ---

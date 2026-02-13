@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Question Discussion | LoanHero</title>
+    <meta name="description" content="Question discussion and answers from the community." />
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+        rel="stylesheet" />
+
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    },
+                    colors: {
+                        primary: '#6605c7',
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                        brand: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            200: '#99f6e4',
+                            300: '#5eead4',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                            950: '#042f2e',
+                        },
+                        accent: {
+                            50: '#fdf4ff',
+                            100: '#fae8ff',
+                            200: '#f5d0fe',
+                            300: '#f0abfc',
+                            400: '#e879f9',
+                            500: '#d946ef',
+                            600: '#c026d3',
+                            700: '#a21caf',
+                            800: '#86198f',
+                            900: '#701a75',
+                            950: '#4a044e',
+                        }
+                    },
+                    animation: {
+                        'blob': 'blob 7s infinite',
+                        'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Custom Styles -->
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .dark .glass-panel {
+            background: rgba(17, 24, 39, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: rgba(156, 163, 175, 0.3);
+            border-radius: 20px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(156, 163, 175, 0.5);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 min-h-screen selection:bg-primary/20 transition-colors duration-500">
+
+    <!-- Background Decoration -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div
+            class="absolute -top-[20%] -left-[10%] w-[70%] h-[70%] bg-purple-200/30 dark:bg-purple-900/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] animate-blob">
+        </div>
+        <div
+            class="absolute -top-[20%] -right-[10%] w-[70%] h-[70%] bg-teal-200/30 dark:bg-teal-900/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] animate-blob animation-delay-2000">
+        </div>
+        <div
+            class="absolute -bottom-[20%] left-[20%] w-[70%] h-[70%] bg-pink-200/30 dark:bg-pink-900/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] animate-blob animation-delay-4000">
+        </div>
+    </div>
+
+    <!-- Navigation Placeholder -->
+    <div id="navbar-placeholder"></div>
+
+    <!-- Main Content -->
+    <main class="relative z-10 pt-28 pb-20 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
+
+        <!-- Back Button -->
+        <div class="mb-6">
+            <button onclick="history.back()"
+                class="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-brand-600 dark:hover:text-brand-400 transition-colors">
+                <span class="material-symbols-rounded">arrow_back</span>
+                <span class="text-sm font-bold">Back to Hub</span>
+            </button>
+        </div>
+
+        <!-- Question Card -->
+        <div id="questionCard" class="glass-panel p-8 rounded-3xl shadow-xl mb-8">
+            <div class="animate-pulse">
+                <div class="h-8 bg-gray-200 dark:bg-white/10 rounded w-3/4 mb-4"></div>
+                <div class="h-4 bg-gray-200 dark:bg-white/10 rounded w-full mb-2"></div>
+                <div class="h-4 bg-gray-200 dark:bg-white/10 rounded w-5/6"></div>
+            </div>
+        </div>
+
+        <!-- Answers Section -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-display font-bold mb-6 flex items-center gap-3">
+                <span class="material-symbols-rounded text-brand-600 dark:text-brand-400">forum</span>
+                Answers & Discussion
+            </h2>
+
+            <!-- Answer Input (for logged-in users) -->
+            <div id="answerInput" class="glass-panel p-6 rounded-3xl mb-6 hidden">
+                <div class="flex gap-4">
+                    <div class="flex-shrink-0">
+                        <div id="currentUserAvatar"
+                            class="w-10 h-10 rounded-full bg-gradient-to-br from-brand-400 to-accent-500 flex items-center justify-center text-lg font-bold text-white">
+                            ?
+                        </div>
+                    </div>
+                    <div class="flex-grow">
+                        <textarea id="answerContent" rows="3" placeholder="Write your answer..."
+                            class="w-full bg-transparent border-none text-gray-900 dark:text-white placeholder-gray-400 focus:ring-0 text-base resize-none !p-0 leading-relaxed"></textarea>
+                        <div class="flex justify-end mt-4">
+                            <button id="submitAnswerBtn"
+                                class="px-6 py-2 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white text-sm font-bold rounded-full shadow-lg shadow-brand-500/30 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed">
+                                Post Answer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Login Prompt -->
+            <div id="loginPrompt" class="glass-panel p-6 rounded-3xl mb-6 hidden text-center">
+                <p class="text-gray-600 dark:text-gray-400 mb-4">
+                    <a href="login.html" class="text-brand-600 dark:text-brand-400 font-bold hover:underline">Log in</a>
+                    to answer this question
+                </p>
+            </div>
+
+            <!-- Answers List -->
+            <div id="answersList" class="space-y-6">
+                <!-- Loading skeleton -->
+                <div class="glass-panel p-6 rounded-3xl animate-pulse">
+                    <div class="flex gap-4 mb-4">
+                        <div class="w-12 h-12 bg-gray-200 dark:bg-white/10 rounded-full"></div>
+                        <div class="flex-1 space-y-2 py-1">
+                            <div class="h-4 bg-gray-200 dark:bg-white/10 rounded w-1/4"></div>
+                            <div class="h-3 bg-gray-200 dark:bg-white/10 rounded w-1/6"></div>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="h-4 bg-gray-200 dark:bg-white/10 rounded w-full"></div>
+                        <div class="h-4 bg-gray-200 dark:bg-white/10 rounded w-5/6"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Related Questions -->
+        <div id="relatedQuestions" class="hidden">
+            <h3 class="text-xl font-display font-bold mb-4 flex items-center gap-2">
+                <span class="material-symbols-rounded text-accent-600 dark:text-accent-400">lightbulb</span>
+                Related Questions
+            </h3>
+            <div id="relatedQuestionsList" class="space-y-3"></div>
+        </div>
+
+    </main>
+
+    <!-- Footer Placeholder -->
+    <div id="footer-placeholder"></div>
+
+    <!-- Scripts -->
+    <script src="assets/js/components-loader.js"></script>
+    <script src="assets/js/theme-manager.js"></script>
+    <script src="assets/js/theme-toggle.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/question-discussion.js"></script>
+
+</body>
+
+</html>

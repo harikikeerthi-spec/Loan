@@ -4,216 +4,256 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Dropdown Test - LoanHero</title>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-        rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: "class",
-            theme: {
-                extend: {
-                    colors: {
-                        "primary": "#6605c7",
-                    }
-                }
-            }
-        };
-    </script>
-    <link href="assets/css/main.css" rel="stylesheet" />
+    <title>Test Profile Dropdown</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <style>
+        body {
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+        }
+
+        .test-button {
+            margin: 10px 5px;
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .test-button:hover {
+            background: #5568d3;
+        }
+
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 8px;
+            font-family: monospace;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
 </head>
 
-<body class="bg-gray-50 p-8">
-    <div class="max-w-4xl mx-auto">
-        <h1 class="text-3xl font-bold mb-8 text-gray-900">User Profile Dropdown Test</h1>
+<body>
+    <!-- Include Navbar Component -->
+    <div id="navbarContainer"></div>
 
-        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
-            <h2 class="text-xl font-semibold mb-4">Instructions:</h2>
-            <ol class="list-decimal list-inside space-y-2 text-gray-700">
-                <li>Click the "Simulate Login" button below to set user credentials</li>
-                <li>The profile button will appear in the navigation</li>
-                <li>Click on the profile button to see the dropdown menu</li>
-                <li>The dropdown shows: Dashboard, My Profile, My Applications, Document Vault, Settings, Help &
-                    Support, and Logout</li>
+    <div class="test-container">
+        <h1 style="text-align: center; color: #667eea; margin-bottom: 10px;">
+            🧪 Profile Dropdown Test Page
+        </h1>
+        <p style="text-align: center; color: #666; margin-bottom: 30px;">
+            Use this page to test the user profile dropdown functionality
+        </p>
+
+        <!-- Test Section 1: Login Status -->
+        <div class="test-section">
+            <h2>1️⃣ Login Status</h2>
+            <p>Check if user is logged in and profile section is visible</p>
+            <button class="test-button" onclick="checkLoginStatus()">Check Status</button>
+            <div id="loginStatus"></div>
+        </div>
+
+        <!-- Test Section 2: Simulate Login -->
+        <div class="test-section">
+            <h2>2️⃣ Simulate Login</h2>
+            <p>Add test credentials to localStorage to simulate a logged-in user</p>
+            <button class="test-button" onclick="simulateLogin()">Simulate Login</button>
+            <button class="test-button" style="background: #dc3545;" onclick="simulateLogout()">Simulate Logout</button>
+            <div id="authStatus"></div>
+        </div>
+
+        <!-- Test Section 3: Dropdown Toggle -->
+        <div class="test-section">
+            <h2>3️⃣ Dropdown Toggle</h2>
+            <p>Manually toggle the dropdown to test visibility</p>
+            <button class="test-button" onclick="openDropdown()">Open Dropdown</button>
+            <button class="test-button" onclick="closeDropdown()">Close Dropdown</button>
+            <div id="dropdownStatus"></div>
+        </div>
+
+        <!-- Test Section 4: Check Elements -->
+        <div class="test-section">
+            <h2>4️⃣ Element Check</h2>
+            <p>Verify all required elements exist in the DOM</p>
+            <button class="test-button" onclick="checkElements()">Check Elements</button>
+            <div id="elementStatus"></div>
+        </div>
+
+        <!-- Instructions -->
+        <div class="test-section" style="background: #f8f9fa;">
+            <h2>📋 Testing Instructions</h2>
+            <ol style="line-height: 1.8;">
+                <li><strong>Check Login Status</strong> - See if you're currently logged in</li>
+                <li><strong>Simulate Login</strong> - Add test user data to localStorage</li>
+                <li><strong>Refresh Page</strong> - The navbar should update automatically</li>
+                <li><strong>Click Profile Button</strong> - Test the dropdown in the navbar</li>
+                <li><strong>Check Animations</strong> - Dropdown should scale and fade smoothly</li>
+                <li><strong>Click Outside</strong> - Dropdown should close automatically</li>
             </ol>
-        </div>
-
-        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
-            <button id="simulateLogin"
-                class="px-6 py-3 bg-primary text-white rounded-lg font-semibold hover:bg-primary/90 transition-all">
-                Simulate Login
-            </button>
-            <button id="simulateLogout"
-                class="px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-all ml-4">
-                Simulate Logout
-            </button>
-        </div>
-
-        <!-- Navigation Bar Demo -->
-        <nav class="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <div class="flex justify-between items-center">
-                <div class="flex items-center gap-2">
-                    <div class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
-                        <span class="material-symbols-outlined text-2xl">school</span>
-                    </div>
-                    <span class="font-bold text-2xl text-gray-900">LoanHero</span>
-                </div>
-
-                <div class="flex items-center gap-4">
-                    <!-- Login/Signup Links (shown when NOT logged in) -->
-                    <a href="#" id="loginLink"
-                        class="text-sm font-bold text-gray-600 hover:text-primary transition-colors">Login</a>
-                    
-                        class="px-6 py-2.5 text-sm font-bold bg-primary text-white rounded-full hover:bg-primary/90 transition-all shadow-lg">Sign
-                        Up</a>
-
-                    <!-- User Profile Section (shown when logged in) -->
-                    <div id="userProfileSection" class="hidden flex items-center gap-4 relative">
-                        <button id="profileBtn"
-                            class="flex items-center gap-2 px-4 py-2 rounded-full hover:bg-gray-200 transition-all">
-                            <span class="material-symbols-outlined text-2xl text-primary">account_circle</span>
-                            <span id="userEmail" class="text-sm font-bold text-gray-900"></span>
-                        </button>
-
-                        <!-- Dropdown Menu -->
-                        <div id="profileDropdown"
-                            class="hidden absolute top-12 right-0 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 w-64 overflow-hidden">
-                            <div class="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-purple-100">
-                                <p class="text-xs text-gray-500">Logged in as</p>
-                                <p id="dropdownEmail" class="text-sm font-bold text-gray-900 truncate"></p>
-                            </div>
-
-                            <div class="py-2">
-                                <a href="#"
-                                    class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                                    <span class="material-symbols-outlined text-lg text-primary">dashboard</span>
-                                    <span class="font-semibold">Dashboard</span>
-                                </a>
-                                <a href="#"
-                                    class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                                    <span class="material-symbols-outlined text-lg text-primary">person</span>
-                                    <span class="font-semibold">My Profile</span>
-                                </a>
-                                <a href="#"
-                                    class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                                    <span class="material-symbols-outlined text-lg text-primary">description</span>
-                                    <span class="font-semibold">My Applications</span>
-                                </a>
-                                <a href="#"
-                                    class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                                    <span class="material-symbols-outlined text-lg text-primary">folder_open</span>
-                                    <span class="font-semibold">Document Vault</span>
-                                </a>
-                                <a href="#"
-                                    class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                                    <span class="material-symbols-outlined text-lg text-primary">settings</span>
-                                    <span class="font-semibold">Settings</span>
-                                </a>
-                                <a href="#"
-                                    class="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
-                                    <span class="material-symbols-outlined text-lg text-primary">help</span>
-                                    <span class="font-semibold">Help & Support</span>
-                                </a>
-                            </div>
-
-                            <div class="border-t border-gray-200">
-                                <a href="#" id="logoutBtn"
-                                    class="flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors font-semibold">
-                                    <span class="material-symbols-outlined text-lg">logout</span>
-                                    <span>Logout</span>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </nav>
-
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
-            <h3 class="font-semibold text-blue-900 mb-2">Current Status:</h3>
-            <p id="statusText" class="text-blue-800">User is not logged in</p>
         </div>
     </div>
 
+    <script src="assets/js/components-loader.js"></script>
+    <script src="assets/js/auth.js"></script>
+
     <script>
-        // Get elements
-        const loginLink = document.getElementById('loginLink');
-        const signupLink = document.getElementById('signupLink');
-        const userProfileSection = document.getElementById('userProfileSection');
-        const userEmail = document.getElementById('userEmail');
-        const dropdownEmail = document.getElementById('dropdownEmail');
-        const profileBtn = document.getElementById('profileBtn');
-        const profileDropdown = document.getElementById('profileDropdown');
-        const logoutBtn = document.getElementById('logoutBtn');
-        const statusText = document.getElementById('statusText');
-        const simulateLoginBtn = document.getElementById('simulateLogin');
-        const simulateLogoutBtn = document.getElementById('simulateLogout');
+        function checkLoginStatus() {
+            const status = document.getElementById('loginStatus');
+            const accessToken = localStorage.getItem('accessToken');
+            const userEmail = localStorage.getItem('userEmail');
+            const profileSection = document.getElementById('userProfileSection');
+            const loginButton = document.getElementById('loginLink');
 
-        // Simulate login
-        simulateLoginBtn.addEventListener('click', () => {
-            const email = 'demo@example.com';
-            localStorage.setItem('userEmail', email);
-            localStorage.setItem('accessToken', 'demo-token-123');
-            updateUI();
-            statusText.textContent = `User logged in as: ${email}`;
-        });
+            let html = '';
 
-        // Simulate logout
-        simulateLogoutBtn.addEventListener('click', () => {
-            localStorage.removeItem('userEmail');
-            localStorage.removeItem('accessToken');
-            updateUI();
-            statusText.textContent = 'User is not logged in';
-        });
-
-        // Update UI based on login status
-        function updateUI() {
-            const email = localStorage.getItem('userEmail');
-
-            if (email) {
-                // User is logged in
-                loginLink.style.display = 'none';
-                signupLink.style.display = 'none';
-                userProfileSection.classList.remove('hidden');
-                userProfileSection.style.display = 'flex';
-                userEmail.textContent = email;
-                dropdownEmail.textContent = email;
+            if (accessToken) {
+                html += '<div class="status success">✅ User is LOGGED IN</div>';
+                html += `<div class="status info">Email: ${userEmail || 'Not set'}</div>`;
             } else {
-                // User is not logged in
-                loginLink.style.display = '';
-                signupLink.style.display = '';
-                userProfileSection.classList.add('hidden');
-                userProfileSection.style.display = 'none';
-                profileDropdown.classList.add('hidden');
+                html += '<div class="status error">❌ User is NOT logged in</div>';
             }
+
+            if (profileSection) {
+                const isHidden = profileSection.classList.contains('hidden');
+                html += `<div class="status ${isHidden ? 'error' : 'success'}">
+                    Profile Section: ${isHidden ? '❌ Hidden' : '✅ Visible'}
+                </div>`;
+            } else {
+                html += '<div class="status error">❌ Profile section element not found!</div>';
+            }
+
+            if (loginButton) {
+                const isHidden = loginButton.classList.contains('hidden');
+                html += `<div class="status ${isHidden ? 'success' : 'info'}">
+                    Login Button: ${isHidden ? '✅ Hidden' : '⚠️ Visible'}
+                </div>`;
+            }
+
+            status.innerHTML = html;
         }
 
-        // Toggle dropdown
-        if (profileBtn && profileDropdown) {
-            profileBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                profileDropdown.classList.toggle('hidden');
-            });
+        function simulateLogin() {
+            localStorage.setItem('accessToken', 'test-token-12345');
+            localStorage.setItem('userEmail', 'test.user@example.com');
+            localStorage.setItem('userId', 'test-user-id');
+            localStorage.setItem('firstName', 'Test');
+            localStorage.setItem('userRole', 'user');
 
-            // Close dropdown when clicking outside
-            document.addEventListener('click', () => {
-                profileDropdown.classList.add('hidden');
-            });
+            updateNavbarAuth();
+
+            document.getElementById('authStatus').innerHTML = `
+                <div class="status success">✅ Simulated login successful!</div>
+                <div class="status info">Please refresh the page to see the navbar update</div>
+                <button class="test-button" onclick="location.reload()">Refresh Page Now</button>
+            `;
         }
 
-        // Logout functionality
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                localStorage.removeItem('userEmail');
-                localStorage.removeItem('accessToken');
-                updateUI();
-                statusText.textContent = 'User logged out successfully';
-            });
+        function simulateLogout() {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('firstName');
+            localStorage.removeItem('userRole');
+
+            updateNavbarAuth();
+
+            document.getElementById('authStatus').innerHTML = `
+                <div class="status success">✅ Logged out successfully!</div>
+                <div class="status info">Refresh to see changes</div>
+                <button class="test-button" onclick="location.reload()">Refresh Page Now</button>
+            `;
         }
 
-        // Initialize on page load
-        updateUI();
+        function openDropdown() {
+            const dropdown = document.getElementById('profileDropdown');
+            const status = document.getElementById('dropdownStatus');
+
+            if (!dropdown) {
+                status.innerHTML = '<div class="status error">❌ Dropdown element not found</div>';
+                return;
+            }
+
+            dropdown.classList.remove('hidden', 'scale-95', 'opacity-0');
+            dropdown.classList.add('scale-100', 'opacity-100');
+
+            status.innerHTML = '<div class="status success">✅ Dropdown opened manually</div>';
+        }
+
+        function closeDropdown() {
+            const dropdown = document.getElementById('profileDropdown');
+            const status = document.getElementById('dropdownStatus');
+
+            if (!dropdown) {
+                status.innerHTML = '<div class="status error">❌ Dropdown element not found</div>';
+                return;
+            }
+
+            dropdown.classList.remove('scale-100', 'opacity-100');
+            dropdown.classList.add('scale-95', 'opacity-0', 'hidden');
+
+            status.innerHTML = '<div class="status success">✅ Dropdown closed manually</div>';
+        }
+
+        function checkElements() {
+            const elements = {
+                'userProfileSection': document.getElementById('userProfileSection'),
+                'profileBtn': document.getElementById('profileBtn'),
+                'profileDropdown': document.getElementById('profileDropdown'),
+                'userEmail': document.getElementById('userEmail'),
+                'dropdownEmail': document.getElementById('dropdownEmail'),
+                'loginLink': document.getElementById('loginLink'),
+                'logoutBtn': document.getElementById('logoutBtn')
+            };
+
+            let html = '<h3 style="margin: 15px 0;">Element Status:</h3>';
+
+            for (const [name, element] of Object.entries(elements)) {
+                if (element) {
+                    html += `<div class="status success">✅ ${name}: Found</div>`;
+                } else {
+                    html += `<div class="status error">❌ ${name}: Not Found</div>`;
+                }
+            }
+
+            document.getElementById('elementStatus').innerHTML = html;
+        }
     </script>
 </body>
 
