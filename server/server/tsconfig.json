@@ -1,5 +1,5 @@
 {
-  "compilerOptions": {
+  "compilerOptions": { // Trigger reload
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "resolvePackageJsonExports": true,

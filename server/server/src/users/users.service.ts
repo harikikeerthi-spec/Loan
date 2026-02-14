@@ -24,7 +24,7 @@ export class UsersService {
     phoneNumber?: string;
     dateOfBirth?: string;
     mobile?: string;
-    password?: string
+    password?: string;
   }) {
     // Convert DD-MM-YYYY to Date object
     let dobDate: Date | null = null;
@@ -60,7 +60,7 @@ export class UsersService {
     firstName: string,
     lastName: string,
     phoneNumber: string,
-    dateOfBirth: string
+    dateOfBirth: string,
   ) {
     // Convert DD-MM-YYYY to Date object
     let dobDate: Date | null = null;
@@ -83,5 +83,111 @@ export class UsersService {
         dateOfBirth: dobDate,
       },
     });
+  }
+
+  async updateRefreshToken(email: string, refreshToken: string | null) {
+    return this.prisma.user.update({
+      where: { email },
+      data: {
+        refreshToken,
+      },
+    });
+  }
+
+  // Loan Application Methods
+  async createLoanApplication(userId: string, data: {
+    bank: string;
+    loanType: string;
+    amount: number;
+    purpose?: string;
+  }) {
+    return this.prisma.loanApplication.create({
+      data: {
+        userId,
+        bank: data.bank,
+        loanType: data.loanType,
+        amount: data.amount,
+        purpose: data.purpose || null,
+      },
+    });
+  }
+
+  async getUserApplications(userId: string) {
+    return this.prisma.loanApplication.findMany({
+      where: { userId },
+      orderBy: { date: 'desc' },
+    });
+  }
+
+  async updateLoanApplicationStatus(applicationId: string, status: string) {
+    return this.prisma.loanApplication.update({
+      where: { id: applicationId },
+      data: { status },
+    });
+  }
+
+  async deleteLoanApplication(applicationId: string) {
+    return this.prisma.loanApplication.delete({
+      where: { id: applicationId },
+    });
+  }
+
+  // Document Methods
+  async upsertUserDocument(userId: string, docType: string, data: {
+    uploaded: boolean;
+    status?: string;
+    filePath?: string;
+  }) {
+    return this.prisma.userDocument.upsert({
+      where: {
+        userId_docType: {
+          userId,
+          docType,
+        },
+      },
+      update: {
+        uploaded: data.uploaded,
+        status: data.status || 'pending',
+        filePath: data.filePath || null,
+        uploadedAt: data.uploaded ? new Date() : null,
+      },
+      create: {
+        userId,
+        docType,
+        uploaded: data.uploaded,
+        status: data.status || 'pending',
+        filePath: data.filePath || null,
+        uploadedAt: data.uploaded ? new Date() : null,
+      },
+    });
+  }
+
+  async getUserDocuments(userId: string) {
+    return this.prisma.userDocument.findMany({
+      where: { userId },
+      orderBy: { docType: 'asc' },
+    });
+  }
+
+  async deleteUserDocument(userId: string, docType: string) {
+    return this.prisma.userDocument.delete({
+      where: {
+        userId_docType: {
+          userId,
+          docType,
+        },
+      },
+    });
+  }
+
+  // Get user dashboard data with all applications and documents
+  async getUserDashboardData(userId: string) {
+    const applications = await this.getUserApplications(userId);
+    const documents = await this.getUserDocuments(userId);
+
+    return {
+      applications,
+      documents,
+    };
   }
 }

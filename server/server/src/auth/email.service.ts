@@ -48,13 +48,15 @@ export class EmailService {
       console.log(`[EmailService] Target Email: ${email}`);
       console.log(`[EmailService] OTP Value: ${otp}`);
       console.log(`--------------------------------`);
-      
+
       // Send actual email if credentials are configured
       if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
         await this.transporter.sendMail(mailOptions);
         console.log(`Email sent successfully to ${email}`);
       } else {
-        console.log(`Email credentials not configured - OTP only logged to console`);
+        console.log(
+          `Email credentials not configured - OTP only logged to console`,
+        );
       }
     } catch (error) {
       console.error('Error sending email:', error);

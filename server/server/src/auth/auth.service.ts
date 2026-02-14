@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { UsersService } from '../users/users.service';
 import { EmailService } from './email.service';
 import { JwtService } from '@nestjs/jwt';
@@ -6,17 +10,20 @@ import { JwtService } from '@nestjs/jwt';
 @Injectable()
 export class AuthService {
   private otps = new Map<string, string>();
-  private signupData = new Map<string, {
-    firstName?: string;
-    lastName?: string;
-    phoneNumber?: string;
-    dateOfBirth?: string;
-  }>();
+  private signupData = new Map<
+    string,
+    {
+      firstName?: string;
+      lastName?: string;
+      phoneNumber?: string;
+      dateOfBirth?: string;
+    }
+  >();
 
   constructor(
     private usersService: UsersService,
     private emailService: EmailService,
-    private jwtService: JwtService
+    private jwtService: JwtService,
   ) { }
 
   async sendOtp(
@@ -27,7 +34,7 @@ export class AuthService {
       lastName?: string;
       phoneNumber?: string;
       dateOfBirth?: string;
-    }
+    },
   ) {
     // Validate required fields for signup (only if provided)
     if (isSignup && signupInfo) {
@@ -38,7 +45,10 @@ export class AuthService {
         }
 
         if (signupInfo.firstName.length > 30) {
-          return { success: false, message: 'First name must not exceed 30 characters' };
+          return {
+            success: false,
+            message: 'First name must not exceed 30 characters',
+          };
         }
       }
 
@@ -49,7 +59,10 @@ export class AuthService {
         }
 
         if (signupInfo.lastName.length > 30) {
-          return { success: false, message: 'Last name must not exceed 30 characters' };
+          return {
+            success: false,
+            message: 'Last name must not exceed 30 characters',
+          };
         }
       }
 
@@ -62,13 +75,19 @@ export class AuthService {
         // Validate phone number format (only numbers, +, -, spaces, and parentheses)
         const phoneRegex = /^[0-9+\s\-()]+$/;
         if (!phoneRegex.test(signupInfo.phoneNumber)) {
-          return { success: false, message: 'Please enter a valid phone number' };
+          return {
+            success: false,
+            message: 'Please enter a valid phone number',
+          };
         }
 
         // Check exact length (exactly 10 digits)
         const digitsOnly = signupInfo.phoneNumber.replace(/[^0-9]/g, '');
         if (digitsOnly.length !== 10) {
-          return { success: false, message: 'Phone number must be exactly 10 digits' };
+          return {
+            success: false,
+            message: 'Phone number must be exactly 10 digits',
+          };
         }
       }
 
@@ -81,7 +100,11 @@ export class AuthService {
         // Validate date of birth format (DD-MM-YYYY)
         const dobPattern = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/;
         if (!dobPattern.test(signupInfo.dateOfBirth)) {
-          return { success: false, message: 'Date of birth must be in DD-MM-YYYY format (e.g., 15-01-1990)' };
+          return {
+            success: false,
+            message:
+              'Date of birth must be in DD-MM-YYYY format (e.g., 15-01-1990)',
+          };
         }
 
         // Parse and validate the date
@@ -93,26 +116,45 @@ export class AuthService {
         const dobDate = new Date(year, month - 1, day);
 
         // Check if it's a valid date
-        if (dobDate.getFullYear() !== year || dobDate.getMonth() !== month - 1 || dobDate.getDate() !== day) {
-          return { success: false, message: 'Please enter a valid date of birth' };
+        if (
+          dobDate.getFullYear() !== year ||
+          dobDate.getMonth() !== month - 1 ||
+          dobDate.getDate() !== day
+        ) {
+          return {
+            success: false,
+            message: 'Please enter a valid date of birth',
+          };
         }
 
         // Check if date is not in the future
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         if (dobDate > today) {
-          return { success: false, message: 'Date of birth cannot be in the future' };
+          return {
+            success: false,
+            message: 'Date of birth cannot be in the future',
+          };
         }
 
         // Check if person is at least 18 years old
-        const age = Math.floor((today.getTime() - dobDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+        const age = Math.floor(
+          (today.getTime() - dobDate.getTime()) /
+          (365.25 * 24 * 60 * 60 * 1000),
+        );
         if (age < 18) {
-          return { success: false, message: 'You must be at least 18 years old to register' };
+          return {
+            success: false,
+            message: 'You must be at least 18 years old to register',
+          };
         }
 
         // Check if date is reasonable (not more than 120 years ago)
         if (age > 120) {
-          return { success: false, message: 'Please enter a valid date of birth' };
+          return {
+            success: false,
+            message: 'Please enter a valid date of birth',
+          };
         }
       }
     }
@@ -130,7 +172,10 @@ export class AuthService {
     // Split email into username and domain
     const emailParts = email.split('@');
     if (emailParts.length !== 2 || !emailParts[1].includes('.')) {
-      return { success: false, message: 'Email must have a valid domain (e.g., .com, .org)' };
+      return {
+        success: false,
+        message: 'Email must have a valid domain (e.g., .com, .org)',
+      };
     }
 
     const username = emailParts[0];
@@ -138,23 +183,37 @@ export class AuthService {
 
     // Validate username: minimum 8 characters
     if (username.length < 8) {
-      return { success: false, message: 'Email username (before @) must be at least 8 characters long' };
+      return {
+        success: false,
+        message: 'Email username (before @) must be at least 8 characters long',
+      };
     }
 
     // Validate username: must include at least one alphabetical character (a-z)
     if (!/[a-z]/.test(username)) {
-      return { success: false, message: 'Email username must include at least one alphabetical character (a-z)' };
+      return {
+        success: false,
+        message:
+          'Email username must include at least one alphabetical character (a-z)',
+      };
     }
 
     // Validate username: no capital letters allowed
     if (/[A-Z]/.test(username)) {
-      return { success: false, message: 'Email username must not contain capital letters' };
+      return {
+        success: false,
+        message: 'Email username must not contain capital letters',
+      };
     }
 
     // Email validation: must contain lowercase letters, @, and a valid domain
     const emailRegex = /^[a-z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
     if (!emailRegex.test(email.toLowerCase())) {
-      return { success: false, message: 'Please enter a valid email address (e.g., username@example.com)' };
+      return {
+        success: false,
+        message:
+          'Please enter a valid email address (e.g., username@example.com)',
+      };
     }
 
     // Check if user exists
@@ -162,12 +221,20 @@ export class AuthService {
 
     if (isSignup && existingUser) {
       // User trying to signup but already exists
-      return { success: false, message: 'User already exists. Please login instead.', redirect: 'login' };
+      return {
+        success: false,
+        message: 'User already exists. Please login instead.',
+        redirect: 'login',
+      };
     }
 
     if (!isSignup && !existingUser) {
       // User trying to login but doesn't exist
-      return { success: false, message: 'User not found. Please signup first.', redirect: 'signup' };
+      return {
+        success: false,
+        message: 'User not found. Please signup first.',
+        redirect: 'signup',
+      };
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -197,7 +264,10 @@ export class AuthService {
     if (user) {
       return { exists: true, message: 'User found' };
     } else {
-      return { exists: false, message: 'User not found. Please sign up first.' };
+      return {
+        exists: false,
+        message: 'User not found. Please sign up first.',
+      };
     }
   }
 
@@ -219,27 +289,44 @@ export class AuthService {
 
     const emailParts = email.split('@');
     if (emailParts.length !== 2 || !emailParts[1].includes('.')) {
-      return { success: false, message: 'Email must have a valid domain (e.g., .com, .org)' };
+      return {
+        success: false,
+        message: 'Email must have a valid domain (e.g., .com, .org)',
+      };
     }
 
     const username = emailParts[0];
     const domain = emailParts[1];
 
     if (username.length < 8) {
-      return { success: false, message: 'Email username (before @) must be at least 8 characters long' };
+      return {
+        success: false,
+        message: 'Email username (before @) must be at least 8 characters long',
+      };
     }
 
     if (!/[a-z]/.test(username)) {
-      return { success: false, message: 'Email username must include at least one alphabetical character (a-z)' };
+      return {
+        success: false,
+        message:
+          'Email username must include at least one alphabetical character (a-z)',
+      };
     }
 
     if (/[A-Z]/.test(username)) {
-      return { success: false, message: 'Email username must not contain capital letters' };
+      return {
+        success: false,
+        message: 'Email username must not contain capital letters',
+      };
     }
 
     const emailRegex = /^[a-z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
     if (!emailRegex.test(email.toLowerCase())) {
-      return { success: false, message: 'Please enter a valid email address (e.g., username@example.com)' };
+      return {
+        success: false,
+        message:
+          'Please enter a valid email address (e.g., username@example.com)',
+      };
     }
 
     // Check if user exists
@@ -256,14 +343,14 @@ export class AuthService {
     return {
       success: true,
       message: 'OTP sent successfully',
-      userExists: !!existingUser // Return whether user exists or not
+      userExists: !!existingUser, // Return whether user exists or not
     };
   }
 
   /**
    * Verify OTP and handle both new and existing users
    * Step 2 of unified flow
-   * 
+   *
    * For existing users with complete details: return token + userExists=true, hasUserDetails=true
    * For existing users without details: return token + userExists=true, hasUserDetails=false
    * For new users: create user + return token + userExists=false, hasUserDetails=false
@@ -274,7 +361,7 @@ export class AuthService {
     if (!storedOtp || storedOtp !== otp) {
       return {
         success: false,
-        message: 'Invalid or expired OTP. Please try again.'
+        message: 'Invalid or expired OTP. Please try again.',
       };
     }
 
@@ -293,31 +380,40 @@ export class AuthService {
       }
 
       // Check if user has complete details
-      const hasUserDetails = !!(user.firstName && user.lastName && user.phoneNumber && user.dateOfBirth);
+      const hasUserDetails = !!(
+        user.firstName &&
+        user.lastName &&
+        user.phoneNumber &&
+        user.dateOfBirth
+      );
 
       // Generate JWT token
       const payload = {
         email: user.email,
         sub: user.id,
+        id: user.id,
         firstName: user.firstName,
-        lastName: user.lastName
+        lastName: user.lastName,
       };
       const accessToken = this.jwtService.sign(payload);
 
       return {
         success: true,
-        message: isNewUser ? 'Signup successful. Please complete your profile.' : 'Login successful.',
+        message: isNewUser
+          ? 'Signup successful. Please complete your profile.'
+          : 'Login successful.',
         access_token: accessToken,
         userExists: !isNewUser,
         hasUserDetails,
         firstName: user.firstName,
         lastName: user.lastName,
+        userId: user.id,
       };
     } catch (error) {
       console.error('[AuthService] Error in verifyOtpUnified:', error);
       return {
         success: false,
-        message: 'An error occurred during verification. Please try again.'
+        message: 'An error occurred during verification. Please try again.',
       };
     }
   }
@@ -349,7 +445,7 @@ export class AuthService {
         phoneNumber: user.phoneNumber,
         dateOfBirth: formattedDob,
         createdAt: user.createdAt,
-      }
+      },
     };
   }
 
@@ -358,14 +454,15 @@ export class AuthService {
     firstName: string,
     lastName: string,
     phoneNumber: string,
-    dateOfBirth: string
+    dateOfBirth: string,
   ) {
     // First, check if user exists with the provided email
     const existingUser = await this.usersService.findOne(email);
     if (!existingUser) {
       return {
         success: false,
-        message: 'User does not exist. Please check your email address or sign up first.'
+        message:
+          'User does not exist. Please check your email address or sign up first.',
       };
     }
 
@@ -374,7 +471,10 @@ export class AuthService {
       return { success: false, message: 'Please enter your first name' };
     }
     if (firstName.length > 30) {
-      return { success: false, message: 'First name must not exceed 30 characters' };
+      return {
+        success: false,
+        message: 'First name must not exceed 30 characters',
+      };
     }
 
     // Validate lastName
@@ -382,7 +482,10 @@ export class AuthService {
       return { success: false, message: 'Please enter your last name' };
     }
     if (lastName.length > 30) {
-      return { success: false, message: 'Last name must not exceed 30 characters' };
+      return {
+        success: false,
+        message: 'Last name must not exceed 30 characters',
+      };
     }
 
     // Validate phoneNumber
@@ -395,7 +498,10 @@ export class AuthService {
     }
     const digitsOnly = phoneNumber.replace(/[^0-9]/g, '');
     if (digitsOnly.length !== 10) {
-      return { success: false, message: 'Phone number must be exactly 10 digits' };
+      return {
+        success: false,
+        message: 'Phone number must be exactly 10 digits',
+      };
     }
 
     // Validate dateOfBirth
@@ -404,7 +510,11 @@ export class AuthService {
     }
     const dobPattern = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/;
     if (!dobPattern.test(dateOfBirth)) {
-      return { success: false, message: 'Date of birth must be in DD-MM-YYYY format (e.g., 15-01-1990)' };
+      return {
+        success: false,
+        message:
+          'Date of birth must be in DD-MM-YYYY format (e.g., 15-01-1990)',
+      };
     }
 
     // Parse and validate the date
@@ -414,19 +524,31 @@ export class AuthService {
     const year = parseInt(dobParts[2], 10);
     const dobDate = new Date(year, month - 1, day);
 
-    if (dobDate.getFullYear() !== year || dobDate.getMonth() !== month - 1 || dobDate.getDate() !== day) {
+    if (
+      dobDate.getFullYear() !== year ||
+      dobDate.getMonth() !== month - 1 ||
+      dobDate.getDate() !== day
+    ) {
       return { success: false, message: 'Please enter a valid date of birth' };
     }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (dobDate > today) {
-      return { success: false, message: 'Date of birth cannot be in the future' };
+      return {
+        success: false,
+        message: 'Date of birth cannot be in the future',
+      };
     }
 
-    const age = Math.floor((today.getTime() - dobDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+    const age = Math.floor(
+      (today.getTime() - dobDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000),
+    );
     if (age < 18) {
-      return { success: false, message: 'You must be at least 18 years old to register' };
+      return {
+        success: false,
+        message: 'You must be at least 18 years old to register',
+      };
     }
     if (age > 120) {
       return { success: false, message: 'Please enter a valid date of birth' };
@@ -439,7 +561,7 @@ export class AuthService {
         firstName,
         lastName,
         phoneNumber,
-        dateOfBirth
+        dateOfBirth,
       );
 
       if (!user) {
@@ -455,13 +577,15 @@ export class AuthService {
           lastName: user.lastName,
           phoneNumber: user.phoneNumber,
           dateOfBirth: user.dateOfBirth,
-        }
+          userId: user.id,
+        },
       };
     } catch (error) {
       console.error('Error updating user details:', error);
       return {
         success: false,
-        message: 'Failed to update profile. Please try again or contact support.'
+        message:
+          'Failed to update profile. Please try again or contact support.',
       };
     }
   }

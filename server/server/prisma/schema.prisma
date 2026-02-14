@@ -8,42 +8,674 @@ datasource db {
 }
 
 model User {
-  id          String    @id @default(uuid())
-  email       String    @unique
-  firstName   String?
-  lastName    String?
-  phoneNumber String?
-  dateOfBirth DateTime?
-  mobile      String
-  password    String
-  createdAt   DateTime  @default(now())
-  blogs       Blog[]    @relation("AuthorBlogs")
+  id               String            @id @default(uuid())
+  email            String            @unique
+  mobile           String
+  password         String
+  createdAt        DateTime          @default(now())
+  dateOfBirth      DateTime?
+  firstName        String?
+  lastName         String?
+  phoneNumber      String?
+  refreshToken     String?
+  role             String            @default("user")
+  updatedAt        DateTime          @default(now()) @updatedAt
+  adminProfile     AdminProfile?     @relation("AdminUser")
+  auditLogs        AuditLog[]        @relation("AuditInitiator")
+  blogs            Blog[]            @relation("AuthorBlogs")
+  comments         Comment[]         @relation("CommentAuthor")
+  forumComments    ForumComment[]
+  forumPosts       ForumPost[]
+  postLikes        PostLike[]
+  forumCommentLikes ForumCommentLike[]
+  loanApplications LoanApplication[]
+  documents        UserDocument[]
+}
+
+model AdminProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  adminTitle      String?
+  department      String?
+  bio             String?
+  profileImage    String?
+  canApproveBlogs Boolean  @default(false)
+  canManageUsers  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation("AdminUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Blog {
-  id            String    @id @default(uuid())
-  title         String                          // H1 title of the blog
-  slug          String    @unique               // URL-friendly slug
-  excerpt       String                          // Short summary/description
-  content       String    @db.Text              // Full HTML content
-  category      String                          // Blog category
-  authorName    String                          // Author's display name
-  authorImage   String?                         // Author's profile image URL
-  authorRole    String?                         // Author's role/title
-  featuredImage String?                         // Main blog image URL
-  readTime      Int       @default(5)           // Estimated read time in minutes
-  views         Int       @default(0)           // View count
-  featured      Boolean   @default(false) @map("isFeatured")      // Featured blog flag
-  published     Boolean   @default(false) @map("isPublished")      // Publication status
-  publishedAt   DateTime?                       // Publication date
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  // Optional relation to User (author)
-  authorId      String?
-  author        User?     @relation("AuthorBlogs", fields: [authorId], references: [id])
-  
+  id              String     @id @default(uuid())
+  title           String
+  slug            String     @unique
+  excerpt         String
+  content         String
+  category        String
+  authorName      String
+  authorImage     String?
+  authorRole      String?
+  featuredImage   String?
+  readTime        Int        @default(5)
+  views           Int        @default(0)
+  isFeatured      Boolean    @default(false)
+  isPublished     Boolean    @default(false)
+  publishedAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  authorId        String?
+  approvedAt      DateTime?
+  approvedBy      String?
+  rejectionReason String?
+  status          String     @default("draft")
+  submittedAt     DateTime?
+  visibility      String     @default("private")
+  auditLogs       AuditLog[] @relation("BlogAuditLogs")
+  author          User?      @relation("AuthorBlogs", fields: [authorId], references: [id])
+  tags            BlogTag[]
+  comments        Comment[]
+
+  @@index([authorId])
+  @@index([status])
+  @@index([visibility])
+  @@index([isPublished])
+  @@index([isFeatured])
   @@index([category])
-  @@index([published])
-  @@index([featured])
+  @@index([publishedAt])
+}
+
+model Comment {
+  id        String        @id @default(uuid())
+  content   String
+  createdAt DateTime      @default(now())
+  blogId    String
+  likes     Int           @default(0)
+  parentId  String?
+  author    String
+  status    String        @default("approved")
+  updatedAt DateTime      @default(now()) @updatedAt
+  userId    String?
+  blog      Blog          @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  parent    Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[]     @relation("CommentReplies")
+  user      User?         @relation("CommentAuthor", fields: [userId], references: [id])
+  likesData CommentLike[]
+
+  @@index([blogId])
+  @@index([userId])
+  @@index([parentId])
+}
+
+model CommentLike {
+  id        String   @id @default(uuid())
+  commentId String
+  userId    String
+  createdAt DateTime @default(now())
+  comment   Comment  @relation(fields: [commentId], references: [id])
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
+}
+
+model Tag {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  blogs     BlogTag[]
+}
+
+model BlogTag {
+  blogId String
+  tagId  String
+  blog   Blog   @relation(fields: [blogId], references: [id])
+  tag    Tag    @relation(fields: [tagId], references: [id])
+
+  @@id([blogId, tagId])
+  @@index([tagId])
+}
+
+model LoanApplication {
+  id                     String                     @id @default(uuid())
+  applicationNumber      String                     @unique @default(uuid())
+  userId                 String
+  bank                   String
+  loanType               String
+  amount                 Float
+  tenure                 Int?
+  interestRate           Float?
+  processingFee          Float?
+  purpose                String?
+  firstName              String?
+  lastName               String?
+  email                  String?
+  phone                  String?
+  dateOfBirth            DateTime?
+  gender                 String?
+  nationality            String?
+  address                String?
+  city                   String?
+  state                  String?
+  pincode                String?
+  country                String?
+  employmentType         String?
+  employerName           String?
+  jobTitle               String?
+  annualIncome           Float?
+  workExperience         Int?
+  universityName         String?
+  courseName             String?
+  courseDuration         Int?
+  courseStartDate        DateTime?
+  admissionStatus        String?
+  hasCoApplicant         Boolean                    @default(false)
+  coApplicantName        String?
+  coApplicantRelation    String?
+  coApplicantPhone       String?
+  coApplicantEmail       String?
+  coApplicantIncome      Float?
+  fatherName             String?
+  fatherPhone            String?
+  fatherEmail            String?
+  motherName             String?
+  motherPhone            String?
+  motherEmail            String?
+  hasCollateral          Boolean                    @default(false)
+  collateralType         String?
+  collateralValue        Float?
+  collateralDetails      String?
+  status                 String                     @default("draft")
+  stage                  String                     @default("application_submitted")
+  progress               Int                        @default(0)
+  priorityLevel          String                     @default("normal")
+  submittedAt            DateTime?
+  reviewStartedAt        DateTime?
+  approvedAt             DateTime?
+  rejectedAt             DateTime?
+  disbursedAt            DateTime?
+  estimatedCompletionAt  DateTime?
+  assignedTo             String?
+  rejectionReason        String?
+  sanctionAmount         Float?
+  sanctionedInterestRate Float?
+  disbursedAmount        Float?
+  remarks                String?
+  date                   DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+  documents              ApplicationDocument[]
+  notes                  ApplicationNote[]
+  statusHistory          ApplicationStatusHistory[]
+  user                   User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([applicationNumber])
+  @@index([stage])
+  @@index([bank])
+  @@index([loanType])
+  @@index([submittedAt])
+}
+
+model ApplicationDocument {
+  id              String          @id @default(uuid())
+  applicationId   String
+  docType         String
+  docName         String
+  fileName        String
+  filePath        String
+  fileSize        Int?
+  mimeType        String?
+  status          String          @default("pending")
+  verifiedAt      DateTime?
+  verifiedBy      String?
+  rejectionReason String?
+  expiryDate      DateTime?
+  isRequired      Boolean         @default(true)
+  uploadedAt      DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  application     LoanApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([docType])
+  @@index([status])
+}
+
+model ApplicationStatusHistory {
+  id            String          @id @default(uuid())
+  applicationId String
+  fromStatus    String?
+  toStatus      String
+  fromStage     String?
+  toStage       String?
+  changedBy     String?
+  changedByName String?
+  changeReason  String?
+  notes         String?
+  isAutomatic   Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+  application   LoanApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([createdAt])
+}
+
+model ApplicationNote {
+  id            String          @id @default(uuid())
+  applicationId String
+  authorId      String?
+  authorName    String
+  content       String
+  type          String          @default("general")
+  isInternal    Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  application   LoanApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId])
+  @@index([createdAt])
+}
+
+model UserDocument {
+  id         String    @id @default(uuid())
+  userId     String
+  docType    String
+  uploaded   Boolean   @default(false)
+  status     String    @default("pending")
+  filePath   String?
+  uploadedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, docType])
+  @@index([userId])
+  @@index([docType])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  action      String
+  entityType  String
+  entityId    String
+  initiatedBy String
+  changes     Json
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  blog        Blog     @relation("BlogAuditLogs", fields: [entityId], references: [id], onDelete: SetNull)
+  initiator   User     @relation("AuditInitiator", fields: [initiatedBy], references: [id], onDelete: SetNull)
+
+  @@index([entityType])
+  @@index([entityId])
+  @@index([initiatedBy])
+  @@index([createdAt])
+}
+
+
+
+model LoanType {
+  id                String   @id @default(uuid())
+  name              String   @unique
+  category          String
+  description       String
+  features          String[]
+  eligibility       String
+  documentsRequired String[]
+  interestRateMin   Float
+  interestRateMax   Float
+  loanAmountMin     String
+  loanAmountMax     String
+  repaymentPeriod   String
+  processingTime    String
+  isPopular         Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([category])
+  @@index([isPopular])
+}
+
+model University {
+  id             String   @id @default(uuid())
+  name           String
+  country        String
+  city           String?
+  state          String?
+  ranking        Int?
+  worldRanking   Int?
+  type           String
+  established    Int?
+  website        String?
+  description    String?
+  popularCourses String[]
+  averageFees    String?
+  acceptanceRate Float?
+  scholarships   Boolean  @default(false)
+  logoUrl        String?
+  imageUrl       String?
+  isFeatured     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([name, country])
+  @@index([country])
+  @@index([ranking])
+  @@index([isFeatured])
+}
+
+model Bank {
+  id                  String   @id @default(uuid())
+  name                String   @unique
+  shortName           String?
+  country             String   @default("India")
+  type                String
+  loanTypes           String[]
+  educationLoan       Boolean  @default(true)
+  interestRateMin     Float
+  interestRateMax     Float
+  maxLoanAmount       String
+  collateralRequired  Boolean
+  collateralFreeLimit String?
+  processingFee       String
+  processingTime      String
+  features            String[]
+  website             String?
+  contactNumber       String?
+  email               String?
+  logoUrl             String?
+  isPopular           Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([country])
+  @@index([type])
+  @@index([isPopular])
+}
+
+model Country {
+  id                 String   @id @default(uuid())
+  name               String   @unique
+  code               String   @unique
+  region             String
+  popularForStudy    Boolean  @default(false)
+  universities       Int      @default(0)
+  averageTuitionFee  String?
+  averageLivingCost  String?
+  studyDuration      String?
+  visaType           String?
+  visaProcessingTime String?
+  workPermit         Boolean  @default(false)
+  postStudyWorkVisa  String?
+  popularCities      String[]
+  currency           String
+  language           String[]
+  flagUrl            String?
+  description        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([region])
+  @@index([popularForStudy])
+}
+
+model Scholarship {
+  id                 String   @id @default(uuid())
+  name               String
+  provider           String
+  country            String
+  eligibleCountries  String[]
+  amount             String
+  type               String
+  description        String
+  eligibility        String
+  applicationProcess String
+  deadline           String?
+  website            String?
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([country])
+  @@index([isActive])
+}
+
+model Course {
+  id               String   @id @default(uuid())
+  name             String
+  level            String
+  field            String
+  duration         String
+  description      String?
+  averageFees      String?
+  popularCountries String[]
+  careerProspects  String[]
+  averageSalary    String?
+  isPopular        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([level])
+  @@index([field])
+  @@index([isPopular])
+}
+
+// ==================== COMMUNITY MODELS ====================
+
+model Mentor {
+  id               String          @id @default(uuid())
+  name             String
+  email            String          @unique
+  phone            String?
+  role             String           @default("MENTOR")
+  university       String?
+  degree           String?
+  country          String?
+  loanBank         String?
+  loanAmount       String?
+  interestRate     String?
+  loanType         String?
+  category         String?
+  linkedIn         String?
+  image            String?
+  expertise        String[]
+  bio              String
+  hourlyRate       Float            @default(0)
+  rating           Float            @default(0)
+  totalSessions    Int              @default(0)
+  studentsMentored Int              @default(0)
+  isApproved       Boolean          @default(false)
+  isActive         Boolean          @default(true)
+  rejectionReason  String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  bookings         MentorBooking[]
+
+  @@index([country])
+  @@index([university])
+  @@index([isActive])
+  @@index([isApproved])
+  @@index([rating])
+}
+
+model MentorBooking {
+  id            String   @id @default(uuid())
+  mentorId      String
+  studentName   String
+  studentEmail  String
+  studentPhone  String?
+  preferredDate String
+  preferredTime String
+  message       String?
+  status        String   @default("pending")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  mentor        Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model CommunityEvent {
+  id              String              @id @default(uuid())
+  title           String
+  description     String
+  type            String
+  category        String?
+  date            String
+  time            String
+  duration        Int
+  speaker         String?
+  speakerTitle    String?
+  speakerBio      String?
+  location        String              @default("Online")
+  meetingLink     String?
+  maxAttendees    Int?
+  attendeesCount  Int                 @default(0)
+  price           Float               @default(0)
+  isFree          Boolean             @default(true)
+  isOnline        Boolean             @default(true)
+  imageUrl        String?
+  recordingUrl    String?
+  isFeatured      Boolean             @default(false)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  registrations   EventRegistration[]
+
+  @@index([type])
+  @@index([date])
+  @@index([isFeatured])
+}
+
+model EventRegistration {
+  id        String         @id @default(uuid())
+  eventId   String
+  name      String
+  email     String
+  phone     String?
+  createdAt DateTime       @default(now())
+  event     CommunityEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, email])
+  @@index([eventId])
+  @@index([email])
+}
+
+model SuccessStory {
+  id              String   @id @default(uuid())
+  name            String
+  email           String
+  university      String
+  country         String
+  degree          String
+  loanAmount      String
+  bank            String
+  interestRate    String?
+  story           String
+  tips            String?
+  image           String?
+  videoUrl        String?
+  category        String?
+  isApproved      Boolean  @default(false)
+  isFeatured      Boolean  @default(false)
+  rejectionReason String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([country])
+  @@index([category])
+  @@index([isApproved])
+  @@index([isFeatured])
+}
+
+model CommunityResource {
+  id           String   @id @default(uuid())
+  title        String
+  description  String
+  type         String
+  category     String
+  fileUrl      String?
+  downloadUrl  String?
+  thumbnailUrl String?
+  downloads    Int      @default(0)
+  isFeatured   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([type])
+  @@index([category])
+  @@index([downloads])
+  @@index([isFeatured])
+}
+
+model PostLike {
+  id        String    @id @default(uuid())
+  postId    String
+  userId    String
+  createdAt DateTime  @default(now())
+  post      ForumPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model ForumCommentLike {
+  id        String       @id @default(uuid())
+  commentId String
+  userId    String
+  createdAt DateTime     @default(now())
+  comment   ForumComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@index([commentId])
+  @@index([userId])
+}
+
+model ForumPost {
+  id           String         @id @default(uuid())
+  authorId     String
+  title        String
+  content      String
+  category     String
+  tags         String[]
+  isMentorOnly Boolean        @default(false)
+  views        Int            @default(0)
+  likes        Int            @default(0)
+  isSolved     Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  author       User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments     ForumComment[]
+  postLikes    PostLike[]
+
+  @@index([authorId])
+  @@index([category])
+  @@index([createdAt])
+}
+
+model ForumComment {
+  id        String         @id @default(uuid())
+  postId    String
+  authorId  String
+  content   String
+  likes     Int            @default(0)
+  parentId  String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  post      ForumPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent    ForumComment?  @relation("ForumCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   ForumComment[] @relation("ForumCommentReplies")
+  commentLikes ForumCommentLike[]
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentId])
 }

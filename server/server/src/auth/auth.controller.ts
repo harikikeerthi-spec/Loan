@@ -3,7 +3,7 @@ import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) { }
+  constructor(private authService: AuthService) {}
 
   /**
    * Check if a user exists in the system
@@ -33,14 +33,14 @@ export class AuthController {
    * Step 2: Verify OTP and determine user flow
    * POST /auth/verify-otp
    * @body email: string (required), otp: string (required, 6 digits)
-   * @returns { 
-   *   success: boolean, 
-   *   access_token: string, 
+   * @returns {
+   *   success: boolean,
+   *   access_token: string,
    *   userExists: boolean,
    *   hasUserDetails: boolean,
    *   message: string
    * }
-   * 
+   *
    * Flow:
    * - If userExists: true && hasUserDetails: true → Navigate to homepage
    * - If userExists: true && hasUserDetails: false → Navigate to user-details.html
@@ -67,26 +67,27 @@ export class AuthController {
   /**
    * Update user details (name, phone, date of birth)
    * POST /auth/update-details
-   * @body email: string (required), firstName: string (required), lastName: string (required), 
+   * @body email: string (required), firstName: string (required), lastName: string (required),
    *       phoneNumber: string (required), dateOfBirth: string (required, DD-MM-YYYY format)
    * @returns { success: boolean, message: string, user?: { email, firstName, lastName, phoneNumber, dateOfBirth } }
    */
   @Post('update-details')
-  async updateUserDetails(@Body() body: {
-    email: string;
-    firstName: string;
-    lastName: string;
-    phoneNumber: string;
-    dateOfBirth: string;
-  }) {
+  async updateUserDetails(
+    @Body()
+    body: {
+      email: string;
+      firstName: string;
+      lastName: string;
+      phoneNumber: string;
+      dateOfBirth: string;
+    },
+  ) {
     return this.authService.updateUserDetails(
       body.email,
       body.firstName,
       body.lastName,
       body.phoneNumber,
-      body.dateOfBirth
+      body.dateOfBirth,
     );
   }
-
-
 }
