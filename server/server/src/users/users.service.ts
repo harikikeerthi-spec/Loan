@@ -157,7 +157,7 @@ export class UsersService {
         uploaded: data.uploaded,
         status: data.status || 'pending',
         filePath: data.filePath || null,
-        uploadedAt: data.uploaded ? new Date() : null,
+        uploadedAt: data.uploaded ? new Date() : undefined,
       },
       create: {
         userId,
@@ -165,7 +165,7 @@ export class UsersService {
         uploaded: data.uploaded,
         status: data.status || 'pending',
         filePath: data.filePath || null,
-        uploadedAt: data.uploaded ? new Date() : null,
+        uploadedAt: data.uploaded ? new Date() : undefined,
       },
     });
   }

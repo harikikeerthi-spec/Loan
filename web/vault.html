@@ -257,13 +257,12 @@
                     const result = await response.json();
                     if (result.success && result.data) {
                         result.data.forEach(doc => {
-                            if (doc.status === 'uploaded' || doc.uploaded) {
-                                // We don't have the original file object here, so we simulate one for display
+                            if (doc.status === 'uploaded' || doc.status === 'verified' || doc.uploaded) {
                                 const mockFile = {
-                                    name: 'Document Uploaded',
-                                    size: 0 // Size unknown from this endpoint
+                                    name: doc.status === 'verified' ? 'Verified' : 'Uploaded',
+                                    size: 0
                                 };
-                                updateDocumentCard(doc.docType, mockFile, true);
+                                updateDocumentCard(doc.docType, mockFile, true, doc.filePath, doc.status);
                             }
                         });
                     }
@@ -320,8 +319,10 @@
                 if (response.ok) {
                     const result = await response.json();
                     if (result.success) {
-                        updateDocumentCard(docType, file);
-                        alert(`${docType} uploaded successfully!`); // Optional
+                        const filePath = result.data?.filePath || result.file?.path || '';
+                        const docStatus = result.data?.status || 'uploaded';
+                        updateDocumentCard(docType, file, false, filePath, docStatus);
+                        alert(`${docType} uploaded successfully!`);
                     } else {
                         throw new Error(result.message || 'Upload failed');
                     }
@@ -340,7 +341,7 @@
         }
 
         // Update document card UI after file selection/load
-        function updateDocumentCard(docType, file, isExisting = false) {
+        function updateDocumentCard(docType, file, isExisting = false, filePath = '', docStatus = 'uploaded') {
             const card = document.getElementById(`doc-${docType}`);
             if (!card) return;
 
@@ -350,10 +351,13 @@
 
             // Update status text
             const fileSize = isExisting ? 'Stored Securely' : formatFileSize(file.size);
-            const fileName = isExisting ? 'Uploaded' : file.name;
+            const fileName = isExisting ? file.name : file.name;
+            const statusLabel = docStatus === 'verified' 
+                ? '<span class="text-green-600 dark:text-green-400 font-semibold">✓ Verified</span>' 
+                : '<span class="text-green-600 dark:text-green-400 font-semibold">Uploaded</span>';
 
             statusEl.innerHTML = `
-                <span class="text-green-600 dark:text-green-400 font-semibold">${fileName}</span>
+                ${statusLabel}
                 <span class="text-gray-400 ml-2">(${fileSize})</span>
             `;
 
@@ -371,19 +375,35 @@
             card.classList.remove('border-gray-100', 'dark:border-white/5');
             card.classList.add('border-green-500', 'dark:border-green-500', 'bg-green-50', 'dark:bg-green-900/10');
 
-            // Show delete button
-            addDeleteButton(card, docType);
+            // Add View and Delete buttons
+            addActionButtons(card, docType, filePath);
         }
 
-        // Add delete button to card
-        function addDeleteButton(card, docType) {
-            // Remove existing delete button if any
+        // Add view and delete buttons to card
+        function addActionButtons(card, docType, filePath) {
+            // Remove existing action buttons if any
+            const existingView = card.querySelector('.view-btn');
+            if (existingView) existingView.remove();
             const existingDelete = card.querySelector('.delete-btn');
             if (existingDelete) existingDelete.remove();
 
+            const userId = getCurrentUserId();
+
+            // Create View button
+            const viewBtn = document.createElement('button');
+            viewBtn.className = 'view-btn ml-2 p-2 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded-lg transition-all';
+            viewBtn.innerHTML = '<span class="material-symbols-outlined text-sm">visibility</span>';
+            viewBtn.title = 'View Document';
+            viewBtn.onclick = (e) => {
+                e.stopPropagation();
+                viewDocument(docType, filePath, userId);
+            };
+
+            // Create Delete button
             const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-btn ml-2 p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-all';
+            deleteBtn.className = 'delete-btn ml-1 p-2 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-lg transition-all';
             deleteBtn.innerHTML = '<span class="material-symbols-outlined text-sm">delete</span>';
+            deleteBtn.title = 'Delete Document';
             deleteBtn.onclick = (e) => {
                 e.stopPropagation();
                 if (confirm('Are you sure you want to delete this document?')) {
@@ -392,8 +412,81 @@
             };
 
             const uploadBtn = card.querySelector('.upload-btn');
-            // Insert after upload button
-            uploadBtn.parentNode.insertBefore(deleteBtn, uploadBtn.nextSibling);
+            uploadBtn.parentNode.insertBefore(viewBtn, uploadBtn.nextSibling);
+            viewBtn.parentNode.insertBefore(deleteBtn, viewBtn.nextSibling);
+        }
+
+        // View/Preview document
+        function viewDocument(docType, filePath, userId) {
+            // Use the dedicated view endpoint
+            const viewUrl = `${API_BASE_URL}/documents/view/${userId}/${docType}`;
+            
+            // Open in a modal or new tab
+            openDocumentPreview(viewUrl, docType, filePath);
+        }
+
+        // Open document preview modal
+        function openDocumentPreview(url, docType, filePath) {
+            // Determine file type from path
+            const ext = (filePath || '').split('.').pop()?.toLowerCase();
+            const isImage = ['jpg', 'jpeg', 'png'].includes(ext);
+            const isPdf = ext === 'pdf';
+            
+            // Create modal overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'doc-preview-modal';
+            overlay.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm';
+            overlay.onclick = (e) => {
+                if (e.target === overlay) overlay.remove();
+            };
+
+            const docTypeName = docType.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+
+            overlay.innerHTML = `
+                <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] flex flex-col overflow-hidden">
+                    <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary text-2xl">description</span>
+                            <h3 class="text-lg font-bold">${docTypeName}</h3>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <a href="${url}" download class="px-3 py-1.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-sm">download</span> Download
+                            </a>
+                            <a href="${url}" target="_blank" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-sm">open_in_new</span> Open
+                            </a>
+                            <button onclick="document.getElementById('doc-preview-modal').remove()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                                <span class="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-auto p-4 flex items-center justify-center bg-gray-50 dark:bg-gray-800">
+                        ${isImage ? `
+                            <img src="${url}" alt="${docTypeName}" class="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg" 
+                                 onerror="this.parentElement.innerHTML='<div class=\\'text-center text-gray-500 py-12\\'><span class=\\'material-symbols-outlined text-6xl mb-4 block\\'>broken_image</span><p>Unable to load preview</p><a href=\\'${url}\\' target=\\'_blank\\' class=\\'text-primary underline mt-2 block\\'>Try opening directly</a></div>'" />
+                        ` : isPdf ? `
+                            <iframe src="${url}" class="w-full h-[70vh] rounded-lg border border-gray-200 dark:border-gray-700" 
+                                    frameborder="0"></iframe>
+                        ` : `
+                            <div class="text-center text-gray-500 py-12">
+                                <span class="material-symbols-outlined text-6xl mb-4 block">description</span>
+                                <p class="text-lg font-medium mb-2">Document Preview</p>
+                                <p class="text-sm mb-4">This file type cannot be previewed directly.</p>
+                                <a href="${url}" target="_blank" class="px-4 py-2 bg-primary text-white rounded-lg inline-flex items-center gap-2 hover:bg-primary/90">
+                                    <span class="material-symbols-outlined text-sm">open_in_new</span> Open in New Tab
+                                </a>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            `;
+
+            // Remove any existing modal first
+            const existingModal = document.getElementById('doc-preview-modal');
+            if (existingModal) existingModal.remove();
+
+            document.body.appendChild(overlay);
         }
 
         // Remove document

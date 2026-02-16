@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 
 <head>
@@ -63,6 +63,9 @@
                             900: '#701a75',
                             950: '#4a044e',
                         }
+                    },
+                    backgroundImage: {
+                        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(102, 5, 199, 0.4) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224, 195, 137, 0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139, 192, 232, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102, 5, 199, 0.3) 0px, transparent 50%)',
                     },
                     animation: {
                         'blob': 'blob 7s infinite',
@@ -138,18 +141,13 @@
 </head>
 
 <body
-    class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 min-h-screen selection:bg-primary/20 transition-colors duration-500">
+    class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 min-h-screen selection:bg-primary/20 transition-colors duration-500 relative font-sans">
 
-    <!-- Background Decoration -->
-    <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div
-            class="absolute -top-[20%] -left-[10%] w-[70%] h-[70%] bg-purple-200/30 dark:bg-purple-900/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] animate-blob">
-        </div>
-        <div
-            class="absolute -top-[20%] -right-[10%] w-[70%] h-[70%] bg-teal-200/30 dark:bg-teal-900/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] animate-blob animation-delay-2000">
-        </div>
-        <div
-            class="absolute -bottom-[20%] left-[20%] w-[70%] h-[70%] bg-pink-200/30 dark:bg-pink-900/20 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] animate-blob animation-delay-4000">
+    <!-- Background Structure (Matching Index) -->
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none overflow-hidden">
+        <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
+        <div class="absolute inset-0 opacity-30 mix-blend-overlay"
+            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
         </div>
     </div>
 
@@ -201,22 +199,30 @@
 
             <!-- Left Sidebar (Sticky) -->
             <div class="hidden lg:block lg:col-span-3 sticky top-32 space-y-6">
-                <!-- User Profile / Login Prompt -->
-                <div id="userWidget"
-                    class="glass-panel p-6 rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20">
-                    <!-- Dynamic Content -->
-                    <div class="text-center">
+                <!-- Post New Question CTA -->
+                <div id="postQuestionWidget"
+                    class="glass-panel p-6 rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-brand-500/10 hover:shadow-brand-500/20 transition-all group">
+                    <div class="text-center relative z-10">
                         <div
-                            class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-brand-400 to-accent-500 p-1 mb-3">
-                            <img id="sidebarUserAvatar" src="assets/img/avatar_placeholder.png" alt="User"
-                                class="w-full h-full rounded-full object-cover">
+                            class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-brand-400 to-accent-500 p-0.5 mb-3 animate-pulse-slow">
+                            <div
+                                class="w-full h-full bg-white dark:bg-gray-900 rounded-full flex items-center justify-center">
+                                <span
+                                    class="material-symbols-rounded text-3xl text-transparent bg-clip-text bg-gradient-to-br from-brand-500 to-accent-500">add_comment</span>
+                            </div>
                         </div>
-                        <h3 class="font-bold text-gray-900 dark:text-white">Guest User</h3>
-                        <p class="text-xs text-gray-500 mb-4">Join the conversation</p>
-                        <a href="login.html"
-                            class="block w-full py-2.5 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-bold text-sm shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5">
-                            Sign In
-                        </a>
+                        <h3 class="font-bold text-gray-900 dark:text-white mb-1">Have a Question?</h3>
+                        <p class="text-xs text-gray-500 mb-4">Get answers from mentors & peers</p>
+
+                        <button id="startPostBtn"
+                            class="block w-full py-3 rounded-xl bg-gradient-to-r from-brand-600 to-accent-600 hover:from-brand-500 hover:to-accent-500 text-white font-bold text-sm shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 transition-all hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                            <span class="material-symbols-rounded text-lg">edit_square</span>
+                            Post a New Question
+                        </button>
+                    </div>
+                    <!-- Background Glow -->
+                    <div
+                        class="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-accent-500/5 rounded-3xl -z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
                     </div>
                 </div>
 
@@ -241,44 +247,8 @@
             <!-- Main Feed -->
             <div class="lg:col-span-6 space-y-8">
 
-                <!-- Create Post Input -->
-                <div id="createPostContainer"
-                    class="glass-panel p-1 rounded-3xl shadow-xl shadow-brand-900/5 transition-all focus-within:ring-2 focus-within:ring-brand-500/50 hidden">
-                    <div class="p-4 sm:p-6">
-                        <div class="flex gap-4">
-                            <div class="flex-shrink-0">
-                                <div id="currentUserAvatar"
-                                    class="w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center text-lg font-bold text-gray-500">
-                                    ?
-                                </div>
-                            </div>
-                            <div class="flex-grow">
-                                <textarea id="postContent" rows="2" placeholder="Start a discussion..."
-                                    class="w-full bg-transparent border-none text-gray-900 dark:text-white placeholder-gray-400 focus:ring-0 text-base resize-none !p-0 leading-relaxed"></textarea>
-
-                                <div
-                                    class="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-white/5">
-                                    <div class="flex gap-2">
-                                        <button
-                                            class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 text-brand-500 transition-colors"
-                                            title="Add Image">
-                                            <span class="material-symbols-rounded text-xl">image</span>
-                                        </button>
-                                        <button
-                                            class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 text-accent-500 transition-colors"
-                                            title="Add Link">
-                                            <span class="material-symbols-rounded text-xl">link</span>
-                                        </button>
-                                    </div>
-                                    <button id="submitPostBtn"
-                                        class="px-6 py-2 bg-gradient-to-r from-brand-600 to-brand-500 hover:from-brand-500 hover:to-brand-400 text-white text-sm font-bold rounded-full shadow-lg shadow-brand-500/30 transition-all hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed">
-                                        Post
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <!-- Create Post Input (Legacy - Hidden) -->
+                <div id="createPostContainer" class="hidden"></div>
 
                 <!-- Feed Sort -->
                 <div class="flex items-center justify-between px-2">
@@ -349,10 +319,77 @@
                     </div>
                     <div id="resourcesList" class="space-y-4"></div>
                 </div>
+
+                <!-- Upcoming Events Widget -->
+                <div
+                    class="glass-panel p-6 rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 mb-6 group hover:border-primary/30 transition-colors">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-rounded text-primary">event</span>
+                            <h3 class="font-bold text-gray-900 dark:text-white font-display">Upcoming</h3>
+                        </div>
+                        <a href="community-events.html" class="text-xs font-bold text-primary hover:underline">View
+                            All</a>
+                    </div>
+                    <div class="space-y-4">
+                        <a href="community-events.html" class="block group/event">
+                            <div class="flex gap-4 items-center">
+                                <div
+                                    class="flex-shrink-0 w-14 text-center bg-gray-50 dark:bg-white/5 rounded-2xl p-2 border border-gray-100 dark:border-white/5 group-hover/event:border-primary/30 transition-colors">
+                                    <span
+                                        class="block text-xs font-bold text-primary uppercase tracking-wider">Feb</span>
+                                    <span
+                                        class="block text-xl font-bold text-gray-900 dark:text-white leading-none mt-0.5">24</span>
+                                </div>
+                                <div>
+                                    <h4
+                                        class="text-sm font-bold text-gray-900 dark:text-white group-hover/event:text-primary transition-colors line-clamp-2">
+                                        Study in UK: Visa & Loan Webinar</h4>
+                                    <p class="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Online • 4:00 PM
+                                    </p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    <button
+                        class="w-full mt-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                        Add to Calendar
+                    </button>
+                </div>
+
+
+
+                <!-- Explore Community Widget -->
+                <div
+                    class="glass-panel p-6 rounded-3xl border border-white/50 dark:border-white/10 shadow-xl shadow-gray-200/50 dark:shadow-black/20 hover:scale-[1.02] transition-transform duration-300">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div
+                            class="p-3 rounded-2xl bg-gradient-to-br from-brand-100 to-accent-100 dark:from-brand-900/40 dark:to-accent-900/40 text-brand-600 dark:text-brand-400 flex items-center justify-center">
+                            <span class="material-symbols-rounded text-2xl">category</span>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-900 dark:text-white font-display text-lg">More Topics</h3>
+                            <p class="text-xs text-gray-500">Explore all categories</p>
+                        </div>
+                    </div>
+                    <p class="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
+                        Discover more communities, from university groups to scholarship discussions.
+                    </p>
+                    <a href="community-categories.html"
+                        class="flex items-center justify-between w-full p-3 rounded-xl bg-gray-50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 border border-gray-100 dark:border-white/5 transition-all group hover:border-brand-200 dark:hover:border-brand-800">
+                        <span class="text-sm font-bold text-gray-700 dark:text-gray-200">View All Categories</span>
+                        <span
+                            class="material-symbols-rounded text-brand-500 text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                    </a>
+                </div>
             </div>
 
         </div>
     </main>
+
+    <!-- Post Wizard Modal -->
+
 
     <!-- Footer Placeholder -->
     <div id="footer-placeholder"></div>

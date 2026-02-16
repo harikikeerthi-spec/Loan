@@ -35,6 +35,9 @@ model ApplicationDocument {
   status          String          @default("pending")
   verifiedAt      DateTime?
   verifiedBy      String?
+  digilockerTxId  String?
+  verificationMetadata Json?
+  aiExplanation   String?
   rejectionReason String?
   expiryDate      DateTime?
   isRequired      Boolean         @default(true)

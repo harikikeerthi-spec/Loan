@@ -495,6 +495,36 @@ export class CommunityController {
     }
 
     /**
+     * Create success story (Admin)
+     * POST /community/admin/stories
+     */
+    @Post('admin/stories')
+    @UseGuards(AdminGuard)
+    async createStory(@Body() body: any) {
+        return this.communityService.createStory(body);
+    }
+
+    /**
+     * Update success story (Admin)
+     * PUT /community/admin/stories/:id
+     */
+    @Put('admin/stories/:id')
+    @UseGuards(AdminGuard)
+    async updateStory(@Param('id') id: string, @Body() body: any) {
+        return this.communityService.updateStory(id, body);
+    }
+
+    /**
+     * Delete success story (Admin)
+     * DELETE /community/admin/stories/:id
+     */
+    @Delete('admin/stories/:id')
+    @UseGuards(AdminGuard)
+    async deleteStory(@Param('id') id: string) {
+        return this.communityService.deleteStory(id);
+    }
+
+    /**
      * Approve/Reject success story (Admin)
      * PUT /community/admin/stories/:id/approve
      */
@@ -575,6 +605,38 @@ export class CommunityController {
             // ignore token errors
         }
         return this.communityService.getForumPostById(id, userId);
+    }
+
+    /**
+     * Get all forum posts (Admin/Public)
+     * GET /community/forum
+     */
+    @Get('forum')
+    async getForumPosts(
+        @Query('category') category?: string,
+        @Query('tag') tag?: string,
+        @Query('limit') limit?: string,
+        @Query('offset') offset?: string,
+        @Query('sort') sort?: string,
+        @Request() req?,
+    ) {
+        let userId: string | undefined;
+        // Try to get user ID if token present
+        try {
+            if (req.headers.authorization) {
+                const token = req.headers.authorization.split(' ')[1];
+                const decoded = this.jwtService.decode(token) as any;
+                userId = decoded?.id;
+            }
+        } catch (e) { }
+
+        return this.communityService.getForumPosts({
+            category,
+            tag,
+            limit: limit ? parseInt(limit, 10) : 20,
+            offset: offset ? parseInt(offset, 10) : 0,
+            sort
+        }, userId);
     }
 
     @Post('forum/:id/comment')

@@ -1062,7 +1062,7 @@ async function initBlogComments(blogId) {
             btn.addEventListener('click', async (e) => {
                 e.preventDefault();
                 const commentId = btn.dataset.commentId;
-                
+
                 if (confirm('Are you sure you want to delete this comment?')) {
                     const result = await deleteComment(commentId);
                     if (result.success) {

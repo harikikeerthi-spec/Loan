@@ -9,14 +9,17 @@ import {
     Query,
     UseGuards,
     Request,
+    Res,
     UseInterceptors,
     UploadedFile,
     BadRequestException,
+    NotFoundException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { extname, resolve } from 'path';
 import { existsSync, mkdirSync, unlinkSync } from 'fs';
+import type { Response } from 'express';
 import { ApplicationService } from './application.service';
 import { UserGuard } from '../auth/user.guard';
 import { AdminGuard } from '../auth/admin.guard';
@@ -338,6 +341,32 @@ export class ApplicationController {
     }
 
     /**
+     * View/Download application document file (Admin)
+     * GET /applications/admin/:id/documents/:documentId/view
+     */
+    @Get('admin/:id/documents/:documentId/view')
+    @UseGuards(AdminGuard)
+    async viewDocumentAdmin(
+        @Param('id') applicationId: string,
+        @Param('documentId') documentId: string,
+        @Res() res: Response,
+    ) {
+        const docsResult = await this.applicationService.getApplicationDocuments(applicationId);
+        const doc = docsResult.data?.find((d: any) => d.id === documentId);
+
+        if (!doc || !doc.filePath) {
+            throw new NotFoundException('Document not found');
+        }
+
+        const absolutePath = resolve(doc.filePath);
+        if (!existsSync(absolutePath)) {
+            throw new NotFoundException('Document file not found on disk');
+        }
+
+        res.sendFile(absolutePath);
+    }
+
+    /**
      * Verify/Reject document (Admin)
      * PUT /applications/admin/documents/:documentId/verify
      */
@@ -392,4 +421,6 @@ export class ApplicationController {
         const authorName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
         return this.applicationService.addApplicationNote(id, req.user.id, authorName, body);
     }
+
+
 }

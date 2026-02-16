@@ -2,9 +2,12 @@
 import { Controller, Post, UseInterceptors, UploadedFile, Body, Get, Param, Delete, Res, BadRequestException, NotFoundException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from '../users/users.service';
+import { DigilockerService } from '../integration/digilocker.service';
+import { DocumentVerificationService } from '../ai/services/document-verification.service';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { extname, resolve } from 'path';
 import { existsSync, mkdirSync, unlinkSync } from 'fs';
+import type { Response } from 'express';
 
 // Multer configuration
 const storage = diskStorage({
@@ -24,7 +27,11 @@ const storage = diskStorage({
 
 @Controller('documents')
 export class DocumentController {
-    constructor(private usersService: UsersService) { }
+    constructor(
+        private usersService: UsersService,
+        private digilockerService: DigilockerService,
+        private docVerificationService: DocumentVerificationService
+    ) { }
 
     @Post('upload')
     @UseInterceptors(FileInterceptor('file', {
@@ -53,24 +60,73 @@ export class DocumentController {
             throw new BadRequestException('userId and docType are required');
         }
 
-        // Update database
+        // 1. Verify Document (Mock/External Service Check)
+        const verificationResult = await this.digilockerService.verifyDocument(file.path, docType);
+
+        let status = 'uploaded';
+        let rejectionReason: string | null = null;
+        let aiExplanation: string | null = null;
+
+        if (verificationResult.isValid) {
+            status = 'verified';
+        } else {
+            status = 'rejected';
+            // 2. If rejected, get AI explanation
+            const reason = verificationResult.details?.message || 'Document verification failed';
+            rejectionReason = reason;
+            aiExplanation = await this.docVerificationService.explainRejection(docType, reason);
+        }
+
+        // 3. Update database with verification results
+        // Note: The UserDocument schema might need updates to store rejection details if not present.
+        // I will assume for now we just use 'status' and maybe store metadata in 'filePath' or separate fields if schema supports it.
+        // Checking schema: UserDocument doesn't have 'rejectionReason' or 'aiExplanation'. 
+        // ApplicationDocument DOES. 
+        // UserDocument has 'status', 'filePath'.
+        // So for UserDocument we can only store status.
+        // Ideally we should update schema, but I cannot migrate DB right now easily without user permission.
+        // So I'll just set status.
+
         const document = await this.usersService.upsertUserDocument(userId, docType, {
             uploaded: true,
             filePath: file.path,
-            status: 'uploaded'
+            status: status
         });
 
         return {
             success: true,
-            data: document,
+            data: {
+                ...document,
+                verification: verificationResult,
+                aiExplanation: aiExplanation
+            },
             file: {
                 originalName: file.originalname,
                 filename: file.filename,
-                // In a real app, this should be a public URL. 
-                // For now, we return the path so the frontend knows it's saved.
                 path: file.path
             }
         };
+    }
+
+    @Get('view/:userId/:docType')
+    async viewDocument(
+        @Param('userId') userId: string,
+        @Param('docType') docType: string,
+        @Res() res: Response,
+    ) {
+        const docs = await this.usersService.getUserDocuments(userId);
+        const doc = docs.find(d => d.docType === docType);
+
+        if (!doc || !doc.filePath) {
+            throw new NotFoundException('Document not found');
+        }
+
+        const absolutePath = resolve(doc.filePath);
+        if (!existsSync(absolutePath)) {
+            throw new NotFoundException('Document file not found on disk');
+        }
+
+        res.sendFile(absolutePath);
     }
 
     @Get(':userId')

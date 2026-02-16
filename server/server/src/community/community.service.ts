@@ -645,6 +645,46 @@ export class CommunityService {
         };
     }
 
+    async createStory(storyData: any) {
+        const story = await this.prisma.successStory.create({
+            data: {
+                ...storyData,
+                isApproved: storyData.isApproved !== undefined ? storyData.isApproved : true,
+                isFeatured: storyData.isFeatured || false,
+            },
+        });
+
+        return {
+            success: true,
+            message: 'Success story created successfully',
+            data: story,
+        };
+    }
+
+    async updateStory(id: string, updateData: any) {
+        const story = await this.prisma.successStory.update({
+            where: { id },
+            data: updateData,
+        });
+
+        return {
+            success: true,
+            message: 'Success story updated successfully',
+            data: story,
+        };
+    }
+
+    async deleteStory(id: string) {
+        await this.prisma.successStory.delete({
+            where: { id },
+        });
+
+        return {
+            success: true,
+            message: 'Success story deleted successfully',
+        };
+    }
+
     async approveMentor(id: string, approved: boolean, reason?: string) {
         const mentor = await this.prisma.mentor.update({
             where: { id },
@@ -769,6 +809,7 @@ export class CommunityService {
             resourceCount,
             bookingCount,
             registrationCount,
+            forumPostCount,
         ] = await Promise.all([
             this.prisma.mentor.count({ where: { isApproved: true } }),
             this.prisma.communityEvent.count(),
@@ -776,6 +817,7 @@ export class CommunityService {
             this.prisma.communityResource.count(),
             this.prisma.mentorBooking.count(),
             this.prisma.eventRegistration.count(),
+            this.prisma.forumPost.count(),
         ]);
 
         return {
@@ -787,6 +829,7 @@ export class CommunityService {
                 resources: resourceCount,
                 bookings: bookingCount,
                 registrations: registrationCount,
+                forumPosts: forumPostCount,
             },
         };
     }

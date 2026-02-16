@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { DigilockerService } from '../integration/digilocker.service';
+import { DocumentVerificationService } from '../ai/services/document-verification.service';
 
 // Application stages with descriptions and order
 const APPLICATION_STAGES = {
@@ -56,7 +58,11 @@ const REQUIRED_DOCUMENTS = {
 
 @Injectable()
 export class ApplicationService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private digilockerService: DigilockerService,
+        private verificationService: DocumentVerificationService
+    ) { }
 
     // ==================== APPLICATION CRUD ====================
 
@@ -556,6 +562,43 @@ export class ApplicationService {
                     status: 'pending',
                 }
             });
+        }
+
+        // Trigger Digilocker Verification
+        try {
+            const verificationResult = await this.digilockerService.verifyDocument(document.filePath, document.docType);
+
+            let updateData: any = {};
+
+            if (verificationResult.isValid) {
+                updateData = {
+                    status: 'verified', // Auto-verified by Digilocker
+                    digilockerTxId: verificationResult.txId,
+                    verifiedAt: new Date(),
+                    verifiedBy: 'Digilocker System',
+                    verificationMetadata: verificationResult.details as any
+                };
+            } else {
+                // Get AI explanation for the rejection
+                const explanation = await this.verificationService.explainRejection(document.docType, verificationResult.code || 'Unknown Error');
+
+                updateData = {
+                    status: 'rejected',
+                    aiExplanation: explanation,
+                    rejectionReason: verificationResult.code || 'Verification Failed',
+                    verificationMetadata: verificationResult.details as any
+                };
+            }
+
+            // Update document with verification result
+            document = await this.prisma.applicationDocument.update({
+                where: { id: document.id },
+                data: updateData
+            });
+
+        } catch (error) {
+            console.error('Document verification process failed:', error);
+            // We continue without failing the upload, status remains 'pending'
         }
 
         return {

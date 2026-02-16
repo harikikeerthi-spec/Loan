@@ -348,24 +348,51 @@
                     </div>
 
                     <!-- Recent Activity -->
-                    <div class="glass-card p-6 rounded-lg">
-                        <h3 class="text-xl font-bold mb-4">Quick Actions</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <button onclick="switchTab('create')"
-                                class="admin-btn-primary text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:shadow-lg">
-                                <span class="material-symbols-outlined">add</span>
-                                Create New Blog
-                            </button>
-                            <button onclick="switchTab('blogs')"
-                                class="admin-btn-primary text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:shadow-lg">
-                                <span class="material-symbols-outlined">list</span>
-                                Manage Blogs
-                            </button>
-                            <button onclick="switchTab('users')"
-                                class="admin-btn-primary text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:shadow-lg">
-                                <span class="material-symbols-outlined">people</span>
-                                View Users
-                            </button>
+                    <!-- Recent Activity Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Quick Actions -->
+                        <div class="glass-card p-6 rounded-lg h-fit">
+                            <h3 class="text-xl font-bold mb-4">Quick Actions</h3>
+                            <div class="space-y-3">
+                                <button onclick="switchTab('create')"
+                                    class="admin-btn-primary w-full text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:shadow-lg transition-all">
+                                    <span class="material-symbols-outlined">add_circle</span>
+                                    Create New Blog
+                                </button>
+                                <button onclick="switchTab('blogs')"
+                                    class="w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">
+                                    <span class="material-symbols-outlined">edit_note</span>
+                                    Manage Blogs
+                                </button>
+                                <button onclick="switchTab('users')"
+                                    class="w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all">
+                                    <span class="material-symbols-outlined">manage_accounts</span>
+                                    Manage Users
+                                </button>
+                                <button onclick="switchTab('applications')"
+                                    class="w-full py-3 rounded-lg font-medium flex items-center justify-center gap-2 border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300 transition-all">
+                                    <span class="material-symbols-outlined">description</span>
+                                    View Applications
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Activity Feed -->
+                        <div class="glass-card p-6 rounded-lg lg:col-span-2">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="text-xl font-bold">Recent Activity</h3>
+                                <button onclick="loadRecentActivity()"
+                                    class="text-primary hover:underline text-sm flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-sm">refresh</span> Refresh
+                                </button>
+                            </div>
+
+                            <div class="overflow-y-auto max-h-[500px] pr-2 custom-scrollbar" id="recentActivityList">
+                                <div class="flex flex-col items-center justify-center py-10 text-gray-500">
+                                    <div class="loading-spinner mb-2"></div>
+                                    <p>Loading activity...</p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -790,7 +817,7 @@
                     <h2 class="text-3xl font-bold mb-6">Community Management</h2>
 
                     <!-- Community Stats Cards -->
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
                         <div class="stat-card glass-card p-6 rounded-lg">
                             <div class="flex justify-between items-start">
                                 <div>
@@ -829,6 +856,15 @@
                                     class="material-symbols-outlined text-3xl text-orange-600 opacity-30">library_books</span>
                             </div>
                         </div>
+                        <div class="stat-card glass-card p-6 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-2">Discussions</p>
+                                    <p class="text-3xl font-bold text-purple-600" id="totalForumPosts">0</p>
+                                </div>
+                                <span class="material-symbols-outlined text-3xl text-purple-600 opacity-30">forum</span>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Community Sub-tabs -->
@@ -850,6 +886,10 @@
                             <span class="material-symbols-outlined text-sm">library_books</span>
                             Resources
                         </button>
+                        <button onclick="switchCommunityTab('forum')" class="community-tab-button tab-button">
+                            <span class="material-symbols-outlined text-sm">forum</span>
+                            Forum
+                        </button>
                     </div>
 
                     <!-- Mentorship Sub-tab -->
@@ -858,7 +898,7 @@
                             <div
                                 class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                                 <h3 class="text-xl font-bold">Mentorship Programs</h3>
-                                <button
+                                <button onclick="openCreateMentorModal()"
                                     class="admin-btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
                                     <span class="material-symbols-outlined">add</span>
                                     Add Mentor
@@ -893,7 +933,7 @@
                             <div
                                 class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                                 <h3 class="text-xl font-bold">Community Events</h3>
-                                <button
+                                <button onclick="openCreateEventModal()"
                                     class="admin-btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
                                     <span class="material-symbols-outlined">add</span>
                                     Add Event
@@ -928,7 +968,7 @@
                             <div
                                 class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                                 <h3 class="text-xl font-bold">Success Stories</h3>
-                                <button
+                                <button onclick="openCreateStoryModal()"
                                     class="admin-btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
                                     <span class="material-symbols-outlined">add</span>
                                     Add Story
@@ -963,7 +1003,7 @@
                             <div
                                 class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                                 <h3 class="text-xl font-bold">Community Resources</h3>
-                                <button
+                                <button onclick="openCreateResourceModal()"
                                     class="admin-btn-primary text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2">
                                     <span class="material-symbols-outlined">add</span>
                                     Add Resource
@@ -982,6 +1022,37 @@
                                 <tbody id="resourcesList">
                                     <tr>
                                         <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                                            <div class="flex justify-center">
+                                                <div class="loading-spinner"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Forum Sub-tab -->
+                    <div id="forum-tab" class="community-sub-tab" style="display: none;">
+                        <div class="glass-card rounded-lg overflow-hidden">
+                            <div
+                                class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                                <h3 class="text-xl font-bold">Forum Discussions</h3>
+                            </div>
+                            <table class="admin-table w-full">
+                                <thead>
+                                    <tr>
+                                        <th class="px-6 py-4 text-left">Title</th>
+                                        <th class="px-6 py-4 text-left">Category</th>
+                                        <th class="px-6 py-4 text-left">Author</th>
+                                        <th class="px-6 py-4 text-left">Stats</th>
+                                        <th class="px-6 py-4 text-left">Date</th>
+                                        <th class="px-6 py-4 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="forumList">
+                                    <tr>
+                                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">
                                             <div class="flex justify-center">
                                                 <div class="loading-spinner"></div>
                                             </div>
@@ -1121,12 +1192,320 @@
         </div>
     </div>
 
+    <!-- Mentor Modal -->
+    <div id="mentorModal" class="modal-overlay">
+        <div class="modal-content p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold" id="mentorModalTitle">Add New Mentor</h2>
+                <button onclick="closeMentorModal()"
+                    class="material-symbols-outlined text-2xl cursor-pointer hover:text-primary">
+                    close
+                </button>
+            </div>
+            <form id="mentorForm" onsubmit="handleMentorSubmit(event)" class="space-y-6">
+                <input type="hidden" id="mentorId">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Full Name</label>
+                        <input type="text" id="mentorName" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Email</label>
+                        <input type="email" id="mentorEmail" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">University</label>
+                        <input type="text" id="mentorUniversity" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Degree</label>
+                        <input type="text" id="mentorDegree" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Country</label>
+                        <input type="text" id="mentorCountry" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Loan Bank</label>
+                        <input type="text" id="mentorBank" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Loan Amount</label>
+                        <input type="number" id="mentorLoanAmount" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Expertise (comma separated)</label>
+                        <input type="text" id="mentorExpertise" required placeholder="e.g. Visa, Loans, Accommodation"
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Bio</label>
+                    <textarea id="mentorBio" rows="3" required
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary resize-none"></textarea>
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="admin-btn-primary text-white px-8 py-2 rounded-lg font-medium flex-1">
+                        Save Mentor
+                    </button>
+                    <button type="button" onclick="closeMentorModal()"
+                        class="px-8 py-2 rounded-lg font-medium border-2 border-gray-300 dark:border-gray-600">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Event Modal -->
+    <div id="eventModal" class="modal-overlay">
+        <div class="modal-content p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold" id="eventModalTitle">Add New Event</h2>
+                <button onclick="closeEventModal()"
+                    class="material-symbols-outlined text-2xl cursor-pointer hover:text-primary">
+                    close
+                </button>
+            </div>
+            <form id="eventForm" onsubmit="handleEventSubmit(event)" class="space-y-6">
+                <input type="hidden" id="eventId">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Event Title</label>
+                        <input type="text" id="eventTitle" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Type</label>
+                        <select id="eventType" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                            <option value="webinar">Webinar</option>
+                            <option value="workshop">Workshop</option>
+                            <option value="qa">Q&A Session</option>
+                            <option value="networking">Networking</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Date</label>
+                        <input type="date" id="eventDate" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Time</label>
+                        <input type="time" id="eventTime" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Duration (minutes)</label>
+                        <input type="number" id="eventDuration" required placeholder="60"
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Speaker</label>
+                        <input type="text" id="eventSpeaker"
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Description</label>
+                    <textarea id="eventDescription" rows="3" required
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary resize-none"></textarea>
+                </div>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="eventIsFree" class="w-4 h-4" checked>
+                        <span class="text-sm font-medium">Free Event</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="eventIsFeatured" class="w-4 h-4">
+                        <span class="text-sm font-medium">Featured</span>
+                    </label>
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="admin-btn-primary text-white px-8 py-2 rounded-lg font-medium flex-1">
+                        Save Event
+                    </button>
+                    <button type="button" onclick="closeEventModal()"
+                        class="px-8 py-2 rounded-lg font-medium border-2 border-gray-300 dark:border-gray-600">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resource Modal -->
+    <div id="resourceModal" class="modal-overlay">
+        <div class="modal-content p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold" id="resourceModalTitle">Add New Resource</h2>
+                <button onclick="closeResourceModal()"
+                    class="material-symbols-outlined text-2xl cursor-pointer hover:text-primary">
+                    close
+                </button>
+            </div>
+            <form id="resourceForm" onsubmit="handleResourceSubmit(event)" class="space-y-6">
+                <input type="hidden" id="resourceId">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Title</label>
+                        <input type="text" id="resourceTitle" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Type</label>
+                        <select id="resourceType" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                            <option value="guide">Guide</option>
+                            <option value="template">Template</option>
+                            <option value="checklist">Checklist</option>
+                            <option value="video">Video</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Category</label>
+                        <input type="text" id="resourceCategory" required placeholder="e.g. Loan Basics"
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Download/Access URL</label>
+                        <input type="url" id="resourceUrl" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Description</label>
+                    <textarea id="resourceDescription" rows="3" required
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary resize-none"></textarea>
+                </div>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="resourceIsFeatured" class="w-4 h-4">
+                        <span class="text-sm font-medium">Featured</span>
+                    </label>
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="admin-btn-primary text-white px-8 py-2 rounded-lg font-medium flex-1">
+                        Save Resource
+                    </button>
+                    <button type="button" onclick="closeResourceModal()"
+                        class="px-8 py-2 rounded-lg font-medium border-2 border-gray-300 dark:border-gray-600">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success Story Modal -->
+    <div id="storyModal" class="modal-overlay">
+        <div class="modal-content p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold" id="storyModalTitle">Add Success Story</h2>
+                <button onclick="closeStoryModal()"
+                    class="material-symbols-outlined text-2xl cursor-pointer hover:text-primary">
+                    close
+                </button>
+            </div>
+            <form id="storyForm" onsubmit="handleStorySubmit(event)" class="space-y-6">
+                <!-- Note: Since there is no explicit create admin story endpoint, we will use the submit story public endpoint or just focus on approving...
+                     However, the user wants CRUD. I'll adding fields here.
+                -->
+                <input type="hidden" id="storyId">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Student Name</label>
+                        <input type="text" id="storyName" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Email</label>
+                        <input type="email" id="storyEmail" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">University</label>
+                        <input type="text" id="storyUniversity" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Course/Degree</label>
+                        <input type="text" id="storyDegree" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Country</label>
+                        <input type="text" id="storyCountry" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Bank</label>
+                        <input type="text" id="storyBank" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Loan Amount</label>
+                        <input type="number" id="storyLoanAmount" required
+                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Story</label>
+                    <textarea id="storyContent" rows="4" required placeholder="Share the journey..."
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Tips for others</label>
+                    <textarea id="storyTips" rows="3"
+                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary resize-none"></textarea>
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="admin-btn-primary text-white px-8 py-2 rounded-lg font-medium flex-1">
+                        Save Story
+                    </button>
+                    <button type="button" onclick="closeStoryModal()"
+                        class="px-8 py-2 rounded-lg font-medium border-2 border-gray-300 dark:border-gray-600">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application Details Modal -->
+    <div id="applicationDetailsModal"
+        class="z-50 fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm hidden">
+        <div
+            class="modal-content relative bg-white dark:bg-gray-900 w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-xl shadow-2xl animate-fadeIn">
+            <button onclick="closeApplicationModal()"
+                class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 z-10 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <span class="material-symbols-outlined text-2xl">close</span>
+            </button>
+            <div id="applicationModalContent" class="p-8">
+                <!-- Content injected via JS -->
+                <div class="text-center py-12">
+                    <div class="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto">
+                    </div>
+                    <p class="mt-4 text-gray-500">Loading details...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="assets/js/theme-manager.js"></script>
     <script src="assets/js/auth-guard.js"></script>
     <script src="assets/js/blog-api.js"></script>
     <script src="assets/js/admin-community-crud.js"></script>
     <script src="assets/js/blog-image-upload.js"></script>
     <script src="assets/js/content-builder.js"></script>
+    <script src="assets/js/auth-guard.js"></script>
     <script src="assets/js/admin-dashboard.js"></script>
 
     <!-- Helper Functions for Content Builder -->

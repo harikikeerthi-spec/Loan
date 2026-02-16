@@ -28,7 +28,9 @@ function logout() {
     localStorage.removeItem('userRole');
     localStorage.removeItem('firstName');
     localStorage.removeItem('lastName');
-    window.location.href = 'index.html';
+
+    // Redirect to user login page
+    window.location.href = 'login.html';
 }
 
 function updateNavbarAuth() {
@@ -109,7 +111,7 @@ function updateNavbarAuth() {
         logoutBtn.dataset.listenerAdded = 'true';
         logoutBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            logout();
+            AuthGuard.logout();
         });
     }
 

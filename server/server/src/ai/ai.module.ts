@@ -6,6 +6,7 @@ import { SopAnalysisService } from './services/sop-analysis.service';
 import { GradeConversionService } from './services/grade-conversion.service';
 import { UniversityComparisonService } from './services/university-comparison.service';
 import { AdmitPredictorService } from './services/admit-predictor.service';
+import { DocumentVerificationService } from './services/document-verification.service';
 import { GroqService } from './services/groq.service';
 
 @Module({
@@ -18,6 +19,7 @@ import { GroqService } from './services/groq.service';
     GradeConversionService,
     UniversityComparisonService,
     AdmitPredictorService,
+    DocumentVerificationService,
   ],
   exports: [
     GroqService,
@@ -27,6 +29,7 @@ import { GroqService } from './services/groq.service';
     GradeConversionService,
     UniversityComparisonService,
     AdmitPredictorService,
+    DocumentVerificationService,
   ],
 })
 export class AiModule { }

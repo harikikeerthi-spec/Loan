@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
         loadBlogs();
         loadUsers();
         loadCommunityData('mentorship');
+        loadCommunityStats();
+        loadRecentActivity(); // Load activity feed
         console.log('✅ All tabs loaded!');
     }, 500);
 
@@ -24,28 +26,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Check Admin Authentication
 function checkAdminAuth() {
-    let token = localStorage.getItem('adminToken');
-    let email = localStorage.getItem('userEmail');
+    console.log('Checking admin authentication...');
+    const user = AuthGuard.getCurrentUser();
 
-    // FOR TESTING: Auto-set real admin JWT token if not logged in
-    if (!token) {
-        console.log('⚠️ No admin token found. Setting real admin JWT for testing.');
-        token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhcmlraWtlZXJ0aGlAZ21haWwuY29tIiwic3ViIjoiMWYzZDNhMzktMzMxYy00YjQxLWJjODEtYzMxMzc2MWUxNzAyIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzcwNzk3NDExLCJleHAiOjE3NzA4ODM4MTF9.dd6GzgTYXM8Sg_IAubaP6nafNMTBDFRqg8NlVE-yzGE';
-        email = 'harikikeerthi@gmail.com';
-
-        // Store admin credentials
-        localStorage.setItem('adminToken', token);
-        localStorage.setItem('userEmail', email);
-        localStorage.setItem('lastLogin', new Date().toISOString());
-
-        console.log('✅ Admin JWT token set. All admin API endpoints should work.');
+    if (!user) {
+        console.warn('AuthGuard: No user found, redirecting to login');
+        AuthGuard.redirectToLogin();
+        return;
     }
 
-    adminToken = token;
-    document.getElementById('adminName').textContent = email || 'Admin';
-    document.getElementById('settingsEmail').value = email || '';
-    document.getElementById('lastLogin').value = new Date(localStorage.getItem('lastLogin') || new Date()).toLocaleString();
+    if (user.role !== 'admin' && user.role !== 'super_admin') {
+        console.warn('User is not admin:', user.role);
+        alert('Access Denied: Admin privileges required.');
+        AuthGuard.clearAuth(); // Clear invalid user session
+        window.location.href = 'admin-login.html';
+        return;
+    }
+
+    // Use accessToken for API calls instead of separate adminToken
+    adminToken = localStorage.getItem('adminToken') || localStorage.getItem('accessToken');
+
+    // Update UI with user info
+    const adminNameEl = document.getElementById('adminName');
+    if (adminNameEl) {
+        adminNameEl.textContent = user.firstName
+            ? `${user.firstName} ${user.lastName || ''}`
+            : (user.email || 'Admin');
+    }
+
+    const settingsEmail = document.getElementById('settingsEmail');
+    if (settingsEmail) settingsEmail.value = user.email || '';
+
+    const lastLoginEl = document.getElementById('lastLogin');
+    if (lastLoginEl) lastLoginEl.value = new Date().toLocaleString();
 }
+
+// Function to handle logout
+function logoutAdmin() {
+    if (confirm('Are you sure you want to logout?')) {
+        AuthGuard.logout();
+    }
+}
+
 
 // Switch between tabs
 function switchTab(tabName) {
@@ -583,9 +605,151 @@ async function loadCommunityData(dataType) {
             case 'resources':
                 await loadResources();
                 break;
+            case 'forum':
+                await loadForumPosts();
+                break;
         }
     } catch (error) {
         console.error('Error loading community data:', error);
+    }
+}
+
+// Load Community Stats (Overall)
+async function loadCommunityStats() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/community/admin/stats`, {
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                const stats = result.data.data || result.data; // Handle structure
+                const setSafe = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+                setSafe('totalMentors', stats.mentors || 0);
+                setSafe('totalEvents', stats.events || 0);
+                setSafe('totalStories', stats.stories || 0);
+                setSafe('totalResources', stats.resources || 0);
+                setSafe('totalForumPosts', stats.forumPosts || 0);
+            }
+        }
+    } catch (error) {
+        console.error('Error loading community stats:', error);
+    }
+}
+
+// Load Forum Posts
+async function loadForumPosts() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/community/forum?limit=50`, { // Fetch more for admin view
+            headers: {
+                'Authorization': `Bearer ${adminToken}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            const posts = data.data || [];
+
+            // Update stats if element exists
+            const totalEl = document.getElementById('totalForumPosts');
+            if (totalEl) totalEl.textContent = data.pagination?.total || posts.length;
+
+            const forumList = document.getElementById('forumList');
+            if (posts.length === 0) {
+                forumList.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                            No discussions found.
+                        </td>
+                    </tr>
+                `;
+            } else {
+                forumList.innerHTML = posts.map(post => `
+                    <tr>
+                        <td class="px-6 py-4">
+                            <div class="max-w-xs">
+                                <p class="font-medium truncate" title="${escapeHtml(post.title)}">${escapeHtml(post.title)}</p>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
+                                ${escapeHtml(post.category)}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm">
+                                <p class="font-medium">${escapeHtml((post.author?.firstName || '') + ' ' + (post.author?.lastName || ''))}</p>
+                                <p class="text-xs text-gray-500">${escapeHtml(post.author?.role || 'user')}</p>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="flex gap-3 text-sm text-gray-600">
+                                <span class="flex items-center gap-1" title="Likes">
+                                    <span class="material-symbols-outlined text-xs">thumb_up</span> ${post.likes || 0}
+                                </span>
+                                <span class="flex items-center gap-1" title="Comments">
+                                    <span class="material-symbols-outlined text-xs">chat_bubble</span> ${post.commentCount || 0}
+                                </span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-500">${new Date(post.createdAt).toLocaleDateString()}</td>
+                        <td class="px-6 py-4 text-center">
+                            <div class="flex justify-center gap-2">
+                                <a href="engage.html?post=${post.id}" target="_blank" 
+                                    class="material-symbols-outlined text-lg cursor-pointer text-blue-600 hover:text-blue-800" title="View Discussion">
+                                    visibility
+                                </a>
+                                <button onclick="deleteForumPost('${post.id}')" title="Delete" 
+                                    class="material-symbols-outlined text-lg cursor-pointer text-red-600 hover:text-red-800">
+                                    delete
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+        }
+    } catch (error) {
+        console.error('Error loading forum posts:', error);
+        const forumList = document.getElementById('forumList');
+        if (forumList) {
+            forumList.innerHTML = `
+                <tr>
+                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                        Error loading discussions. Please try again.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+}
+
+// Delete Forum Post
+async function deleteForumPost(postId) {
+    if (!confirm('Are you sure you want to delete this discussion? This action cannot be undone.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/community/forum/${postId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${adminToken}`
+            }
+        });
+
+        const result = await response.json();
+
+        if (response.ok) {
+            showSuccess('Discussion deleted successfully!');
+            loadForumPosts();
+        } else {
+            showError(result.message || 'Failed to delete discussion');
+        }
+    } catch (error) {
+        console.error('Error deleting discussion:', error);
+        showError('Error deleting discussion');
     }
 }
 
@@ -735,6 +899,7 @@ async function loadSuccessStories() {
                         <td class="px-6 py-4 text-center">
                             <div class="flex justify-center gap-2">
                                 <button onclick="viewStoryDetails('${story.id}')" title="View" class="material-symbols-outlined text-lg cursor-pointer text-green-600 hover:text-green-800">visibility</button>
+                                <button onclick="openEditStoryModal('${story.id}')" title="Edit" class="material-symbols-outlined text-lg cursor-pointer text-blue-600 hover:text-blue-800">edit</button>
                                 <button onclick="deleteStory('${story.id}')" title="Delete" class="material-symbols-outlined text-lg cursor-pointer text-red-600 hover:text-red-800">delete</button>
                             </div>
                         </td>
@@ -814,7 +979,7 @@ function logoutAdmin() {
     if (confirm('Are you sure you want to logout?')) {
         localStorage.removeItem('adminToken');
         localStorage.removeItem('userEmail');
-        window.location.href = 'login.html';
+        window.location.href = 'admin-login.html';
     }
 }
 
@@ -905,7 +1070,7 @@ function resetSettings() {
 // Redirect to login
 function redirectToLogin() {
     setTimeout(() => {
-        window.location.href = 'login.html?redirect=admin-dashboard.html';
+        window.location.href = 'admin-login.html?redirect=admin-dashboard.html';
     }, 2000);
 }
 
@@ -948,59 +1113,57 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// ==================== COMMUNITY MODAL FUNCTIONS ====================
+// ==================== COMMUNITY VIEW FUNCTIONS ====================
 
-function openCreateMentorModal() {
-    showNotification('Create Mentor feature coming soon! For now, use the API directly.', 'info');
-    console.log('Open Create Mentor Modal');
-}
-
-function openEditMentorModal(mentorId) {
-    showNotification('Edit Mentor feature coming soon! For now, use the API directly.', 'info');
-    console.log('Edit Mentor:', mentorId);
-}
-
-function openCreateEventModal() {
-    showNotification('Create Event feature coming soon! For now, use the API directly.', 'info');
-    console.log('Open Create Event Modal');
-}
-
-function openEditEventModal(eventId) {
-    showNotification('Edit Event feature coming soon! For now, use the API directly.', 'info');
-    console.log('Edit Event:', eventId);
-}
-
-function openCreateResourceModal() {
-    showNotification('Create Resource feature coming soon! For now, use the API directly.', 'info');
-    console.log('Open Create Resource Modal');
-}
-
-function openEditResourceModal(resourceId) {
-    showNotification('Edit Resource feature coming soon! For now, use the API directly.', 'info');
-    console.log('Edit Resource:', resourceId);
-}
-
-function viewStoryDetails(storyId) {
-    showNotification('View Story feature coming soon!', 'info');
-    console.log('View Story:', storyId);
-}
-
-function deleteStory(storyId) {
-    if (confirm('Are you sure you want to delete this success story?')) {
-        showNotification('Delete Story feature coming soon! For now, use the API directly.', 'info');
-        console.log('Delete Story:', storyId);
+async function viewStoryDetails(storyId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/community/stories/${storyId}`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+        });
+        const data = await response.json();
+        if (data.success) {
+            const story = data.data;
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4';
+            modal.innerHTML = `
+                <div class="bg-white dark:bg-gray-800 rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                    <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                        <h3 class="text-xl font-bold">Success Story Details</h3>
+                         <button onclick="this.closest('.fixed').remove()" class="material-symbols-outlined cursor-pointer hover:text-red-500">close</button>
+                    </div>
+                    <div class="p-6 space-y-4">
+                        <div>
+                            <h4 class="font-bold text-lg">${escapeHtml(story.name)}</h4>
+                            <p class="text-gray-500">${escapeHtml(story.university)} • ${escapeHtml(story.degree)}</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <div><span class="font-semibold">Country:</span> ${escapeHtml(story.country)}</div>
+                            <div><span class="font-semibold">Bank:</span> ${escapeHtml(story.bank)}</div>
+                            <div><span class="font-semibold">Loan Amount:</span> ${escapeHtml(story.loanAmount)}</div>
+                            <div><span class="font-semibold">Email:</span> ${escapeHtml(story.email)}</div>
+                        </div>
+                        <div>
+                            <h5 class="font-semibold mb-2">Story</h5>
+                            <p class="whitespace-pre-wrap text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 p-4 rounded">${escapeHtml(story.story)}</p>
+                        </div>
+                        <div>
+                            <h5 class="font-semibold mb-2">Tips</h5>
+                            <p class="whitespace-pre-wrap text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 p-4 rounded">${escapeHtml(story.tips)}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+    } catch (error) {
+        console.error('Error viewing story:', error);
+        showError('Failed to load story details');
     }
 }
 
 // Make functions globally available
-window.openCreateMentorModal = openCreateMentorModal;
-window.openEditMentorModal = openEditMentorModal;
-window.openCreateEventModal = openCreateEventModal;
-window.openEditEventModal = openEditEventModal;
-window.openCreateResourceModal = openCreateResourceModal;
-window.openEditResourceModal = openEditResourceModal;
 window.viewStoryDetails = viewStoryDetails;
-window.deleteStory = deleteStory;
+// Note: openCreate..., openEdit..., deleteStory are now handled by admin-community-crud.js
 
 // ==================== BLOG TEMPLATE & PREVIEW FUNCTIONS ====================
 
@@ -1276,4 +1439,528 @@ function viewBlog(blogId) {
 window.previewBlogTemplate = previewBlogTemplate;
 window.resetTemplate = resetTemplate;
 window.previewFullBlog = previewFullBlog;
-window.viewBlog = viewBlog;
+
+// View Application Details Modal
+async function viewApplication(appId) {
+    const modal = document.getElementById('applicationDetailsModal');
+    const content = document.getElementById('applicationModalContent');
+
+    if (!modal) return;
+
+    // Show modal with loading state
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    content.innerHTML = `
+        <div class="text-center py-12">
+            <div class="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+            <p class="mt-4 text-gray-500">Loading details...</p>
+        </div>
+    `;
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/applications/${appId}`, {
+            headers: {
+                'Authorization': `Bearer ${adminToken}`
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error('Server Error:', errorData);
+            throw new Error(errorData.message || 'Failed to load details');
+        }
+
+        const result = await response.json();
+        const app = result.data;
+
+        content.innerHTML = `
+            <!-- Header -->
+            <div class="flex flex-col md:flex-row justify-between items-start gap-6 mb-8 border-b border-gray-100 dark:border-gray-800 pb-6">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 ${getStatusBg(app.status)} rounded-2xl flex items-center justify-center">
+                        <span class="material-symbols-outlined text-3xl ${getStatusColor(app.status)}">
+                            ${getLoanIcon(app.loanType || app.type)}
+                        </span>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-display font-bold text-gray-900 dark:text-gray-100">${formatLoanType(app.loanType || app.type)}</h2>
+                        <p class="text-gray-500 dark:text-gray-400">Application #${app.applicationNumber || app.id.substring(0, 8)}</p>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col items-end gap-2">
+                    <span class="px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider ${getStatusClass(app.status)}">
+                        ${app.status?.replace('_', ' ')}
+                    </span>
+                    <p class="text-sm text-gray-500">Applied on ${new Date(app.date || app.createdAt).toLocaleDateString()}</p>
+                </div>
+            </div>
+
+            <!-- Primary Info Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <!-- Applicant -->
+                <div class="glass-card p-4 rounded-xl border border-gray-100 dark:border-gray-800">
+                    <p class="text-xs text-gray-400 uppercase tracking-wider mb-2 font-bold flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm">person</span> Applicant
+                    </p>
+                    <p class="font-bold text-lg">${app.user?.firstName || app.firstName} ${app.user?.lastName || app.lastName || ''}</p>
+                    <p class="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                        <span class="material-symbols-outlined text-xs">email</span> ${app.user?.email || app.email}
+                    </p>
+                    <p class="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                        <span class="material-symbols-outlined text-xs">call</span> ${app.user?.phoneNumber || app.phone || 'N/A'}
+                    </p>
+                     ${app.dateOfBirth ? `<p class="text-sm text-gray-500 mt-1">DOB: ${new Date(app.dateOfBirth).toLocaleDateString()}</p>` : ''}
+                </div>
+                
+                <!-- Financial -->
+                <div class="glass-card p-4 rounded-xl border border-gray-100 dark:border-gray-800">
+                     <p class="text-xs text-gray-400 uppercase tracking-wider mb-2 font-bold flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm">payments</span> Finance
+                    </p>
+                    <p class="font-bold text-lg text-primary">₹${(app.amount || 0).toLocaleString('en-IN')}</p>
+                    <p class="text-sm text-gray-500 mt-1">Bank: <span class="font-medium text-gray-700 dark:text-gray-300">${app.bank}</span></p>
+                    ${app.tenure ? `<p class="text-sm text-gray-500 mt-1">Tenure: ${app.tenure} Months</p>` : ''}
+                    ${app.annualIncome ? `<p class="text-sm text-gray-500 mt-1">Annual Income: ₹${app.annualIncome.toLocaleString('en-IN')}</p>` : ''}
+                </div>
+
+                <!-- Education/Loan Specific -->
+                <div class="glass-card p-4 rounded-xl border border-gray-100 dark:border-gray-800">
+                     <p class="text-xs text-gray-400 uppercase tracking-wider mb-2 font-bold flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm">school</span> Education
+                    </p>
+                    <p class="font-bold text-sm truncate" title="${app.universityName || app.university}">${app.universityName || app.university || 'N/A'}</p>
+                    <p class="text-sm text-gray-500 mt-1">Course: ${app.course || app.courseName || 'N/A'}</p>
+                    ${app.courseStartDate ? `<p class="text-sm text-gray-500 mt-1">Starts: ${new Date(app.courseStartDate).toLocaleDateString()}</p>` : ''}
+                </div>
+            </div>
+
+            <!-- Detailed Info Sections (Collapsible/Tabs could be better, but stacking for now) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <!-- Address & Employment -->
+                <div class="bg-gray-50 dark:bg-gray-800/30 p-5 rounded-xl">
+                    <h4 class="font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">location_on</span> Address & Employment
+                    </h4>
+                    <div class="space-y-2 text-sm">
+                        <p><span class="text-gray-500">Address:</span> <span class="text-gray-800 dark:text-gray-200">${app.address || 'N/A'}</span></p>
+                        <p><span class="text-gray-500">City/State:</span> <span class="text-gray-800 dark:text-gray-200">${app.city || '-'}, ${app.state || '-'}</span></p>
+                        <div class="h-px bg-gray-200 dark:bg-gray-700 my-2"></div>
+                        <p><span class="text-gray-500">Employment:</span> <span class="text-gray-800 dark:text-gray-200 capitalize">${app.employmentType || 'N/A'}</span></p>
+                        <p><span class="text-gray-500">Employer:</span> <span class="text-gray-800 dark:text-gray-200">${app.employerName || 'N/A'}</span></p>
+                        <p><span class="text-gray-500">Job Title:</span> <span class="text-gray-800 dark:text-gray-200">${app.jobTitle || 'N/A'}</span></p>
+                    </div>
+                </div>
+
+                <!-- Additional Details (Co-Applicant / Collateral) -->
+                <div class="bg-gray-50 dark:bg-gray-800/30 p-5 rounded-xl">
+                    <h4 class="font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">group</span> Co-Applicant & Collateral
+                    </h4>
+                     <div class="space-y-2 text-sm">
+                        ${app.hasCoApplicant ? `
+                            <p><span class="text-gray-500">Co-Applicant:</span> <span class="font-medium">${app.coApplicantName}</span> (${app.coApplicantRelation})</p>
+                             <p><span class="text-gray-500">Phone/Email:</span> ${app.coApplicantPhone || '-'} / ${app.coApplicantEmail || '-'}</p>
+                             <p><span class="text-gray-500">Income:</span> ₹${(app.coApplicantIncome || 0).toLocaleString('en-IN')}</p>
+                        ` : `<p class="text-gray-400 italic">No Co-Applicant details provided.</p>`}
+                        
+                        <div class="h-px bg-gray-200 dark:bg-gray-700 my-2"></div>
+                        
+                        ${app.hasCollateral ? `
+                             <p><span class="text-gray-500">Collateral:</span> <span class="font-medium capitalize">${app.collateralType}</span></p>
+                             <p><span class="text-gray-500">Value:</span> ₹${(app.collateralValue || 0).toLocaleString('en-IN')}</p>
+                        ` : `<p class="text-gray-400 italic">No Collateral details provided.</p>`}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Documents Section -->
+            <div class="mb-8">
+                <h3 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">folder_open</span>
+                    Documents
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${renderDocumentsList(app.documents, app.id)}
+                </div>
+            </div>
+
+            ${app.purpose ? `
+            <div class="mb-8 bg-blue-50/50 dark:bg-blue-900/10 p-5 rounded-xl border border-blue-100 dark:border-blue-900/30">
+                <h4 class="font-bold mb-2 text-sm text-blue-800 dark:text-blue-300 uppercase flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm">format_quote</span> Statement of Purpose
+                </h4>
+                <p class="text-gray-700 dark:text-gray-300 italic whitespace-pre-wrap leading-relaxed">"${app.purpose}"</p>
+            </div>
+            ` : ''}
+
+            <!-- Action Footer -->
+            <div class="flex flex-col sm:flex-row justify-end gap-3 pt-6 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/20 -mx-8 -mb-8 p-8 mt-4">
+                <button onclick="closeApplicationModal()" 
+                    class="px-6 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-lg font-medium transition-colors">
+                    Close
+                </button>
+
+                ${['pending', 'submitted', 'under_review'].includes(app.status) ? `
+                <button onclick="updateApplicationStatus('${app.id}', 'rejected'); closeApplicationModal()" 
+                    class="px-6 py-2 border border-red-200 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-lg">cancel</span> Reject
+                </button>
+                <button onclick="updateApplicationStatus('${app.id}', 'approved'); closeApplicationModal()" 
+                    class="px-6 py-2 bg-green-600 text-white hover:bg-green-700 shadow-lg shadow-green-200 dark:shadow-none rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-lg">check_circle</span> Approve Loan
+                </button>
+                ` : ''}
+            </div>
+        `;
+
+    } catch (error) {
+        console.error('Error fetching application details:', error);
+        console.log('Token status:', adminToken ? 'Present' : 'Missing', adminToken);
+
+        let errorDetails = error.message || 'Unknown error';
+        if (error.cause) {
+            try {
+                errorDetails += ` (${JSON.stringify(error.cause)})`;
+            } catch (e) {
+                // ignore circular structure errors
+            }
+        }
+
+        content.innerHTML = `
+            <div class="text-center py-12 text-red-500">
+                <span class="material-symbols-outlined text-4xl mb-4">error</span>
+                <h3 class="text-lg font-bold">Failed to load details</h3>
+                <p class="font-medium mt-2">Error: ${escapeHtml(error.name || 'Error')}</p>
+                <div class="mt-4 text-sm bg-red-50 dark:bg-red-900/20 p-4 rounded text-left overflow-auto max-h-40 max-w-lg mx-auto border border-red-100 dark:border-red-900/50">
+                    <code class="break-words whitespace-pre-wrap">${escapeHtml(errorDetails)}</code>
+                </div>
+                 <div class="mt-2 text-xs text-gray-400">
+                    Token: ${adminToken ? 'Present' : 'Missing'}
+                </div>
+                <button onclick="closeApplicationModal()" class="mt-6 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-lg text-sm font-medium transition-colors">
+                    Close
+                </button>
+            </div>
+        `;
+    }
+}
+
+function closeApplicationModal() {
+    const modal = document.getElementById('applicationDetailsModal');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+function renderDocumentsList(documents, applicationId) {
+    if (!documents || documents.length === 0) {
+        return '<div class="col-span-full text-center py-8 text-gray-500 bg-gray-50 dark:bg-gray-800/30 rounded-xl">No documents uploaded yet.</div>';
+    }
+
+    return documents.map(doc => {
+        // Handle Windows backslashes
+        const normalizedPath = doc.filePath ? doc.filePath.replace(/\\/g, '/') : '';
+        // Construct detailed view URL
+        let viewUrl = '';
+        if (applicationId && doc.id) {
+            viewUrl = `${API_BASE_URL}/applications/admin/${applicationId}/documents/${doc.id}/view`;
+        } else if (normalizedPath) {
+            viewUrl = `${API_BASE_URL}/${normalizedPath}`;
+        }
+        const ext = normalizedPath.split('.').pop()?.toLowerCase() || '';
+        const isImage = ['jpg', 'jpeg', 'png'].includes(ext);
+
+        return `
+        <div class="flex items-start p-4 border rounded-xl ${doc.status === 'rejected' ? 'border-red-200 bg-red-50/50 dark:border-red-900/30 dark:bg-red-900/10' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'}">
+            <div class="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg mr-4 shrink-0">
+                ${isImage && viewUrl ? `
+                    <img src="${viewUrl}" alt="${formatDocType(doc.docType)}" class="w-10 h-10 object-cover rounded" onerror="this.outerHTML='<span class=\\'material-symbols-outlined text-2xl text-gray-600 dark:text-gray-300\\'>description</span>'" />
+                ` : `
+                    <span class="material-symbols-outlined text-2xl text-gray-600 dark:text-gray-300">description</span>
+                `}
+            </div>
+            <div class="flex-1">
+                <div class="flex justify-between items-start mb-1">
+                    <h4 class="font-bold text-gray-800 dark:text-gray-200">${formatDocType(doc.docType)}</h4>
+                    ${getAdminDocStatusBadge(doc)}
+                </div>
+                ${doc.docName ? `<p class="text-xs text-gray-500 mb-1">${escapeHtml(doc.docName)}</p>` : ''}
+                ${doc.fileSize ? `<p class="text-xs text-gray-400">${formatFileSize(doc.fileSize)}</p>` : ''}
+                
+                ${doc.status === 'rejected' && doc.rejectionReason ? `
+                    <p class="text-sm text-red-600 dark:text-red-400 mt-1 mb-2">
+                        <span class="font-bold">Reason:</span> ${doc.rejectionReason}
+                    </p>
+                    ${doc.aiExplanation ? `
+                    <div class="text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-900 p-2 rounded border border-gray-100 dark:border-gray-700">
+                        <span class="font-bold text-primary">AI Explanation sent to user:</span> "${doc.aiExplanation}"
+                    </div>
+                    ` : ''}
+                ` : ''}
+
+                ${doc.status === 'verified' && doc.digilockerTxId ? `
+                     <p class="text-xs text-green-600 dark:text-green-400 mt-1 mb-2 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm">verified_user</span> 
+                        Digilocker Verified (Tx: ${doc.digilockerTxId.substring(0, 8)}...)
+                    </p>
+                ` : ''}
+                
+                <div class="mt-3 flex gap-2">
+                    ${viewUrl ? `
+                        <button onclick="openAdminDocPreview('${viewUrl}', '${formatDocType(doc.docType)}', '${ext}')" 
+                           class="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-900/20 dark:text-blue-400 dark:hover:bg-blue-900/30 rounded text-sm font-medium transition-colors flex items-center gap-1 cursor-pointer">
+                            <span class="material-symbols-outlined text-sm">visibility</span> View
+                        </button>
+                        <a href="${viewUrl}" download 
+                           class="px-3 py-1.5 bg-gray-50 text-gray-600 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 rounded text-sm font-medium transition-colors flex items-center gap-1">
+                            <span class="material-symbols-outlined text-sm">download</span> Download
+                        </a>
+                    ` : '<span class="text-xs text-gray-400 italic">File not uploaded yet</span>'}
+                </div>
+            </div>
+        </div>
+    `}).join('');
+}
+
+// Admin document preview modal
+function openAdminDocPreview(url, docTypeName, ext) {
+    const isImage = ['jpg', 'jpeg', 'png'].includes(ext);
+    const isPdf = ext === 'pdf';
+
+    // Remove any existing modal
+    const existingModal = document.getElementById('admin-doc-preview-modal');
+    if (existingModal) existingModal.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'admin-doc-preview-modal';
+    overlay.className = 'fixed inset-0 z-[1100] flex items-center justify-center bg-black/60 backdrop-blur-sm';
+    overlay.onclick = (e) => {
+        if (e.target === overlay) overlay.remove();
+    };
+
+    overlay.innerHTML = `
+        <div class="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-5xl w-full mx-4 max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary text-2xl">description</span>
+                    <h3 class="text-lg font-bold">${docTypeName}</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="${url}" download class="px-3 py-1.5 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm">download</span> Download
+                    </a>
+                    <a href="${url}" target="_blank" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm">open_in_new</span> Open
+                    </a>
+                    <button onclick="document.getElementById('admin-doc-preview-modal').remove()" class="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-auto p-4 flex items-center justify-center bg-gray-50 dark:bg-gray-800 min-h-[400px]">
+                ${isImage ? `
+                    <img src="${url}" alt="${docTypeName}" class="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg" 
+                         onerror="this.parentElement.innerHTML='<div class=\\'text-center text-gray-500 py-12\\'><span class=\\'material-symbols-outlined text-6xl mb-4 block\\'>broken_image</span><p>Unable to load preview</p><a href=\\'${url}\\' target=\\'_blank\\' class=\\'text-primary underline mt-2 block\\'>Try opening directly</a></div>'" />
+                ` : isPdf ? `
+                    <iframe src="${url}" class="w-full h-[70vh] rounded-lg border border-gray-200 dark:border-gray-700" 
+                            frameborder="0"></iframe>
+                ` : `
+                    <div class="text-center text-gray-500 py-12">
+                        <span class="material-symbols-outlined text-6xl mb-4 block">description</span>
+                        <p class="text-lg font-medium mb-2">Document Preview</p>
+                        <p class="text-sm mb-4">This file type cannot be previewed directly in the browser.</p>
+                        <a href="${url}" target="_blank" class="px-4 py-2 bg-primary text-white rounded-lg inline-flex items-center gap-2 hover:bg-primary/90">
+                            <span class="material-symbols-outlined text-sm">open_in_new</span> Open in New Tab
+                        </a>
+                    </div>
+                `}
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+}
+
+// Format file size helper
+function formatFileSize(bytes) {
+    if (!bytes || bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+window.openAdminDocPreview = openAdminDocPreview;
+
+function getAdminDocStatusBadge(doc) {
+    if (doc.status === 'verified') {
+        return `<span class="px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full text-xs font-bold uppercase">Verified</span>`;
+    } else if (doc.status === 'rejected') {
+        return `<span class="px-2 py-0.5 bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-full text-xs font-bold uppercase">Rejected</span>`;
+    } else if (doc.filePath) {
+        return `<span class="px-2 py-0.5 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 rounded-full text-xs font-bold uppercase">Pending</span>`;
+    } else {
+        return `<span class="px-2 py-0.5 bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 rounded-full text-xs font-bold uppercase">Missing</span>`;
+    }
+}
+
+// Format helpers re-declared here just in case (or rely on existing ones if in scope)
+function formatDocType(type) {
+    if (!type) return 'Document';
+    return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+}
+function formatLoanType(type) {
+    const types = { education: 'Education Loan', home: 'Home Loan', personal: 'Personal Loan', business: 'Business Loan', vehicle: 'Vehicle Loan' };
+    return types[type] || type || 'Loan Application';
+}
+function getLoanIcon(type) {
+    const icons = { education: 'school', home: 'home', personal: 'person', business: 'business', vehicle: 'directions_car' };
+    return icons[type] || 'account_balance';
+}
+
+// Helper functions for status styling
+function getStatusBg(status) {
+    status = (status || '').toLowerCase();
+    if (status === 'approved' || status === 'verified') return 'bg-green-100 dark:bg-green-900/30';
+    if (status === 'rejected' || status === 'cancelled') return 'bg-red-100 dark:bg-red-900/30';
+    if (status === 'submitted' || status === 'processing' || status === 'under_review') return 'bg-blue-100 dark:bg-blue-900/30';
+    return 'bg-gray-100 dark:bg-gray-800'; // pending/draft
+}
+
+function getStatusColor(status) {
+    status = (status || '').toLowerCase();
+    if (status === 'approved' || status === 'verified') return 'text-green-600 dark:text-green-400';
+    if (status === 'rejected' || status === 'cancelled') return 'text-red-600 dark:text-red-400';
+    if (status === 'submitted' || status === 'processing' || status === 'under_review') return 'text-blue-600 dark:text-blue-400';
+    return 'text-gray-600 dark:text-gray-400';
+}
+
+function getStatusClass(status) {
+    status = (status || '').toLowerCase();
+    if (status === 'approved') return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300';
+    if (status === 'rejected' || status === 'cancelled') return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300';
+    if (status === 'submitted') return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300';
+    if (status === 'processing' || status === 'under_review') return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300';
+    return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+}
+
+// Using window assignment to ensure global availability
+window.viewApplication = viewApplication;
+window.closeApplicationModal = closeApplicationModal;
+
+// Load Recent Activity
+async function loadRecentActivity() {
+    try {
+        const container = document.getElementById('recentActivityList');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-10 text-gray-500">
+                <div class="loading-spinner mb-2"></div>
+                <p>Loading activity...</p>
+            </div>
+        `;
+
+        const response = await fetch(`${API_BASE_URL}/audit/activity?limit=20`, {
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data.length > 0) {
+                renderActivityList(result.data);
+            } else {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-10 text-gray-500">
+                        <span class="material-symbols-outlined text-4xl mb-2 opacity-50">history</span>
+                        <p>No recent activity found.</p>
+                    </div>
+                `;
+            }
+        } else {
+            console.error('Failed to load activity:', response.status);
+            container.innerHTML = `
+                <div class="text-center py-10 text-red-500">
+                    <p>Failed to load activity feed.</p>
+                    <button onclick="loadRecentActivity()" class="mt-2 text-sm underline">Try Again</button>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error loading activity:', error);
+        const container = document.getElementById('recentActivityList');
+        if (container) {
+            container.innerHTML = `
+                <div class="text-center py-10 text-red-500">
+                    <p>Error loading activity.</p>
+                </div>
+            `;
+        }
+    }
+}
+
+function renderActivityList(activities) {
+    const container = document.getElementById('recentActivityList');
+    container.innerHTML = activities.map(item => {
+        let icon = 'info';
+        let colorClass = 'bg-gray-100 text-gray-600';
+        let bgClass = 'hover:bg-gray-50 dark:hover:bg-gray-800';
+
+        switch (item.type) {
+            case 'application':
+                icon = 'description';
+                colorClass = 'bg-blue-100 text-blue-600';
+                break;
+            case 'blog':
+                icon = 'article';
+                colorClass = 'bg-purple-100 text-purple-600';
+                break;
+            case 'forum':
+                icon = 'forum';
+                colorClass = 'bg-green-100 text-green-600';
+                break;
+            case 'user':
+                icon = 'person_add';
+                colorClass = 'bg-yellow-100 text-yellow-600';
+                break;
+            case 'mentor':
+                icon = 'school';
+                colorClass = 'bg-indigo-100 text-indigo-600';
+                break;
+        }
+
+        const date = new Date(item.date).toLocaleString(undefined, {
+            month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+        });
+
+        // Ensure description is safe string
+        const description = (item.description || 'No description').toString();
+        const title = (item.title || 'Untitled').toString();
+
+        return `
+            <div class="flex items-start gap-4 p-3 rounded-lg ${bgClass} transition-colors border-b border-gray-100 dark:border-gray-800 last:border-0 animate-fade-in">
+                <div class="p-2 rounded-full ${colorClass} shrink-0 mt-1">
+                    <span class="material-symbols-outlined text-xl">${icon}</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex justify-between items-start mb-1">
+                        <p class="font-medium text-sm truncate pr-2" title="${escapeHtml(title)}">${escapeHtml(title)}</p>
+                        <span class="text-xs text-gray-500 whitespace-nowrap">${date}</span>
+                    </div>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 truncate mb-2">${escapeHtml(description)}</p>
+                    <div class="flex items-center justify-between">
+                         <span class="text-[10px] px-2 py-0.5 rounded-full uppercase font-bold tracking-wider bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                            ${item.type}
+                        </span>
+                        <a href="${item.link}" class="group text-xs text-primary hover:text-primary-dark flex items-center gap-1 transition-colors">
+                            View Details <span class="material-symbols-outlined text-[10px] group-hover:translate-x-0.5 transition-transform">arrow_forward</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}

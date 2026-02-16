@@ -125,51 +125,12 @@
                         style="width: 0%"></div>
                 </div>
 
-                <div class="relative flex justify-between">
-                    <div class="flex flex-col items-center" id="step1">
-                        <div
-                            class="step-circle w-12 h-12 rounded-full flex items-center justify-center bg-gray-200 dark:bg-white/10 text-gray-400 dark:text-gray-500 transition-all duration-300 z-10">
-                            <span class="material-symbols-outlined">description</span>
-                        </div>
-                        <span
-                            class="mt-3 text-xs font-bold text-gray-500 dark:text-gray-400 text-center">Application<br>Submitted</span>
-                    </div>
-                    <div class="flex flex-col items-center" id="step2">
-                        <div
-                            class="step-circle w-12 h-12 rounded-full flex items-center justify-center bg-gray-200 dark:bg-white/10 text-gray-400 dark:text-gray-500 transition-all duration-300 z-10">
-                            <span class="material-symbols-outlined">upload_file</span>
-                        </div>
-                        <span
-                            class="mt-3 text-xs font-bold text-gray-500 dark:text-gray-400 text-center">Documents<br>Uploaded</span>
-                    </div>
-                    <div class="flex flex-col items-center" id="step3">
-                        <div
-                            class="step-circle w-12 h-12 rounded-full flex items-center justify-center bg-gray-200 dark:bg-white/10 text-gray-400 dark:text-gray-500 transition-all duration-300 z-10">
-                            <span class="material-symbols-outlined">rate_review</span>
-                        </div>
-                        <span
-                            class="mt-3 text-xs font-bold text-gray-500 dark:text-gray-400 text-center">Under<br>Review</span>
-                    </div>
-                    <div class="flex flex-col items-center" id="step4">
-                        <div
-                            class="step-circle w-12 h-12 rounded-full flex items-center justify-center bg-gray-200 dark:bg-white/10 text-gray-400 dark:text-gray-500 transition-all duration-300 z-10">
-                            <span class="material-symbols-outlined">verified</span>
-                        </div>
-                        <span
-                            class="mt-3 text-xs font-bold text-gray-500 dark:text-gray-400 text-center">Loan<br>Sanctioned</span>
-                    </div>
-                    <div class="flex flex-col items-center" id="step5">
-                        <div
-                            class="step-circle w-12 h-12 rounded-full flex items-center justify-center bg-gray-200 dark:bg-white/10 text-gray-400 dark:text-gray-500 transition-all duration-300 z-10">
-                            <span class="material-symbols-outlined">payments</span>
-                        </div>
-                        <span
-                            class="mt-3 text-xs font-bold text-gray-500 dark:text-gray-400 text-center">Amount<br>Disbursed</span>
-                    </div>
+                <div class="relative flex justify-between" id="progressSteps">
+                    <!-- Steps will be dynamically injected here -->
                 </div>
             </div>
 
-            <div class="mt-8 p-4 bg-primary/5 dark:bg-primary/10 rounded-2xl flex items-center gap-4"
+            <div class="mt-8 p-4 bg-primary/5 dark:bg-primary/10 rounded-2xl flex items-center gap-4 transition-all hover:bg-primary/10"
                 id="currentStatusInfo">
                 <div class="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center">
                     <span class="material-symbols-outlined text-primary" id="currentStatusIcon">hourglass_empty</span>

@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Ask a Question | Community Hub</title>
+    <meta name="description" content="Post a new question to the community." />
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    },
+                    colors: {
+                        primary: '#6605c7',
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                        brand: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            200: '#99f6e4',
+                            300: '#5eead4',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                            950: '#042f2e',
+                        }
+                    },
+                    backgroundImage: {
+                        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(102, 5, 199, 0.4) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224, 195, 137, 0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139, 192, 232, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102, 5, 199, 0.3) 0px, transparent 50%)',
+                    },
+                    animation: {
+                        'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
+                        'spin-slow': 'spin 3s linear infinite',
+                    },
+                    keyframes: {
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .dark .glass-panel {
+            background: rgba(17, 24, 39, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 min-h-screen font-sans relative">
+
+    <!-- Background -->
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none overflow-hidden">
+        <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
+        <div class="absolute inset-0 opacity-30 mix-blend-overlay"
+            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
+        </div>
+    </div>
+
+    <!-- Navbar -->
+    <div id="navbar-placeholder"></div>
+
+    <!-- Main Content -->
+    <main class="relative z-10 pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-3xl mx-auto">
+
+        <!-- Header -->
+        <div class="text-center mb-10">
+            <h1 class="text-4xl md:text-5xl font-display font-bold text-gray-900 dark:text-white mb-4">
+                Ask the Community
+            </h1>
+            <p class="text-lg text-gray-600 dark:text-gray-400">
+                Get answers from mentors, alumni, and fellow students.
+            </p>
+        </div>
+
+        <!-- Wizard Container -->
+        <div class="glass-panel p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
+
+            <!-- Category Badge (shown when topic is passed) -->
+            <div id="categoryBadge" class="hidden mb-6">
+                <div class="flex items-center gap-3 px-5 py-3 rounded-2xl bg-white/60 dark:bg-white/5 border border-white/40 dark:border-white/10 backdrop-blur-sm w-fit mx-auto">
+                    <div id="categoryIcon" class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-lg font-bold shrink-0">
+                        <span class="material-symbols-rounded text-xl" id="categoryIconSymbol">forum</span>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Posting in</p>
+                        <p id="categoryName" class="text-sm font-bold text-gray-900 dark:text-white">General Discussion</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-gray-100 dark:bg-white/5">
+                <div id="progressBar" class="h-full bg-brand-500 transition-all duration-500 w-1/3"></div>
+            </div>
+
+            <div id="wizardContent" class="mt-4">
+
+
+
+                <!-- Step 1: Title -->
+                <div id="step1" class="hidden animate-fade-in-up">
+                    <div class="mb-8">
+                        <label class="block text-xl font-bold font-display text-gray-900 dark:text-white mb-2">
+                            What's your question?
+                        </label>
+                        <p class="text-sm text-gray-500 mb-4">Keep it short and specific.</p>
+                        <input type="text" id="questionTitle"
+                            placeholder="e.g. How do I get an education loan aimed at UK universities?"
+                            class="w-full text-lg px-6 py-4 rounded-2xl bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition-all font-bold placeholder:font-normal">
+                    </div>
+                </div>
+
+                <!-- Step 2: Details -->
+                <div id="step2" class="hidden animate-fade-in-up">
+                    <div class="mb-4">
+                        <label class="block text-xl font-bold font-display text-gray-900 dark:text-white mb-2">
+                            Add some details
+                        </label>
+                        <p class="text-sm text-gray-500 mb-4">
+                            Context helps mentors give better answers. Mention stats, universities, etc.
+                        </p>
+                        <textarea id="questionContent" rows="8"
+                            placeholder="I am looking for a loan of 40L for MS in CS..."
+                            class="w-full px-6 py-4 rounded-2xl bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition-all resize-none font-medium"></textarea>
+                    </div>
+                </div>
+
+                <!-- Step 3: Analysis (Loading) -->
+                <div id="step3" class="hidden flex flex-col items-center justify-center py-12 animate-fade-in-up">
+                    <div class="relative w-24 h-24 mb-8">
+                        <div class="absolute inset-0 border-4 border-gray-200 dark:border-white/10 rounded-full"></div>
+                        <div
+                            class="absolute inset-0 border-4 border-brand-500 rounded-full border-t-transparent animate-spin">
+                        </div>
+                        <div class="absolute inset-0 flex items-center justify-center text-3xl animate-pulse">🤖</div>
+                    </div>
+                    <h3 class="text-2xl font-bold font-display text-gray-900 dark:text-white mb-2">Reviewing...</h3>
+                    <p class="text-gray-500">Checking for similar questions and ensuring compliance.</p>
+                </div>
+
+                <!-- Step 4: Duplicate Found -->
+                <div id="step4Duplicate" class="hidden animate-fade-in-up">
+                    <div
+                        class="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 rounded-3xl p-6 mb-6">
+                        <div class="flex gap-4">
+                            <div
+                                class="flex-shrink-0 w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                                <span class="material-symbols-rounded">warning</span>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-amber-800 dark:text-amber-200 mb-1">Wait, we found
+                                    similar topics!</h3>
+                                <p class="text-sm text-amber-900/70 dark:text-amber-100/70">
+                                    These existing discussions might already answer your question.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h4 class="font-bold text-gray-900 dark:text-white mb-4 px-2">Related Discussions</h4>
+                    <div id="duplicateList" class="space-y-3 mb-8"></div>
+                </div>
+
+                <!-- Step 5: Success -->
+                <div id="step5Success"
+                    class="hidden flex flex-col items-center justify-center py-12 animate-fade-in-up">
+                    <div
+                        class="w-24 h-24 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 mb-8 animate-[bounce_1s_ease-in-out]">
+                        <span class="material-symbols-rounded text-5xl">check_circle</span>
+                    </div>
+                    <h3 class="text-3xl font-bold font-display text-gray-900 dark:text-white mb-4">Posted!</h3>
+                    <p class="text-gray-500 mb-8 max-w-sm text-center">Your question is live. Mentors have been
+                        notified.</p>
+                    <button id="goToDiscussionBtn"
+                        class="px-8 py-3 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold shadow-lg shadow-brand-500/30 transition-all hover:-translate-y-1">
+                        View Discussion
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Footer Actions -->
+            <div id="wizardFooter"
+                class="mt-8 pt-6 border-t border-gray-100 dark:border-white/5 flex justify-between items-center">
+                <button id="backBtn"
+                    class="px-6 py-2 rounded-xl text-gray-500 font-bold hover:bg-gray-100 dark:hover:bg-white/5 transition-colors hidden">
+                    Back
+                </button>
+                <div class="flex gap-3 ml-auto">
+                    <!-- Duplicate Actions -->
+                    <div id="duplicateActions" class="hidden gap-3">
+                        <button id="cancelPostBtn"
+                            class="px-6 py-2 rounded-xl text-gray-500 font-bold hover:bg-gray-100 dark:hover:bg-white/5 transition-colors">
+                            Cancel
+                        </button>
+                        <button id="postAnywayBtn"
+                            class="px-6 py-2 rounded-xl bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-white font-bold hover:bg-gray-300 dark:hover:bg-white/20 transition-colors">
+                            Post Anyway
+                        </button>
+                    </div>
+
+                    <!-- Main Actions -->
+                    <button id="nextBtn"
+                        class="px-8 py-3 rounded-xl bg-gradient-to-r from-brand-600 to-brand-500 text-white font-bold hover:shadow-lg hover:shadow-brand-500/25 hover:-translate-y-0.5 transition-all">
+                        Next
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Scripts -->
+    <script src="assets/js/components-loader.js"></script>
+    <script src="assets/js/theme-manager.js"></script>
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/create-post.js"></script>
+
+</body>
+
+</html>

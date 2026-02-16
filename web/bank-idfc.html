@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>IDFC First Bank Education Loan - VidhyaLoan</title>
+    <meta name="description"
+        content="Get education loans from IDFC First Bank with competitive interest rates starting at 10.5% p.a., flexible repayment, and quick 48-hour approval. Apply now through VidhyaLoan." />
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
+    <link href="assets/css/main.css" rel="stylesheet" />
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                        "bank-primary": "#EC1C24",
+                    },
+                    fontFamily: {
+                        "display": ["'Noto Serif'", "serif"],
+                        "sans": ["'Noto Sans'", "sans-serif"],
+                    },
+                    backgroundImage: {
+                        'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(102, 5, 199, 0.4) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224, 195, 137, 0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139, 192, 232, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102, 5, 199, 0.3) 0px, transparent 50%)',
+                    }
+                },
+            },
+        };
+    </script>
+    <style>
+        .bank-gradient {
+            background: linear-gradient(135deg, #EC1C24 0%, #B71519 100%);
+        }
+
+        .bank-gradient-light {
+            background: linear-gradient(135deg, rgba(236, 28, 36, 0.08) 0%, rgba(183, 21, 25, 0.05) 100%);
+        }
+
+        .feature-card {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-8px);
+        }
+
+        .pulse-ring {
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse-ring {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(1.1);
+            }
+        }
+
+        .step-line {
+            position: relative;
+        }
+
+        .step-line::after {
+            content: '';
+            position: absolute;
+            left: 24px;
+            top: 56px;
+            bottom: -20px;
+            width: 2px;
+            background: linear-gradient(to bottom, #EC1C24 0%, transparent 100%);
+        }
+
+        .step-line:last-child::after {
+            display: none;
+        }
+
+        .counter-value {
+            font-variant-numeric: tabular-nums;
+        }
+
+        .doc-card {
+            transition: all 0.3s ease;
+        }
+
+        .doc-card:hover {
+            transform: translateX(8px);
+            border-color: #EC1C24;
+        }
+    </style>
+</head>
+
+<body
+    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none">
+        <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
+    </div>
+
+    <div id="navbar-placeholder"></div>
+
+    <main class="relative z-10 pt-32 pb-24">
+        <div class="max-w-7xl mx-auto px-6">
+            <!-- Hero Section -->
+            <section class="mb-20">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                    <div>
+                        <a href="compare-loans.html"
+                            class="inline-flex items-center gap-2 text-sm font-bold text-primary mb-6 hover:underline">
+                            <span class="material-symbols-outlined text-lg">arrow_back</span>
+                            Back to All Banks
+                        </a>
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-20 h-20 bg-white rounded-2xl shadow-lg flex items-center justify-center p-3">
+                                <img src="https://upload.wikimedia.org/wikipedia/commons/8/85/IDFC_First_Bank.svg"
+                                    alt="IDFC First Bank" class="w-full h-full object-contain" />
+                            </div>
+                            <div>
+                                <h1 class="text-4xl md:text-5xl font-bold font-display text-gray-900 dark:text-white">
+                                    IDFC First Bank</h1>
+                                <p class="text-gray-500 dark:text-gray-400 font-medium">Education Loan</p>
+                            </div>
+                        </div>
+                        <p class="text-xl text-gray-600 dark:text-gray-300 leading-relaxed mb-8">
+                            Achieve your study abroad dreams with IDFC First Bank's flexible education loans.
+                            Competitive rates starting at 10.5% p.a. with up to ₹40 lakhs coverage.
+                        </p>
+
+                        <!-- Key Highlights -->
+                        <div class="grid grid-cols-3 gap-4 mb-8">
+                            <div class="glass-card p-4 rounded-2xl">
+                                <p class="text-xs font-bold text-primary uppercase tracking-wider mb-1">Interest Rate
+                                </p>
+                                <p class="text-2xl font-bold font-display">10.5%</p>
+                                <p class="text-xs text-gray-500">p.a. onwards</p>
+                            </div>
+                            <div class="glass-card p-4 rounded-2xl">
+                                <p class="text-xs font-bold text-primary uppercase tracking-wider mb-1">Max Loan</p>
+                                <p class="text-2xl font-bold font-display">₹40L</p>
+                                <p class="text-xs text-gray-500">Unsecured</p>
+                            </div>
+                            <div class="glass-card p-4 rounded-2xl">
+                                <p class="text-xs font-bold text-primary uppercase tracking-wider mb-1">Approval</p>
+                                <p class="text-2xl font-bold font-display">48h</p>
+                                <p class="text-xs text-gray-500">Fast track</p>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex flex-col sm:flex-row gap-4">
+                            <button onclick="openReferralForm('IDFC')"
+                                class="flex-1 bank-gradient text-white py-4 px-8 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-red-500/40 transition-all hover:-translate-y-1 flex items-center justify-center gap-3">
+                                <span class="material-symbols-outlined text-2xl">send</span>
+                                Refer Now
+                            </button>
+                            <a href="apply-loan.html"
+                                class="flex-1 bg-white dark:bg-gray-800 border-2 border-red-500 text-red-600 py-4 px-8 rounded-2xl font-bold text-lg shadow-lg hover:shadow-red-500/20 transition-all hover:-translate-y-1 flex items-center justify-center gap-3">
+                                <span class="material-symbols-outlined text-2xl">description</span>
+                                Apply Now
+                            </a>
+                        </div>
+                        <a href="loan-eligibility.html"
+                            class="mt-4 inline-flex items-center gap-2 text-sm font-bold text-red-600 hover:text-red-700 transition-colors group">
+                            <span class="material-symbols-outlined text-lg">verified_user</span>
+                            Check Your Eligibility
+                            <span
+                                class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                        </a>
+                    </div>
+
+                    <div class="relative">
+                        <div class="glass-card rounded-[3rem] p-8 relative overflow-hidden">
+                            <div class="absolute -top-20 -right-20 w-64 h-64 bg-red-500/10 rounded-full blur-[100px]">
+                            </div>
+                            <img src="https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80"
+                                alt="Education" class="rounded-3xl shadow-2xl relative z-10" />
+                            <div
+                                class="absolute bottom-12 left-12 right-12 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 z-20">
+                                <div class="flex items-center gap-4">
+                                    <div
+                                        class="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center text-white pulse-ring">
+                                        <span class="material-symbols-outlined">check_circle</span>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-gray-900 dark:text-white">Quick Approval</p>
+                                        <p class="text-sm text-gray-500">Get sanctioned in 48 hours</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Stats Counter -->
+            <section class="mb-20">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <div class="glass-card rounded-2xl p-6 text-center">
+                        <p class="text-3xl md:text-4xl font-bold font-display text-red-600 counter-value">25,000+</p>
+                        <p class="text-sm text-gray-500 mt-1">Students Funded</p>
+                    </div>
+                    <div class="glass-card rounded-2xl p-6 text-center">
+                        <p class="text-3xl md:text-4xl font-bold font-display text-red-600 counter-value">800+</p>
+                        <p class="text-sm text-gray-500 mt-1">Universities Covered</p>
+                    </div>
+                    <div class="glass-card rounded-2xl p-6 text-center">
+                        <p class="text-3xl md:text-4xl font-bold font-display text-red-600 counter-value">35+</p>
+                        <p class="text-sm text-gray-500 mt-1">Countries Supported</p>
+                    </div>
+                    <div class="glass-card rounded-2xl p-6 text-center">
+                        <p class="text-3xl md:text-4xl font-bold font-display text-red-600 counter-value">4.5★</p>
+                        <p class="text-sm text-gray-500 mt-1">Customer Rating</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Key Features -->
+            <section class="mb-20">
+                <h2 class="text-3xl md:text-4xl font-bold font-display text-gray-900 dark:text-white mb-4 text-center">
+                    Why Choose IDFC First Bank?</h2>
+                <p class="text-gray-500 text-center mb-12 max-w-2xl mx-auto">Industry-leading education loan features
+                    designed to make your study abroad journey seamless</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="feature-card glass-card p-8 rounded-3xl text-center">
+                        <div class="w-16 h-16 bg-red-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <span class="material-symbols-outlined text-4xl text-red-500">percent</span>
+                        </div>
+                        <h3 class="font-bold text-lg mb-2">Competitive Rates</h3>
+                        <p class="text-sm text-gray-500">Starting at 10.5% p.a. with flexible tenure options</p>
+                    </div>
+                    <div class="feature-card glass-card p-8 rounded-3xl text-center">
+                        <div class="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <span class="material-symbols-outlined text-4xl text-blue-500">account_balance</span>
+                        </div>
+                        <h3 class="font-bold text-lg mb-2">High Loan Amount</h3>
+                        <p class="text-sm text-gray-500">Up to ₹40 lakhs without collateral</p>
+                    </div>
+                    <div class="feature-card glass-card p-8 rounded-3xl text-center">
+                        <div
+                            class="w-16 h-16 bg-green-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <span class="material-symbols-outlined text-4xl text-green-500">schedule</span>
+                        </div>
+                        <h3 class="font-bold text-lg mb-2">Quick Processing</h3>
+                        <p class="text-sm text-gray-500">Sanction letter in as quick as 48 hours</p>
+                    </div>
+                    <div class="feature-card glass-card p-8 rounded-3xl text-center">
+                        <div
+                            class="w-16 h-16 bg-orange-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <span class="material-symbols-outlined text-4xl text-orange-500">payments</span>
+                        </div>
+                        <h3 class="font-bold text-lg mb-2">Flexible Repayment</h3>
+                        <p class="text-sm text-gray-500">Moratorium period during course + 1 year</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- How It Works -->
+            <section class="mb-20">
+                <h2 class="text-3xl md:text-4xl font-bold font-display text-gray-900 dark:text-white mb-4 text-center">
+                    How It Works</h2>
+                <p class="text-gray-500 text-center mb-12 max-w-2xl mx-auto">Get your education loan in 4 simple steps
+                </p>
+                <div class="max-w-3xl mx-auto">
+                    <div class="space-y-8">
+                        <div class="step-line flex items-start gap-6">
+                            <div
+                                class="w-12 h-12 rounded-full bank-gradient flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-lg shadow-red-500/30">
+                                1</div>
+                            <div class="glass-card rounded-2xl p-6 flex-1">
+                                <h3 class="font-bold text-lg mb-1">Check Eligibility</h3>
+                                <p class="text-sm text-gray-500">Use our quick eligibility checker to see if you qualify
+                                    for an IDFC First Bank education loan. It takes less than 2 minutes.</p>
+                                <a href="loan-eligibility.html"
+                                    class="inline-flex items-center gap-1 text-sm font-bold text-red-600 mt-3 hover:text-red-700 transition-colors">
+                                    Check Now <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="step-line flex items-start gap-6">
+                            <div
+                                class="w-12 h-12 rounded-full bank-gradient flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-lg shadow-red-500/30">
+                                2</div>
+                            <div class="glass-card rounded-2xl p-6 flex-1">
+                                <h3 class="font-bold text-lg mb-1">Submit Application</h3>
+                                <p class="text-sm text-gray-500">Fill out the application form with your academic
+                                    details, admission letter, and financial documents. Our team reviews it instantly.
+                                </p>
+                                <a href="apply-loan.html"
+                                    class="inline-flex items-center gap-1 text-sm font-bold text-red-600 mt-3 hover:text-red-700 transition-colors">
+                                    Apply Now <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="step-line flex items-start gap-6">
+                            <div
+                                class="w-12 h-12 rounded-full bank-gradient flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-lg shadow-red-500/30">
+                                3</div>
+                            <div class="glass-card rounded-2xl p-6 flex-1">
+                                <h3 class="font-bold text-lg mb-1">Get Sanctioned</h3>
+                                <p class="text-sm text-gray-500">Receive your sanction letter within 48 hours. Our
+                                    dedicated team handles all verification and documentation for a smooth process.</p>
+                            </div>
+                        </div>
+                        <div class="step-line flex items-start gap-6">
+                            <div
+                                class="w-12 h-12 rounded-full bank-gradient flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-lg shadow-red-500/30">
+                                4</div>
+                            <div class="glass-card rounded-2xl p-6 flex-1">
+                                <h3 class="font-bold text-lg mb-1">Disbursement</h3>
+                                <p class="text-sm text-gray-500">Funds are disbursed directly to the university. Tuition
+                                    fees, living expenses, and other costs are covered as per the sanction letter.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Loan Details & Eligibility -->
+            <section class="mb-20">
+                <div class="glass-card rounded-[3rem] p-10 md:p-16">
+                    <h2 class="text-3xl font-bold font-display text-gray-900 dark:text-white mb-10">Loan Details &
+                        Eligibility</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                        <div>
+                            <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary">description</span>
+                                Loan Specifications
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+                                    <span class="text-gray-500">Interest Rate</span>
+                                    <span class="font-bold">10.5% - 12.5% p.a.</span>
+                                </div>
+                                <div class="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+                                    <span class="text-gray-500">Loan Amount</span>
+                                    <span class="font-bold">Up to ₹40 Lakhs</span>
+                                </div>
+                                <div class="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+                                    <span class="text-gray-500">Processing Fee</span>
+                                    <span class="font-bold">1% + GST</span>
+                                </div>
+                                <div class="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+                                    <span class="text-gray-500">Repayment Tenure</span>
+                                    <span class="font-bold">Up to 15 years</span>
+                                </div>
+                                <div class="flex justify-between py-3 border-b border-gray-200 dark:border-gray-700">
+                                    <span class="text-gray-500">Moratorium Period</span>
+                                    <span class="font-bold">Course + 12 months</span>
+                                </div>
+                                <div class="flex justify-between py-3">
+                                    <span class="text-gray-500">Collateral</span>
+                                    <span class="font-bold">Not required up to ₹40L</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-primary">verified_user</span>
+                                Eligibility Criteria
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex items-start gap-3">
+                                    <div
+                                        class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                        <span class="material-symbols-outlined text-white text-sm">check</span>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold">Admission Confirmed</p>
+                                        <p class="text-sm text-gray-500">From recognized university abroad</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <div
+                                        class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                        <span class="material-symbols-outlined text-white text-sm">check</span>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold">Co-Applicant Required</p>
+                                        <p class="text-sm text-gray-500">Parent or guardian with income proof</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <div
+                                        class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                        <span class="material-symbols-outlined text-white text-sm">check</span>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold">Age Limit</p>
+                                        <p class="text-sm text-gray-500">18-35 years for the student</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-3">
+                                    <div
+                                        class="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                        <span class="material-symbols-outlined text-white text-sm">check</span>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold">Academic Record</p>
+                                        <p class="text-sm text-gray-500">Good academic track record required</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Quick Eligibility CTA -->
+                            <a href="loan-eligibility.html"
+                                class="mt-8 flex items-center gap-3 p-4 rounded-2xl bank-gradient-light border border-red-200 dark:border-red-800 hover:border-red-400 transition-all group">
+                                <div
+                                    class="w-10 h-10 bg-red-500 rounded-xl flex items-center justify-center text-white">
+                                    <span class="material-symbols-outlined">quiz</span>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="font-bold text-gray-900 dark:text-white text-sm">Not sure if you qualify?
+                                    </p>
+                                    <p class="text-xs text-gray-500">Check eligibility in 2 minutes →</p>
+                                </div>
+                                <span
+                                    class="material-symbols-outlined text-red-600 group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Documents Required -->
+            <section class="mb-20">
+                <h2 class="text-3xl md:text-4xl font-bold font-display text-gray-900 dark:text-white mb-4 text-center">
+                    Documents Required</h2>
+                <p class="text-gray-500 text-center mb-12 max-w-2xl mx-auto">Keep these documents ready for a faster
+                    application process</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto">
+                    <div class="doc-card flex items-center gap-4 glass-card p-5 rounded-2xl border border-transparent">
+                        <div class="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span class="material-symbols-outlined text-red-500">badge</span>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm">Identity Proof</p>
+                            <p class="text-xs text-gray-500">Passport, Aadhaar, PAN Card</p>
+                        </div>
+                    </div>
+                    <div class="doc-card flex items-center gap-4 glass-card p-5 rounded-2xl border border-transparent">
+                        <div class="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span class="material-symbols-outlined text-blue-500">school</span>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm">Admission Letter</p>
+                            <p class="text-xs text-gray-500">From the university/college</p>
+                        </div>
+                    </div>
+                    <div class="doc-card flex items-center gap-4 glass-card p-5 rounded-2xl border border-transparent">
+                        <div
+                            class="w-10 h-10 bg-green-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span class="material-symbols-outlined text-green-500">history_edu</span>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm">Academic Records</p>
+                            <p class="text-xs text-gray-500">10th, 12th, UG marksheets & certificates</p>
+                        </div>
+                    </div>
+                    <div class="doc-card flex items-center gap-4 glass-card p-5 rounded-2xl border border-transparent">
+                        <div
+                            class="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span class="material-symbols-outlined text-purple-500">account_balance_wallet</span>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm">Income Proof (Co-applicant)</p>
+                            <p class="text-xs text-gray-500">Salary slips, ITR, bank statements</p>
+                        </div>
+                    </div>
+                    <div class="doc-card flex items-center gap-4 glass-card p-5 rounded-2xl border border-transparent">
+                        <div
+                            class="w-10 h-10 bg-orange-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span class="material-symbols-outlined text-orange-500">flight</span>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm">Visa & Travel Documents</p>
+                            <p class="text-xs text-gray-500">Valid passport, visa (if available)</p>
+                        </div>
+                    </div>
+                    <div class="doc-card flex items-center gap-4 glass-card p-5 rounded-2xl border border-transparent">
+                        <div class="w-10 h-10 bg-pink-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <span class="material-symbols-outlined text-pink-500">receipt_long</span>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm">Fee Structure</p>
+                            <p class="text-xs text-gray-500">Detailed fee breakdown from university</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Popular Courses Funded -->
+            <section class="mb-20">
+                <h2 class="text-3xl md:text-4xl font-bold font-display text-gray-900 dark:text-white mb-4 text-center">
+                    Popular Courses Funded</h2>
+                <p class="text-gray-500 text-center mb-12 max-w-2xl mx-auto">IDFC First Bank funds a wide range of
+                    programs across top global universities</p>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div class="glass-card p-5 rounded-2xl text-center hover:shadow-lg transition-all">
+                        <span class="material-symbols-outlined text-3xl text-red-500 mb-2">computer</span>
+                        <p class="font-bold text-xs">MS in CS</p>
+                    </div>
+                    <div class="glass-card p-5 rounded-2xl text-center hover:shadow-lg transition-all">
+                        <span class="material-symbols-outlined text-3xl text-blue-500 mb-2">business</span>
+                        <p class="font-bold text-xs">MBA</p>
+                    </div>
+                    <div class="glass-card p-5 rounded-2xl text-center hover:shadow-lg transition-all">
+                        <span class="material-symbols-outlined text-3xl text-green-500 mb-2">biotech</span>
+                        <p class="font-bold text-xs">MS in Data Science</p>
+                    </div>
+                    <div class="glass-card p-5 rounded-2xl text-center hover:shadow-lg transition-all">
+                        <span class="material-symbols-outlined text-3xl text-purple-500 mb-2">engineering</span>
+                        <p class="font-bold text-xs">MS Engineering</p>
+                    </div>
+                    <div class="glass-card p-5 rounded-2xl text-center hover:shadow-lg transition-all">
+                        <span class="material-symbols-outlined text-3xl text-orange-500 mb-2">local_hospital</span>
+                        <p class="font-bold text-xs">MBBS / MD</p>
+                    </div>
+                    <div class="glass-card p-5 rounded-2xl text-center hover:shadow-lg transition-all">
+                        <span class="material-symbols-outlined text-3xl text-pink-500 mb-2">gavel</span>
+                        <p class="font-bold text-xs">LLM / Law</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- What Makes IDFC Unique -->
+            <section class="mb-20">
+                <div class="glass-card rounded-[3rem] p-10 md:p-16 bank-gradient-light">
+                    <h2 class="text-3xl font-bold font-display text-gray-900 dark:text-white mb-8 text-center">
+                        What Makes IDFC First Bank Unique?</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div class="text-center">
+                            <div
+                                class="w-16 h-16 bg-white dark:bg-gray-800 rounded-2xl shadow-lg flex items-center justify-center mx-auto mb-4">
+                                <span class="material-symbols-outlined text-3xl text-red-500">speed</span>
+                            </div>
+                            <h3 class="font-bold text-lg mb-2">48-Hour Fast Track</h3>
+                            <p class="text-sm text-gray-500">One of the fastest processing times in the industry. Get
+                                your sanction letter in just 2 working days.</p>
+                        </div>
+                        <div class="text-center">
+                            <div
+                                class="w-16 h-16 bg-white dark:bg-gray-800 rounded-2xl shadow-lg flex items-center justify-center mx-auto mb-4">
+                                <span class="material-symbols-outlined text-3xl text-red-500">savings</span>
+                            </div>
+                            <h3 class="font-bold text-lg mb-2">Zero Margin Money</h3>
+                            <p class="text-sm text-gray-500">No upfront margin money required. 100% of the tuition fee
+                                and living expenses covered under the loan.</p>
+                        </div>
+                        <div class="text-center">
+                            <div
+                                class="w-16 h-16 bg-white dark:bg-gray-800 rounded-2xl shadow-lg flex items-center justify-center mx-auto mb-4">
+                                <span class="material-symbols-outlined text-3xl text-red-500">support_agent</span>
+                            </div>
+                            <h3 class="font-bold text-lg mb-2">Dedicated Relationship Manager</h3>
+                            <p class="text-sm text-gray-500">Get a personal loan advisor who guides you through every
+                                step of the process from application to disbursement.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CTA Section -->
+            <section class="mb-20">
+                <div class="bank-gradient rounded-[3rem] p-10 md:p-16 text-white text-center relative overflow-hidden">
+                    <div
+                        class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=60')] opacity-10 bg-cover bg-center mix-blend-overlay">
+                    </div>
+                    <div class="relative z-10">
+                        <h2 class="text-3xl md:text-5xl font-bold font-display mb-4">Ready to Apply?</h2>
+                        <p class="text-xl mb-8 text-red-100 max-w-2xl mx-auto">
+                            Submit your referral through VidhyaLoan and get connected with IDFC First Bank's dedicated
+                            education loan team
+                        </p>
+                        <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                            <button onclick="openReferralForm('IDFC')"
+                                class="bg-white text-red-600 px-10 py-4 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-white/20 transition-all hover:-translate-y-1 inline-flex items-center gap-3">
+                                <span class="material-symbols-outlined text-2xl">rocket_launch</span>
+                                Refer Now
+                            </button>
+                            <a href="apply-loan.html"
+                                class="border-2 border-white text-white px-10 py-4 rounded-2xl font-bold text-lg hover:bg-white/10 transition-all hover:-translate-y-1 inline-flex items-center gap-3">
+                                <span class="material-symbols-outlined text-2xl">description</span>
+                                Apply Directly
+                            </a>
+                        </div>
+                        <p class="mt-6 text-sm text-red-100">✓ No hidden charges ✓ Quick processing ✓ Expert assistance
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <div id="footer-placeholder"></div>
+
+    <!-- Referral Form Modal -->
+    <div id="referralModal"
+        class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+        <div class="bg-white dark:bg-gray-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-8 relative">
+            <button onclick="closeReferralForm()"
+                class="absolute top-6 right-6 w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+            <h2 class="text-3xl font-bold font-display mb-2">Refer to <span id="bankName">IDFC First Bank</span></h2>
+            <p class="text-gray-500 mb-8">Fill in your details and we'll connect you with the bank</p>
+            <form id="referralForm" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-bold mb-2">Full Name *</label>
+                        <input type="text" required
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-transparent"
+                            placeholder="John Doe" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">Email Address *</label>
+                        <input type="email" required
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-transparent"
+                            placeholder="john@example.com" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">Phone Number *</label>
+                        <input type="tel" required
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-transparent"
+                            placeholder="+91 98765 43210" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-2">Loan Amount Required *</label>
+                        <input type="text" required
+                            class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-transparent"
+                            placeholder="₹20,00,000" />
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-2">University/College *</label>
+                    <input type="text" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="University of California, Berkeley" />
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-2">Course/Program *</label>
+                    <input type="text" required
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Master of Science in Computer Science" />
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-2">Additional Information</label>
+                    <textarea rows="3"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="Any specific requirements or queries..."></textarea>
+                </div>
+                <button type="submit"
+                    class="w-full bank-gradient text-white py-4 px-8 rounded-2xl font-bold text-lg shadow-2xl hover:shadow-red-500/40 transition-all hover:-translate-y-1">
+                    Submit Referral
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script src="assets/js/auth.js"></script>
+    <script src="assets/js/components-loader.js"></script>
+    <script>
+        function openReferralForm(bankName) {
+            document.getElementById('referralModal').classList.remove('hidden');
+            document.getElementById('bankName').textContent = bankName + ' First Bank';
+        }
+        function closeReferralForm() {
+            document.getElementById('referralModal').classList.add('hidden');
+        }
+        document.getElementById('referralForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+            alert('Thank you for your referral! Our team will contact you within 24 hours.');
+            closeReferralForm();
+        });
+        document.getElementById('referralModal').addEventListener('click', function (e) {
+            if (e.target === this) closeReferralForm();
+        });
+    </script>
+</body>
+
+</html>

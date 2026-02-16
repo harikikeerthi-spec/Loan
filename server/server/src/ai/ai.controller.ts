@@ -5,6 +5,7 @@ import { SopAnalysisService } from './services/sop-analysis.service';
 import { GradeConversionService } from './services/grade-conversion.service';
 import { UniversityComparisonService } from './services/university-comparison.service';
 import { AdmitPredictorService } from './services/admit-predictor.service';
+import { GroqService } from './services/groq.service';
 
 @Controller('ai')
 export class AiController {
@@ -15,6 +16,7 @@ export class AiController {
     private readonly gradeConversionService: GradeConversionService,
     private readonly universityComparisonService: UniversityComparisonService,
     private readonly admitPredictorService: AdmitPredictorService,
+    private readonly groqService: GroqService,
   ) { }
 
   @Post('eligibility-check')
@@ -199,6 +201,36 @@ export class AiController {
       success: true,
       prediction: result
     };
+  }
+
+  @Post('check-relevance')
+  async checkRelevance(@Body() data: { topic: string; content: string }) {
+    const prompt = `You are a strict moderator for a student loan and international education community.
+    Check if the user's post is RELEVANT to the topic "${data.topic}" OR generally relevant to:
+    - Education Loans
+    - Study Abroad
+    - University Admissions
+    - Visa Processes
+    - Standardized Tests (IELTS/GRE)
+    - Student Success Stories
+    - General Student Discussions
+
+    Content: "${data.content}"
+
+    Respond with strictly valid JSON:
+    {
+       "isRelevant": boolean,
+       "reason": "Short explanation (max 1 sentence) only if rejected."
+    }`;
+
+    try {
+      const result = await this.groqService.getJson<any>(prompt);
+      return { success: true, ...result };
+    } catch (error) {
+      console.error("AI Check Failed", error);
+      // Fail permissive if AI is down
+      return { success: true, isRelevant: true, reason: "AI Check Skipped due to error" };
+    }
   }
 }
 

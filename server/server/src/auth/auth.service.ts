@@ -341,6 +341,7 @@ export class AuthService {
         hasUserDetails,
         firstName: user.firstName,
         lastName: user.lastName,
+        role: user.role
       };
     } catch (error) {
       console.error('[AuthService] Error in verifyOtpUnified:', error);

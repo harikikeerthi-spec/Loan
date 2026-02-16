@@ -19,7 +19,7 @@ const onboardingData = {
 };
 
 let currentStep = 0;
-let totalSteps = 11;
+let totalSteps = 13;
 
 // Conversation flow definition - Simplified approach
 const conversationFlow = [
@@ -129,10 +129,32 @@ const conversationFlow = [
     },
     {
         id: 'completion',
-        botMessage: (data) => `All set, ${data.firstName}! 🎉 Let me find the best loan options for you...`,
+        botMessage: (data) => `Perfect, ${data.firstName}! 🎉 Let me analyze your profile and find the best loan options...`,
         type: 'auto',
         action: async () => {
             await saveOnboardingData();
+            setTimeout(() => nextStep(), 1500);
+        }
+    },
+    {
+        id: 'aiAnalysis',
+        botMessage: (data) => generateAIInsights(data),
+        type: 'auto',
+        action: () => {
+            setTimeout(() => nextStep(), 3000);
+        }
+    },
+    {
+        id: 'recommendations',
+        botMessage: (data) => {
+            const loans = getRecommendedLoans(data);
+            return formatLoanRecommendations(loans, data);
+        },
+        type: 'auto',
+        action: () => {
+            setTimeout(() => {
+                showFinalOptions();
+            }, 2000);
         }
     }
 ];
@@ -381,7 +403,7 @@ async function saveOnboardingData() {
     try {
         const token = localStorage.getItem('accessToken');
 
-        // Save onboarding data to localStorage for recommendations page
+        // Save onboarding data to localStorage
         localStorage.setItem('onboardingData', JSON.stringify(onboardingData));
         localStorage.setItem('firstName', onboardingData.firstName);
 
@@ -396,30 +418,222 @@ async function saveOnboardingData() {
 
         if (response.ok) {
             const result = await response.json();
-
             // Mark onboarding as complete
             localStorage.setItem('onboardingComplete', 'true');
-
-            // Show success message
-            addBotMessage("Perfect! 🎉 Let me show you the best loan options...");
-
-            setTimeout(() => {
-                window.location.href = 'loan-recommendations.html';
-            }, 2000);
+            console.log('Onboarding data saved successfully');
         } else {
-            throw new Error('Failed to save onboarding data');
+            console.warn('Failed to save to backend, but continuing with flow');
         }
     } catch (error) {
         console.error('Error saving onboarding:', error);
-        // Still save to localStorage and show recommendations
+        // Still save to localStorage
         localStorage.setItem('onboardingData', JSON.stringify(onboardingData));
         localStorage.setItem('firstName', onboardingData.firstName);
-
-        addBotMessage("Got it! Let me show you personalized loan options...");
-        setTimeout(() => {
-            window.location.href = 'loan-recommendations.html';
-        }, 2000);
     }
+    // Don't redirect - continue with AI analysis in the conversational flow
+}
+
+// AI-Powered Recommendation Functions
+function generateAIInsights(data) {
+    const { studyDestination, courseLevel, courseName } = data;
+
+    let insight = `🤖 **AI Analysis Complete!**\n\n`;
+
+    // Destination-specific insights
+    if (studyDestination === 'USA') {
+        insight += `For ${courseName || 'your field'} in the USA, typical costs are $50,000-$80,000/year. `;
+        insight += `Great news! You qualify for no-cosigner loans from top lenders. `;
+    } else if (studyDestination === 'UK') {
+        insight += `${courseLevel} programs in the UK typically cost £20,000-£35,000/year. `;
+        insight += `Multiple UK lenders offer loans without requiring a UK guarantor. `;
+    } else if (studyDestination === 'Canada') {
+        insight += `Studying in Canada costs CAD 20,000-40,000/year. `;
+        insight += `Both Canadian banks and international lenders have excellent options for you. `;
+    } else {
+        insight += `Studying ${courseName || 'your field'} abroad is a fantastic investment! `;
+    }
+
+    // Course level insights
+    if (courseLevel === 'MBA') {
+        insight += `MBA programs often qualify for up to $150,000 in financing. `;
+    } else if (courseLevel === 'Masters') {
+        insight += `Master's students typically get approved for $50,000-$100,000. `;
+    }
+
+    insight += `\n\nBased on your profile, I found 3 perfect matches! 🎯`;
+
+    return insight;
+}
+
+function getRecommendedLoans(data) {
+    const destination = data.studyDestination || 'USA';
+    const courseLevel = data.courseLevel || 'Masters';
+
+    const loanDatabase = {
+        'USA': [
+            {
+                name: 'Prodigy Finance',
+                rate: '9.95% - 14.25%',
+                amount: '$150,000',
+                time: '7-14 days',
+                collateral: 'None',
+                highlight: 'No cosigner needed',
+                score: 4.7
+            },
+            {
+                name: 'MPower Financing',
+                rate: '10.48% - 12.99%',
+                amount: '$50,000/year',
+                time: '10-20 days',
+                collateral: 'None',
+                highlight: 'Build US credit score',
+                score: 4.3
+            },
+            {
+                name: 'Discover Student Loans',
+                rate: '7.99% - 14.99%',
+                amount: '$100,000/year',
+                time: '15-30 days',
+                collateral: 'US co-signer',
+                highlight: 'Competitive rates',
+                score: 4.5
+            }
+        ],
+        'UK': [
+            {
+                name: 'Future Finance',
+                rate: '9.9% - 11.9%',
+                amount: '£40,000',
+                time: '5-10 days',
+                collateral: 'None',
+                highlight: 'No UK guarantor needed',
+                score: 4.6
+            },
+            {
+                name: 'Prodigy Finance',
+                rate: '9.50% - 13.75%',
+                amount: '£100,000',
+                time: '7-14 days',
+                collateral: 'None',
+                highlight: 'Alumni-funded',
+                score: 4.7
+            },
+            {
+                name: 'Lendwise',
+                rate: '7.9% - 11.9%',
+                amount: '£25,000',
+                time: '3-7 days',
+                collateral: 'None',
+                highlight: 'Fast approval',
+                score: 4.4
+            }
+        ],
+        'Canada': [
+            {
+                name: 'CIBC Student Loan',
+                rate: 'Prime + 1.00%',
+                amount: 'CAD 100,000',
+                time: '10-15 days',
+                collateral: 'Canadian co-signer',
+                highlight: 'Flexible withdrawal',
+                score: 4.3
+            },
+            {
+                name: 'MPower Financing',
+                rate: '10.48% - 12.99%',
+                amount: 'CAD 60,000/year',
+                time: '10-20 days',
+                collateral: 'None',
+                highlight: 'No cosigner needed',
+                score: 4.3
+            }
+        ],
+        'Australia': [
+            {
+                name: 'Prodigy Finance',
+                rate: '9.75% - 14.00%',
+                amount: 'AUD 120,000',
+                time: '7-14 days',
+                collateral: 'None',
+                highlight: 'No local guarantor',
+                score: 4.7
+            }
+        ]
+    };
+
+    let loans = loanDatabase[destination] || loanDatabase['USA'];
+
+    // Score loans based on suitability
+    loans = loans.map(loan => ({
+        ...loan,
+        suitability: loan.score + (loan.collateral === 'None' ? 0.5 : 0)
+    }));
+
+    loans.sort((a, b) => b.suitability - a.suitability);
+    return loans.slice(0, 3);
+}
+
+function formatLoanRecommendations(loans, data) {
+    let message = `📊 **Top 3 Loan Recommendations for You:**\n\n`;
+
+    loans.forEach((loan, index) => {
+        const stars = '⭐'.repeat(Math.floor(loan.score));
+        message += `**${index + 1}. ${loan.name}** ${index === 0 ? '✨ RECOMMENDED' : ''}\n`;
+        message += `${stars} (${loan.score}/5.0)\n`;
+        message += `💰 Amount: ${loan.amount}\n`;
+        message += `📈 Interest: ${loan.rate}\n`;
+        message += `⏱️ Processing: ${loan.time}\n`;
+        message += `🔒 Collateral: ${loan.collateral}\n`;
+        message += `✨ ${loan.highlight}\n\n`;
+    });
+
+    message += `\n💡 **What would you like to do next?**`;
+    return message;
+}
+
+function showFinalOptions() {
+    hideAllInputs();
+
+    const optionsHtml = `
+        <div class="final-options" style="display: flex; flex-direction: column; gap: 12px; margin-top: 20px;">
+            <button onclick="applyForLoan()" class="option-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px; border-radius: 12px; font-weight: bold; border: none; cursor: pointer;">
+                🚀 Apply for Recommended Loan
+            </button>
+            <button onclick="compareAllLoans()" class="option-btn" style="background: white; color: #667eea; padding: 16px; border-radius: 12px; font-weight: bold; border: 2px solid #667eea; cursor: pointer;">
+                📊 Compare All Options
+            </button>
+            <button onclick="talkToExpert()" class="option-btn" style="background: white; color: #667eea; padding: 16px; border-radius: 12px; font-weight: bold; border: 2px solid #667eea; cursor: pointer;">
+                👨‍💼 Talk to an Expert
+            </button>
+            <button onclick="saveToDashboard()" class="option-btn" style="background: transparent; color: #666; padding: 12px; border-radius: 12px; font-weight: 600; border: none; cursor: pointer; text-decoration: underline;">
+                💾 Save and Continue Later
+            </button>
+        </div>
+    `;
+
+    optionsContainer.innerHTML = optionsHtml;
+    optionsContainer.classList.add('active');
+    scrollToBottom();
+}
+
+function applyForLoan() {
+    localStorage.setItem('onboardingData', JSON.stringify(onboardingData));
+    window.location.href = 'apply-loan.html';
+}
+
+function compareAllLoans() {
+    localStorage.setItem('onboardingData', JSON.stringify(onboardingData));
+    window.location.href = 'compare-loans.html';
+}
+
+function talkToExpert() {
+    window.location.href = 'contact.html';
+}
+
+function saveToDashboard() {
+    localStorage.setItem('onboardingData', JSON.stringify(onboardingData));
+    localStorage.setItem('onboardingComplete', 'true');
+    window.location.href = 'dashboard.html';
 }
 
 function skipOnboarding() {

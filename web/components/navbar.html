@@ -9,7 +9,7 @@
                     class="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg backdrop-blur-sm border border-white/20 logo-icon">
                     <span class="material-symbols-outlined text-2xl">school</span>
                 </div>
-                <span class="font-bold text-2xl tracking-tight font-display logo-text">LoanHero
+                <span class="font-bold text-2xl tracking-tight font-display logo-text">VidhyaLoan
                     <span class="text-primary/80"></span></span>
             </a>
 
@@ -26,10 +26,11 @@
                     </button>
                     <!-- Mega Menu Dropdown -->
                     <div
-                        class="absolute top-full -left-4 w-[600px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
+                        class="absolute top-full -left-4 w-[850px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
                         <div
                             class="bg-white/95 dark:bg-[#1a0f2e]/95 backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden p-6 ring-1 ring-black/5">
-                            <div class="grid grid-cols-2 gap-8">
+                            <div class="grid grid-cols-3 gap-6">
+                                <!-- Column 1: Calculators -->
                                 <div>
                                     <h3 class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4 pl-3">
                                         Calculators</h3>
@@ -48,6 +49,7 @@
                                                     monthly repayments accurately</div>
                                             </div>
                                         </a>
+
                                         <a href="loan-eligibility.html"
                                             class="flex items-start gap-4 p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/5 transition-all group/item">
                                             <div
@@ -64,15 +66,16 @@
                                         </a>
                                     </div>
                                 </div>
-                                <div
-                                    class="bg-gray-50/50 dark:bg-white/5 -m-6 p-6 border-l border-gray-100 dark:border-white/5 flex flex-col justify-between">
+
+                                <!-- Column 2: Compare & Apply -->
+                                <div class="flex flex-col justify-between">
                                     <div>
                                         <h3
                                             class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4 pl-3">
                                             Compare & Apply</h3>
                                         <div class="space-y-1">
                                             <a href="compare-loans.html"
-                                                class="flex items-start gap-4 p-3 rounded-2xl hover:bg-white dark:hover:bg-white/5 transition-all group/item">
+                                                class="flex items-start gap-4 p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/5 transition-all group/item">
                                                 <div
                                                     class="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 group-hover/item:bg-orange-500 group-hover/item:text-white transition-all shadow-sm">
                                                     <span class="material-symbols-outlined text-xl">compare</span>
@@ -86,7 +89,7 @@
                                                 </div>
                                             </a>
                                             <a href="bank-reviews.html"
-                                                class="flex items-start gap-4 p-3 rounded-2xl hover:bg-white dark:hover:bg-white/5 transition-all group/item">
+                                                class="flex items-start gap-4 p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/5 transition-all group/item">
                                                 <div
                                                     class="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500 group-hover/item:bg-green-500 group-hover/item:text-white transition-all shadow-sm">
                                                     <span class="material-symbols-outlined text-xl">rate_review</span>
@@ -106,6 +109,80 @@
                                         Apply Now <span
                                             class="material-symbols-outlined text-sm ml-1">arrow_forward</span>
                                     </a>
+                                </div>
+
+                                <!-- Column 3: Our Lending Partners -->
+                                <div
+                                    class="bg-gray-50/50 dark:bg-white/5 -mr-6 -my-6 p-6 border-l border-gray-100 dark:border-white/5 rounded-r-3xl">
+                                    <h3 class="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4 pl-3">
+                                        Our Lending Partners</h3>
+                                    <div class="space-y-1">
+                                        <a href="bank-idfc.html"
+                                            class="flex items-center gap-3 p-2 rounded-xl hover:bg-white dark:hover:bg-white/5 transition-all group/partner">
+                                            <div
+                                                class="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                                                <span class="text-xs font-bold text-red-600">IF</span>
+                                            </div>
+                                            <div class="flex-1">
+                                                <div
+                                                    class="text-xs font-bold text-gray-900 dark:text-gray-100 group-hover/partner:text-red-600 transition-colors">
+                                                    IDFC First Bank</div>
+                                                <div class="text-[10px] text-gray-500">From 10.5% p.a.</div>
+                                            </div>
+                                        </a>
+                                        <a href="bank-auxilo.html"
+                                            class="flex items-center gap-3 p-2 rounded-xl hover:bg-white dark:hover:bg-white/5 transition-all group/partner">
+                                            <div
+                                                class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                                                <span class="text-xs font-bold text-blue-600">AX</span>
+                                            </div>
+                                            <div class="flex-1">
+                                                <div
+                                                    class="text-xs font-bold text-gray-900 dark:text-gray-100 group-hover/partner:text-blue-600 transition-colors">
+                                                    Auxilo Finserve</div>
+                                                <div class="text-[10px] text-gray-500">From 11.25% p.a.</div>
+                                            </div>
+                                        </a>
+                                        <a href="bank-avanse.html"
+                                            class="flex items-center gap-3 p-2 rounded-xl hover:bg-white dark:hover:bg-white/5 transition-all group/partner">
+                                            <div
+                                                class="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                                                <span class="text-xs font-bold text-green-600">AV</span>
+                                            </div>
+                                            <div class="flex-1">
+                                                <div
+                                                    class="text-xs font-bold text-gray-900 dark:text-gray-100 group-hover/partner:text-green-600 transition-colors">
+                                                    Avanse Financial</div>
+                                                <div class="text-[10px] text-gray-500">From 10.99% p.a.</div>
+                                            </div>
+                                        </a>
+                                        <a href="bank-credila.html"
+                                            class="flex items-center gap-3 p-2 rounded-xl hover:bg-white dark:hover:bg-white/5 transition-all group/partner">
+                                            <div
+                                                class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
+                                                <span class="text-xs font-bold text-indigo-600">CR</span>
+                                            </div>
+                                            <div class="flex-1">
+                                                <div
+                                                    class="text-xs font-bold text-gray-900 dark:text-gray-100 group-hover/partner:text-indigo-600 transition-colors">
+                                                    Credila (HDFC)</div>
+                                                <div class="text-[10px] text-gray-500">From 10.75% p.a.</div>
+                                            </div>
+                                        </a>
+                                        <a href="bank-poonawalla.html"
+                                            class="flex items-center gap-3 p-2 rounded-xl hover:bg-white dark:hover:bg-white/5 transition-all group/partner">
+                                            <div
+                                                class="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                                                <span class="text-xs font-bold text-orange-600">PF</span>
+                                            </div>
+                                            <div class="flex-1">
+                                                <div
+                                                    class="text-xs font-bold text-gray-900 dark:text-gray-100 group-hover/partner:text-orange-600 transition-colors">
+                                                    Poonawalla Fincorp</div>
+                                                <div class="text-[10px] text-gray-500">From 11.50% p.a.</div>
+                                            </div>
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
