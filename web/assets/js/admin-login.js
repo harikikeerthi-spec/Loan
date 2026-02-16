@@ -142,6 +142,7 @@ const API_URL = (() => {
             localStorage.setItem('adminToken', data.access_token);
             localStorage.setItem('accessToken', data.access_token); // Set for AuthGuard
             localStorage.setItem('adminEmail', email); // Use distinct keys for admin
+            if (data.refresh_token) localStorage.setItem('refreshToken', data.refresh_token);
 
             // Also save as user for shared components if needed, but maybe better to keep separate?
             // For now, let's keep it separate to avoid pollution.

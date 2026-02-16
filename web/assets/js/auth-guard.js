@@ -31,10 +31,12 @@ class AuthGuard {
     const decoded = this.parseJwt(token);
     if (!decoded) return null;
 
-    // Check expiration
+    // Check expiration — but try refreshing first before clearing
     if (decoded.exp && decoded.exp * 1000 < Date.now()) {
-      this.clearAuth();
-      return null;
+      // Don't clear auth here — let the refresh mechanism handle it
+      // Return decoded payload so the caller can still attempt a refresh
+      console.warn('AuthGuard: Access token expired, refresh may be needed');
+      return decoded;
     }
 
     return decoded;

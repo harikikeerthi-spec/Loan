@@ -22,7 +22,7 @@ import { join } from 'path';
     ServeStaticModule.forRoot(
       {
         rootPath: join(__dirname, '..', '..', '..', 'web'),
-        exclude: ['/api/:path*'],
+        exclude: ['/api/{*path}'],
       },
       {
         rootPath: join(__dirname, '..', 'uploads'),

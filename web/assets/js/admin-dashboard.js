@@ -4,6 +4,58 @@ let currentEditBlogId = null;
 let adminToken = null;
 let adminData = null;
 
+/**
+ * Admin-aware fetch wrapper with automatic token refresh on 401.
+ * Use this instead of raw fetch() for all admin API calls.
+ */
+async function adminFetch(url, options = {}) {
+    if (!options.headers) options.headers = {};
+    if (adminToken) options.headers['Authorization'] = `Bearer ${adminToken}`;
+
+    let response = await fetch(url, options);
+
+    if (response.status === 401) {
+        // Try to refresh the token
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (refreshToken) {
+            try {
+                const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refresh_token: refreshToken })
+                });
+                if (refreshRes.ok) {
+                    const data = await refreshRes.json();
+                    if (data.success && data.access_token) {
+                        // Save the new tokens
+                        localStorage.setItem('accessToken', data.access_token);
+                        if (data.refresh_token) localStorage.setItem('refreshToken', data.refresh_token);
+                        adminToken = data.access_token;
+
+                        // Retry original request with new token
+                        options.headers['Authorization'] = `Bearer ${adminToken}`;
+                        response = await fetch(url, options);
+                    }
+                } else {
+                    // Refresh failed — force re-login
+                    console.warn('Token refresh failed, redirecting to login');
+                    showError('Session expired. Please login again.');
+                    setTimeout(() => { AuthGuard.logout(); }, 1500);
+                }
+            } catch (e) {
+                console.error('Token refresh error:', e);
+                showError('Session expired. Please login again.');
+                setTimeout(() => { AuthGuard.logout(); }, 1500);
+            }
+        } else {
+            showError('Session expired. Please login again.');
+            setTimeout(() => { AuthGuard.logout(); }, 1500);
+        }
+    }
+
+    return response;
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     console.log('🚀 Admin Dashboard Loading...');
@@ -732,11 +784,8 @@ async function deleteForumPost(postId) {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/community/forum/${postId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${adminToken}`
-            }
+        const response = await adminFetch(`${API_BASE_URL}/community/forum/${postId}`, {
+            method: 'DELETE'
         });
 
         const result = await response.json();
