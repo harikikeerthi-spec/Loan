@@ -155,7 +155,8 @@ const API_URL = (() => {
                 // Clear any partial state
                 localStorage.removeItem('adminToken');
                 localStorage.removeItem('adminEmail');
-                window.location.href = 'index.html'; // Redirect away
+                // Stay/redirect to the admin login page (do not send to user homepage)
+                window.location.href = 'admin-login.html';
             }
         } finally {
             submitBtn.disabled = false;

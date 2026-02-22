@@ -397,32 +397,137 @@
                     </div>
                 </div>
 
+
                 <!-- Blog Management Tab -->
                 <div id="blogs" class="tab-container">
                     <div class="flex justify-between items-center mb-6">
                         <h2 class="text-3xl font-bold">Blog Management</h2>
-                        <button onclick="switchTab('create')"
-                            class="admin-btn-primary text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2">
-                            <span class="material-symbols-outlined">add</span>
-                            Create Blog
-                        </button>
+                        <div class="flex items-center gap-3">
+                            <button onclick="loadBlogs()"
+                                class="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center gap-1 text-sm px-3">
+                                <span class="material-symbols-outlined text-lg">refresh</span>
+                                Refresh
+                            </button>
+                            <a href="create-blog-canva.html"
+                                class="admin-btn-primary text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2">
+                                <span class="material-symbols-outlined">add</span>
+                                Create Blog
+                            </a>
+                        </div>
                     </div>
 
-                    <!-- Filter Options -->
-                    <div class="glass-card p-4 rounded-lg mb-6 flex flex-col md:flex-row gap-4">
-                        <input type="text" id="searchBlogs" placeholder="Search blogs..."
-                            class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
-                        <select id="filterStatus"
-                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
-                            <option value="">All Status</option>
-                            <option value="published">Published</option>
-                            <option value="draft">Draft</option>
-                        </select>
-                        <button onclick="loadBlogs()"
-                            class="admin-btn-primary text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2">
-                            <span class="material-symbols-outlined">search</span>
-                            Search
-                        </button>
+                    <!-- Blog Stats Cards -->
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                        <div class="stat-card glass-card p-5 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p
+                                        class="text-gray-600 dark:text-gray-400 text-xs font-medium mb-1 uppercase tracking-wide">
+                                        Total Blogs</p>
+                                    <p class="text-2xl font-bold" id="blogStatTotal">—</p>
+                                </div>
+                                <span class="material-symbols-outlined text-2xl text-primary opacity-40">article</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-card p-5 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p
+                                        class="text-gray-600 dark:text-gray-400 text-xs font-medium mb-1 uppercase tracking-wide">
+                                        Published</p>
+                                    <p class="text-2xl font-bold text-green-600" id="blogStatPublished">—</p>
+                                </div>
+                                <span
+                                    class="material-symbols-outlined text-2xl text-green-600 opacity-40">check_circle</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-card p-5 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p
+                                        class="text-gray-600 dark:text-gray-400 text-xs font-medium mb-1 uppercase tracking-wide">
+                                        Drafts</p>
+                                    <p class="text-2xl font-bold text-blue-600" id="blogStatDrafts">—</p>
+                                </div>
+                                <span
+                                    class="material-symbols-outlined text-2xl text-blue-600 opacity-40">edit_note</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-card p-5 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p
+                                        class="text-gray-600 dark:text-gray-400 text-xs font-medium mb-1 uppercase tracking-wide">
+                                        Featured</p>
+                                    <p class="text-2xl font-bold text-yellow-600" id="blogStatFeatured">—</p>
+                                </div>
+                                <span class="material-symbols-outlined text-2xl text-yellow-600 opacity-40">star</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-card p-5 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p
+                                        class="text-gray-600 dark:text-gray-400 text-xs font-medium mb-1 uppercase tracking-wide">
+                                        Total Views</p>
+                                    <p class="text-2xl font-bold text-purple-600" id="blogStatViews">—</p>
+                                </div>
+                                <span
+                                    class="material-symbols-outlined text-2xl text-purple-600 opacity-40">visibility</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter & Search Bar -->
+                    <div class="glass-card p-4 rounded-lg mb-6">
+                        <div class="flex flex-col lg:flex-row gap-3">
+                            <div class="flex-1 relative">
+                                <span
+                                    class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                                <input type="text" id="searchBlogs" placeholder="Search by title, author, excerpt..."
+                                    onkeydown="if(event.key==='Enter') loadBlogs()"
+                                    class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                            </div>
+                            <select id="filterStatus"
+                                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                                <option value="">All Status</option>
+                                <option value="published">Published</option>
+                                <option value="draft">Draft</option>
+                            </select>
+                            <select id="filterCategory"
+                                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                                <option value="">All Categories</option>
+                                <option value="Finance">Finance</option>
+                                <option value="Education">Education</option>
+                                <option value="Technology">Technology</option>
+                                <option value="News">News</option>
+                                <option value="Tips">Tips &amp; Guides</option>
+                            </select>
+                            <button onclick="loadBlogs()"
+                                class="admin-btn-primary text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2">
+                                <span class="material-symbols-outlined">search</span>
+                                Search
+                            </button>
+                        </div>
+                        <!-- Bulk Actions -->
+                        <div class="flex flex-wrap gap-2 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                            <span class="text-xs text-gray-500 self-center mr-1 font-medium">Bulk Actions:</span>
+                            <button onclick="bulkUpdateStatusSelected(true)"
+                                class="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-medium border border-green-200 hover:bg-green-100 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-sm">publish</span>
+                                Publish Selected
+                            </button>
+                            <button onclick="bulkUpdateStatusSelected(false)"
+                                class="px-3 py-1.5 bg-yellow-50 text-yellow-700 rounded-lg text-xs font-medium border border-yellow-200 hover:bg-yellow-100 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-sm">unpublished</span>
+                                Unpublish Selected
+                            </button>
+                            <button onclick="bulkDeleteSelected()"
+                                class="px-3 py-1.5 bg-red-50 text-red-700 rounded-lg text-xs font-medium border border-red-200 hover:bg-red-100 flex items-center gap-1">
+                                <span class="material-symbols-outlined text-sm">delete_sweep</span>
+                                Delete Selected
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Blogs Table -->
@@ -430,8 +535,13 @@
                         <table class="admin-table w-full">
                             <thead>
                                 <tr>
-                                    <th class="px-6 py-4 text-left">Title</th>
+                                    <th class="px-4 py-4 text-left w-4">
+                                        <input id="selectAllBlogs" type="checkbox"
+                                            onchange="toggleSelectAllBlogs(this)" />
+                                    </th>
+                                    <th class="px-6 py-4 text-left">Title &amp; Slug</th>
                                     <th class="px-6 py-4 text-left">Author</th>
+                                    <th class="px-6 py-4 text-left">Category</th>
                                     <th class="px-6 py-4 text-left">Status</th>
                                     <th class="px-6 py-4 text-left">Views</th>
                                     <th class="px-6 py-4 text-left">Date</th>
@@ -440,7 +550,7 @@
                             </thead>
                             <tbody id="blogsList">
                                 <tr>
-                                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">
+                                    <td colspan="8" class="px-6 py-8 text-center text-gray-500">
                                         <div class="flex justify-center">
                                             <div class="loading-spinner"></div>
                                         </div>
@@ -449,6 +559,9 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <!-- Blog count info -->
+                    <div id="blogsCountInfo" class="mt-3 text-sm text-gray-500 text-right"></div>
                 </div>
 
                 <!-- Create Blog Tab -->
@@ -728,7 +841,76 @@
 
                 <!-- User Management Tab -->
                 <div id="users" class="tab-container">
-                    <h2 class="text-3xl font-bold mb-6">User Management</h2>
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold">User Management</h2>
+                        <button onclick="loadUsers()"
+                            class="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center gap-1 text-sm px-3">
+                            <span class="material-symbols-outlined text-lg">refresh</span>
+                            Refresh
+                        </button>
+                    </div>
+
+                    <!-- User Stats Cards -->
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                        <div class="stat-card glass-card p-5 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p
+                                        class="text-gray-600 dark:text-gray-400 text-xs font-medium mb-1 uppercase tracking-wide">
+                                        Total Users</p>
+                                    <p class="text-2xl font-bold" id="userStatTotal">—</p>
+                                </div>
+                                <span class="material-symbols-outlined text-2xl text-primary opacity-40">people</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-card p-5 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p
+                                        class="text-gray-600 dark:text-gray-400 text-xs font-medium mb-1 uppercase tracking-wide">
+                                        Admins</p>
+                                    <p class="text-2xl font-bold text-purple-600" id="userStatAdmins">—</p>
+                                </div>
+                                <span
+                                    class="material-symbols-outlined text-2xl text-purple-600 opacity-40">admin_panel_settings</span>
+                            </div>
+                        </div>
+                        <div class="stat-card glass-card p-5 rounded-lg">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <p
+                                        class="text-gray-600 dark:text-gray-400 text-xs font-medium mb-1 uppercase tracking-wide">
+                                        Regular Users</p>
+                                    <p class="text-2xl font-bold text-blue-600" id="userStatRegular">—</p>
+                                </div>
+                                <span class="material-symbols-outlined text-2xl text-blue-600 opacity-40">person</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search & Filter -->
+                    <div class="glass-card p-4 rounded-lg mb-6 flex flex-col md:flex-row gap-3">
+                        <div class="flex-1 relative">
+                            <span
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                            <input type="text" id="searchUsers" placeholder="Search by name or email..."
+                                onkeydown="if(event.key==='Enter') filterUsersTable()"
+                                class="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary">
+                        </div>
+                        <select id="filterUserRole"
+                            class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:border-primary"
+                            onchange="filterUsersTable()">
+                            <option value="">All Roles</option>
+                            <option value="admin">Admin</option>
+                            <option value="super_admin">Super Admin</option>
+                            <option value="user">User</option>
+                        </select>
+                        <button onclick="filterUsersTable()"
+                            class="admin-btn-primary text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2">
+                            <span class="material-symbols-outlined">search</span>
+                            Search
+                        </button>
+                    </div>
 
                     <div class="glass-card rounded-lg overflow-hidden">
                         <table class="admin-table w-full">
@@ -752,7 +934,9 @@
                             </tbody>
                         </table>
                     </div>
+                    <div id="usersCountInfo" class="mt-3 text-sm text-gray-500 text-right"></div>
                 </div>
+
 
                 <!-- Applications Tab -->
                 <div id="applications" class="tab-container">

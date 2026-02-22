@@ -95,6 +95,9 @@ function checkAdminAuth() {
         return;
     }
 
+    // Save current admin details for role-based UI
+    adminData = user;
+
     // Use accessToken for API calls instead of separate adminToken
     adminToken = localStorage.getItem('adminToken') || localStorage.getItem('accessToken');
 
@@ -353,13 +356,17 @@ async function loadDashboardStats() {
 // Load Blogs
 async function loadBlogs() {
     try {
-        const searchTerm = document.getElementById('searchBlogs')?.value || '';
+        const searchTerm = document.getElementById('searchBlogs')?.value?.trim() || '';
         const filterStatus = document.getElementById('filterStatus')?.value || '';
+        const filterCategory = document.getElementById('filterCategory')?.value || '';
+
+        const blogsList = document.getElementById('blogsList');
+        if (blogsList) {
+            blogsList.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500"><div class="flex justify-center"><div class="loading-spinner"></div></div></td></tr>`;
+        }
 
         const response = await fetch(`${API_BASE_URL}/blogs/admin/all`, {
-            headers: {
-                'Authorization': `Bearer ${adminToken}`
-            }
+            headers: { 'Authorization': `Bearer ${adminToken}` }
         });
 
         if (response.ok) {
@@ -367,11 +374,25 @@ async function loadBlogs() {
             if (data.success) {
                 let blogs = data.data || [];
 
+                // Update tab-level blog stats cards
+                const allBlogs = blogs;
+                const statTotal = document.getElementById('blogStatTotal');
+                const statPublished = document.getElementById('blogStatPublished');
+                const statDrafts = document.getElementById('blogStatDrafts');
+                const statFeatured = document.getElementById('blogStatFeatured');
+                const statViews = document.getElementById('blogStatViews');
+                if (statTotal) statTotal.textContent = allBlogs.length;
+                if (statPublished) statPublished.textContent = allBlogs.filter(b => b.isPublished).length;
+                if (statDrafts) statDrafts.textContent = allBlogs.filter(b => !b.isPublished).length;
+                if (statFeatured) statFeatured.textContent = allBlogs.filter(b => b.isFeatured).length;
+                if (statViews) statViews.textContent = allBlogs.reduce((sum, b) => sum + (b.views || 0), 0).toLocaleString();
+
                 // Filter by search term
                 if (searchTerm) {
                     blogs = blogs.filter(blog =>
-                        blog.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                        blog.excerpt.toLowerCase().includes(searchTerm.toLowerCase())
+                        (blog.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (blog.excerpt || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (blog.authorName || '').toLowerCase().includes(searchTerm.toLowerCase())
                     );
                 }
 
@@ -382,7 +403,14 @@ async function loadBlogs() {
                     blogs = blogs.filter(blog => !blog.isPublished);
                 }
 
-                displayBlogs(blogs);
+                // Filter by category
+                if (filterCategory) {
+                    blogs = blogs.filter(blog =>
+                        (blog.category || '').toLowerCase() === filterCategory.toLowerCase()
+                    );
+                }
+
+                displayBlogs(blogs, allBlogs.length);
             }
         } else if (response.status === 401) {
             showError('Session expired. Please login again.');
@@ -395,14 +423,23 @@ async function loadBlogs() {
 }
 
 // Display Blogs in Table
-function displayBlogs(blogs) {
+function displayBlogs(blogs, totalCount) {
     const blogsList = document.getElementById('blogsList');
+    const countInfo = document.getElementById('blogsCountInfo');
+
+    if (countInfo) {
+        countInfo.textContent = blogs.length < (totalCount || blogs.length)
+            ? `Showing ${blogs.length} of ${totalCount} blogs`
+            : `${blogs.length} blog${blogs.length !== 1 ? 's' : ''} total`;
+    }
 
     if (blogs.length === 0) {
         blogsList.innerHTML = `
             <tr>
-                <td colspan="6" class="px-6 py-8 text-center text-gray-500">
-                    No blogs found. <a href="#" onclick="switchTab('create'); return false;" class="text-primary hover:underline">Create one</a>
+                <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                    <span class="material-symbols-outlined text-5xl block mb-3 opacity-30">article</span>
+                    <p class="font-medium mb-1">No blogs found</p>
+                    <p class="text-sm">Try adjusting your filters or <a href="create-blog-canva.html" class="text-primary hover:underline">create a new blog</a></p>
                 </td>
             </tr>
         `;
@@ -410,36 +447,56 @@ function displayBlogs(blogs) {
     }
 
     blogsList.innerHTML = blogs.map(blog => `
-        <tr>
-            <td class="px-6 py-4">
-                <div>
-                    <p class="font-medium">${escapeHtml(blog.title)}</p>
-                    <p class="text-sm text-gray-500">${escapeHtml(blog.slug)}</p>
+        <tr class="transition-colors hover:bg-purple-50/30 dark:hover:bg-purple-900/10">
+            <td class="px-4 py-4">
+                <input type="checkbox" class="blog-checkbox" value="${blog.id}" />
+            </td>
+            <td class="px-6 py-4 max-w-xs">
+                <div class="flex items-start gap-3">
+                    ${blog.featuredImage ? `<img src="${escapeHtml(blog.featuredImage)}" class="w-10 h-10 rounded object-cover flex-shrink-0 mt-0.5" alt="thumb" onerror="this.style.display='none'">` : '<div class="w-10 h-10 rounded bg-gray-100 dark:bg-gray-700 flex-shrink-0 flex items-center justify-center"><span class="material-symbols-outlined text-sm text-gray-400">image</span></div>'}
+                    <div class="min-w-0">
+                        <p class="font-medium truncate">${escapeHtml(blog.title)}</p>
+                        <p class="text-xs text-gray-400 truncate">${escapeHtml(blog.slug)}</p>
+                        ${blog.isFeatured ? '<span class="inline-flex items-center gap-0.5 text-xs text-yellow-600 font-medium"><span class="material-symbols-outlined text-xs" style="font-size:12px">star</span>Featured</span>' : ''}
+                    </div>
                 </div>
             </td>
-            <td class="px-6 py-4">${escapeHtml(blog.authorName)}</td>
+            <td class="px-6 py-4 text-sm">${escapeHtml(blog.authorName || 'Unknown')}</td>
+            <td class="px-6 py-4">
+                ${blog.category ? `<span class="inline-block px-2 py-1 text-xs font-medium rounded-full bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">${escapeHtml(blog.category)}</span>` : '<span class="text-gray-400 text-xs">—</span>'}
+            </td>
             <td class="px-6 py-4">
                 <span class="status-badge status-${blog.isPublished ? 'published' : 'draft'}">
                     ${blog.isPublished ? 'Published' : 'Draft'}
                 </span>
             </td>
-            <td class="px-6 py-4">${(blog.views || 0).toLocaleString()}</td>
-            <td class="px-6 py-4">${new Date(blog.updatedAt).toLocaleDateString()}</td>
-            <td class="px-6 py-4 text-center">
-                <div class="flex justify-center gap-2">
-                    <button onclick="viewBlog('${blog.id}')"
-                        class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-green-50 text-green-700 rounded-lg hover:bg-green-100 border border-green-200 transition-colors" title="View Blog">
-                        <span class="material-symbols-outlined text-base">visibility</span>
-                        View
+            <td class="px-6 py-4 text-sm">
+                <span class="flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm text-gray-400">visibility</span>
+                    ${(blog.views || 0).toLocaleString()}
+                </span>
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-500">${new Date(blog.updatedAt || blog.createdAt).toLocaleDateString()}</td>
+            <td class="px-6 py-4">
+                <div class="flex justify-center gap-1.5 flex-wrap">
+                    <button onclick="viewBlogDetails('${blog.id}')"
+                        class="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 border border-purple-200 transition-colors" title="View Details">
+                        <span class="material-symbols-outlined text-sm">info</span>
+                        Details
+                    </button>
+                    <button onclick="toggleBlogPublish('${blog.id}', ${blog.isPublished})"
+                        class="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium ${blog.isPublished ? 'bg-yellow-50 text-yellow-700 border-yellow-200 hover:bg-yellow-100' : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'} rounded-lg border transition-colors" title="${blog.isPublished ? 'Unpublish' : 'Publish'}">
+                        <span class="material-symbols-outlined text-sm">${blog.isPublished ? 'unpublished' : 'publish'}</span>
+                        ${blog.isPublished ? 'Unpublish' : 'Publish'}
                     </button>
                     <button onclick="openEditModal('${blog.id}')"
-                        class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 border border-blue-200 transition-colors" title="Edit Blog">
-                        <span class="material-symbols-outlined text-base">edit</span>
+                        class="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 border border-blue-200 transition-colors" title="Edit Blog">
+                        <span class="material-symbols-outlined text-sm">edit</span>
                         Edit
                     </button>
                     <button onclick="deleteBlog('${blog.id}')"
-                        class="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-red-50 text-red-700 rounded-lg hover:bg-red-100 border border-red-200 transition-colors" title="Delete Blog">
-                        <span class="material-symbols-outlined text-base">delete</span>
+                        class="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-red-50 text-red-700 rounded-lg hover:bg-red-100 border border-red-200 transition-colors" title="Delete Blog">
+                        <span class="material-symbols-outlined text-sm">delete</span>
                         Delete
                     </button>
                 </div>
@@ -448,20 +505,390 @@ function displayBlogs(blogs) {
     `).join('');
 }
 
+// View Blog Details in a Modal (like viewUser)
+async function viewBlogDetails(blogId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/blogs/admin/all`, {
+            headers: { 'Authorization': `Bearer ${adminToken}` }
+        });
+        if (!response.ok) throw new Error('Failed to fetch blogs');
+        const data = await response.json();
+        const blog = (data.data || []).find(b => b.id === blogId);
+        if (!blog) throw new Error('Blog not found');
+
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4';
+        modal.innerHTML = `
+            <div class="bg-white dark:bg-gray-900 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+                <div class="flex justify-between items-start p-6 border-b border-gray-200 dark:border-gray-700">
+                    <div class="flex items-center gap-3">
+                        <span class="material-symbols-outlined text-primary text-2xl">article</span>
+                        <h3 class="text-xl font-bold">Blog Details</h3>
+                    </div>
+                    <button onclick="this.closest('.fixed').remove()" class="material-symbols-outlined cursor-pointer text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">close</button>
+                </div>
+                ${blog.featuredImage ? `<div class="w-full h-48 overflow-hidden"><img src="${escapeHtml(blog.featuredImage)}" class="w-full h-full object-cover" alt="Featured Image"></div>` : ''}
+                <div class="p-6 space-y-4">
+                    <div>
+                        <h4 class="text-lg font-bold text-gray-900 dark:text-white">${escapeHtml(blog.title)}</h4>
+                        <p class="text-sm text-gray-500 font-mono mt-1">/blog/${escapeHtml(blog.slug)}</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <span class="status-badge status-${blog.isPublished ? 'published' : 'draft'}">${blog.isPublished ? 'Published' : 'Draft'}</span>
+                        ${blog.isFeatured ? '<span class="status-badge" style="background:rgba(234,179,8,0.2);color:#ca8a04;">⭐ Featured</span>' : ''}
+                        ${blog.category ? `<span class="inline-block px-2 py-1 text-xs font-medium rounded-full bg-purple-50 text-purple-700">${escapeHtml(blog.category)}</span>` : ''}
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                            <p class="text-xs text-gray-500 mb-1">Author</p>
+                            <p class="font-medium">${escapeHtml(blog.authorName || '—')}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                            <p class="text-xs text-gray-500 mb-1">Views</p>
+                            <p class="font-medium">${(blog.views || 0).toLocaleString()}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                            <p class="text-xs text-gray-500 mb-1">Read Time</p>
+                            <p class="font-medium">${blog.readTime ? blog.readTime + ' min' : '—'}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                            <p class="text-xs text-gray-500 mb-1">Created</p>
+                            <p class="font-medium">${blog.createdAt ? new Date(blog.createdAt).toLocaleDateString() : '—'}</p>
+                        </div>
+                    </div>
+                    ${blog.excerpt ? `
+                    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+                        <p class="text-xs text-gray-500 mb-1">Excerpt</p>
+                        <p class="text-sm text-gray-700 dark:text-gray-300">${escapeHtml(blog.excerpt)}</p>
+                    </div>` : ''}
+                    ${blog.tags && blog.tags.length ? `
+                    <div>
+                        <p class="text-xs text-gray-500 mb-2">Tags</p>
+                        <div class="flex flex-wrap gap-1.5">${blog.tags.map(t => `<span class="px-2 py-0.5 bg-primary/10 text-primary text-xs rounded-full font-medium">${escapeHtml(t)}</span>`).join('')}</div>
+                    </div>` : ''}
+                </div>
+                <div class="px-6 pb-6 flex gap-2 justify-end">
+                    <button onclick="this.closest('.fixed').remove(); openEditModal('${blog.id}')" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm">edit</span>
+                        Edit Blog
+                    </button>
+                    <a href="blog-article.html?slug=${encodeURIComponent(blog.slug)}" target="_blank" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm">open_in_new</span>
+                        View Live
+                    </a>
+                    <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-lg text-sm font-medium">Close</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+    } catch (e) {
+        console.error(e);
+        showError(e.message || 'Failed to load blog details');
+    }
+}
+
+// Toggle blog published status quickly from the table
+async function toggleBlogPublish(blogId, currentlyPublished) {
+    const action = currentlyPublished ? 'unpublish' : 'publish';
+    if (!confirm(`Are you sure you want to ${action} this blog?`)) return;
+    try {
+        const resp = await adminFetch(`${API_BASE_URL}/blogs/admin/bulk-status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ blogIds: [blogId], isPublished: !currentlyPublished })
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+            showSuccess(data.message || `Blog ${action}ed successfully!`);
+            loadBlogs();
+        } else {
+            showError(data.message || `Failed to ${action} blog`);
+        }
+    } catch (e) {
+        console.error(e);
+        showError(`Error: ${e.message}`);
+    }
+}
+
+// Cache for client-side user filtering
+let _allUsersCache = [];
+
 // Load Users
 async function loadUsers() {
     try {
-        // This would typically come from your users API endpoint
         const usersList = document.getElementById('usersList');
+        if (usersList) {
+            usersList.innerHTML = `
+                <tr>
+                    <td colspan="5" class="px-6 py-8 text-center text-gray-500">
+                        <div class="flex justify-center"><div class="loading-spinner"></div></div>
+                    </td>
+                </tr>
+            `;
+        }
+
+        const response = await adminFetch(`${API_BASE_URL}/users/admin/list`);
+        if (!response.ok) {
+            if (response.status === 401) {
+                showError('Session expired. Redirecting to login...');
+                redirectToLogin();
+                return;
+            }
+            throw new Error('Failed to load users');
+        }
+
+        const result = await response.json();
+        const users = result.data || [];
+
+        // Cache for client-side filtering
+        _allUsersCache = users;
+
+        // Populate stat cards
+        const statTotal = document.getElementById('userStatTotal');
+        const statAdmins = document.getElementById('userStatAdmins');
+        const statRegular = document.getElementById('userStatRegular');
+        if (statTotal) statTotal.textContent = users.length;
+        if (statAdmins) statAdmins.textContent = users.filter(u => u.role === 'admin' || u.role === 'super_admin').length;
+        if (statRegular) statRegular.textContent = users.filter(u => u.role !== 'admin' && u.role !== 'super_admin').length;
+
+        renderUsersTable(users);
+
+    } catch (error) {
+        console.error('Error loading users:', error);
+        const usersList = document.getElementById('usersList');
+        if (usersList) usersList.innerHTML = `
+            <tr>
+                <td colspan="5" class="px-6 py-8 text-center text-red-500">Failed to load users.</td>
+            </tr>
+        `;
+    }
+}
+
+// Client-side user search/filter (no extra network call)
+function filterUsersTable() {
+    const searchTerm = (document.getElementById('searchUsers')?.value || '').trim().toLowerCase();
+    const roleFilter = document.getElementById('filterUserRole')?.value || '';
+
+    let filtered = _allUsersCache;
+
+    if (searchTerm) {
+        filtered = filtered.filter(u =>
+            (`${u.firstName || ''} ${u.lastName || ''}`).toLowerCase().includes(searchTerm) ||
+            (u.email || '').toLowerCase().includes(searchTerm)
+        );
+    }
+    if (roleFilter) {
+        filtered = filtered.filter(u => (u.role || 'user') === roleFilter);
+    }
+
+    renderUsersTable(filtered, _allUsersCache.length);
+}
+
+// Render user rows — separated so both loadUsers and filterUsersTable can call it
+function renderUsersTable(users, totalCount) {
+    const usersList = document.getElementById('usersList');
+    const countInfo = document.getElementById('usersCountInfo');
+
+    if (countInfo) {
+        countInfo.textContent = users.length < (totalCount || users.length)
+            ? `Showing ${users.length} of ${totalCount} users`
+            : `${users.length} user${users.length !== 1 ? 's' : ''} total`;
+    }
+
+    if (!usersList) return;
+
+    if (users.length === 0) {
         usersList.innerHTML = `
             <tr>
-                <td colspan="5" class="px-6 py-8 text-center text-gray-500">
-                    User management functionality coming soon.
+                <td colspan="5" class="px-6 py-12 text-center text-gray-500">
+                    <span class="material-symbols-outlined text-5xl block mb-3 opacity-30">people</span>
+                    <p class="font-medium mb-1">No users found</p>
+                    <p class="text-sm">Try adjusting your search or filters</p>
                 </td>
             </tr>
         `;
-    } catch (error) {
-        console.error('Error loading users:', error);
+        return;
+    }
+
+    const isSuper = adminData?.role === 'super_admin';
+
+    const roleColorMap = {
+        'super_admin': 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+        'admin': 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+        'user': 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+    };
+
+    usersList.innerHTML = users.map(u => {
+        const fullName = `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Unknown';
+        const initials = [u.firstName, u.lastName].filter(Boolean).map(n => n[0]).join('').toUpperCase() || '?';
+        const roleColor = roleColorMap[u.role] || roleColorMap['user'];
+        const roleLabel = u.role === 'super_admin' ? 'Super Admin' : (u.role || 'user');
+
+        return `
+        <tr class="transition-colors hover:bg-purple-50/30 dark:hover:bg-purple-900/10">
+            <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center font-bold text-sm
+                        ${u.role === 'super_admin' ? 'bg-red-100 text-red-700' : u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}">
+                        ${initials}
+                    </div>
+                    <div>
+                        <p class="font-medium leading-tight">${escapeHtml(fullName)}</p>
+                        <p class="text-xs text-gray-400 font-mono">${escapeHtml(u.id || '')}</p>
+                    </div>
+                </div>
+            </td>
+            <td class="px-6 py-4 text-sm">${escapeHtml(u.email || '')}</td>
+            <td class="px-6 py-4">
+                <span class="inline-block px-2.5 py-1 text-xs font-semibold rounded-full ${roleColor}">${escapeHtml(roleLabel)}</span>
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-500">${u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</td>
+            <td class="px-6 py-4">
+                <div class="flex justify-center gap-1.5">
+                    <button onclick="viewUser('${escapeHtml(u.email)}')"
+                        class="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-green-50 text-green-700 rounded-lg hover:bg-green-100 border border-green-200 transition-colors" title="View User">
+                        <span class="material-symbols-outlined text-sm">person_search</span>
+                        View
+                    </button>
+                    ${isSuper ? (u.role !== 'admin' && u.role !== 'super_admin' ? `
+                    <button onclick="changeUserRole('${escapeHtml(u.email)}','admin')"
+                        class="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 border border-blue-200 transition-colors" title="Make Admin">
+                        <span class="material-symbols-outlined text-sm">admin_panel_settings</span>
+                        Make Admin
+                    </button>
+                    ` : u.role === 'admin' ? `
+                    <button onclick="changeUserRole('${escapeHtml(u.email)}','user')"
+                        class="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 border border-yellow-200 transition-colors" title="Revoke Admin">
+                        <span class="material-symbols-outlined text-sm">remove_moderator</span>
+                        Revoke
+                    </button>
+                    ` : '') : ''}
+                </div>
+            </td>
+        </tr>
+        `;
+    }).join('');
+}
+
+
+// Toggle select-all for blogs
+function toggleSelectAllBlogs(cb) {
+    document.querySelectorAll('.blog-checkbox').forEach(ch => ch.checked = cb.checked);
+}
+
+function getSelectedBlogIds() {
+    return Array.from(document.querySelectorAll('.blog-checkbox:checked')).map(ch => ch.value);
+}
+
+async function bulkUpdateStatusSelected(isPublished) {
+    const ids = getSelectedBlogIds();
+    if (!ids.length) return showError('No blogs selected');
+    if (!confirm(`Are you sure you want to ${isPublished ? 'publish' : 'unpublish'} ${ids.length} blog(s)?`)) return;
+
+    try {
+        const resp = await adminFetch(`${API_BASE_URL}/blogs/admin/bulk-status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ blogIds: ids, isPublished })
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+            showSuccess(data.message || 'Updated status');
+            loadBlogs();
+        } else {
+            showError(data.message || 'Failed to update status');
+        }
+    } catch (e) {
+        console.error(e);
+        showError('Error updating status');
+    }
+}
+
+async function bulkDeleteSelected() {
+    const ids = getSelectedBlogIds();
+    if (!ids.length) return showError('No blogs selected');
+    if (!confirm(`Delete ${ids.length} selected blog(s)? This cannot be undone.`)) return;
+
+    try {
+        const resp = await adminFetch(`${API_BASE_URL}/blogs/admin/bulk-delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ blogIds: ids })
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+            showSuccess(data.message || 'Deleted selected blogs');
+            loadBlogs();
+        } else {
+            showError(data.message || 'Failed to delete blogs');
+        }
+    } catch (e) {
+        console.error(e);
+        showError('Error deleting blogs');
+    }
+}
+
+// View user details (modal)
+async function viewUser(email) {
+    try {
+        const response = await adminFetch(`${API_BASE_URL}/users/profile`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        if (!response.ok) throw new Error('Failed to load user');
+        const res = await response.json();
+        if (!res.success) throw new Error(res.message || 'User not found');
+
+        const u = res.user;
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4';
+        modal.innerHTML = `
+            <div class="bg-white dark:bg-gray-900 rounded-lg max-w-md w-full p-6">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-xl font-bold">User details</h3>
+                    <button onclick="this.closest('.fixed').remove()" class="material-symbols-outlined cursor-pointer">close</button>
+                </div>
+                <div class="space-y-3 text-sm text-gray-700 dark:text-gray-300">
+                    <p><strong>Name:</strong> ${escapeHtml((u.firstName || '') + ' ' + (u.lastName || ''))}</p>
+                    <p><strong>Email:</strong> ${escapeHtml(u.email || '')}</p>
+                    <p><strong>Role:</strong> ${escapeHtml(u.role || 'user')}</p>
+                    <p><strong>Phone:</strong> ${escapeHtml(u.phoneNumber || u.mobile || 'N/A')}</p>
+                    <p><strong>DOB:</strong> ${escapeHtml(u.dateOfBirth || 'N/A')}</p>
+                    <p><strong>Joined:</strong> ${u.createdAt ? new Date(u.createdAt).toLocaleString() : 'N/A'}</p>
+                </div>
+                <div class="mt-6 flex justify-end gap-2">
+                    <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-200 rounded">Close</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    } catch (e) {
+        console.error(e);
+        showError(e.message || 'Failed to load user details');
+    }
+}
+
+// Change user role (super admin only)
+async function changeUserRole(email, role) {
+    if (!confirm(`Are you sure you want to set role to '${role}' for ${email}?`)) return;
+    try {
+        const resp = await adminFetch(`${API_BASE_URL}/users/make-admin`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, role })
+        });
+        const data = await resp.json();
+        if (resp.ok) {
+            showSuccess(data.message || 'Role updated');
+            loadUsers();
+        } else {
+            showError(data.message || 'Failed to update role');
+        }
+    } catch (err) {
+        console.error(err);
+        showError('Error updating role');
     }
 }
 

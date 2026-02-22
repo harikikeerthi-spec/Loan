@@ -92,15 +92,16 @@ async function loadProfile() {
 function enableEditMode() {
     firstNameInput.disabled = false;
     lastNameInput.disabled = false;
-    // Phone, DOB, and Passport remain disabled (readonly)
-    // phoneNumberInput.disabled = false;
-    // dateOfBirthInput.disabled = false;
-    // if(passportNumberInput) passportNumberInput.disabled = false;
+
+    // Only allow editing passport number if it's empty
+    if (passportNumberInput) {
+        passportNumberInput.disabled = !!passportNumberInput.value.trim();
+    }
 
     editBtn.classList.add('hidden');
     actionButtons.classList.remove('hidden');
 
-    showToast('Edit mode enabled', 'info');
+    showToast('Edit mode enabled. Passport number cannot be changed once saved.', 'info');
 }
 
 // Disable editing mode
@@ -119,8 +120,7 @@ function disableEditMode() {
 function cancelEdit() {
     firstNameInput.value = originalValues.firstName;
     lastNameInput.value = originalValues.lastName;
-    // phoneNumberInput.value = originalValues.phoneNumber;
-    // dateOfBirthInput.value = originalValues.dateOfBirth;
+    if (passportNumberInput) passportNumberInput.value = originalValues.passportNumber || '';
 
     disableEditMode();
     showToast('Changes cancelled', 'info');

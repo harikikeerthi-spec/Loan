@@ -8,6 +8,7 @@ async function testDuplicateDetection() {
 
     const testQuestion = {
         title: 'How to apply for education loan?',
+        excerpt: 'Steps, documents and timeline for an education loan — short summary.',
         content: 'I am a student planning to study abroad and need guidance on the education loan application process. What documents are required and how long does it take?',
         category: 'loan'
     };

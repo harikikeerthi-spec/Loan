@@ -162,6 +162,21 @@
                         <textarea id="questionContent" rows="8"
                             placeholder="I am looking for a loan of 40L for MS in CS..."
                             class="w-full px-6 py-4 rounded-2xl bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition-all resize-none font-medium"></textarea>
+
+                        <div class="mt-4">
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Short description (optional)</label>
+                            <textarea id="questionExcerpt" rows="2" maxlength="280"
+                                placeholder="Add a 1–3 line summary to help others quickly understand your question..."
+                                class="w-full px-4 py-2 rounded-xl bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/8 transition-all resize-none text-sm"></textarea>
+                            <p class="text-xs text-gray-400 mt-2">Shown on hub lists — keep it short and focused.</p>
+                        </div>
+
+                        <!-- Tag suggestions (AI-like) -->
+                        <div id="tagSuggestions" class="mt-4">
+                            <label class="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Suggested tags</label>
+                            <div id="suggestedTagsList" class="flex flex-wrap gap-2"></div>
+                            <p class="text-xs text-gray-400 mt-2">Tags are auto‑suggested for better discoverability. You can toggle suggestions before posting.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -181,24 +196,58 @@
                 <!-- Step 4: Duplicate Found -->
                 <div id="step4Duplicate" class="hidden animate-fade-in-up">
                     <div
-                        class="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30 rounded-3xl p-6 mb-6">
+                        class="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-3xl p-6 mb-6">
                         <div class="flex gap-4">
                             <div
-                                class="flex-shrink-0 w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-600 dark:text-amber-400">
-                                <span class="material-symbols-rounded">warning</span>
+                                class="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/50 flex items-center justify-center text-red-600 dark:text-red-400">
+                                <span class="material-symbols-rounded">info</span>
                             </div>
                             <div>
-                                <h3 class="text-lg font-bold text-amber-800 dark:text-amber-200 mb-1">Wait, we found
-                                    similar topics!</h3>
-                                <p class="text-sm text-amber-900/70 dark:text-amber-100/70">
-                                    These existing discussions might already answer your question.
+                                <h3 class="text-lg font-bold text-red-800 dark:text-red-200 mb-1">Sorry, this question already exists!</h3>
+                                <p class="text-sm text-red-900/70 dark:text-red-100/70">
+                                    Our AI detected that a very similar discussion already exists in the community. Please visit the existing discussion below to get your answers.
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    <h4 class="font-bold text-gray-900 dark:text-white mb-4 px-2">Related Discussions</h4>
-                    <div id="duplicateList" class="space-y-3 mb-8"></div>
+                    <h4 class="font-bold text-gray-900 dark:text-white mb-4 px-2">Visit the Existing Discussion</h4>
+                    <div id="duplicateList" class="space-y-3 mb-6"></div>
+
+                    <div class="text-center">
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-2">Can't find what you need? Try rephrasing your question with more specific details.</p>
+                        <button id="editQuestionBtn" class="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold shadow-lg shadow-brand-500/30 transition-all hover:-translate-y-0.5 text-sm">
+                            Edit My Question
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 4b: Blocked / Off-topic -->
+                <div id="step4Blocked" class="hidden animate-fade-in-up">
+                    <div class="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-900/30 rounded-3xl p-6 mb-6">
+                        <div class="flex gap-4">
+                            <div class="flex-shrink-0 w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/50 flex items-center justify-center text-yellow-700 dark:text-yellow-400">
+                                <span class="material-symbols-rounded">block</span>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-yellow-800 dark:text-yellow-200 mb-1">Your question can't be posted</h3>
+                                <p id="blockedReasonText" class="text-sm text-yellow-900/70 dark:text-yellow-100/70">The content appears off‑topic or contains prohibited material and cannot be posted here.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-6">
+                        <h4 class="font-bold text-gray-900 dark:text-white mb-3">How to fix</h4>
+                        <ul class="text-sm text-gray-600 space-y-2">
+                            <li>• Make sure your question is related to education, study abroad or education loans.</li>
+                            <li>• Remove profanity, illegal or abusive content and any request unrelated to studying/loans.</li>
+                            <li>• Add specific details: loan amount, country, university, test scores, financial questions, etc.</li>
+                        </ul>
+                    </div>
+
+                    <div class="text-center">
+                        <button id="editBlockedBtn" class="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white font-bold shadow-lg shadow-brand-500/30 transition-all hover:-translate-y-0.5 text-sm">Edit my question</button>
+                    </div>
                 </div>
 
                 <!-- Step 5: Success -->
@@ -208,12 +257,12 @@
                         class="w-24 h-24 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400 mb-8 animate-[bounce_1s_ease-in-out]">
                         <span class="material-symbols-rounded text-5xl">check_circle</span>
                     </div>
-                    <h3 class="text-3xl font-bold font-display text-gray-900 dark:text-white mb-4">Posted!</h3>
-                    <p class="text-gray-500 mb-8 max-w-sm text-center">Your question is live. Mentors have been
-                        notified.</p>
+                    <h3 class="text-3xl font-bold font-display text-gray-900 dark:text-white mb-4">Awesome, Great Question!</h3>
+                    <p class="text-brand-600 dark:text-brand-400 font-semibold text-lg mb-2">Thank you for your unique contribution!</p>
+                    <p class="text-gray-500 mb-8 max-w-sm text-center">Your question is now live and our mentors have been notified. You're helping the community grow!</p>
                     <button id="goToDiscussionBtn"
                         class="px-8 py-3 bg-brand-600 hover:bg-brand-500 text-white rounded-xl font-bold shadow-lg shadow-brand-500/30 transition-all hover:-translate-y-1">
-                        View Discussion
+                        View Your Discussion
                     </button>
                 </div>
 

@@ -14,6 +14,7 @@ import { ExploreModule } from './explore/explore.module';
 import { OnboardingModule } from './onboarding/onboarding.module';
 import { IntegrationModule } from './integration/integration.module';
 import { AuditModule } from './audit/audit.module';
+import { ReferralModule } from './referral/referral.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
@@ -42,6 +43,7 @@ import { join } from 'path';
     OnboardingModule,
     IntegrationModule,
     AuditModule,
+    ReferralModule,
   ],
   controllers: [AppController],
   providers: [AppService],

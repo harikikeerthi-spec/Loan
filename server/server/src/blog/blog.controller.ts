@@ -302,7 +302,7 @@ export class BlogController {
      * @returns { success: boolean, data: Blog[], pagination }
      */
     @Get('admin/all')
-    // @UseGuards(AdminGuard) // Temporarily disabled for testing
+    @UseGuards(AdminGuard)
     async getAllBlogsAdmin(
         @Query('limit') limit?: string,
         @Query('offset') offset?: string,
@@ -323,7 +323,7 @@ export class BlogController {
      * @returns { success: boolean, message: string, data: Blog }
      */
     @Post()
-    // @UseGuards(AdminGuard) // Temporarily disabled for testing
+    @UseGuards(AdminGuard)
     async createBlog(
         @Body()
         body: {
@@ -369,7 +369,7 @@ export class BlogController {
      * @returns { success: boolean, message: string, data: Blog }
      */
     @Put(':id')
-    // @UseGuards(AdminGuard) // Temporarily disabled for testing
+    @UseGuards(AdminGuard)
     async updateBlog(
         @Param('id') id: string,
         @Body()
@@ -399,7 +399,7 @@ export class BlogController {
      * @returns { success: boolean, message: string }
      */
     @Delete(':id')
-    // @UseGuards(AdminGuard) // Temporarily disabled for testing
+    @UseGuards(AdminGuard)
     async deleteBlog(@Param('id') id: string) {
         return this.blogService.deleteBlog(id);
     }

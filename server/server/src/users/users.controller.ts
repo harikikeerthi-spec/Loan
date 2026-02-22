@@ -1,5 +1,7 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { AdminGuard } from '../auth/admin.guard';
+import { SuperAdminGuard } from '../auth/super-admin.guard';
 
 @Controller('users')
 export class UsersController {
@@ -41,6 +43,18 @@ export class UsersController {
         };
     }
 
+    // Admin: list all users (limited fields)
+    @Get('admin/list')
+    @UseGuards(AdminGuard)
+    async listUsers() {
+        const users = await this.usersService.findAll();
+        return {
+            success: true,
+            data: users.map(u => ({ id: u.id, email: u.email, firstName: u.firstName, lastName: u.lastName, role: u.role, createdAt: u.createdAt }))
+        };
+    }
+
+    @UseGuards(SuperAdminGuard)
     @Post('make-admin')
     async makeAdmin(@Body() body: { email: string; role: string }) {
         const allowedRoles = ['admin', 'user'];

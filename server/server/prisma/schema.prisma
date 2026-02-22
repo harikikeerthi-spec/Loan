@@ -371,6 +371,7 @@ model ForumPost {
   id           String         @id @default(uuid())
   title        String?
   content      String
+  excerpt      String?
   category     String
   tags         String[]
   authorId     String
@@ -379,6 +380,7 @@ model ForumPost {
   isMentorOnly Boolean        @default(false)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+  isPinned     Boolean        @default(false)
   comments     ForumComment[]
   postLikes    PostLike[]
   author       User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
@@ -639,6 +641,10 @@ model User {
   updatedAt       DateTime          @updatedAt
   role            String            @default("user")
   refreshToken    String?
+  referralCode    String?           @unique
+  referredById    String?
+  referredBy      User?             @relation("UserReferrals", fields: [referredById], references: [id])
+  referrals       User[]            @relation("UserReferrals")
   adminProfile    AdminProfile?
   auditLogs       AuditLog[]
   blogs           Blog[]
@@ -649,6 +655,27 @@ model User {
   forumCommentLikes ForumCommentLike[]
   loanApplications LoanApplication[]
   documents       UserDocument[]
+  sentReferrals   Referral[]        @relation("ReferrerReferrals")
+  receivedReferral Referral?        @relation("RefereeReferrals")
+}
+
+model Referral {
+  id            String    @id @default(uuid())
+  referrerId    String
+  refereeId     String?   @unique
+  refereeEmail  String?
+  status        String    @default("pending") // pending, signed_up, completed
+  reward        String?   @default("none")    // none, bronze, silver, gold
+  createdAt     DateTime  @default(now())
+  completedAt   DateTime?
+  updatedAt     DateTime  @updatedAt
+  referrer      User      @relation("ReferrerReferrals", fields: [referrerId], references: [id], onDelete: Cascade)
+  referee       User?     @relation("RefereeReferrals", fields: [refereeId], references: [id])
+
+  @@index([referrerId])
+  @@index([refereeId])
+  @@index([status])
+  @@index([refereeEmail])
 }
 
 model UserDocument {

@@ -13,6 +13,7 @@
         'about-us.html',
         'login.html',
         'signup.html',
+        'onboarding.html',
         'blog.html',
         'blog-article.html',
         'faq.html',
@@ -30,7 +31,11 @@
     const isLoggedIn = !!localStorage.getItem('accessToken');
     const needsGuard = !isPublic && !isLoggedIn;
 
-    if (needsGuard) {
+    // Detect admin pages so we don't show the *user* login overlay on admin routes
+    const isAdminPage = currentPage.startsWith('admin-') || currentPage === 'admin-dashboard.html' || pagePath.includes('/admin/');
+
+    // Only lock scroll for non-admin protected pages (admin pages use their own admin-login flow)
+    if (needsGuard && !isAdminPage) {
         // Lock scroll immediately
         document.documentElement.style.overflow = 'hidden';
     }
@@ -114,7 +119,11 @@
 
     async function initComponents() {
         // Show login overlay if user is not authenticated on a protected page
-        showLoginOverlay();
+        // Do NOT show the user login overlay on admin pages (admin-login.html handles admin access)
+        const isAdminPageForOverlay = currentPage.startsWith('admin-') || currentPage === 'admin-dashboard.html' || pagePath.includes('/admin/');
+        if (!isAdminPageForOverlay) {
+            showLoginOverlay();
+        }
 
         // Load navbar and footer in parallel
         await Promise.all([

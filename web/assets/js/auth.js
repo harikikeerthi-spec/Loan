@@ -111,7 +111,13 @@ function updateNavbarAuth() {
         logoutBtn.dataset.listenerAdded = 'true';
         logoutBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            AuthGuard.logout();
+            // Use AuthGuard if available (admin pages), otherwise fall back to local logout()
+            if (window.AuthGuard && typeof AuthGuard.logout === 'function') {
+                AuthGuard.logout();
+            } else {
+                console.warn('[Auth] AuthGuard not found — using fallback logout()');
+                logout();
+            }
         });
     }
 

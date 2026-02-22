@@ -41,28 +41,62 @@ async function authFetch(url, options = {}) {
 // --- Page Logic ---
 
 let currentStep = 1;
-let postData = { title: '', category: 'General Discussion', content: '' };
+let postData = { title: '', category: 'General Discussion', content: '', excerpt: '' };
 const topicMap = {
     'education-loan': 'Education Loan',
     'loan': 'Education Loan',
+    'eligibility': 'Education Loan',
+    'banks': 'Education Loan',
+    'finance': 'Education Loan',
+
     'visa': 'Visa Process',
     'visa-process': 'Visa Process',
+    'immigration': 'Visa Process',
+
     'admission': 'University Admission',
     'university-admission': 'University Admission',
     'universities': 'University Admission',
+    'rankings': 'University Admission',
+
     'scholarships': 'Scholarships',
-    'study-abroad': 'Study Abroad',
-    'general': 'General Discussion',
+    'grants': 'Scholarships',
+    'financial-aid': 'Scholarships',
+
     'courses': 'Courses & Majors',
-    'test-prep': 'Test Preparation',
+    'programs': 'Courses & Majors',
+    'majors': 'Courses & Majors',
+
+    'test-prep': 'Test Prep (GRE/IELTS/TOEFL)',
+    'gre': 'Test Prep (GRE/IELTS/TOEFL)',
+    'ielts': 'Test Prep (GRE/IELTS/TOEFL)',
+    'toefl': 'Test Prep (GRE/IELTS/TOEFL)',
+
     'accommodation': 'Housing & Accommodation',
     'housing': 'Housing & Accommodation',
+    'living': 'Housing & Accommodation',
+
     'jobs': 'Part-time Jobs & Careers',
-    'gre': 'Test Prep (GRE/IELTS/TOEFL)',
-    'eligibility': 'Education Loan',
-    'banks': 'Education Loan',
-    'sop': 'SOP & Applications',
+    'careers': 'Part-time Jobs & Careers',
+    'internships': 'Part-time Jobs & Careers',
+    'work': 'Part-time Jobs & Careers',
+
+    'general': 'General Discussion',
+    'study-abroad': 'General Discussion',
+    'sop': 'General Discussion',
     'meetups': 'General Discussion'
+};
+
+// Map Display Name -> Backend Hub Slug (Canonical)
+const categorySlugMap = {
+    'Education Loan': 'eligibility',
+    'Visa Process': 'visa',
+    'University Admission': 'universities',
+    'Scholarships': 'scholarships',
+    'Courses & Majors': 'courses',
+    'Test Prep (GRE/IELTS/TOEFL)': 'gre',
+    'Housing & Accommodation': 'accommodation',
+    'Part-time Jobs & Careers': 'jobs',
+    'General Discussion': 'general'
 };
 
 // Icon & color map for each category (used for visual display)
@@ -71,15 +105,197 @@ const categoryMeta = {
     'Visa Process': { icon: 'flight_takeoff', color: 'sky', emoji: '✈️' },
     'University Admission': { icon: 'school', color: 'blue', emoji: '🏛️' },
     'Scholarships': { icon: 'savings', color: 'teal', emoji: '🎓' },
-    'Study Abroad': { icon: 'public', color: 'indigo', emoji: '🌍' },
     'General Discussion': { icon: 'forum', color: 'gray', emoji: '💬' },
     'Courses & Majors': { icon: 'menu_book', color: 'purple', emoji: '📚' },
-    'Test Preparation': { icon: 'quiz', color: 'cyan', emoji: '📝' },
-    'Housing & Accommodation': { icon: 'home', color: 'rose', emoji: '🏠' },
-    'Part-time Jobs & Careers': { icon: 'work', color: 'amber', emoji: '💼' },
     'Test Prep (GRE/IELTS/TOEFL)': { icon: 'quiz', color: 'cyan', emoji: '📝' },
-    'SOP & Applications': { icon: 'description', color: 'violet', emoji: '📄' }
+    'Housing & Accommodation': { icon: 'home', color: 'rose', emoji: '🏠' },
+    'Part-time Jobs & Careers': { icon: 'work', color: 'amber', emoji: '💼' }
 };
+
+// Moderation / tagging state
+let moderationBlocked = false;
+let moderationReason = '';
+
+// ─── AI Moderation Keyword Lists ──────────────────────────────────────────────
+
+// Topics that ARE allowed on this platform
+const EDUCATION_KEYWORDS = [
+    // Loans & Finance
+    'loan', 'student loan', 'education loan', 'emi', 'interest rate', 'bank', 'nbfc',
+    'collateral', 'co-applicant', 'cosigner', 'sanction', 'disbursement', 'moratorium',
+    'repayment', 'itr', 'form16', 'salary', 'income', 'credit score', 'cibil',
+    'axis', 'sbi', 'hdfc', 'avanse', 'credila', 'incred', 'prodigy', 'mpower',
+    // Education & Admissions
+    'university', 'college', 'admission', 'scholarship', 'degree', 'masters', 'phd',
+    'bachelors', 'mba', 'ms', 'btech', 'gpa', 'transcript', 'application', 'deadline',
+    'acceptance', 'waitlist', 'enrollment', 'tuition', 'fees', 'grant', 'fellowship',
+    'assistantship', 'stipend', 'funding', 'professor', 'advisor', 'campus',
+    // Study Abroad
+    'abroad', 'international', 'studyabroad', 'usa', 'uk', 'canada', 'australia',
+    'germany', 'ireland', 'europe', 'overseas',
+    // Visa & Immigration
+    'visa', 'f1', 'immigration', 'i20', 'sevis', 'ds160', 'embassy', 'consulate',
+    'opt', 'cpt', 'h1b', 'resident',
+    // Tests
+    'gre', 'gmat', 'sat', 'toefl', 'ielts', 'pte', 'duolingo', 'sop', 'lor',
+    'recommendation', 'eligibility',
+    // Career (academic context)
+    'internship', 'placement', 'on campus', 'off campus', 'career', 'work permit'
+];
+
+// Explicitly OFF-TOPIC categories — any match here causes instant rejection
+const OFF_TOPIC_KEYWORDS = [
+    // Food & Cooking
+    'recipe', 'ingredient', 'ingredients', 'cook', 'cooking', 'biryani', 'pizza',
+    'burger', 'pasta', 'noodles', 'food', 'dish', 'meal', 'restaurant', 'chef',
+    'bake', 'fry', 'boil', 'spice', 'masala', 'curry', 'snack', 'breakfast',
+    'lunch', 'dinner', 'kitchen', 'tomato', 'onion', 'garlic', 'rice', 'roti',
+    'bread', 'soup', 'salad', 'dessert', 'cake', 'sweet', 'chocolate',
+    // Entertainment
+    'movie', 'film', 'actor', 'actress', 'celebrity', 'bollywood', 'hollywood',
+    'song', 'music', 'album', 'concert', 'anime', 'manga', 'show', 'series',
+    'netflix', 'youtube', 'tiktok', 'reel', 'streaming',
+    // Sports
+    'cricket', 'football', 'soccer', 'basketball', 'tennis', 'ipl', 'fifa',
+    'match', 'tournament', 'wicket', 'athlete', 'olympic', 'score',
+    // Politics & Religion
+    'election', 'vote', 'politician', 'politics', 'religion', 'god', 'temple',
+    'church', 'mosque', 'prayer', 'astrology', 'horoscope', 'zodiac',
+    // Lifestyle
+    'fitness', 'gym', 'workout', 'diet', 'weight loss', 'beauty', 'makeup',
+    'skincare', 'fashion', 'dating', 'relationship', 'love', 'breakup',
+    // Random / Trivial
+    'joke', 'meme', 'funny', 'prank', 'gossip', 'rumour', 'pet', 'dog', 'cat',
+    'animal', 'plant', 'garden', 'tourism', 'hotel', 'vacation', 'holiday',
+    'shopping', 'discount', 'crypto', 'bitcoin', 'nft', 'gaming', 'game'
+];
+
+const BANNED_WORDS = [
+    'bomb', 'attack', 'drugs', 'porn', 'sex', 'murder', 'kill', 'suicide',
+    'weapon', 'terror', 'illegal', 'fraud', 'scam', 'hack', 'explosive', 'abuse'
+];
+
+const STOPWORDS = [
+    'the', 'and', 'for', 'with', 'that', 'this', 'are', 'was', 'were', 'will',
+    'would', 'could', 'should', 'have', 'has', 'had', 'from', 'your', 'you',
+    'a', 'an', 'in', 'on', 'of', 'to', 'is', 'it', 'as', 'by', 'be', 'or',
+    'at', 'our', 'we', 'me', 'i', 'my', 'what', 'how', 'why', 'when', 'where',
+    'who', 'which', 'do', 'get', 'make', 'give', 'tell', 'want', 'need', 'please'
+];
+
+// Lightweight text helpers + moderation/tag extraction
+function normalizeText(s) {
+    return (s || '').toLowerCase().replace(/[\W_]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function containsBannedWords(text) {
+    const t = normalizeText(text);
+    return BANNED_WORDS.some(b => t.includes(b));
+}
+
+function isOffTopic(text) {
+    const t = normalizeText(text);
+    return OFF_TOPIC_KEYWORDS.some(k => t.includes(k));
+}
+
+function isTopical(text) {
+    const t = normalizeText(text);
+    const matches = EDUCATION_KEYWORDS.filter(k => t.includes(k));
+    // Short/vague questions need 2 matching education keywords; longer ones need at least 1
+    const wordCount = t.split(' ').filter(w => w.length > 2).length;
+    const requiredMatches = wordCount < 6 ? 2 : 1;
+    return matches.length >= requiredMatches;
+}
+
+function extractKeywords(text, limit = 6) {
+    const t = normalizeText(text);
+    const tokens = t.split(' ').filter(w => w.length > 2 && !STOPWORDS.includes(w));
+    const freq = {};
+    tokens.forEach(w => { freq[w] = (freq[w] || 0) + 1; });
+    const sorted = Object.keys(freq).sort((a, b) => freq[b] - freq[a]);
+    return sorted.slice(0, limit);
+}
+
+function mapKeywordsToTags(words) {
+    const mapped = new Set();
+    words.forEach(w => {
+        if (!w) return;
+        if (w.match(/^(ielts|toefl|pte|gre|sop)$/)) mapped.add(w);
+        else if (w.match(/^(loan|loans)$/)) mapped.add('loan');
+        else if (w.match(/^(education|study|studying|studyabroad)$/)) mapped.add('education');
+        else if (w.match(/^(visa|immigration)$/)) mapped.add('visa');
+        else if (w.match(/^(scholarship|scholarships|grant)$/)) mapped.add('scholarship');
+        else if (w.match(/^(admission|apply|application)$/)) mapped.add('admission');
+        else if (w.match(/^(bank|banks)$/)) mapped.add('bank');
+        else if (w.match(/^(salary|salary_slip|salaryslip)$/)) mapped.add('salary');
+        else if (w.match(/^(itr|form16|tax)$/)) mapped.add('itr');
+        else if (w.length <= 20) mapped.add(w);
+    });
+    return Array.from(mapped).slice(0, 6);
+}
+
+function generateTagsFromText(text) {
+    // Always include baseline tags
+    const base = new Set(['education', 'loan']);
+    const kws = extractKeywords(text, 8);
+    const mapped = mapKeywordsToTags(kws);
+    mapped.forEach(t => base.add(t));
+    return Array.from(base).slice(0, 5);
+}
+
+function moderateContent(text) {
+    // Returns { allowed: boolean, reason: string }
+    const combined = normalizeText(text);
+
+    // 1. Hard block: explicitly off-topic content (food, sports, etc.)
+    if (isOffTopic(combined)) return { allowed: false, reason: 'off_topic' };
+
+    // 2. Prohibited content: violence, profanity, etc.
+    if (containsBannedWords(combined)) return { allowed: false, reason: 'prohibited_content' };
+
+    // 3. Must relate to education / loans
+    if (!isTopical(combined)) return { allowed: false, reason: 'off_topic' };
+
+    return { allowed: true };
+}
+
+// Render tag suggestions (click to toggle)
+function renderTagSuggestionsUI(tags) {
+    const el = document.getElementById('suggestedTagsList');
+    if (!el) return;
+    const selected = new Set(postData.tags || []);
+    el.innerHTML = tags.map(t => `
+        <button type="button" data-tag="${t}" class="tag-chip px-3 py-1 rounded-full border text-sm font-semibold ${selected.has(t) ? 'bg-primary text-white' : 'bg-white dark:bg-black/20 text-gray-700'}">
+            #${t}
+        </button>
+    `).join('');
+
+    // bind toggle
+    el.querySelectorAll('.tag-chip').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tag = btn.dataset.tag;
+            const idx = (postData.tags || []).indexOf(tag);
+            if (idx === -1) {
+                postData.tags = [...(postData.tags || []), tag];
+            } else {
+                postData.tags = (postData.tags || []).filter(t => t !== tag);
+            }
+            renderTagSuggestionsUI(tags);
+        });
+    });
+}
+
+// Wire up live tag suggestions while user types
+function updateTagSuggestionsLive() {
+    const title = document.getElementById('questionTitle')?.value || '';
+    const content = document.getElementById('questionContent')?.value || '';
+    const combined = `${title} ${content}`.trim();
+    const tags = generateTagsFromText(combined);
+    // AI suggestions are rendered, but we donnot automatically apply them to the post data
+    // to give the user full control over tagging.
+    // if (!postData.tags || postData.tags.length === 0) postData.tags = tags;
+    renderTagSuggestionsUI(tags);
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Check Auth
@@ -107,18 +323,56 @@ document.addEventListener('DOMContentLoaded', () => {
     // 4. Bind Events
     document.getElementById('nextBtn').onclick = handleNext;
     document.getElementById('backBtn').onclick = handleBack;
-    // Post Anyway button logic removed as requested for strict checking
-    // document.getElementById('postAnywayBtn').onclick = finalizePost; 
 
+    // Live tag suggestions while typing
+    const titleEl = document.getElementById('questionTitle');
+    const contentEl = document.getElementById('questionContent');
+    if (titleEl) titleEl.addEventListener('input', updateTagSuggestionsLive);
+    if (contentEl) contentEl.addEventListener('input', updateTagSuggestionsLive);
+
+    // Cancel / Edit buttons
     document.getElementById('cancelPostBtn').onclick = () => {
         // Just go back to editing or step 0
         if (currentStep === 4) {
             currentStep = 2; // Go back to edit details
+            moderationBlocked = false;
+            moderationReason = '';
             updateUI();
         } else {
             window.history.back();
         }
     };
+
+    // Edit My Question button on duplicate step
+    const editQuestionBtn = document.getElementById('editQuestionBtn');
+    if (editQuestionBtn) {
+        editQuestionBtn.onclick = () => {
+            currentStep = 1; // Go back to title editing
+            updateUI();
+        };
+    }
+
+    // Edit button on blocked/off-topic step
+    const editBlockedBtn = document.getElementById('editBlockedBtn');
+    if (editBlockedBtn) {
+        editBlockedBtn.onclick = () => {
+            moderationBlocked = false;
+            moderationReason = '';
+            currentStep = 2;
+            updateUI();
+        };
+    }
+
+    // Post Anyway button (allow duplicates) — proceed to post even if AI finds similar questions
+    const postAnywayBtn = document.getElementById('postAnywayBtn');
+    if (postAnywayBtn) {
+        postAnywayBtn.onclick = async () => {
+            // Show posting state and continue
+            currentStep = 3;
+            updateUI();
+            await finalizePost();
+        };
+    }
 
     // Go to Discussion button logic depends on if we save the result ID
     // We'll set it dynamically in finalizePost
@@ -156,23 +410,22 @@ function updateUI() {
         document.getElementById('step3').classList.remove('hidden');
         wizardFooter.classList.add('hidden'); // No buttons while loading
         updateProgress(80);
-    } else if (currentStep === 4) { // Duplicate Found
-        document.getElementById('step4Duplicate').classList.remove('hidden');
-        wizardFooter.classList.remove('hidden');
-
-        // Hide NEXT button, force user to deal with duplicates
-        nextBtn.classList.add('hidden');
-
-        // Show only 'Cancel/Back' options, NO 'Post Anyway'
-        duplicateActions.classList.remove('hidden');
-        duplicateActions.classList.add('flex');
-
-        // Ensure Post Anyway is hidden if it exists in DOM
-        const postAnywayBtn = document.getElementById('postAnywayBtn');
-        if (postAnywayBtn) postAnywayBtn.classList.add('hidden');
-
-        backBtn.classList.remove('hidden'); // Allow going back to edit
-        updateProgress(90);
+    } else if (currentStep === 4) { // Duplicate Found OR Blocked
+        // If moderation blocked, show blocked UI; otherwise show duplicate list
+        if (moderationBlocked) {
+            document.getElementById('step4Blocked').classList.remove('hidden');
+            // show footer so user can edit
+            wizardFooter.classList.remove('hidden');
+            nextBtn.classList.add('hidden');
+            duplicateActions.classList.add('hidden');
+        } else {
+            document.getElementById('step4Duplicate').classList.remove('hidden');
+            // Show footer and reveal duplicate actions so user may choose to "Post Anyway"
+            wizardFooter.classList.remove('hidden');
+            nextBtn.classList.add('hidden');
+            duplicateActions.classList.remove('hidden');
+        }
+        updateProgress(100);
     } else if (currentStep === 5) { // Success
         document.getElementById('step5Success').classList.remove('hidden');
         wizardFooter.classList.add('hidden');
@@ -195,12 +448,36 @@ async function handleNext() {
 
     } else if (currentStep === 2) {
         const content = document.getElementById('questionContent').value.trim();
-        if (!content) {
-            postData.content = postData.title;
-        } else {
-            postData.content = content;
+        postData.content = content || postData.title || '';
+
+        // Short excerpt/summary (user can provide or we auto-generate a short preview)
+        const excerptEl = document.getElementById('questionExcerpt');
+        const excerptVal = excerptEl ? excerptEl.value.trim() : '';
+        postData.excerpt = excerptVal || (postData.content ? (postData.content.length > 160 ? postData.content.substring(0, 160) + '...' : postData.content) : '');
+
+        // 1) Moderate content locally (quick rejection for profanity/off-topic)
+        const combinedText = `${postData.title} ${postData.content} ${postData.excerpt}`;
+        const mod = moderateContent(combinedText);
+        if (!mod.allowed) {
+            moderationBlocked = true;
+            moderationReason = mod.reason;
+            // show blocked UI with reason
+            const reasonText = mod.reason === 'prohibited_content'
+                ? 'Your post contains prohibited language or illegal content.'
+                : 'This topic is not allowed here. Vidhya Path Aid is focused exclusively on Education, Student Loans, Visas, and Study Abroad. Please keep your questions related to these topics only.';
+            const reasonEl = document.getElementById('blockedReasonText');
+            if (reasonEl) reasonEl.textContent = reasonText;
+            currentStep = 4; // blocked/duplicate slot — updateUI will choose blocked view
+            updateUI();
+            return;
         }
 
+        // 2) Generate AI-like tags and attach to postData
+        const suggested = generateTagsFromText(combinedText);
+        postData.tags = suggested;
+        renderTagSuggestionsUI(suggested);
+
+        // Proceed to analysis for duplicates & posting
         currentStep = 3;
         updateUI();
         await analyzeContent();
@@ -220,10 +497,13 @@ function handleBack() {
 
 async function analyzeContent() {
     try {
+        // Normalize category to hub slug before duplicate check so backend inspects the correct hub
+        const topicSlug = getTopicSlug(postData.category);
+        const payload = { ...postData, category: topicSlug };
         const response = await fetch(`${API_BASE_URL}/forum/check-duplicate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(postData)
+            body: JSON.stringify(payload)
         });
 
         const result = await response.json();
@@ -260,16 +540,19 @@ async function finalizePost() {
     }
 
     try {
-        // Use SLUG for the URL!
+        // Use SLUG for the URL and ensure request body uses the slug as well
         const topicSlug = getTopicSlug(postData.category);
+        const payload = { ...postData, category: topicSlug };
+
+        console.debug('[create-post] Posting to hub:', topicSlug, 'payload:', payload);
         const response = await authFetch(`${API_BASE_URL}/explore/hub/${topicSlug}/forum`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(postData)
+            body: JSON.stringify(payload)
         });
 
         if (response.ok) {
-            const data = await response.json(); // Assuming backend returns the created object
+            const data = await response.json(); // Backend returns created object or wrapper
 
             currentStep = 5; // Success
             updateUI();
@@ -277,8 +560,6 @@ async function finalizePost() {
             // Setup the "Go to Discussion" button
             const btn = document.getElementById('goToDiscussionBtn');
             if (btn) {
-                // If data has ID, use it. Otherwise fallback to hub.
-                // data might be the post object itself or { success: true, data: post }
                 const postId = data.id || (data.data && data.data.id);
 
                 if (postId) {
@@ -292,11 +573,17 @@ async function finalizePost() {
                 }
             }
         } else {
-            throw new Error('Failed');
+            // Try to surface server error for easier debugging
+            let errBody = null;
+            try { errBody = await response.json(); } catch (ignored) { errBody = await response.text().catch(() => null); }
+            console.error('[create-post] Server rejected post:', response.status, errBody);
+            const serverMsg = errBody && (errBody.message || errBody.error || JSON.stringify(errBody));
+            alert(serverMsg || `Failed to post question (status ${response.status}). Please try again.`);
+            currentStep = 2;
         }
     } catch (e) {
-        console.error(e);
-        alert('Failed to post question. Please try again.');
+        console.error('[create-post] Exception while posting:', e);
+        alert(e?.message || 'Failed to post question. Please try again.');
         currentStep = 2;
     }
     updateUI();
@@ -307,21 +594,26 @@ function renderDuplicates(questions) {
     const topicSlug = getTopicSlug(postData.category);
 
     list.innerHTML = questions.map(q => `
-        <a href="question-discussion.html?id=${q.id}&topic=${topicSlug}" target="_blank" class="block p-4 rounded-xl border border-gray-100 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group bg-white dark:bg-white/5">
-            <h5 class="font-bold text-gray-900 dark:text-white group-hover:text-brand-500 mb-1">${q.title}</h5>
-            <div class="flex items-center gap-3 text-xs text-gray-500">
-                <span class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-2 py-0.5 rounded font-bold">${Math.round(q.similarity * 100)}% Match</span>
-                <span>${q.reason || 'Similar content detected'}</span>
+        <a href="question-discussion.html?id=${q.id}&topic=${topicSlug}" class="block p-5 rounded-2xl border-2 border-brand-200 dark:border-brand-800/40 hover:border-brand-400 dark:hover:border-brand-500 hover:shadow-lg hover:shadow-brand-500/10 transition-all group bg-white dark:bg-white/5 cursor-pointer">
+            <div class="flex items-start gap-4">
+                <div class="flex-shrink-0 w-10 h-10 rounded-xl bg-brand-100 dark:bg-brand-900/30 flex items-center justify-center text-brand-600 dark:text-brand-400 mt-0.5">
+                    <span class="material-symbols-rounded text-xl">forum</span>
+                </div>
+                <div class="flex-1">
+                    <h5 class="font-bold text-gray-900 dark:text-white group-hover:text-brand-500 mb-1.5 text-base">${q.title}</h5>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mb-2">${q.reason || 'Similar content detected'}</p>
+                    <div class="flex items-center gap-3">
+                        <span class="bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 px-2.5 py-0.5 rounded-full font-bold text-xs">${Math.round(q.similarity * 100)}% Match</span>
+                        <span class="text-brand-600 dark:text-brand-400 font-semibold text-xs group-hover:underline flex items-center gap-1">Go to Discussion <span class="material-symbols-rounded text-sm">arrow_forward</span></span>
+                    </div>
+                </div>
             </div>
         </a>
     `).join('');
 }
 
 function getTopicSlug(categoryName) {
-    for (const [slug, name] of Object.entries(topicMap)) {
-        if (name === categoryName) return slug;
-    }
-    return 'general';
+    return categorySlugMap[categoryName] || 'general';
 }
 
 // Render the category badge with icon and color

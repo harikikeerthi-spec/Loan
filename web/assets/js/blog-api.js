@@ -61,7 +61,10 @@ function createBlogCard(blog, index) {
                 ${blog.tags && blog.tags.length > 0 ? `
                     <div class="flex flex-wrap gap-2 mt-4">
                         ${blog.tags.slice(0, 3).map(tag => `
-                            <span class="px-2 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded-full">#${tag}</span>
+                            <span onclick="event.preventDefault(); event.stopPropagation(); window.location.href='blog.html?tag=${encodeURIComponent(tag)}'" 
+                                class="cursor-pointer px-2 py-1 bg-primary/10 text-primary text-[10px] font-bold rounded-full hover:bg-primary/20 transition-colors">
+                                #${tag}
+                            </span>
                         `).join('')}
                     </div>
                 ` : ''}
@@ -102,6 +105,18 @@ function createFeaturedBlog(blog) {
                         <p class="text-gray-500 dark:text-gray-400 font-sans leading-relaxed mb-6">
                             ${blog.excerpt}
                         </p>
+                        
+                        ${blog.tags && blog.tags.length > 0 ? `
+                            <div class="flex flex-wrap gap-2 mb-6">
+                                ${blog.tags.map(tag => `
+                                    <span onclick="event.preventDefault(); event.stopPropagation(); window.location.href='blog.html?tag=${encodeURIComponent(tag)}'" 
+                                        class="cursor-pointer px-3 py-1 bg-primary/10 text-primary text-xs font-bold rounded-full hover:bg-primary/20 transition-colors">
+                                        #${tag}
+                                    </span>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+
                         <div class="flex items-center gap-4">
                             <img src="${blog.authorImage || defaultAuthorImage}"
                                 alt="${blog.authorName}"
@@ -122,14 +137,23 @@ function createFeaturedBlog(blog) {
  * Fetch all blogs from API and combine with admin blogs
  */
 async function fetchBlogs(options = {}) {
+    console.log('fetchBlogs called with options:', options);
     try {
         const params = new URLSearchParams();
-        if (options.category) params.append('category', options.category);
-        if (options.featured !== undefined) params.append('featured', options.featured);
         if (options.limit) params.append('limit', options.limit);
         if (options.offset) params.append('offset', options.offset);
 
-        const url = `${API_BASE_URL}/blogs?${params.toString()}`;
+        let url;
+        if (options.tag) {
+            // Use tag endpoint if tag is provided
+            url = `${API_BASE_URL}/blogs/tags/${encodeURIComponent(options.tag)}?${params.toString()}`;
+        } else {
+            // Regular listing endpoint
+            if (options.category) params.append('category', options.category);
+            if (options.featured !== undefined) params.append('featured', options.featured);
+            url = `${API_BASE_URL}/blogs?${params.toString()}`;
+        }
+
         const response = await fetch(url);
 
         let apiBlogs = [];
@@ -165,11 +189,16 @@ async function fetchBlogs(options = {}) {
         // Combine API blogs and admin blogs
         const allBlogs = [...adminBlogs, ...apiBlogs];
 
-        // Apply filtering if needed
+        // Apply filtering if needed (mostly for admin blogs since API is already filtered)
         let filteredBlogs = allBlogs;
         if (options.category) {
             filteredBlogs = filteredBlogs.filter(blog =>
                 blog.category.toLowerCase() === options.category.toLowerCase()
+            );
+        }
+        if (options.tag) {
+            filteredBlogs = filteredBlogs.filter(blog =>
+                blog.tags && blog.tags.some(t => t.toLowerCase() === options.tag.toLowerCase())
             );
         }
 
@@ -177,8 +206,23 @@ async function fetchBlogs(options = {}) {
         filteredBlogs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
         // Apply pagination
-        const offset = options.offset || 0;
-        const limit = options.limit || 10;
+        // Note: API already handled pagination for its part, but since we merge we might need to re-slice?
+        // Actually, merging paginated API results with all admin blogs is tricky.
+        // Ideally we should filter admin blogs -> sort -> paginate -> then merge? 
+        // But for simplicity in this hybrid approach, we merge then slice.
+        // However, if API returns page 2, and we have admin blogs... 
+        // A simple approach: 
+        // For local dev/admin blogs, we usually assume small number.
+        // We'll just slice the combined result which effectively paginates the "merged view".
+
+        const offset = parseInt(options.offset) || 0;
+        const limit = parseInt(options.limit) || 10;
+
+        // Remove duplicates based on slug or ID if merging happened weirdly?
+        // Usually fine assuming admin IDs don't clash with API IDs.
+
+        // LIMITATION: This "client-side merge" pagination is imperfect if API returns partial data.
+        // But it's the established pattern in this file, so preserving it.
         const paginatedBlogs = filteredBlogs.slice(offset, offset + limit);
 
         return {
@@ -217,11 +261,16 @@ async function fetchBlogs(options = {}) {
                 blog.category.toLowerCase() === options.category.toLowerCase()
             );
         }
+        if (options.tag) {
+            filteredBlogs = filteredBlogs.filter(blog =>
+                blog.tags && blog.tags.some(t => t.toLowerCase() === options.tag.toLowerCase())
+            );
+        }
 
         filteredBlogs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-        const offset = options.offset || 0;
-        const limit = options.limit || 10;
+        const offset = parseInt(options.offset) || 0;
+        const limit = parseInt(options.limit) || 10;
         const paginatedBlogs = filteredBlogs.slice(offset, offset + limit);
 
         return {
@@ -442,6 +491,7 @@ function getUrlParam(param) {
  * Initialize blog listing page
  */
 async function initBlogListingPage() {
+    console.log('initBlogListingPage called');
     const featuredSection = document.getElementById('featured-blog-section');
     const blogGrid = document.getElementById('blog-grid');
     const categoryPills = document.getElementById('category-pills');
@@ -518,32 +568,27 @@ async function initBlogListingPage() {
 
     // Load blogs
     async function loadBlogs(reset = false) {
+        console.log('loadBlogs called, reset:', reset);
         if (loadingSpinner) loadingSpinner.classList.remove('hidden');
 
         let result;
 
-        // If filtering by tag, use tag search API
-        if (currentTag) {
-            const response = await fetch(`${API_BASE_URL}/blogs/tags/${encodeURIComponent(currentTag)}?limit=${limit}&offset=${currentOffset}`);
-            if (response.ok) {
-                result = await response.json();
-            } else {
-                result = { success: false, data: [] };
-            }
-        } else {
-            // Regular blog listing
-            const options = {
-                limit,
-                offset: currentOffset,
-                featured: false  // Exclude featured from grid
-            };
+        const options = {
+            limit,
+            offset: currentOffset,
+            featured: false  // Exclude featured from grid
+        };
 
-            if (currentCategory) {
-                options.category = currentCategory;
-            }
-
-            result = await fetchBlogs(options);
+        if (currentCategory) {
+            options.category = currentCategory;
         }
+
+        if (currentTag) {
+            options.tag = currentTag;
+        }
+
+        // Use unified fetchBlogs for both tag and regular listing
+        result = await fetchBlogs(options);
 
         if (loadingSpinner) loadingSpinner.classList.add('hidden');
 
@@ -560,7 +605,7 @@ async function initBlogListingPage() {
 
             // Show/hide load more button
             if (loadMoreBtn) {
-                if (result.pagination && result.pagination.hasMore) {
+                if (result.hasMore) { // fetchBlogs returns hasMore
                     loadMoreBtn.classList.remove('hidden');
                 } else {
                     loadMoreBtn.classList.add('hidden');
@@ -570,6 +615,7 @@ async function initBlogListingPage() {
     }
 
     // Initial load
+    seedBlogsIfNeeded();
     await loadBlogs(true);
 
     // Load more handler
@@ -593,19 +639,13 @@ async function initBlogListingPage() {
                 options.category = currentCategory;
             }
 
+            if (currentTag) {
+                options.tag = currentTag;
+            }
+
             if (loadingSpinner) loadingSpinner.classList.remove('hidden');
 
-            let result;
-            if (currentTag) {
-                const response = await fetch(`${API_BASE_URL}/blogs/tags/${encodeURIComponent(currentTag)}?limit=${allBlogsLimit}&offset=0`);
-                if (response.ok) {
-                    result = await response.json();
-                } else {
-                    result = { success: false, data: [] };
-                }
-            } else {
-                result = await fetchBlogs(options);
-            }
+            const result = await fetchBlogs(options);
 
             if (loadingSpinner) loadingSpinner.classList.add('hidden');
 
@@ -644,6 +684,7 @@ async function initBlogListingPage() {
         }
     });
 }
+
 
 /**
  * Fetch comments for a blog
@@ -1264,8 +1305,80 @@ async function initBlogArticlePage() {
     }
 }
 
+/**
+ * Seed sample blogs if no blogs exist
+ */
+function seedBlogsIfNeeded() {
+    console.log('Checking if blog seeding is needed...');
+    const adminBlogs = JSON.parse(localStorage.getItem('adminBlogs') || '[]');
+
+    if (adminBlogs.length > 0) {
+        console.log('Blogs already exist, skipping seed.');
+        return;
+    }
+
+    console.log('No blogs found, seeding sample data...');
+
+    const sampleBlogs = [
+        {
+            id: 'seed-1',
+            title: 'Top 10 Study Abroad Destinations for 2026',
+            excerpt: 'Discover the most popular countries for international students this year, with detailed insights on tuition, culture, and career opportunities.',
+            content: '<p>Studying abroad is a life-changing experience...</p><p>Here are the top 10 destinations...</p>',
+            category: 'Study Abroad',
+            tags: ['StudyAbroad', 'Education', 'Travel'],
+            author: 'Sarah Johnson',
+            image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&q=80',
+            status: 'published',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            views: 1250,
+            adminId: 'admin1',
+            adminName: 'Admin User'
+        },
+        {
+            id: 'seed-2',
+            title: 'How to Finance Your Master\'s Degree',
+            excerpt: 'A comprehensive guide to student loans, scholarships, and grants. Learn how to fund your education without breaking the bank.',
+            content: '<p>Financing higher education can be daunting...</p><p>Explore these options...</p>',
+            category: 'Finance',
+            tags: ['Finance', 'Scholarships', 'Loans'],
+            author: 'Michael Chen',
+            image: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&q=80',
+            status: 'published',
+            createdAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+            updatedAt: new Date(Date.now() - 86400000).toISOString(),
+            views: 840,
+            adminId: 'admin1',
+            adminName: 'Admin User'
+        },
+        {
+            id: 'seed-3',
+            title: 'Visa Application Tips: Avoid Common Mistakes',
+            excerpt: 'Getting your student visa approved is crucial. We highlight the most common errors students make and how to avoid them.',
+            content: '<p>The visa application process is strict...</p><p>Pay attention to these details...</p>',
+            category: 'Visa Guides',
+            tags: ['Visa', 'Tips', 'Documentation'],
+            author: 'Emma Wilson',
+            image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=800&q=80',
+            status: 'published',
+            createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
+            updatedAt: new Date(Date.now() - 172800000).toISOString(),
+            views: 2100,
+            adminId: 'admin1',
+            adminName: 'Admin User'
+        }
+    ];
+
+    localStorage.setItem('adminBlogs', JSON.stringify(sampleBlogs));
+    console.log('Sample blogs seeded successfully.');
+}
+
 // Export functions for use in HTML
+
+console.log('Exporting BlogAPI...');
 window.BlogAPI = {
+    seedBlogsIfNeeded,
     fetchBlogs,
     fetchFeaturedBlog,
     fetchBlogBySlug,

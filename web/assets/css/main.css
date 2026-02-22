@@ -169,9 +169,9 @@ body:not(.home-page) {
 
 /* Adaptive state for Sub-pages (Light Background initially) */
 .nav-on-light:not(.nav-scrolled) {
-    background: rgba(255, 255, 255, 0.5);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: transparent;
+    backdrop-filter: none;
+    border-bottom: none;
 }
 
 .nav-on-light:not(.nav-scrolled) .nav-link,
@@ -399,6 +399,314 @@ input {
     }
 }
 
-.animate-fade-in-up {
-    animation: fadeInUp 0.5s ease-out forwards;
+/* ... existing styles ... */
+
+/* Onboarding Specific Styles (GradRight Inspired) */
+.onboarding-container {
+    padding: 2rem 1rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.onboarding-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
+    padding: 40px;
+    position: relative;
+    overflow: hidden;
+}
+
+.dark .onboarding-card {
+    background: #1f2937;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.onboarding-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.onboarding-header h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    margin-bottom: 0.5rem;
+    color: #111827;
+}
+
+.dark .onboarding-header h1 {
+    color: white;
+}
+
+/* Progress Bar */
+.progress-container {
+    margin-bottom: 3rem;
+    position: relative;
+}
+
+.progress-bar {
+    height: 4px;
+    background: #E5E7EB;
+    border-radius: 2px;
+    position: relative;
+    top: 14px;
+    /* Align with dots */
+    z-index: 0;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #4F46E5;
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.4s ease;
+}
+
+.step-indicators {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+    z-index: 1;
+}
+
+.step-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.step-dot {
+    width: 32px;
+    height: 32px;
+    background: white;
+    border: 2px solid #E5E7EB;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: #6B7280;
+    transition: all 0.3s ease;
+}
+
+.step-dot.active {
+    border-color: #4F46E5;
+    color: #4F46E5;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.1);
+}
+
+.step-dot.completed {
+    background: #4F46E5;
+    border-color: #4F46E5;
+    color: white;
+}
+
+.step-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #6B7280;
+}
+
+.step-dot.active+.step-label {
+    color: #4F46E5;
+    font-weight: 600;
+}
+
+/* Options Grid */
+.options-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.option-card {
+    border: 2px solid #E5E7EB;
+    border-radius: 16px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.option-card:hover {
+    border-color: #4F46E5;
+    background: #EEF2FF;
+}
+
+.option-card.selected {
+    border-color: #4F46E5;
+    background: #EEF2FF;
+    box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1);
+}
+
+.option-icon {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.option-title {
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 0.25rem;
+}
+
+.option-desc {
+    font-size: 0.875rem;
+    color: #6B7280;
+}
+
+/* Quick Picks */
+.quick-picks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.quick-pick {
+    background: white;
+    border: 1px solid #E5E7EB;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #374151;
+    transition: all 0.2s;
+}
+
+.quick-pick:hover {
+    border-color: #9CA3AF;
+}
+
+.quick-pick.selected {
+    background: #4F46E5;
+    border-color: #4F46E5;
+    color: white;
+}
+
+/* Inputs */
+.input-group {
+    margin-bottom: 1.5rem;
+}
+
+.input-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.input-field {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #D1D5DB;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: #4F46E5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.input-field.error {
+    border-color: #EF4444;
+}
+
+.error-message {
+    font-size: 0.75rem;
+    color: #EF4444;
+    margin-top: 0.25rem;
+    display: none;
+}
+
+.error-message.show {
+    display: block;
+}
+
+/* Navigation */
+.navigation-buttons {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #E5E7EB;
+}
+
+.nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.nav-btn.back {
+    color: #6B7280;
+    background: transparent;
+}
+
+.nav-btn.back:hover {
+    background: #F3F4F6;
+}
+
+.nav-btn.next {
+    background: #4F46E5;
+    color: white;
+}
+
+.nav-btn.next:hover {
+    background: #4338CA;
+    transform: translateY(-1px);
+}
+
+.nav-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Step Content visibility */
+.step-content {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.step-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Category Pill Component */
+.category-pill {
+    transition: all 0.2s ease;
+}
+
+.category-pill:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 5, 199, 0.15);
+    border-color: #6605c7;
+}
+
+.dark .category-pill:hover {
+    box-shadow: 0 4px 12px rgba(168, 85, 247, 0.15);
+    border-color: #a855f7;
 }

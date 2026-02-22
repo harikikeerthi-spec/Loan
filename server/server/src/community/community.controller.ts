@@ -589,6 +589,41 @@ export class CommunityController {
 
     // ==================== FORUM ENDPOINTS ====================
 
+    // ==================== ADMIN FORUM ENDPOINTS ====================
+
+    /**
+     * Get all forum posts (Admin)
+     * GET /community/admin/forum/posts
+     */
+    @Get('admin/forum/posts')
+    @UseGuards(AdminGuard)
+    async getAllForumPostsAdmin(
+        @Query('category') category?: string,
+        @Query('limit') limit?: string,
+        @Query('offset') offset?: string,
+        @Query('sort') sort?: string,
+    ) {
+        return this.communityService.getAllForumPostsAdmin({
+            category,
+            limit: limit ? parseInt(limit, 10) : 20,
+            offset: offset ? parseInt(offset, 10) : 0,
+            sort,
+        });
+    }
+
+    /**
+     * Pin/Unpin a forum post (Admin)
+     * PUT /community/admin/forum/posts/:id/pin
+     */
+    @Put('admin/forum/posts/:id/pin')
+    @UseGuards(AdminGuard)
+    async togglePinForumPost(
+        @Param('id') id: string,
+        @Body() body: { isPinned: boolean }
+    ) {
+        return this.communityService.togglePinForumPost(id, body.isPinned);
+    }
+
     @Get('forum/:id')
     async getForumPostById(@Param('id') id: string, @Request() req) {
         let userId: string | undefined;

@@ -237,7 +237,10 @@
         };
 
         function loadDashboardData() {
-            const saved = localStorage.getItem('dashboardData');
+            const userId = localStorage.getItem('userId');
+            if (!userId) return;
+
+            const saved = localStorage.getItem(`dashboardData_${userId}`);
             if (saved) {
                 window.dashboardData = JSON.parse(saved);
                 if (!Array.isArray(dashboardData.applications)) dashboardData.applications = [];
@@ -255,7 +258,9 @@
         }
 
         function saveDashboardData() {
-            localStorage.setItem('dashboardData', JSON.stringify(window.dashboardData));
+            const userId = localStorage.getItem('userId');
+            if (!userId) return;
+            localStorage.setItem(`dashboardData_${userId}`, JSON.stringify(window.dashboardData));
         }
 
         function renderDashboard() {
@@ -334,22 +339,22 @@
                 container.innerHTML = `<div class="text-center py-8 text-gray-400"><span class="material-symbols-outlined text-4xl mb-2">history</span><p>No recent activity</p></div>`;
                 return;
             }
-            container.innerHTML = window.dashboardData.activity.slice(0, 10).map((act, i) => `
-                <div class="activity-item flex items-center gap-4" style="animation-delay: ${i * 0.05}s">
-                    <div class="w-10 h-10 ${getActivityBg(act.type)} rounded-full flex items-center justify-center ${getActivityColor(act.type)}">
+            container.innerHTML = window.dashboardData.activity.slice(0, 15).map((act, i) => `
+                <div class="activity-item flex items-center gap-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl p-2 -mx-2 transition-colors" ${act.link ? `onclick="window.location.href='${act.link}'"` : ''} style="animation-delay: ${i * 0.05}s">
+                    <div class="w-10 h-10 ${getActivityBg(act.type)} rounded-full flex items-center justify-center ${getActivityColor(act.type)} shrink-0">
                         <span class="material-symbols-outlined text-xl">${getActivityIcon(act.type)}</span>
                     </div>
-                    <div class="flex-1">
+                    <div class="flex-1 min-w-0">
                         <p class="font-bold text-sm">${act.title || getActivityTitle(act.type)}</p>
-                        <p class="text-xs text-gray-500">${act.description}</p>
+                        <p class="text-xs text-gray-500 truncate">${act.description}</p>
                     </div>
-                    <p class="text-xs text-gray-400">${formatTimeAgo(act.timestamp || act.date)}</p>
+                    <p class="text-xs text-gray-400 shrink-0">${formatTimeAgo(act.timestamp || act.date)}</p>
                 </div>
             `).join('');
         }
 
         function getActivityTitle(type) {
-            const titles = { 'new_application': 'New Application Submitted', 'application': 'Application Submitted', 'delete': 'Application Deleted', 'upload': 'Document Uploaded', 'approved': 'Application Approved', 'rejected': 'Application Rejected' };
+            const titles = { 'new_application': 'New Application Submitted', 'application': 'Application Submitted', 'delete': 'Application Deleted', 'upload': 'Document Uploaded', 'approved': 'Application Approved', 'rejected': 'Application Rejected', 'forum_post': 'Posted in Community Forum', 'forum_comment': 'Commented on Forum Post', 'blog_comment': 'Commented on Blog', 'post_like': 'Liked a Forum Post' };
             return titles[type] || 'Activity';
         }
 
@@ -383,9 +388,9 @@
         function getStatusColor(status) { const colors = { pending: 'text-yellow-600 dark:text-yellow-400', approved: 'text-green-600 dark:text-green-400', rejected: 'text-red-600 dark:text-red-400', processing: 'text-blue-600 dark:text-blue-400' }; return colors[status] || colors.pending; }
         function formatDate(dateStr) { return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); }
         function formatTimeAgo(dateStr) { const diff = Date.now() - new Date(dateStr).getTime(); const mins = Math.floor(diff / 60000); const hours = Math.floor(mins / 60); const days = Math.floor(hours / 24); if (mins < 1) return 'Just now'; if (mins < 60) return `${mins}m ago`; if (hours < 24) return `${hours}h ago`; if (days < 7) return `${days}d ago`; return formatDate(dateStr); }
-        function getActivityIcon(type) { const icons = { application: 'description', new_application: 'add_circle', delete: 'delete', upload: 'upload_file', approved: 'check_circle', rejected: 'cancel' }; return icons[type] || 'info'; }
-        function getActivityBg(type) { const bgs = { application: 'bg-primary/10', new_application: 'bg-green-100 dark:bg-green-900/20', delete: 'bg-red-100 dark:bg-red-900/20', upload: 'bg-blue-100 dark:bg-blue-900/20', approved: 'bg-green-100 dark:bg-green-900/20', rejected: 'bg-red-100 dark:bg-red-900/20' }; return bgs[type] || 'bg-gray-100 dark:bg-white/10'; }
-        function getActivityColor(type) { const colors = { application: 'text-primary', new_application: 'text-green-500', delete: 'text-red-500', upload: 'text-blue-500', approved: 'text-green-500', rejected: 'text-red-500' }; return colors[type] || 'text-gray-500'; }
+        function getActivityIcon(type) { const icons = { application: 'description', new_application: 'add_circle', delete: 'delete', upload: 'upload_file', approved: 'check_circle', rejected: 'cancel', forum_post: 'forum', forum_comment: 'chat_bubble', blog_comment: 'rate_review', post_like: 'thumb_up' }; return icons[type] || 'info'; }
+        function getActivityBg(type) { const bgs = { application: 'bg-primary/10', new_application: 'bg-green-100 dark:bg-green-900/20', delete: 'bg-red-100 dark:bg-red-900/20', upload: 'bg-blue-100 dark:bg-blue-900/20', approved: 'bg-green-100 dark:bg-green-900/20', rejected: 'bg-red-100 dark:bg-red-900/20', forum_post: 'bg-indigo-100 dark:bg-indigo-900/20', forum_comment: 'bg-teal-100 dark:bg-teal-900/20', blog_comment: 'bg-orange-100 dark:bg-orange-900/20', post_like: 'bg-pink-100 dark:bg-pink-900/20' }; return bgs[type] || 'bg-gray-100 dark:bg-white/10'; }
+        function getActivityColor(type) { const colors = { application: 'text-primary', new_application: 'text-green-500', delete: 'text-red-500', upload: 'text-blue-500', approved: 'text-green-500', rejected: 'text-red-500', forum_post: 'text-indigo-500', forum_comment: 'text-teal-500', blog_comment: 'text-orange-500', post_like: 'text-pink-500' }; return colors[type] || 'text-gray-500'; }
 
         document.addEventListener('DOMContentLoaded', () => {
             if (typeof loadUserDashboard === 'function') loadUserDashboard();

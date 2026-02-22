@@ -72,6 +72,19 @@
             background: rgba(25, 15, 35, 0.7);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
+
+        .category-pill {
+            transition: all 0.2s ease;
+        }
+
+        .category-pill:hover {
+            transform: scale(1.05);
+            border-color: #6605c7;
+        }
+
+        .dark .category-pill:hover {
+            border-color: #a855f7;
+        }
     </style>
 </head>
 
@@ -91,6 +104,45 @@
                 <p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed">Choose a category
                     to dive deep into discussions and resources.</p>
             </header>
+
+            <div class="flex flex-wrap justify-center gap-3 mb-16">
+                <a href="engage.html?topic=loan"
+                    class="category-pill px-4 py-2 rounded-full text-sm font-bold bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 shadow-sm hover:border-primary dark:hover:border-primary">
+                    #StudentLoans
+                </a>
+                <a href="engage.html?topic=visa"
+                    class="category-pill px-4 py-2 rounded-full text-sm font-bold bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 shadow-sm hover:border-primary dark:hover:border-primary">
+                    #VisaProcess
+                </a>
+                <a href="engage.html?topic=scholarships"
+                    class="category-pill px-4 py-2 rounded-full text-sm font-bold bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 shadow-sm hover:border-primary dark:hover:border-primary">
+                    #Scholarships
+                </a>
+                <a href="engage.html?topic=universities"
+                    class="category-pill px-4 py-2 rounded-full text-sm font-bold bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 shadow-sm hover:border-primary dark:hover:border-primary">
+                    #StudyAbroad
+                </a>
+                <a href="engage.html?topic=gre"
+                    class="category-pill px-4 py-2 rounded-full text-sm font-bold bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 shadow-sm hover:border-primary dark:hover:border-primary">
+                    #GREPrep
+                </a>
+                <a href="engage.html?topic=accommodation"
+                    class="category-pill px-4 py-2 rounded-full text-sm font-bold bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 shadow-sm hover:border-primary dark:hover:border-primary">
+                    #StudentHousing
+                </a>
+                <a href="community-success-stories.html"
+                    class="category-pill px-4 py-2 rounded-full text-sm font-bold bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 shadow-sm hover:border-primary dark:hover:border-primary">
+                    #SuccessStories
+                </a>
+                <a href="community-mentorship.html"
+                    class="category-pill px-4 py-2 rounded-full text-sm font-bold bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 shadow-sm hover:border-primary dark:hover:border-primary">
+                    #Mentorship
+                </a>
+                <a href="engage.html?topic=courses"
+                    class="category-pill px-4 py-2 rounded-full text-sm font-bold bg-white dark:bg-white/5 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10 shadow-sm hover:border-primary dark:hover:border-primary">
+                    #MastersDegree
+                </a>
+            </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <!-- Loans Category -->

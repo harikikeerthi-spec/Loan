@@ -4,17 +4,17 @@
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Education - Empowering Your Global Journey</title>
+    <title>Vidhya Loans - Fund Your Dream Education Abroad</title>
 
     <!-- Meta Tags -->
     <meta name="description"
-        content="Transparent, flexible, and accessible education loans for students pursuing global excellence." />
+        content="Compare education loans from 50+ banks & NBFCs. Get the best rates, quick approvals, and expert guidance — all in one place." />
 
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link
-        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap"
         rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
@@ -30,16 +30,18 @@
                 extend: {
                     colors: {
                         "primary": "#6605c7",
-                        "background-light": "#f7f5f8",
-                        "background-dark": "#190f23",
-                        "gold-accent": "#e0c389",
+                        "secondary": "#8b5cf6",
+                        "background-light": "#ffffff",
+                        "background-dark": "#0f172a",
+                        "accent": "#f59e0b",
                     },
                     fontFamily: {
-                        "display": ["'Noto Serif'", "serif"],
-                        "sans": ["'Noto Sans'", "sans-serif"],
+                        "display": ["'Playfair Display'", "serif"],
+                        "sans": ["'Plus Jakarta Sans'", "sans-serif"],
                     },
                     backgroundImage: {
                         'mesh-gradient': 'radial-gradient(at 0% 0%, rgba(102, 5, 199, 0.4) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224, 195, 137, 0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139, 192, 232, 0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102, 5, 199, 0.3) 0px, transparent 50%)',
+                        'grid-pattern': "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 40 L40 40 L40 0 L0 0 Z M39 39 L1 39 L1 1 L39 1 Z' fill='%23000' fill-opacity='0.05'/%3E%3C/svg%3E\")",
                     }
                 },
             },
@@ -67,682 +69,719 @@
     <div id="navbar-placeholder"></div>
 
     <main class="relative z-10">
-        <!-- Hero Section Wrapper -->
-        <div class="relative w-full overflow-hidden bg-[#190f23]">
-            <!-- Background Video -->
-            <video id="heroVideo" autoplay muted loop playsinline webkit-playsinline preload="auto" poster=""
-                class="absolute inset-0 w-full h-full object-cover z-0 opacity-50">
-                <source src="assets/videos/video_preview_h264.mp4" type="video/mp4">
-            </video>
-
-            <!-- Dark Overlay -->
-            <div class="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/70 z-0"></div>
-
-            <script>
-                document.addEventListener('DOMContentLoaded', function () {
-                    const video = document.getElementById('heroVideo');
-                    if (video) {
-                        video.play().catch(function (error) {
-                            console.log('Autoplay prevented:', error);
-                            document.addEventListener('click', function () {
-                                video.play();
-                            }, { once: true });
-                        });
-                    }
-                });
-            </script>
-
-
-
-            <section class="max-w-7xl mx-auto px-6 pt-48 pb-24 text-center relative z-10">
-                <!-- Hanging Badge -->
-                <div class="relative inline-block mb-12 group drop-from-top">
-                    <!-- Vertical Hanging Lines -->
-                    <!-- <div class="absolute -top-48 left-[20%] w-px h-48 bg-white/30"></div>
-                    <div class="absolute -top-48 right-[20%] w-px h-48 bg-white/30"></div> -->
-
-                    <!-- Badge -->
-                    <!-- <div
-                        class="inline-flex items-center gap-6 rounded-full border border-white/20 bg-white/90 backdrop-blur-md px-8 py-3 shadow-md relative z-10 transition-transform hover:-translate-y-1">
-                        <a href="apply-loan.html" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                            <span class="material-symbols-outlined text-2xl text-primary">school</span>
-                            <span class="text-sm font-bold text-gray-900">Education Loan</span>
+        <!-- Hero Section -->
+        <div class="relative min-h-screen flex items-center pt-20 overflow-hidden bg-transparent">
+            
+            <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
+                <div class="animate-fade-in-up">
+                    <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary text-sm font-bold mb-6 backdrop-blur-md border border-primary/20">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+                        </span>
+                        Trusted by 10,000+ students across 20+ countries
+                    </div>
+                    
+                    <h1 class="text-5xl md:text-7xl font-bold font-display leading-tight mb-6 text-gray-900 dark:text-white">
+                        Fund Your <span class="text-primary italic">Dream</span> Education Abroad
+                    </h1>
+                    
+                    <p class="text-xl text-gray-600 dark:text-gray-400 mb-10 leading-relaxed max-w-xl">
+                        Compare education loans from 50+ banks & NBFCs. Get the best rates, quick approvals, and expert guidance — all in one place.
+                    </p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-4 mb-12">
+                        <a href="apply-loan.html" class="px-8 py-4 bg-primary text-white font-bold rounded-xl shadow-lg hover:shadow-primary/30 hover:-translate-y-1 transition-all text-center">
+                            Check Your Eligibility
                         </a>
-                        <div class="w-px h-6 bg-gray-300"></div>
-                        <a href="bank-reviews.html" class="flex items-center gap-1.5 group/link cursor-pointer">
-                            <span
-                                class="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 group-hover/link:text-primary transition-colors">Up
-                                to 100% Funding</span>
-                            <span
-                                class="material-symbols-outlined text-[16px] text-gray-500 group-hover/link:text-primary group-hover/link:translate-x-0.5 transition-all">arrow_forward</span>
+                        <a href="emi.html" class="px-8 py-4 bg-white/50 backdrop-blur-md text-gray-900 border border-gray-200 font-bold rounded-xl shadow-sm hover:bg-white/80 transition-all text-center dark:bg-white/10 dark:text-white dark:border-white/10">
+                            Calculate EMI
                         </a>
-                    </div> -->
-                </div>
-
-                <h1
-                    class="text-6xl md:text-8xl font-bold font-display leading-[1.05] tracking-tight mb-8 text-white drop-shadow-sm invisible">
-                    Let's find your <br />
-                    <span class="italic text-primary font-normal">perfect</span> loan
-                </h1>
-
-                <!-- <p class="text-xl text-gray-100 max-w-2xl mx-auto mb-16 leading-relaxed font-sans drop-shadow-sm">
-                    Your global education journey starts here.
-                </p> -->
-
-                <div
-                    class="flex items-center justify-center gap-4 cursor-pointer group mb-24 transition-opacity hover:opacity-80 invisible">
-                    <a href="apply-loan.html"
-                        class="px-8 py-4 bg-primary text-white font-bold rounded-full shadow-lg hover:bg-gold-accent hover:text-gray-900 transition-all">
-                        Start Your Application
-                    </a>
-                </div>
-
-                <!-- Stats -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-6xl mx-auto">
-                    <div class="text-center px-8">
-                        <h3 class="text-5xl font-bold text-white mb-3 font-display">$150M+</h3>
-                        <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-100 leading-relaxed">Total
-                            Education Funding Disbursed</p>
                     </div>
-                    <div class="text-center px-8 border-x-0 md:border-x border-white/10">
-                        <h3 class="text-5xl font-bold text-white mb-3 font-display">12,000+</h3>
-                        <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-100 leading-relaxed">Global
-                            Students Helped</p>
-                    </div>
-                    <div class="text-center px-8">
-                        <h3 class="text-5xl font-bold text-white mb-3 font-display">45+</h3>
-                        <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-blue-100 leading-relaxed">Global
-                            Bank Partners</p>
+                    
+                    <div class="flex items-center gap-4 text-sm text-gray-500">
+                        <div class="flex -space-x-2">
+                            <img src="https://i.pravatar.cc/40?u=1" class="w-8 h-8 rounded-full border-2 border-white" alt="User">
+                            <img src="https://i.pravatar.cc/40?u=2" class="w-8 h-8 rounded-full border-2 border-white" alt="User">
+                            <img src="https://i.pravatar.cc/40?u=3" class="w-8 h-8 rounded-full border-2 border-white" alt="User">
+                        </div>
+                        <div>
+                            <span class="font-bold text-gray-900 dark:text-white">4.9/5</span> from 2,000+ reviews
+                        </div>
                     </div>
                 </div>
-            </section>
+                
+                <div class="relative lg:block">
+                    <div class="relative rounded-3xl overflow-hidden shadow-2xl border border-white/10">
+                        <img src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" alt="Students" class="w-full object-cover opacity-90">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    </div>
+                    
+                    <!-- Floating Cards -->
+                    <div class="absolute -bottom-6 -left-6 bg-white/10 backdrop-blur-xl p-6 rounded-2xl shadow-xl border border-white/20 animate-bounce-slow">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center text-primary">
+                                <span class="material-symbols-outlined">verified</span>
+                            </div>
+                            <div>
+                                <div class="text-xs text-gray-400 uppercase font-bold tracking-wider">Lowest Rate</div>
+                                <div class="text-xl font-bold text-white">8.5% p.a.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- Stories Section -->
-        <section id="stories" class="max-w-7xl mx-auto px-6 py-24 scroll-mt-24">
-            <div class="flex justify-between items-end mb-12">
-                <div>
-                    <span class="text-primary font-bold text-[11px] tracking-[0.2em] uppercase mb-2 block">Student
-                        Stories</span>
-                    <h2 class="text-4xl md:text-5xl font-display text-gray-900 dark:text-white">
-                        Global campus <br />
-                        <span class="italic font-normal text-gray-600 dark:text-gray-400">experiences</span>
+        <!-- Trust Badges -->
+        <div class="bg-gray-50 dark:bg-slate-800/50 py-12">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-white dark:bg-slate-700 rounded-xl shadow-sm flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined text-3xl">account_balance</span>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold dark:text-white">50+</div>
+                            <div class="text-xs text-gray-500 font-bold uppercase tracking-wider">Lending Partners</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-white dark:bg-slate-700 rounded-xl shadow-sm flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined text-3xl">speed</span>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold dark:text-white">48hrs</div>
+                            <div class="text-xs text-gray-500 font-bold uppercase tracking-wider">Quick Approval</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-white dark:bg-slate-700 rounded-xl shadow-sm flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined text-3xl">verified_user</span>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold dark:text-white">100%</div>
+                            <div class="text-xs text-gray-500 font-bold uppercase tracking-wider">Secure & Trusted</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-white dark:bg-slate-700 rounded-xl shadow-sm flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined text-3xl">public</span>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold dark:text-white">30+</div>
+                            <div class="text-xs text-gray-500 font-bold uppercase tracking-wider">Countries Covered</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Why Students Choose Us -->
+        <section class="py-24 bg-transparent overflow-hidden">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="text-center mb-16">
+                    <span class="text-primary font-bold text-sm tracking-widest uppercase mb-4 block">Why Choose Us</span>
+                    <h2 class="text-4xl md:text-5xl font-bold font-display text-gray-900 dark:text-white mb-6">
+                        Everything you need to finance your <br/> <span class="text-primary italic">international education</span>, simplified
                     </h2>
                 </div>
-                <div class="flex gap-3">
-                    <button
-                        class="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors shadow-sm text-gray-800 dark:text-gray-200">
-                        <span class="material-symbols-outlined text-sm font-bold">arrow_back</span>
-                    </button>
-                    <button
-                        class="w-12 h-12 rounded-full bg-white dark:bg-zinc-800 border border-gray-300 dark:border-zinc-700 flex items-center justify-center hover:bg-gray-50 dark:hover:bg-zinc-700 transition-colors shadow-sm text-gray-800 dark:text-gray-200">
-                        <span class="material-symbols-outlined text-sm font-bold">arrow_forward</span>
-                    </button>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Story 1 -->
-                <div class="group relative rounded-2xl overflow-hidden cursor-pointer shadow-lg">
-                    <img alt="Student Portrait Ananya"
-                        class="w-full h-[480px] object-cover transition-transform duration-700 group-hover:scale-105"
-                        src="assets/img/story_ananya.png" />
-                    <div
-                        class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300">
-                    </div>
-                    <div
-                        class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
-                        <div
-                            class="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/40 hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined text-white text-2xl">play_arrow</span>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <!-- Feature 1 -->
+                    <div class="p-8 rounded-3xl border border-gray-100 dark:border-slate-800 hover:border-primary/30 transition-all hover:shadow-xl group bg-white dark:bg-slate-800/50">
+                        <div class="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined text-3xl">hub</span>
                         </div>
+                        <h3 class="text-xl font-bold mb-4 dark:text-white">Top 50+ Lender Network</h3>
+                        <p class="text-gray-600 dark:text-gray-400 leading-relaxed">Access India's largest education loan marketplace with banks, NBFCs, and international lenders.</p>
                     </div>
-                    <div class="absolute bottom-0 left-0 right-0 p-8 z-10">
-                        <h3 class="text-white font-display text-2xl mb-1 drop-shadow-md font-medium">Ananya</h3>
-                        <p class="text-blue-100 font-bold text-[11px] uppercase tracking-wider drop-shadow-sm">NYU, New
-                            York</p>
-                    </div>
-                </div>
-                <!-- Story 2 -->
-                <div class="group relative rounded-2xl overflow-hidden cursor-pointer shadow-lg">
-                    <img alt="Student David Statue Art"
-                        class="w-full h-[480px] object-cover grayscale transition-transform duration-700 group-hover:scale-105"
-                        src="assets/img/story_david.png" />
-                    <div
-                        class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300">
-                    </div>
-                    <div
-                        class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
-                        <div
-                            class="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/40 hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined text-white text-2xl">play_arrow</span>
+
+                    <!-- Feature 2 -->
+                    <div class="p-8 rounded-3xl border border-gray-100 dark:border-slate-800 hover:border-primary/30 transition-all hover:shadow-xl group bg-white dark:bg-slate-800/50">
+                        <div class="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined text-3xl">apartment</span>
                         </div>
+                        <h3 class="text-xl font-bold mb-4 dark:text-white">University-Specific Offers</h3>
+                        <p class="text-gray-600 dark:text-gray-400 leading-relaxed">Get tailored loan offers based on your university, course, and country of study.</p>
                     </div>
-                    <div class="absolute bottom-0 left-0 right-0 p-8 z-10">
-                        <h3 class="text-white font-display text-2xl mb-1 drop-shadow-md font-medium">David</h3>
-                        <p class="text-blue-100 font-bold text-[11px] uppercase tracking-wider drop-shadow-sm">LSE,
-                            London</p>
-                    </div>
-                </div>
-                <!-- Story 3 -->
-                <div class="group relative rounded-2xl overflow-hidden cursor-pointer shadow-lg">
-                    <img alt="Student Portrait Mei"
-                        class="w-full h-[480px] object-cover transition-transform duration-700 group-hover:scale-105"
-                        src="assets/img/story_mei.png" />
-                    <div
-                        class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 group-hover:opacity-100 transition-opacity duration-300">
-                    </div>
-                    <div
-                        class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10">
-                        <div
-                            class="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/40 hover:scale-110 transition-transform">
-                            <span class="material-symbols-outlined text-white text-2xl">play_arrow</span>
+
+                    <!-- Feature 3 -->
+                    <div class="p-8 rounded-3xl border border-gray-100 dark:border-slate-800 hover:border-primary/30 transition-all hover:shadow-xl group bg-white dark:bg-slate-800/50">
+                        <div class="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined text-3xl">handshake</span>
                         </div>
+                        <h3 class="text-xl font-bold mb-4 dark:text-white">Guaranteed Best Rate</h3>
+                        <p class="text-gray-600 dark:text-gray-400 leading-relaxed">We negotiate with lenders to get you the lowest interest rates available in the market.</p>
                     </div>
-                    <div class="absolute bottom-0 left-0 right-0 p-8 z-10">
-                        <h3 class="text-white font-display text-2xl mb-1 drop-shadow-md font-medium">Mei</h3>
-                        <p class="text-blue-100 font-bold text-[11px] uppercase tracking-wider drop-shadow-sm">
-                            University of Melbourne</p>
+
+                    <!-- Feature 4 -->
+                    <div class="p-8 rounded-3xl border border-gray-100 dark:border-slate-800 hover:border-primary/30 transition-all hover:shadow-xl group bg-white dark:bg-slate-800/50">
+                        <div class="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined text-3xl">devices</span>
+                        </div>
+                        <h3 class="text-xl font-bold mb-4 dark:text-white">Digital Application</h3>
+                        <p class="text-gray-600 dark:text-gray-400 leading-relaxed">Apply 100% online. Upload documents, e-sign, and track your application in real-time.</p>
+                    </div>
+
+                    <!-- Feature 5 -->
+                    <div class="p-8 rounded-3xl border border-gray-100 dark:border-slate-800 hover:border-primary/30 transition-all hover:shadow-xl group bg-white dark:bg-slate-800/50">
+                        <div class="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined text-3xl">psychology</span>
+                        </div>
+                        <h3 class="text-xl font-bold mb-4 dark:text-white">Free Expert Counseling</h3>
+                        <p class="text-gray-600 dark:text-gray-400 leading-relaxed">Free 1-on-1 guidance from education loan experts throughout your journey.</p>
+                    </div>
+
+                    <!-- Feature 6 -->
+                    <div class="p-8 rounded-3xl border border-gray-100 dark:border-slate-800 hover:border-primary/30 transition-all hover:shadow-xl group bg-white dark:bg-slate-800/50">
+                        <div class="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary mb-6 group-hover:scale-110 transition-transform">
+                            <span class="material-symbols-outlined text-3xl">bolt</span>
+                        </div>
+                        <h3 class="text-xl font-bold mb-4 dark:text-white">Quick Disbursement</h3>
+                        <p class="text-gray-600 dark:text-gray-400 leading-relaxed">Get your loan sanctioned in 48 hours and disbursed before your university deadline.</p>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Partner Section -->
-        <section
-            class="py-24 border-y border-gray-100 dark:border-white/5 bg-white/20 dark:bg-zinc-900/20 backdrop-blur-sm overflow-hidden">
-            <div class="max-w-7xl mx-auto px-6 mb-12 text-center">
-                <p class="text-[15px] font-bold tracking-[0.3em] text-gray-400 uppercase mb-4">Trusted by Global Banking
-                    Partners</p>
-                <h2 class="text-3xl font-display text-gray-900 dark:text-white">Our Network</h2>
-            </div>
-
-            <div class="flex flex-col gap-16">
-                <!-- Row 1 (Right) -->
-                <div class="relative overflow-hidden w-full py-2">
-                    <div class="bank-row animate-scroll-right flex items-center whitespace-nowrap" data-row="1">
-                        <!-- Set 1 -->
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            HDFC Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            SBI</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            ICICI Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Axis Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Prodigy Finance</div>
-                        <!-- Repeat 1 -->
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            HDFC Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            SBI</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            ICICI Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Axis Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Prodigy Finance</div>
-                        <!-- Repeat 2 -->
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            HDFC Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            SBI</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            ICICI Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Axis Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Prodigy Finance</div>
-                        <!-- Repeat 3 -->
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            HDFC Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            SBI</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            ICICI Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Axis Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Prodigy Finance</div>
-                    </div>
+        <!-- Study Abroad Journey -->
+        <section class="py-24 bg-transparent">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="text-4xl md:text-5xl font-bold font-display text-gray-900 dark:text-white">Study Abroad Journey</h2>
                 </div>
-
-                <!-- Row 2 (Left) -->
-                <div class="relative overflow-hidden w-full py-1 border-y border-gray-100/30 dark:border-white/5">
-                    <div class="bank-row animate-scroll-left flex items-center whitespace-nowrap" data-row="2">
-                        <!-- Set 1 -->
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Kotak Mahindra</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            IDBI Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            PNB</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Yes Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            HSBC</div>
-                        <!-- Repeat 1 -->
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Kotak Mahindra</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            IDBI Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            PNB</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Yes Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            HSBC</div>
-                        <!-- Repeat 2 -->
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Kotak Mahindra</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            IDBI Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            PNB</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Yes Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            HSBC</div>
-                        <!-- Repeat 3 -->
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Kotak Mahindra</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            IDBI Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            PNB</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Yes Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            HSBC</div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div class="p-6 text-center group cursor-pointer">
+                        <div class="w-20 h-20 mx-auto bg-white dark:bg-slate-700 rounded-2xl shadow-sm flex items-center justify-center mb-4 group-hover:-translate-y-2 transition-transform">
+                            <img src="https://img.icons8.com/isometric/50/6605c7/search.png" alt="Exploration" class="w-12 h-12">
+                        </div>
+                        <div class="font-bold text-gray-900 dark:text-white">1. Exploration</div>
                     </div>
-                </div>
-
-                <!-- Row 3 (Left) -->
-                <div class="relative overflow-hidden w-full py-2">
-                    <div class="bank-row animate-scroll-right flex items-center whitespace-nowrap" data-row="3">
-                        <!-- Set 1 -->
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Standard Chartered</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Barclays</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Citibank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Deutsche Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Bank of America</div>
-                        <!-- Repeat 1 -->
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Standard Chartered</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Barclays</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Citibank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Deutsche Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Bank of America</div>
-                        <!-- Repeat 2 -->
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Standard Chartered</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Barclays</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Citibank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Deutsche Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Bank of America</div>
-                        <!-- Repeat 3 -->
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Standard Chartered</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Barclays</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Citibank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Deutsche Bank</div>
-                        <div
-                            class="bank-item text-3xl font-bold text-gray-400 dark:text-gray-600 hover:text-primary dark:hover:text-white transition-colors font-display">
-                            Bank of America</div>
+                    <div class="p-6 text-center group cursor-pointer">
+                        <div class="w-20 h-20 mx-auto bg-white dark:bg-slate-700 rounded-2xl shadow-sm flex items-center justify-center mb-4 group-hover:-translate-y-2 transition-transform">
+                            <img src="https://img.icons8.com/isometric/50/6605c7/edit-file.png" alt="Application" class="w-12 h-12">
+                        </div>
+                        <div class="font-bold text-gray-900 dark:text-white">2. Application</div>
+                    </div>
+                    <div class="p-6 text-center group cursor-pointer">
+                        <div class="w-20 h-20 mx-auto bg-white dark:bg-slate-700 rounded-2xl shadow-sm flex items-center justify-center mb-4 group-hover:-translate-y-2 transition-transform">
+                            <img src="https://img.icons8.com/isometric/50/6605c7/university.png" alt="Admission" class="w-12 h-12">
+                        </div>
+                        <div class="font-bold text-gray-900 dark:text-white">3. Admission</div>
+                    </div>
+                    <div class="p-6 text-center group cursor-pointer border-2 border-primary rounded-3xl">
+                        <div class="w-20 h-20 mx-auto bg-white dark:bg-slate-700 rounded-2xl shadow-sm flex items-center justify-center mb-4 group-hover:-translate-y-2 transition-transform">
+                            <img src="https://img.icons8.com/isometric/50/6605c7/money-bag.png" alt="Finance" class="w-12 h-12">
+                        </div>
+                        <div class="font-bold text-primary">4. Finance</div>
+                        <div class="text-[10px] text-primary font-bold mt-1">EXPLORE 🔥</div>
+                    </div>
+                    <div class="p-6 text-center group cursor-pointer">
+                        <div class="w-20 h-20 mx-auto bg-white dark:bg-slate-700 rounded-2xl shadow-sm flex items-center justify-center mb-4 group-hover:-translate-y-2 transition-transform">
+                            <img src="https://img.icons8.com/isometric/50/6605c7/passport.png" alt="Visa" class="w-12 h-12">
+                        </div>
+                        <div class="font-bold text-gray-900 dark:text-white">5. Visa</div>
+                    </div>
+                    <div class="p-6 text-center group cursor-pointer">
+                        <div class="w-20 h-20 mx-auto bg-white dark:bg-slate-700 rounded-2xl shadow-sm flex items-center justify-center mb-4 group-hover:-translate-y-2 transition-transform">
+                            <img src="https://img.icons8.com/isometric/50/6605c7/airportroom.png" alt="Fly" class="w-12 h-12">
+                        </div>
+                        <div class="font-bold text-gray-900 dark:text-white">6. Prepare to Fly</div>
                     </div>
                 </div>
             </div>
         </section>
 
-
-        <!-- Vault Section -->
-        <section id="vault" class="max-w-7xl mx-auto px-6 py-32 scroll-mt-24">
-            <div class="text-center mb-16">
-                <h2 class="text-4xl md:text-5xl font-display text-gray-900 dark:text-white mb-4">Secure Application
-                    Vault</h2>
-                <p class="text-gray-500 dark:text-gray-400 text-lg font-sans">Manage your critical documents with
-                    bank-grade security.</p>
+        <!-- Your Study Abroad Universe -->
+        <section class="py-24 bg-transparent">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="flex flex-col lg:flex-row gap-16 items-center">
+                    <div class="flex-1">
+                        <h2 class="text-4xl md:text-5xl font-bold font-display text-gray-900 dark:text-white mb-6">Your Study Abroad Universe</h2>
+                        <p class="text-lg text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">Everything you need to kickstart your global education journey</p>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <a href="explore.html" class="p-4 rounded-2xl border border-gray-100 dark:border-slate-800 hover:border-primary/20 transition-all flex items-center gap-4">
+                                <span class="text-2xl">📚</span>
+                                <span class="font-bold dark:text-white text-sm">TRENDING Courses</span>
+                            </a>
+                            <a href="explore.html" class="p-4 rounded-2xl border border-gray-100 dark:border-slate-800 hover:border-primary/20 transition-all flex items-center gap-4">
+                                <span class="text-2xl">🏛️</span>
+                                <span class="font-bold dark:text-white text-sm">POPULAR Universities</span>
+                            </a>
+                            <a href="explore.html" class="p-4 rounded-2xl border border-gray-100 dark:border-slate-800 hover:border-primary/20 transition-all flex items-center gap-4">
+                                <span class="text-2xl">✍️</span>
+                                <span class="font-bold dark:text-white text-sm">Exams Prep</span>
+                            </a>
+                            <a href="explore.html" class="p-4 rounded-2xl border border-gray-100 dark:border-slate-800 hover:border-primary/20 transition-all flex items-center gap-4">
+                                <span class="text-2xl">🏆</span>
+                                <span class="font-bold dark:text-white text-sm">HOT Scholarships</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <img src="https://images.unsplash.com/photo-1541339907198-e08756ebafe3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Universe" class="rounded-[3rem] shadow-2xl">
+                    </div>
+                </div>
             </div>
-            <div
-                class="glass-card rounded-[3rem] p-8 md:p-12 shadow-2xl max-w-xl mx-auto border-white dark:border-zinc-800 relative">
-                <div class="flex items-center gap-4 mb-10 pb-6 border-b border-gray-100 dark:border-white/5">
-                    <div
-                        class="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/20 text-blue-600 flex items-center justify-center">
-                        <span class="material-symbols-outlined text-2xl">folder_open</span>
+        </section>
+
+        <!-- AI Tools Section -->
+        <section class="py-24 bg-transparent text-gray-900 dark:text-white overflow-hidden relative">
+            <div class="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-[120px]"></div>
+            <div class="absolute bottom-0 left-0 w-96 h-96 bg-secondary/5 rounded-full blur-[120px]"></div>
+            
+            <div class="max-w-7xl mx-auto px-6 relative z-10">
+                <div class="text-center mb-20">
+                    <span class="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest mb-4">Premium AI Ecosystem</span>
+                    <h2 class="text-4xl md:text-6xl font-bold font-display mb-6 text-gray-900 dark:text-white">Smart Tools for <span class="text-primary italic">Global Success</span></h2>
+                    <p class="text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">Empowering your study abroad journey with data-driven insights and AI precision.</p>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Top Row: 3 Cards -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Tool 1: SOP Reviewer -->
+                        <a href="sop-writer.html" class="flex flex-col p-8 rounded-[2rem] bg-[#e7e1f7] dark:bg-purple-900/40 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 group border border-white/50">
+                            <div class="flex items-start gap-6 mb-8">
+                                <div class="w-16 h-16 bg-white/80 rounded-full flex items-center justify-center shrink-0 shadow-sm overflow-hidden p-3">
+                                    <img src="https://img.icons8.com/isometric/50/6605c7/edit-file.png" alt="SOP" class="w-full h-full object-contain">
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-xl font-bold mb-3 text-gray-900 dark:text-white leading-tight">Automated SOP Writer</h3>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Draft your Statement of Purpose evaluated on matter, grammar, and readability using AI.</p>
+                                </div>
+                            </div>
+                            <div class="mt-auto flex justify-end">
+                                <span class="inline-flex items-center gap-2 text-primary dark:text-primary font-bold text-sm group-hover:gap-3 transition-all">Submit SOP <span class="material-symbols-outlined text-sm">arrow_forward</span></span>
+                            </div>
+                        </a>
+
+                        <!-- Tool 2: Future Earnings -->
+                        <a href="admit-predictor.html" class="flex flex-col p-8 rounded-[2rem] bg-[#fdfaf2] dark:bg-amber-900/40 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 group border border-white/50">
+                            <div class="flex items-start gap-6 mb-8">
+                                <div class="w-16 h-16 bg-white/80 rounded-full flex items-center justify-center shrink-0 shadow-sm overflow-hidden p-3">
+                                    <img src="https://img.icons8.com/isometric/50/6605c7/hourglass.png" alt="Earnings" class="w-full h-full object-contain">
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-xl font-bold mb-3 text-gray-900 dark:text-white leading-tight">Estimate Future Earnings</h3>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Project your potential future earnings and compare countries based on ROI.</p>
+                                </div>
+                            </div>
+                            <div class="mt-auto flex justify-end">
+                                <span class="inline-flex items-center gap-2 text-primary font-bold text-sm group-hover:gap-3 transition-all">Estimate Now <span class="material-symbols-outlined text-sm">arrow_forward</span></span>
+                            </div>
+                        </a>
+
+                        <!-- Tool 3: University Compare -->
+                        <a href="compare-universities.html" class="flex flex-col p-8 rounded-[2rem] bg-[#e1f0f7] dark:bg-blue-900/40 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 group border border-white/50">
+                            <div class="flex items-start gap-6 mb-8">
+                                <div class="w-16 h-16 bg-white/80 rounded-full flex items-center justify-center shrink-0 shadow-sm overflow-hidden p-3">
+                                    <img src="https://img.icons8.com/isometric/50/6605c7/scales.png" alt="Compare" class="w-full h-full object-contain">
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-xl font-bold mb-3 text-gray-900 dark:text-white leading-tight">University Compare</h3>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Get insights on income, employability, costs, and top recruiters of up to 4 universities.</p>
+                                </div>
+                            </div>
+                            <div class="mt-auto flex justify-end">
+                                <span class="inline-flex items-center gap-2 text-primary font-bold text-sm group-hover:gap-3 transition-all">Compare Now <span class="material-symbols-outlined text-sm">arrow_forward</span></span>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- Middle Row: 1 Centered Card -->
+                    <div class="max-w-3xl mx-auto">
+                        <a href="admit-predictor.html" class="flex flex-col p-8 rounded-[2rem] bg-[#e7e1f7] dark:bg-purple-900/40 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 group border border-white/50">
+                            <div class="flex items-start gap-8 mb-4">
+                                <div class="w-20 h-20 bg-white/80 rounded-full flex items-center justify-center shrink-0 shadow-sm overflow-hidden p-4">
+                                    <img src="https://img.icons8.com/isometric/50/6605c7/document.png" alt="Predictor" class="w-full h-full object-contain">
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-2xl font-bold mb-3 text-gray-900 dark:text-white">Admit Predictor</h3>
+                                    <p class="text-gray-600 dark:text-gray-400 text-base leading-relaxed">Check the probability of your MS in US admission. Predict your admission chances with 98% accuracy.</p>
+                                </div>
+                            </div>
+                            <div class="mt-auto flex justify-end">
+                                <span class="inline-flex items-center gap-2 text-primary font-bold text-base group-hover:gap-4 transition-all">Evaluate Now <span class="material-symbols-outlined">arrow_forward</span></span>
+                            </div>
+                        </a>
+                    </div>
+
+                    <!-- Bottom Row: 3 Cards -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Tool 5: Grade Converter -->
+                        <a href="grade-converter.html" class="flex flex-col p-8 rounded-[2rem] bg-[#e1f0f7] dark:bg-blue-900/40 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 group border border-white/50">
+                            <div class="flex items-start gap-6 mb-8">
+                                <div class="w-16 h-16 bg-white/80 rounded-full flex items-center justify-center shrink-0 shadow-sm overflow-hidden p-3">
+                                    <img src="https://img.icons8.com/isometric/50/6605c7/calculator.png" alt="Converter" class="w-full h-full object-contain">
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-xl font-bold mb-3 text-gray-900 dark:text-white leading-tight">Grade Converter</h3>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Convert your percentage or 10-point CGPA to GPA score with just a single click.</p>
+                                </div>
+                            </div>
+                            <div class="mt-auto flex justify-end">
+                                <span class="inline-flex items-center gap-2 text-primary font-bold text-sm group-hover:gap-3 transition-all">Convert Now <span class="material-symbols-outlined text-sm">arrow_forward</span></span>
+                            </div>
+                        </a>
+
+                        <!-- Tool 6: EMI Calculator -->
+                        <a href="emi.html" class="flex flex-col p-8 rounded-[2rem] bg-white dark:bg-slate-800 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 group border border-primary/10">
+                            <div class="flex items-start gap-6 mb-8">
+                                <div class="w-16 h-16 bg-primary/5 rounded-full flex items-center justify-center shrink-0 shadow-sm overflow-hidden p-3 border border-primary/20">
+                                    <img src="https://img.icons8.com/isometric/50/6605c7/sand-watch.png" alt="EMI" class="w-full h-full object-contain">
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-xl font-bold mb-3 text-gray-900 dark:text-white leading-tight">EMI Calculator</h3>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Determine your EMIs and repayment schedules before committing to a student loan.</p>
+                                </div>
+                            </div>
+                            <div class="mt-auto flex justify-end">
+                                <span class="inline-flex items-center gap-2 text-primary font-bold text-sm group-hover:gap-3 transition-all">Calculate Now <span class="material-symbols-outlined text-sm">arrow_forward</span></span>
+                            </div>
+                        </a>
+
+                        <!-- Tool 7: Loan Eligibility -->
+                        <a href="loan-eligibility.html" class="flex flex-col p-8 rounded-[2rem] bg-[#e7e1f7] dark:bg-purple-900/40 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 group border border-white/50">
+                            <div class="flex items-start gap-6 mb-8">
+                                <div class="w-16 h-16 bg-white/80 rounded-full flex items-center justify-center shrink-0 shadow-sm overflow-hidden p-3">
+                                    <img src="https://img.icons8.com/isometric/50/6605c7/money.png" alt="Eligibility" class="w-full h-full object-contain">
+                                </div>
+                                <div class="flex-1">
+                                    <h3 class="text-xl font-bold mb-3 text-gray-900 dark:text-white leading-tight">Loan Eligibility Checker</h3>
+                                    <p class="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">Find the best education loan for you in just 2 minutes with our intelligent checker.</p>
+                                </div>
+                            </div>
+                            <div class="mt-auto flex justify-end">
+                                <span class="inline-flex items-center gap-2 text-primary font-bold text-sm group-hover:gap-3 transition-all">Check Eligibility <span class="material-symbols-outlined text-sm">arrow_forward</span></span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="mt-12 flex flex-wrap justify-center gap-12 text-center border-t border-black/5 dark:border-white/5 pt-12">
+                    <div>
+                        <div class="text-4xl font-bold text-gray-900 dark:text-white">7</div>
+                        <div class="text-xs text-gray-500 uppercase font-bold tracking-widest mt-1">AI Tools</div>
                     </div>
                     <div>
-                        <h4 class="font-bold text-gray-900 dark:text-white">My Documents</h4>
-                        <p class="text-[10px] text-gray-400 font-bold uppercase tracking-widest">2 of 3 Uploaded</p>
+                        <div class="text-4xl font-bold text-gray-900 dark:text-white">3,000+</div>
+                        <div class="text-xs text-gray-500 uppercase font-bold tracking-widest mt-1">Universities Covered</div>
                     </div>
-                    <button class="ml-auto material-symbols-outlined text-gray-300">more_vert</button>
-                </div>
-
-                <div class="space-y-4">
-                    <!-- Passport -->
-                    <div
-                        class="flex items-center justify-between p-6 bg-gray-50/50 dark:bg-zinc-800/30 rounded-3xl border border-gray-100 dark:border-white/5 transition-all hover:bg-white dark:hover:bg-zinc-800/50">
-                        <div class="flex items-center gap-4">
-                            <span class="material-symbols-outlined text-gray-400">badge</span>
-                            <div>
-                                <p class="font-bold text-sm text-gray-900 dark:text-white">Passport</p>
-                                <p class="text-[10px] text-gray-400 font-medium tracking-tight">Scanned Copy</p>
-                            </div>
-                        </div>
-                        <span
-                            class="flex items-center gap-1.5 text-[9px] font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-lg uppercase tracking-wider">
-                            Uploaded <span class="material-symbols-outlined text-[12px]">check</span>
-                        </span>
+                    <div>
+                        <div class="text-4xl font-bold text-gray-900 dark:text-white">98%</div>
+                        <div class="text-xs text-gray-500 uppercase font-bold tracking-widest mt-1">Accuracy Rate</div>
                     </div>
-
-                    <!-- I-20 Letter -->
-                    <div
-                        class="flex items-center justify-between p-6 bg-red-50/30 dark:bg-red-900/10 rounded-3xl border border-red-100 dark:border-red-900/20">
-                        <div class="flex items-center gap-4">
-                            <span class="material-symbols-outlined text-gray-400">text_snippet</span>
-                            <div>
-                                <p class="font-bold text-sm text-gray-900 dark:text-white">I-20 Letter</p>
-                                <p class="text-[10px] text-red-500 font-bold tracking-tight">Action Required</p>
-                            </div>
-                        </div>
-                        <button
-                            class="px-5 py-2 text-[9px] font-bold text-gray-600 dark:text-gray-300 bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-full shadow-sm uppercase tracking-widest hover:bg-gray-50 transition-all">Upload</button>
+                    <div>
+                        <div class="text-4xl font-bold text-gray-900 dark:text-white">50K+</div>
+                        <div class="text-xs text-gray-500 uppercase font-bold tracking-widest mt-1">Students Helped</div>
                     </div>
-
-                    <!-- ITR Returns -->
-                    <div
-                        class="flex items-center justify-between p-6 bg-gray-50/50 dark:bg-zinc-800/30 rounded-3xl border border-gray-100 dark:border-white/5 transition-all hover:bg-white dark:hover:bg-zinc-800/50">
-                        <div class="flex items-center gap-4">
-                            <span class="material-symbols-outlined text-gray-400">description</span>
-                            <div>
-                                <p class="font-bold text-sm text-gray-900 dark:text-white">ITR Returns</p>
-                                <p class="text-[10px] text-gray-400 font-medium tracking-tight">PDF • 2.4 MB</p>
-                            </div>
-                        </div>
-                        <span
-                            class="flex items-center gap-1.5 text-[9px] font-bold text-green-600 bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded-lg uppercase tracking-wider">
-                            Uploaded <span class="material-symbols-outlined text-[12px]">check</span>
-                        </span>
-                    </div>
-                </div>
-
-                <div
-                    class="mt-10 flex justify-center items-center gap-2 text-[10px] text-gray-400 font-bold tracking-[0.2em] uppercase">
-                    <span class="material-symbols-outlined text-[14px] text-gray-300">verified_user</span>
-                    Security & 256-Bit Encryption
                 </div>
             </div>
         </section>
-        <!-- Trending Discussions Section -->
-        <section id="trending-discussions" class="max-w-7xl mx-auto px-6 py-24 scroll-mt-24">
-            <div class="flex justify-between items-end mb-12">
-                <div>
-                    <span class="text-primary font-bold text-[11px] tracking-[0.2em] uppercase mb-2 block">Live
-                        Community</span>
-                    <h2 class="text-4xl md:text-5xl font-display text-gray-900 dark:text-white">
-                        Trending <br />
-                        <span class="italic font-normal text-gray-600 dark:text-gray-400">Discussions</span>
-                    </h2>
-                </div>
-                <a href="explore.html"
-                    class="hidden md:flex items-center gap-2 text-primary font-bold text-sm hover:underline">
-                    View All Topics <span class="material-symbols-outlined text-sm">arrow_forward</span>
-                </a>
-            </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <!-- Discussion 1 -->
-                <a href="engage.html?topic=usa-visa"
-                    class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 p-6">
-                        <span
-                            class="flex items-center gap-1 text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-1 rounded-full uppercase tracking-wider">
-                            <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> Hot
-                        </span>
-                    </div>
-                    <div class="flex items-center gap-4 mb-6">
-                        <div
-                            class="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-600">
-                            <span class="material-symbols-outlined">flight_takeoff</span>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Visa & Travel</p>
-                            <h4 class="font-bold text-gray-900 dark:text-white">USA F-1 Interview Slots</h4>
-                        </div>
-                    </div>
-                    <p class="text-gray-600 dark:text-gray-400 text-sm mb-6 line-clamp-2">"Is anyone else seeing bulk
-                        slots opening for Mumbai Consulate in June? Just booked mine!"</p>
-                    <div
-                        class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5 text-xs text-gray-500 font-bold">
-                        <span class="flex items-center gap-1.5"><span
-                                class="material-symbols-outlined text-sm">chat_bubble</span> 142 Comments</span>
-                        <span class="flex items-center gap-1.5"><span
-                                class="material-symbols-outlined text-sm">visibility</span> 2.4k Views</span>
-                    </div>
-                </a>
-
-                <!-- Discussion 2 -->
-                <a href="engage.html?topic=loan-strategy"
-                    class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500">
-                    <div class="flex items-center gap-4 mb-6">
-                        <div
-                            class="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center text-green-600">
-                            <span class="material-symbols-outlined">account_balance</span>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Loans</p>
-                            <h4 class="font-bold text-gray-900 dark:text-white">SBI vs Prodigy Finance</h4>
-                        </div>
-                    </div>
-                    <p class="text-gray-600 dark:text-gray-400 text-sm mb-6 line-clamp-2">"Comparing 8.5% with
-                        collateral vs 11% non-collateral. What makes sense for a 2-year masters?"</p>
-                    <div
-                        class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5 text-xs text-gray-500 font-bold">
-                        <span class="flex items-center gap-1.5"><span
-                                class="material-symbols-outlined text-sm">chat_bubble</span> 89 Comments</span>
-                        <span class="flex items-center gap-1.5"><span
-                                class="material-symbols-outlined text-sm">visibility</span> 1.8k Views</span>
-                    </div>
-                </a>
-
-                <!-- Discussion 3 -->
-                <a href="engage.html?topic=accommodation-uk"
-                    class="glass-card p-8 rounded-[2.5rem] group hover:-translate-y-2 transition-all duration-500">
-                    <div class="flex items-center gap-4 mb-6">
-                        <div
-                            class="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-600">
-                            <span class="material-symbols-outlined">home</span>
-                        </div>
-                        <div>
-                            <p class="text-xs font-bold text-gray-500 uppercase tracking-widest">Housing</p>
-                            <h4 class="font-bold text-gray-900 dark:text-white">London Zone 2 Sharing</h4>
-                        </div>
-                    </div>
-                    <p class="text-gray-600 dark:text-gray-400 text-sm mb-6 line-clamp-2">"Looking for 2 female
-                        roommates for a 3BHK near Canary Wharf. Available from August."</p>
-                    <div
-                        class="flex items-center gap-6 pt-6 border-t border-gray-100 dark:border-white/5 text-xs text-gray-500 font-bold">
-                        <span class="flex items-center gap-1.5"><span
-                                class="material-symbols-outlined text-sm">chat_bubble</span> 34 Comments</span>
-                        <span class="flex items-center gap-1.5"><span
-                                class="material-symbols-outlined text-sm">visibility</span> 950 Views</span>
-                    </div>
-                </a>
-            </div>
-        </section>
-
-        <section class="max-w-7xl mx-auto px-6 py-24 relative overflow-hidden">
-            <div
-                class="glass-card p-12 md:p-20 rounded-[4rem] overflow-hidden relative shadow-2xl border-white/40 dark:border-white/5">
-                <!-- Decorative Gradients -->
-                <div
-                    class="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/2">
-                </div>
-                <div
-                    class="absolute bottom-0 left-0 w-96 h-96 bg-gold-accent/10 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/2">
+        <!-- How It Works -->
+        <section class="py-24 bg-transparent">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="text-center mb-16">
+                    <span class="text-primary font-bold text-sm tracking-widest uppercase mb-4 block">Process</span>
+                    <h2 class="text-4xl md:text-5xl font-bold font-display text-gray-900 dark:text-white mb-6">How It Works</h2>
+                    <p class="text-gray-500 max-w-2xl mx-auto">From eligibility check to disbursement — in 4 simple steps</p>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                    <div class="relative z-10">
-                        <span
-                            class="inline-block px-4 py-2 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-[0.2em] mb-6">Student
-                            Network</span>
-                        <h2
-                            class="text-4xl md:text-5xl font-bold font-display text-gray-900 dark:text-white mb-6 leading-tight">
-                            Join our thriving <span
-                                class="text-primary italic underline decoration-gold-accent/30 underline-offset-8">Student
-                                Community</span>
-                        </h2>
-                        <p class="text-lg text-gray-600 dark:text-gray-400 mb-10 font-sans leading-relaxed">
-                            Connect with thousands of ambitious students worldwide. Share experiences, get insider tips
-                            on loan approvals, discuss university life, and find the best accommodation options
-                            together.
-                        </p>
-                        <div class="flex flex-col sm:flex-row gap-8 items-start sm:items-center">
-                            <a href="explore.html"
-                                class="group relative inline-flex items-center justify-center px-12 py-6 font-bold text-white transition-all duration-300 bg-primary rounded-full hover:bg-background-light/90 hover:scale-105 active:scale-95 shadow-[0_20px_50px_rgba(102,5,199,0.3)]">
-                                <span class="relative flex items-center gap-3 tracking-widest uppercase text-xs">
-                                    Join the Hub
-                                    <span
-                                        class="material-symbols-outlined group-hover:translate-x-1 transition-transform">groups</span>
-                                </span>
-                                <!-- Button Glow Animation -->
-                                <div
-                                    class="absolute inset-0 rounded-full bg-primary blur-lg opacity-0 group-hover:opacity-40 transition-opacity animate-pulse">
-                                </div>
-                            </a>
-                            <div class="flex items-center gap-4">
-                                <div class="flex -space-x-4">
-                                    <img src="assets/img/avatar_2.png"
-                                        class="w-12 h-12 rounded-full border-4 border-white dark:border-zinc-900 object-cover"
-                                        alt="User">
-                                    <img src="assets/img/avatar_1.png"
-                                        class="w-12 h-12 rounded-full border-4 border-white dark:border-zinc-900 object-cover"
-                                        alt="User">
-                                    <img src="assets/img/avatar_3.png"
-                                        class="w-12 h-12 rounded-full border-4 border-white dark:border-zinc-900 object-cover"
-                                        alt="User">
-                                </div>
-                                <div class="text-sm font-bold text-gray-500 dark:text-gray-400">
-                                    <span class="text-primary">+2,400</span> students active now
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <!-- Step 1 -->
                     <div class="relative group">
-                        <div
-                            class="absolute inset-0 bg-primary/20 rounded-[3rem] blur-3xl group-hover:bg-primary/30 transition-all duration-500">
+                        <div class="text-8xl font-black text-gray-100 dark:text-slate-800 absolute -top-10 -left-6 z-0">01</div>
+                        <div class="relative z-10 bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-xl transition-all h-full">
+                            <h3 class="text-xl font-bold mb-4 dark:text-white">Check Eligibility</h3>
+                            <p class="text-gray-500 text-sm mb-6">Answer a few questions about your education plans and financial profile.</p>
+                            <div class="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-primary w-1/4"></div>
+                            </div>
                         </div>
-                        <div class="relative z-10 overflow-hidden rounded-[3rem] shadow-2xl border border-white/20">
-                            <img src="assets/img/community_hero.png" alt="Community Illustration"
-                                class="w-full h-full object-cover transform scale-105 group-hover:scale-110 transition-transform duration-700">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
+                    </div>
+                    <!-- Step 2 -->
+                    <div class="relative group">
+                        <div class="text-8xl font-black text-gray-100 dark:text-slate-800 absolute -top-10 -left-6 z-0">02</div>
+                        <div class="relative z-10 bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-xl transition-all h-full">
+                            <h3 class="text-xl font-bold mb-4 dark:text-white">Compare Offers</h3>
+                            <p class="text-gray-500 text-sm mb-6">Get personalized loan offers from 50+ lenders. Compare rates, tenure, and terms.</p>
+                            <div class="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-primary w-1/2"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Step 3 -->
+                    <div class="relative group">
+                        <div class="text-8xl font-black text-gray-100 dark:text-slate-800 absolute -top-10 -left-6 z-0">03</div>
+                        <div class="relative z-10 bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-xl transition-all h-full">
+                            <h3 class="text-xl font-bold mb-4 dark:text-white">Apply Online</h3>
+                            <p class="text-gray-500 text-sm mb-6">Complete your application digitally. Upload documents and e-sign securely.</p>
+                            <div class="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-primary w-3/4"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Step 4 -->
+                    <div class="relative group">
+                        <div class="text-8xl font-black text-gray-100 dark:text-slate-800 absolute -top-10 -left-6 z-0">04</div>
+                        <div class="relative z-10 bg-white dark:bg-slate-800 p-8 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 hover:shadow-xl transition-all h-full">
+                            <h3 class="text-xl font-bold mb-4 dark:text-white">Get Funded</h3>
+                            <p class="text-gray-500 text-sm mb-6">Receive your sanction letter in 48 hours. Funds disbursed directly.</p>
+                            <div class="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-primary w-full"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- CTA Section -->
-        <section class="max-w-7xl mx-auto px-6 py-24">
-            <div
-                class="glass-card rounded-[4rem] p-12 md:p-20 text-center relative overflow-hidden shadow-2xl border-white/40 dark:border-white/5">
-                <div class="relative z-10">
-                    <h2
-                        class="text-4xl md:text-6xl font-bold font-display text-gray-900 dark:text-white mb-4 leading-tight">
-                        Ready to fund your global <br class="hidden md:block" /> future?</h2>
-                    <div class="mt-12 max-w-lg mx-auto flex flex-col sm:flex-row gap-3">
-                        <input type="email" placeholder="Enter your email"
-                            class="flex-1 bg-white dark:bg-zinc-800/50 border-none rounded-full px-8 py-5 text-sm focus:ring-2 focus:ring-primary shadow-inner outline-none dark:text-white">
-                        <a href="apply-loan.html"
-                            class="bg-[#111] dark:bg-white dark:text-black text-white px-10 py-5 rounded-full font-bold uppercase tracking-[0.2em] text-[10px] hover:scale-105 transition-all shadow-xl active:scale-95 flex items-center justify-center">Get
-                            Started</a>
+        <!-- EMI Calculator Section -->
+        <section class="py-24 bg-transparent">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                    <div>
+                        <h2 class="text-4xl md:text-5xl font-bold font-display text-gray-900 dark:text-white mb-6">Calculate Your EMI</h2>
+                        <p class="text-lg text-gray-600 dark:text-gray-400 mb-10">Plan your education financing with our instant EMI calculator. Get a detailed breakdown of your monthly payments.</p>
+                        
+                        <div class="space-y-6">
+                            <div class="flex items-start gap-4">
+                                <div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+                                    <span class="material-symbols-outlined text-sm">check</span>
+                                </div>
+                                <p class="text-gray-700 dark:text-gray-300">Compare monthly payments across different interest rates</p>
+                            </div>
+                            <div class="flex items-start gap-4">
+                                <div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+                                    <span class="material-symbols-outlined text-sm">check</span>
+                                </div>
+                                <p class="text-gray-700 dark:text-gray-300">Understand total interest payable over the loan tenure</p>
+                            </div>
+                            <div class="flex items-start gap-4">
+                                <div class="w-8 h-8 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
+                                    <span class="material-symbols-outlined text-sm">check</span>
+                                </div>
+                                <p class="text-gray-700 dark:text-gray-300">Adjust tenure to find an EMI that fits your budget</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-12">
+                            <a href="emi.html" class="inline-flex items-center gap-2 text-primary font-bold hover:gap-4 transition-all">
+                                Try Calculator Now <span class="material-symbols-outlined">arrow_forward</span>
+                            </a>
+                        </div>
                     </div>
-                    <div
-                        class="mt-8 flex flex-wrap justify-center items-center gap-6 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400">
-                        <span class="flex items-center gap-2"><span
-                                class="material-symbols-outlined text-[16px] text-green-500">verified_user</span>
-                            Verified by RBI</span>
-                        <span class="flex items-center gap-2"><span
-                                class="material-symbols-outlined text-[16px] text-primary">lock</span> Secure</span>
+                    
+                    <div class="bg-white dark:bg-slate-800 p-8 rounded-[3rem] shadow-2xl border border-gray-100 dark:border-slate-700">
+                        <!-- Preview of Calculator UI -->
+                        <div class="space-y-8">
+                            <div>
+                                <div class="flex justify-between mb-4">
+                                    <label class="font-bold dark:text-white">Loan Amount</label>
+                                    <span class="text-primary font-bold">₹ 20,00,000</span>
+                                </div>
+                                <div class="h-2 w-full bg-gray-100 rounded-full">
+                                    <div class="h-full bg-primary w-2/3 rounded-full relative">
+                                        <div class="w-4 h-4 bg-white border-2 border-primary rounded-full absolute right-0 top-1/2 -translate-y-1/2"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex justify-between mb-4">
+                                    <label class="font-bold dark:text-white">Interest Rate</label>
+                                    <span class="text-primary font-bold">9.5%</span>
+                                </div>
+                                <div class="h-2 w-full bg-gray-100 rounded-full">
+                                    <div class="h-full bg-primary w-1/3 rounded-full relative">
+                                        <div class="w-4 h-4 bg-white border-2 border-primary rounded-full absolute right-0 top-1/2 -translate-y-1/2"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="pt-8 border-t border-gray-100 dark:border-slate-700 text-center">
+                                <div class="text-sm text-gray-500 uppercase font-bold tracking-widest mb-2">Monthly EMI</div>
+                                <div class="text-5xl font-black text-gray-900 dark:text-white">₹ 42,004</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
+
+        <!-- Our Lending Partners -->
+        <section class="py-24 bg-transparent">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="text-center mb-16">
+                    <h2 class="text-4xl md:text-5xl font-bold font-display text-gray-900 dark:text-white">Our Lending Partners</h2>
+                    <p class="text-gray-500 mt-4">Compare interest rates, processing times & fees from India's top lenders</p>
+                </div>
+
+                <div class="overflow-x-auto rounded-3xl border border-gray-100 dark:border-slate-800 shadow-xl">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50 dark:bg-slate-800">
+                            <tr>
+                                <th class="p-6 font-bold dark:text-white">Lender</th>
+                                <th class="p-6 font-bold dark:text-white">Interest Rate</th>
+                                <th class="p-6 font-bold dark:text-white">Processing Time</th>
+                                <th class="p-6 font-bold dark:text-white">Processing Fee</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100 dark:divide-slate-800">
+                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                <td class="p-6">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 bg-blue-100 rounded flex items-center justify-center font-bold text-blue-800">S</div>
+                                        <div>
+                                            <div class="font-bold dark:text-white">SBI</div>
+                                            <div class="text-[10px] text-green-600 font-bold uppercase tracking-tight">Lowest Rate</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="p-6 dark:text-gray-300">8.50% - 10.15%</td>
+                                <td class="p-6 dark:text-gray-300">7-15 days</td>
+                                <td class="p-6 dark:text-gray-300">₹10,000</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                <td class="p-6">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 bg-red-100 rounded flex items-center justify-center font-bold text-red-800">H</div>
+                                        <div>
+                                            <div class="font-bold dark:text-white">HDFC Credila</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="p-6 dark:text-gray-300">9.00% - 11.50%</td>
+                                <td class="p-6 dark:text-gray-300">5-10 days</td>
+                                <td class="p-6 dark:text-gray-300">1% of loan</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                <td class="p-6">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 bg-orange-100 rounded flex items-center justify-center font-bold text-orange-800">I</div>
+                                        <div>
+                                            <div class="font-bold dark:text-white">ICICI Bank</div>
+                                            <div class="text-[10px] text-amber-600 font-bold uppercase tracking-tight">Fastest</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="p-6 dark:text-gray-300">9.50% - 12.00%</td>
+                                <td class="p-6 dark:text-gray-300">5-7 days</td>
+                                <td class="p-6 dark:text-gray-300">₹12,500</td>
+                            </tr>
+                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                <td class="p-6">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 bg-indigo-100 rounded flex items-center justify-center font-bold text-indigo-800">P</div>
+                                        <div>
+                                            <div class="font-bold dark:text-white">Prodigy Finance</div>
+                                            <div class="text-[10px] text-indigo-600 font-bold uppercase tracking-tight">No Collateral</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="p-6 dark:text-gray-300">7.50% - 12.50%</td>
+                                <td class="p-6 dark:text-gray-300">10-14 days</td>
+                                <td class="p-6 dark:text-gray-300">$0</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonials -->
+        <section class="py-24 bg-transparent">
+            <div class="max-w-7xl mx-auto px-6">
+                <div class="text-center mb-16">
+                    <span class="text-primary font-bold text-sm tracking-widest uppercase mb-4 block">Testimonials</span>
+                    <h2 class="text-4xl md:text-5xl font-bold font-display text-gray-900 dark:text-white">Loved by 10,000+ Students</h2>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- Testimonial 1 -->
+                    <div class="p-8 rounded-[2.5rem] bg-white dark:bg-slate-800 shadow-sm hover:shadow-xl transition-all border border-gray-100 dark:border-slate-700">
+                        <div class="flex gap-1 text-amber-500 mb-6">
+                            <span class="material-symbols-outlined fill-1">star</span>
+                            <span class="material-symbols-outlined fill-1">star</span>
+                            <span class="material-symbols-outlined fill-1">star</span>
+                            <span class="material-symbols-outlined fill-1">star</span>
+                            <span class="material-symbols-outlined fill-1">star</span>
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-300 mb-8 leading-relaxed italic">"Vidhya Loans helped me secure a ₹45L education loan at 8.5% interest. The process was seamless and I got my sanction letter in just 3 days!"</p>
+                        <div class="flex items-center gap-4">
+                            <img src="https://i.pravatar.cc/100?u=priya" class="w-12 h-12 rounded-full ring-2 ring-primary/20" alt="Student">
+                            <div>
+                                <div class="font-bold dark:text-white">Priya Sharma</div>
+                                <div class="text-xs text-gray-500">Stanford University, USA</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Testimonial 2 -->
+                    <div class="p-8 rounded-[2.5rem] bg-white dark:bg-slate-800 shadow-sm hover:shadow-xl transition-all border border-gray-100 dark:border-slate-700">
+                        <div class="flex gap-1 text-amber-500 mb-6">
+                            <span class="material-symbols-outlined fill-1">star</span>
+                            <span class="material-symbols-outlined fill-1">star</span>
+                            <span class="material-symbols-outlined fill-1">star</span>
+                            <span class="material-symbols-outlined fill-1">star</span>
+                            <span class="material-symbols-outlined fill-1">star</span>
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-300 mb-8 leading-relaxed italic">"I compared 12 lenders on the platform and saved ₹2.3L in total interest. The EMI calculator and expert counseling were invaluable."</p>
+                        <div class="flex items-center gap-4">
+                            <img src="https://i.pravatar.cc/100?u=rahul" class="w-12 h-12 rounded-full ring-2 ring-primary/20" alt="Student">
+                            <div>
+                                <div class="font-bold dark:text-white">Rahul Menon</div>
+                                <div class="text-xs text-gray-500">University of Toronto, Canada</div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Testimonial 3 -->
+                    <div class="p-8 rounded-[2.5rem] bg-white dark:bg-slate-800 shadow-sm hover:shadow-xl transition-all border border-gray-100 dark:border-slate-700">
+                        <div class="flex gap-1 text-amber-500 mb-6">
+                            <span class="material-symbols-outlined fill-1">star</span>
+                            <span class="material-symbols-outlined fill-1">star</span>
+                            <span class="material-symbols-outlined fill-1">star</span>
+                            <span class="material-symbols-outlined fill-1">star</span>
+                            <span class="material-symbols-outlined fill-1">star</span>
+                        </div>
+                        <p class="text-gray-600 dark:text-gray-300 mb-8 leading-relaxed italic">"As a first-generation student going abroad, I was overwhelmed. The team guided me through every step — from choosing the right loan to disbursement."</p>
+                        <div class="flex items-center gap-4">
+                            <img src="https://i.pravatar.cc/100?u=ananya" class="w-12 h-12 rounded-full ring-2 ring-primary/20" alt="Student">
+                            <div>
+                                <div class="font-bold dark:text-white">Ananya Reddy</div>
+                                <div class="text-xs text-gray-500">Imperial College London, UK</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final CTA -->
+        <section class="py-24 bg-transparent">
+            <div class="max-w-5xl mx-auto px-6">
+                <div class="bg-primary rounded-[3rem] p-12 md:p-20 text-center text-white relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                    <div class="absolute bottom-0 left-0 w-64 h-64 bg-black/10 rounded-full blur-3xl -ml-32 -mb-32"></div>
+                    
+                    <h2 class="text-4xl md:text-6xl font-bold font-display mb-8">Ready to Fund Your Education?</h2>
+                    <p class="text-xl text-white/80 mb-12 max-w-2xl mx-auto">Join 10,000+ students who found their perfect education loan. Start your journey in under 5 minutes.</p>
+                    
+                    <div class="flex flex-col sm:flex-row gap-6 justify-center">
+                        <a href="apply-loan.html" class="px-10 py-5 bg-white text-primary font-bold rounded-2xl shadow-xl hover:-translate-y-1 transition-all">Start Application</a>
+                        <a href="emi.html" class="px-10 py-5 bg-primary/20 text-white border border-white/30 font-bold rounded-2xl hover:bg-white/10 transition-all">Try EMI Calculator</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Reference to the UI inspiration -->
+        <div class="text-center py-12 text-gray-400 text-xs border-t border-gray-100 dark:border-slate-800">
+            Design inspired by <a href="https://vidhya-path-aid.lovable.app/" class="underline hover:text-primary">Vidhya Path Aid</a>
+        </div>
     </main>
 
     <!-- Footer Component Placeholder -->
@@ -770,6 +809,166 @@
     <script src="assets/js/blog-api.js"></script>
     <script src="assets/js/dashboard.js"></script>
     <script src="assets/js/auth.js"></script>
+
+    <!-- Floating Referral Icon (Left Side) -->
+    <style>
+        @keyframes referral-float {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-6px);
+            }
+        }
+
+        @keyframes referral-pulse-ring {
+            0% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+
+            100% {
+                transform: scale(1.8);
+                opacity: 0;
+            }
+        }
+
+        @keyframes referral-shine {
+            0% {
+                left: -100%;
+            }
+
+            50%,
+            100% {
+                left: 100%;
+            }
+        }
+
+        .referral-float-icon {
+            position: fixed;
+            left: 20px;
+            bottom: 100px;
+            z-index: 9998;
+            animation: referral-float 3s ease-in-out infinite;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .referral-float-icon:hover {
+            transform: scale(1.1) !important;
+        }
+
+        .referral-float-icon:hover .referral-icon-label {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+        }
+
+        .referral-icon-btn {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #6605c7 0%, #a855f7 50%, #e0c389 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 20px rgba(102, 5, 199, 0.35), 0 0 0 0 rgba(102, 5, 199, 0.3);
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .referral-icon-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            animation: referral-shine 3s ease-in-out infinite;
+        }
+
+        .referral-icon-btn::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            border: 2px solid rgba(102, 5, 199, 0.4);
+            animation: referral-pulse-ring 2s ease-out infinite;
+        }
+
+        .referral-icon-label {
+            position: absolute;
+            left: 64px;
+            top: 50%;
+            transform: translateX(-8px) translateY(-50%);
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            letter-spacing: 0.03em;
+        }
+
+        .referral-icon-label::before {
+            content: '';
+            position: absolute;
+            left: -5px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 5px solid transparent;
+            border-right-color: rgba(0, 0, 0, 0.85);
+        }
+
+        .referral-badge-count {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #e0c389;
+            color: #1a0f2e;
+            font-size: 10px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid white;
+            z-index: 1;
+        }
+    </style>
+
+    <div class="referral-float-icon" id="referralFloatIcon" onclick="window.location.href='referral.html'">
+        <div class="referral-icon-btn">
+            <span class="material-symbols-outlined text-white text-2xl"
+                style="position:relative;z-index:1;">redeem</span>
+            <div class="referral-badge-count" title="Earn rewards!">🎁</div>
+        </div>
+        <div class="referral-icon-label">Refer & Earn Rewards</div>
+    </div>
+
+    <script>
+        // Only show referral icon after a brief delay for smooth appearance
+        (function () {
+            const icon = document.getElementById('referralFloatIcon');
+            if (icon) {
+                icon.style.opacity = '0';
+                icon.style.transition = 'opacity 0.5s ease';
+                setTimeout(() => { icon.style.opacity = '1'; }, 1500);
+            }
+        })();
+    </script>
 </body>
 
 </html>

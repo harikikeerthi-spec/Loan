@@ -58,9 +58,14 @@ async function initializeHub(topic, postId) {
 
 async function loadHubData(topic) {
     try {
-        const token = localStorage.getItem(AUTH_TOKEN_KEY);
-        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
-        const response = await fetch(`http://localhost:3000/community/explore/hub/${topic}`, { headers });
+        const response = await authFetch(`${API_BASE_URL}/explore/hub/${topic}`);
+
+        if (response.status === 401) {
+            showToast('Session expired. Please login again.', 'error');
+            setTimeout(() => window.location.href = 'login.html', 2000);
+            return;
+        }
+
         const result = await response.json();
         if (result.success) {
             updateHeader(result.data.hub);
@@ -70,10 +75,14 @@ async function loadHubData(topic) {
             renderFeed(result.data.forumPosts);
             const adviceEl = document.getElementById('mentorAdvice');
             if (adviceEl && result.data.hub.advice) adviceEl.textContent = result.data.hub.advice;
+        } else {
+            document.getElementById('postsContainer').innerHTML = `
+            <div class="glass-panel p-8 text-center text-red-500">Failed to load content: ${result.message || 'Unknown error'}</div>`;
         }
     } catch (error) {
+        console.error('Error loading hub:', error);
         document.getElementById('postsContainer').innerHTML = `
-            <div class="glass-panel p-8 text-center text-red-500">Failed to load content.</div>`;
+            <div class="glass-panel p-8 text-center text-red-500">Failed to load content. Please refresh.</div>`;
     }
 }
 
@@ -147,8 +156,9 @@ function createPostHTML(post) {
                             ` : ''}
                         </div>
                     </div>
-                    <h3 class="font-display font-bold text-lg text-gray-900 dark:text-gray-100 mb-2 leading-tight hover:text-brand-600 dark:hover:text-brand-400 transition-colors">${post.title || 'Discussion'}</h3>
-                    <p class="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-4 whitespace-pre-wrap line-clamp-3">${post.content}</p>
+                    <h3 class="font-display font-bold text-lg text-gray-900 dark:text-gray-100 mb-2 leading-tight hover:text-brand-600 dark:hover:text-brand-400 transition-colors break-words">${post.title || 'Discussion'}</h3>
+
+                    ${post.tags && post.tags.length > 0 ? `<div class="flex flex-wrap gap-2 mb-3">${post.tags.slice(0, 5).map(t => `<span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300">#${t}</span>`).join('')}</div>` : ''}
 
                     <div class="flex items-center gap-6 border-t border-gray-100 dark:border-white/5 pt-4">
                         <button data-action="like-post" data-id="${post.id}" class="flex items-center gap-2 text-xs font-bold ${post.liked ? 'text-pink-500' : 'text-gray-500'} hover:text-pink-500 transition-colors group/btn z-10 relative">

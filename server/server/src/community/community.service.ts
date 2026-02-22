@@ -1014,6 +1014,7 @@ export class CommunityService {
             data: {
                 title: data.title,
                 content: data.content,
+                excerpt: data.excerpt || null,
                 category: data.category,
                 tags: data.tags || [],
                 authorId: userId,
@@ -1435,6 +1436,73 @@ export class CommunityService {
             message: 'Profile updated successfully',
             data: mentor,
         };
+    }
+
+    async getAllForumPostsAdmin(filters: any) {
+        const { category, limit, offset, sort } = filters;
+        const where: any = {};
+
+        if (category) {
+            where.category = { contains: category, mode: 'insensitive' };
+        }
+
+        const orderBy: any = sort === 'popular'
+            ? [{ isPinned: 'desc' }, { likes: 'desc' }]
+            : [{ isPinned: 'desc' }, { createdAt: 'desc' }];
+
+        const [posts, total] = await Promise.all([
+            this.prisma.forumPost.findMany({
+                where,
+                include: {
+                    author: {
+                        select: {
+                            firstName: true,
+                            lastName: true,
+                            role: true,
+                            email: true,
+                        }
+                    },
+                    _count: {
+                        select: { comments: true }
+                    }
+                },
+                take: limit,
+                skip: offset,
+                orderBy,
+            }),
+            this.prisma.forumPost.count({ where }),
+        ]);
+
+        return {
+            success: true,
+            data: posts.map(post => ({
+                ...post,
+                commentCount: post._count.comments,
+            })),
+            pagination: {
+                total,
+                limit,
+                offset,
+                hasMore: offset + posts.length < total,
+            },
+        };
+    }
+
+    async togglePinForumPost(id: string, isPinned: boolean) {
+        try {
+            const post = await this.prisma.forumPost.update({
+                where: { id },
+                data: { isPinned }
+            });
+
+            return {
+                success: true,
+                message: isPinned ? 'Post pinned successfully' : 'Post unpinned successfully',
+                data: post
+            };
+        } catch (error) {
+            throw new NotFoundException('Post not found');
+        }
     }
 
     // ==================== AI DUPLICATE QUESTION DETECTION ====================

@@ -7,6 +7,7 @@ const tagsPool = ['urgent', 'help needed', 'success story', 'advice', 'review', 
 const samplePosts = [
     {
         title: "Best banks for education loans without collateral?",
+        excerpt: "Which banks lend large education loans without collateral — quick comparison.",
         content: "I'm looking for banks that offer education loans up to 40 Lakhs without collateral for MS in US. Any suggestions?",
         category: "loan",
         tags: ["finance", "collateral-free"],
@@ -15,6 +16,7 @@ const samplePosts = [
     },
     {
         title: "US F1 Visa interview experience at Mumbai Consulate",
+        excerpt: "Real interview questions and tips from a recent F1 interview at Mumbai.",
         content: "Just had my visa interview today. Here are the questions asked: 1. Why this university? 2. Who is sponsoring you? ... Approved!",
         category: "visa",
         tags: ["visa-interview", "usa"],
@@ -23,6 +25,7 @@ const samplePosts = [
     },
     {
         title: "Profile Evaluation for Fall 2026 - CS Major",
+        excerpt: "Quick profile summary and target university fit for MS in CS.",
         content: "GRE: 325, IELTS: 8.0, GPA: 8.5/10. Work exp: 2 years. Target universities: NEU, ASU, UTD. Are these safe or ambitious?",
         category: "universities",
         tags: ["profile-evaluation", "ms-in-cs"],
@@ -31,6 +34,7 @@ const samplePosts = [
     },
     {
         title: "Accommodation near Northeastern University Boston?",
+        excerpt: "Looking for shared housing options near campus within a budget.",
         content: "Looking for shared accommodation near NEU. Budget around $800-1000 per month. Any leads?",
         category: "accommodation",
         tags: ["boston", "housing"],
@@ -39,6 +43,7 @@ const samplePosts = [
     },
     {
         title: "How to prepare for GRE Verbal section?",
+        excerpt: "Best study resources and strategies to improve GRE Verbal quickly.",
         content: "Struggling with vocabulary. Which word lists are the best? Magoosh vs Manhattan?",
         category: "gre",
         tags: ["exam-prep", "verbal"],
@@ -47,6 +52,7 @@ const samplePosts = [
     },
     {
         title: "Scholarships for Indian Students in UK",
+        excerpt: "Overview of scholarships and application tips for Indian applicants.",
         content: "Compiling a list of scholarships available for Indian students applying to UK universities. Please add if you know any.",
         category: "scholarships",
         tags: ["funding", "uk"],
@@ -55,6 +61,7 @@ const samplePosts = [
     },
     {
         title: "Part-time job opportunities in Canada for students",
+        excerpt: "Common part-time roles and how to find them in Toronto.",
         content: "What are the common PT jobs available? How easy is it to find one in Toronto?",
         category: "jobs",
         tags: ["canada", "work"],
@@ -63,6 +70,7 @@ const samplePosts = [
     },
     {
         title: "Loan messed up my credit score? Help!",
+        excerpt: "Will a past missed payment affect future education loan approvals?",
         content: "I took a small loan previously and missed one payment. Will this affect my education loan approval?",
         category: "loan",
         tags: ["credit-score", "urgent"],
@@ -71,6 +79,7 @@ const samplePosts = [
     },
     {
         title: "SOP Review for Data Science programs",
+        excerpt: "Request for SOP review — willing to share draft for feedback.",
         content: "Can someone review my Statement of Purpose? I can DM the draft.",
         category: "general",
         tags: ["sop", "review"],
@@ -79,6 +88,7 @@ const samplePosts = [
     },
     {
         title: "Is it worth doing MS in 2026 given the job market?",
+        excerpt: "Discussion on ROI and timing for pursuing MS in the current market.",
         content: "With the current recession fears, is it a good idea to invest in an MS right now?",
         category: "general",
         tags: ["career-advice", "discussion"],

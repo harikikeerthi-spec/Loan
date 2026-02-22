@@ -195,6 +195,56 @@
             </div>
         </div>
 
+        <!-- Trending Tags -->
+        <div class="flex items-center gap-4 mb-8 overflow-hidden group">
+            <div
+                class="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-2xl border border-primary/20">
+                <span class="material-symbols-outlined text-primary text-sm animate-pulse">local_fire_department</span>
+                <span class="text-[10px] font-bold uppercase tracking-widest text-primary">Trending</span>
+            </div>
+            <div class="flex flex-wrap gap-3 overflow-x-auto no-scrollbar pb-1 flex-1">
+                <a href="engage.html?topic=education" class="engage-tag">#Education</a>
+                <a href="engage.html?topic=universities" class="engage-tag">#StudyAbroad</a>
+                <a href="engage.html?topic=loan" class="engage-tag">#StudentLoans</a>
+                <a href="engage.html?topic=visa" class="engage-tag">#VisaUpdates</a>
+                <a href="engage.html?topic=scholarships" class="engage-tag">#Scholarships</a>
+                <a href="engage.html?topic=gre" class="engage-tag">#GREPrep</a>
+                <a href="engage.html?topic=general" class="engage-tag">#Masters2026</a>
+                <a href="engage.html?topic=sop" class="engage-tag">#Admissions</a>
+                <a href="engage.html?topic=banks" class="engage-tag">#LoanInterest</a>
+            </div>
+        </div>
+
+        <style>
+            .engage-tag {
+                padding: 6px 16px;
+                border-radius: 99px;
+                background: white;
+                border: 1px solid rgba(0, 0, 0, 0.05);
+                font-size: 11px;
+                font-weight: 700;
+                color: #4b5563;
+                transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+                white-space: nowrap;
+            }
+
+            .dark .engage-tag {
+                background: rgba(255, 255, 255, 0.05);
+                border-color: rgba(255, 255, 255, 0.05);
+                color: #d1d5db;
+                box-shadow: none;
+            }
+
+            .engage-tag:hover {
+                transform: translateY(-2px);
+                background: #6605c7;
+                color: white !important;
+                border-color: #6605c7;
+                box-shadow: 0 8px 15px rgba(102, 5, 199, 0.2);
+            }
+        </style>
+
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
             <!-- Left Sidebar (Sticky) -->
@@ -240,6 +290,37 @@
                         <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed" id="mentorAdvice">
                             Connect with alumni from top universities worldwide for insider perspectives.
                         </p>
+                    </div>
+                </div>
+
+                <!-- AI Moderator Widget -->
+                <div class="glass-panel p-6 rounded-3xl relative overflow-hidden group border-brand-500/30">
+                    <div class="absolute inset-0 bg-gradient-to-br from-brand-500/5 to-transparent"></div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div
+                                class="w-10 h-10 rounded-xl bg-brand-500/10 flex items-center justify-center text-brand-500">
+                                <span class="material-symbols-rounded animate-spin-slow">psychology</span>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-gray-900 dark:text-white text-sm">AI Moderator</h3>
+                                <p class="text-[10px] text-green-500 font-bold uppercase tracking-wider">Active Curation
+                                </p>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                            Every discussion is cross-checked by our AI to ensure it stays relevant to <b>Education &
+                                Loans</b>.
+                        </p>
+                        <div class="mt-4 pt-4 border-t border-gray-100 dark:border-white/5">
+                            <div class="flex justify-between items-center text-[10px] font-bold text-gray-500">
+                                <span>Topic Relevance</span>
+                                <span class="text-brand-500">99.8%</span>
+                            </div>
+                            <div class="w-full h-1 bg-gray-100 dark:bg-white/5 rounded-full mt-1.5 overflow-hidden">
+                                <div class="h-full bg-brand-500 rounded-full" style="width: 99.8%"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

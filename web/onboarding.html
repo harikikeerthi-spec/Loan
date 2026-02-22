@@ -1,248 +1,1747 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Let's Get Started | LoanHero</title>
-    <link rel="stylesheet" href="assets/css/main.css">
-    <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap">
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Get Started - Vidhya Path Aid</title>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com" rel="preconnect" />
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap"
+        rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
         rel="stylesheet" />
-    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <link href="assets/css/main.css" rel="stylesheet" />
+    <link href="assets/css/design-tokens.css" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6605c7",
+                        "primary-dark": "#5204a8",
+                        "background-light": "#f7f5f8",
+                        "background-dark": "#190f23",
+                        "gold-accent": "#e0c389",
+                    }
+                }
+            }
+        };
+    </script>
     <style>
-        body {
-            background-attachment: fixed;
+        * {
+            font-family: 'Inter', sans-serif;
+            box-sizing: border-box;
         }
 
-        .onboarding-container {
+        /*  PROGRESS  */
+        .progress-track {
+            position: fixed;
+            top: 80px;
+            left: 0;
+            right: 0;
+            z-index: 49;
+            height: 3px;
+            background: #f0e9fc;
+        }
+
+        .progress-fill {
+            height: 3px;
+            background: linear-gradient(90deg, #7c3aed, #6605c7);
+            transition: width 0.55s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+            animation: shimmer 1.8s infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        /*  PAGE  */
+        body {
+            background: #fff;
+            margin: 0;
             min-height: 100vh;
+        }
+
+        .page-wrap {
+            min-height: 100vh;
+            padding-top: 100px;
+            padding-bottom: 110px;
+        }
+
+        /*  CHAT COLUMN  */
+        .chat-col {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 28px 20px 16px;
+        }
+
+        /*  QUESTION  */
+        .q-row {
+            margin-bottom: 6px;
+        }
+
+        .q-text {
+            font-size: 15.5px;
+            font-weight: 500;
+            color: #1a1a2e;
+            line-height: 1.55;
+            padding: 6px 0 2px;
+        }
+
+        /*  ANSWER BUBBLE  */
+        .ans-row {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            margin-bottom: 18px;
+        }
+
+        .ans-bubble {
+            background: #ede9fe;
+            color: #2d1a4e;
+            font-size: 14.5px;
+            font-weight: 700;
+            padding: 10px 18px;
+            border-radius: 18px 18px 4px 18px;
+            max-width: 72%;
+            animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0.82);
+                opacity: 0;
+            }
+
+            70% {
+                transform: scale(1.04);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .ans-edit {
+            font-size: 11px;
+            color: #c4b5d4;
+            cursor: pointer;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .ans-edit:hover {
+            color: #6605c7;
+        }
+
+        /*  INTERACTION  */
+        .ia-wrap {
+            margin-bottom: 24px;
+        }
+
+        /* OPTION CARDS */
+        .opts-grid {
+            display: grid;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .opts-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .opts-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        @media (max-width: 480px) {
+            .opts-3 {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .opt-card {
+            padding: 13px 16px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 12px;
+            background: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1a1a2e;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.16s;
+        }
+
+        .opt-card:hover {
+            border-color: #6605c7;
+            background: #f9f5ff;
+            transform: translateY(-1px);
+        }
+
+        .opt-card.selected {
+            border-color: #6605c7;
+            background: #ede9fe;
+            color: #5b21b6;
+            font-weight: 700;
+        }
+
+        /* MONTH CHIPS */
+        .months-wrap {
+            margin-top: 10px;
+        }
+
+        .year-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #bbb;
+            letter-spacing: 1.4px;
+            margin-bottom: 8px;
+        }
+
+        .chips-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .month-chip {
+            padding: 8px 18px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 9999px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #444;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .month-chip:hover {
+            border-color: #6605c7;
+            background: #f9f5ff;
+        }
+
+        .month-chip.selected {
+            background: linear-gradient(135deg, #7c3aed, #6605c7);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 4px 14px rgba(102, 5, 199, 0.25);
+        }
+
+        /* TEXT / NUMBER INPUT */
+        .input-group {
+            margin-top: 10px;
+            position: relative;
+        }
+
+        .chat-input {
+            width: 100%;
+            padding: 13px 16px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #1a1a2e;
+            outline: none;
+            transition: border 0.18s;
+            background: #fff;
+            display: block;
+        }
+
+        .chat-input:focus {
+            border-color: #6605c7;
+            box-shadow: 0 0 0 3px rgba(102, 5, 199, 0.08);
+        }
+
+        .chat-input.with-prefix {
+            padding-left: 28px;
+        }
+
+        .input-prefix {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 15px;
+            color: #666;
+            font-weight: 600;
+            pointer-events: none;
+        }
+
+        .chat-submit {
+            margin-top: 10px;
+            padding: 11px 28px;
+            background: #6605c7;
+            color: #fff;
+            border: none;
+            border-radius: 9999px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+
+        .chat-submit:hover {
+            background: #5204a8;
+            transform: translateY(-1px);
+        }
+
+        .chat-submit:active {
+            transform: scale(0.97);
+        }
+
+        /* SEARCH BOX */
+        .search-wrap {
+            margin-top: 10px;
+            position: relative;
+        }
+
+        .search-ico {
+            position: absolute;
+            left: 13px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #bbb;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 13px 16px 13px 40px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 15px;
+            color: #1a1a2e;
+            outline: none;
+            transition: border 0.18s;
+            background: #fff;
+            display: block;
+        }
+
+        .search-input:focus {
+            border-color: #6605c7;
+            box-shadow: 0 0 0 3px rgba(102, 5, 199, 0.08);
+        }
+
+        .search-results {
+            margin-top: 5px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 12px;
+            overflow: hidden;
+            background: #fff;
+            display: none;
+        }
+
+        .search-results.open {
+            display: block;
+        }
+
+        .search-item {
+            padding: 12px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            border-bottom: 1px solid #f8f8f8;
+            color: #1a1a2e;
+            transition: background 0.12s;
+        }
+
+        .search-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-item:hover {
+            background: #f9f5ff;
+            color: #6605c7;
+        }
+
+        /*  STICKY CTA  */
+        .sticky-cta {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 14px 20px;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(12px);
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: center;
+            z-index: 40;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .sticky-cta.show {
+            transform: translateY(0);
+        }
+
+        .resume-btn {
+            width: 100%;
+            max-width: 420px;
+            padding: 15px;
+            background: linear-gradient(135deg, #7c3aed, #6605c7);
+            color: #fff;
+            border: none;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(102, 5, 199, 0.3);
+            transition: opacity 0.15s, transform 0.15s;
+        }
+
+        .resume-btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        /* FADE IN */
+        .fade-in {
+            animation: fadeIn 0.35s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* TYPING DOTS */
+        .typing-dots {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+            padding: 4px 0;
+        }
+
+        .typing-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #a78bfa;
+            animation: bop 1.2s infinite;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes bop {
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0.8);
+                opacity: 0.45
+            }
+
+            40% {
+                transform: scale(1.2);
+                opacity: 1
+            }
+        }
+
+        /* ── AI CHAT BUBBLE (left-aligned bot message) ── */
+        .ai-bubble-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin: 8px 0 18px;
+        }
+
+        .ai-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: #f5f3ff;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 20px;
-            position: relative;
-            z-index: 10;
+            overflow: hidden;
+            border: 1.5px solid #ede9fe;
         }
 
-        /* ... rest of styles ... */
+        .ai-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .ai-bubble {
+            background: #f9f5ff;
+            border: 1.5px solid #ede9fe;
+            border-radius: 4px 16px 16px 16px;
+            padding: 12px 16px;
+            max-width: 86%;
+            font-size: 14px;
+            color: #1a1a2e;
+            line-height: 1.5;
+            animation: fadeIn 0.3s ease forwards;
+        }
+
+        .ai-bubble strong {
+            color: #6605c7;
+        }
+
+        .ai-bubble .ai-stat {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #ede9fe;
+            color: #5b21b6;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-weight: 700;
+            font-size: 13px;
+            margin: 0 2px;
+        }
+
+        /* ── MASCOT FLOATING ── */
+        .mascot-wrap {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 20px;
+            position: relative;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .mascot-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 0 15px rgba(102, 5, 199, 0.3));
+            animation: pulse-glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulse-glow {
+            from {
+                filter: drop-shadow(0 0 15px rgba(102, 5, 199, 0.3));
+            }
+
+            to {
+                filter: drop-shadow(0 0 25px rgba(102, 5, 199, 0.6));
+            }
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(-2deg);
+            }
+
+            50% {
+                transform: translateY(-10px) rotate(2deg);
+            }
+        }
+
+        /* ── UNIVERSITY RESULT CARDS ── */
+        .univ-results-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .univ-card {
+            border: 1.5px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 16px 18px;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.18s;
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .univ-card:hover {
+            border-color: #6605c7;
+            box-shadow: 0 4px 20px rgba(102, 5, 199, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .univ-rank-badge {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #f5eeff;
+            color: #6605c7;
+            font-size: 12px;
+            font-weight: 800;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .univ-card-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .univ-card-name {
+            font-size: 14.5px;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 2px;
+            line-height: 1.3;
+        }
+
+        .univ-card-location {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 8px;
+        }
+
+        .univ-card-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .tag {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 9px;
+            border-radius: 9999px;
+            white-space: nowrap;
+        }
+
+        .tag-tuition {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .tag-accept {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .tag-rank {
+            background: #e0f2fe;
+            color: #075985;
+        }
+
+        .tag-loan {
+            background: #f3e8ff;
+            color: #6b21a8;
+        }
+
+        .match-col {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .match-ring {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 800;
+            position: relative;
+        }
+
+        .match-ring svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 52px;
+            height: 52px;
+            transform: rotate(-90deg);
+        }
+
+        .match-ring .ring-bg {
+            fill: none;
+            stroke: #f0e9fc;
+            stroke-width: 4;
+        }
+
+        .match-ring .ring-fill {
+            fill: none;
+            stroke-width: 4;
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s ease;
+        }
+
+        .match-ring .ring-text {
+            position: relative;
+            z-index: 1;
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        .match-high {
+            color: #16a34a;
+        }
+
+        .match-high .ring-fill {
+            stroke: #4ade80;
+        }
+
+        .match-mid {
+            color: #d97706;
+        }
+
+        .match-mid .ring-fill {
+            stroke: #fbbf24;
+        }
+
+        .match-low {
+            color: #9333ea;
+        }
+
+        .match-low .ring-fill {
+            stroke: #a78bfa;
+        }
+
+        .univ-apply-btn {
+            font-size: 11px;
+            font-weight: 700;
+            color: #6605c7;
+            background: #f5eeff;
+            border: none;
+            border-radius: 8px;
+            padding: 5px 10px;
+            cursor: pointer;
+            transition: background 0.14s;
+        }
+
+        .univ-apply-btn:hover {
+            background: #ede9fe;
+        }
+
+        /* ── AI LOADING WRAP ── */
+        .ai-loading-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: #f9f5ff;
+            border-radius: 12px;
+            border: 1.5px solid #ede9fe;
+            margin: 10px 0;
+            font-size: 13px;
+            color: #6605c7;
+            font-weight: 600;
+        }
+
+        /* ── SECTION DIVIDER ── */
+        .section-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: #bbb;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin: 20px 0 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #f0f0f0;
+        }
+
+        /* ── WELCOME HERO ── */
+        .welcome-hero {
+            text-align: center;
+            padding: 36px 20px 32px;
+            max-width: 720px;
+            margin: 0 auto 8px;
+            position: relative;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: linear-gradient(135deg, #ede9fe, #e0d9ff);
+            color: #6605c7;
+            font-size: 11.5px;
+            font-weight: 700;
+            padding: 5px 14px;
+            border-radius: 9999px;
+            letter-spacing: 0.4px;
+            margin-bottom: 16px;
+            border: 1px solid #d8b4fe;
+        }
+
+        .hero-badge-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #6605c7;
+            animation: pulse-dot 1.8s infinite;
+        }
+
+        @keyframes pulse-dot {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.4);
+                opacity: 0.6;
+            }
+        }
+
+        .hero-title {
+            font-size: clamp(24px, 5vw, 34px);
+            font-weight: 800;
+            color: #1a1a2e;
+            line-height: 1.22;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
+        }
+
+        .hero-gradient {
+            background: linear-gradient(135deg, #6605c7 0%, #a855f7 50%, #7c3aed 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-sub {
+            font-size: 14.5px;
+            color: #6b7280;
+            line-height: 1.6;
+            max-width: 480px;
+            margin: 0 auto 22px;
+        }
+
+        .trust-pills {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 26px;
+        }
+
+        .trust-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #fff;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 9999px;
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #444;
+            transition: all 0.2s;
+        }
+
+        .trust-pill:hover {
+            border-color: #6605c7;
+            color: #6605c7;
+            background: #faf5ff;
+        }
+
+        .trust-pill-icon {
+            font-size: 14px;
+        }
+
+        .stats-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0;
+            background: linear-gradient(135deg, #faf5ff, #f5f3ff);
+            border: 1.5px solid #ede9fe;
+            border-radius: 18px;
+            padding: 20px 24px;
+            max-width: 560px;
+            margin: 0 auto;
+            box-shadow: 0 4px 24px rgba(102, 5, 199, 0.07);
+        }
+
+        .stat-item {
+            flex: 1;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 22px;
+            font-weight: 800;
+            color: #6605c7;
+            letter-spacing: -0.5px;
+            line-height: 1;
+        }
+
+        .stat-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: #9ca3af;
+            margin-top: 4px;
+            letter-spacing: 0.3px;
+        }
+
+        .stat-divider {
+            width: 1px;
+            height: 36px;
+            background: #ede9fe;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 480px) {
+            .stats-row {
+                gap: 0;
+                padding: 16px 12px;
+            }
+
+            .stat-number {
+                font-size: 18px;
+            }
+        }
+
+        /* ── STEP LABEL STRIP ── */
+        .step-label-strip {
+            position: fixed;
+            top: 83px;
+            left: 0;
+            right: 0;
+            z-index: 48;
+            display: flex;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .step-label-inner {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #a78bfa;
+            letter-spacing: 0.8px;
+            padding: 2px 12px;
+            background: rgba(255, 255, 255, 0.92);
+        }
+
+        #stepLabelText {
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #stepLabelText.visible {
+            opacity: 1;
+        }
+
+        /* ── SOCIAL PROOF TOAST ── */
+        .sp-toast {
+            position: fixed;
+            bottom: 90px;
+            left: 20px;
+            z-index: 9000;
+            background: #fff;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            max-width: 280px;
+            min-width: 220px;
+            transform: translateX(-120%);
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .sp-toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        @media (max-width: 480px) {
+            .sp-toast {
+                left: 12px;
+                max-width: 230px;
+                bottom: 100px;
+            }
+        }
+
+        .sp-avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #7c3aed, #6605c7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sp-avatar-letter {
+            font-size: 16px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .sp-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .sp-name {
+            font-size: 12.5px;
+            font-weight: 800;
+            color: #1a1a2e;
+        }
+
+        .sp-msg {
+            font-size: 12px;
+            color: #6b7280;
+            line-height: 1.4;
+        }
+
+        .sp-msg strong {
+            color: #6605c7;
+        }
+
+        .sp-time {
+            font-size: 10px;
+            color: #c4b5d4;
+            margin-top: 2px;
+        }
+
+        .sp-check {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: #dcfce7;
+            color: #16a34a;
+            font-size: 12px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        /* ── COUNTRY IMAGE CARDS ── */
+        .country-img-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        @media (max-width: 540px) {
+            .country-img-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+            }
+        }
+
+        .country-img-card {
+            position: relative;
+            height: 120px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 2px solid transparent;
+            cursor: pointer;
+            background: var(--bg) center/cover no-repeat #1a1a2e;
+            transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 0 0 12px;
+        }
+
+        .country-img-card:hover {
+            transform: translateY(-3px) scale(1.02);
+            border-color: #7c3aed;
+            box-shadow: 0 8px 28px rgba(102, 5, 199, 0.28);
+        }
+
+        .country-img-card.selected {
+            border-color: #6605c7;
+            box-shadow: 0 0 0 3px rgba(102, 5, 199, 0.25);
+        }
+
+        .cic-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(15, 5, 30, 0.82) 0%, rgba(15, 5, 30, 0.18) 60%, transparent 100%);
+            transition: opacity 0.2s;
+        }
+
+        .country-img-card:hover .cic-overlay {
+            opacity: 0.9;
+        }
+
+        .cic-flag {
+            position: relative;
+            z-index: 1;
+            margin-bottom: 5px;
+        }
+
+        .cic-flag-img {
+            width: 52px;
+            height: auto;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+            display: block;
+        }
+
+        .cic-name {
+            position: relative;
+            z-index: 1;
+            font-size: 13px;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: 0.2px;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .cic-sub {
+            position: relative;
+            z-index: 1;
+            font-size: 9.5px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.72);
+            letter-spacing: 0.2px;
+            margin-top: 2px;
+        }
+
+        /* ── COUNTRY SEARCH PICKER ── */
+        .country-search-wrap {
+            margin-top: 12px;
+        }
+
+        .country-search-trigger {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 11px 18px;
+            border: 1.5px dashed #d8b4fe;
+            border-radius: 12px;
+            background: #fafaff;
+            color: #7c3aed;
+            font-size: 13.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.18s;
+            user-select: none;
+        }
+
+        .country-search-trigger:hover {
+            background: #f5eeff;
+            border-color: #a855f7;
+        }
+
+        .country-search-trigger.open {
+            border-style: solid;
+            border-color: #6605c7;
+            background: #f5eeff;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .cst-arrow {
+            margin-left: auto;
+            font-size: 18px;
+            transition: transform 0.25s;
+        }
+
+        .country-search-trigger.open .cst-arrow {
+            transform: rotate(180deg);
+        }
+
+        .country-search-box {
+            border: 1.5px solid #6605c7;
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .country-search-input {
+            width: 100%;
+            padding: 11px 16px;
+            border: none;
+            border-bottom: 1.5px solid #f0e9fc;
+            font-size: 14px;
+            color: #1a1a2e;
+            outline: none;
+            font-family: 'Inter', sans-serif;
+            background: #fcfaff;
+        }
+
+        .country-search-input::placeholder {
+            color: #c4b5d4;
+        }
+
+        .country-search-results {
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .country-search-results::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .country-search-results::-webkit-scrollbar-thumb {
+            background: #d8b4fe;
+            border-radius: 4px;
+        }
+
+        .csr-item {
+            padding: 9px 16px;
+            font-size: 13.5px;
+            font-weight: 500;
+            color: #1a1a2e;
+            cursor: pointer;
+            border-bottom: 1px solid #faf5ff;
+            transition: background 0.12s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .csr-flag-img {
+            width: 28px;
+            height: auto;
+            border-radius: 3px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+            flex-shrink: 0;
+        }
+
+        .csr-item:last-child {
+            border-bottom: none;
+        }
+
+        .csr-item:hover {
+            background: #f5eeff;
+            color: #6605c7;
+            font-weight: 700;
+        }
+
+        .csr-empty {
+            padding: 16px;
+            text-align: center;
+            color: #bbb;
+            font-size: 13px;
+        }
+
+        /* Legacy country card (fallback) */
+        .country-card {
+            padding: 12px 14px;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 12px;
+            background: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1a1a2e;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.16s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .country-card .flag {
+            font-size: 22px;
+            line-height: 1;
+        }
+
+        .country-card:hover {
+            border-color: #6605c7;
+            background: #f9f5ff;
+            transform: translateY(-2px);
+        }
+
+        .country-card.selected {
+            border-color: #6605c7;
+            background: #ede9fe;
+            color: #5b21b6;
+        }
+
+        /* ── GOAL GRID (IMAGE 1) ── */
+        .goal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto;
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .goal-card-large {
+            grid-row: span 2;
+            background: #fff;
+            border: 1.5px solid #f0f0f5;
+            border-radius: 20px;
+            padding: 32px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+        }
+
+        .goal-card-small {
+            background: #fafafa;
+            border: 1.5px solid #f0f0f5;
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .goal-card-large:hover,
+        .goal-card-small:hover {
+            border-color: #6605c7;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(102, 5, 199, 0.08);
+        }
+
+        .icon-box {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            font-size: 24px;
+        }
+
+        .icon-purple {
+            background: #f3e8ff;
+            color: #6605c7;
+        }
+
+        .icon-green {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .icon-yellow {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        /* ── TRANSITION SCREEN (IMAGE 2) ── */
+        .transition-screen {
+            text-align: center;
+            padding: 40px 20px;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .transition-title {
+            font-size: 48px;
+            font-weight: 800;
+            color: #6605c7;
+            margin-bottom: 24px;
+        }
+
+        .transition-box {
+            background: #f3f4f6;
+            border-radius: 16px;
+            padding: 20px 32px;
+            max-width: 600px;
+            margin: 0 auto 32px;
+            font-size: 16px;
+            color: #4b5563;
+            line-height: 1.6;
+        }
+
+        .transition-box strong {
+            color: #6605c7;
+        }
+
+        .begin-btn {
+            background: #6b21a8;
+            color: white;
+            padding: 14px 64px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            box-shadow: 0 4px 14px rgba(107, 33, 168, 0.3);
+        }
+
+        .begin-btn:hover {
+            background: #581c87;
+            transform: scale(1.02);
+        }
+
+        .blob-mascot {
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 20px;
+            position: relative;
+            animation: float 4s ease-in-out infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mascot-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 0 25px rgba(236, 72, 153, 0.4)) drop-shadow(0 0 50px rgba(168, 85, 247, 0.3));
+        }
+
+        .blob-mascot.img-loaded .mascot-body {
+            display: none;
+        }
+
+        .blob-mascot.img-failed .mascot-img {
+            display: none;
+        }
+
+        .blob-mascot.img-failed .mascot-body {
+            display: flex;
+        }
+
+        /* ── CSS FALLBACK ── */
+        .mascot-body {
+            width: 100px;
+            height: 100px;
+            display: none;
+            background: linear-gradient(135deg, #a855f7, #ec4899);
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 0 30px rgba(236, 72, 153, 0.4);
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .mascot-eye {
+            width: 14px;
+            height: 14px;
+            background: #fff;
+            border-radius: 50%;
+            position: relative;
+            animation: blink 4s infinite;
+        }
+
+        .mascot-eye::after {
+            content: '';
+            width: 50%;
+            height: 50%;
+            background: #1a1a2e;
+            border-radius: 50%;
+            position: absolute;
+            top: 25%;
+            left: 25%;
+        }
+
+        .mascot-mouth {
+            width: 16px;
+            height: 8px;
+            border-bottom: 2px solid #fff;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 25%;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0) rotate(-2deg);
+            }
+
+            50% {
+                transform: translateY(-15px) rotate(2deg);
+            }
+        }
+
+        @keyframes blink {
+
+            0%,
+            90%,
+            100% {
+                transform: scaleY(1);
+            }
+
+            95% {
+                transform: scaleY(0.1);
+            }
+        }
     </style>
 </head>
 
-<body
-    class="bg-background-light dark:bg-background-dark min-h-screen font-sans transition-colors duration-500 text-gray-900 dark:text-gray-100 relative">
+<body>
+    <!-- Navigation Component Placeholder -->
+    <div id="navbar-placeholder"></div>
 
-    <!-- Background Structure -->
-    <div class="fixed inset-0 z-0 bg-background-light dark:bg-background-dark pointer-events-none overflow-hidden">
-        <div class="absolute inset-0 bg-mesh-gradient opacity-90"></div>
-        <div class="absolute inset-0 opacity-30 mix-blend-overlay"
-            style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCSQJcRexkqlKu3kzwZCWIGdx9mSdhvK4Je6lxA9kVrWHQFg-ShCu6j3XLipgBh0waP45VYm3rBVD2Psy-FTMp2qLU946EXQwD2sIGZJLe5tw2ugWPYnnOTMWoTGM95X4u1epiDmYaEV_vVdH7tyv2ZlDuFjSMZlzWulHW3UyesMipUWi30MryHEiz-_Lje83ApXK-FpMUQdIEWe0M_ZFfiu3BcH1_opus8b5qOTiMh8tMBAX7ifzSLR_qpWnWtdB8obUzknDxLtfeP');">
-        </div>
+    <!-- Onboarding Progress Bar -->
+    <div class="progress-track">
+        <div class="progress-fill" id="progressBar" style="width:0%"></div>
     </div>
-    <button class="skip-btn" onclick="skipOnboarding()">Skip for now →</button>
-
-    <div class="onboarding-container">
-        <div class="onboarding-card">
-            <!-- Header -->
-            <div class="onboarding-header">
-                <h1>Welcome to LoanHero</h1>
-                <p>Let's find your perfect education loan in just a few steps</p>
-            </div>
-
-            <!-- Progress -->
-            <div class="progress-container">
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill"></div>
-                </div>
-                <div class="step-indicators">
-                    <div class="step-indicator">
-                        <div class="step-dot" data-step="1">1</div>
-                        <div class="step-label">Goal</div>
-                    </div>
-                    <div class="step-indicator">
-                        <div class="step-dot" data-step="2">2</div>
-                        <div class="step-label">Study Plan</div>
-                    </div>
-                    <div class="step-indicator">
-                        <div class="step-dot" data-step="3">3</div>
-                        <div class="step-label">Contact</div>
-                    </div>
-                    <div class="step-indicator">
-                        <div class="step-dot" data-step="4">4</div>
-                        <div class="step-label">Results</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Content -->
-            <div class="onboarding-content" id="onboardingContent">
-                <!-- Step 1: Goal Selection -->
-                <div class="step-content active" data-step="1">
-                    <h2 class="step-title">What brings you here today?</h2>
-                    <p class="step-subtitle">Tell us your goal so we can personalize your experience</p>
-
-                    <div class="options-grid">
-                        <div class="option-card" data-value="plan" onclick="selectOption(this)">
-                            <span class="option-icon">📚</span>
-                            <h3 class="option-title">Plan My Education</h3>
-                            <p class="option-desc">Get help planning your study abroad journey</p>
-                        </div>
-                        <div class="option-card" data-value="loan" onclick="selectOption(this)">
-                            <span class="option-icon">💰</span>
-                            <h3 class="option-title">Find Education Loans</h3>
-                            <p class="option-desc">Discover the best loan options for your studies</p>
-                        </div>
-                        <div class="option-card" data-value="evaluate" onclick="selectOption(this)">
-                            <span class="option-icon">🎓</span>
-                            <h3 class="option-title">Evaluate Universities</h3>
-                            <p class="option-desc">Compare and choose the right university</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 2: Study Details -->
-                <div class="step-content" data-step="2">
-                    <h2 class="step-title">Tell us about your study plans</h2>
-                    <p class="step-subtitle">This helps us find the most suitable loan options for you</p>
-
-                    <div class="input-group">
-                        <label class="input-label">Study Destination</label>
-                        <div class="quick-picks" id="destinationPicks">
-                            <button class="quick-pick" onclick="selectQuickPick(this, 'studyDestination')">USA</button>
-                            <button class="quick-pick" onclick="selectQuickPick(this, 'studyDestination')">UK</button>
-                            <button class="quick-pick"
-                                onclick="selectQuickPick(this, 'studyDestination')">Canada</button>
-                            <button class="quick-pick"
-                                onclick="selectQuickPick(this, 'studyDestination')">Australia</button>
-                            <button class="quick-pick"
-                                onclick="selectQuickPick(this, 'studyDestination')">Germany</button>
-                        </div>
-                        <input type="text" class="input-field" id="studyDestination"
-                            placeholder="Or type another country..."
-                            oninput="handleCustomInput(this, 'studyDestination')">
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label">Course Level</label>
-                        <div class="options-grid">
-                            <div class="option-card" data-value="Bachelors"
-                                onclick="selectSingleOption(this, 'courseLevel')">
-                                <span class="option-icon">🎓</span>
-                                <h3 class="option-title">Bachelor's</h3>
-                                <p class="option-desc">Undergraduate degree</p>
-                            </div>
-                            <div class="option-card" data-value="Masters"
-                                onclick="selectSingleOption(this, 'courseLevel')">
-                                <span class="option-icon">📘</span>
-                                <h3 class="option-title">Master's</h3>
-                                <p class="option-desc">Graduate degree</p>
-                            </div>
-                            <div class="option-card" data-value="MBA" onclick="selectSingleOption(this, 'courseLevel')">
-                                <span class="option-icon">💼</span>
-                                <h3 class="option-title">MBA</h3>
-                                <p class="option-desc">Business degree</p>
-                            </div>
-                            <div class="option-card" data-value="PhD" onclick="selectSingleOption(this, 'courseLevel')">
-                                <span class="option-icon">🔬</span>
-                                <h3 class="option-title">PhD</h3>
-                                <p class="option-desc">Doctoral degree</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label">Field of Study</label>
-                        <div class="quick-picks" id="coursePicks">
-                            <button class="quick-pick" onclick="selectQuickPick(this, 'courseName')">Computer
-                                Science</button>
-                            <button class="quick-pick" onclick="selectQuickPick(this, 'courseName')">Business</button>
-                            <button class="quick-pick"
-                                onclick="selectQuickPick(this, 'courseName')">Engineering</button>
-                            <button class="quick-pick" onclick="selectQuickPick(this, 'courseName')">Data
-                                Science</button>
-                            <button class="quick-pick" onclick="selectQuickPick(this, 'courseName')">Medicine</button>
-                        </div>
-                        <input type="text" class="input-field" id="courseName" placeholder="Or type your field..."
-                            oninput="handleCustomInput(this, 'courseName')">
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label">Intake Year</label>
-                        <div class="options-grid">
-                            <div class="option-card" data-value="Fall 2026"
-                                onclick="selectSingleOption(this, 'intakeSeason')">
-                                <span class="option-icon">🍂</span>
-                                <h3 class="option-title">Fall 2026</h3>
-                                <p class="option-desc">September start</p>
-                            </div>
-                            <div class="option-card" data-value="Spring 2027"
-                                onclick="selectSingleOption(this, 'intakeSeason')">
-                                <span class="option-icon">🌸</span>
-                                <h3 class="option-title">Spring 2027</h3>
-                                <p class="option-desc">January start</p>
-                            </div>
-                            <div class="option-card" data-value="Fall 2027"
-                                onclick="selectSingleOption(this, 'intakeSeason')">
-                                <span class="option-icon">🍂</span>
-                                <h3 class="option-title">Fall 2027</h3>
-                                <p class="option-desc">September start</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 3: Contact Information -->
-                <div class="step-content" data-step="3">
-                    <h2 class="step-title">Almost there! Your details</h2>
-                    <p class="step-subtitle">We need this information to save your profile and provide personalized
-                        recommendations</p>
-
-                    <div class="input-group">
-                        <label class="input-label">First Name</label>
-                        <input type="text" class="input-field" id="firstName" placeholder="Enter your first name">
-                        <div class="error-message" id="firstNameError">Please enter your first name</div>
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label">Email Address</label>
-                        <input type="email" class="input-field" id="email" placeholder="your.email@example.com">
-                        <div class="error-message" id="emailError">Please enter a valid email address</div>
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label">Phone Number</label>
-                        <input type="tel" class="input-field" id="phone" placeholder="1234567890">
-                        <div class="error-message" id="phoneError">Please enter a valid 10-digit phone number</div>
-                    </div>
-                </div>
-
-                <!-- Step 4: Results -->
-                <div class="step-content" data-step="4">
-                    <h2 class="step-title">🎉 Perfect! Here's what we found for you</h2>
-                    <p class="step-subtitle">Based on your profile, here are the best loan options</p>
-
-                    <div id="resultsContent">
-                        <!-- Results will be loaded here -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Navigation -->
-            <div class="navigation-buttons">
-                <button class="nav-btn back" id="backBtn" onclick="goBack()" style="display: none;">
-                    <span class="material-symbols-outlined" style="font-size: 18px;">arrow_back</span>
-                    Back
-                </button>
-                <button class="nav-btn next" id="nextBtn" onclick="goNext()">
-                    Continue
-                    <span class="material-symbols-outlined" style="font-size: 18px;">arrow_forward</span>
-                </button>
-            </div>
+    <!-- Step label strip -->
+    <div class="step-label-strip">
+        <div class="step-label-inner">
+            <span id="stepLabelText"></span>
         </div>
     </div>
 
+    <!--  MAIN  -->
+    <div class="page-wrap">
+
+        <!-- ── WELCOME HERO ── -->
+        <div class="welcome-hero" id="welcomeHero">
+            <div class="blob-mascot" id="heroMascot">
+                <img src="assets/img/mascot_ai.png" alt="Mascot" class="mascot-img"
+                    onload="this.parentElement.classList.add('img-loaded')"
+                    onerror="this.parentElement.classList.add('img-failed')">
+                <div class="mascot-body">
+                    <div class="mascot-eye"></div>
+                    <div class="mascot-eye"></div>
+                    <div class="mascot-mouth"></div>
+                </div>
+            </div>
+            <div class="hero-badge">
+                <span class="hero-badge-dot"></span>
+                AI-Powered Loan Matching
+            </div>
+            <h1 class="hero-title">Find Your Perfect<br><span class="hero-gradient">Education Loan</span></h1>
+            <p class="hero-sub">Answer a few quick questions and we'll match you with the best loan — in under 2
+                minutes. No paperwork. No hassle.</p>
+            <div class="trust-pills">
+                <span class="trust-pill"><span class="trust-pill-icon">🎓</span> 50,000+ Students</span>
+                <span class="trust-pill"><span class="trust-pill-icon">✅</span> 98% Approval Rate</span>
+                <span class="trust-pill"><span class="trust-pill-icon">⚡</span> Instant Eligibility</span>
+                <span class="trust-pill"><span class="trust-pill-icon">🔒</span> 100% Secure</span>
+            </div>
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="stat-number" id="stat1">0</div>
+                    <div class="stat-label">Students Helped</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-number" id="stat2">₹0 Cr+</div>
+                    <div class="stat-label">Loans Disbursed</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-number" id="stat3">0%</div>
+                    <div class="stat-label">Approval Rate</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-number" id="stat4">0</div>
+                    <div class="stat-label">Partner Banks</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-col" id="chatCol">
+            <!-- Steps injected by JS -->
+        </div>
+    </div>
+
+    <!-- ── SOCIAL PROOF TOAST ── -->
+    <div class="sp-toast" id="spToast">
+        <div class="sp-avatar">
+            <span class="sp-avatar-letter" id="spLetter">P</span>
+        </div>
+        <div class="sp-content">
+            <div class="sp-name" id="spName">Priya S.</div>
+            <div class="sp-msg" id="spMsg">just got approved for <strong>₹35L</strong> 🎉</div>
+            <div class="sp-time" id="spTime">2 minutes ago</div>
+        </div>
+        <div class="sp-check">✓</div>
+    </div>
+
+    <!--  STICKY RESUME CTA  -->
+    <div class="sticky-cta" id="stickyCta">
+        <button class="resume-btn" id="resumeBtn">Resume your journey</button>
+    </div>
+
+    <script src="assets/js/components-loader.js"></script>
     <script src="assets/js/onboarding-wizard.js"></script>
+    <script src="assets/js/auth.js"></script>
+
+    <script>
+        // ── ANIMATED STAT COUNTERS ──────────────────────────────────────────
+        (function () {
+            const counters = [
+                { el: document.getElementById('stat1'), target: 50000, format: n => n >= 1000 ? (n / 1000).toFixed(0) + 'K+' : n },
+                { el: document.getElementById('stat2'), target: 2500, format: n => '₹' + n + 'Cr+' },
+                { el: document.getElementById('stat3'), target: 98, format: n => n + '%' },
+                { el: document.getElementById('stat4'), target: 15, format: n => n + '+' },
+            ];
+            function animateCounter(obj) {
+                const duration = 1800, step = 16;
+                const steps = duration / step;
+                let current = 0;
+                const inc = obj.target / steps;
+                const timer = setInterval(() => {
+                    current = Math.min(current + inc, obj.target);
+                    obj.el.textContent = obj.format(Math.floor(current));
+                    if (current >= obj.target) clearInterval(timer);
+                }, step);
+            }
+            // Only animate when hero is visible (IntersectionObserver)
+            const hero = document.getElementById('welcomeHero');
+            let animated = false;
+            const obs = new IntersectionObserver(entries => {
+                if (entries[0].isIntersecting && !animated) {
+                    animated = true;
+                    setTimeout(() => counters.forEach(animateCounter), 300);
+                }
+            }, { threshold: 0.3 });
+            if (hero) obs.observe(hero);
+        })();
+
+        // ── SOCIAL PROOF TOASTS ─────────────────────────────────────────────
+        (function () {
+            const toasts = [
+                { name: 'Priya S.', letter: 'P', msg: 'just got approved for <strong>₹35L</strong> 🎉', time: '2 min ago' },
+                { name: 'Arjun M.', letter: 'A', msg: 'received <strong>₹52L</strong> for MS in USA 🇺🇸', time: '5 min ago' },
+                { name: 'Sneha R.', letter: 'S', msg: 'got <strong>0% processing fee</strong> waived ✨', time: '8 min ago' },
+                { name: 'Karthik V.', letter: 'K', msg: 'loan approved in <strong>48 hours</strong> ⚡', time: '12 min ago' },
+                { name: 'Ritika D.', letter: 'R', msg: 'matched with <strong>3 lenders</strong> instantly 🏆', time: '15 min ago' },
+                { name: 'Mihir P.', letter: 'M', msg: 'saved <strong>₹1.2L</strong> vs bank quote 💰', time: '18 min ago' },
+            ];
+            const toast = document.getElementById('spToast');
+            const nameEl = document.getElementById('spName');
+            const letterEl = document.getElementById('spLetter');
+            const msgEl = document.getElementById('spMsg');
+            const timeEl = document.getElementById('spTime');
+            let idx = 0;
+            function showToast() {
+                const t = toasts[idx % toasts.length];
+                nameEl.textContent = t.name;
+                letterEl.textContent = t.letter;
+                msgEl.innerHTML = t.msg;
+                timeEl.textContent = t.time;
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 4200);
+                idx++;
+            }
+            // First toast after 3s, then every 8s
+            setTimeout(() => { showToast(); setInterval(showToast, 8000); }, 3000);
+        })();
+
+        // ── STEP LABEL UPDATE ────────────────────────────────────────────────
+        (function () {
+            // One label per wizard step (12 total: goal, country, course,
+            // ai_search, admit_status, intake_month, gpa, english_test,
+            // english_score, loan_amount, work_exp, ai_match)
+            const TOTAL_STEPS = 13;
+            const labels = [
+                'Step 1 · Your Goal',
+                'Step 2 · Getting Started',
+                'Step 3 · Destination',
+                'Step 4 · Course',
+                'Step 5 · Finding Universities',
+                'Step 6 · Admit Status',
+                'Step 7 · Intake Month',
+                'Step 8 · Academic Score',
+                'Step 9 · English Test',
+                'Step 10 · Test Score',
+                'Step 11 · Loan Amount',
+                'Step 12 · Work Experience',
+                'Step 13 · Matching Loans',
+            ];
+            const bar = document.getElementById('progressBar');
+            const labelEl = document.getElementById('stepLabelText');
+            if (!bar || !labelEl) return;
+            const mo = new MutationObserver(() => {
+                const pct = parseFloat(bar.style.width || '0');
+                if (pct > 0) {
+                    // Reverse the wizard's formula: pct = round(((idx+1)/TOTAL)*100)
+                    // so idx ≈ round(pct/100 * TOTAL) - 1
+                    const stepIdx = Math.min(
+                        Math.max(Math.round((pct / 100) * TOTAL_STEPS) - 1, 0),
+                        labels.length - 1
+                    );
+                    labelEl.textContent = labels[stepIdx];
+                    labelEl.classList.add('visible');
+                }
+            });
+            mo.observe(bar, { attributes: true, attributeFilter: ['style'] });
+
+            // Collapse hero only after the user answers Step 1 (chatCol gets 2nd child)
+            const hero = document.getElementById('welcomeHero');
+            const chatCol = document.getElementById('chatCol');
+            if (hero && chatCol) {
+                const co = new MutationObserver(() => {
+                    if (chatCol.children.length >= 2) {
+                        hero.style.transition = 'max-height 0.55s ease, opacity 0.45s ease, margin 0.45s ease, padding 0.45s ease';
+                        hero.style.maxHeight = hero.offsetHeight + 'px';
+                        requestAnimationFrame(() => {
+                            hero.style.maxHeight = '0';
+                            hero.style.opacity = '0';
+                            hero.style.marginBottom = '0';
+                            hero.style.overflow = 'hidden';
+                            hero.style.paddingTop = '0';
+                            hero.style.paddingBottom = '0';
+                        });
+                        co.disconnect();
+                    }
+                });
+                co.observe(chatCol, { childList: true });
+            }
+        })();
+    </script>
 </body>
 
 </html>

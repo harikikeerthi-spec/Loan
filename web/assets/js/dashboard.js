@@ -121,7 +121,12 @@ async function loadDynamicDashboardData(userId) {
             // Update dashboard with database data
             window.dashboardData.applications = data.data.applications || [];
             window.dashboardData.documents = convertDocumentsToFormat(data.data.documents || []);
-            window.dashboardData.activity = [];
+            window.dashboardData.activity = data.data.activity || [];
+
+            // Save to localStorage so activity persists
+            if (typeof saveDashboardData === 'function') {
+                saveDashboardData();
+            }
 
             // Render the updated dashboard
             if (typeof renderDashboard === 'function') {
@@ -430,9 +435,27 @@ document.addEventListener('DOMContentLoaded', function () {
     loadUserDashboard();
 });
 
+// Add activity to the local activity feed
+function addActivity(type, title, description) {
+    if (!window.dashboardData) return;
+    if (!Array.isArray(window.dashboardData.activity)) {
+        window.dashboardData.activity = [];
+    }
+    window.dashboardData.activity.unshift({
+        type: type,
+        title: title,
+        description: description,
+        timestamp: new Date().toISOString()
+    });
+    // Keep only last 20 activities
+    if (window.dashboardData.activity.length > 20) {
+        window.dashboardData.activity = window.dashboardData.activity.slice(0, 20);
+    }
+}
+
 // Export for use in other scripts
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { loadUserDashboard, displayUserInfo, setupProfileDropdown, logout, getUserName, createLoanApplicationAPI, deleteApplicationAPI, uploadDocumentAPI }
+    module.exports = { loadUserDashboard, displayUserInfo, setupProfileDropdown, logout, getUserName, createLoanApplicationAPI, deleteApplicationAPI, uploadDocumentAPI, addActivity }
 };
 
 

@@ -195,6 +195,279 @@
                         <button onclick="document.getElementById('file-degree').click()"
                             class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
                     </div>
+
+                    <!-- Test Score Card -->
+                    <div id="doc-test_score"
+                        class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">grading</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">Test Score Card</p>
+                                <p class="doc-status text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-test_score" class="hidden" accept=".pdf,.jpg,.jpeg,.png"
+                            data-doc-type="test_score">
+                        <button onclick="document.getElementById('file-test_score').click()"
+                            class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- University Offer Letter -->
+                    <div id="doc-offer_letter"
+                        class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">assignment_turned_in</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">University Offer Letter</p>
+                                <p class="doc-status text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-offer_letter" class="hidden" accept=".pdf,.jpg,.jpeg,.png"
+                            data-doc-type="offer_letter">
+                        <button onclick="document.getElementById('file-offer_letter').click()"
+                            class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Additional sections: Financial documents + Co-applicant / Family -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+            <!-- Financial Documents -->
+            <div class="glass-card rounded-3xl p-8">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+                        <span class="material-symbols-outlined text-2xl">account_balance_wallet</span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold">Financial Documents</h2>
+                        <p class="text-sm text-gray-500">Salary slips, bank statements and tax proofs</p>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Electricity Bill -->
+                    <div id="doc-electricity_bill" class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">receipt_long</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">Latest Electricity Bill</p>
+                                <p class="doc-status text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-electricity_bill" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-doc-type="electricity_bill">
+                        <button onclick="document.getElementById('file-electricity_bill').click()" class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- Salary Slips (last 3 months) -->
+                    <div id="doc-salary_slip" class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">payments</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">Salary Slips (last 3 months)</p>
+                                <p class="doc-status text-xs text-gray-500">Upload combined PDF or latest slips</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-salary_slip" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-doc-type="salary_slip">
+                        <button onclick="document.getElementById('file-salary_slip').click()" class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- Bank statement (salary account - last 6 months) -->
+                    <div id="doc-bank_statement_salary" class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">account_balance</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">Bank Statement (salary account - 6 months)</p>
+                                <p class="doc-status text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-bank_statement_salary" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-doc-type="bank_statement_salary">
+                        <button onclick="document.getElementById('file-bank_statement_salary').click()" class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- Form 16 -->
+                    <div id="doc-form16" class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">description</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">Form 16</p>
+                                <p class="doc-status text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-form16" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-doc-type="form16">
+                        <button onclick="document.getElementById('file-form16').click()" class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- ITR (last 1 year) -->
+                    <div id="doc-itr" class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">receipt</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">ITR / Tax Returns</p>
+                                <p class="doc-status text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-itr" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-doc-type="itr">
+                        <button onclick="document.getElementById('file-itr').click()" class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- ITR Computation (self-employed) -->
+                    <div id="doc-itr_computation" class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">summarize</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">ITR - Computation of Income</p>
+                                <p class="doc-status text-xs text-gray-500">(Self‑employed) Not Uploaded</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-itr_computation" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-doc-type="itr_computation">
+                        <button onclick="document.getElementById('file-itr_computation').click()" class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- Balance Sheet -->
+                    <div id="doc-balance_sheet" class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">format_list_bulleted</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">Balance Sheet</p>
+                                <p class="doc-status text-xs text-gray-500">(Self‑employed) Not Uploaded</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-balance_sheet" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-doc-type="balance_sheet">
+                        <button onclick="document.getElementById('file-balance_sheet').click()" class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- Profit & Loss Account -->
+                    <div id="doc-profit_loss" class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">bar_chart</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">Profit & Loss Account</p>
+                                <p class="doc-status text-xs text-gray-500">(Self‑employed) Not Uploaded</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-profit_loss" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-doc-type="profit_loss">
+                        <button onclick="document.getElementById('file-profit_loss').click()" class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- Business registration proof (GST/Registration) -->
+                    <div id="doc-business_proof" class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">badge</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">Business registration / GST</p>
+                                <p class="doc-status text-xs text-gray-500">(Self‑employed) Not Uploaded</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-business_proof" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-doc-type="business_proof">
+                        <button onclick="document.getElementById('file-business_proof').click()" class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- Bank statement (business - 1 year) -->
+                    <div id="doc-bank_statement_business" class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">account_balance</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">Bank Statement (business - 1 year)</p>
+                                <p class="doc-status text-xs text-gray-500">(Self‑employed) Not Uploaded</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-bank_statement_business" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-doc-type="bank_statement_business">
+                        <button onclick="document.getElementById('file-bank_statement_business').click()" class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Co-applicant & Family Documents -->
+            <div class="glass-card rounded-3xl p-8">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+                        <span class="material-symbols-outlined text-2xl">people</span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold">Co-applicant & Family Documents</h2>
+                        <p class="text-sm text-gray-500">Co‑applicant / parent identity proofs</p>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- Co-applicant PAN -->
+                    <div id="doc-coapplicant_pan" class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">credit_card</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">Co‑applicant PAN</p>
+                                <p class="doc-status text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-coapplicant_pan" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-doc-type="coapplicant_pan">
+                        <button onclick="document.getElementById('file-coapplicant_pan').click()" class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- Co-applicant Aadhar -->
+                    <div id="doc-coapplicant_aadhar" class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">description</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">Co‑applicant Aadhar</p>
+                                <p class="doc-status text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-coapplicant_aadhar" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-doc-type="coapplicant_aadhar">
+                        <button onclick="document.getElementById('file-coapplicant_aadhar').click()" class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- Father PAN -->
+                    <div id="doc-father_pan" class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">credit_card</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">Father PAN</p>
+                                <p class="doc-status text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-father_pan" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-doc-type="father_pan">
+                        <button onclick="document.getElementById('file-father_pan').click()" class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- Father Aadhar -->
+                    <div id="doc-father_aadhar" class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">description</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">Father Aadhar</p>
+                                <p class="doc-status text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-father_aadhar" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-doc-type="father_aadhar">
+                        <button onclick="document.getElementById('file-father_aadhar').click()" class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- Mother PAN -->
+                    <div id="doc-mother_pan" class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">credit_card</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">Mother PAN</p>
+                                <p class="doc-status text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-mother_pan" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-doc-type="mother_pan">
+                        <button onclick="document.getElementById('file-mother_pan').click()" class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
+
+                    <!-- Mother Aadhar -->
+                    <div id="doc-mother_aadhar" class="document-card flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 transition-all">
+                        <div class="flex items-center gap-3 flex-1">
+                            <span class="material-symbols-outlined text-gray-400 doc-icon">description</span>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm">Mother Aadhar</p>
+                                <p class="doc-status text-xs text-gray-500">Not Uploaded</p>
+                            </div>
+                        </div>
+                        <input type="file" id="file-mother_aadhar" class="hidden" accept=".pdf,.jpg,.jpeg,.png" data-doc-type="mother_aadhar">
+                        <button onclick="document.getElementById('file-mother_aadhar').click()" class="upload-btn px-4 py-2 text-xs font-bold bg-primary text-white rounded-lg hover:bg-primary/90 transition-all">Upload</button>
+                    </div>
                 </div>
             </div>
         </div>

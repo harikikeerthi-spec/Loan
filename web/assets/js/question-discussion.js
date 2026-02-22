@@ -112,12 +112,15 @@ function renderQuestion(question) {
                     ${question.author?.role === 'mentor' ? '<span class="px-2 py-0.5 rounded-full bg-accent-100 text-accent-700 text-xs font-bold uppercase">Mentor</span>' : ''}
                     <span class="text-sm text-gray-500">• ${timeAgo}</span>
                 </div>
-                <h1 class="text-3xl font-display font-bold text-gray-900 dark:text-white mb-4 leading-tight">
+                <h1 class="text-3xl font-display font-bold text-gray-900 dark:text-white mb-4 leading-tight break-words">
                     ${question.title || 'Discussion'}
                 </h1>
+                ${question.excerpt ? `<p class="text-gray-600 dark:text-gray-300 text-sm font-semibold mb-2 whitespace-pre-wrap break-words">${question.excerpt}</p>` : ''}
+                ${question.content && question.content !== question.title ? `
                 <div class="prose dark:prose-invert max-w-none mb-6">
-                    <p class="text-gray-700 dark:text-gray-300 text-base leading-relaxed whitespace-pre-wrap">${question.content}</p>
+                    <p class="text-gray-700 dark:text-gray-300 text-base leading-relaxed whitespace-pre-wrap break-words">${question.content}</p>
                 </div>
+                ` : ''}
                 
                 <!-- Tags -->
                 ${question.tags && question.tags.length > 0 ? `
@@ -441,7 +444,7 @@ function renderRelatedQuestions(questions) {
     list.innerHTML = questions.map(q => `
         <a href="question-discussion.html?id=${q.id}&topic=${hubTopic}" 
            class="block glass-panel p-4 rounded-2xl hover:shadow-lg transition-all">
-            <h4 class="font-bold text-gray-900 dark:text-white mb-1">${q.title || 'Discussion'}</h4>
+            <h4 class="font-bold text-gray-900 dark:text-white mb-1 break-words">${q.title || 'Discussion'}</h4>
             <p class="text-xs text-gray-500">${q.commentCount || 0} answers • ${getTimeAgo(q.createdAt)}</p>
         </a>
     `).join('');

@@ -170,7 +170,8 @@ class AuthGuard {
     if (requiredRole === 'super_admin' && !this.isSuperAdmin()) {
       alert('Access Denied: Super Admin privileges required. Please login with an admin account.');
       this.clearAuth();
-      this.redirectToLogin();
+      // Ensure super-admin access denial always goes to the admin login page
+      window.location.href = 'admin-login.html';
       return false;
     }
 
