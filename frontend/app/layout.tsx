@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     template: "%s | Vidhya Loans",
   },
   description:
-    "Compare education loans from 50+ banks & NBFCs. Get the best rates, quick approvals, and expert guidance — all in one place.",
+    "Compare education loans from our curated network of top lending partners. Get the best rates, quick approvals, and expert guidance — all in one place.",
   keywords: [
     "education loan",
     "study abroad",
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Vidhya Loans - Fund Your Dream Education Abroad",
     description:
-      "Compare education loans from 50+ banks & NBFCs. Get the best rates, quick approvals, and expert guidance.",
+      "Compare education loans from our curated network of top lending partners. Get the best rates, quick approvals, and expert guidance.",
     type: "website",
   },
 };

@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3000/community';
+const API_BASE_URL = 'http://localhost:3000/api/community';
 const AUTH_TOKEN_KEY = 'accessToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';
 
@@ -19,7 +19,7 @@ async function authFetch(url, options = {}) {
         const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
         if (refreshToken) {
             try {
-                const refreshRes = await fetch('http://localhost:3000/auth/refresh', {
+                const refreshRes = await fetch('http://localhost:3000/api/auth/refresh', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ refresh_token: refreshToken })

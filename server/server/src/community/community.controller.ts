@@ -132,6 +132,15 @@ export class CommunityController {
         return this.communityService.getMentorStats();
     }
 
+    /**
+     * Get overall community statistics
+     * GET /community/stats
+     */
+    @Get('stats')
+    async getStats() {
+        return this.communityService.getCommunityStats();
+    }
+
     // ==================== EVENTS ENDPOINTS ====================
 
     /**
@@ -672,6 +681,127 @@ export class CommunityController {
             offset: offset ? parseInt(offset, 10) : 0,
             sort
         }, userId);
+    }
+
+    /**
+     * Compatibility: GET /community/posts (alias for /community/forum)
+     */
+    @Get('posts')
+    async getPostsAlias(
+        @Query('topic') topic?: string,
+        @Query('page') page?: string,
+        @Request() req?,
+    ) {
+        // Map topic/page to category/offset
+        const category = topic;
+        const offset = page ? (parseInt(page, 10) - 1) * 20 : 0;
+        let userId: string | undefined;
+        try {
+            if (req?.headers?.authorization) {
+                const token = req.headers.authorization.split(' ')[1];
+                const decoded = this.jwtService.decode(token) as any;
+                userId = decoded?.id;
+            }
+        } catch (e) { }
+
+        return this.communityService.getForumPosts({ category, limit: 20, offset }, userId);
+    }
+
+    /**
+     * Search for similar/duplicate forum posts (pre-post duplicate check)
+     * GET /community/forum/search?q=my+question+title
+     */
+    @Get('forum/search')
+    async searchForumPosts(@Query('q') q?: string) {
+        return this.communityService.searchSimilarPosts(q || '');
+    }
+
+    /**
+     * GET /community/hubs - list of available hub categories
+     */
+    @Get('hubs')
+    async getHubs() {
+        return this.communityService.getHubs();
+    }
+
+    /**
+     * Compatibility: GET /community/posts/:id -> fetch single forum post by id
+     */
+    @Get('posts/:id')
+    async getPostByIdAlias(@Param('id') id: string, @Request() req) {
+        let userId: string | undefined;
+        try {
+            const authHeader = req.headers.authorization;
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const token = authHeader.split(' ')[1];
+                const decoded = this.jwtService.decode(token) as any;
+                if (decoded && decoded.id) {
+                    userId = decoded.id;
+                }
+            }
+        } catch (e) { }
+
+        return this.communityService.getForumPostById(id, userId);
+    }
+
+    /**
+     * Compatibility: POST /community/posts to create a new forum post (requires auth)
+     */
+    @Post('posts')
+    @UseGuards(UserGuard)
+    async createPostAlias(@Request() req, @Body() body: any) {
+        // Enforce allowed categories server-side to prevent off-topic posts
+        const allowedCategories = [
+            'Education Loans',
+            'Universities',
+            'Courses',
+            'Exams',
+            'GRE / GMAT',
+            'IELTS / TOEFL',
+            'Scholarship',
+            'Visa & Immigration',
+            'Career & Jobs',
+            'General'
+        ];
+
+        const providedCategory = (body && body.category) ? String(body.category).trim() : '';
+        const isAllowed = allowedCategories.some(c => c.toLowerCase() === providedCategory.toLowerCase());
+        if (!providedCategory || !isAllowed) {
+            throw new HttpException({
+                success: false,
+                message: 'Category not allowed. Please choose one of: ' + allowedCategories.join(', '),
+                allowedCategories,
+            }, HttpStatus.BAD_REQUEST);
+        }
+
+        // If the client did not explicitly force posting, run AI duplicate-check first
+        const force = body && body.force === true;
+        if (!force) {
+            try {
+                const dup = await this.communityService.checkDuplicateQuestion({
+                    title: body.title || '',
+                    content: body.content || '',
+                    category: body.category || 'General'
+                });
+
+                if (dup && dup.isDuplicate) {
+                    // Respond with 409 Conflict and include similar questions for client to show UI
+                    throw new HttpException({
+                        success: false,
+                        message: 'Similar questions found',
+                        isDuplicate: true,
+                        similarQuestions: dup.similarQuestions || []
+                    }, HttpStatus.CONFLICT);
+                }
+            } catch (err) {
+                // If the duplicate check threw an HttpException (e.g., to indicate duplicates), rethrow
+                if (err instanceof HttpException) throw err;
+                // Otherwise, log and continue to allow posting (fail-open)
+                console.error('[CommunityController] duplicate check failed, continuing to create post', err);
+            }
+        }
+
+        return this.communityService.createForumPost(req.user.id, body);
     }
 
     @Post('forum/:id/comment')

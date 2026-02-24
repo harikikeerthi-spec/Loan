@@ -1,5 +1,5 @@
 // Conversational Onboarding Flow
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'http://localhost:3000/api';
 
 // Onboarding state
 const onboardingData = {

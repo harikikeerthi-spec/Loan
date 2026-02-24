@@ -418,8 +418,9 @@
                     date: data.application.date || new Date().toISOString()
                 };
 
-                // Load existing dashboard data
-                let dashboardData = JSON.parse(localStorage.getItem('dashboardData')) || {
+                // Load existing dashboard data (per-user key)
+                const dashboardKey = `dashboardData_${userId}`;
+                let dashboardData = JSON.parse(localStorage.getItem(dashboardKey)) || {
                     applications: [],
                     documents: {
                         aadhar: { uploaded: false, status: 'pending' },
@@ -461,13 +462,10 @@
                     date: new Date().toISOString()
                 });
 
-                // Save to localStorage
-                localStorage.setItem('dashboardData', JSON.stringify(dashboardData));
-
-                // Show success modal after a short delay
-                setTimeout(() => {
-                    document.getElementById('successModal').classList.remove('hidden');
-                }, 500);
+                // Save to localStorage (user-specific) and redirect to applications page
+                localStorage.setItem(dashboardKey, JSON.stringify(dashboardData));
+                // Redirect so the user immediately sees their application
+                window.location.href = 'my-applications.html';
             } catch (error) {
                 console.error('Error submitting application:', error);
                 alert('Error submitting application: ' + error.message);

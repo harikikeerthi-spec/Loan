@@ -1,0 +1,10 @@
+{
+    "age": 22,
+    "credit": 750,
+    "income": 600000,
+    "loan": 1000000,
+    "employment": "student",
+    "study": "masters",
+    "coApplicant": "yes",
+    "collateral": "no"
+}

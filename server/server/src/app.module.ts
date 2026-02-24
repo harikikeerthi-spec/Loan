@@ -20,16 +20,10 @@ import { join } from 'path';
 
 @Module({
   imports: [
-    ServeStaticModule.forRoot(
-      {
-        rootPath: join(__dirname, '..', '..', '..', 'web'),
-        exclude: ['/api/{*path}'],
-      },
-      {
-        rootPath: join(__dirname, '..', 'uploads'),
-        serveRoot: '/uploads',
-      },
-    ),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'uploads'),
+      serveRoot: '/uploads',
+    }),
     PrismaModule,
     AuthModule,
     UsersModule,

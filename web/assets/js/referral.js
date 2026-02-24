@@ -6,7 +6,7 @@
 (function () {
     'use strict';
 
-    const API_URL = 'http://localhost:3000';
+    const API_URL = 'http://localhost:3000/api';
     let referralCode = '';
     let referralLink = '';
 

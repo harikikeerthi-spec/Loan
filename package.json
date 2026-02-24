@@ -1,7 +1,17 @@
 {
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:frontend\"",
+    "dev:server": "cd server/server && npm run start:dev",
+    "dev:frontend": "cd frontend && npm run dev"
+  },
   "dependencies": {
     "@types/nodemailer": "^7.0.5",
     "cache-manager": "^7.2.8",
     "nodemailer": "^7.0.12"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "concurrently": "^9.1.2"
   }
 }

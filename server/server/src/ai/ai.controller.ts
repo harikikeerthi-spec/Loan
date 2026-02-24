@@ -22,16 +22,7 @@ export class AiController {
   @Post('eligibility-check')
   async checkEligibility(
     @Body()
-    data: {
-      age: number;
-      credit: number;
-      income: number;
-      loan: number;
-      employment: 'employed' | 'self' | 'student' | 'unemployed';
-      study: 'undergrad' | 'masters' | 'doctoral' | 'diploma';
-      coApplicant: 'yes' | 'no';
-      collateral: 'yes' | 'no';
-    },
+    data: any,
   ) {
     const eligibilityResult = await this.eligibilityService.calculateEligibilityScore(data);
 
@@ -230,6 +221,17 @@ export class AiController {
       console.error("AI Check Failed", error);
       // Fail permissive if AI is down
       return { success: true, isRelevant: true, reason: "AI Check Skipped due to error" };
+    }
+  }
+
+  @Post('search-advice')
+  async searchAdvice(@Body() data: { query: string; type: 'university' | 'course'; context?: any }) {
+    try {
+      const results = await this.groqService.searchAdvice(data.query, data.type, data.context);
+      return { success: true, results };
+    } catch (error) {
+      console.error("AI Search Failed", error);
+      return { success: false, message: "Search failed", results: [] };
     }
   }
 }

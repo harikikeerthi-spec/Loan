@@ -97,6 +97,17 @@ h6,
   background-clip: content-box;
 }
 
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+
 /* Glass cards */
 .glass-card {
   background: rgba(255, 255, 255, 0.8);
@@ -246,6 +257,19 @@ h6,
   background-image: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 40 L40 40 L40 0 L0 0 Z M39 39 L1 39 L1 1 L39 1 Z' fill='%23000' fill-opacity='0.05'/%3E%3C/svg%3E");
 }
 
+.bg-mesh-gradient {
+  background-image:
+    radial-gradient(at 0% 0%, rgba(102, 5, 199, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(224, 195, 137, 0.2) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(139, 192, 232, 0.15) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(102, 5, 199, 0.1) 0px, transparent 50%);
+}
+
+.bg-premium-noise {
+  background-image: url('https://www.transparenttextures.com/patterns/cubes.png');
+  opacity: 0.03;
+}
+
 /* Material Symbols */
 .material-symbols-outlined {
   font-family: 'Material Symbols Outlined';
@@ -350,4 +374,108 @@ h6,
 .nav-btn.next:hover {
   background: #4338CA;
   transform: translateY(-1px);
+}
+
+/* Admin Dashboard Styles */
+.admin-sidebar {
+  background: linear-gradient(135deg, rgba(102, 5, 199, 0.05) 0%, rgba(139, 192, 232, 0.03) 100%);
+  border-right: 1px solid rgba(102, 5, 199, 0.1);
+  backdrop-filter: blur(20px);
+}
+
+.admin-nav-item {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-left: 3px solid transparent;
+}
+
+.admin-nav-item:hover {
+  background: rgba(102, 5, 199, 0.08);
+  border-left-color: #6605c7;
+  transform: translateX(4px);
+}
+
+.admin-nav-item.active {
+  background: rgba(102, 5, 199, 0.12);
+  border-left-color: #6605c7;
+  color: #6605c7;
+  font-weight: 700;
+}
+
+.stat-card-gradient {
+  background: linear-gradient(135deg, rgba(102, 5, 199, 0.03) 0%, rgba(139, 192, 232, 0.03) 100%);
+  border: 1px solid rgba(102, 5, 199, 0.08);
+  transition: all 0.3s ease;
+}
+
+.stat-card-gradient:hover {
+  border-color: #6605c7;
+  transform: translateY(-4px);
+  background: linear-gradient(135deg, rgba(102, 5, 199, 0.06) 0%, rgba(139, 192, 232, 0.06) 100%);
+  box-shadow: 0 10px 30px -10px rgba(102, 5, 199, 0.15);
+}
+
+.admin-btn-primary {
+  background: linear-gradient(135deg, #6605c7 0%, #8b24e5 100%);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(102, 5, 199, 0.2);
+}
+
+.admin-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 5, 199, 0.3);
+  filter: brightness(1.1);
+}
+
+.admin-table-container {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(102, 5, 199, 0.1);
+}
+
+.admin-table th {
+  background: rgba(102, 5, 199, 0.05);
+  color: #6605c7 !important;
+  font-weight: 700 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.75rem;
+}
+
+.admin-table tr {
+  transition: background-color 0.2s ease;
+}
+
+.admin-table tr:hover {
+  background-color: rgba(102, 5, 199, 0.02);
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.status-published,
+.status-approved {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.status-draft,
+.status-pending {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.status-rejected {
+  background: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.2);
 }

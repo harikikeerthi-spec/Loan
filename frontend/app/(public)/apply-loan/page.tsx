@@ -2,21 +2,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import { applicationApi } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 const banks = [
-    { id: "sbi", name: "State Bank of India", rate: "8.5 - 10.15%" },
-    { id: "hdfc", name: "HDFC Credila", rate: "9.0 - 11.5%" },
-    { id: "icici", name: "ICICI Bank", rate: "9.5 - 12.0%" },
-    { id: "auxilo", name: "Auxilo Finserve", rate: "11.25 - 13.0%" },
-    { id: "avanse", name: "Avanse Financial", rate: "10.99 - 13.5%" },
     { id: "idfc", name: "IDFC First Bank", rate: "10.5 - 12.5%" },
-    { id: "credila", name: "Credila (HDFC)", rate: "10.75 - 13.0%" },
-    { id: "poonawalla", name: "Poonawalla Fincorp", rate: "11.5 - 14.0%" },
+    { id: "hdfc", name: "HDFC Credila", rate: "10.75 - 12.5%" },
+    { id: "auxilo", name: "Auxilo Finserve", rate: "11.25 - 13.5%" },
+    { id: "avanse", name: "Avanse Financial", rate: "10.99 - 13.0%" },
+    { id: "poonawalla", name: "Poonawalla Fincorp", rate: "11.5 - 14.5%" },
 ];
 
 const loanTypes = ["Undergraduate Abroad", "Postgraduate Abroad", "Doctoral/PhD Abroad", "Professional Course"];
@@ -67,6 +62,19 @@ export default function ApplyLoanPage() {
                 ...formData,
                 amount: parseFloat(formData.amount),
             });
+            // Notify other parts of the frontend that dashboard data changed
+            try {
+                const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
+                if (userId) {
+                    const key = `dashboardDataUpdated_${userId}`;
+                    localStorage.setItem(key, String(Date.now()));
+                }
+                // Dispatch an in-page event so same-tab listeners react immediately
+                window.dispatchEvent(new Event('dashboard-data-changed'));
+            } catch (err) {
+                // ignore
+            }
+
             setSubmitted(true);
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : "Failed to submit");
@@ -78,17 +86,16 @@ export default function ApplyLoanPage() {
     if (submitted) {
         return (
             <div className="min-h-screen bg-transparent">
-                <Navbar />
                 <div className="flex items-center justify-center min-h-screen px-6">
                     <div className="text-center max-w-lg">
                         <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                             <span className="material-symbols-outlined text-green-500 text-5xl">check_circle</span>
                         </div>
-                        <h2 className="text-3xl font-bold font-display dark:text-white mb-4">Application Submitted!</h2>
+                        <h2 className="text-3xl font-bold font-display mb-4">Application Submitted!</h2>
                         <p className="text-gray-500 mb-8">Our loan experts will review your application and reach out within 24-48 hours.</p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
                             <Link href="/dashboard" className="px-8 py-4 bg-[#6605c7] text-white font-bold rounded-xl">View Dashboard</Link>
-                            <Link href="/" className="px-8 py-4 bg-white dark:bg-slate-800 text-gray-900 dark:text-white font-bold rounded-xl border border-gray-200">Back to Home</Link>
+                            <Link href="/" className="px-8 py-4 bg-white text-gray-900 font-bold rounded-xl border border-gray-200">Back to Home</Link>
                         </div>
                     </div>
                 </div>
@@ -98,11 +105,10 @@ export default function ApplyLoanPage() {
 
     return (
         <div className="min-h-screen bg-transparent">
-            <Navbar />
             <div className="pt-28 pb-16 px-6">
                 <div className="max-w-3xl mx-auto">
                     <div className="text-center mb-10">
-                        <h1 className="text-4xl font-bold font-display dark:text-white mb-3">Apply for Education Loan</h1>
+                        <h1 className="text-4xl font-bold font-display mb-3">Apply for Education Loan</h1>
                         <p className="text-gray-500">Complete in 3 simple steps — takes only 5 minutes</p>
                     </div>
 
@@ -110,21 +116,21 @@ export default function ApplyLoanPage() {
                     <div className="flex items-center justify-center gap-2 mb-10">
                         {["Loan Details", "Personal Info", "Review"].map((s, i) => (
                             <div key={s} className="flex items-center gap-2">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${step > i + 1 ? "bg-green-500 text-white" : step === i + 1 ? "bg-[#6605c7] text-white" : "bg-gray-200 dark:bg-slate-700 text-gray-400"
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${step > i + 1 ? "bg-green-500 text-white" : step === i + 1 ? "bg-[#6605c7] text-white" : "bg-gray-200 text-gray-400"
                                     }`}>
                                     {step > i + 1 ? <span className="material-symbols-outlined text-lg">check</span> : i + 1}
                                 </div>
                                 <span className={`text-sm font-medium hidden sm:block ${step === i + 1 ? "text-[#6605c7]" : "text-gray-400"}`}>{s}</span>
-                                {i < 2 && <div className="w-12 sm:w-20 h-0.5 bg-gray-200 dark:bg-slate-700" />}
+                                {i < 2 && <div className="w-12 sm:w-20 h-0.5 bg-gray-200" />}
                             </div>
                         ))}
                     </div>
 
-                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-sm border border-gray-100 dark:border-slate-700">
+                    <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
                         {/* Step 1: Loan Details */}
                         {step === 1 && (
                             <div className="space-y-6">
-                                <h2 className="text-xl font-bold dark:text-white">Loan Details</h2>
+                                <h2 className="text-xl font-bold">Loan Details</h2>
                                 <SelectField label="Select Bank" value={formData.bank} onChange={(v) => update("bank", v)}
                                     options={banks.map((b) => ({ value: b.id, label: `${b.name} (${b.rate})` }))} />
                                 <SelectField label="Loan Type" value={formData.loanType} onChange={(v) => update("loanType", v)}
@@ -144,7 +150,7 @@ export default function ApplyLoanPage() {
                         {/* Step 2: Personal Info */}
                         {step === 2 && (
                             <div className="space-y-6">
-                                <h2 className="text-xl font-bold dark:text-white">Personal Information</h2>
+                                <h2 className="text-xl font-bold">Personal Information</h2>
                                 <div className="grid grid-cols-2 gap-4">
                                     <InputField label="First Name" value={formData.firstName} onChange={(v) => update("firstName", v)} placeholder="Rahul" />
                                     <InputField label="Last Name" value={formData.lastName} onChange={(v) => update("lastName", v)} placeholder="Sharma" />
@@ -157,13 +163,13 @@ export default function ApplyLoanPage() {
                                 <SelectField label="Collateral Available?" value={formData.collateral} onChange={(v) => update("collateral", v)}
                                     options={[{ value: "yes-property", label: "Yes – Property" }, { value: "yes-fdr", label: "Yes – FDR/Insurance" }, { value: "no", label: "No Collateral" }]} />
                                 <div>
-                                    <label className="text-sm font-bold dark:text-gray-300 block mb-2">Additional Notes</label>
+                                    <label className="text-sm font-bold block mb-2">Additional Notes</label>
                                     <textarea
                                         value={formData.notes}
                                         onChange={(e) => update("notes", e.target.value)}
                                         placeholder="Any special requirements or notes..."
                                         rows={3}
-                                        className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-xl bg-transparent dark:text-white focus:outline-none focus:ring-2 focus:ring-[#6605c7]"
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6605c7]"
                                     />
                                 </div>
                             </div>
@@ -172,7 +178,7 @@ export default function ApplyLoanPage() {
                         {/* Step 3: Review */}
                         {step === 3 && (
                             <div className="space-y-6">
-                                <h2 className="text-xl font-bold dark:text-white">Review Application</h2>
+                                <h2 className="text-xl font-bold">Review Application</h2>
                                 <div className="bg-[#6605c7]/5 rounded-2xl p-6 space-y-3">
                                     {[
                                         { label: "Bank", value: banks.find((b) => b.id === formData.bank)?.name || formData.bank },
@@ -184,9 +190,9 @@ export default function ApplyLoanPage() {
                                         { label: "Email", value: formData.email },
                                         { label: "Phone", value: formData.phone },
                                     ].filter((f) => f.value).map((f) => (
-                                        <div key={f.label} className="flex justify-between items-center py-2 border-b border-white/10 dark:border-slate-700/50">
+                                        <div key={f.label} className="flex justify-between items-center py-2 border-b border-white/10">
                                             <span className="text-gray-500 text-sm">{f.label}</span>
-                                            <span className="font-bold text-sm dark:text-white">{f.value}</span>
+                                            <span className="font-bold text-sm">{f.value}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -194,7 +200,7 @@ export default function ApplyLoanPage() {
                                     <div className="px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">{error}</div>
                                 )}
                                 {!isAuthenticated && (
-                                    <div className="px-4 py-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-xl text-amber-700 dark:text-amber-400 text-sm">
+                                    <div className="px-4 py-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">
                                         <span className="material-symbols-outlined text-sm mr-1">info</span>
                                         You need to be logged in to submit an application.{" "}
                                         <Link href="/login?redirect=/apply-loan" className="underline font-bold">Login here</Link>
@@ -206,7 +212,7 @@ export default function ApplyLoanPage() {
                         {/* Navigation */}
                         <div className="flex justify-between mt-8">
                             {step > 1 ? (
-                                <button onClick={back} className="px-6 py-3 bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-white font-bold rounded-xl hover:bg-gray-200 transition-all">
+                                <button onClick={back} className="px-6 py-3 bg-gray-100 text-gray-800 font-bold rounded-xl hover:bg-gray-200 transition-all">
                                     ← Back
                                 </button>
                             ) : <div />}
@@ -224,7 +230,6 @@ export default function ApplyLoanPage() {
                     </div>
                 </div>
             </div>
-            <Footer />
         </div>
     );
 }
@@ -235,13 +240,13 @@ function InputField({ label, value, onChange, placeholder, type = "text" }: {
 }) {
     return (
         <div>
-            <label className="text-sm font-bold dark:text-gray-300 block mb-2">{label}</label>
+            <label className="text-sm font-bold block mb-2">{label}</label>
             <input
                 type={type}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
-                className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-xl bg-transparent dark:text-white focus:outline-none focus:ring-2 focus:ring-[#6605c7] transition-all"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6605c7] transition-all"
             />
         </div>
     );
@@ -253,11 +258,11 @@ function SelectField({ label, value, onChange, options }: {
 }) {
     return (
         <div>
-            <label className="text-sm font-bold dark:text-gray-300 block mb-2">{label}</label>
+            <label className="text-sm font-bold block mb-2">{label}</label>
             <select
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#6605c7] transition-all"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#6605c7] transition-all"
             >
                 <option value="">Select an option</option>
                 {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}

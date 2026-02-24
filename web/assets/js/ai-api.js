@@ -4,7 +4,7 @@
  */
 
 const AI_API = {
-  BASE_URL: 'http://localhost:3000/ai',
+  BASE_URL: 'http://localhost:3000/api/ai',
 
   /**
    * Check loan eligibility based on user profile

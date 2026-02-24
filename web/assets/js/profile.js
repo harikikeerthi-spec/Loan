@@ -1,5 +1,5 @@
 // Profile page functionality
-const API_URL = 'http://localhost:3000';
+const API_URL = 'http://localhost:3000/api';
 
 // Get user email from localStorage
 const currentUserEmail = localStorage.getItem('userEmail');

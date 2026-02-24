@@ -4,11 +4,11 @@ const API_URL = (() => {
         return window.APP_CONFIG.apiBase;
     }
     if (window.location.protocol === 'file:') {
-        return 'http://localhost:3000';
+        return 'http://localhost:3000/api';
     }
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1') {
-        return 'http://localhost:3000';
+        return 'http://localhost:3000/api';
     }
     return window.location.origin;
 })();

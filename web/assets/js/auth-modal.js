@@ -1,5 +1,5 @@
 // Authentication Modal Handler
-const API_URL = 'http://localhost:3000';
+const API_URL = 'http://localhost:3000/api';
 
 let authModal = document.getElementById('authModal');
 let registerLink = document.getElementById('registerLink');

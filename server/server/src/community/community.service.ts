@@ -1006,16 +1006,105 @@ export class CommunityService {
         };
     }
 
+    /**
+     * Search for similar/duplicate forum posts by title keywords
+     * Returns top 5 matches with id, title, category, commentCount, createdAt
+     */
+    async searchSimilarPosts(query: string) {
+        if (!query || query.trim().length < 3) {
+            return { success: true, data: [] };
+        }
+
+        // Extract meaningful keywords (>= 3 chars, ignore stopwords)
+        const stopwords = new Set(['the', 'and', 'for', 'how', 'can', 'what', 'why', 'which', 'does', 'are', 'was', 'get', 'not', 'any', 'but', 'you', 'your', 'that', 'this', 'have', 'with', 'will', 'from', 'its', 'into', 'than', 'then', 'about']);
+        const keywords = query.trim().toLowerCase().split(/\s+/).filter(w => w.length >= 3 && !stopwords.has(w));
+
+        if (keywords.length === 0) {
+            return { success: true, data: [] };
+        }
+
+        // Search: posts whose title contains ANY of the keywords
+        const orConditions = keywords.map(kw => ({
+            title: { contains: kw, mode: 'insensitive' as const }
+        }));
+
+        const posts = await this.prisma.forumPost.findMany({
+            where: { OR: orConditions },
+            select: {
+                id: true,
+                title: true,
+                category: true,
+                createdAt: true,
+                _count: { select: { comments: true } },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+        });
+
+        // Score by how many keywords match the title
+        const scored = posts.map(p => {
+            // title can be nullable in Prisma schema; guard against null
+            const t = (p.title || '').toLowerCase();
+            const score = keywords.reduce((acc, kw) => acc + (t.includes(kw) ? 1 : 0), 0);
+            return { ...p, score };
+        });
+
+        // Sort by score desc, take top 5
+        scored.sort((a, b) => b.score - a.score);
+        const top5 = scored.slice(0, 5).map(({ score, ...p }) => ({
+            ...p,
+            commentCount: p._count.comments,
+        }));
+
+        return { success: true, data: top5 };
+    }
+
+    /**
+     * Return a list of hub categories (distinct categories from forum posts)
+     */
+    async getHubs() {
+        try {
+            const rows = await this.prisma.forumPost.findMany({
+                select: { category: true },
+                orderBy: { category: 'asc' },
+            });
+            const unique = Array.from(new Set(rows.map(r => r.category).filter(Boolean)));
+            return { success: true, data: unique };
+        } catch (error) {
+            console.error('[CommunityService] getHubs failed:', error);
+            return { success: true, data: [] };
+        }
+    }
+
     async createForumPost(userId: string, data: any) {
         const user = await this.prisma.user.findUnique({ where: { id: userId } });
         if (!user) throw new NotFoundException('User not found');
+
+        // IDEMPOTENCY CHECK: Prevent duplicate posts by same user with same title in last 60s
+        const recentPost = await this.prisma.forumPost.findFirst({
+            where: {
+                authorId: userId,
+                title: data.title,
+                createdAt: { gte: new Date(Date.now() - 60000) } // 60 seconds
+            }
+        });
+
+        if (recentPost && data.force !== true) {
+            return {
+                success: true,
+                message: 'Post already created recently',
+                data: recentPost,
+                isDuplicate: true
+            };
+        }
 
         const post = await this.prisma.forumPost.create({
             data: {
                 title: data.title,
                 content: data.content,
                 excerpt: data.excerpt || null,
-                category: data.category,
+                // category is required in Prisma schema — default to 'General' when missing
+                category: data.category || 'General',
                 tags: data.tags || [],
                 authorId: userId,
                 isMentorOnly: data.isMentorOnly || false
@@ -1045,6 +1134,17 @@ export class CommunityService {
         content: string,
         parentId?: string,
     ) {
+        // Prevent double comment submission (idempotency)
+        const recentComment = await this.prisma.forumComment.findFirst({
+            where: {
+                authorId: userId,
+                postId,
+                content,
+                createdAt: { gte: new Date(Date.now() - 10000) } // 10 seconds
+            }
+        });
+        if (recentComment) return { success: true, data: recentComment };
+
         const post = await this.prisma.forumPost.findUnique({
             where: { id: postId },
         });
@@ -1513,13 +1613,56 @@ export class CommunityService {
         category: string;
     }) {
         try {
-            // 1. Fetch recent questions from the same category
-            const existingQuestions = await this.prisma.forumPost.findMany({
-                where: { category: { contains: questionData.category, mode: 'insensitive' } },
-                orderBy: { createdAt: 'desc' },
-                take: 100,
-                select: { id: true, title: true, content: true, createdAt: true }
+            // 0. CHECK FOR EXACT TITLE MATCH (Fast)
+            const exactMatch = await this.prisma.forumPost.findFirst({
+                where: {
+                    title: { equals: questionData.title.trim(), mode: 'insensitive' },
+                    category: questionData.category
+                },
+                select: { id: true, title: true, createdAt: true, _count: { select: { comments: true } } }
             });
+
+            if (exactMatch) {
+                return {
+                    isDuplicate: true,
+                    similarQuestions: [{
+                        id: exactMatch.id,
+                        title: exactMatch.title,
+                        similarity: 1.0,
+                        reason: 'Exact title match found in this category.',
+                        url: `/community/discussions/${exactMatch.id}`
+                    }],
+                    message: 'A question with this exact title already exists.'
+                };
+            }
+
+            // 1. EXTRACT KEYWORDS for pre-filtering (Fast keyword match)
+            const stopwords = new Set(['the', 'and', 'for', 'how', 'can', 'what', 'why', 'which', 'does', 'are', 'was', 'get', 'not', 'any', 'but', 'you', 'your', 'that', 'this', 'have', 'with', 'will', 'from', 'its', 'into', 'than', 'then', 'about']);
+            const keywords = questionData.title.toLowerCase().split(/\s+/).filter(w => w.length >= 3 && !stopwords.has(w));
+
+            let existingQuestions: any[] = [];
+
+            if (keywords.length > 0) {
+                existingQuestions = await this.prisma.forumPost.findMany({
+                    where: {
+                        category: { contains: questionData.category, mode: 'insensitive' },
+                        OR: keywords.map(kw => ({ title: { contains: kw, mode: 'insensitive' } }))
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    take: 50,
+                    select: { id: true, title: true, content: true, createdAt: true }
+                });
+            }
+
+            // If no keyword matches, fallback to recent 20 in category
+            if (existingQuestions.length === 0) {
+                existingQuestions = await this.prisma.forumPost.findMany({
+                    where: { category: { contains: questionData.category, mode: 'insensitive' } },
+                    orderBy: { createdAt: 'desc' },
+                    take: 20,
+                    select: { id: true, title: true, content: true, createdAt: true }
+                });
+            }
 
             if (existingQuestions.length === 0) {
                 return {
@@ -1529,7 +1672,7 @@ export class CommunityService {
                 };
             }
 
-            // 2. Prepare AI prompt for duplicate detection
+            // 2. Prepare AI prompt for deep semantic analysis
             const existingQuestionsText = existingQuestions
                 .map((q, i) => `${i + 1}. ID: ${q.id}\n   Title: "${q.title}"\n   Preview: ${q.content.substring(0, 150)}...`)
                 .join('\n\n');
@@ -1543,7 +1686,8 @@ Content: ${questionData.content}
 Existing Questions in the ${questionData.category} category:
 ${existingQuestionsText}
 
-Task: Identify if the new question is substantially similar to any existing questions. Questions are considered similar if they ask for the same information, even if worded differently.
+Task: Identify if the new question is substantially similar to any existing questions. Questions are considered similar if they ask for the same information, even if worded differently. 
+High similarity (>= 0.8) means they should be merged or the user should be directed to the existing one.
 
 Provide your analysis in JSON format with the following structure:
 {
@@ -1559,8 +1703,8 @@ Provide your analysis in JSON format with the following structure:
 
 IMPORTANT RULES:
 1. Only include questions with similarity >= 0.7
-2. Similarity of 1.0 means essentially the same question
-3. Similarity of 0.7-0.8 means very similar intent
+2. Similarity of 0.9-1.0 means essentially the same question or intent
+3. Similarity of 0.7-0.8 means related topics but maybe slightly different focus
 4. Maximum 5 matches
 5. Respond ONLY with valid JSON, no markdown formatting`;
 
@@ -1583,7 +1727,7 @@ IMPORTANT RULES:
                     title: m.title,
                     similarity: m.similarity,
                     reason: m.reason,
-                    url: `/question-discussion.html?id=${m.id}&topic=${questionData.category}`
+                    url: `/community/discussions/${m.id}`
                 }));
 
             return {

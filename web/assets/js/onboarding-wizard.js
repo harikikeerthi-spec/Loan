@@ -1,4 +1,4 @@
-﻿//  Sun Glade — AI-Powered Chat Onboarding 
+//  Sun Glade — AI-Powered Chat Onboarding 
 
 const chatCol = document.getElementById('chatCol');
 const progressBar = document.getElementById('progressBar');

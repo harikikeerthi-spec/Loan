@@ -431,6 +431,7 @@ export class AuthService {
         lastName: user.lastName,
         phoneNumber: user.phoneNumber,
         dateOfBirth: formattedDob,
+        passportNumber: user.passportNumber,
         createdAt: user.createdAt,
       }
     };
@@ -441,7 +442,8 @@ export class AuthService {
     firstName: string,
     lastName: string,
     phoneNumber: string,
-    dateOfBirth: string
+    dateOfBirth: string,
+    passportNumber?: string
   ) {
     // First, check if user exists with the provided email
     const existingUser = await this.usersService.findOne(email);
@@ -522,7 +524,8 @@ export class AuthService {
         firstName,
         lastName,
         phoneNumber,
-        dateOfBirth
+        dateOfBirth,
+        passportNumber
       );
 
       if (!user) {
@@ -538,6 +541,7 @@ export class AuthService {
           lastName: user.lastName,
           phoneNumber: user.phoneNumber,
           dateOfBirth: user.dateOfBirth,
+          passportNumber: user.passportNumber,
         }
       };
     } catch (error) {

@@ -1,5 +1,5 @@
 // Loan Recommendations based on Onboarding Data
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'http://localhost:3000/api';
 
 // Get onboarding data from localStorage
 const onboardingData = JSON.parse(localStorage.getItem('onboardingData') || '{}');

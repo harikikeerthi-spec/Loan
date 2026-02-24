@@ -1,118 +1,171 @@
 "use client";
 
 import { useState } from "react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
+import Image from "next/image";
+import { banks } from "@/lib/bankData";
 
-const banks = [
-    { id: "sbi", name: "SBI", fullName: "State Bank of India", rate: 8.5, maxTenure: 15, maxAmount: 75, tag: "Public Bank", color: "bg-blue-500" },
-    { id: "hdfc", name: "HDFC Credila", fullName: "HDFC Credila Financial Services", rate: 9.0, maxTenure: 12, maxAmount: 150, tag: "NBFC", color: "bg-red-500" },
-    { id: "icici", name: "ICICI Bank", fullName: "ICICI Bank Ltd.", rate: 9.5, maxTenure: 10, maxAmount: 100, tag: "Private Bank", color: "bg-orange-500" },
-    { id: "auxilo", name: "Auxilo", fullName: "Auxilo Finserve Pvt. Ltd.", rate: 11.25, maxTenure: 10, maxAmount: 100, tag: "NBFC", color: "bg-purple-500" },
-    { id: "avanse", name: "Avanse", fullName: "Avanse Financial Services", rate: 10.99, maxTenure: 10, maxAmount: 100, tag: "NBFC", color: "bg-green-500" },
-    { id: "idfc", name: "IDFC First", fullName: "IDFC First Bank", rate: 10.5, maxTenure: 10, maxAmount: 75, tag: "Private Bank", color: "bg-indigo-500" },
-];
+const LOAN_DATA = Object.values(banks).map(bank => ({
+    id: bank.slug,
+    bank: bank.name,
+    logo: bank.logo,
+    rate: bank.interestRate,
+    maxAmount: bank.maxLoan,
+    fee: bank.specifications.find(s => s.label === "Processing Fee")?.value || "1% + GST",
+    tenure: bank.specifications.find(s => s.label === "Repayment Tenure")?.value || "Up to 15 Years",
+    collateral: bank.specifications.find(s => s.label === "Collateral")?.value || "Profile based",
+    tag: bank.uniqueFeatures[0]?.title || "Premium Partner"
+}));
 
 export default function CompareLoansPage() {
-    const [selectedBanks, setSelectedBanks] = useState<string[]>([]);
-    const [amount, setAmount] = useState(3000000);
-    const [tenure, setTenure] = useState(84);
+    const [selected, setSelected] = useState<string[]>([]);
+    const [showModal, setShowModal] = useState(false);
 
-    const toggleBank = (id: string) => {
-        setSelectedBanks((prev) =>
-            prev.includes(id) ? prev.filter((b) => b !== id) : prev.length < 4 ? [...prev, id] : prev
-        );
+    const toggleLoan = (id: string) => {
+        if (selected.includes(id)) {
+            setSelected(selected.filter(i => i !== id));
+        } else {
+            if (selected.length < 3) {
+                setSelected([...selected, id]);
+            } else {
+                alert("You can compare up to 3 loans at a time.");
+            }
+        }
     };
 
-    const fmt = (n: number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
-
-    const compareList = selectedBanks.length > 0
-        ? banks.filter((b) => selectedBanks.includes(b.id))
-        : banks.slice(0, 3);
-
-    const calcEMI = (rate: number) => {
-        const r = rate / 12 / 100;
-        return amount * r * Math.pow(1 + r, tenure) / (Math.pow(1 + r, tenure) - 1);
-    };
+    const selectedData = LOAN_DATA.filter(l => selected.includes(l.id));
 
     return (
-        <div className="min-h-screen bg-transparent">
-            <Navbar />
-            <div className="pt-28 pb-16 px-6">
-                <div className="max-w-7xl mx-auto">
-                    <div className="text-center mb-10">
-                        <h1 className="text-4xl md:text-5xl font-bold font-display dark:text-white mb-4">Compare Education Loans</h1>
-                        <p className="text-gray-500">Find the best loan for your study abroad journey</p>
-                    </div>
+        <main className="relative z-10 pt-32 pb-24">
+            <section className="max-w-7xl mx-auto px-6">
+                <div className="text-center mb-16">
+                    <span className="text-[#6605c7] font-bold text-[11px] tracking-[0.2em] uppercase mb-4 block">Marketplace</span>
+                    <h1 className="text-5xl md:text-6xl font-display font-medium text-gray-900 mb-6">
+                        Compare <span className="italic text-gray-500">Education Loans</span>
+                    </h1>
+                    <p className="text-gray-500 text-lg max-w-2xl mx-auto leading-relaxed">
+                        Find the perfect loan for your education journey. Compare interest rates, processing fees, and terms from India's top lenders.
+                    </p>
+                </div>
 
-                    {/* Filters */}
-                    <div className="bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-slate-700 mb-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <label className="text-sm font-bold dark:text-gray-300 block mb-2">Loan Amount: {fmt(amount)}</label>
-                                <input type="range" min={500000} max={10000000} step={100000} value={amount} onChange={(e) => setAmount(+e.target.value)}
-                                    className="w-full accent-[#6605c7]" />
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {LOAN_DATA.map((loan) => (
+                        <div key={loan.id} className={`group bg-white/80 backdrop-blur-xl border rounded-[2.5rem] p-8 transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 ${selected.includes(loan.id) ? "border-[#6605c7] ring-1 ring-[#6605c7]" : "border-gray-100"}`}>
+                            <div className="flex items-center gap-4 mb-8">
+                                <div className="w-16 h-16 bg-white rounded-2xl p-3 flex items-center justify-center border border-gray-100 shadow-sm overflow-hidden">
+                                    <img src={loan.logo} alt={loan.bank} className="w-full h-full object-contain" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-gray-900 text-lg leading-tight">{loan.bank}</h3>
+                                    <span className="text-[10px] font-bold text-[#6605c7] uppercase tracking-widest">{loan.tag}</span>
+                                </div>
                             </div>
-                            <div>
-                                <label className="text-sm font-bold dark:text-gray-300 block mb-2">Tenure: {tenure} months</label>
-                                <input type="range" min={12} max={180} step={6} value={tenure} onChange={(e) => setTenure(+e.target.value)}
-                                    className="w-full accent-[#6605c7]" />
+
+                            <div className="space-y-4 mb-10">
+                                <div className="flex justify-between items-baseline">
+                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Interest Rate</span>
+                                    <span className="text-2xl font-bold text-[#6605c7]">{loan.rate}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Max Amount</span>
+                                    <span className="text-sm font-bold text-gray-900">{loan.maxAmount}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Processing Fee</span>
+                                    <span className="text-sm font-bold text-gray-900">{loan.fee}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <a href="/apply-loan" className="flex-1 py-4 bg-[#6605c7] text-white rounded-2xl font-bold uppercase tracking-widest text-[10px] hover:scale-[1.02] transition-all shadow-xl text-center flex items-center justify-center">Apply Now</a>
+                                <button
+                                    onClick={() => toggleLoan(loan.id)}
+                                    className={`px-6 py-4 rounded-2xl font-bold uppercase tracking-widest text-[10px] transition-all border ${selected.includes(loan.id) ? "bg-[#6605c7] text-white border-[#6605c7]" : "border-[#6605c7] text-[#6605c7] hover:bg-[#6605c7]/5"}`}
+                                >
+                                    {selected.includes(loan.id) ? "Selected" : "Compare"}
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {selected.length > 0 && (
+                    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 z-50">
+                        <div className="bg-white/90 backdrop-blur-2xl border border-gray-100 rounded-full p-2 pl-8 flex items-center justify-between shadow-2xl">
+                            <span className="text-gray-900 font-bold text-sm">
+                                <span className="text-[#6605c7]">{selected.length}</span> {selected.length === 1 ? "Loan" : "Loans"} Selected
+                            </span>
+                            <div className="flex gap-4">
+                                <button onClick={() => setSelected([])} className="text-xs font-bold text-gray-400 hover:text-gray-600 uppercase tracking-widest">Clear</button>
+                                <button
+                                    onClick={() => setShowModal(true)}
+                                    disabled={selected.length < 2}
+                                    className="px-8 py-3 bg-[#6605c7] text-white rounded-full font-bold uppercase tracking-widest text-xs hover:scale-[1.02] shadow-xl transition-all disabled:opacity-50"
+                                >
+                                    Compare Now
+                                </button>
                             </div>
                         </div>
                     </div>
+                )}
+            </section>
 
-                    {/* Bank Selector */}
-                    <div className="flex flex-wrap gap-3 mb-8">
-                        {banks.map((b) => (
-                            <button key={b.id} onClick={() => toggleBank(b.id)}
-                                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all border ${selectedBanks.includes(b.id)
-                                        ? "bg-[#6605c7] text-white border-[#6605c7]"
-                                        : "bg-white dark:bg-slate-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-slate-700 hover:border-[#6605c7]"
-                                    }`}>
-                                {b.name}
+            {showModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-gray-900/40 backdrop-blur-md">
+                    <div className="bg-white rounded-[3rem] w-full max-w-5xl max-h-[90vh] overflow-hidden shadow-2xl animate-fade-in-up">
+                        <div className="p-8 border-b border-gray-100 flex justify-between items-center">
+                            <h2 className="text-3xl font-display font-medium text-gray-900">Loan <span className="italic">Comparison</span></h2>
+                            <button onClick={() => setShowModal(false)} className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-colors">
+                                <span className="material-symbols-outlined">close</span>
                             </button>
-                        ))}
-                        <span className="text-xs text-gray-400 self-center">{selectedBanks.length === 0 ? "Select banks to compare (max 4)" : `${selectedBanks.length} selected`}</span>
-                    </div>
-
-                    {/* Comparison Table */}
-                    <div className="overflow-x-auto rounded-3xl border border-gray-100 dark:border-slate-700 shadow-xl">
-                        <table className="w-full min-w-[700px]">
-                            <thead>
-                                <tr className="bg-gray-50 dark:bg-slate-800">
-                                    <th className="p-6 text-left font-bold dark:text-white">Feature</th>
-                                    {compareList.map((b) => (
-                                        <th key={b.id} className="p-6 text-center">
-                                            <div className={`w-10 h-10 ${b.color} rounded-xl mx-auto mb-2 flex items-center justify-center text-white text-xs font-bold`}>
-                                                {b.name[0]}
-                                            </div>
-                                            <div className="font-bold dark:text-white text-sm">{b.name}</div>
-                                            <div className="text-[10px] text-gray-400">{b.tag}</div>
-                                        </th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100 dark:divide-slate-800">
-                                {[
-                                    { label: "Interest Rate (p.a.)", fn: (b: typeof banks[0]) => `${b.rate}%` },
-                                    { label: "Monthly EMI", fn: (b: typeof banks[0]) => fmt(calcEMI(b.rate)) },
-                                    { label: "Total Interest", fn: (b: typeof banks[0]) => fmt(calcEMI(b.rate) * tenure - amount) },
-                                    { label: "Max Loan Amount", fn: (b: typeof banks[0]) => `₹${b.maxAmount}L` },
-                                    { label: "Max Tenure", fn: (b: typeof banks[0]) => `${b.maxTenure} years` },
-                                ].map((row) => (
-                                    <tr key={row.label} className="hover:bg-gray-50/50 transition-colors">
-                                        <td className="p-6 font-medium text-gray-600 dark:text-gray-400 text-sm">{row.label}</td>
-                                        {compareList.map((b) => (
-                                            <td key={b.id} className="p-6 text-center font-bold dark:text-white text-sm">{row.fn(b)}</td>
+                        </div>
+                        <div className="p-10 overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr>
+                                        <th className="py-6 px-4"></th>
+                                        {selectedData.map(loan => (
+                                            <th key={loan.id} className="py-6 px-4">
+                                                <div className="flex flex-col items-center gap-3">
+                                                    <div className="w-12 h-12 flex items-center justify-center bg-white rounded-xl shadow-sm border border-gray-50 p-2">
+                                                        <img src={loan.logo} alt={loan.bank} className="w-full h-full object-contain" />
+                                                    </div>
+                                                    <span className="font-bold text-gray-900 text-[11px] uppercase tracking-wider whitespace-nowrap">{loan.bank}</span>
+                                                </div>
+                                            </th>
                                         ))}
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50 text-center">
+                                    {[
+                                        { label: "Interest Rate", key: "rate" },
+                                        { label: "Max Amount", key: "maxAmount" },
+                                        { label: "Processing Fee", key: "fee" },
+                                        { label: "Tenure", key: "tenure" },
+                                        { label: "Collateral", key: "collateral" }
+                                    ].map((row, i) => (
+                                        <tr key={i}>
+                                            <td className="py-6 px-4 text-left font-bold text-gray-400 uppercase tracking-widest text-[9px] whitespace-nowrap">{row.label}</td>
+                                            {selectedData.map(loan => (
+                                                <td key={loan.id} className={`py-6 px-4 ${row.key === "rate" ? "text-xl font-bold text-[#6605c7]" : "text-sm font-bold text-gray-900"}`}>
+                                                    {loan[row.key as keyof typeof loan]}
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                    <tr>
+                                        <td className="py-10"></td>
+                                        {selectedData.map(loan => (
+                                            <td key={loan.id} className="py-10 px-4">
+                                                <a href="/apply-loan" className="w-full py-4 bg-[#6605c7] text-white rounded-2xl font-bold uppercase tracking-widest text-[10px] hover:scale-[1.05] transition-all shadow-xl inline-block text-center">Apply Now</a>
+                                            </td>
+                                        ))}
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <Footer />
-        </div>
+            )}
+        </main>
     );
 }

@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import BlogClient from "./BlogClient";
 
 export const metadata: Metadata = {
@@ -11,9 +9,7 @@ export const metadata: Metadata = {
 export default function BlogPage() {
     return (
         <div className="min-h-screen bg-transparent">
-            <Navbar />
             <BlogClient />
-            <Footer />
         </div>
     );
 }

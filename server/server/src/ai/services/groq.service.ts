@@ -19,7 +19,7 @@ export class GroqService {
             ],
         };
 
-        const maskedKey = this.apiKey ? `${this.apiKey.slice(0,4)}...${this.apiKey.slice(-4)} (len ${this.apiKey.length})` : '[NOT SET]';
+        const maskedKey = this.apiKey ? `${this.apiKey.slice(0, 4)}...${this.apiKey.slice(-4)} (len ${this.apiKey.length})` : '[NOT SET]';
         console.log('Groq request:', {
             url: this.apiUrl,
             model: requestBody.model,
@@ -61,10 +61,39 @@ export class GroqService {
         try {
             // Clean up common markdown json wrappers if present
             const cleaned = content.replace(/```json/g, '').replace(/```/g, '').trim();
-            return JSON.parse(cleaned) as T;
+            const jsonStart = cleaned.indexOf('{');
+            const jsonEnd = cleaned.lastIndexOf('}');
+            if (jsonStart === -1 || jsonEnd === -1) {
+                // Try array
+                const arrStart = cleaned.indexOf('[');
+                const arrEnd = cleaned.lastIndexOf(']');
+                if (arrStart === -1 || arrEnd === -1) throw new Error('No JSON found');
+                return JSON.parse(cleaned.slice(arrStart, arrEnd + 1)) as T;
+            }
+            return JSON.parse(cleaned.slice(jsonStart, jsonEnd + 1)) as T;
         } catch (e) {
             console.error('Failed to parse JSON response:', content);
             throw new Error('AI response was not valid JSON');
         }
+    }
+
+    async searchAdvice(query: string, type: 'university' | 'course', context?: any): Promise<any[]> {
+        let prompt = '';
+        if (type === 'university') {
+            prompt = `Search for universities matching or relevant to "${query}". 
+            Context: ${JSON.stringify(context || {})}
+            Return a list of up to 12 universities.
+            Each university must have: name, loc (location), slug (kebab-case name), rank (approximate world rank), accept (approximate acceptance rate %), tuition (approximate yearly tuition in USD), and country.
+            
+            Return ONLY a JSON array of objects.`;
+        } else {
+            prompt = `Search for courses/fields of study matching or relevant to "${query}".
+            Context: ${JSON.stringify(context || {})}
+            Return a list of up to 10 specific course names.
+            
+            Return ONLY a JSON array of strings.`;
+        }
+
+        return this.getJson<any[]>(prompt);
     }
 }

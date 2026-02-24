@@ -1,6 +1,6 @@
 // User profile details completion page for new/existing users without profile data
 // Uses unified OTP authentication flow
-const API_URL = 'http://localhost:3000';
+const API_URL = 'http://localhost:3000/api';
 
 // Verify user has been authenticated via OTP
 const accessToken = localStorage.getItem('accessToken');

@@ -5,8 +5,6 @@ import Link from "next/link";
 import { communityApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import type { ForumPost } from "@/types";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 
 const topics = [
     { id: "all", label: "All Discussions", icon: "forum" },
@@ -47,8 +45,6 @@ export default function ExplorePage() {
 
     return (
         <div className="min-h-screen bg-transparent">
-            <Navbar />
-
             <div className="pt-28 pb-16">
                 {/* Header */}
                 <div className="bg-gradient-to-r from-[#6605c7] to-purple-700 text-white py-16 px-6 mb-10">
@@ -85,7 +81,7 @@ export default function ExplorePage() {
                     <div className="flex flex-col lg:flex-row gap-8">
                         {/* Sidebar */}
                         <aside className="lg:w-64 shrink-0">
-                            <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-gray-100 dark:border-slate-700 sticky top-28">
+                            <div className="bg-white rounded-2xl p-4 border border-gray-100 sticky top-28">
                                 <h3 className="font-bold text-sm uppercase tracking-wider text-gray-400 px-3 mb-3">Topics</h3>
                                 <nav className="space-y-1">
                                     {topics.map((t) => (
@@ -94,7 +90,7 @@ export default function ExplorePage() {
                                             onClick={() => setActiveTopic(t.id)}
                                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${activeTopic === t.id
                                                     ? "bg-[#6605c7] text-white"
-                                                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-slate-700"
+                                                    : "text-gray-600 hover:bg-gray-50:bg-slate-700"
                                                 }`}
                                         >
                                             <span className="material-symbols-outlined text-lg">{t.icon}</span>
@@ -110,13 +106,13 @@ export default function ExplorePage() {
                             {loading ? (
                                 <div className="space-y-4">
                                     {[...Array(5)].map((_, i) => (
-                                        <div key={i} className="h-32 bg-white dark:bg-slate-800 rounded-2xl animate-pulse" />
+                                        <div key={i} className="h-32 bg-white rounded-2xl animate-pulse" />
                                     ))}
                                 </div>
                             ) : !filtered.length ? (
-                                <div className="text-center py-24 bg-white dark:bg-slate-800 rounded-2xl">
+                                <div className="text-center py-24 bg-white rounded-2xl">
                                     <span className="material-symbols-outlined text-6xl text-gray-300 block mb-4">forum</span>
-                                    <h3 className="text-xl font-bold dark:text-white mb-2">No discussions yet</h3>
+                                    <h3 className="text-xl font-bold mb-2">No discussions yet</h3>
                                     <p className="text-gray-500 mb-6">Be the first to start a conversation!</p>
                                     {isAuthenticated && (
                                         <Link href="/explore/create-post" className="px-6 py-3 bg-[#6605c7] text-white font-bold rounded-xl">Ask a Question</Link>
@@ -125,14 +121,14 @@ export default function ExplorePage() {
                             ) : (
                                 <div className="space-y-4">
                                     {filtered.map((post) => (
-                                        <Link key={post.id} href={`/explore/${post.slug || post.id}`} className="block group bg-white dark:bg-slate-800 rounded-2xl p-6 border border-gray-100 dark:border-slate-700 hover:shadow-lg hover:border-[#6605c7]/20 transition-all">
+                                        <Link key={post.id} href={`/explore/${post.slug || post.id}`} className="block group bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg hover:border-[#6605c7]/20 transition-all">
                                             <div className="flex items-start gap-4">
                                                 <div className="w-10 h-10 bg-[#6605c7]/10 rounded-xl flex items-center justify-center text-[#6605c7] shrink-0">
                                                     <span className="material-symbols-outlined text-lg">chat_bubble</span>
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-start justify-between gap-4 mb-2">
-                                                        <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-[#6605c7] transition-colors leading-tight">
+                                                        <h3 className="font-bold text-gray-900 group-hover:text-[#6605c7] transition-colors leading-tight">
                                                             {post.title}
                                                         </h3>
                                                         {post.isPinned && (
@@ -168,7 +164,6 @@ export default function ExplorePage() {
                     </div>
                 </div>
             </div>
-            <Footer />
         </div>
     );
 }

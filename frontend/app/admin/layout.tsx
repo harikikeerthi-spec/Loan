@@ -1,22 +1,23 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const { isAdmin, isLoading, isAuthenticated } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
 
     useEffect(() => {
-        if (!isLoading) {
+        if (!isLoading && pathname !== "/admin/login") {
             if (!isAuthenticated) {
-                router.replace("/login?redirect=/admin");
+                router.replace("/admin/login?redirect=" + encodeURIComponent(pathname));
             } else if (!isAdmin) {
                 router.replace("/dashboard");
             }
         }
-    }, [isAdmin, isLoading, isAuthenticated, router]);
+    }, [isAdmin, isLoading, isAuthenticated, router, pathname]);
 
     if (isLoading) {
         return (
@@ -25,6 +26,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
         );
     }
+
+    if (pathname === "/admin/login") return <>{children}</>;
 
     if (!isAuthenticated || !isAdmin) return null;
 

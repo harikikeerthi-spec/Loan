@@ -67,7 +67,8 @@ export class UsersService {
     firstName: string,
     lastName: string,
     phoneNumber: string,
-    dateOfBirth: string
+    dateOfBirth: string,
+    passportNumber?: string
   ) {
     // Convert DD-MM-YYYY to Date object
     let dobDate: Date | null = null;
@@ -88,6 +89,7 @@ export class UsersService {
         lastName,
         phoneNumber,
         dateOfBirth: dobDate,
+        passportNumber: passportNumber || undefined,
       },
     });
   }

@@ -1247,7 +1247,7 @@ function saveBlog() {
     showNotification('Publishing blog...', 'info');
 
     // Send to backend API
-    fetch('http://localhost:3000/blogs', {
+    fetch('http://localhost:3000/api/blogs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

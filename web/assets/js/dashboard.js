@@ -1,5 +1,5 @@
 // User Dashboard API Integration
-const API_URL = 'http://localhost:3000';
+const API_URL = 'http://localhost:3000/api';
 
 // Pages that don't require authentication (public pages)
 const publicPages = [

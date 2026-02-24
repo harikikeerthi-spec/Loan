@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <rect width="400" height="720" x="0" fill="#009A44" />
+  <rect width="400" height="720" x="400" fill="#ffffff" />
+  <rect width="400" height="720" x="800" fill="#FF883E" />
+  <text x="50%" y="50%" fill="#1a1a2e" font-size="48" font-family="Inter, Arial" font-weight="800" text-anchor="middle" dominant-baseline="middle">Ireland</text>
+</svg>

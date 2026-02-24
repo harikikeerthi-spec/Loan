@@ -53,14 +53,14 @@ export default function CreatePostPage() {
             <div className="pt-28 pb-16 px-6">
                 <div className="max-w-3xl mx-auto">
                     <div className="mb-8">
-                        <h1 className="text-3xl font-bold font-display dark:text-white mb-2">Ask a Question</h1>
+                        <h1 className="text-3xl font-bold font-display mb-2">Ask a Question</h1>
                         <p className="text-gray-500">Share your query with the VidhyaLoan community</p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="bg-white dark:bg-slate-800 rounded-3xl p-8 shadow-sm border border-gray-100 dark:border-slate-700 space-y-6">
+                    <form onSubmit={handleSubmit} className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 space-y-6">
                         {/* Topic */}
                         <div>
-                            <label className="text-sm font-bold dark:text-gray-300 block mb-3">Topic</label>
+                            <label className="text-sm font-bold block mb-3">Topic</label>
                             <div className="flex flex-wrap gap-2">
                                 {TOPICS.map((t) => (
                                     <button
@@ -68,8 +68,8 @@ export default function CreatePostPage() {
                                         type="button"
                                         onClick={() => setTopic(t)}
                                         className={`px-4 py-2 rounded-xl text-sm font-bold capitalize transition-all ${topic === t
-                                                ? "bg-[#6605c7] text-white"
-                                                : "bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200"
+                                            ? "bg-[#6605c7] text-white"
+                                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                                             }`}
                                     >
                                         {t}
@@ -80,13 +80,13 @@ export default function CreatePostPage() {
 
                         {/* Title */}
                         <div>
-                            <label className="text-sm font-bold dark:text-gray-300 block mb-2">Title <span className="text-red-500">*</span></label>
+                            <label className="text-sm font-bold block mb-2">Title <span className="text-red-500">*</span></label>
                             <input
                                 type="text"
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value)}
-                                placeholder="e.g. What documents are needed for SBI education loan?"
-                                className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-xl bg-transparent dark:text-white focus:outline-none focus:ring-2 focus:ring-[#6605c7] transition-all"
+                                placeholder="e.g. What documents are needed for HDFC Credila education loan?"
+                                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6605c7] transition-all"
                                 maxLength={200}
                                 required
                             />
@@ -95,13 +95,13 @@ export default function CreatePostPage() {
 
                         {/* Content */}
                         <div>
-                            <label className="text-sm font-bold dark:text-gray-300 block mb-2">Details <span className="text-red-500">*</span></label>
+                            <label className="text-sm font-bold block mb-2">Details <span className="text-red-500">*</span></label>
                             <textarea
                                 value={content}
                                 onChange={(e) => setContent(e.target.value)}
                                 placeholder="Provide more context about your question. What have you already tried? What specifically are you confused about?"
                                 rows={8}
-                                className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-xl bg-transparent dark:text-white focus:outline-none focus:ring-2 focus:ring-[#6605c7] transition-all resize-none"
+                                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6605c7] transition-all resize-none"
                                 required
                             />
                             <div className="text-right text-xs text-gray-400 mt-1">{content.length} characters</div>
@@ -118,7 +118,7 @@ export default function CreatePostPage() {
                             <button
                                 type="button"
                                 onClick={() => router.back()}
-                                className="px-6 py-3 bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-white font-bold rounded-xl hover:bg-gray-200 transition-all"
+                                className="px-6 py-3 bg-gray-100 text-gray-800 font-bold rounded-xl hover:bg-gray-200 transition-all"
                             >
                                 Cancel
                             </button>

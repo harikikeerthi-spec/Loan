@@ -45,7 +45,7 @@ export default function Navbar() {
         <nav
             id="mainNav"
             className={`fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500 ${scrolled
-                ? "bg-[rgba(17,8,26,0.9)] backdrop-blur-xl border-b border-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.2)] !py-4"
+                ? "bg-white/90 backdrop-blur-xl border-b border-black/5 shadow-[0_4px_20px_rgba(0,0,0,0.05)] !py-4"
                 : "bg-transparent"
                 }`}
         >
@@ -56,8 +56,8 @@ export default function Navbar() {
                         <div className="w-10 h-10 rounded-xl bg-[#6605c7]/10 flex items-center justify-center shadow-lg backdrop-blur-sm border border-[#6605c7]/20">
                             <span className="material-symbols-outlined text-2xl text-[#6605c7]">school</span>
                         </div>
-                        <span className={`font-bold text-2xl tracking-tight font-display transition-colors duration-500 ${scrolled ? "text-white" : "text-[#1a1626]"}`}>
-                            VidhyaLoan
+                        <span className={`font-bold text-2xl tracking-tight font-display transition-colors duration-500 text-[#1a1626]`}>
+                            VidhyaLoans
                         </span>
                     </Link>
 
@@ -65,38 +65,55 @@ export default function Navbar() {
                     <div className="hidden lg:flex items-center gap-1">
                         {/* Loans Mega Menu */}
                         <div className="group/nav relative px-3 py-4">
-                            <button className={`nav-link flex items-center gap-1 text-sm font-bold uppercase tracking-wider transition-colors duration-500 ${scrolled ? "!text-white" : "text-[#190f23]/90"}`}>
+                            <button className={`nav-link flex items-center gap-1 text-sm font-bold uppercase tracking-wider transition-colors duration-500 text-[#190f23]/90`}>
                                 Loans
                             </button>
-                            <div className="absolute top-full -left-4 w-[600px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
+                            <div className="absolute top-full -left-4 w-[850px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
                                 <div className="bg-white/95 backdrop-blur-2xl border border-white/20 rounded-3xl shadow-2xl p-6">
-                                    <div className="grid grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-3 gap-6">
+                                        {/* Column 1: Calculators */}
                                         <div>
                                             <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4 pl-3">Calculators</h3>
                                             <NavItem href="/emi" icon="calculate" title="EMI Calculator" desc="Plan your monthly repayments" />
                                             <NavItem href="/loan-eligibility" icon="smart_toy" title="Eligibility Checker" desc="Check your approval chances" color="text-blue-500" />
                                         </div>
-                                        <div>
-                                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4 pl-3">Compare & Apply</h3>
-                                            <NavItem href="/compare-loans" icon="compare" title="Compare Loans" desc="Find the best interest rates" color="text-orange-500" />
-                                            <NavItem href="/bank-reviews" icon="rate_review" title="Bank Reviews" desc="Real feedback from students" color="text-green-500" />
+
+                                        {/* Column 2: Compare & Apply */}
+                                        <div className="flex flex-col justify-between">
+                                            <div>
+                                                <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4 pl-3">Compare & Apply</h3>
+                                                <NavItem href="/compare-loans" icon="compare" title="Compare Loans" desc="Find the best interest rates" color="text-orange-500" />
+                                                <NavItem href="/bank-reviews" icon="rate_review" title="Bank Reviews" desc="Real feedback from students" color="text-green-500" />
+                                            </div>
+                                            <Link href="/apply-loan" className="mt-4 flex items-center justify-center w-full py-3 bg-gradient-to-r from-primary to-purple-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:shadow-lg transition-all">
+                                                Apply Now <span className="material-symbols-outlined text-sm ml-1">arrow_forward</span>
+                                            </Link>
+                                        </div>
+
+                                        {/* Column 3: Our Lending Partners */}
+                                        <div className="bg-gray-50/80 -mr-6 -my-6 p-6 border-l border-gray-100 rounded-r-3xl">
+                                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4 pl-3">Our Lending Partners</h3>
+                                            <div className="space-y-1">
+                                                <PartnerItem href="/bank/idfc" initials="IF" name="IDFC First Bank" rate="From 10.5% p.a." color="text-red-600" bgColor="bg-red-500/10" />
+                                                <PartnerItem href="/bank/auxilo" initials="AX" name="Auxilo Finserve" rate="From 11.25% p.a." color="text-blue-600" bgColor="bg-blue-500/10" />
+                                                <PartnerItem href="/bank/avanse" initials="AV" name="Avanse Financial" rate="From 10.99% p.a." color="text-green-600" bgColor="bg-green-500/10" />
+                                                <PartnerItem href="/bank/credila" initials="CR" name="Credila (HDFC)" rate="From 10.75% p.a." color="text-indigo-600" bgColor="bg-indigo-500/10" />
+                                                <PartnerItem href="/bank/poonawalla" initials="PF" name="Poonawalla Fincorp" rate="From 11.50% p.a." color="text-orange-600" bgColor="bg-orange-500/10" />
+                                            </div>
                                         </div>
                                     </div>
-                                    <Link href="/apply-loan" className="mt-4 flex items-center justify-center w-full py-3 bg-gradient-to-r from-primary to-purple-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:shadow-lg transition-all">
-                                        Apply Now <span className="material-symbols-outlined text-sm ml-1">arrow_forward</span>
-                                    </Link>
                                 </div>
                             </div>
                         </div>
 
                         {/* Services Mega Menu */}
                         <div className="group/nav relative px-3 py-4">
-                            <button className={`nav-link flex items-center gap-1 text-sm font-bold uppercase tracking-wider transition-colors duration-500 ${scrolled ? "!text-white" : "text-[#190f23]/90"}`}>
+                            <button className={`nav-link flex items-center gap-1 text-sm font-bold uppercase tracking-wider transition-colors duration-500 text-[#190f23]/90`}>
                                 Services
                             </button>
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 w-[600px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 w-[850px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
                                 <div className="bg-white/95 backdrop-blur-2xl border border-white/20 rounded-3xl shadow-2xl p-8">
-                                    <div className="grid grid-cols-2 gap-8">
+                                    <div className="grid grid-cols-3 gap-8">
                                         <div>
                                             <h3 className="text-[10px] font-bold uppercase tracking-widest text-[#6605c7] mb-4 border-b border-primary/20 pb-2">Planning</h3>
                                             <NavItem href="/onboarding" icon="rocket_launch" title="Get Started" desc="Personalized loan journey" />
@@ -106,8 +123,19 @@ export default function Navbar() {
                                         <div>
                                             <h3 className="text-[10px] font-bold uppercase tracking-widest text-pink-500 mb-4 border-b border-pink-500/20 pb-2">Application</h3>
                                             <NavItem href="/sop-writer" icon="auto_fix_high" title="AI SOP Writer" desc="Generate statements instantly" color="text-pink-500" />
+                                            <NavItem href="/sop-analyzer" icon="analytics" title="Quality Scorer" desc="Analyze your existing SOP" color="text-pink-500" />
                                             <NavItem href="/admit-predictor" icon="insights" title="Admit Predictor" desc="Chance of acceptance" color="text-pink-500" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-purple-500 mb-4 border-b border-purple-500/20 pb-2">Research</h3>
                                             <NavItem href="/compare-universities" icon="school" title="Compare Universities" desc="Find your best fit" color="text-purple-500" />
+                                            <div className="px-3 opacity-50">
+                                                <div className="flex items-center gap-2 mt-4">
+                                                    <span className="material-symbols-outlined text-sm text-gray-400">paid</span>
+                                                    <span className="text-[10px] font-bold uppercase text-gray-400">Scholarships</span>
+                                                    <span className="text-[8px] bg-gray-100 text-gray-500 px-1 py-0.5 rounded">SOON</span>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -116,7 +144,7 @@ export default function Navbar() {
 
                         {/* Community */}
                         <div className="group/nav relative px-3 py-4">
-                            <button className={`nav-link flex items-center gap-1 text-sm font-bold uppercase tracking-wider transition-colors duration-500 ${scrolled ? "!text-white" : "text-[#190f23]/90"}`}>
+                            <button className={`nav-link flex items-center gap-1 text-sm font-bold uppercase tracking-wider transition-colors duration-500 text-[#190f23]/90`}>
                                 Community
                             </button>
                             <div className="absolute top-full -left-20 w-[500px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
@@ -130,21 +158,22 @@ export default function Navbar() {
                                                 <h3 className="text-white font-display text-xl font-bold mb-2">Join the Club</h3>
                                                 <p className="text-blue-100 text-xs leading-relaxed">Connect with 10k+ students worldwide.</p>
                                             </div>
-                                            <Link href={isAuthenticated ? "/explore" : "/login"} className="mt-6 px-4 py-2.5 bg-white text-[#6605c7] rounded-xl text-xs font-bold text-center hover:bg-gray-50">
+                                            <Link href="/community" className="mt-6 px-4 py-2.5 bg-white text-[#6605c7] rounded-xl text-xs font-bold text-center hover:bg-gray-50">
                                                 Join Community
                                             </Link>
                                         </div>
-                                        <div className="col-span-3 p-6">
-                                            <NavItem href="/explore" icon="forum" title="Discussions" desc="Ask questions, get answers" color="text-yellow-500" />
+                                        <div className="col-span-3 p-6 flex flex-col gap-2">
+                                            <NavItem href="/community/discussions" icon="forum" title="Discussions" desc="Ask questions, get answers" color="text-yellow-500" />
+                                            <NavItem href="/community" icon="groups" title="Community Hub" desc="Mentors, events & stories" color="text-purple-500" />
                                             <NavItem href="/blog" icon="article" title="Blogs" desc="Latest news and guides" color="text-blue-500" />
-                                            <NavItem href="/community-events" icon="event" title="Events & Webinars" desc="Upcoming sessions" color="text-red-500" />
+                                            <NavItem href="/referral" icon="redeem" title="Refer & Earn" desc="Invite friends, get rewards" color="text-[#6605c7]" />
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <Link href="/about-us" className={`nav-link px-3 py-4 text-sm font-bold uppercase tracking-wider transition-colors duration-500 ${scrolled ? "!text-white" : "text-[#190f23]/90"}`}>Company</Link>
+                        <Link href="/about-us" className={`nav-link px-3 py-4 text-sm font-bold uppercase tracking-wider transition-colors duration-500 text-[#190f23]/90`}>Company</Link>
                     </div>
                 </div>
 
@@ -161,7 +190,7 @@ export default function Navbar() {
                         <div className="relative" ref={profileRef}>
                             <button
                                 onClick={() => setProfileOpen((p) => !p)}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border ${scrolled ? "border-white/20 bg-white/10" : "border-[#E5E7EB] bg-white/80"} shadow-sm hover:shadow-md`}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border border-[#E5E7EB] bg-white/80 shadow-sm hover:shadow-md`}
                             >
                                 <div className="w-8 h-8 rounded-full bg-[#6605c7]/10 flex items-center justify-center overflow-hidden border border-[#6605c7]/20">
                                     <Image
@@ -172,7 +201,7 @@ export default function Navbar() {
                                         className="w-full h-full object-cover"
                                     />
                                 </div>
-                                <span className={`text-xs font-bold px-1 hidden md:block max-w-[150px] truncate transition-colors duration-500 ${scrolled ? "text-white" : "text-[#1a1626]"}`}>
+                                <span className={`text-xs font-bold px-1 hidden md:block max-w-[150px] truncate transition-colors duration-500 text-[#1a1626]`}>
                                     {displayName}
                                 </span>
                             </button>
@@ -185,7 +214,11 @@ export default function Navbar() {
                                     </div>
                                     <div className="py-2">
                                         <ProfileDropItem href="/dashboard" icon="dashboard" label="Dashboard" iconClass="text-[#6605c7]" />
+                                        <ProfileDropItem href="/referral" icon="redeem" label="Refer & Earn" iconClass="text-pink-500" />
                                         <ProfileDropItem href="/profile" icon="person" label="My Profile" iconClass="text-[#6605c7]" />
+                                        {!(user?.firstName && user?.lastName && user?.phoneNumber && user?.dateOfBirth) && (
+                                            <ProfileDropItem href="/user-details" icon="info" label="Complete Profile" iconClass="text-yellow-500" />
+                                        )}
                                     </div>
                                     <div className="border-t border-gray-200 p-2">
                                         <button
@@ -203,7 +236,7 @@ export default function Navbar() {
 
                     {/* Mobile hamburger */}
                     <button
-                        className={`lg:hidden w-9 h-9 rounded-full flex items-center justify-center transition-colors ${scrolled ? "bg-white/10 text-white" : "bg-[#190f23]/5 text-[#190f23]"}`}
+                        className={`lg:hidden w-9 h-9 rounded-full flex items-center justify-center transition-colors bg-[#190f23]/5 text-[#190f23]`}
                         onClick={() => setMobileOpen((o) => !o)}
                     >
                         <span className="material-symbols-outlined">{mobileOpen ? "close" : "menu"}</span>
@@ -217,7 +250,7 @@ export default function Navbar() {
                     <MobileLink href="/" label="Home" onClick={() => setMobileOpen(false)} />
                     <MobileLink href="/emi" label="EMI Calculator" onClick={() => setMobileOpen(false)} />
                     <MobileLink href="/compare-loans" label="Compare Loans" onClick={() => setMobileOpen(false)} />
-                    <MobileLink href="/explore" label="Community" onClick={() => setMobileOpen(false)} />
+                    <MobileLink href="/community" label="Community" onClick={() => setMobileOpen(false)} />
                     <MobileLink href="/blog" label="Blog" onClick={() => setMobileOpen(false)} />
                     <MobileLink href="/sop-writer" label="AI Tools" onClick={() => setMobileOpen(false)} />
                     {isAuthenticated ? (
@@ -265,6 +298,22 @@ function MobileLink({ href, label, onClick }: { href: string; label: string; onC
     return (
         <Link href={href} onClick={onClick} className="text-gray-900 font-bold text-sm py-2 border-b border-gray-100">
             {label}
+        </Link>
+    );
+}
+
+function PartnerItem({ href, initials, name, rate, color, bgColor }: {
+    href: string; initials: string; name: string; rate: string; color: string; bgColor: string;
+}) {
+    return (
+        <Link href={href} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white transition-all group/partner">
+            <div className={`w-8 h-8 rounded-lg ${bgColor} flex items-center justify-center flex-shrink-0`}>
+                <span className={`text-[10px] font-bold ${color}`}>{initials}</span>
+            </div>
+            <div className="flex-1">
+                <div className="text-xs font-bold text-gray-900 group-hover/partner:text-[#6605c7] transition-colors">{name}</div>
+                <div className="text-[10px] text-gray-400 font-bold">{rate}</div>
+            </div>
         </Link>
     );
 }

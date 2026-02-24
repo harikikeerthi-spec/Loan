@@ -2,8 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { User, AuthTokenPayload } from "@/types";
+import { authApi } from "@/lib/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 interface AuthContextType {
     user: User | null;
@@ -59,6 +60,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const logout = useCallback(() => {
+        // Notify server (best-effort) and clear tokens locally
+        try { const email = localStorage.getItem("userEmail"); if (email) { void authApi.logout(email); } } catch { }
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("userEmail");
@@ -72,24 +75,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const refreshUser = useCallback(async () => {
-        const storedToken = localStorage.getItem("accessToken");
+        let storedToken = localStorage.getItem("accessToken");
+        const refreshToken = localStorage.getItem("refreshToken");
+
+        // If no access token or expired, try to refresh using refresh token
         if (!storedToken) {
-            setIsLoading(false);
-            return;
+            if (refreshToken) {
+                try {
+                    const data: any = await authApi.refresh(refreshToken);
+                    if (data?.access_token) {
+                        storedToken = data.access_token;
+                        localStorage.setItem("accessToken", storedToken!);
+                        if (data.refresh_token) localStorage.setItem("refreshToken", data.refresh_token);
+                    }
+                } catch (e) {
+                    // cannot refresh
+                    logout();
+                    setIsLoading(false);
+                    return;
+                }
+            } else {
+                setIsLoading(false);
+                return;
+            }
         }
 
-        const decoded = parseJwt(storedToken);
+        const decoded = parseJwt(storedToken!);
         if (!decoded) {
             logout();
             setIsLoading(false);
             return;
         }
 
-        // Check expiration
+        // If token expired, try refresh once
         if (decoded.exp && decoded.exp * 1000 < Date.now()) {
-            logout();
-            setIsLoading(false);
-            return;
+            if (refreshToken) {
+                try {
+                    const data: any = await authApi.refresh(refreshToken);
+                    if (data?.access_token) {
+                        storedToken = data.access_token;
+                        localStorage.setItem("accessToken", storedToken!);
+                        if (data.refresh_token) localStorage.setItem("refreshToken", data.refresh_token);
+                    } else {
+                        logout();
+                        setIsLoading(false);
+                        return;
+                    }
+                } catch {
+                    logout();
+                    setIsLoading(false);
+                    return;
+                }
+            } else {
+                logout();
+                setIsLoading(false);
+                return;
+            }
         }
 
         const email = localStorage.getItem("userEmail") || decoded.email;
@@ -117,6 +158,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         lastName: u.lastName,
                         phoneNumber: u.phoneNumber,
                         dateOfBirth: u.dateOfBirth,
+                        passportNumber: u.passportNumber,
                         role: decoded.role as User["role"],
                     });
                 }

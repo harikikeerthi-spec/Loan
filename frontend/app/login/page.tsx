@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { authApi } from "@/lib/api";
 
-export default function LoginPage() {
+function LoginContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { login } = useAuth();
@@ -79,13 +79,31 @@ export default function LoginPage() {
         setError("");
         try {
             const data = await authApi.verifyOtp(email.trim(), code) as {
-                success: boolean; access_token: string; userExists: boolean;
-                firstName?: string; lastName?: string; refresh_token?: string;
+                success: boolean;
+                access_token: string;
+                userExists: boolean;
+                hasUserDetails?: boolean;
+                firstName?: string;
+                lastName?: string;
+                refresh_token?: string;
+                role?: string;
             };
             if (data.refresh_token) localStorage.setItem("refreshToken", data.refresh_token);
-            login(data.access_token, { email: email.trim(), firstName: data.firstName, lastName: data.lastName });
+            login(data.access_token, {
+                email: email.trim(),
+                firstName: data.firstName,
+                lastName: data.lastName,
+                role: data.role as any
+            });
 
-            if (!data.userExists) {
+            // Role-based redirection
+            if (data.role === "admin" || data.role === "super_admin") {
+                router.push("/admin");
+                return;
+            }
+
+            // if user is new or doesn't yet have profile details, send them to the details page
+            if (!data.userExists || data.hasUserDetails === false) {
                 router.push("/user-details");
             } else {
                 const redirectTo = searchParams.get("redirect");
@@ -117,12 +135,12 @@ export default function LoginPage() {
                         <div className="w-12 h-12 rounded-2xl bg-[#6605c7]/20 flex items-center justify-center border border-[#6605c7]/30">
                             <span className="material-symbols-outlined text-[#6605c7] text-3xl">school</span>
                         </div>
-                        <span className="font-bold text-3xl font-display text-gray-900 dark:text-white">VidhyaLoan</span>
+                        <span className="font-bold text-3xl font-display text-gray-900">VidhyaLoan</span>
                     </Link>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white font-display mb-2">
+                    <h1 className="text-3xl font-bold text-gray-900 font-display mb-2">
                         {step === "email" ? "Welcome Back" : "Check Your Email"}
                     </h1>
-                    <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    <p className="text-gray-600 text-sm">
                         {step === "email"
                             ? "Sign in with your email — no password needed"
                             : `We sent a 6-digit code to ${email}`}
@@ -130,11 +148,11 @@ export default function LoginPage() {
                 </div>
 
                 {/* Card */}
-                <div className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/60 dark:border-white/10 rounded-3xl p-8 shadow-2xl">
+                <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-3xl p-8 shadow-2xl">
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Email */}
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Email Address</label>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Email Address</label>
                             <div className="relative">
                                 <input
                                     id="email"
@@ -143,7 +161,7 @@ export default function LoginPage() {
                                     onChange={(e) => setEmail(e.target.value)}
                                     disabled={step === "otp"}
                                     placeholder="you@example.com"
-                                    className="w-full px-4 py-3.5 bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#6605c7] focus:ring-2 focus:ring-[#6605c7]/20 transition-all disabled:opacity-60"
+                                    className="w-full px-4 py-3.5 bg-white/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#6605c7] focus:ring-2 focus:ring-[#6605c7]/20 transition-all disabled:opacity-60"
                                     required
                                 />
                                 {step === "otp" && (
@@ -161,7 +179,7 @@ export default function LoginPage() {
                         {/* OTP Input */}
                         {step === "otp" && (
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">Enter OTP</label>
+                                <label className="block text-sm font-bold text-gray-700 mb-4">Enter OTP</label>
                                 <div className="flex gap-3 justify-center" onPaste={handleOtpPaste}>
                                     {otp.map((digit, i) => (
                                         <input
@@ -173,7 +191,7 @@ export default function LoginPage() {
                                             value={digit}
                                             onChange={(e) => handleOtpChange(i, e.target.value)}
                                             onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                                            className="w-12 h-14 text-center text-xl font-bold bg-white/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:border-[#6605c7] focus:ring-2 focus:ring-[#6605c7]/20 transition-all"
+                                            className="w-12 h-14 text-center text-xl font-bold bg-white/50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-[#6605c7] focus:ring-2 focus:ring-[#6605c7]/20 transition-all"
                                         />
                                     ))}
                                 </div>
@@ -218,17 +236,17 @@ export default function LoginPage() {
                     </form>
 
                     {/* Divider */}
-                    <div className="mt-6 pt-6 border-t border-gray-200 dark:border-white/5 text-center">
-                        <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    {/* <div className="mt-6 pt-6 border-t border-gray-200 text-center">
+                        <p className="text-gray-500 text-sm">
                             New to VidhyaLoan?{" "}
                             <Link href="/signup" className="text-[#6605c7] font-bold hover:underline">
                                 Create an account
                             </Link>
                         </p>
-                    </div>
+                    </div> */}
                 </div>
 
-                <p className="text-center text-gray-500 dark:text-gray-600 text-xs mt-6">
+                <p className="text-center text-gray-500 text-xs mt-6">
                     By continuing, you agree to our{" "}
                     <Link href="/terms-conditions" className="hover:text-gray-400 underline">Terms</Link>
                     {" "}and{" "}
@@ -236,5 +254,13 @@ export default function LoginPage() {
                 </p>
             </div>
         </div>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><span className="material-symbols-outlined animate-spin text-4xl text-[#6605c7]">progress_activity</span></div>}>
+            <LoginContent />
+        </Suspense>
     );
 }

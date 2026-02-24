@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720">
+  <rect width="1200" height="240" y="0" fill="#000" />
+  <rect width="1200" height="240" y="240" fill="#dd0000" />
+  <rect width="1200" height="240" y="480" fill="#ffce00" />
+  <text x="50%" y="50%" fill="#fff" font-size="48" font-family="Inter, Arial" font-weight="800" text-anchor="middle" dominant-baseline="middle">Germany</text>
+</svg>

@@ -397,7 +397,8 @@
             loadDashboardData();
         });
 
-        window.addEventListener('storage', (e) => { if (e.key === 'dashboardData') loadDashboardData(); });
+        // React to updates to user-specific dashboard storage
+        window.addEventListener('storage', (e) => { if (e.key && e.key.startsWith('dashboardData_')) loadDashboardData(); });
         window.addEventListener('focus', () => loadDashboardData());
         document.addEventListener('visibilitychange', () => { if (!document.hidden) loadDashboardData(); });
     </script>

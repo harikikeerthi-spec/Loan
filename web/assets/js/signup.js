@@ -1,5 +1,5 @@
 // API Base URL
-const API_URL = 'http://localhost:3000';
+const API_URL = 'http://localhost:3000/api';
 
 const signupForm = document.getElementById('signupForm');
 if (signupForm) {

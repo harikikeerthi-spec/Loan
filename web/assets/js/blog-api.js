@@ -1,6 +1,6 @@
 // Blog API Service
 // Base URL for API calls - change this for production
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'http://localhost:3000/api';
 
 /**
  * Format date to readable string

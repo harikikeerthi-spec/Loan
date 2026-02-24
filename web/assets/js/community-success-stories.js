@@ -1,5 +1,5 @@
 // Community Success Stories API Integration
-const API_BASE_URL = 'http://localhost:3000/community';
+const API_BASE_URL = 'http://localhost:3000/api/community';
 
 // State management
 let allStories = [];

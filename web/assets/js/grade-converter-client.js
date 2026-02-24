@@ -4,7 +4,7 @@
  */
 
 class GradeConverterClient {
-  constructor(baseURL = 'http://localhost:3000/ai') {
+  constructor(baseURL = 'http://localhost:3000/api/ai') {
     this.baseURL = baseURL;
   }
 

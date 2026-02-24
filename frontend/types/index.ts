@@ -47,8 +47,11 @@ export interface BlogPost {
     excerpt?: string;
     content: string;
     coverImage?: string;
+    featuredImage?: string;
     author?: string;
+    authorName?: string;
     tags?: string[];
+    category?: string;
     published: boolean;
     createdAt: string;
     updatedAt: string;

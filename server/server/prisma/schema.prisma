@@ -89,14 +89,14 @@ model AuditLog {
   id          String   @id @default(uuid())
   action      String
   entityType  String
-  entityId    String
-  initiatedBy String
+  entityId    String?
+  initiatedBy String?
   changes     Json
   ipAddress   String?
   userAgent   String?
   createdAt   DateTime @default(now())
-  blog        Blog     @relation(fields: [entityId], references: [id], onDelete: SetNull)
-  initiator   User     @relation(fields: [initiatedBy], references: [id], onDelete: SetNull)
+  blog        Blog?    @relation(fields: [entityId], references: [id], onDelete: SetNull)
+  initiator   User?    @relation(fields: [initiatedBy], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
   @@index([entityId])
@@ -638,6 +638,7 @@ model User {
   firstName       String?
   lastName        String?
   phoneNumber     String?
+  passportNumber  String?
   updatedAt       DateTime          @updatedAt
   role            String            @default("user")
   refreshToken    String?

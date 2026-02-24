@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="40" viewBox="0 0 64 40">
+  <rect width="21.333" height="40" x="0" fill="#009A44" />
+  <rect width="21.333" height="40" x="21.333" fill="#fff" />
+  <rect width="21.333" height="40" x="42.666" fill="#FF883E" />
+  <text x="50%" y="65%" fill="#111" font-size="12" font-family="Inter, Arial" font-weight="800" text-anchor="middle">IE</text>
+</svg>

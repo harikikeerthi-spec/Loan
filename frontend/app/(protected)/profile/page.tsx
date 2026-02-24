@@ -1,30 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+import { authApi } from "@/lib/api";
 
 export default function ProfilePage() {
-    const { user, token, refreshUser } = useAuth();
+    const { user, refreshUser } = useAuth();
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState(false);
     const [form, setForm] = useState({
-        firstName: user?.firstName || "",
-        lastName: user?.lastName || "",
-        phoneNumber: user?.phoneNumber || "",
-        dateOfBirth: user?.dateOfBirth || "",
+        firstName: "",
+        lastName: "",
+        phoneNumber: "",
+        dateOfBirth: "",
     });
 
+    // Keep form in sync whenever the user object updates (e.g. after user-details submission)
+    useEffect(() => {
+        if (user) {
+            setForm({
+                firstName: user.firstName || "",
+                lastName: user.lastName || "",
+                phoneNumber: user.phoneNumber || "",
+                dateOfBirth: user.dateOfBirth || "",
+            });
+        }
+    }, [user]);
+
     const handleSave = async () => {
+        if (!user?.email) return;
         setSaving(true);
         try {
-            await fetch(`${API_URL}/users/profile`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-                body: JSON.stringify(form),
+            await authApi.updateDetails(user.email, {
+                firstName: form.firstName,
+                lastName: form.lastName,
+                phoneNumber: form.phoneNumber,
+                dateOfBirth: form.dateOfBirth,
             });
             await refreshUser();
             setSuccess(true);
@@ -42,7 +55,7 @@ export default function ProfilePage() {
             <Navbar />
             <div className="pt-28 pb-16 px-6">
                 <div className="max-w-2xl mx-auto">
-                    <h1 className="text-3xl font-bold font-display dark:text-white mb-8">My Profile</h1>
+                    <h1 className="text-3xl font-bold font-display mb-8">My Profile</h1>
 
                     {success && (
                         <div className="mb-6 px-4 py-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-600 flex items-center gap-2">
@@ -51,7 +64,7 @@ export default function ProfilePage() {
                         </div>
                     )}
 
-                    <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden">
+                    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                         {/* Avatar */}
                         <div className="p-8 bg-gradient-to-r from-[#6605c7] to-purple-700 text-white flex items-center gap-6">
                             <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-3xl font-bold">
@@ -78,9 +91,9 @@ export default function ProfilePage() {
                                         { label: "Phone Number", value: user?.phoneNumber || "—" },
                                         { label: "Date of Birth", value: user?.dateOfBirth || "—" },
                                     ].map((f) => (
-                                        <div key={f.label} className="flex justify-between items-center py-3 border-b border-gray-100 dark:border-slate-700">
-                                            <span className="text-sm font-bold text-gray-500 dark:text-gray-400">{f.label}</span>
-                                            <span className="text-sm font-medium dark:text-white">{f.value}</span>
+                                        <div key={f.label} className="flex justify-between items-center py-3 border-b border-gray-100">
+                                            <span className="text-sm font-bold text-gray-500">{f.label}</span>
+                                            <span className="text-sm font-medium">{f.value}</span>
                                         </div>
                                     ))}
                                     <button
@@ -107,17 +120,17 @@ export default function ProfilePage() {
                                         { key: "dateOfBirth", label: "Date of Birth" },
                                     ].map(({ key, label }) => (
                                         <div key={key}>
-                                            <label className="text-sm font-bold dark:text-gray-300 block mb-2">{label}</label>
+                                            <label className="text-sm font-bold block mb-2">{label}</label>
                                             <input
                                                 type={key === "dateOfBirth" ? "date" : "text"}
                                                 value={form[key as keyof typeof form]}
                                                 onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
-                                                className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-xl bg-transparent dark:text-white focus:outline-none focus:ring-2 focus:ring-[#6605c7]"
+                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6605c7]"
                                             />
                                         </div>
                                     ))}
                                     <div className="flex gap-4">
-                                        <button onClick={() => setEditing(false)} className="px-6 py-3 bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-white font-bold rounded-xl">
+                                        <button onClick={() => setEditing(false)} className="px-6 py-3 bg-gray-100 text-gray-800 font-bold rounded-xl">
                                             Cancel
                                         </button>
                                         <button onClick={handleSave} disabled={saving} className="flex-1 py-3 bg-[#6605c7] text-white font-bold rounded-xl disabled:opacity-60 flex items-center justify-center gap-2">
