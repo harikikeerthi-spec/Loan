@@ -31,19 +31,7 @@ export default function EventsPage() {
     }, []);
 
     return (
-        <main className="relative min-h-screen font-sans" style={{ background: "#f7f5f8" }}>
-            {/* Background */}
-            <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden" style={{ background: "#f7f5f8" }}>
-                <div
-                    className="absolute inset-0"
-                    style={{
-                        background:
-                            "radial-gradient(at 0% 0%, rgba(102,5,199,0.3) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(244,63,94,0.3) 0px, transparent 50%)",
-                        opacity: 0.6,
-                    }}
-                />
-            </div>
-
+        <main className="relative min-h-screen font-sans bg-transparent">
             <style>{`
                 .e-glass { background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.5); }
                 .event-card { background: rgba(255,255,255,0.85); border: 1px solid rgba(255,255,255,0.6); transition: all 0.4s cubic-bezier(0.16,1,0.3,1); }

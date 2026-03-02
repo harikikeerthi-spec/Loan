@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { UniversityProvider } from "@/context/UniversityContext";
+import SelectedUniversityWidget from "@/components/SelectedUniversityWidget";
 
 export const metadata: Metadata = {
   title: {
@@ -41,7 +43,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-screen transition-colors duration-500 overflow-x-hidden bg-white">
         {/* Background Structure exactly like index.html - No Dark Mode */}
-        <div className="fixed inset-0 z-[-1] bg-white pointer-events-none overflow-hidden">
+        <div className="fixed inset-0 z-0 bg-white pointer-events-none overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(at_0%_0%,rgba(102,5,199,0.4)_0px,transparent_50%),radial-gradient(at_100%_0%,rgba(224,195,137,0.5)_0px,transparent_50%),radial-gradient(at_100%_100%,rgba(139,192,232,0.4)_0px,transparent_50%),radial-gradient(at_0%_100%,rgba(102,5,199,0.3)_0px,transparent_50%)] opacity-90"></div>
           <div
             className="absolute inset-0 opacity-30 mix-blend-overlay"
@@ -52,7 +54,14 @@ export default function RootLayout({
           ></div>
         </div>
 
-        <AuthProvider>{children}</AuthProvider>
+        <div className="relative z-10">
+          <AuthProvider>
+            <UniversityProvider>
+              {children}
+              <SelectedUniversityWidget />
+            </UniversityProvider>
+          </AuthProvider>
+        </div>
       </body>
     </html>
   );

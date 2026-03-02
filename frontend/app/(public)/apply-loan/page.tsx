@@ -58,13 +58,16 @@ export default function ApplyLoanPage() {
         setSubmitting(true);
         setError("");
         try {
+            const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
+            const bankName = banks.find(b => b.id === formData.bank)?.name || formData.bank;
             await applicationApi.create({
                 ...formData,
+                userId: userId || '',
+                bank: bankName,
                 amount: parseFloat(formData.amount),
             });
             // Notify other parts of the frontend that dashboard data changed
             try {
-                const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
                 if (userId) {
                     const key = `dashboardDataUpdated_${userId}`;
                     localStorage.setItem(key, String(Date.now()));
@@ -92,10 +95,10 @@ export default function ApplyLoanPage() {
                             <span className="material-symbols-outlined text-green-500 text-5xl">check_circle</span>
                         </div>
                         <h2 className="text-3xl font-bold font-display mb-4">Application Submitted!</h2>
-                        <p className="text-gray-500 mb-8">Our loan experts will review your application and reach out within 24-48 hours.</p>
+                        <p className="text-gray-500 text-[13px] mb-8">Our loan experts will review your application and reach out within 24-48 hours.</p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            <Link href="/dashboard" className="px-8 py-4 bg-[#6605c7] text-white font-bold rounded-xl">View Dashboard</Link>
-                            <Link href="/" className="px-8 py-4 bg-white text-gray-900 font-bold rounded-xl border border-gray-200">Back to Home</Link>
+                            <Link href="/dashboard" className="px-8 py-4 bg-[#6605c7] text-white text-[11px] uppercase tracking-widest font-bold rounded-xl">View Dashboard</Link>
+                            <Link href="/" className="px-8 py-4 bg-white text-gray-900 text-[11px] uppercase tracking-widest font-bold rounded-xl border border-gray-200">Back to Home</Link>
                         </div>
                     </div>
                 </div>
@@ -109,24 +112,24 @@ export default function ApplyLoanPage() {
                 <div className="max-w-3xl mx-auto">
                     <div className="text-center mb-10">
                         <h1 className="text-4xl font-bold font-display mb-3">Apply for Education Loan</h1>
-                        <p className="text-gray-500">Complete in 3 simple steps — takes only 5 minutes</p>
+                        <p className="text-gray-500 text-[13px]">Complete in 3 simple steps — takes only 5 minutes</p>
                     </div>
 
                     {/* Progress */}
                     <div className="flex items-center justify-center gap-2 mb-10">
                         {["Loan Details", "Personal Info", "Review"].map((s, i) => (
                             <div key={s} className="flex items-center gap-2">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all ${step > i + 1 ? "bg-green-500 text-white" : step === i + 1 ? "bg-[#6605c7] text-white" : "bg-gray-200 text-gray-400"
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-[13px] font-bold transition-all ${step > i + 1 ? "bg-green-500 text-white" : step === i + 1 ? "bg-[#6605c7] text-white" : "bg-gray-200 text-gray-400"
                                     }`}>
                                     {step > i + 1 ? <span className="material-symbols-outlined text-lg">check</span> : i + 1}
                                 </div>
-                                <span className={`text-sm font-medium hidden sm:block ${step === i + 1 ? "text-[#6605c7]" : "text-gray-400"}`}>{s}</span>
+                                <span className={`text-[11px] uppercase tracking-widest font-bold hidden sm:block ${step === i + 1 ? "text-[#6605c7]" : "text-gray-400"}`}>{s}</span>
                                 {i < 2 && <div className="w-12 sm:w-20 h-0.5 bg-gray-200" />}
                             </div>
                         ))}
                     </div>
 
-                    <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+                    <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
                         {/* Step 1: Loan Details */}
                         {step === 1 && (
                             <div className="space-y-6">
@@ -163,13 +166,13 @@ export default function ApplyLoanPage() {
                                 <SelectField label="Collateral Available?" value={formData.collateral} onChange={(v) => update("collateral", v)}
                                     options={[{ value: "yes-property", label: "Yes – Property" }, { value: "yes-fdr", label: "Yes – FDR/Insurance" }, { value: "no", label: "No Collateral" }]} />
                                 <div>
-                                    <label className="text-sm font-bold block mb-2">Additional Notes</label>
+                                    <label className="text-[11px] uppercase tracking-widest font-bold block mb-2">Additional Notes</label>
                                     <textarea
                                         value={formData.notes}
                                         onChange={(e) => update("notes", e.target.value)}
                                         placeholder="Any special requirements or notes..."
                                         rows={3}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6605c7]"
+                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6605c7] text-[13px]"
                                     />
                                 </div>
                             </div>
@@ -179,7 +182,7 @@ export default function ApplyLoanPage() {
                         {step === 3 && (
                             <div className="space-y-6">
                                 <h2 className="text-xl font-bold">Review Application</h2>
-                                <div className="bg-[#6605c7]/5 rounded-2xl p-6 space-y-3">
+                                <div className="bg-[#6605c7]/5 rounded-xl p-6 space-y-3">
                                     {[
                                         { label: "Bank", value: banks.find((b) => b.id === formData.bank)?.name || formData.bank },
                                         { label: "Loan Type", value: formData.loanType },
@@ -191,17 +194,17 @@ export default function ApplyLoanPage() {
                                         { label: "Phone", value: formData.phone },
                                     ].filter((f) => f.value).map((f) => (
                                         <div key={f.label} className="flex justify-between items-center py-2 border-b border-white/10">
-                                            <span className="text-gray-500 text-sm">{f.label}</span>
-                                            <span className="font-bold text-sm">{f.value}</span>
+                                            <span className="text-gray-500 text-[13px]">{f.label}</span>
+                                            <span className="font-bold text-[13px]">{f.value}</span>
                                         </div>
                                     ))}
                                 </div>
                                 {error && (
-                                    <div className="px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">{error}</div>
+                                    <div className="px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-[13px]">{error}</div>
                                 )}
                                 {!isAuthenticated && (
-                                    <div className="px-4 py-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">
-                                        <span className="material-symbols-outlined text-sm mr-1">info</span>
+                                    <div className="px-4 py-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-[13px]">
+                                        <span className="material-symbols-outlined text-[13px] mr-1">info</span>
                                         You need to be logged in to submit an application.{" "}
                                         <Link href="/login?redirect=/apply-loan" className="underline font-bold">Login here</Link>
                                     </div>
@@ -212,16 +215,16 @@ export default function ApplyLoanPage() {
                         {/* Navigation */}
                         <div className="flex justify-between mt-8">
                             {step > 1 ? (
-                                <button onClick={back} className="px-6 py-3 bg-gray-100 text-gray-800 font-bold rounded-xl hover:bg-gray-200 transition-all">
+                                <button onClick={back} className="px-6 py-3 bg-gray-100 text-gray-800 text-[11px] uppercase tracking-widest font-bold rounded-xl hover:bg-gray-200 transition-all">
                                     ← Back
                                 </button>
                             ) : <div />}
                             {step < 3 ? (
-                                <button onClick={next} className="px-8 py-3 bg-[#6605c7] text-white font-bold rounded-xl hover:bg-[#7a0de8] transition-all">
+                                <button onClick={next} className="px-8 py-3 bg-[#6605c7] text-white text-[11px] uppercase tracking-widest font-bold rounded-xl hover:bg-[#7a0de8] transition-all">
                                     Continue →
                                 </button>
                             ) : (
-                                <button onClick={handleSubmit} disabled={submitting} className="px-8 py-3 bg-[#6605c7] text-white font-bold rounded-xl hover:bg-[#7a0de8] disabled:opacity-60 transition-all flex items-center gap-2">
+                                <button onClick={handleSubmit} disabled={submitting} className="px-8 py-3 bg-[#6605c7] text-white text-[11px] uppercase tracking-widest font-bold rounded-xl hover:bg-[#7a0de8] disabled:opacity-60 transition-all flex items-center gap-2">
                                     {submitting ? <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span> : null}
                                     Submit Application
                                 </button>
@@ -240,13 +243,13 @@ function InputField({ label, value, onChange, placeholder, type = "text" }: {
 }) {
     return (
         <div>
-            <label className="text-sm font-bold block mb-2">{label}</label>
+            <label className="text-[11px] uppercase tracking-widest font-bold block mb-2">{label}</label>
             <input
                 type={type}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 placeholder={placeholder}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6605c7] transition-all"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6605c7] transition-all text-[13px]"
             />
         </div>
     );
@@ -258,11 +261,11 @@ function SelectField({ label, value, onChange, options }: {
 }) {
     return (
         <div>
-            <label className="text-sm font-bold block mb-2">{label}</label>
+            <label className="text-[11px] uppercase tracking-widest font-bold block mb-2">{label}</label>
             <select
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#6605c7] transition-all"
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-[#6605c7] transition-all text-[13px]"
             >
                 <option value="">Select an option</option>
                 {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}

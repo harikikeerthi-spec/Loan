@@ -22,10 +22,11 @@ export class AuditService {
                 select: {
                     id: true,
                     applicationNumber: true,
-                    firstName: true,
-                    lastName: true,
                     status: true,
                     date: true,
+                    user: {
+                        select: { firstName: true, lastName: true },
+                    },
                 }
             }),
             // Recent Blogs
@@ -84,7 +85,7 @@ export class AuditService {
                 id: app.id,
                 type: 'application',
                 title: `Application #${app.applicationNumber}`,
-                description: `${formatName(app.firstName, app.lastName)} - ${app.status}`,
+                description: `${formatName(app.user?.firstName, app.user?.lastName)} - ${app.status}`,
                 status: app.status,
                 date: app.date,
                 link: '#', // TODO: Link to application details

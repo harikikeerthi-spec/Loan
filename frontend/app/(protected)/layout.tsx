@@ -16,7 +16,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
     if (isLoading) {
         return (
-            <div className="h-screen flex items-center justify-center bg-[#0f0a18]">
+            <div className="h-screen flex items-center justify-center bg-transparent">
                 <div className="text-center">
                     <div className="w-16 h-16 border-4 border-[#6605c7]/20 border-t-[#6605c7] rounded-full animate-spin mx-auto mb-4" />
                     <p className="text-gray-400 text-sm">Loading...</p>

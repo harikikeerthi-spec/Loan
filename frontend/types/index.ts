@@ -7,6 +7,7 @@ export interface User {
     lastName?: string;
     phoneNumber?: string;
     dateOfBirth?: string;
+    passportNumber?: string;
     role?: "user" | "admin" | "super_admin";
     createdAt?: string;
 }

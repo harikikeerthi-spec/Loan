@@ -61,6 +61,10 @@ export default function BankReviewsPage() {
                             <a href={`/bank/${bank.slug}`} className="block w-full py-4 border border-gray-100 text-[#1a1626] text-center rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all">
                                 View Reviews
                             </a>
+                            <a href="/referral" className="flex items-center justify-center gap-2 w-full py-4 bg-gradient-to-r from-[#e0c389] to-[#d4a743] text-gray-900 text-center rounded-2xl font-bold text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all">
+                                <span className="material-symbols-outlined text-sm">card_giftcard</span>
+                                Refer & Earn
+                            </a>
                         </div>
                     </div>
                 ))}

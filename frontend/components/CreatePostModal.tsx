@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Link from "next/link";
-import { communityApi } from "@/lib/api";
+import { communityApi, aiApi } from "@/lib/api";
 import {
     moderateContent,
     generateTagsFromText,
@@ -82,16 +82,31 @@ export default function CreatePostModal({
         return () => window.removeEventListener("keydown", esc);
     }, [onClose]);
 
-    // Live tag suggestions
+    // AI Tag Suggestions based on TITLE only
     useEffect(() => {
-        const combined = `${title} ${content}`.trim();
-        if (combined.length > 5) {
-            const suggestions = generateTagsFromText(combined);
-            setSuggestedTags(suggestions);
-        } else {
+        if (!title.trim() || title.length < 5) {
             setSuggestedTags([]);
+            return;
         }
-    }, [title, content]);
+
+        const timeout = setTimeout(async () => {
+            try {
+                const res: any = await aiApi.suggestTags(title);
+                if (res.success && res.tags) {
+                    setSuggestedTags(res.tags);
+                } else {
+                    // Fallback to local
+                    const suggestions = generateTagsFromText(title);
+                    setSuggestedTags(suggestions);
+                }
+            } catch {
+                const suggestions = generateTagsFromText(title);
+                setSuggestedTags(suggestions);
+            }
+        }, 800);
+
+        return () => clearTimeout(timeout);
+    }, [title]);
 
     if (!open) return null;
 
@@ -134,7 +149,7 @@ export default function CreatePostModal({
     const handleDescriptionNext = async () => {
         if (!validateContent()) return;
 
-        // LOCAL MODERATION (AI Keyword check)
+        // LOCAL MODERATION (Keyword check)
         const combinedText = `${title} ${content}`;
         const mod = moderateContent(combinedText);
         if (!mod.allowed) {
@@ -144,6 +159,19 @@ export default function CreatePostModal({
         }
 
         setStep("checking");
+
+        // AI RELEVANCE CHECK (Secondary)
+        try {
+            const rel: any = await communityApi.checkRelevance(title, content);
+            if (rel && (rel.relevant === false || rel.isRelevant === false)) {
+                setStep("blocked");
+                setModerationReason("off_topic");
+                return;
+            }
+        } catch (e) {
+            console.warn("AI relevance check failed, proceeding...", e);
+        }
+
         try {
             const res: any = await communityApi.searchSimilarPosts(title);
             const matches: SimilarPost[] = (res?.data || []).slice(0, 5);

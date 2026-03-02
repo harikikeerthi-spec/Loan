@@ -292,7 +292,7 @@ export default function DiscussionDetailPage() {
 
     if (loading) {
         return (
-            <main className="min-h-screen pt-32 pb-20" style={{ background: "#f7f5f8" }}>
+            <main className="min-h-screen pt-32 pb-20 bg-transparent">
                 <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12">
                     <div className="lg:col-span-8 space-y-8">
                         <div className="h-64 rounded-[2.5rem] bg-white/40 animate-pulse border border-white/50" />
@@ -305,7 +305,7 @@ export default function DiscussionDetailPage() {
 
     if (!post) {
         return (
-            <main className="min-h-screen pt-32 pb-20 flex items-center justify-center text-center" style={{ background: "#f7f5f8" }}>
+            <main className="min-h-screen pt-32 pb-20 flex items-center justify-center text-center bg-transparent">
                 <div className="max-w-md px-6">
                     <div className="text-6xl mb-6">🔍</div>
                     <h2 className="text-3xl font-bold mb-4" style={{ fontFamily: "'Noto Serif', serif" }}>
@@ -329,19 +329,7 @@ export default function DiscussionDetailPage() {
     const topLevelComments = comments.filter((c) => !c.parentId);
 
     return (
-        <main className="relative min-h-screen font-sans" style={{ background: "#f7f5f8" }}>
-            {/* ── Background ──────────────────────────────────────────────── */}
-            <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden" style={{ background: "#f7f5f8" }}>
-                <div
-                    className="absolute inset-0"
-                    style={{
-                        background:
-                            "radial-gradient(at 0% 0%, rgba(102,5,199,0.3) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224,195,137,0.3) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139,192,232,0.3) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102,5,199,0.2) 0px, transparent 50%)",
-                        opacity: 0.8,
-                    }}
-                />
-            </div>
-
+        <main className="relative min-h-screen font-sans bg-transparent">
             <style>{`
                 .det-glass { background: rgba(255,255,255,0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.5); }
                 .det-badge { display:inline-block; padding:3px 10px; border-radius:9999px; font-size:10.5px; font-weight:700; background:#f3e8ff; color:#7e22ce; }

@@ -120,27 +120,35 @@ let moderationReason = '';
 
 // Topics that ARE allowed on this platform
 const EDUCATION_KEYWORDS = [
+    // Standalone & Common
+    'education', 'study', 'studying', 'course', 'program', 'university', 'college', 'degree',
     // Loans & Finance
-    'loan', 'student loan', 'education loan', 'emi', 'interest rate', 'bank', 'nbfc',
+    'loan', 'loans', 'finance', 'student loan', 'education loan', 'emi', 'interest rate', 'bank', 'nbfc',
     'collateral', 'co-applicant', 'cosigner', 'sanction', 'disbursement', 'moratorium',
     'repayment', 'itr', 'form16', 'salary', 'income', 'credit score', 'cibil',
     'axis', 'sbi', 'hdfc', 'avanse', 'credila', 'incred', 'prodigy', 'mpower',
+    'interest', 'processing fee', 'margin money', 'subsidy',
     // Education & Admissions
-    'university', 'college', 'admission', 'scholarship', 'degree', 'masters', 'phd',
+    'admission', 'admissions', 'scholarship', 'scholarships', 'masters', 'phd',
     'bachelors', 'mba', 'ms', 'btech', 'gpa', 'transcript', 'application', 'deadline',
     'acceptance', 'waitlist', 'enrollment', 'tuition', 'fees', 'grant', 'fellowship',
     'assistantship', 'stipend', 'funding', 'professor', 'advisor', 'campus',
+    'admit', 'accepted', 'rejected', 'decision', 'offer letter', 'i20',
     // Study Abroad
-    'abroad', 'international', 'studyabroad', 'usa', 'uk', 'canada', 'australia',
-    'germany', 'ireland', 'europe', 'overseas',
+    'abroad', 'international', 'studyabroad', 'usa', 'us', 'uk', 'canada', 'australia',
+    'germany', 'ireland', 'europe', 'overseas', 'united kingdom', 'united states',
+    'foreign', 'immigrant', 'student',
     // Visa & Immigration
-    'visa', 'f1', 'immigration', 'i20', 'sevis', 'ds160', 'embassy', 'consulate',
-    'opt', 'cpt', 'h1b', 'resident',
+    'visa', 'f1', 'f-1', 'immigration', 'sevis', 'ds160', 'ds-160', 'embassy', 'consulate',
+    'opt', 'cpt', 'h1b', 'h-1b', 'resident', 'approve', 'approval', 'interview', 'slot',
+    'biometric', 'passport', 'stamping', 'rejected', 'denial', 'days', 'processing',
     // Tests
     'gre', 'gmat', 'sat', 'toefl', 'ielts', 'pte', 'duolingo', 'sop', 'lor',
-    'recommendation', 'eligibility',
+    'recommendation', 'eligibility', 'score', 'exam', 'test',
     // Career (academic context)
-    'internship', 'placement', 'on campus', 'off campus', 'career', 'work permit'
+    'internship', 'placement', 'on campus', 'off campus', 'career', 'work permit',
+    // Common question words in context
+    'how long', 'how many', 'required', 'process', 'documents', 'requirements'
 ];
 
 // Explicitly OFF-TOPIC categories — any match here causes instant rejection
@@ -157,7 +165,7 @@ const OFF_TOPIC_KEYWORDS = [
     'netflix', 'youtube', 'tiktok', 'reel', 'streaming',
     // Sports
     'cricket', 'football', 'soccer', 'basketball', 'tennis', 'ipl', 'fifa',
-    'match', 'tournament', 'wicket', 'athlete', 'olympic', 'score',
+    'match', 'tournament', 'wicket', 'athlete', 'olympic',
     // Politics & Religion
     'election', 'vote', 'politician', 'politics', 'religion', 'god', 'temple',
     'church', 'mosque', 'prayer', 'astrology', 'horoscope', 'zodiac',
@@ -201,6 +209,15 @@ function isOffTopic(text) {
 function isTopical(text) {
     const t = normalizeText(text);
     const matches = EDUCATION_KEYWORDS.filter(k => t.includes(k));
+    
+    // High-signal keywords: if ANY of these appear, allow immediately
+    const highSignalKeywords = [
+        'visa', 'scholarship', 'loan', 'admission', 'masters', 'university',
+        'college', 'gre', 'ielts', 'toefl', 'f1', 'i20', 'tuition', 'education',
+        'mba', 'phd', 'abroad', 'embassy', 'consulate', 'opt', 'cpt', 'h1b'
+    ];
+    if (highSignalKeywords.some(k => t.includes(k))) return true;
+    
     // Short/vague questions need 2 matching education keywords; longer ones need at least 1
     const wordCount = t.split(' ').filter(w => w.length > 2).length;
     const requiredMatches = wordCount < 6 ? 2 : 1;
@@ -235,7 +252,7 @@ function mapKeywordsToTags(words) {
 }
 
 function generateTagsFromText(text) {
-    // Always include baseline tags
+    // Fallback local tags based on title keywords
     const base = new Set(['education', 'loan']);
     const kws = extractKeywords(text, 8);
     const mapped = mapKeywordsToTags(kws);
@@ -286,15 +303,37 @@ function renderTagSuggestionsUI(tags) {
 }
 
 // Wire up live tag suggestions while user types
+let tagSuggestionTimeout = null;
 function updateTagSuggestionsLive() {
     const title = document.getElementById('questionTitle')?.value || '';
-    const content = document.getElementById('questionContent')?.value || '';
-    const combined = `${title} ${content}`.trim();
-    const tags = generateTagsFromText(combined);
-    // AI suggestions are rendered, but we donnot automatically apply them to the post data
-    // to give the user full control over tagging.
-    // if (!postData.tags || postData.tags.length === 0) postData.tags = tags;
-    renderTagSuggestionsUI(tags);
+    if (!title.trim() || title.length < 5) return;
+
+    // Debounce to avoid excessive AI calls
+    clearTimeout(tagSuggestionTimeout);
+    tagSuggestionTimeout = setTimeout(async () => {
+        try {
+            const aiUrl = API_BASE_URL.replace('/community', '/ai/suggest-tags');
+            const response = await authFetch(aiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.success && data.tags && data.tags.length > 0) {
+                    renderTagSuggestionsUI(data.tags);
+                    return;
+                }
+            }
+        } catch (e) {
+            console.warn('AI tag suggestion failed, falling back to local extraction', e);
+        }
+
+        // Fallback to local logic if AI fails
+        const tags = generateTagsFromText(title);
+        renderTagSuggestionsUI(tags);
+    }, 800);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -324,11 +363,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nextBtn').onclick = handleNext;
     document.getElementById('backBtn').onclick = handleBack;
 
-    // Live tag suggestions while typing
+    // Live tag suggestions while typing (title only per requirement)
     const titleEl = document.getElementById('questionTitle');
-    const contentEl = document.getElementById('questionContent');
     if (titleEl) titleEl.addEventListener('input', updateTagSuggestionsLive);
-    if (contentEl) contentEl.addEventListener('input', updateTagSuggestionsLive);
 
     // Cancel / Edit buttons
     document.getElementById('cancelPostBtn').onclick = () => {
@@ -472,10 +509,13 @@ async function handleNext() {
             return;
         }
 
-        // 2) Generate AI-like tags and attach to postData
-        const suggested = generateTagsFromText(combinedText);
-        postData.tags = suggested;
-        renderTagSuggestionsUI(suggested);
+        // 2) AI-based tags (using title only as requested)
+        // If the user hasn't selected any tags yet, we can provide defaults/suggestions
+        if (!postData.tags || postData.tags.length === 0) {
+            const suggested = generateTagsFromText(postData.title);
+            postData.tags = suggested;
+            renderTagSuggestionsUI(suggested);
+        }
 
         // Proceed to analysis for duplicates & posting
         currentStep = 3;

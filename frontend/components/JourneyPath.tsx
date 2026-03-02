@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 
 const steps = [
     {
@@ -124,23 +125,35 @@ export default function JourneyPath() {
     const step = steps[active];
 
     return (
-        <section className="py-28 bg-[#f3eeff]/60 relative overflow-hidden">
+        <motion.section
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: false, amount: 0.05 }}
+            transition={{ duration: 0.4 }}
+            className="py-28 bg-[#f3eeff]/60 relative overflow-hidden"
+        >
             {/* Decorative blobs */}
             <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full opacity-20 blur-3xl pointer-events-none" style={{ background: 'radial-gradient(circle, #6605c7, transparent)' }} />
             <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full opacity-20 blur-3xl pointer-events-none" style={{ background: 'radial-gradient(circle, #a855f7, transparent)' }} />
 
             {/* Header */}
-            <div className="max-w-7xl mx-auto px-6 text-center mb-16 relative z-10">
-                <span className="inline-block px-5 py-2 rounded-full bg-[#6605c7]/10 text-[#6605c7] text-[11px] font-black uppercase tracking-widest mb-5 border border-[#6605c7]/15">
+            <motion.div
+                initial={{ opacity: 0, x: -60 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: false, amount: 0.3 }}
+                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                className="max-w-7xl mx-auto px-6 text-center mb-16 relative z-10"
+            >
+                <span className="inline-block px-4 py-1.5 rounded-full bg-[#6605c7]/5 text-[#6605c7] text-[10px] font-bold uppercase tracking-widest mb-4 border border-[#6605c7]/10">
                     YOUR PATHWAY
                 </span>
-                <h2 className="text-4xl md:text-6xl font-black text-gray-900 mb-5 leading-tight">
+                <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4 tracking-tight">
                     Study Abroad <span style={{ background: 'linear-gradient(135deg, #6605c7, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Journey</span>
                 </h2>
-                <p className="text-gray-500 max-w-xl mx-auto text-lg font-medium">
+                <p className="text-gray-500 max-w-xl mx-auto text-sm md:text-base font-normal">
                     6 milestones. One seamless platform. We guide you from first thought to first lecture.
                 </p>
-            </div>
+            </motion.div>
 
             {/* ── ARC NODE ROW (Desktop) ── */}
             <div className="hidden lg:block max-w-6xl mx-auto px-6 relative z-10" style={{ height: 280 }}>
@@ -210,7 +223,7 @@ export default function JourneyPath() {
 
                             {/* Label below node */}
                             <div
-                                className="mt-3 text-xs font-black transition-all duration-300 whitespace-nowrap"
+                                className="mt-3 text-[11px] font-semibold transition-all duration-300 whitespace-nowrap"
                                 style={{ color: isActive ? s.color : '#9ca3af' }}
                             >
                                 {s.title}
@@ -221,32 +234,32 @@ export default function JourneyPath() {
             </div>
 
             {/* ── DETAIL CARD ── */}
-            <div className="max-w-5xl mx-auto px-6 mt-12 lg:mt-8 relative z-10">
+            <div className="max-w-4xl mx-auto px-6 mt-12 lg:mt-8 relative z-10">
                 <div
                     key={active}
-                    className="rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden transition-all"
+                    className="rounded-3xl p-8 md:p-10 relative overflow-hidden transition-all"
                     style={{
                         background: 'white',
-                        boxShadow: `0 20px 80px -12px ${step.color}30, 0 4px 24px rgba(0,0,0,0.06)`,
-                        border: `1.5px solid ${step.color}22`,
+                        boxShadow: `0 20px 80px -12px ${step.color}25, 0 4px 24px rgba(0,0,0,0.04)`,
+                        border: `1px solid ${step.color}15`,
                     }}
                 >
                     {/* Background tint */}
-                    <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ background: step.gradient }} />
+                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ background: step.gradient }} />
 
                     <div className="relative z-10 flex flex-col md:flex-row gap-10 items-center">
                         {/* Left: Icon + Step Label */}
                         <div className="flex-shrink-0 text-center">
                             <div
-                                className="w-28 h-28 md:w-36 md:h-36 rounded-[2rem] flex items-center justify-center mx-auto mb-4 shadow-2xl relative"
-                                style={{ background: step.gradient, boxShadow: `0 20px 60px ${step.color}55` }}
+                                className="w-24 h-24 md:w-32 md:h-32 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl relative"
+                                style={{ background: step.gradient, boxShadow: `0 15px 45px ${step.color}40` }}
                             >
-                                <div className="absolute inset-0 rounded-[2rem] animate-ping opacity-20" style={{ background: step.gradient }} />
-                                <span className="text-5xl md:text-6xl">{step.icon}</span>
+                                <div className="absolute inset-0 rounded-2xl animate-ping opacity-10" style={{ background: step.gradient }} />
+                                <span className="text-4xl md:text-5xl">{step.icon}</span>
                             </div>
                             <span
-                                className="inline-block px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-widest"
-                                style={{ background: `${step.color}15`, color: step.color }}
+                                className="inline-block px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                                style={{ background: `${step.color}10`, color: step.color }}
                             >
                                 {step.label}
                             </span>
@@ -254,34 +267,34 @@ export default function JourneyPath() {
 
                         {/* Right: Content */}
                         <div className="flex-1 text-center md:text-left">
-                            <p className="text-sm font-bold mb-2 uppercase tracking-widest" style={{ color: step.color }}>{step.subtitle}</p>
-                            <h3 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 leading-tight">{step.title}</h3>
-                            <p className="text-gray-500 text-base md:text-lg leading-relaxed mb-6">{step.desc}</p>
+                            <p className="text-[11px] font-bold mb-1 uppercase tracking-wider" style={{ color: step.color }}>{step.subtitle}</p>
+                            <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3 tracking-tight">{step.title}</h3>
+                            <p className="text-gray-600 text-sm md:text-base leading-relaxed mb-6">{step.desc}</p>
 
                             {/* Tip card */}
                             <div
-                                className="flex items-start gap-3 p-4 rounded-2xl mb-7 text-left"
-                                style={{ background: `${step.color}08`, border: `1px solid ${step.color}20` }}
+                                className="flex items-start gap-3 p-4 rounded-xl mb-7 text-left"
+                                style={{ background: `${step.color}05`, border: `1px solid ${step.color}10` }}
                             >
-                                <span className="text-xl flex-shrink-0 mt-0.5">💡</span>
-                                <p className="text-sm font-medium text-gray-600 leading-relaxed italic">{step.tip}</p>
+                                <span className="text-lg flex-shrink-0 mt-0.5">💡</span>
+                                <p className="text-xs font-normal text-gray-600 leading-relaxed italic">{step.tip}</p>
                             </div>
 
                             {/* Stat + CTA */}
                             <div className="flex flex-col sm:flex-row items-center md:items-start gap-4">
                                 <Link
                                     href={step.ctaHref}
-                                    className="inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl text-white font-black text-sm shadow-lg transition-all hover:opacity-90 hover:-translate-y-0.5 hover:shadow-xl"
-                                    style={{ background: step.gradient, boxShadow: `0 8px 24px ${step.color}40` }}
+                                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-white font-bold text-xs shadow-md transition-all hover:opacity-95 hover:-translate-y-0.5 hover:shadow-lg"
+                                    style={{ background: step.gradient, boxShadow: `0 6px 18px ${step.color}30` }}
                                 >
-                                    <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: '"FILL" 1' }}>{step.materialIcon}</span>
+                                    <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: '"FILL" 1' }}>{step.materialIcon}</span>
                                     {step.cta}
                                 </Link>
                                 <div
-                                    className="flex items-center gap-2 px-5 py-3.5 rounded-2xl font-black text-sm"
-                                    style={{ background: `${step.color}10`, color: step.color }}
+                                    className="flex items-center gap-2 px-4 py-3 rounded-xl font-bold text-xs"
+                                    style={{ background: `${step.color}08`, color: step.color }}
                                 >
-                                    <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: '"FILL" 1' }}>verified</span>
+                                    <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: '"FILL" 1' }}>verified</span>
                                     {step.stat}
                                 </div>
                             </div>
@@ -326,6 +339,6 @@ export default function JourneyPath() {
                     </button>
                 ))}
             </div>
-        </section>
+        </motion.section>
     );
 }

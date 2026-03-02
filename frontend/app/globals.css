@@ -297,6 +297,77 @@ h6,
   border: 1px solid #E5E7EB;
 }
 
+/* GradRight-inspired goal grid */
+.goal-grid.gradright-style {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 18px;
+  align-items: stretch;
+}
+
+.goal-card-large,
+.goal-card-small {
+  background: linear-gradient(180deg, #ffffff, #fbfbff);
+  border-radius: 18px;
+  padding: 20px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 12px 30px -10px rgba(99, 102, 241, 0.08);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.goal-card-large {
+  padding: 28px;
+}
+
+.goal-card-small {
+  padding: 18px;
+}
+
+.goal-card-body {
+  flex: 1;
+}
+
+.icon-box {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f3e8ff, #eef2ff);
+  color: #6b21a8;
+  font-size: 22px;
+}
+
+.chat-cta {
+  background: #6b21a8;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+}
+
+.chat-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(107, 33, 168, 0.18);
+}
+
+.tool-link {
+  color: #6b21a8;
+  font-weight: 700;
+  align-self: center;
+  text-decoration: none;
+}
+
+.tool-link:hover {
+  text-decoration: underline;
+}
+
+
 .progress-bar {
   height: 4px;
   background: #E5E7EB;
@@ -478,4 +549,70 @@ h6,
   background: rgba(239, 68, 68, 0.1);
   color: #dc2626;
   border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+@keyframes bounce-slow {
+
+  0%,
+  100% {
+    transform: translateY(-5%);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+
+  50% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 4s infinite;
+}
+
+@keyframes shine {
+  0% {
+    left: -100%;
+  }
+
+  100% {
+    left: 100%;
+  }
+}
+
+.animate-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-shine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(to right,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent);
+  transform: skewX(-25deg);
+  animation: shine 3s infinite;
+}
+
+@keyframes gradient-x {
+
+  0%,
+  100% {
+    background-size: 200% 200%;
+    background-position: left center;
+  }
+
+  50% {
+    background-size: 200% 200%;
+    background-position: right center;
+  }
+}
+
+.animate-gradient-x {
+  animation: gradient-x 15s ease infinite;
 }

@@ -314,12 +314,44 @@ export const aiApi = {
             body: JSON.stringify({ uni1, uni2 }),
         }).then(handleResponse),
 
+    compareShortlist: (shortlist: Array<{ name: string; course: string }>, profile: { bachelors?: string; workExp?: string; gpa?: string }) =>
+        fetch(`${API_URL}/ai/compare-shortlist`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ shortlist, profile }),
+        }).then(handleResponse),
+
     searchAdvice: (query: string, type: 'university' | 'course', context?: any) =>
         fetch(`${API_URL}/ai/search-advice`, {
             method: "POST",
             headers: authHeaders(),
             body: JSON.stringify({ query, type, context }),
         }).then(handleResponse),
+
+    suggestTags: (title: string) =>
+        fetch(`${API_URL}/ai/suggest-tags`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ title }),
+        }).then(handleResponse),
+
+    // Flexible AI search: prefers external API when NEXT_PUBLIC_API_URL set,
+    // otherwise falls back to the local Next.js serverless route `/api/ai-search`.
+    aiSearch: (data: Record<string, unknown>) => {
+        const externalConfigured = !!process.env.NEXT_PUBLIC_API_URL;
+        if (externalConfigured) {
+            return fetch(`${API_URL}/ai/search`, {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify(data),
+            }).then(handleResponse);
+        }
+        return fetch('/api/ai-search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        }).then(handleResponse);
+    },
 };
 
 // ─── Reference Data ───────────────────────────────────────────────────
@@ -342,6 +374,55 @@ export const onboardingApi = {
 
     getStatus: (userId: string) =>
         fetch(`${API_URL}/onboarding/status/${userId}`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+};
+
+// ─── Referral ─────────────────────────────────────────────────────────
+export const referralApi = {
+    // Get user's referral code (or create one if doesn't exist)
+    getMyCode: () =>
+        fetch(`${API_URL}/referral/my-code`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    // Get referral statistics
+    getStats: () =>
+        fetch(`${API_URL}/referral/stats`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    // Get list of referrals
+    getList: (status?: string) => {
+        const query = status ? `?status=${status}` : '';
+        return fetch(`${API_URL}/referral/list${query}`, {
+            headers: authHeaders(),
+        }).then(handleResponse);
+    },
+
+    // Validate a referral code
+    validateCode: (code: string) =>
+        fetch(`${API_URL}/referral/validate/${code}`).then(handleResponse),
+
+    // Record a new referral (when someone signs up with code)
+    recordReferral: (data: { referralCode: string; referredUserId: string }) =>
+        fetch(`${API_URL}/referral/record`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    // Send referral invite email
+    sendInvite: (email: string) =>
+        fetch(`${API_URL}/referral/invite`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ email }),
+        }).then(handleResponse),
+
+    // Get referral leaderboard
+    getLeaderboard: (limit = 10) =>
+        fetch(`${API_URL}/referral/leaderboard?limit=${limit}`, {
             headers: authHeaders(),
         }).then(handleResponse),
 };

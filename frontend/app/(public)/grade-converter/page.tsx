@@ -64,35 +64,35 @@ export default function GradeConverterPage() {
             <section className="max-w-7xl mx-auto px-6">
                 <div className="text-center mb-16">
                     <span className="text-[#6605c7] font-bold text-[11px] tracking-[0.2em] uppercase mb-3 block">Expert Tools</span>
-                    <h1 className="text-5xl md:text-6xl font-display font-medium text-gray-900 mb-6">
-                        Grade <span className="italic text-gray-500">Converter</span>
+                    <h1 className="text-3xl md:text-5xl font-display font-black text-gray-900 mb-6">
+                        Grade <span className="italic text-[#6605c7]">Converter</span>
                     </h1>
-                    <p className="text-gray-500 text-lg max-w-2xl mx-auto leading-relaxed">
+                    <p className="text-gray-500 text-[13px] max-w-2xl mx-auto leading-relaxed">
                         Convert grades between different formats and grading systems worldwide with AI-powered analysis.
                     </p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                    <div className="lg:col-span-2 bg-white/80 backdrop-blur-xl border border-gray-100 rounded-[2.5rem] p-10 shadow-xl">
+                    <div className="lg:col-span-2 bg-white p-8 border border-gray-100 rounded-xl shadow-xl">
                         <div className="flex gap-8 border-b border-gray-100 mb-10">
                             {["single", "multiple"].map((tab) => (
                                 <button
                                     key={tab}
                                     onClick={() => { setActiveTab(tab); setResult(null); }}
-                                    className={`pb-4 text-xs font-bold uppercase tracking-widest transition-all relative ${activeTab === tab ? "text-[#6605c7]" : "text-gray-400 hover:text-gray-600"}`}
+                                    className={`pb-4 text-[11px] font-bold uppercase tracking-widest transition-all relative ${activeTab === tab ? "text-[#6605c7]" : "text-gray-400 hover:text-gray-600"}`}
                                 >
                                     {tab} Grade
-                                    {activeTab === tab && <div className="absolute bottom-0 left-0 w-full h-1 bg-[#6605c7] rounded-full" />}
+                                    {activeTab === tab && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[#6605c7] rounded-full" />}
                                 </button>
                             ))}
                         </div>
 
                         {activeTab === "single" ? (
-                            <form onSubmit={handleSingleSubmit} className="space-y-8">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <form onSubmit={handleSingleSubmit} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Input Type</label>
-                                        <select value={formData.inputType} onChange={e => setFormData({ ...formData, inputType: e.target.value })} className="w-full px-4 py-4 rounded-2xl border-gray-100 bg-gray-50/50 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900">
+                                        <select value={formData.inputType} onChange={e => setFormData({ ...formData, inputType: e.target.value })} className="w-full px-4 py-2.5 rounded-lg border border-gray-100 bg-gray-50/30 focus:border-[#6605c7] focus:ring-0 transition-all font-bold text-gray-900 text-[13px] outline-none">
                                             <option value="marks">Marks</option>
                                             <option value="percentage">Percentage</option>
                                             <option value="gpa">GPA (4.0)</option>
@@ -128,7 +128,7 @@ export default function GradeConverterPage() {
                                         </select>
                                     </div>
                                 </div>
-                                <button type="submit" disabled={loading} className="w-full py-5 bg-[#6605c7] text-white rounded-full font-bold uppercase tracking-widest text-xs hover:scale-[1.02] shadow-xl transition-all disabled:opacity-50">
+                                <button type="submit" disabled={loading} className="w-full py-4 bg-[#6605c7] text-white rounded-lg font-bold uppercase tracking-widest text-[11px] hover:bg-[#5504a6] transition-all shadow-lg shadow-purple-500/10 disabled:opacity-50 mt-4">
                                     {loading ? "Converting..." : "Convert Grade"}
                                 </button>
                             </form>

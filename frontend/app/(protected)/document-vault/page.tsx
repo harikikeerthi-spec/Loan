@@ -119,33 +119,35 @@ export default function DocumentVaultPage() {
     const uploadedCount = docs.filter(d => d.uploaded).length;
 
     const renderDocGroup = (title: string, icon: string, docList: any[]) => (
-        <div className="mb-12">
-            <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#6605c7]">{icon}</span>
+        <div className="mb-10">
+            <h2 className="text-[13px] font-bold mb-5 flex items-center gap-2 text-gray-900 uppercase tracking-wider">
+                <div className="w-8 h-8 rounded-lg bg-[#6605c7]/[0.05] flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[18px] text-[#6605c7]">{icon}</span>
+                </div>
                 {title}
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {docList.map((req) => {
                     const existing = docs.find(d => d.docType === req.type);
                     const isUploaded = existing?.uploaded || existing?.status === 'uploaded';
 
                     return (
-                        <div key={req.type} className={`bg-white rounded-3xl p-6 border transition-all duration-300 ${isUploaded ? 'border-green-100 shadow-sm' : 'border-gray-100 hover:shadow-xl hover:-translate-y-1'
+                        <div key={req.type} className={`bg-white rounded-xl p-5 border transition-all duration-200 ${isUploaded ? 'border-emerald-100 bg-emerald-50/10' : 'border-gray-100'
                             }`}>
-                            <div className="flex justify-between items-start mb-6">
-                                <div className={`w-14 h-14 ${isUploaded ? 'bg-green-100 text-green-600' : 'bg-purple-50 text-[#6605c7]'} rounded-2xl flex items-center justify-center transition-colors`}>
-                                    <span className="material-symbols-outlined text-2xl">{req.icon}</span>
+                            <div className="flex justify-between items-start mb-5">
+                                <div className={`w-10 h-10 ${isUploaded ? 'bg-emerald-100 text-emerald-600' : 'bg-[#6605c7]/[0.03] text-[#6605c7]'} rounded-xl flex items-center justify-center transition-colors`}>
+                                    <span className="material-symbols-outlined text-[20px]">{req.icon}</span>
                                 </div>
                                 {isUploaded && (
-                                    <div className="flex items-center gap-1.5 px-3 py-1 bg-green-500 text-white rounded-full text-[10px] font-black uppercase tracking-wider">
-                                        <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500 text-white rounded-md text-[9px] font-bold uppercase tracking-wider">
+                                        <span className="material-symbols-outlined text-[12px]">check_circle</span>
                                         Verified
                                     </div>
                                 )}
                             </div>
 
-                            <h3 className="text-sm font-bold text-gray-900 mb-1">{req.label}</h3>
-                            <p className="text-[10px] text-gray-400 mb-6">
+                            <h3 className="text-[13px] font-bold text-gray-900 mb-1">{req.label}</h3>
+                            <p className="text-[11px] text-gray-500 mb-5">
                                 {isUploaded ? "Document successfully stored in vault" : "Click to upload your original document"}
                             </p>
 
@@ -161,29 +163,29 @@ export default function DocumentVaultPage() {
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => handleView(req.type)}
-                                        className="flex-1 py-2.5 bg-gray-50 text-gray-700 text-[10px] font-bold rounded-xl hover:bg-gray-100 transition-all flex items-center justify-center gap-2"
+                                        className="flex-1 py-2 bg-gray-50 text-gray-700 text-[11px] font-bold rounded-lg hover:bg-gray-100 transition-all flex items-center justify-center gap-2 border border-gray-100"
                                     >
-                                        <span className="material-symbols-outlined text-lg">visibility</span> View
+                                        <span className="material-symbols-outlined text-[16px]">visibility</span> View
                                     </button>
                                     <button
                                         onClick={() => triggerFileInput(req.type)}
                                         disabled={!!uploading}
-                                        className="w-10 h-10 bg-gray-50 text-gray-400 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-all"
+                                        className="w-9 h-9 bg-gray-50 text-gray-400 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-all border border-gray-100"
                                         title="Re-upload"
                                     >
-                                        <span className="material-symbols-outlined text-lg">sync</span>
+                                        <span className="material-symbols-outlined text-[16px]">sync</span>
                                     </button>
                                 </div>
                             ) : (
                                 <button
                                     onClick={() => triggerFileInput(req.type)}
                                     disabled={!!uploading}
-                                    className="w-full py-3 bg-[#6605c7] text-white text-[11px] font-bold rounded-xl hover:bg-[#7a0de8] hover:shadow-lg hover:shadow-purple-500/20 shadow-sm transition-all flex items-center justify-center gap-2"
+                                    className="w-full py-2.5 bg-[#6605c7] text-white text-[11px] font-bold rounded-lg hover:bg-[#5504a6] transition-all flex items-center justify-center gap-2"
                                 >
                                     {uploading === req.type ? (
-                                        <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
+                                        <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
                                     ) : (
-                                        <span className="material-symbols-outlined text-lg">upload</span>
+                                        <span className="material-symbols-outlined text-[16px]">upload</span>
                                     )}
                                     {uploading === req.type ? "Encrypting..." : "Upload to Vault"}
                                 </button>
@@ -196,42 +198,42 @@ export default function DocumentVaultPage() {
     );
 
     return (
-        <div className="min-h-screen bg-transparent">
+        <div className="min-h-screen bg-white">
             <Navbar />
-            <div className="max-w-6xl mx-auto px-6 pt-28 pb-16">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-10">
+            <div className="max-w-6xl mx-auto px-6 pt-24 pb-16">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
                     <div className="flex items-center gap-4">
-                        <Link href="/dashboard" className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-gray-100 shadow-sm hover:shadow-md transition-all">
-                            <span className="material-symbols-outlined text-gray-600">arrow_back</span>
+                        <Link href="/dashboard" className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-gray-100 shadow-sm hover:border-gray-200 transition-all">
+                            <span className="material-symbols-outlined text-gray-500 text-[20px]">arrow_back</span>
                         </Link>
                         <div>
-                            <h1 className="text-3xl font-bold font-display">Document Vault</h1>
-                            <p className="text-gray-500 text-sm">Securely store and manage your loan documents</p>
+                            <h1 className="text-2xl font-bold text-gray-900">Document Vault</h1>
+                            <p className="text-gray-500 text-[13px]">Securely store and manage your loan documents</p>
                         </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-4">
                         {/* Profile Toggle */}
-                        <div className="flex bg-gray-100 p-1 rounded-2xl border border-gray-200">
+                        <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-100">
                             <button
                                 onClick={() => setProfileType("salaried")}
-                                className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase transition-all ${profileType === "salaried" ? "bg-white text-[#6605c7] shadow-sm" : "text-gray-500"}`}
+                                className={`px-4 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all ${profileType === "salaried" ? "bg-white text-[#6605c7] shadow-sm border border-gray-100" : "text-gray-500"}`}
                             >
                                 Salaried Case
                             </button>
                             <button
                                 onClick={() => setProfileType("self-employed")}
-                                className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase transition-all ${profileType === "self-employed" ? "bg-white text-[#6605c7] shadow-sm" : "text-gray-500"}`}
+                                className={`px-4 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all ${profileType === "self-employed" ? "bg-white text-[#6605c7] shadow-sm border border-gray-100" : "text-gray-500"}`}
                             >
                                 Self-Employed
                             </button>
                         </div>
 
-                        <div className="flex items-center gap-3 p-3 bg-purple-50 rounded-2xl border border-purple-100">
-                            <div className="w-8 h-8 bg-[#6605c7] text-white rounded-lg flex items-center justify-center">
-                                <span className="material-symbols-outlined text-sm font-bold">verified</span>
+                        <div className="flex items-center gap-3 p-2 px-3 bg-[#6605c7]/[0.02] rounded-xl border border-[#6605c7]/[0.05]">
+                            <div className="w-7 h-7 bg-[#6605c7] text-white rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/20">
+                                <span className="material-symbols-outlined text-[14px]">verified</span>
                             </div>
-                            <div className="text-sm font-bold text-gray-900">
+                            <div className="text-[13px] font-bold text-gray-900 tracking-tight">
                                 {uploadedCount} / {allRequiredDocs.length} Docs
                             </div>
                         </div>
@@ -239,9 +241,9 @@ export default function DocumentVaultPage() {
                 </div>
 
                 {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {[...Array(6)].map((_, i) => (
-                            <div key={i} className="h-48 bg-gray-50 rounded-2xl animate-pulse" />
+                            <div key={i} className="h-40 bg-gray-50 rounded-xl animate-pulse" />
                         ))}
                     </div>
                 ) : (
@@ -252,26 +254,30 @@ export default function DocumentVaultPage() {
                     </>
                 )}
 
-                <div className="mt-12 bg-gradient-to-br from-indigo-900 to-[#1a1a2e] rounded-3xl p-8 text-white relative overflow-hidden shadow-2xl">
-                    <div className="absolute top-0 right-0 p-8 opacity-20">
+                <div className="mt-12 bg-[#1a1a2e] rounded-xl p-8 text-white relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-5">
                         <span className="material-symbols-outlined text-9xl">shield_lock</span>
                     </div>
                     <div className="relative z-10 max-w-2xl">
-                        <h2 className="text-2xl font-bold mb-4">Privacy & Security Choice</h2>
-                        <p className="text-indigo-100 text-sm leading-relaxed mb-6">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-lg text-[10px] font-bold uppercase tracking-widest mb-4 border border-white/5">
+                            <span className="material-symbols-outlined text-[14px] text-emerald-400">lock</span>
+                            Security Choice
+                        </div>
+                        <h2 className="text-xl font-bold mb-4">Privacy & Data Protection</h2>
+                        <p className="text-gray-400 text-[13px] leading-relaxed mb-6">
                             Your documents are encrypted using AES-256 military-grade encryption before being stored.
                             Only authorized bank officials can access them during your application review process.
                             We never share your personal data with third parties.
                         </p>
-                        <div className="flex flex-wrap gap-4">
-                            <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl border border-white/10 text-xs font-bold">
-                                <span className="material-symbols-outlined text-green-400 text-sm">verified_user</span> 256-bit SSL
+                        <div className="flex flex-wrap gap-3">
+                            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 text-[11px] font-bold uppercase tracking-wider">
+                                <span className="material-symbols-outlined text-emerald-400 text-[16px]">verified_user</span> 256-bit SSL
                             </div>
-                            <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl border border-white/10 text-xs font-bold">
-                                <span className="material-symbols-outlined text-green-400 text-sm">verified_user</span> GDPR Compliant
+                            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 text-[11px] font-bold uppercase tracking-wider">
+                                <span className="material-symbols-outlined text-emerald-400 text-[16px]">verified_user</span> GDPR Compliant
                             </div>
-                            <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-xl border border-white/10 text-xs font-bold">
-                                <span className="material-symbols-outlined text-green-400 text-sm">verified_user</span> ISO 27001
+                            <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 text-[11px] font-bold uppercase tracking-wider">
+                                <span className="material-symbols-outlined text-emerald-400 text-[16px]">verified_user</span> ISO 27001
                             </div>
                         </div>
                     </div>

@@ -53,29 +53,29 @@ export default function ProfilePage() {
     return (
         <div className="min-h-screen bg-transparent">
             <Navbar />
-            <div className="pt-28 pb-16 px-6">
+            <div className="pt-32 pb-16 px-6">
                 <div className="max-w-2xl mx-auto">
-                    <h1 className="text-3xl font-bold font-display mb-8">My Profile</h1>
+                    <h1 className="text-2xl font-bold font-display text-gray-900 mb-8">My Profile</h1>
 
                     {success && (
-                        <div className="mb-6 px-4 py-3 bg-green-500/10 border border-green-500/20 rounded-xl text-green-600 flex items-center gap-2">
+                        <div className="mb-6 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-600 text-xs font-bold flex items-center gap-2">
                             <span className="material-symbols-outlined text-sm">check_circle</span>
                             Profile updated successfully!
                         </div>
                     )}
 
-                    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                         {/* Avatar */}
-                        <div className="p-8 bg-gradient-to-r from-[#6605c7] to-purple-700 text-white flex items-center gap-6">
-                            <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-3xl font-bold">
+                        <div className="p-8 bg-gray-50 border-b border-gray-100 flex items-center gap-6">
+                            <div className="w-16 h-16 bg-[#6605c7] rounded-lg flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-[#6605c7]/20">
                                 {user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || "U"}
                             </div>
                             <div>
-                                <h2 className="text-2xl font-bold">
+                                <h2 className="text-xl font-bold text-gray-900">
                                     {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : "My Account"}
                                 </h2>
-                                <p className="text-purple-200">{user?.email}</p>
-                                <span className="inline-block mt-2 px-3 py-0.5 rounded-full bg-white/20 text-xs font-bold uppercase tracking-wide">
+                                <p className="text-gray-500 text-sm">{user?.email}</p>
+                                <span className="inline-block mt-2 px-3 py-0.5 rounded-full bg-[#6605c7]/10 text-[#6605c7] text-[10px] font-bold uppercase tracking-widest">
                                     {user?.role || "user"}
                                 </span>
                             </div>
@@ -83,7 +83,7 @@ export default function ProfilePage() {
 
                         <div className="p-8">
                             {!editing ? (
-                                <div className="space-y-6">
+                                <div className="space-y-4">
                                     {[
                                         { label: "First Name", value: user?.firstName || "—" },
                                         { label: "Last Name", value: user?.lastName || "—" },
@@ -91,25 +91,27 @@ export default function ProfilePage() {
                                         { label: "Phone Number", value: user?.phoneNumber || "—" },
                                         { label: "Date of Birth", value: user?.dateOfBirth || "—" },
                                     ].map((f) => (
-                                        <div key={f.label} className="flex justify-between items-center py-3 border-b border-gray-100">
-                                            <span className="text-sm font-bold text-gray-500">{f.label}</span>
-                                            <span className="text-sm font-medium">{f.value}</span>
+                                        <div key={f.label} className="flex justify-between items-center py-4 border-b border-gray-50 last:border-0">
+                                            <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{f.label}</span>
+                                            <span className="text-[13px] font-semibold text-gray-900">{f.value}</span>
                                         </div>
                                     ))}
-                                    <button
-                                        onClick={() => {
-                                            setForm({
-                                                firstName: user?.firstName || "",
-                                                lastName: user?.lastName || "",
-                                                phoneNumber: user?.phoneNumber || "",
-                                                dateOfBirth: user?.dateOfBirth || "",
-                                            });
-                                            setEditing(true);
-                                        }}
-                                        className="mt-4 px-6 py-3 bg-[#6605c7] text-white font-bold rounded-xl hover:bg-[#7a0de8] transition-all"
-                                    >
-                                        Edit Profile
-                                    </button>
+                                    <div className="pt-4">
+                                        <button
+                                            onClick={() => {
+                                                setForm({
+                                                    firstName: user?.firstName || "",
+                                                    lastName: user?.lastName || "",
+                                                    phoneNumber: user?.phoneNumber || "",
+                                                    dateOfBirth: user?.dateOfBirth || "",
+                                                });
+                                                setEditing(true);
+                                            }}
+                                            className="px-5 py-2.5 bg-[#6605c7] text-white text-xs font-bold rounded-lg hover:bg-[#5504a8] transition-all shadow-sm"
+                                        >
+                                            Edit Profile
+                                        </button>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="space-y-5">
@@ -120,21 +122,21 @@ export default function ProfilePage() {
                                         { key: "dateOfBirth", label: "Date of Birth" },
                                     ].map(({ key, label }) => (
                                         <div key={key}>
-                                            <label className="text-sm font-bold block mb-2">{label}</label>
+                                            <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 block mb-2">{label}</label>
                                             <input
                                                 type={key === "dateOfBirth" ? "date" : "text"}
                                                 value={form[key as keyof typeof form]}
                                                 onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
-                                                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-transparent focus:outline-none focus:ring-2 focus:ring-[#6605c7]"
+                                                className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50/50 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7] transition-all"
                                             />
                                         </div>
                                     ))}
-                                    <div className="flex gap-4">
-                                        <button onClick={() => setEditing(false)} className="px-6 py-3 bg-gray-100 text-gray-800 font-bold rounded-xl">
+                                    <div className="flex gap-3 pt-4">
+                                        <button onClick={() => setEditing(false)} className="px-5 py-2.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-200 transition-all">
                                             Cancel
                                         </button>
-                                        <button onClick={handleSave} disabled={saving} className="flex-1 py-3 bg-[#6605c7] text-white font-bold rounded-xl disabled:opacity-60 flex items-center justify-center gap-2">
-                                            {saving && <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>}
+                                        <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 bg-[#6605c7] text-white text-xs font-bold rounded-lg disabled:opacity-60 flex items-center justify-center gap-2 hover:bg-[#5504a8] transition-all shadow-sm">
+                                            {saving && <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>}
                                             Save Changes
                                         </button>
                                     </div>
@@ -146,4 +148,5 @@ export default function ProfilePage() {
             </div>
         </div>
     );
+    
 }

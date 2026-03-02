@@ -423,39 +423,29 @@
 
             <!-- Blog Builder Modal (Canvas-like interface) -->
             <div id="blogFormModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                <div
-                    class="admin-form rounded-2xl shadow-2xl max-w-full w-full max-h-[95vh] overflow-hidden flex flex-col">
+                <div class="admin-form rounded-2xl shadow-2xl max-w-full w-full max-h-[95vh] overflow-hidden flex flex-col">
                     <!-- Header with toolbar -->
-                    <div
-                        class="sticky top-0 bg-white dark:bg-gray-900 p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between z-10">
+                    <div class="sticky top-0 bg-white dark:bg-gray-900 p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between z-10">
                         <div class="flex items-center gap-4">
                             <h2 class="text-2xl font-bold font-display text-gray-900 dark:text-white flex items-center">
                                 <span class="material-symbols-outlined text-primary mr-2">edit</span>
                                 <span id="formTitle">✨ Blog Builder</span>
                             </h2>
-                            <span id="autoSaveIndicator" class="text-xs text-gray-500 dark:text-gray-400">•
-                                Auto-saving...</span>
+                            <span id="autoSaveIndicator" class="text-xs text-gray-500 dark:text-gray-400">• Auto-saving...</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <button id="undoBtn"
-                                class="p-2 text-gray-600 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                                title="Undo">
+                            <button id="undoBtn" class="p-2 text-gray-600 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="Undo">
                                 <span class="material-symbols-outlined">undo</span>
                             </button>
-                            <button id="redoBtn"
-                                class="p-2 text-gray-600 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors"
-                                title="Redo">
+                            <button id="redoBtn" class="p-2 text-gray-600 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors" title="Redo">
                                 <span class="material-symbols-outlined">redo</span>
                             </button>
                             <div class="border-l border-gray-200 dark:border-gray-700 mx-2 h-6"></div>
-                            <button id="previewBtn"
-                                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm"
-                                title="Preview">
+                            <button id="previewBtn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center gap-2 text-sm" title="Preview">
                                 <span class="material-symbols-outlined text-lg">visibility</span>
                                 Preview
                             </button>
-                            <button id="closeModal"
-                                class="p-2 text-gray-600 hover:text-gray-800 dark:hover:text-gray-400">
+                            <button id="closeModal" class="p-2 text-gray-600 hover:text-gray-800 dark:hover:text-gray-400">
                                 <span class="material-symbols-outlined text-2xl">close</span>
                             </button>
                         </div>
@@ -463,51 +453,38 @@
 
                     <div class="flex flex-1 overflow-hidden">
                         <!-- Left Sidebar: Element Palette -->
-                        <div
-                            class="w-64 bg-gray-50 dark:bg-gray-800/50 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
+                        <div class="w-64 bg-gray-50 dark:bg-gray-800/50 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
                             <div class="p-4 space-y-6">
                                 <!-- Elements Section -->
                                 <div>
-                                    <h3 class="text-sm font-bold font-display text-gray-900 dark:text-white mb-3">📦
-                                        ELEMENTS</h3>
+                                    <h3 class="text-sm font-bold font-display text-gray-900 dark:text-white mb-3">📦 ELEMENTS</h3>
                                     <div class="space-y-2">
-                                        <div class="draggable-element" data-type="heading" draggable="true"
-                                            class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
+                                        <div class="draggable-element" data-type="heading" draggable="true" class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
                                             <span class="material-symbols-outlined text-sm text-primary">title</span>
                                             <span class="text-sm font-medium">Heading</span>
                                         </div>
-                                        <div class="draggable-element" data-type="text" draggable="true"
-                                            class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
-                                            <span
-                                                class="material-symbols-outlined text-sm text-primary">text_fields</span>
+                                        <div class="draggable-element" data-type="text" draggable="true" class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
+                                            <span class="material-symbols-outlined text-sm text-primary">text_fields</span>
                                             <span class="text-sm font-medium">Text</span>
                                         </div>
-                                        <div class="draggable-element" data-type="image" draggable="true"
-                                            class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
+                                        <div class="draggable-element" data-type="image" draggable="true" class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
                                             <span class="material-symbols-outlined text-sm text-primary">image</span>
                                             <span class="text-sm font-medium">Image</span>
                                         </div>
-                                        <div class="draggable-element" data-type="video" draggable="true"
-                                            class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
-                                            <span
-                                                class="material-symbols-outlined text-sm text-primary">video_camera</span>
+                                        <div class="draggable-element" data-type="video" draggable="true" class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
+                                            <span class="material-symbols-outlined text-sm text-primary">video_camera</span>
                                             <span class="text-sm font-medium">Video</span>
                                         </div>
-                                        <div class="draggable-element" data-type="button" draggable="true"
-                                            class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
-                                            <span
-                                                class="material-symbols-outlined text-sm text-primary">smart_button</span>
+                                        <div class="draggable-element" data-type="button" draggable="true" class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
+                                            <span class="material-symbols-outlined text-sm text-primary">smart_button</span>
                                             <span class="text-sm font-medium">Button</span>
                                         </div>
-                                        <div class="draggable-element" data-type="divider" draggable="true"
-                                            class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
+                                        <div class="draggable-element" data-type="divider" draggable="true" class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
                                             <span class="material-symbols-outlined text-sm text-primary">remove</span>
                                             <span class="text-sm font-medium">Divider</span>
                                         </div>
-                                        <div class="draggable-element" data-type="grid" draggable="true"
-                                            class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
-                                            <span
-                                                class="material-symbols-outlined text-sm text-primary">dashboard</span>
+                                        <div class="draggable-element" data-type="grid" draggable="true" class="flex items-center gap-2 p-3 bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 cursor-grab hover:shadow-md transition-all">
+                                            <span class="material-symbols-outlined text-sm text-primary">dashboard</span>
                                             <span class="text-sm font-medium">Grid</span>
                                         </div>
                                     </div>
@@ -515,46 +492,31 @@
 
                                 <!-- Design Tools Section -->
                                 <div>
-                                    <h3 class="text-sm font-bold font-display text-gray-900 dark:text-white mb-3">🎨
-                                        DESIGN</h3>
+                                    <h3 class="text-sm font-bold font-display text-gray-900 dark:text-white mb-3">🎨 DESIGN</h3>
                                     <div class="space-y-3">
                                         <div>
-                                            <label
-                                                class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">Color</label>
-                                            <input type="color" id="fontColorPicker" data-property="fontColor"
-                                                class="w-full h-10 rounded-lg cursor-pointer border border-gray-300 dark:border-gray-600">
+                                            <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">Color</label>
+                                            <input type="color" id="fontColorPicker" data-property="fontColor" class="w-full h-10 rounded-lg cursor-pointer border border-gray-300 dark:border-gray-600">
                                         </div>
                                         <div>
-                                            <label
-                                                class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">Background</label>
-                                            <input type="color" id="bgColorPicker" data-property="backgroundColor"
-                                                class="w-full h-10 rounded-lg cursor-pointer border border-gray-300 dark:border-gray-600">
+                                            <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">Background</label>
+                                            <input type="color" id="bgColorPicker" data-property="backgroundColor" class="w-full h-10 rounded-lg cursor-pointer border border-gray-300 dark:border-gray-600">
                                         </div>
                                         <div>
-                                            <label
-                                                class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">Font
-                                                Size</label>
-                                            <input type="number" id="fontSizeInput" data-tool="fontSize" min="8"
-                                                max="72" value="16"
-                                                class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm">
+                                            <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">Font Size</label>
+                                            <input type="number" id="fontSizeInput" data-tool="fontSize" min="8" max="72" value="16" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm">
                                         </div>
                                         <div>
-                                            <label
-                                                class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">Font
-                                                Weight</label>
-                                            <select id="fontWeightSelect" data-tool="fontWeight"
-                                                class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm">
+                                            <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">Font Weight</label>
+                                            <select id="fontWeightSelect" data-tool="fontWeight" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm">
                                                 <option value="normal">Normal</option>
                                                 <option value="bold">Bold</option>
                                                 <option value="lighter">Lighter</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label
-                                                class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">Font
-                                                Family</label>
-                                            <select id="fontFamilySelect" data-tool="fontFamily"
-                                                class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm">
+                                            <label class="text-xs font-semibold text-gray-700 dark:text-gray-300 block mb-2">Font Family</label>
+                                            <select id="fontFamilySelect" data-tool="fontFamily" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm">
                                                 <option value="serif">Serif</option>
                                                 <option value="sans-serif">Sans-serif</option>
                                                 <option value="monospace">Monospace</option>
@@ -565,16 +527,13 @@
 
                                 <!-- Layer Tools -->
                                 <div>
-                                    <h3 class="text-sm font-bold font-display text-gray-900 dark:text-white mb-3">📚
-                                        LAYERS</h3>
+                                    <h3 class="text-sm font-bold font-display text-gray-900 dark:text-white mb-3">📚 LAYERS</h3>
                                     <div class="space-y-2">
-                                        <button id="bringToFrontBtn" data-tool="bringToFront"
-                                            class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-medium flex items-center gap-2 hover:bg-primary/10 transition-colors">
+                                        <button id="bringToFrontBtn" data-tool="bringToFront" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-medium flex items-center gap-2 hover:bg-primary/10 transition-colors">
                                             <span class="material-symbols-outlined text-sm">arrow_upward</span>
                                             Bring Forward
                                         </button>
-                                        <button id="sendToBackBtn" data-tool="sendToBack"
-                                            class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-medium flex items-center gap-2 hover:bg-primary/10 transition-colors">
+                                        <button id="sendToBackBtn" data-tool="sendToBack" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-medium flex items-center gap-2 hover:bg-primary/10 transition-colors">
                                             <span class="material-symbols-outlined text-sm">arrow_downward</span>
                                             Send Backward
                                         </button>
@@ -583,16 +542,12 @@
 
                                 <!-- Blog Metadata -->
                                 <div>
-                                    <h3 class="text-sm font-bold font-display text-gray-900 dark:text-white mb-3">📋
-                                        METADATA</h3>
+                                    <h3 class="text-sm font-bold font-display text-gray-900 dark:text-white mb-3">📋 METADATA</h3>
                                     <div class="space-y-3">
                                         <input type="hidden" id="blogId" value="">
-                                        <input type="text" id="blogTitle" placeholder="Blog Title"
-                                            class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
-                                        <input type="text" id="blogSlug" placeholder="URL Slug"
-                                            class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
-                                        <select id="blogCategory"
-                                            class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
+                                        <input type="text" id="blogTitle" placeholder="Blog Title" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
+                                        <input type="text" id="blogSlug" placeholder="URL Slug" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
+                                        <select id="blogCategory" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
                                             <option value="">Category</option>
                                             <option value="education">Education</option>
                                             <option value="finance">Finance</option>
@@ -601,34 +556,27 @@
                                             <option value="career">Career</option>
                                             <option value="tips">Tips & Tricks</option>
                                         </select>
-                                        <input type="text" id="blogAuthor" placeholder="Author Name"
-                                            class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
-                                        <input type="text" id="blogExcerpt" placeholder="Excerpt"
-                                            class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
-                                        <input type="text" id="blogTags" placeholder="Tags (comma separated)"
-                                            class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
+                                        <input type="text" id="blogAuthor" placeholder="Author Name" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
+                                        <input type="text" id="blogExcerpt" placeholder="Excerpt" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
+                                        <input type="text" id="blogTags" placeholder="Tags (comma separated)" class="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs">
                                         <div class="flex items-center gap-2">
                                             <input type="checkbox" id="blogPublished" class="w-4 h-4">
-                                            <label for="blogPublished"
-                                                class="text-xs font-medium text-gray-700 dark:text-gray-300">Publish</label>
+                                            <label for="blogPublished" class="text-xs font-medium text-gray-700 dark:text-gray-300">Publish</label>
                                         </div>
                                         <div class="flex items-center gap-2">
                                             <input type="checkbox" id="blogFeatured" class="w-4 h-4">
-                                            <label for="blogFeatured"
-                                                class="text-xs font-medium text-gray-700 dark:text-gray-300">Featured</label>
+                                            <label for="blogFeatured" class="text-xs font-medium text-gray-700 dark:text-gray-300">Featured</label>
                                         </div>
                                     </div>
                                 </div>
 
                                 <!-- Action Buttons -->
                                 <div class="space-y-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                    <button id="saveBtn"
-                                        class="w-full px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2">
+                                    <button id="saveBtn" class="w-full px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2">
                                         <span class="material-symbols-outlined">save</span>
                                         Save Blog
                                     </button>
-                                    <button id="clearCanvasBtn"
-                                        class="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2">
+                                    <button id="clearCanvasBtn" class="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2">
                                         <span class="material-symbols-outlined">delete</span>
                                         Clear Canvas
                                     </button>
@@ -688,7 +636,6 @@
 
 
 
-    <script src="assets/js/auth-guard.js"></script>
     <script src="assets/js/components-loader.js"></script>
     <script src="assets/js/auth.js"></script>
     <script src="assets/js/theme-toggle.js"></script>
@@ -1914,7 +1861,7 @@ Final thoughts and recommendations for similar situations.`,
 
         // Update edit blog function
         const originalEditBlog = window.editBlog;
-        window.editBlog = function (blog) {
+        window.editBlog = function(blog) {
             console.log('📝 Editing blog:', blog);
             openBlogBuilder(blog);
         };

@@ -73,8 +73,56 @@ export class UniversityComparisonService {
             return await this.groq.getJson(prompt);
         } catch (error) {
             console.error('University comparison failed', error);
-            // Fallback for demo if offline or error
             throw new NotFoundException('Could not compare universities at this time.');
+        }
+    }
+
+    async compareShortlist(
+        shortlist: Array<{ name: string; course: string }>,
+        profile: { bachelors?: string; workExp?: string; gpa?: string }
+    ): Promise<any> {
+        const shortlistText = shortlist.map((u, i) => `${i + 1}. ${u.name} (Program: ${u.course})`).join('\n');
+        const profileText = `Bachelor's: ${profile.bachelors || 'N/A'}, Work Exp: ${profile.workExp || '0'} months, GPA: ${profile.gpa || 'N/A'}`;
+
+        const prompt = `
+        As an AI Education Consultant, provide a Deep Comparative Analysis for a student with the following profile:
+        ${profileText}
+
+        The student has shortlisted these universities:
+        ${shortlistText}
+
+        For each university, evaluate:
+        1. Admissions Probability (based on profile)
+        2. Program Quality (specifically for the chosen course)
+        3. ROI & Career Outlook
+        4. Profile Fit (How well the student's background matches the university's typical intake)
+
+        Respond in a structured JSON format:
+        {
+            "summary": "Overall expert advice based on the profile and shortlist",
+            "universities": [
+                {
+                    "name": "Full Name",
+                    "course": "Program Name",
+                    "admissionChance": "High/Medium/Low (with % estimate)",
+                    "pros": ["Pro 1", "Pro 2"],
+                    "cons": ["Con 1", "Con 2"],
+                    "profileAnalysis": "Specific feedback on how the student's background fits this uni",
+                    "roiScore": "Score out of 10",
+                    "rank": "World Rank"
+                }
+            ],
+            "recommendation": "Which one is the best fit and why?"
+        }
+        
+        Provide accurate, data-driven insights. Focus on the comparability of these specific data points.
+        `;
+
+        try {
+            return await this.groq.getJson(prompt);
+        } catch (error) {
+            console.error('Shortlist comparison failed', error);
+            throw new Error('Could not compare shortlist at this time.');
         }
     }
 }

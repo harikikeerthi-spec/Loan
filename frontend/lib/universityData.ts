@@ -74,7 +74,7 @@ export const universities: Record<string, UniversityData> = {
         description: "MIT is the world's leading institution for science, technology, engineering, and mathematics. With an unmatched culture of innovation and entrepreneurship, MIT graduates have founded over 30,000 companies generating $1.9 trillion in annual revenue.",
         heroImage: "https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=1400&q=80",
         campusImages: [
-            "https://images.unsplash.com/photo-1541339907198-e08756ebafe3?w=600&q=80",
+            "https://images.unsplash.com/photo-1523050335392-93851179ae22?w=600&q=80",
             "https://images.unsplash.com/photo-1607237138185-eedd9c632b0b?w=600&q=80",
             "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600&q=80",
         ],
@@ -144,7 +144,7 @@ export const universities: Record<string, UniversityData> = {
         campusImages: [
             "https://images.unsplash.com/photo-1562774053-701939374585?w=600&q=80",
             "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=600&q=80",
-            "https://images.unsplash.com/photo-1541339907198-e08756ebafe3?w=600&q=80",
+            "https://images.unsplash.com/photo-1523050335392-93851179ae22?w=600&q=80",
         ],
         logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Stanford_Cardinal_logo.svg/800px-Stanford_Cardinal_logo.svg.png",
         primaryColor: "#8C1515",

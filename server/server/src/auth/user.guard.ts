@@ -52,8 +52,7 @@ export class UserGuard implements CanActivate {
                 });
             }
 
-            console.error('UserGuard Token Verification Error:', error.message, error.name);
-            throw new UnauthorizedException(`Invalid token: ${error.message}`);
+            throw new UnauthorizedException('Invalid token');
         }
     }
 }

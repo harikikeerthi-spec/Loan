@@ -61,35 +61,66 @@ export class GroqService {
         try {
             // Clean up common markdown json wrappers if present
             const cleaned = content.replace(/```json/g, '').replace(/```/g, '').trim();
-            const jsonStart = cleaned.indexOf('{');
-            const jsonEnd = cleaned.lastIndexOf('}');
-            if (jsonStart === -1 || jsonEnd === -1) {
-                // Try array
-                const arrStart = cleaned.indexOf('[');
-                const arrEnd = cleaned.lastIndexOf(']');
-                if (arrStart === -1 || arrEnd === -1) throw new Error('No JSON found');
-                return JSON.parse(cleaned.slice(arrStart, arrEnd + 1)) as T;
+
+            // Find the outermost structure: either { ... } or [ ... ]
+            const firstBrace = cleaned.indexOf('{');
+            const firstBracket = cleaned.indexOf('[');
+
+            let start = -1;
+            let end = -1;
+
+            if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+                // Object starts first
+                start = firstBrace;
+                end = cleaned.lastIndexOf('}');
+            } else if (firstBracket !== -1) {
+                // Array starts first
+                start = firstBracket;
+                end = cleaned.lastIndexOf(']');
             }
-            return JSON.parse(cleaned.slice(jsonStart, jsonEnd + 1)) as T;
+
+            if (start === -1 || end === -1 || end < start) {
+                throw new Error('No valid JSON structure ({ or [) found in response');
+            }
+
+            const jsonString = cleaned.slice(start, end + 1);
+            return JSON.parse(jsonString) as T;
         } catch (e) {
             console.error('Failed to parse JSON response:', content);
-            throw new Error('AI response was not valid JSON');
+            throw new Error(`AI response was not valid JSON: ${e.message}`);
         }
     }
 
     async searchAdvice(query: string, type: 'university' | 'course', context?: any): Promise<any[]> {
         let prompt = '';
         if (type === 'university') {
-            prompt = `Search for universities matching or relevant to "${query}". 
-            Context: ${JSON.stringify(context || {})}
-            Return a list of up to 12 universities.
-            Each university must have: name, loc (location), slug (kebab-case name), rank (approximate world rank), accept (approximate acceptance rate %), tuition (approximate yearly tuition in USD), and country.
+            const country = context?.country || '';
+            const course = context?.course || '';
+
+            prompt = `Search for REAL, ACCREDITED universities ${query ? `matching or relevant to "${query}"` : 'that are popular'} for international students.
+            ${country ? `PRIORITY: Focus PRIMARILY on universities located in "${country}".` : ''}
+            ${course ? `SECONARY FOCUS: Universities strong in "${course}".` : ''}
+            
+            Context Details: ${JSON.stringify(context || {})}
+            
+            Requirement: Return a list of up to 12 universities.
+            For each university, provide: 
+            - name: Full official name
+            - loc: city, country
+            - slug: kebab-case name
+            - rank: approximate world QS rank (integer)
+            - accept: approximate acceptance rate % (integer)
+            - tuition: approximate yearly tuition in USD (integer)
+            - country: full country name
+            - description: short one-liner about the university
+            - website: official website URL
+            - courses: array of 3-5 relevant master's programs
             
             Return ONLY a JSON array of objects.`;
         } else {
-            prompt = `Search for courses/fields of study matching or relevant to "${query}".
-            Context: ${JSON.stringify(context || {})}
-            Return a list of up to 10 specific course names.
+            prompt = `Search for valid courses/fields of study matching or relevant to "${query || ''}".
+            Context of interest: ${JSON.stringify(context || {})}
+            Return a list of up to 15 specific and standard course names.
             
             Return ONLY a JSON array of strings.`;
         }

@@ -63,13 +63,6 @@ export class AuthController {
    */
   @Post('refresh')
   async refreshToken(@Body() body: { refresh_token: string }) {
-    if (!body?.refresh_token) {
-      return {
-        success: false,
-        message: 'refresh_token is required in the request body',
-        statusCode: 400,
-      };
-    }
     return this.authService.refreshTokens(body.refresh_token);
   }
 
@@ -158,6 +151,19 @@ export class AuthController {
     loanType: string;
     amount: number;
     purpose?: string;
+    courseType?: string;
+    country?: string;
+    university?: string;
+    annualFee?: string;
+    livingCost?: string;
+    coApplicant?: string;
+    income?: string;
+    collateral?: string;
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    phone?: string;
+    notes?: string;
   }) {
     try {
       const application = await this.usersService.createLoanApplication(body.userId, {
@@ -165,12 +171,26 @@ export class AuthController {
         loanType: body.loanType,
         amount: body.amount,
         purpose: body.purpose,
+        courseType: body.courseType,
+        country: body.country,
+        university: body.university,
+        annualFee: body.annualFee,
+        livingCost: body.livingCost,
+        coApplicant: body.coApplicant,
+        income: body.income,
+        collateral: body.collateral,
+        firstName: body.firstName,
+        lastName: body.lastName,
+        email: body.email,
+        phone: body.phone,
+        notes: body.notes,
       });
       return {
         success: true,
         application,
       };
     } catch (error) {
+      console.error('Create application error:', error);
       return {
         success: false,
         message: 'Failed to create application',

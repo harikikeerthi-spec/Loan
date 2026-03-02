@@ -148,19 +148,7 @@ function DiscussionsInner() {
     ];
 
     return (
-        <main className="relative min-h-screen font-sans" style={{ background: "#f7f5f8" }}>
-            {/* ── Background ──────────────────────────────────────────────── */}
-            <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden" style={{ background: "#f7f5f8" }}>
-                <div
-                    className="absolute inset-0"
-                    style={{
-                        background:
-                            "radial-gradient(at 0% 0%, rgba(102,5,199,0.4) 0px, transparent 50%), radial-gradient(at 100% 0%, rgba(224,195,137,0.5) 0px, transparent 50%), radial-gradient(at 100% 100%, rgba(139,192,232,0.4) 0px, transparent 50%), radial-gradient(at 0% 100%, rgba(102,5,199,0.3) 0px, transparent 50%)",
-                        opacity: 0.9,
-                    }}
-                />
-            </div>
-
+        <main className="relative min-h-screen font-sans bg-transparent">
             {/* ── Styles ───────────────────────────────────────────────────── */}
             <style>{`
                 .eng-glass { background:rgba(255,255,255,0.7); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.5); }
@@ -781,7 +769,7 @@ function DiscussionsInner() {
 export default function DiscussionsPage() {
     return (
         <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center" style={{ background: "#f7f5f8" }}>
+            <div className="min-h-screen flex items-center justify-center bg-transparent">
                 <div style={{ width: 40, height: 40, border: "3px solid #e9d5ff", borderTopColor: "#6605c7", borderRadius: "50%", animation: "spin 0.9s linear infinite" }} />
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>

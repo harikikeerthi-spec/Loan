@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { authApi } from "@/lib/api";
+import { authApi, referralApi } from "@/lib/api";
 
 function LoginContent() {
     const router = useRouter();
@@ -18,8 +18,23 @@ function LoginContent() {
     const [error, setError] = useState("");
     const [resendDisabled, setResendDisabled] = useState(false);
     const [countdown, setCountdown] = useState(0);
+    const [referralCode, setReferralCode] = useState<string | null>(null);
 
     const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+    // Capture referral code from URL on mount
+    useEffect(() => {
+        const ref = searchParams.get("ref");
+        if (ref) {
+            setReferralCode(ref);
+            // Store in sessionStorage in case user refreshes
+            sessionStorage.setItem("referralCode", ref);
+        } else {
+            // Check if there's a stored referral code
+            const stored = sessionStorage.getItem("referralCode");
+            if (stored) setReferralCode(stored);
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         if (countdown > 0) {
@@ -87,6 +102,7 @@ function LoginContent() {
                 lastName?: string;
                 refresh_token?: string;
                 role?: string;
+                userId?: string;
             };
             if (data.refresh_token) localStorage.setItem("refreshToken", data.refresh_token);
             login(data.access_token, {
@@ -95,6 +111,22 @@ function LoginContent() {
                 lastName: data.lastName,
                 role: data.role as any
             });
+
+            // Record referral for new users
+            if (!data.userExists && referralCode) {
+                try {
+                    // Try to record the referral - backend will validate the code
+                    await referralApi.recordReferral({
+                        referralCode,
+                        referredUserId: data.userId || email.trim() // Use email as fallback identifier
+                    });
+                    // Clear stored referral code after successful recording
+                    sessionStorage.removeItem("referralCode");
+                } catch (refError) {
+                    // Don't block login if referral recording fails
+                    console.error("Failed to record referral:", refError);
+                }
+            }
 
             // Role-based redirection
             if (data.role === "admin" || data.role === "super_admin") {
@@ -107,7 +139,7 @@ function LoginContent() {
                 router.push("/user-details");
             } else {
                 const redirectTo = searchParams.get("redirect");
-                router.push(redirectTo ? decodeURIComponent(redirectTo) : "/dashboard");
+                router.push(redirectTo ? decodeURIComponent(redirectTo) : "/");
             }
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : "Invalid OTP");
@@ -129,18 +161,31 @@ function LoginContent() {
 
 
             <div className="relative z-10 w-full max-w-md">
+                {/* Referral Badge */}
+                {referralCode && (
+                    <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/50 rounded-xl px-4 py-3 flex items-center gap-3">
+                        <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-white shrink-0">
+                            <span className="material-symbols-outlined text-sm">redeem</span>
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-gray-900">You&apos;ve been referred!</p>
+                            <p className="text-xs text-gray-500">Sign up to activate your referral bonus</p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Logo */}
                 <div className="text-center mb-8">
-                    <Link href="/" className="inline-flex items-center gap-2 mb-6">
-                        <div className="w-12 h-12 rounded-2xl bg-[#6605c7]/20 flex items-center justify-center border border-[#6605c7]/30">
-                            <span className="material-symbols-outlined text-[#6605c7] text-3xl">school</span>
+                    <Link href="/" className="inline-flex items-center gap-2 mb-6 group">
+                        <div className="w-10 h-10 rounded-xl bg-[#6605c7] flex items-center justify-center text-white shadow-lg shadow-[#6605c7]/20 group-hover:scale-105 transition-transform">
+                            <span className="material-symbols-outlined text-xl">school</span>
                         </div>
-                        <span className="font-bold text-3xl font-display text-gray-900">VidhyaLoan</span>
+                        <span className="font-bold text-2xl font-display text-gray-900 tracking-tight">Vidhyaloan</span>
                     </Link>
-                    <h1 className="text-3xl font-bold text-gray-900 font-display mb-2">
+                    <h1 className="text-2xl font-bold text-gray-900 font-display mb-1.5 tracking-tight">
                         {step === "email" ? "Welcome Back" : "Check Your Email"}
                     </h1>
-                    <p className="text-gray-600 text-sm">
+                    <p className="text-gray-500 text-[13px] font-normal">
                         {step === "email"
                             ? "Sign in with your email — no password needed"
                             : `We sent a 6-digit code to ${email}`}
@@ -148,11 +193,11 @@ function LoginContent() {
                 </div>
 
                 {/* Card */}
-                <div className="bg-white/70 backdrop-blur-xl border border-white/60 rounded-3xl p-8 shadow-2xl">
+                <div className="bg-white rounded-2xl p-8 shadow-xl shadow-black/[0.03] border border-gray-100">
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Email */}
                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Email Address</label>
+                            <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Email Address</label>
                             <div className="relative">
                                 <input
                                     id="email"
@@ -161,14 +206,14 @@ function LoginContent() {
                                     onChange={(e) => setEmail(e.target.value)}
                                     disabled={step === "otp"}
                                     placeholder="you@example.com"
-                                    className="w-full px-4 py-3.5 bg-white/50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#6605c7] focus:ring-2 focus:ring-[#6605c7]/20 transition-all disabled:opacity-60"
+                                    className="w-full px-4 py-3 bg-gray-50/50 border border-gray-100 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 transition-all disabled:opacity-60"
                                     required
                                 />
                                 {step === "otp" && (
                                     <button
                                         type="button"
                                         onClick={() => { setStep("email"); setOtp(["", "", "", "", "", ""]); setError(""); }}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#6605c7] hover:underline"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-[#6605c7] font-bold hover:underline"
                                     >
                                         Change
                                     </button>
@@ -179,8 +224,8 @@ function LoginContent() {
                         {/* OTP Input */}
                         {step === "otp" && (
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-4">Enter OTP</label>
-                                <div className="flex gap-3 justify-center" onPaste={handleOtpPaste}>
+                                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 ml-1">Enter OTP</label>
+                                <div className="flex gap-2.5 justify-center" onPaste={handleOtpPaste}>
                                     {otp.map((digit, i) => (
                                         <input
                                             key={i}
@@ -191,15 +236,15 @@ function LoginContent() {
                                             value={digit}
                                             onChange={(e) => handleOtpChange(i, e.target.value)}
                                             onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                                            className="w-12 h-14 text-center text-xl font-bold bg-white/50 border border-gray-200 rounded-xl text-gray-900 focus:outline-none focus:border-[#6605c7] focus:ring-2 focus:ring-[#6605c7]/20 transition-all"
+                                            className="w-11 h-12 text-center text-lg font-bold bg-gray-50/50 border border-gray-100 rounded-xl text-gray-900 focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 transition-all"
                                         />
                                     ))}
                                 </div>
                                 <div className="text-center mt-4">
                                     {resendDisabled ? (
-                                        <span className="text-xs text-gray-500">Resend in {countdown}s</span>
+                                        <span className="text-[11px] text-gray-400 font-medium tracking-tight">Resend code in {countdown}s</span>
                                     ) : (
-                                        <button type="button" onClick={sendOtp} className="text-xs text-[#6605c7] hover:underline font-bold">
+                                        <button type="button" onClick={sendOtp} className="text-[11px] text-[#6605c7] hover:underline font-bold uppercase tracking-wider">
                                             Resend OTP
                                         </button>
                                     )}
@@ -209,8 +254,8 @@ function LoginContent() {
 
                         {/* Error */}
                         {error && (
-                            <div className="px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm flex items-center gap-2">
-                                <span className="material-symbols-outlined text-sm">error</span>
+                            <div className="px-4 py-2.5 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs font-medium flex items-center gap-2">
+                                <span className="material-symbols-outlined text-base">error</span>
                                 {error}
                             </div>
                         )}
@@ -220,37 +265,24 @@ function LoginContent() {
                             id="submitBtn"
                             type="submit"
                             disabled={loading}
-                            className="w-full py-4 bg-[#6605c7] text-white font-bold rounded-xl hover:bg-[#7a0de8] active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-[#6605c7]/30"
+                            className="w-full py-3.5 bg-[#6605c7] text-white font-bold rounded-xl hover:bg-[#5a04b1] active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-[#6605c7]/20 text-[14px]"
                         >
                             {loading ? (
                                 <>
-                                    <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
+                                    <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
                                     {step === "email" ? "Sending..." : "Verifying..."}
                                 </>
                             ) : step === "email" ? (
-                                <>Get OTP <span className="material-symbols-outlined">arrow_forward</span></>
+                                <>Get OTP <span className="material-symbols-outlined text-base">arrow_forward</span></>
                             ) : (
-                                <>Login <span className="material-symbols-outlined">login</span></>
+                                <>Login <span className="material-symbols-outlined text-base">login</span></>
                             )}
                         </button>
                     </form>
-
-                    {/* Divider */}
-                    {/* <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-                        <p className="text-gray-500 text-sm">
-                            New to VidhyaLoan?{" "}
-                            <Link href="/signup" className="text-[#6605c7] font-bold hover:underline">
-                                Create an account
-                            </Link>
-                        </p>
-                    </div> */}
                 </div>
 
-                <p className="text-center text-gray-500 text-xs mt-6">
-                    By continuing, you agree to our{" "}
-                    <Link href="/terms-conditions" className="hover:text-gray-400 underline">Terms</Link>
-                    {" "}and{" "}
-                    <Link href="/privacy-policy" className="hover:text-gray-400 underline">Privacy Policy</Link>
+                <p className="text-center text-gray-400 text-[11px] mt-8 font-normal leading-relaxed">
+                    By continuing, you agree to our <Link href="/terms-conditions" className="text-gray-500 hover:text-[#6605c7] font-medium underline">Terms</Link> and <Link href="/privacy-policy" className="text-gray-500 hover:text-[#6605c7] font-medium underline">Privacy Policy</Link>
                 </p>
             </div>
         </div>
