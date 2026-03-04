@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
@@ -56,6 +56,16 @@ export default function AdminDashboardPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState("all");
     const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    // Application detail modal state
+    const [selectedApp, setSelectedApp] = useState<any>(null);
+    const [actionRemarks, setActionRemarks] = useState("");
+    const [actionLoading, setActionLoading] = useState(false);
+
+    // AI Review state
+    const [aiReview, setAiReview] = useState<any>(null);
+    const [aiReviewLoading, setAiReviewLoading] = useState(false);
+    const [drawerTab, setDrawerTab] = useState<'details' | 'ai_review'>('details');
 
     const loadOverview = useCallback(async () => {
         setLoading(true);
@@ -136,12 +146,41 @@ export default function AdminDashboardPage() {
     };
 
     const handleAppStatus = async (appId: string, status: string) => {
+        setActionLoading(true);
         try {
-            await adminApi.updateApplicationStatus(appId, { status });
+            const remarks = aiReview
+                ? `[AI Score: ${aiReview.overallScore}/100 | Rec: ${aiReview.recommendation}] ${actionRemarks || ''}`
+                : actionRemarks || undefined;
+            await adminApi.updateApplicationStatus(appId, {
+                status,
+                remarks,
+                rejectionReason: status === 'rejected' ? (actionRemarks || aiReview?.aiSummary) : undefined,
+            });
+            setSelectedApp(null);
+            setActionRemarks("");
+            setAiReview(null);
+            setDrawerTab('details');
             loadData();
             loadOverview();
         } catch (e) {
             alert("Failed to update application status");
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleAIReview = async (appId: string) => {
+        setAiReviewLoading(true);
+        setAiReview(null);
+        setDrawerTab('ai_review');
+        try {
+            const result: any = await adminApi.aiReviewApplication(appId);
+            setAiReview(result.data);
+        } catch (e: any) {
+            console.error('AI Review failed:', e);
+            alert(`AI Review failed: ${e.message || 'Please try again.'}`);
+        } finally {
+            setAiReviewLoading(false);
         }
     };
 
@@ -169,10 +208,22 @@ export default function AdminDashboardPage() {
         if (activeSection === 'applications') {
             return (item.applicationNumber?.toLowerCase().includes(query) ||
                 item.firstName?.toLowerCase().includes(query) ||
-                item.lastName?.toLowerCase().includes(query));
+                item.lastName?.toLowerCase().includes(query) ||
+                item.bank?.toLowerCase().includes(query) ||
+                item.email?.toLowerCase().includes(query));
         }
         return true;
     });
+
+    const statusColors: Record<string, string> = {
+        pending: "bg-amber-100 text-amber-700 border-amber-200",
+        processing: "bg-blue-100 text-blue-700 border-blue-200",
+        approved: "bg-emerald-100 text-emerald-700 border-emerald-200",
+        rejected: "bg-red-100 text-red-600 border-red-200",
+        disbursed: "bg-purple-100 text-purple-700 border-purple-200",
+        cancelled: "bg-gray-100 text-gray-600 border-gray-200",
+        draft: "bg-gray-100 text-gray-500 border-gray-200",
+    };
 
     return (
         <div className="min-h-screen flex bg-[#f7f5f8]">
@@ -370,6 +421,7 @@ export default function AdminDashboardPage() {
                                         >
                                             <option value="all">Every State</option>
                                             <option value="pending">Pending Audit</option>
+                                            <option value="processing">Processing</option>
                                             <option value="approved">Success</option>
                                             <option value="rejected">Declined</option>
                                         </select>
@@ -504,17 +556,20 @@ export default function AdminDashboardPage() {
                                                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{item.email}</p>
                                                             </td>
                                                             <td className="px-8 py-6 text-sm font-bold text-gray-700">{item.bank} <br /><span className="text-[10px] uppercase text-gray-400">{item.loanType}</span></td>
-                                                            <td className="px-8 py-6 text-sm font-black text-[#6605c7]">₹{item.amount?.toLocaleString()}</td>
+                                                            <td className="px-8 py-6 text-sm font-black text-[#6605c7]">â‚¹{item.amount?.toLocaleString()}</td>
                                                             <td className="px-8 py-6">
-                                                                <span className={`status-badge status-${item.status}`}>
+                                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${statusColors[item.status] || "bg-gray-100 text-gray-600 border-gray-200"}`}>
                                                                     {item.status}
                                                                 </span>
                                                             </td>
                                                             <td className="px-8 py-6">
-                                                                <div className="flex gap-2">
-                                                                    <button onClick={() => handleAppStatus(item.id, 'approved')} className="p-2 text-green-500 hover:bg-green-50 rounded-xl shadow-sm"><span className="material-symbols-outlined text-lg">check_circle</span></button>
-                                                                    <button onClick={() => handleAppStatus(item.id, 'rejected')} className="p-2 text-red-500 hover:bg-red-50 rounded-xl shadow-sm"><span className="material-symbols-outlined text-lg">cancel</span></button>
-                                                                </div>
+                                                                <button
+                                                                    onClick={() => { setSelectedApp(item); setActionRemarks(""); }}
+                                                                    className="px-4 py-2 bg-[#6605c7]/5 text-[#6605c7] text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[#6605c7]/10 transition-all flex items-center gap-1.5"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-sm">visibility</span>
+                                                                    View Details
+                                                                </button>
                                                             </td>
                                                         </>
                                                     )}
@@ -568,6 +623,298 @@ export default function AdminDashboardPage() {
                     )}
                 </div>
             </main>
+
+            {/* Application Detail Modal / Drawer */}
+            {selectedApp && (
+                <div className="fixed inset-0 z-[60] flex">
+                    {/* Overlay */}
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { setSelectedApp(null); setAiReview(null); setDrawerTab('details'); }} />
+
+                    {/* Drawer */}
+                    <div className="absolute right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl overflow-y-auto animate-slide-in-right flex flex-col">
+                        {/* Header */}
+                        <div className="sticky top-0 z-20 bg-white border-b border-gray-100">
+                            <div className="px-8 py-5 flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-xl font-black font-display text-gray-900">Application Details</h2>
+                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
+                                        {selectedApp.applicationNumber}
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${statusColors[selectedApp.status] || "bg-gray-100 text-gray-600 border-gray-200"}`}>
+                                        {selectedApp.status}
+                                    </span>
+                                    <button onClick={() => { setSelectedApp(null); setAiReview(null); setDrawerTab('details'); }} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-all">
+                                        <span className="material-symbols-outlined">close</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Tabs */}
+                            <div className="flex px-8 gap-6 border-b border-gray-50">
+                                <button
+                                    onClick={() => setDrawerTab('details')}
+                                    className={`py-3 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all ${drawerTab === 'details' ? 'border-[#6605c7] text-[#6605c7]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                                >
+                                    Details
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        if (!aiReview) handleAIReview(selectedApp.id);
+                                        else setDrawerTab('ai_review');
+                                    }}
+                                    className={`py-3 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all flex items-center gap-2 ${drawerTab === 'ai_review' ? 'border-[#6605c7] text-[#6605c7]' : 'border-transparent text-gray-400 hover:text-gray-600'}`}
+                                >
+                                    <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+                                    AI Review {aiReview && `(${aiReview.overallScore}%)`}
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-8 space-y-8">
+                            {drawerTab === 'details' ? (
+                                <>
+                                    {/* Applicant Info */}
+                                    <DetailSection icon="person" title="Applicant Information" color="bg-blue-50 text-blue-600">
+                                        <DetailRow label="Full Name" value={`${selectedApp.firstName || ''} ${selectedApp.lastName || ''}`.trim() || '—'} />
+                                        <DetailRow label="Email" value={selectedApp.email || selectedApp.user?.email || '—'} />
+                                        <DetailRow label="Phone" value={selectedApp.phone || '—'} />
+                                        <DetailRow label="Date of Birth" value={selectedApp.dateOfBirth ? new Date(selectedApp.dateOfBirth).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'} />
+                                        <DetailRow label="Address" value={selectedApp.address || '—'} />
+                                    </DetailSection>
+
+                                    {/* Loan Details */}
+                                    <DetailSection icon="account_balance" title="Loan Details" color="bg-purple-50 text-purple-600">
+                                        <DetailRow label="Bank" value={selectedApp.bank || '—'} />
+                                        <DetailRow label="Loan Type" value={selectedApp.loanType || '—'} />
+                                        <DetailRow label="Loan Amount" value={selectedApp.amount ? `₹${Number(selectedApp.amount).toLocaleString('en-IN')}` : '—'} highlight />
+                                        <DetailRow label="Course / Program" value={selectedApp.courseName || '—'} />
+                                        <DetailRow label="University" value={selectedApp.universityName || '—'} />
+                                        <DetailRow label="Country" value={selectedApp.country || '—'} />
+                                    </DetailSection>
+
+                                    {/* Financial Details */}
+                                    <DetailSection icon="payments" title="Financial Details" color="bg-emerald-50 text-emerald-600">
+                                        <DetailRow label="Co-Applicant" value={selectedApp.hasCoApplicant ? (selectedApp.coApplicantRelation ? selectedApp.coApplicantRelation.charAt(0).toUpperCase() + selectedApp.coApplicantRelation.slice(1) : 'Yes') : 'None'} />
+                                        {selectedApp.hasCoApplicant && selectedApp.coApplicantIncome && (
+                                            <DetailRow label="Co-Applicant Income" value={`₹${Number(selectedApp.coApplicantIncome).toLocaleString('en-IN')} / year`} />
+                                        )}
+                                        <DetailRow label="Collateral" value={selectedApp.hasCollateral ? (selectedApp.collateralType || 'Yes') : 'No Collateral'} />
+                                    </DetailSection>
+
+                                    {/* Application Meta */}
+                                    <DetailSection icon="info" title="Application Meta" color="bg-amber-50 text-amber-600">
+                                        <DetailRow label="Application Number" value={selectedApp.applicationNumber} mono />
+                                        <DetailRow label="Stage" value={selectedApp.stage?.replace(/_/g, ' ') || '—'} />
+                                        <DetailRow label="Progress" value={`${selectedApp.progress || 0}%`} />
+                                        <DetailRow label="Submitted" value={selectedApp.submittedAt ? new Date(selectedApp.submittedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : (selectedApp.date ? new Date(selectedApp.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : '—')} />
+                                    </DetailSection>
+                                </>
+                            ) : (
+                                <div className="space-y-6">
+                                    {aiReviewLoading ? (
+                                        <div className="flex flex-col items-center justify-center py-20 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                                            <div className="w-16 h-16 rounded-full border-4 border-[#6605c7]/20 border-t-[#6605c7] animate-spin mb-4" />
+                                            <p className="text-[11px] font-black uppercase tracking-widest text-gray-500 animate-pulse">Running AI Deep Scan...</p>
+                                            <p className="text-[10px] font-bold text-gray-400 mt-2">Checking documents, financials, and eligibility</p>
+                                        </div>
+                                    ) : aiReview ? (
+                                        <>
+                                            {/* AI Summary Card */}
+                                            <div className="relative p-8 rounded-3xl bg-gradient-to-br from-[#6605c7] to-[#4c0491] text-white overflow-hidden shadow-2xl shadow-purple-500/20">
+                                                <div className="relative z-10">
+                                                    <div className="flex justify-between items-start mb-6">
+                                                        <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+                                                            <span className="material-symbols-outlined text-2xl">auto_awesome</span>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <div className="text-4xl font-black">{aiReview.overallScore}%</div>
+                                                            <div className="text-[10px] font-bold uppercase tracking-widest opacity-60">Overall Score</div>
+                                                        </div>
+                                                    </div>
+                                                    <h3 className="text-lg font-black mb-2 flex items-center gap-2">
+                                                        AI Recommendation:
+                                                        <span className={`px-2 py-0.5 rounded-lg text-[10px] uppercase bg-white/20`}>
+                                                            {aiReview.recommendation.replace(/_/g, ' ')}
+                                                        </span>
+                                                    </h3>
+                                                    <p className="text-sm opacity-90 leading-relaxed italic">
+                                                        "{aiReview.aiSummary}"
+                                                    </p>
+                                                </div>
+                                                <div className="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
+                                                    <span className="material-symbols-outlined text-[200px]">psychology</span>
+                                                </div>
+                                            </div>
+
+                                            {/* AI Checks Grid */}
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="p-5 rounded-2xl bg-gray-50 border border-gray-100">
+                                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Credit Risk</p>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <div className={`w-2 h-2 rounded-full ${aiReview.creditAssessment.riskLevel === 'low' ? 'bg-emerald-500' : aiReview.creditAssessment.riskLevel === 'medium' ? 'bg-amber-500' : 'bg-red-500'}`} />
+                                                        <span className="text-sm font-black uppercase tracking-tight text-gray-900">{aiReview.creditAssessment.riskLevel} Risk</span>
+                                                    </div>
+                                                    <p className="text-[11px] font-bold text-gray-500">I/L Ratio: {aiReview.creditAssessment.incomeToLoanRatio}</p>
+                                                </div>
+                                                <div className="p-5 rounded-2xl bg-gray-50 border border-gray-100">
+                                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Completeness</p>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="text-sm font-black uppercase tracking-tight text-gray-900">{aiReview.completenessCheck.percentage}%</span>
+                                                    </div>
+                                                    <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-[#6605c7]" style={{ width: `${aiReview.completenessCheck.percentage}%` }} />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Flag Status */}
+                                            <DetailSection icon="flag" title="Eligibility Flags" color="bg-gray-100 text-gray-700">
+                                                {aiReview.eligibilityFlags.map((f: any, i: number) => (
+                                                    <div key={i} className="px-5 py-3 flex items-start gap-4">
+                                                        <span className={`material-symbols-outlined text-lg mt-0.5 ${f.status === 'pass' ? 'text-emerald-500' : f.status === 'warning' ? 'text-amber-500' : 'text-red-500'}`}>
+                                                            {f.status === 'pass' ? 'check_circle' : f.status === 'warning' ? 'warning' : 'error'}
+                                                        </span>
+                                                        <div>
+                                                            <p className="text-xs font-black text-gray-900">{f.flag}</p>
+                                                            <p className="text-[11px] font-bold text-gray-500">{f.detail}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </DetailSection>
+
+                                            {/* Document Check */}
+                                            <DetailSection icon="description" title="Document Check" color="bg-gray-100 text-gray-700">
+                                                <DetailRow label="Total Required" value={aiReview.documentCheck.totalRequired.toString()} />
+                                                <DetailRow label="Uploaded" value={aiReview.documentCheck.uploaded.toString()} />
+                                                <DetailRow label="Verified" value={aiReview.documentCheck.verified.toString()} />
+                                                <DetailRow label="Status" value={aiReview.documentCheck.status.toUpperCase()} highlight={aiReview.documentCheck.status !== 'complete'} />
+                                            </DetailSection>
+
+                                            {/* Mentor Review Trigger */}
+                                            {aiReview.mentorReviewRequired && (
+                                                <div className="p-6 rounded-2xl bg-red-50 border border-red-100">
+                                                    <div className="flex items-center gap-3 mb-4">
+                                                        <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-600">
+                                                            <span className="material-symbols-outlined">supervisor_account</span>
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-sm font-black text-red-900">Manual Review Suggested</h4>
+                                                            <p className="text-[10px] font-bold text-red-700/60 uppercase tracking-widest">Complex Risk detected</p>
+                                                        </div>
+                                                    </div>
+                                                    <ul className="space-y-2">
+                                                        {aiReview.mentorReviewReasons.map((r: string, i: number) => (
+                                                            <li key={i} className="flex items-center gap-2 text-[11px] font-bold text-red-700">
+                                                                <span className="w-1 h-1 rounded-full bg-red-400" />
+                                                                {r}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="text-center py-20">
+                                            <button
+                                                onClick={() => handleAIReview(selectedApp.id)}
+                                                className="px-8 py-4 bg-[#6605c7] text-white text-xs font-black uppercase tracking-widest rounded-2xl hover:bg-[#4c0491] transition-all shadow-xl shadow-purple-500/20 flex items-center gap-3 mx-auto"
+                                            >
+                                                <span className="material-symbols-outlined">auto_awesome</span>
+                                                Initialize AI Analysis
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Footer / Actions */}
+                        <div className="sticky bottom-0 bg-white border-t border-gray-100 p-8 pt-6">
+                            <h3 className="text-[10px] uppercase tracking-widest font-bold text-gray-400 mb-4 flex items-center gap-2">
+                                <span className="material-symbols-outlined text-[14px]">gavel</span>
+                                Final Determination
+                            </h3>
+                            <textarea
+                                value={actionRemarks}
+                                onChange={(e) => setActionRemarks(e.target.value)}
+                                placeholder={aiReview ? "AI insights will be attached automatically..." : "Add your manual remarks here..."}
+                                rows={2}
+                                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-gray-50/50 text-[13px] font-medium focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7] transition-all mb-4"
+                            />
+                            <div className="flex gap-3">
+                                {aiReview?.mentorReviewRequired ? (
+                                    <button
+                                        onClick={() => handleAppStatus(selectedApp.id, 'processing')}
+                                        disabled={actionLoading}
+                                        className="flex-[2] px-6 py-4 bg-amber-500 text-white text-[10px] uppercase font-black tracking-widest rounded-2xl hover:bg-amber-600 shadow-xl shadow-amber-500/20 transition-all flex items-center justify-center gap-3"
+                                    >
+                                        <span className="material-symbols-outlined">send_to_mobile</span>
+                                        Escalate to Mentors
+                                    </button>
+                                ) : (
+                                    <>
+                                        <button
+                                            onClick={() => handleAppStatus(selectedApp.id, 'approved')}
+                                            disabled={actionLoading || aiReviewLoading}
+                                            className="flex-1 px-6 py-4 bg-emerald-500 text-white text-[10px] uppercase font-black tracking-widest rounded-2xl hover:bg-emerald-600 shadow-xl shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
+                                        >
+                                            {actionLoading ? <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span> : <span className="material-symbols-outlined text-base group-hover:scale-110 transition-transform">check_circle</span>}
+                                            Approve
+                                        </button>
+                                        <button
+                                            onClick={() => handleAppStatus(selectedApp.id, 'rejected')}
+                                            disabled={actionLoading || aiReviewLoading}
+                                            className="flex-1 px-6 py-4 bg-red-500 text-white text-[10px] uppercase font-black tracking-widest rounded-2xl hover:bg-red-600 shadow-xl shadow-red-500/20 transition-all flex items-center justify-center gap-2 group disabled:opacity-50"
+                                        >
+                                            {actionLoading ? <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span> : <span className="material-symbols-outlined text-base group-hover:scale-110 transition-transform">cancel</span>}
+                                            Reject
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <style jsx>{`
+                @keyframes slideInRight {
+                    from { transform: translateX(100%); }
+                    to { transform: translateX(0); }
+                }
+                .animate-slide-in-right {
+                    animation: slideInRight 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+                }
+            `}</style>
+        </div>
+    );
+}
+
+function DetailSection({ icon, title, color, children }: { icon: string; title: string; color: string; children: React.ReactNode }) {
+    return (
+        <div>
+            <h3 className="text-[11px] uppercase tracking-widest font-bold text-gray-400 mb-3 flex items-center gap-2">
+                <div className={`w-6 h-6 rounded-md ${color} flex items-center justify-center`}>
+                    <span className="material-symbols-outlined text-[14px]">{icon}</span>
+                </div>
+                {title}
+            </h3>
+            <div className="bg-gray-50/80 rounded-xl border border-gray-100 divide-y divide-gray-100">
+                {children}
+            </div>
+        </div>
+    );
+}
+
+function DetailRow({ label, value, highlight, mono }: { label: string; value: string; highlight?: boolean; mono?: boolean }) {
+    return (
+        <div className="flex justify-between items-center px-5 py-3">
+            <span className="text-[12px] font-bold text-gray-500">{label}</span>
+            <span className={`text-[13px] text-right max-w-[60%] break-words ${highlight ? 'font-black text-[#6605c7] text-base' : 'font-semibold text-gray-900'} ${mono ? 'font-mono text-[11px]' : ''}`}>
+                {value}
+            </span>
         </div>
     );
 }

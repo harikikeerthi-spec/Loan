@@ -477,6 +477,11 @@ export const adminApi = {
             headers: authHeaders(),
             body: JSON.stringify(data),
         }).then(handleResponse),
+    aiReviewApplication: (id: string) =>
+        fetch(`${API_URL}/applications/admin/${id}/ai-review`, {
+            method: "POST",
+            headers: authHeaders(),
+        }).then(handleResponse),
 
     // Community
     getCommunityStats: () =>

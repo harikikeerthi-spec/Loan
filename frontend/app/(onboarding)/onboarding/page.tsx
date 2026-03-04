@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import UniversityCard from "@/components/UniversityCard";
+import UniDetailModal from "@/components/UniDetailModal";
 import { aiApi } from '@/lib/api';
 
 const COUNTRY_FLAGS: Record<string, string> = {
@@ -1755,15 +1756,19 @@ export default function OnboardingPage() {
                 </div>
 
                 <div className="section-label">Your Top Universities in {country}</div>
-                <div className="univ-results-grid">
-                    {scored.map((u, i) => (
-                        <UniversityCard
-                            key={u.slug || u.name || i}
-                            university={u}
-                            onDetails={(uni: any) => setSelectedUniForModal(uni)}
-                            onApply={(uni: any) => setSelectedUniForModal(uni)}
-                        />
-                    ))}
+                <div style={{ width: '100vw', position: 'relative', left: '50%', right: '50%', marginLeft: '-50vw', marginRight: '-50vw', padding: '0 32px', boxSizing: 'border-box' }}>
+                    <div style={{ maxWidth: 1400, margin: '0 auto' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 20, marginTop: 16 }}>
+                            {scored.map((u, i) => (
+                                <UniversityCard
+                                    key={u.slug || u.name || i}
+                                    university={u}
+                                    onDetails={(uni: any) => setSelectedUniForModal(uni)}
+                                    onApply={(uni: any) => setSelectedUniForModal(uni)}
+                                />
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         );
@@ -1774,7 +1779,7 @@ export default function OnboardingPage() {
             <style jsx global>{`
                 .progress-track{position:fixed;top:80px;left:0;right:0;z-index:49;height:3px;background:rgba(102,5,199,0.05)}
                 .progress-fill{height:3px;background:linear-gradient(90deg,#7c3aed,#6605c7);transition:width 0.55s ease}
-                .page-wrap{min-height:100vh;padding-top:100px;padding-bottom:110px}
+                .page-wrap{min-height:100vh;padding-top:100px;padding-bottom:110px;overflow-x:hidden}
                 .welcome-hero{text-align:center;padding:36px 20px 32px;max-width:720px;margin:0 auto 8px;transition:all 0.5s ease}
                 .hero-badge{display:inline-flex;align-items:center;gap:6px;background:white;color:#6605c7;font-size:11px;font-weight:700;padding:4px 12px;border-radius:9999px;margin-bottom:16px;border:1px solid #6605c7/10;box-shadow:0 2px 10px rgba(102,5,199,0.05)}
                 .hero-title{font-size:28px;font-weight:bold;color:#1a1626;margin-bottom:12px;letter-spacing:-0.015em}
@@ -1784,7 +1789,7 @@ export default function OnboardingPage() {
                 .stat-item{flex:1;text-align:center}
                 .stat-number{font-size:18px;font-weight:bold;color:#1a1626}
                 .stat-label{font-size:10px;font-weight:600;color:#9ca3af;margin-top:2px;text-transform:uppercase;letter-spacing:0.02em}
-                .chat-col{max-width:680px;margin:0 auto;padding:28px 20px 16px}
+                .chat-col{max-width:680px;margin:0 auto;padding:28px 20px 16px;overflow:visible}
                 .q-row{margin-bottom:4px}
                 .q-text{font-size:14px;font-weight:600;color:#1a1626;line-height:1.5;padding:6px 0 2px}
                 .ans-row{display:flex;flex-direction:column;align-items:flex-end;margin-bottom:16px}
@@ -1841,7 +1846,7 @@ export default function OnboardingPage() {
                 .typing-dot:nth-child(1){animation-delay:-0.32s}
                 .typing-dot:nth-child(2){animation-delay:-0.16s}
                 @keyframes bop{0%,80%,100%{transform:scale(0)}40%{transform:scale(1)}}
-                .univ-results-grid{display:grid;gap:12px;margin-top:12px}
+                .univ-results-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;margin-top:16px}
                 .univ-card{background:#fff;border:1px solid #f3f4f6;border-radius:16px;padding:14px;display:flex;gap:14px;position:relative;transition:all 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.02)}
                 .univ-card:hover{border-color:#6605c7/20;box-shadow:0 8px 24px rgba(102,5,199,0.06);transform:translateY(-1px)}
                 .univ-rank-badge{position:absolute;top:-8px;left:14px;background:#1a1626;color:#fff;font-size:9px;font-weight:800;padding:3px 8px;border-radius:9999px;box-shadow:0 2px 8px rgba(0,0,0,0.1)}
@@ -2189,207 +2194,8 @@ export default function OnboardingPage() {
                     </>
                 )}
             </div>
-            {/* ══════════════ CLEAN & NEAT UNIVERSITY DETAIL MODAL ══════════════ */}
-            {selectedUniForModal && (() => {
-                const u = selectedUniForModal;
-                const admitChance = u._score || Math.min(92, Math.round((10 - (u.min_gpa || 7)) * 17 + (u.accept || 28)));
-                const loanChance = u.loan ? 88 : 62;
-                const roi = Math.min(72, Math.round(admitChance * 0.62));
-                const tuitionInr = Math.round((u.tuition || 30000) * 85);
-                const livingInr = Math.round((u.tuition || 30000) * 0.55 * 85);
-                const totalInr = tuitionInr + livingInr;
-                const medInr = Math.round((u.tuition || 30000) * 3.4 * 85 / 4);
-                const courseName = u.courses?.[0] || answers.course?.value || "Master's Program";
-                const isStem = ['AI', 'ML', 'CS', 'Software', 'Data', 'Comp', 'Eng', 'Tech', 'Cyber', 'Quant'].some((k: string) => courseName.toLowerCase().includes(k.toLowerCase()));
-                const category = isStem ? 'STEM' : 'Business';
-                const flag = COUNTRY_FLAGS[u.country] || '🌐';
-
-                const Ring = ({ pct, color, label, value }: { pct: number; color: string; label: string; value: string }) => {
-                    const r = 30, circ = 2 * Math.PI * r;
-                    return (
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                            <div style={{ position: 'relative', width: 72, height: 72 }}>
-                                <svg width="72" height="72" style={{ transform: 'rotate(-90deg)' }}>
-                                    <circle cx="36" cy="36" r={r} fill="none" stroke="#f1f5f9" strokeWidth="6" />
-                                    <circle cx="36" cy="36" r={r} fill="none" stroke={color} strokeWidth="6"
-                                        strokeDasharray={circ} strokeDashoffset={circ - (circ * pct / 100)}
-                                        strokeLinecap="round" style={{ transition: 'stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)' }} />
-                                </svg>
-                                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                    <span style={{ fontSize: 13, fontWeight: 900, color: '#1a1a2e' }}>{value}</span>
-                                </div>
-                            </div>
-                            <div style={{ fontSize: 10, color: '#64748b', fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, textAlign: 'center' }}>{label}</div>
-                        </div>
-                    );
-                };
-
-                return (
-                    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }} onClick={() => setSelectedUniForModal(null)}>
-                        <div style={{ width: '100%', maxWidth: '900px', maxHeight: '90vh', background: '#fff', display: 'flex', flexDirection: 'column', position: 'relative', animation: 'modalSlideUp 0.4s ease-out', borderRadius: '32px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }} onClick={e => e.stopPropagation()}>
-
-                            {/* ── TOP HEADER (CLEAN & MINIMAL) ── */}
-                            <div style={{ flexShrink: 0, padding: '24px 32px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'white' }}>
-                                <div style={{ display: 'flex', items: 'center', gap: 14 }}>
-                                    <div style={{ width: 48, height: 48, borderRadius: 12, background: '#f8fafc', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, fontWeight: 900, color: '#6605c7' }}>{u.name?.[0] || 'U'}</div>
-                                    <div>
-                                        <div style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 2 }}>{flag} {u.country}</div>
-                                        <h2 style={{ fontSize: 18, fontWeight: 900, color: '#1e293b', margin: 0, letterSpacing: '-0.02em' }}>{u.name}</h2>
-                                    </div>
-                                </div>
-                                <button onClick={() => setSelectedUniForModal(null)} style={{ width: 36, height: 36, borderRadius: '50%', background: '#f8fafc', border: 'none', cursor: 'pointer', color: '#64748b', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-                            </div>
-
-                            {/* ── SCROLLABLE AREA ── */}
-                            <div style={{ flex: 1, overflowY: 'auto', background: '#fcfcfe', paddingBottom: 100 }}>
-
-                                {/* ── HERO SUMMARY CARD ── */}
-                                <div style={{ margin: '24px 32px', background: 'white', borderRadius: 24, padding: '32px', border: '1px solid #f1f5f9', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ fontSize: 12, fontWeight: 700, color: '#7c3aed', marginBottom: 6 }}>Target Program</div>
-                                                <h1 style={{ fontSize: 28, fontWeight: 900, color: '#0f172a', margin: 0, lineHeight: 1.1 }}>{courseName}</h1>
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
-                                                    {[category, '2 Years', u.rank ? `QS #${u.rank}` : null, u.loc ? u.loc.split(',')[0] : null].filter(Boolean).map((tag, i) => (
-                                                        <span key={i} style={{ fontSize: 11, fontWeight: 700, padding: '4px 12px', background: '#f5f3ff', color: '#7c3aed', borderRadius: 9999 }}>{tag}</span>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            {/* Top Stat Boxes */}
-                                            <div style={{ display: 'flex', gap: 20 }}>
-                                                <Ring pct={admitChance} color="#6605c7" label="Admit Match" value={`${admitChance}%`} />
-                                                <Ring pct={loanChance} color="#0d9488" label="Loan Match" value={loanChance >= 75 ? 'High' : 'Med'} />
-                                            </div>
-                                        </div>
-
-                                        <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, margin: 0 }}>
-                                            {u.description || `Explore ${u.name}, a leading institution in ${u.country} renowned for its academic excellence. Join a global community and accelerate your career with world-class faculty and state-of-the-art facilities.`}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                {/* ── QUICK STATS GRID ── */}
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, margin: '0 32px 32px' }}>
-                                    {[
-                                        { label: 'Estimated Cost', val: `₹${(totalInr / 100000).toFixed(1)}L`, icon: '💰' },
-                                        { label: 'Acceptance Rate', val: `${u.accept || '—'}%`, icon: '📊' },
-                                        { label: 'Min GPA Req', val: `${u.min_gpa || 6.5}/10`, icon: '🎓' },
-                                        { label: 'Entrance Req', val: u.min_ielts ? `IELTS ${u.min_ielts}` : 'Waivable*', icon: '📄' }
-                                    ].map((stat, i) => (
-                                        <div key={i} style={{ background: 'white', padding: '16px', borderRadius: 20, border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                                            <div style={{ fontSize: 20, marginBottom: 8 }}>{stat.icon}</div>
-                                            <div style={{ fontSize: 15, fontWeight: 900, color: '#1e293b' }}>{stat.val}</div>
-                                            <div style={{ fontSize: 10, color: '#94a3b8', fontWeight: 800, textTransform: 'uppercase', marginTop: 2 }}>{stat.label}</div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* ── CONTENT SECTIONS ── */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 24, margin: '0 32px' }}>
-
-                                    {/* Left Column */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                                        {/* Admission Criteria Table */}
-                                        <div style={{ background: 'white', borderRadius: 24, padding: '24px', border: '1px solid #f1f5f9' }}>
-                                            <h3 style={{ fontSize: 13, fontWeight: 900, color: '#1e293b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 20 }}>Academic Fit</h3>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                                                {[
-                                                    { req: 'GPA (out of 10)', min: (u.min_gpa || 7.0), yours: answers.gpa?.value || '0', ok: parseFloat(answers.gpa?.value || '0') >= (u.min_gpa || 7.0) },
-                                                    { req: 'Language Proficiency', min: (u.min_ielts || 6.5), yours: answers.english_score?.value || '0', ok: parseFloat(answers.english_score?.value || '0') >= (u.min_ielts || 6.5) }
-                                                ].map((r, i) => (
-                                                    <div key={i} style={{ display: 'flex', items: 'center', justifyContent: 'space-between', padding: '12px 16px', background: r.ok ? '#f0fdf4' : '#fff1f2', borderRadius: 16 }}>
-                                                        <div style={{ fontSize: 13, fontWeight: 700, color: r.ok ? '#166534' : '#991b1b' }}>{r.req}</div>
-                                                        <div style={{ display: 'flex', items: 'center', gap: 12 }}>
-                                                            <div style={{ textAlign: 'right' }}>
-                                                                <div style={{ fontSize: 12, fontWeight: 800, color: r.ok ? '#15803d' : '#ef4444' }}>{r.ok ? '✓ Match' : '✗ Below Req.'}</div>
-                                                                <div style={{ fontSize: 10, color: r.ok ? '#16a34a' : '#ef4444', opacity: 0.7 }}>Min: {r.min}</div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Cost Breakdown */}
-                                        <div style={{ background: 'white', borderRadius: 24, padding: '24px', border: '1px solid #f1f5f9' }}>
-                                            <h3 style={{ fontSize: 13, fontWeight: 900, color: '#1e293b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 20 }}>Financial Outlook (Yearly)</h3>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                                                {[
-                                                    { label: 'Tuition Fees', val: tuitionInr, color: '#7c3aed' },
-                                                    { label: 'Living Expenses', val: livingInr, color: '#6366f1' }
-                                                ].map((cost, i) => (
-                                                    <div key={i}>
-                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                                                            <span style={{ fontSize: 13, fontWeight: 600, color: '#64748b' }}>{cost.label}</span>
-                                                            <span style={{ fontSize: 14, fontWeight: 800, color: '#1e293b' }}>₹{cost.val.toLocaleString('en-IN')}</span>
-                                                        </div>
-                                                        <div style={{ height: 6, background: '#f1f5f9', borderRadius: 999 }}>
-                                                            <div style={{ height: '100%', background: cost.color, borderRadius: 999, width: `${(cost.val / totalInr) * 100}%` }} />
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                                <div style={{ marginTop: 8, padding: '16px', background: '#f8fafc', borderRadius: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <span style={{ fontSize: 13, fontWeight: 800, color: '#1e293b' }}>Combined Total</span>
-                                                    <span style={{ fontSize: 18, fontWeight: 900, color: '#7c3aed' }}>₹{totalInr.toLocaleString('en-IN')}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Right Column */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                                        {/* Expert Consultation */}
-                                        <div style={{ background: 'linear-gradient(135deg, #1e1b4b, #312e81)', borderRadius: 24, padding: '24px', color: 'white', position: 'relative', overflow: 'hidden' }}>
-                                            <div style={{ position: 'absolute', top: -10, right: -10, width: 80, height: 80, background: 'white', opacity: 0.05, borderRadius: '50%' }} />
-                                            <h3 style={{ fontSize: 12, fontWeight: 900, color: '#c4b5fd', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 16 }}>Expert Guidance</h3>
-                                            <p style={{ fontSize: 13, color: '#e2e8f0', lineHeight: 1.5, marginBottom: 20 }}>Get a free 15-min profile evaluation from our senior study abroad consultants.</p>
-                                            <button style={{ width: '100%', padding: '12px', background: 'white', color: '#1e1b4b', border: 'none', borderRadius: 14, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>Book Free Call</button>
-                                        </div>
-
-                                        {/* Official Links */}
-                                        <div style={{ background: 'white', borderRadius: 24, padding: '24px', border: '1px solid #f1f5f9' }}>
-                                            <h3 style={{ fontSize: 13, fontWeight: 900, color: '#1e293b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16 }}>Official Portal</h3>
-                                            {u.website ? (
-                                                <a href={u.website} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px', background: '#f8fafc', borderRadius: 16, textDecoration: 'none' }}>
-                                                    <span style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>Visit Website</span>
-                                                    <span style={{ color: '#94a3b8' }}>↗</span>
-                                                </a>
-                                            ) : (
-                                                <div style={{ padding: '14px', background: '#f8fafc', borderRadius: 16, fontSize: 12, color: '#64748b', textAlign: 'center' }}>Official portal not available</div>
-                                            )}
-                                        </div>
-
-                                        {/* Loan Feature */}
-                                        <div style={{ background: '#fdf4ff', borderRadius: 24, padding: '24px', border: '1px solid #f5d0fe' }}>
-                                            <div style={{ display: 'flex', items: 'center', gap: 10, marginBottom: 12 }}>
-                                                <span style={{ fontSize: 20 }}>⚡</span>
-                                                <span style={{ fontSize: 13, fontWeight: 900, color: '#86198f' }}>Instant Loan Check</span>
-                                            </div>
-                                            <p style={{ fontSize: 12, color: '#a21caf', lineHeight: 1.4, margin: '0 0 16px' }}>Pre-approve your education loan for {u.name} in minutes.</p>
-                                            <button onClick={() => { setSelectedUniForModal(null); window.location.href = '/loans/apply'; }} style={{ width: '100%', padding: '10px', background: '#86198f', color: 'white', border: 'none', borderRadius: 12, fontWeight: 800, fontSize: 12, cursor: 'pointer' }}>Check Eligibility</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* ── STICKY FOOTER ── */}
-                            <div style={{ flexShrink: 0, padding: '20px 32px', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', borderTop: '1px solid #f1f5f9', display: 'flex', gap: 16 }}>
-                                <button onClick={() => setSelectedUniForModal(null)} style={{ flex: 1, padding: '14px', background: 'white', color: '#1e293b', border: '1px solid #e2e8f0', borderRadius: 16, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Close</button>
-                                <button onClick={() => { setSelectedUniForModal(null); window.location.href = '/loans/apply?university=' + encodeURIComponent(u.name); }} style={{ flex: 2, padding: '14px', background: '#6605c7', color: 'white', border: 'none', borderRadius: 16, fontWeight: 900, fontSize: 14, cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(102, 5, 199, 0.3)' }}>Apply with VidhyaLoans →</button>
-                            </div>
-
-                            <style>{`
-                                @keyframes modalSlideUp {
-                                    from { opacity: 0; transform: translateY(40px) scale(0.98); }
-                                    to { opacity: 1; transform: translateY(0) scale(1); }
-                                }
-                            `}</style>
-                        </div>
-                    </div>
-                );
-            })()}
+            {/* ══════════════ AI-POWERED UNIVERSITY DETAIL MODAL ══════════════ */}
+            {selectedUniForModal && <UniDetailModal university={selectedUniForModal} answers={answers} onClose={() => setSelectedUniForModal(null)} />}
 
         </main>
     );

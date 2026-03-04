@@ -116,15 +116,17 @@ export default function ProfilePage() {
                             ) : (
                                 <div className="space-y-5">
                                     {[
-                                        { key: "firstName", label: "First Name" },
-                                        { key: "lastName", label: "Last Name" },
-                                        { key: "phoneNumber", label: "Phone Number" },
-                                        { key: "dateOfBirth", label: "Date of Birth" },
-                                    ].map(({ key, label }) => (
+                                        { key: "firstName", label: "First Name", type: "text" },
+                                        { key: "lastName", label: "Last Name", type: "text" },
+                                        { key: "phoneNumber", label: "Phone Number", type: "text" },
+                                        { key: "dateOfBirth", label: "Date of Birth", type: "text", placeholder: "DD-MM-YYYY", pattern: "^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\\d{4}$" },
+                                    ].map(({ key, label, type, placeholder, pattern }) => (
                                         <div key={key}>
                                             <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 block mb-2">{label}</label>
                                             <input
-                                                type={key === "dateOfBirth" ? "date" : "text"}
+                                                type={type}
+                                                placeholder={placeholder}
+                                                pattern={pattern}
                                                 value={form[key as keyof typeof form]}
                                                 onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
                                                 className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50/50 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7] transition-all"
@@ -148,5 +150,5 @@ export default function ProfilePage() {
             </div>
         </div>
     );
-    
+
 }

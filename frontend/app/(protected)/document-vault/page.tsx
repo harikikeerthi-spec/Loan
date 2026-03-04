@@ -81,17 +81,29 @@ export default function DocumentVaultPage() {
 
         setUploading(docType);
         try {
-            // Create a preview URL for the local file (to simulate viewing "uploaded" file)
+            // Create a preview URL for the local file
             const objectUrl = URL.createObjectURL(file);
             setPreviewUrls(prev => ({ ...prev, [docType]: objectUrl }));
 
-            // Simulate upload with metadata
-            await authApi.uploadDocument({
-                userId: user.id,
-                docType,
-                uploaded: true,
-                filePath: `uploads/${user.id}/${docType}_${file.name}`
+            // Upload the actual file to server using FormData
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('userId', user.id);
+            formData.append('docType', docType);
+
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+            const token = localStorage.getItem("accessToken");
+            
+            const response = await fetch(`${apiUrl}/api/documents/upload`, {
+                method: 'POST',
+                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                body: formData
             });
+
+            if (!response.ok) {
+                throw new Error('Upload failed');
+            }
+
             await loadDocs();
 
             const key = `dashboardDataUpdated_${user.id}`;
@@ -106,11 +118,22 @@ export default function DocumentVaultPage() {
     };
 
     const handleView = (docType: string) => {
-        const url = previewUrls[docType];
-        if (url) {
-            window.open(url, '_blank');
+        // First check for local preview URL (current session uploads)
+        const localUrl = previewUrls[docType];
+        if (localUrl) {
+            window.open(localUrl, '_blank');
+            return;
+        }
+
+        // Check if document exists in database with a file path
+        const existing = docs.find(d => d.docType === docType);
+        if (existing?.filePath && user?.id) {
+            // Use the backend API endpoint to view the document
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+            const viewUrl = `${apiUrl}/api/documents/view/${user.id}/${docType}`;
+            window.open(viewUrl, '_blank');
         } else {
-            alert("This document was already uploaded. Viewing of previously uploaded documents is coming soon.");
+            alert("Document file not available. Please re-upload the document.");
         }
     };
 

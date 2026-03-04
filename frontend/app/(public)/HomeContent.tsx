@@ -147,10 +147,116 @@ function ToolCard({ href, bg, icon, title, desc, cta, large = false, border = fa
         </Link>
     );
 }
+
+function TestimonialsCarousel() {
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+    const itemsPerView = 3;
+    const totalSlides = Math.ceil(testimonials.length / itemsPerView);
+
+    useEffect(() => {
+        if (!isAutoPlaying) return;
+        const interval = setInterval(() => {
+            setCurrentIndex((prev) => (prev + 1) % totalSlides);
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [isAutoPlaying, totalSlides]);
+
+    const visibleTestimonials = () => {
+        const start = currentIndex * itemsPerView;
+        return testimonials.slice(start, start + itemsPerView);
+    };
+
+    return (
+        <div 
+            className="relative"
+            onMouseEnter={() => setIsAutoPlaying(false)}
+            onMouseLeave={() => setIsAutoPlaying(true)}
+        >
+            {/* Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 min-h-[320px]">
+                {visibleTestimonials().map((t, idx) => (
+                    <motion.div
+                        key={`${currentIndex}-${t.name}`}
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: idx * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                        className={`flex flex-col p-8 rounded-xl ${t.bg} hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 group border border-white/50`}
+                    >
+                        <div className="flex items-start gap-6 mb-8">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm overflow-hidden p-2.5" style={{ background: 'rgba(255,255,255,0.85)' }}>
+                                <img src={t.icon} alt={t.name} className="w-full h-full object-contain" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-[15px] font-bold mb-2 text-gray-900 leading-tight">{t.name}</h3>
+                                <p className="text-gray-500 text-[13px] leading-relaxed font-medium">{t.school}</p>
+                            </div>
+                        </div>
+                        <p className="text-[13px] text-gray-500 leading-relaxed font-medium flex-1 mb-8">"{t.quote}"</p>
+                        <div className="mt-auto flex justify-between items-center">
+                            <div className="flex gap-0.5 text-amber-400">
+                                {[...Array(5)].map((_, i) => (
+                                    <span key={i} className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>
+                                ))}
+                            </div>
+                            <span className="inline-flex items-center gap-2 text-[#6605c7] font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
+                                Verified <span className="material-symbols-outlined text-sm">verified</span>
+                            </span>
+                        </div>
+                    </motion.div>
+                ))}
+            </div>
+
+            {/* Navigation */}
+            <div className="flex items-center justify-center gap-6 mt-10">
+                {/* Prev Button */}
+                <button
+                    onClick={() => setCurrentIndex((prev) => (prev - 1 + totalSlides) % totalSlides)}
+                    className="w-10 h-10 rounded-full bg-white border border-[#6605c7]/10 flex items-center justify-center text-[#6605c7] hover:bg-[#6605c7] hover:text-white hover:border-[#6605c7] transition-all shadow-sm"
+                >
+                    <span className="material-symbols-outlined text-lg">chevron_left</span>
+                </button>
+
+                {/* Dots */}
+                <div className="flex gap-2">
+                    {Array.from({ length: totalSlides }).map((_, idx) => (
+                        <button
+                            key={idx}
+                            onClick={() => setCurrentIndex(idx)}
+                            className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
+                                idx === currentIndex 
+                                    ? 'bg-[#6605c7] w-8' 
+                                    : 'bg-[#6605c7]/20 hover:bg-[#6605c7]/40'
+                            }`}
+                        />
+                    ))}
+                </div>
+
+                {/* Next Button */}
+                <button
+                    onClick={() => setCurrentIndex((prev) => (prev + 1) % totalSlides)}
+                    className="w-10 h-10 rounded-full bg-white border border-[#6605c7]/10 flex items-center justify-center text-[#6605c7] hover:bg-[#6605c7] hover:text-white hover:border-[#6605c7] transition-all shadow-sm"
+                >
+                    <span className="material-symbols-outlined text-lg">chevron_right</span>
+                </button>
+            </div>
+
+            {/* Auto-play indicator */}
+            <div className="flex justify-center mt-4">
+                <span className={`text-[10px] font-bold uppercase tracking-widest transition-opacity ${isAutoPlaying ? 'text-[#6605c7]/40' : 'text-transparent'}`}>
+                    Auto-playing
+                </span>
+            </div>
+        </div>
+    );
+}
 const testimonials = [
-    { quote: `"Vidhya Loans helped me secure a ₹45L education loan at 8.5% interest. The process was seamless and I got my sanction letter in just 3 days!"`, name: "Priya Sharma", school: "Stanford University, USA", avatar: "priya" },
-    { quote: `"I compared 12 lenders on the platform and saved ₹2.3L in total interest. The EMI calculator and expert counseling were invaluable."`, name: "Rahul Menon", school: "University of Toronto, Canada", avatar: "rahul" },
-    { quote: `"As a first-generation student going abroad, I was overwhelmed. The team guided me through every step — from choosing the right loan to disbursement."`, name: "Ananya Reddy", school: "Imperial College London, UK", avatar: "ananya" },
+    { quote: `Vidhya Loans helped me secure a ₹45L education loan at 8.5% interest. The process was seamless and I got my sanction letter in just 3 days!`, name: "Priya Sharma", school: "Stanford University, USA", avatar: "priya", bg: "bg-[#e7e1f7]", icon: "https://img.icons8.com/isometric/50/6605c7/graduation-cap.png" },
+    { quote: `I compared 12 lenders on the platform and saved ₹2.3L in total interest. The EMI calculator and expert counseling were invaluable.`, name: "Rahul Menon", school: "University of Toronto, Canada", avatar: "rahul", bg: "bg-[#fdfaf2]", icon: "https://img.icons8.com/isometric/50/6605c7/money-bag.png" },
+    { quote: `As a first-generation student going abroad, I was overwhelmed. The team guided me through every step — from choosing the right loan to disbursement.`, name: "Ananya Reddy", school: "Imperial College London, UK", avatar: "ananya", bg: "bg-[#e1f0f7]", icon: "https://img.icons8.com/isometric/50/6605c7/handshake.png" },
+    { quote: `The AI-powered SOP writer saved me weeks of effort. My application stood out and I got into my dream university with a full scholarship!`, name: "Vikram Patel", school: "MIT, USA", avatar: "vikram", bg: "bg-[#f0e7f7]", icon: "https://img.icons8.com/isometric/50/6605c7/artificial-intelligence.png" },
+    { quote: `Got my loan approved in just 48 hours! The customer support team was incredibly helpful and kept me updated throughout the process.`, name: "Sneha Krishnan", school: "University of Melbourne, Australia", avatar: "sneha", bg: "bg-[#e7f7e1]", icon: "https://img.icons8.com/isometric/50/6605c7/time.png" },
+    { quote: `The university comparison tool helped me make an informed decision. I could see ROI projections and recruiters for each university.`, name: "Arjun Desai", school: "NUS, Singapore", avatar: "arjun", bg: "bg-[#f7e7e1]", icon: "https://img.icons8.com/isometric/50/6605c7/university.png" },
 ];
 const postAdmissionServices = [
     { icon: "💳", title: "Forex & Cards", desc: "Lock in the best exchange rates with zero-markup cards.", color: "linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)", link: "/forex", img: "https://images.unsplash.com/photo-1580519542036-c47de6196ba5?w=500&q=80" },
@@ -484,7 +590,7 @@ export default function HomeContent() {
                                     <ToolCard
                                         href="/emi"
                                         bg="bg-white"
-                                        icon="https://img.icons8.com/isometric/50/6605c7/sand-watch.png"
+                                        icon="https://img.icons8.com/isometric/50/6605c7/calculator.png"
                                         title="EMI Calculator"
                                         desc="Determine your EMIs and repayment schedules before committing to a student loan."
                                         cta="Calculate Now"
@@ -551,39 +657,9 @@ export default function HomeContent() {
                             className="text-center mb-16"
                         >
                             <span className="text-[#6605c7] font-black text-[11px] tracking-widest uppercase mb-4 block">Testimonials</span>
-                            <h2 className="text-3xl md:text-5xl font-black text-gray-900 uppercase tracking-tight">Loved by 10,000+ Students</h2>
+                            <h2 className="text-3xl md:text-5xl font-black text-gray-900 uppercase tracking-tight">Loved by <span className="text-[#6605c7] italic">10,000+</span> Students</h2>
                         </motion.div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {testimonials.map((t, idx) => (
-                                <motion.div
-                                    key={t.name}
-                                    initial={{
-                                        opacity: 0,
-                                        x: idx === 0 ? -70 : idx === 2 ? 70 : 0,
-                                        y: idx === 1 ? 60 : 0
-                                    }}
-                                    whileInView={{ opacity: 1, x: 0, y: 0 }}
-                                    viewport={{ once: false, amount: 0.2 }}
-                                    transition={{ duration: 0.7, delay: idx * 0.12, ease: [0.16, 1, 0.3, 1] }}
-                                    className="p-8 rounded-xl bg-white/60 backdrop-blur-sm border border-white/50 shadow-sm hover:shadow-2xl hover:-translate-y-2 hover:bg-white/80 hover:border-[#6605c7]/15 transition-all duration-400 cursor-default"
-                                >
-                                    <div className="flex gap-1 text-amber-500 mb-6 font-black uppercase tracking-widest text-[11px]">
-                                        {[...Array(5)].map((_, i) => <span key={i} className="material-symbols-outlined fill-1" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>)}
-                                        <span className="ml-1">EXCELLENT</span>
-                                    </div>
-                                    <p className="text-[13px] text-gray-500 mb-8 leading-relaxed italic font-medium">"{t.quote}"</p>
-                                    <div className="flex items-center gap-4">
-                                        <div className="relative">
-                                            <Image src={`https://i.pravatar.cc/100?u=${t.avatar}`} className="w-10 h-10 rounded-full grayscale hover:grayscale-0 transition-all border border-[#6605c7]/20 p-0.5" alt={t.name} width={40} height={40} />
-                                        </div>
-                                        <div>
-                                            <div className="font-black text-gray-900 text-[13px]">{t.name}</div>
-                                            <div className="text-[11px] text-gray-400 uppercase font-black tracking-widest">{t.school}</div>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
+                        <TestimonialsCarousel />
                     </div>
                 </motion.section>
 

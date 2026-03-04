@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { communityApi, aiApi } from "@/lib/api";
+import { CATEGORY_SLUG_MAP } from "@/lib/moderation";
 
 const TOPICS = ["loan", "visa", "university", "career", "general"];
 
@@ -72,10 +73,13 @@ export default function CreatePostPage() {
         setError("");
         try {
             // Include tags and use canonical 'category' field if needed or 'topic'
+            // Convert the local topic/slug to the display category name expected by backend
+            const displayCategory = Object.keys(CATEGORY_SLUG_MAP).find(k => CATEGORY_SLUG_MAP[k] === topic) || topic;
+
             const result = await communityApi.createPost({
                 title,
                 content,
-                category: topic,
+                category: displayCategory,
                 tags: tags.length > 0 ? tags : suggestedTags.slice(0, 3)
             } as any) as { post?: { slug?: string; id?: string } };
 

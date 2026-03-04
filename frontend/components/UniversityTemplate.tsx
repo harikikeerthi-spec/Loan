@@ -42,6 +42,19 @@ const COUNTRY_FLAGS: Record<string, string> = {
   'South Korea': '🇰🇷', 'China': '🇨🇳', 'Hong Kong': '🇭🇰',
 };
 
+const COUNTRY_COLORS: Record<string, { bg: string; accent: string; badge: string; glow: string }> = {
+  'USA': { bg: 'from-blue-600 to-indigo-700', accent: 'text-blue-400', badge: 'bg-blue-500/20 text-blue-200 border-blue-400/20', glow: 'bg-blue-500/20' },
+  'UK': { bg: 'from-red-700 to-rose-800', accent: 'text-rose-400', badge: 'bg-rose-500/20 text-rose-200 border-rose-400/20', glow: 'bg-rose-500/20' },
+  'Canada': { bg: 'from-red-600 to-red-800', accent: 'text-red-400', badge: 'bg-red-500/20 text-red-200 border-red-400/20', glow: 'bg-red-500/20' },
+  'Australia': { bg: 'from-amber-600 to-amber-800', accent: 'text-amber-400', badge: 'bg-amber-500/20 text-amber-200 border-amber-400/20', glow: 'bg-amber-500/20' },
+  'Germany': { bg: 'from-gray-800 to-gray-900', accent: 'text-yellow-400', badge: 'bg-yellow-500/20 text-yellow-200 border-yellow-400/20', glow: 'bg-yellow-500/20' },
+  'France': { bg: 'from-blue-700 to-blue-900', accent: 'text-blue-300', badge: 'bg-blue-500/20 text-blue-200 border-blue-400/20', glow: 'bg-blue-500/20' },
+};
+
+function generateSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
 export default function UniversityTemplate({
   university,
   showFullDetails = false,
@@ -66,6 +79,8 @@ export default function UniversityTemplate({
   const location = university.loc || university.city || university.country;
   const flag = COUNTRY_FLAGS[university.country] || '🌐';
   const acceptance = university.accept || university.acceptanceRate;
+  const colors = COUNTRY_COLORS[university.country] || { bg: 'from-[#6605c7] to-purple-900', accent: 'text-purple-400', badge: 'bg-purple-500/20 text-purple-200 border-purple-400/20', glow: 'bg-purple-500/20' };
+  const slug = university.slug || generateSlug(university.name);
 
   // Fetch AI-enhanced details
   useEffect(() => {
@@ -98,78 +113,112 @@ export default function UniversityTemplate({
     }
   };
 
-  // Card View (Compact) - Clean & Neat Modern Design
+  // ──────────────────────────────────────────
+  // Card View (Compact) – Premium Bento Card
+  // ──────────────────────────────────────────
   if (!showFullDetails) {
     return (
       <div
-        onClick={(e) => { e.stopPropagation(); onDetails?.(university); }}
-        className={`group relative overflow-hidden rounded-[2rem] border transition-all duration-300 cursor-pointer ${isActive
-          ? "bg-white border-purple-500 shadow-[0_20px_40px_rgba(102,5,199,0.1)]"
-          : "bg-white border-slate-100 shadow-sm hover:shadow-[0_15px_30px_rgba(0,0,0,0.05)] hover:border-purple-200 hover:-translate-y-1"
+        className={`group relative overflow-hidden rounded-2xl transition-all duration-500 cursor-pointer ${isActive
+          ? "shadow-[0_25px_60px_rgba(102,5,199,0.15)] ring-2 ring-[#6605c7]/40 scale-[1.02]"
+          : "shadow-md hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] hover:-translate-y-1.5"
           }`}
       >
-        <div className="p-6">
-          {/* Header - Identity */}
-          <div className="flex items-center gap-4 mb-6">
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl font-black shrink-0 ${isActive
-              ? 'bg-purple-600 text-white'
-              : 'bg-slate-50 text-slate-400 group-hover:bg-purple-100 group-hover:text-purple-600'
-              } transition-all duration-300`}>
-              {university.name?.charAt(0) || '🏛️'}
-            </div>
+        {/* Gradient Header Strip */}
+        <div className={`relative bg-gradient-to-r ${colors.bg} px-6 pt-5 pb-12`}>
+          {/* Decorative Orb */}
+          <div className={`absolute -top-8 -right-8 w-28 h-28 ${colors.glow} rounded-full blur-2xl opacity-60`} />
+          <div className="absolute top-0 left-0 right-0 h-full opacity-10" style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 0L40 20L20 40L0 20L20 0z' fill='%23fff' fill-opacity='0.05'/%3E%3C/svg%3E\")", backgroundSize: '20px 20px' }} />
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-xl filter drop-shadow-sm">{flag}</span>
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.15em]">
-                  {university.country}
-                </span>
+          <div className="relative z-10 flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              {/* University Initial */}
+              <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white font-black text-lg shadow-lg">
+                {university.name?.charAt(0) || '🏛️'}
               </div>
-              <h3 className="text-lg font-black text-slate-900 leading-tight line-clamp-1 tracking-tight">
-                {university.name}
-              </h3>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="text-base drop-shadow-md">{flag}</span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border ${colors.badge}`}>
+                    {university.alpha_two_code || university.country}
+                  </span>
+                </div>
+                <h3 className="text-[15px] font-black text-white leading-tight line-clamp-1 tracking-tight drop-shadow-sm">
+                  {university.name}
+                </h3>
+              </div>
             </div>
-          </div>
 
-          {/* Core Metrics Strip */}
-          <div className="flex justify-between items-center px-2 mb-6">
-            <div className="flex flex-col items-center">
-              <span className="text-xs font-bold text-slate-900">{university.rank ? `#${university.rank}` : '—'}</span>
-              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Rank</span>
+            {/* Rank Badge */}
+            {university.rank && (
+              <div className="flex flex-col items-center bg-white/10 backdrop-blur-sm rounded-lg px-2.5 py-1.5 border border-white/15 shrink-0">
+                <span className="text-white/50 text-[8px] font-black uppercase tracking-wider leading-none">QS</span>
+                <span className="text-white text-sm font-black leading-tight">#{university.rank}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* White Card Body */}
+        <div className="bg-white px-6 -mt-6 relative z-10 rounded-t-2xl pt-5 pb-5">
+          {/* Stats Row – Floating Cards */}
+          <div className="flex gap-2 mb-5">
+            <div className="flex-1 py-2.5 px-3 bg-emerald-50 rounded-xl text-center border border-emerald-100/60">
+              <div className="text-emerald-600 text-sm font-black leading-none mb-0.5">
+                {acceptance ? `${acceptance}%` : '—'}
+              </div>
+              <div className="text-[8px] text-emerald-400 font-bold uppercase tracking-wider">Accept</div>
             </div>
-            <div className="w-px h-6 bg-slate-100" />
-            <div className="flex flex-col items-center">
-              <span className="text-xs font-bold text-emerald-600">{acceptance ? `${acceptance}%` : '—'}</span>
-              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Acceptance</span>
+            <div className="flex-1 py-2.5 px-3 bg-amber-50 rounded-xl text-center border border-amber-100/60">
+              <div className="text-amber-600 text-sm font-black leading-none mb-0.5">
+                {university.tuition ? `$${Math.round(university.tuition / 1000)}k` : '—'}
+              </div>
+              <div className="text-[8px] text-amber-400 font-bold uppercase tracking-wider">Tuition</div>
             </div>
-            <div className="w-px h-6 bg-slate-100" />
-            <div className="flex flex-col items-center">
-              <span className="text-xs font-bold text-amber-600">{university.tuition ? `$${Math.round(university.tuition / 1000)}k` : '—'}</span>
-              <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Tuition</span>
+            <div className="flex-1 py-2.5 px-3 bg-purple-50 rounded-xl text-center border border-purple-100/60">
+              <div className="text-purple-600 text-sm font-black leading-none mb-0.5">
+                {university.min_gpa ? `${university.min_gpa}` : '—'}
+              </div>
+              <div className="text-[8px] text-purple-400 font-bold uppercase tracking-wider">GPA</div>
             </div>
           </div>
 
           {/* Action Row */}
-          <div className="flex items-center gap-2 border-t border-slate-50 pt-5">
+          <div className="flex items-center gap-2">
             <button
               onClick={(e) => { e.stopPropagation(); onApply?.(university); }}
-              className="flex-1 px-4 py-3 rounded-2xl bg-[#6605c7] text-white font-black text-xs hover:bg-purple-700 transition-all shadow-[0_10px_20px_rgba(102,5,199,0.2)] active:scale-[0.98]"
+              className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-[#6605c7] to-[#8b24e5] text-white font-black text-xs hover:shadow-lg hover:shadow-purple-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
             >
-              Apply Loan →
+              <span className="material-symbols-outlined text-sm">payments</span>
+              Apply Loan
             </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onDetails?.(university); }}
-              className="px-5 py-3 rounded-2xl bg-slate-50 text-slate-600 font-bold text-xs hover:bg-slate-100 transition-all"
+            <Link
+              href={`/university/${slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-3 rounded-xl bg-gray-50 text-gray-600 font-bold text-xs hover:bg-gray-100 hover:text-[#6605c7] transition-all flex items-center gap-1.5 border border-gray-100"
             >
+              <span className="material-symbols-outlined text-sm">open_in_new</span>
               Details
-            </button>
+            </Link>
           </div>
         </div>
+
+        {/* Subtle Active Indicator */}
+        {isActive && (
+          <div className="absolute top-3 right-3 z-20">
+            <div className="w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/40 animate-pulse">
+              <span className="material-symbols-outlined text-white text-[10px]" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
-  // Full Details View - Premium Clean & Neat Design
+  // ──────────────────────────────────────────
+  // Full Details View – Premium Clean Design
+  // ──────────────────────────────────────────
   return (
     <div className="w-full bg-[#fcfaff] rounded-[2.5rem] overflow-hidden shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-white">
       {/* Hero Header - Refined Gradient */}
@@ -204,6 +253,14 @@ export default function UniversityTemplate({
               {domain && <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-purple-400/50" /> {domain}</span>}
             </div>
           </div>
+
+          {/* View Full Page Link */}
+          <Link
+            href={`/university/${slug}`}
+            className="hidden md:inline-flex items-center gap-2 px-6 py-3 bg-white/10 backdrop-blur-sm text-white font-bold text-xs uppercase tracking-widest rounded-2xl border border-white/20 hover:bg-white/20 transition-all shrink-0"
+          >
+            Full Page <span className="material-symbols-outlined text-sm">open_in_new</span>
+          </Link>
         </div>
 
         {/* Floating Quick Info Bar */}
@@ -377,13 +434,19 @@ export default function UniversityTemplate({
                 ))}
               </div>
 
-              <div className="pt-2">
+              <div className="pt-2 space-y-3">
                 <button
                   onClick={() => onApply?.(university)}
                   className="w-full py-5 bg-[#6605c7] text-white font-black rounded-2xl hover:bg-purple-700 transition-all shadow-[0_15px_30px_rgba(102,5,199,0.2)] active:scale-[0.98] text-sm"
                 >
                   Apply for Loan →
                 </button>
+                <Link
+                  href={`/university/${slug}`}
+                  className="block w-full py-4 text-center bg-gray-50 text-gray-700 font-black text-xs uppercase tracking-widest rounded-2xl hover:bg-gray-100 hover:text-[#6605c7] transition-all border border-gray-100"
+                >
+                  View Full University Page →
+                </Link>
               </div>
             </div>
 

@@ -20,7 +20,7 @@ export default function LoginWall({ children }: { children: React.ReactNode }) {
     }
 
     // Skip pages that are meant to be fully public or are the login/signup flow
-    const skipList = ["/", "/login", "/signup", "/api-test", "/test-admin-system", "/visa-mock"];
+    const skipList = ["/", "/login", "/signup", "/api-test", "/test-admin-system", "/visa-mock", "/connected"];
     // Also skip static/marketing pages if user wants (about-us etc)
     const alwaysPublic = ["/about-us", "/faq", "/terms-conditions", "/privacy-policy", "/contact"];
 
@@ -58,7 +58,7 @@ export default function LoginWall({ children }: { children: React.ReactNode }) {
                                 Unlock <span className="text-[#6605c7] italic">Everything</span>
                             </h2>
                             <p className="text-gray-500 mb-10 leading-relaxed text-lg font-medium px-4">
-                                You're seeing a limited preview (30%). Login for full access to 50+ lenders, quick sanctions, and AI-driven counseling.
+                                Login for full access to 5+ lenders, quick sanctions, and AI-driven counseling.
                             </p>
 
                             <div className="flex flex-col sm:flex-row gap-5">

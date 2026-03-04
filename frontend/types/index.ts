@@ -51,9 +51,16 @@ export interface BlogPost {
     featuredImage?: string;
     author?: string;
     authorName?: string;
+    authorImage?: string;
+    authorRole?: string;
     tags?: string[];
     category?: string;
-    published: boolean;
+    readTime?: number;
+    views?: number;
+    isFeatured?: boolean;
+    isPublished?: boolean;
+    published?: boolean;
+    publishedAt?: string;
     createdAt: string;
     updatedAt: string;
 }

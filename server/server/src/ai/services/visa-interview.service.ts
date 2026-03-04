@@ -41,14 +41,99 @@ export class VisaInterviewService {
         return INTERVIEW_SECTIONS.map(s => ({ ...s }));
     }
 
+    private getSystemPromptTemplate(): string {
+        return `MASTER REAL-TIME AI INTERVIEW ENGINE PROMPT
+(WebRTC + Voice Optimized Version)
+
+You are a real-time AI Interview Engine designed for live voice interaction.
+You are conducting a structured, professional interview over live audio.
+
+PRIMARY OBJECTIVE:
+Simulate a realistic human interviewer experience while strictly following structured interview requirements provided by the system.
+
+BEHAVIOR RULES:
+1. Ask EXACTLY ONE question at a time.
+2. Keep every question under 20 words.
+3. Maintain a professional, neutral, and slightly serious tone.
+4. Do NOT provide feedback during questioning.
+5. Do NOT explain reasoning.
+6. Do NOT ask multiple questions in one turn.
+7. If the candidate’s answer is vague, incomplete, or lacks detail → ask a sharp clarification question.
+8. If the answer is complete → continue logically within the current section.
+9. Never skip sections.
+10. Never jump ahead in the interview structure.
+
+VOICE INTERACTION RULES:
+- Speak naturally and conversationally.
+- Pause briefly before each new question.
+- Assume this is a live voice session.
+- Wait for the candidate to finish speaking before generating the next question.
+- Do not interrupt.
+- Do not repeat the candidate’s answer.
+
+INTERVIEW STRUCTURE:
+You must strictly follow this section order:
+{{sectionList}}
+
+Each section must be completed before moving to the next.
+
+INTERVIEW PARAMETERS:
+Interview Type: {{interviewType}}
+Difficulty Level: {{difficultyLevel}}
+Evaluation Focus Areas:
+{{evaluationAreas}}
+
+APPLICANT PROFILE:
+{{userProfile}}
+
+CURRENT SECTION:
+{{currentSection}}
+
+ADAPTIVE INTELLIGENCE RULES:
+- Increase pressure slightly if difficulty level is "Strict".
+- Ask for numbers, specifics, and concrete details.
+- If inconsistencies appear, probe deeper.
+- If answers are strong and precise, move efficiently.
+
+CONSTRAINTS:
+- Never produce summaries.
+- Never provide scoring.
+- Never give improvement suggestions.
+- Never switch into assistant mode.
+- Never ask meta-questions.
+- Only continue the structured interview.
+
+Begin now with the first question for the current section.`;
+    }
+
+    private buildPrompt(
+        userProfile: Record<string, any>,
+        visaType: string,
+        currentSection: string,
+        historyContext: string = ''
+    ): string {
+        const sections = INTERVIEW_SECTIONS.map((s, i) => `${i + 1}. ${s.label}`).join('\n');
+        const evaluations = `- Consistency\n- Ties to Home Country\n- Financial Capability\n- Travel Intent`;
+
+        let prompt = this.getSystemPromptTemplate()
+            .replace('{{sectionList}}', sections)
+            .replace('{{interviewType}}', `${visaType} Interview`)
+            .replace('{{difficultyLevel}}', 'Strict')
+            .replace('{{evaluationAreas}}', evaluations)
+            .replace('{{userProfile}}', JSON.stringify(userProfile, null, 2))
+            .replace('{{currentSection}}', currentSection);
+
+        if (historyContext) {
+            prompt += `\n\nCONVERSATION HISTORY:\n${historyContext}\n\nNEXT QUESTION:`;
+        } else {
+            prompt += `\n\nFIRST QUESTION:`;
+        }
+
+        return prompt;
+    }
+
     async startInterview(userProfile: Record<string, any>, visaType: string): Promise<string> {
-        const systemPrompt = this.buildSystemPrompt(userProfile);
-        const prompt = `${systemPrompt}
-
-Visa Type: ${visaType || 'B1/B2 Tourist/Business Visa'}
-
-Start the interview now with the first question on travel purpose. Remember: Ask EXACTLY ONE question. Be formal. Max 25 words.`;
-
+        const prompt = this.buildPrompt(userProfile, visaType, 'purpose');
         return this.groqService.chat(prompt);
     }
 
@@ -60,50 +145,14 @@ Start the interview now with the first question on travel purpose. Remember: Ask
         currentSection: string,
         conversationHistory: InterviewMessage[],
     ): Promise<string> {
-        // Build conversation context from history
         let historyContext = '';
         if (conversationHistory && conversationHistory.length > 0) {
-            historyContext = '\n\nFull Interview Transcript So Far:\n';
-            for (const msg of conversationHistory) {
-                const role = msg.role === 'officer' ? 'Officer' : 'Applicant';
-                historyContext += `${role}: ${msg.content}\n`;
-            }
+            historyContext = conversationHistory
+                .map(msg => `${msg.role === 'officer' ? 'Interviewer' : 'Applicant'}: ${msg.content}`)
+                .join('\n');
         }
 
-        const prompt = `You are continuing the mock U.S. visa interview.
-
-Maintain the same rules:
-- Ask EXACTLY ONE question at a time.
-- Do NOT provide feedback, explanation, or reason.
-- Questions must be formal and concise (max 25 words).
-- You may ask clarifying or follow-up questions ONLY if the answer is ambiguous.
-- Do NOT skip topics unless they are complete.
-${historyContext}
-
-Context:
-Last Question: ${previousQuestion}
-Last Answer: ${transcript}
-
-Continuing Topic: ${currentSection}
-
-If the last answer lacks specifics, ask a clarifying question.
-Otherwise move to the next subtopic within the current section.
-If the current section is complete, move to the next section in this order:
-1. Purpose of travel
-2. Funding and financial credibility
-3. Ties to home country
-4. Employment or academic background
-5. Travel history
-6. Accommodation and itinerary
-7. Return intent
-
-Applicant Profile:
-${JSON.stringify(userProfile)}
-
-Visa Type: ${visaType || 'B1/B2 Tourist/Business Visa'}
-
-Generate ONLY the next interview question. No explanations, no preface, just the question.`;
-
+        const prompt = this.buildPrompt(userProfile, visaType, currentSection, historyContext);
         return this.groqService.chat(prompt);
     }
 
@@ -112,10 +161,10 @@ Generate ONLY the next interview question. No explanations, no preface, just the
         question: string,
         transcript: string,
     ): Promise<EvaluationResult> {
-        const prompt = `You are a U.S. Visa Interview Evaluation Engine.
+        const prompt = `You are a structured JSON-only scoring engine for Visa Interviews.
+Analyze the applicant's response to the specific question and return ONLY valid JSON.
 
-Analyze the applicant's last response and return ONLY valid JSON in this exact format:
-
+FORMAT:
 {
   "clarity": number (1-10),
   "confidence": number (1-10),
@@ -126,16 +175,8 @@ Analyze the applicant's last response and return ONLY valid JSON in this exact f
   "suggestedImprovement": [string]
 }
 
-Evaluation Criteria:
-- Clarity: directness and completeness of answer (1=very unclear, 10=perfectly clear)
-- Confidence: certainty implied in wording (1=very uncertain, 10=very confident)
-- Relevance: alignment with question intent (1=completely off-topic, 10=perfectly relevant)
-- Risk: potential immigration risk level based on the answer
-- Red flags: specific risky phrases or logic gaps that could concern an officer
-- Missing details: information that should have been included
-- Suggested improvement: how the answer could be improved
-
-Visa Type: ${visaType || 'B1/B2'}
+DATA:
+Visa Type: ${visaType}
 Question: ${question}
 Answer: ${transcript}
 
@@ -149,25 +190,20 @@ Return ONLY valid JSON. No markdown, no explanation.`;
         conversationHistory: InterviewMessage[],
         evaluations: EvaluationResult[],
     ): Promise<any> {
-        let historyText = '';
-        for (const msg of conversationHistory) {
-            const role = msg.role === 'officer' ? 'Officer' : 'Applicant';
-            historyText += `${role}: ${msg.content}\n`;
-        }
+        let historyText = conversationHistory
+            .map(msg => `${msg.role === 'officer' ? 'Officer' : 'Applicant'}: ${msg.content}`)
+            .join('\n');
 
-        const prompt = `You are a U.S. Visa Interview Analysis Expert.
+        const prompt = `Analyze this Complete Visa Interview Session and generate a Final Performance Report.
+Return ONLY valid JSON.
 
-Analyze this complete mock interview and provide a comprehensive final report.
-
-Full Interview Transcript:
+Transcript:
 ${historyText}
 
-Individual Answer Evaluations:
+Evaluations:
 ${JSON.stringify(evaluations)}
 
-Visa Type: ${visaType || 'B1/B2'}
-
-Return ONLY valid JSON in this format:
+Format:
 {
   "overallScore": number (1-100),
   "overallRisk": "Low"|"Medium"|"High",
@@ -190,29 +226,5 @@ Return ONLY valid JSON in this format:
 
         return this.groqService.getJson(prompt);
     }
-
-    private buildSystemPrompt(userProfile: Record<string, any>): string {
-        return `You are a U.S. Visa Consular Officer conducting a realistic, formal mock interview.
-
-Interview Rules:
-- Ask EXACTLY ONE question at a time.
-- Do NOT provide feedback, explanation, or reason.
-- Questions must be formal and concise (max 25 words).
-- You may ask clarifying or follow-up questions ONLY if the answer is ambiguous.
-- Do NOT skip topics unless they are complete.
-
-Interview Flow Structure:
-1. Purpose of travel
-2. Funding and financial credibility
-3. Ties to home country
-4. Employment or academic background
-5. Travel history
-6. Accommodation and itinerary
-7. Return intent
-
-Use the applicant's responses dynamically to shape the next question but always within this structure.
-
-Applicant Profile:
-${JSON.stringify(userProfile)}`;
-    }
 }
+

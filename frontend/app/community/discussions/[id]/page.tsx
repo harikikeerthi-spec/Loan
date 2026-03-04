@@ -41,6 +41,7 @@ interface Post {
     views?: number;
     isPinned?: boolean;
     isLiked?: boolean;
+    isExpertOnly?: boolean;
     _count?: { likes?: number; comments?: number };
     comments?: Comment[];
 }
@@ -373,7 +374,12 @@ export default function DiscussionDetailPage() {
                                             Posted {post.createdAt ? timeAgo(post.createdAt) : ""}
                                         </p>
                                     </div>
-                                    <div className="ml-auto">
+                                    <div className="ml-auto flex items-center gap-2">
+                                        {post.isExpertOnly && (
+                                            <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest" style={{ background: "linear-gradient(135deg, #f5f3ff, #ede9fe)", color: "#6d28d9", border: "1px solid #c4b5fd" }}>
+                                                🎓 Expert Only
+                                            </span>
+                                        )}
                                         {post.isPinned && (
                                             <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-600 text-[10px] font-bold uppercase tracking-widest">
                                                 📌 Pinned
@@ -450,28 +456,41 @@ export default function DiscussionDetailPage() {
                             </h2>
 
                             {/* Post a Reply Form */}
-                            <form onSubmit={submitComment} className="mb-12 relative">
-                                <textarea
-                                    ref={commentInputRef}
-                                    value={comment}
-                                    onChange={(e) => setComment(e.target.value)}
-                                    placeholder="Share your thoughts, experiences, or a helpful answer..."
-                                    className="w-full p-6 pb-20 rounded-3xl bg-white/50 border border-white/80 backdrop-blur-md outline-none focus:border-[#a855f7] transition-all text-gray-800 leading-relaxed resize-none"
-                                    rows={4}
-                                />
-                                {commentError && (
-                                    <p className="text-xs font-bold text-red-500 mt-2 ml-4">⚠️ {commentError}</p>
-                                )}
-                                <div className="absolute bottom-4 right-4">
-                                    <button
-                                        type="submit"
-                                        disabled={postingComment || !comment.trim()}
-                                        className="post-btn px-8"
-                                    >
-                                        {postingComment ? "..." : "📤 Post Reply"}
-                                    </button>
+                            {post.isExpertOnly ? (
+                                <div className="mb-12 p-8 rounded-3xl text-center" style={{ background: "linear-gradient(135deg, #f5f3ff, #ede9fe)", border: "1.5px solid #c4b5fd" }}>
+                                    <div className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center text-3xl" style={{ background: "linear-gradient(135deg, #7c3aed, #6605c7)" }}>
+                                        🎓
+                                    </div>
+                                    <h3 className="font-bold text-lg text-gray-900 mb-2">Expert Only Question</h3>
+                                    <p className="text-sm text-gray-600 mb-4">This question is marked for expert answers only. Only verified mentors can reply to this discussion.</p>
+                                    <Link href="/community/mentors" className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-white text-[#6605c7] font-bold text-sm hover:shadow-lg transition-all">
+                                        <span>👥</span> Browse Our Mentors
+                                    </Link>
                                 </div>
-                            </form>
+                            ) : (
+                                <form onSubmit={submitComment} className="mb-12 relative">
+                                    <textarea
+                                        ref={commentInputRef}
+                                        value={comment}
+                                        onChange={(e) => setComment(e.target.value)}
+                                        placeholder="Share your thoughts, experiences, or a helpful answer..."
+                                        className="w-full p-6 pb-20 rounded-3xl bg-white/50 border border-white/80 backdrop-blur-md outline-none focus:border-[#a855f7] transition-all text-gray-800 leading-relaxed resize-none"
+                                        rows={4}
+                                    />
+                                    {commentError && (
+                                        <p className="text-xs font-bold text-red-500 mt-2 ml-4">⚠️ {commentError}</p>
+                                    )}
+                                    <div className="absolute bottom-4 right-4">
+                                        <button
+                                            type="submit"
+                                            disabled={postingComment || !comment.trim()}
+                                            className="post-btn px-8"
+                                        >
+                                            {postingComment ? "..." : "📤 Post Reply"}
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
 
                             {/* Comments List */}
                             <div className="space-y-4">

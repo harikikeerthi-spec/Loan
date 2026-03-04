@@ -145,7 +145,11 @@ export default function DashboardPage() {
                             <h1 className="text-2xl md:text-3xl font-bold font-display text-gray-900 mb-2">
                                 Welcome back, {user?.firstName || user?.email?.split("@")[0]}! 👋
                             </h1>
-                            <p className="text-gray-500 text-sm">Your education loan journey is 45% complete. You're doing great!</p>
+                            <p className="text-gray-500 text-sm">
+                                {data.applications?.length
+                                    ? `Your education loan journey is ${data.applications[0]?.progress || 10}% complete. ${data.applications[0]?.progress && data.applications[0].progress >= 50 ? "You're doing great!" : "Keep going!"}`
+                                    : "Start your education loan journey today!"}
+                            </p>
                         </div>
                         <div className="flex flex-wrap gap-3">
                             <Link href="/apply-loan" className="px-5 py-2.5 bg-[#6605c7] text-white text-xs font-bold rounded-lg hover:bg-[#5504a8] transition-all shadow-sm">
@@ -205,6 +209,77 @@ export default function DashboardPage() {
                                         <div className="text-[11px] text-gray-500 mt-1 line-clamp-1">{l.desc}</div>
                                     </Link>
                                 ))}
+                            </div>
+
+                            {/* Active Applications Summary */}
+                            <div className="mb-10">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400">Active Applications</h2>
+                                    {(data.applications?.length || 0) > 0 && (
+                                        <button onClick={() => setActiveTab("applications")} className="text-[10px] font-bold uppercase tracking-wider text-[#6605c7] hover:underline flex items-center gap-1">
+                                            View All <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
+                                        </button>
+                                    )}
+                                </div>
+                                {!data.applications?.length ? (
+                                    <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-8 text-center">
+                                        <div className="w-14 h-14 bg-[#6605c7]/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                            <span className="material-symbols-outlined text-3xl text-[#6605c7]/40">add_circle</span>
+                                        </div>
+                                        <p className="text-gray-500 text-[13px] font-semibold mb-1">No applications yet</p>
+                                        <p className="text-gray-400 text-[11px] mb-4">Start your education loan journey</p>
+                                        <Link href="/apply-loan" className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#6605c7] text-white text-[11px] font-bold uppercase tracking-wider rounded-lg hover:bg-[#5504a8] transition-all">
+                                            <span className="material-symbols-outlined text-[16px]">add</span> Apply Now
+                                        </Link>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {data.applications.slice(0, 3).map((app) => {
+                                            const statusColors: Record<string, string> = {
+                                                pending: "bg-amber-100 text-amber-700",
+                                                processing: "bg-blue-100 text-blue-700",
+                                                approved: "bg-emerald-100 text-emerald-700",
+                                                rejected: "bg-red-100 text-red-600",
+                                                disbursed: "bg-purple-100 text-purple-700",
+                                            };
+                                            const sc = statusColors[app.status] || "bg-gray-100 text-gray-600";
+                                            return (
+                                                <div key={app.id} className="bg-white rounded-xl p-4 border border-gray-100 hover:border-[#6605c7]/15 transition-all">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                            <div className="w-9 h-9 bg-[#6605c7]/5 rounded-lg flex items-center justify-center text-[#6605c7] shrink-0">
+                                                                <span className="material-symbols-outlined text-xl">account_balance</span>
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-bold text-[13px] text-gray-900 truncate">{app.bank}</span>
+                                                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${sc}`}>
+                                                                        {app.status}
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex flex-wrap items-center gap-x-3 text-[11px] text-gray-500 mt-0.5">
+                                                                    <span className="font-semibold text-gray-700">₹{app.amount?.toLocaleString("en-IN")}</span>
+                                                                    {app.universityName && <span>• {app.universityName}</span>}
+                                                                    {app.country && <span>• {app.country}</span>}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    {/* Mini Progress */}
+                                                    <div className="flex items-center gap-3 mt-2">
+                                                        <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                                                            <div
+                                                                className="bg-gradient-to-r from-[#6605c7] to-purple-400 h-1.5 rounded-full transition-all duration-700"
+                                                                style={{ width: `${app.progress || 10}%` }}
+                                                            />
+                                                        </div>
+                                                        <span className="text-[10px] font-bold text-[#6605c7] whitespace-nowrap">{app.progress || 10}%</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
 
                             {/* Journey Tracker */}
@@ -382,6 +457,8 @@ export default function DashboardPage() {
                                     { label: "First Name", value: user?.firstName || "—" },
                                     { label: "Last Name", value: user?.lastName || "—" },
                                     { label: "Email", value: user?.email || "—" },
+                                    { label: "Phone Number", value: user?.phoneNumber || "—" },
+                                    { label: "Date of Birth", value: user?.dateOfBirth || "—" },
                                     { label: "Role", value: user?.role || "user" },
                                 ].map((f) => (
                                     <div key={f.label}>

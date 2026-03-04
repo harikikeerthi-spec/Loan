@@ -119,6 +119,8 @@ export class UsersService {
     lastName?: string;
     email?: string;
     phone?: string;
+    dateOfBirth?: string;
+    address?: string;
     notes?: string;
   }) {
     return this.prisma.loanApplication.create({
@@ -135,6 +137,8 @@ export class UsersService {
         lastName: data.lastName || null,
         email: data.email || null,
         phone: data.phone || null,
+        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth) : null,
+        address: data.address || null,
         hasCoApplicant: !!data.coApplicant && data.coApplicant !== 'none',
         coApplicantRelation: data.coApplicant !== 'none' ? data.coApplicant : null,
         coApplicantIncome: data.income ? parseFloat(data.income) : null,

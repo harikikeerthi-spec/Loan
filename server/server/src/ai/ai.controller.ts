@@ -222,18 +222,24 @@ export class AiController {
     const contentToVerify = data.content || data.title || '';
 
     const prompt = `You are an AI moderator for a student community focused on international education and loans.
-    Your goal is to allow any content that is HELPFUL, RELEVANT, or RELATED to the following topics:
-    - Education Loans (Eligibility, Application, Benefits, Interest Rates, etc.)
-    - Study Abroad (Planning, Countries, Universities, Life as a student)
-    - Admission processes and Standardized Tests (GRE/IELTS/TOEFL)
-    - Visa processes and immigration
-    - Scholarships and Financial Aid
-    - Career discussions for students
+    Your goal is to ALLOW any content that is HELPFUL, RELEVANT, or EVEN LOOSELY RELATED to the following topics:
+    - Education Loans (Eligibility, Application, Benefits, Interest Rates, EMI, Banks, NBFCs, etc.)
+    - Study Abroad (Planning, Countries, Universities, Life as a student, Accommodation, etc.)
+    - Admission Processes and Applications (SOP, LOR, Transcripts, GPA, etc.)
+    - **Standardized Tests & Exam Preparation** (GRE, GMAT, SAT, IELTS, TOEFL, PTE, Duolingo, etc.)
+      - This INCLUDES: exam eligibility, requirements, scores, preparation tips, study plans, coaching, mock tests, exam schedules, registration, cutoffs, percentiles, retakes, verbal/quant/analytical sections, test centers, etc.
+      - Questions like "What are the requirements for GRE?" or "How to prepare for GMAT?" are ABSOLUTELY ALLOWED.
+    - Visa Processes and Immigration (F1, H1B, OPT, CPT, DS-160, Embassy, etc.)
+    - Scholarships, Financial Aid, and Funding
+    - Career Discussions for Students (Internships, Placements, Work Permits, etc.)
+    - Student Life, Housing, and Practical Tips for Study Abroad
+
+    IMPORTANT: When in doubt, ALLOW the content. Only reject if the content is completely unrelated to education, student life, or careers (e.g., recipes, sports scores, entertainment gossip, politics).
 
     Context: "${topicContext}"
     Title/Content: "${contentToVerify}"
 
-    Does this content belong in an education/loan community? (Be inclusive of general questions about how things work or how they help).
+    Does this content belong in an education/loan/student community?
 
     Respond with strictly valid JSON:
     {

@@ -166,9 +166,20 @@ export default function Navbar() {
                                         </div>
                                         <div className="col-span-3 p-6 flex flex-col gap-2">
                                             <NavItem href="/community/discussions" icon="forum" title="Discussions" desc="Ask questions, get answers" color="text-yellow-500" />
+                                            <Link href="/connected" target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-all group/item">
+                                                <div className="w-9 h-9 rounded-lg bg-current/5 flex items-center justify-center text-orange-600 transition-all">
+                                                    <span className="material-symbols-outlined text-lg">handshake</span>
+                                                </div>
+                                                <div>
+                                                    <div className="font-semibold text-gray-900 text-[13px] group-hover/item:text-[#6605c7] transition-colors flex items-center gap-1">
+                                                        connectED <span className="material-symbols-outlined text-[10px]">open_in_new</span>
+                                                    </div>
+                                                    <div className="text-[10px] text-gray-500 leading-tight mt-0.5">Exclusive offline community</div>
+                                                </div>
+                                            </Link>
                                             <NavItem href="/community" icon="groups" title="Community Hub" desc="Mentors, events & stories" color="text-purple-500" />
                                             <NavItem href="/blog" icon="article" title="Blogs" desc="Latest news and guides" color="text-blue-500" />
-                                            <NavItem href="/referral" icon="redeem" title="Refer & Earn" desc="Invite friends, get rewards" color="text-[#6605c7]" />
+                                            {/* <NavItem href="/referral" icon="redeem" title="Refer & Earn" desc="Invite friends, get rewards" color="text-[#6605c7]" /> */}
                                         </div>
                                     </div>
                                 </div>

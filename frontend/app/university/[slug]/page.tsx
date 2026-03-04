@@ -208,13 +208,13 @@ export default async function UniversityPage({ params }: Props) {
             <div className="sticky top-[80px] z-40 bg-white/95 backdrop-blur-md border-b border-purple-100 hidden md:block">
                 <div className="max-w-[1600px] mx-auto px-10 flex items-center gap-12 h-16">
                     {['Overview', 'Programs', 'Admissions', 'Scholarships', 'Campus Life', 'Alumni', 'Financing'].map((section) => (
-                        <button
+                        <a
                             key={section}
-                            onClick={() => document.getElementById(section.toLowerCase().replace(' ', '-'))?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                            href={`#${section.toLowerCase().replace(' ', '-')}`}
                             className="text-sm font-black text-gray-400 hover:text-purple-600 transition-colors uppercase tracking-[0.1em]"
                         >
                             {section}
-                        </button>
+                        </a>
                     ))}
                 </div>
             </div>
@@ -503,7 +503,7 @@ export default async function UniversityPage({ params }: Props) {
                                         <p className="text-gray-400 text-sm leading-relaxed mb-8">Exclusive financing pathways for {u.country} institutions with lower processing fees and collateral-free options.</p>
                                     </div>
                                     <div className="space-y-4">
-                                        <button onClick={() => window.location.href = '/apply-loan'} className="w-full py-5 bg-white text-gray-900 font-black rounded-2xl shadow-xl hover:-translate-y-1 transition-all">Get Your Ref Number</button>
+                                        <Link href="/apply-loan" className="block w-full py-5 bg-white text-gray-900 font-black rounded-2xl shadow-xl hover:-translate-y-1 transition-all text-center">Get Your Ref Number</Link>
                                         <div className="text-[10px] text-center text-gray-500 font-bold uppercase tracking-widest">Takes less than 3 minutes</div>
                                     </div>
                                 </div>

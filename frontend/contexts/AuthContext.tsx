@@ -45,6 +45,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (userData.email) localStorage.setItem("userEmail", userData.email);
         if (userData.firstName) localStorage.setItem("firstName", userData.firstName);
         if (userData.lastName) localStorage.setItem("lastName", userData.lastName);
+        if (userData.phoneNumber) localStorage.setItem("phoneNumber", userData.phoneNumber);
+        if (userData.dateOfBirth) localStorage.setItem("dateOfBirth", userData.dateOfBirth);
 
         const decoded = parseJwt(accessToken);
         const mergedUser: User = {
@@ -54,6 +56,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             lastName: userData.lastName,
             role: (decoded?.role as User["role"]) || "user",
         };
+
+        // Store userId for application creation and other features
+        if (mergedUser.id) localStorage.setItem("userId", mergedUser.id);
 
         setToken(accessToken);
         setUser(mergedUser);
@@ -67,6 +72,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem("userEmail");
         localStorage.removeItem("firstName");
         localStorage.removeItem("lastName");
+        localStorage.removeItem("phoneNumber");
+        localStorage.removeItem("dateOfBirth");
         localStorage.removeItem("userId");
         localStorage.removeItem("userRole");
         localStorage.removeItem("token");
@@ -151,6 +158,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     localStorage.setItem("userId", u.id);
                     localStorage.setItem("firstName", u.firstName || "");
                     localStorage.setItem("lastName", u.lastName || "");
+                    localStorage.setItem("phoneNumber", u.phoneNumber || "");
+                    localStorage.setItem("dateOfBirth", u.dateOfBirth || "");
                     setUser({
                         id: u.id,
                         email: u.email,
@@ -165,11 +174,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         } catch {
             // If API fails, still use token data
+            if (decoded.sub) localStorage.setItem("userId", decoded.sub);
             setUser({
                 id: decoded.sub,
                 email: email,
                 firstName: localStorage.getItem("firstName") || undefined,
                 lastName: localStorage.getItem("lastName") || undefined,
+                phoneNumber: localStorage.getItem("phoneNumber") || undefined,
+                dateOfBirth: localStorage.getItem("dateOfBirth") || undefined,
                 role: decoded.role as User["role"],
             });
         }

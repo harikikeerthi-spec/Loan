@@ -10,13 +10,12 @@ export default function UniversityLayout({
 }) {
     return (
         <div className="min-h-screen bg-transparent">
-            <Navbar />
+            {/* Navbar and Footer are hidden to use the custom integrated ones in the university page */}
             <main className="relative z-10">
                 <LoginWall>
                     {children}
                 </LoginWall>
             </main>
-            <Footer />
         </div>
     );
 }

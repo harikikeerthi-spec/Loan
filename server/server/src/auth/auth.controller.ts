@@ -163,6 +163,8 @@ export class AuthController {
     lastName?: string;
     email?: string;
     phone?: string;
+    dateOfBirth?: string;
+    address?: string;
     notes?: string;
   }) {
     try {
@@ -183,6 +185,8 @@ export class AuthController {
         lastName: body.lastName,
         email: body.email,
         phone: body.phone,
+        dateOfBirth: body.dateOfBirth,
+        address: body.address,
         notes: body.notes,
       });
       return {

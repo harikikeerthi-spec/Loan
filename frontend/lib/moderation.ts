@@ -26,9 +26,16 @@ export const EDUCATION_KEYWORDS = [
     'visa', 'f1', 'f-1', 'immigration', 'sevis', 'ds160', 'ds-160', 'embassy', 'consulate',
     'opt', 'cpt', 'h1b', 'h-1b', 'resident', 'approve', 'approval', 'interview', 'slot',
     'biometric', 'passport', 'stamping', 'rejected', 'denial', 'days', 'processing',
-    // Tests
+    // Tests & Exam Prep
     'gre', 'gmat', 'sat', 'toefl', 'ielts', 'pte', 'duolingo', 'sop', 'lor',
-    'recommendation', 'eligibility', 'score', 'exam', 'test',
+    'recommendation', 'eligibility', 'score', 'exam', 'test', 'exams', 'tests',
+    'qualify', 'qualifying', 'qualification', 'preparation', 'prep', 'study plan',
+    'verbal', 'quantitative', 'quant', 'analytical', 'writing', 'section',
+    'practice', 'mock', 'mock test', 'sample paper', 'coaching', 'study material',
+    'percentile', 'cutoff', 'cut off', 'attempt', 'retake', 'schedule',
+    'registration', 'exam date', 'slot booking', 'test center', 'prometric',
+    'ets', 'gmac', 'band', 'composite score', 'subject test', 'general test',
+    'integrated reasoning', 'data insights', 'focus edition', 'awa',
     // Career (academic context)
     'internship', 'placement', 'on campus', 'off campus', 'career', 'work permit',
     // Common question words in context
@@ -106,15 +113,18 @@ export function isOffTopic(text: string): boolean {
 export function isTopical(text: string): boolean {
     const t = normalizeText(text);
     const matches = EDUCATION_KEYWORDS.filter(k => t.includes(k));
-    
+
     // High-signal keywords: if ANY of these appear, allow immediately
     const highSignalKeywords = [
         'visa', 'scholarship', 'loan', 'admission', 'masters', 'university',
-        'college', 'gre', 'ielts', 'toefl', 'f1', 'i20', 'tuition', 'education',
-        'mba', 'phd', 'abroad', 'embassy', 'consulate', 'opt', 'cpt', 'h1b'
+        'college', 'gre', 'gmat', 'sat', 'ielts', 'toefl', 'pte', 'duolingo',
+        'f1', 'i20', 'tuition', 'education', 'exam', 'exams', 'test', 'tests',
+        'mba', 'phd', 'abroad', 'embassy', 'consulate', 'opt', 'cpt', 'h1b',
+        'score', 'eligibility', 'qualify', 'preparation', 'prep', 'coaching',
+        'cutoff', 'percentile', 'sop', 'lor', 'transcript', 'internship'
     ];
     if (highSignalKeywords.some(k => t.includes(k))) return true;
-    
+
     // Short/vague questions need 2 matching education keywords; longer ones need at least 1
     const wordCount = t.split(' ').filter(w => w.length > 2).length;
     const requiredMatches = wordCount < 6 ? 2 : 1;
@@ -160,14 +170,17 @@ export function generateTagsFromText(text: string): string[] {
 export function moderateContent(text: string): { allowed: boolean, reason?: string } {
     const combined = normalizeText(text);
 
-    // 1. Hard block: explicitly off-topic content (food, sports, etc.)
-    if (isOffTopic(combined)) return { allowed: false, reason: 'off_topic' };
-
-    // 2. Prohibited content: violence, profanity, etc.
+    // 1. Prohibited content: violence, profanity, etc. — always block
     if (containsBannedWords(combined)) return { allowed: false, reason: 'prohibited_content' };
 
-    // 3. Must relate to education / loans
-    if (!isTopical(combined)) return { allowed: false, reason: 'off_topic' };
+    // 2. Check if content is education-related FIRST —
+    //    If the post contains education keywords, ALLOW it even if it also has
+    //    some off-topic words (e.g., "What is the exam schedule for GRE?")
+    if (isTopical(combined)) return { allowed: true };
 
-    return { allowed: true };
+    // 3. Only block as off-topic if it's NOT education-related
+    if (isOffTopic(combined)) return { allowed: false, reason: 'off_topic' };
+
+    // 4. If no education keywords found and not off-topic, still block
+    return { allowed: false, reason: 'off_topic' };
 }

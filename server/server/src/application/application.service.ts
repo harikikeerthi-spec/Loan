@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { DigilockerService } from '../integration/digilocker.service';
 import { DocumentVerificationService } from '../ai/services/document-verification.service';
+import { ApplicationReviewService } from '../ai/services/application-review.service';
 
 // Application stages with descriptions and order
 const APPLICATION_STAGES = {
@@ -61,7 +62,8 @@ export class ApplicationService {
     constructor(
         private prisma: PrismaService,
         private digilockerService: DigilockerService,
-        private verificationService: DocumentVerificationService
+        private verificationService: DocumentVerificationService,
+        private applicationReviewService: ApplicationReviewService,
     ) { }
 
     // ==================== APPLICATION CRUD ====================
@@ -776,9 +778,6 @@ export class ApplicationService {
             stage?: string;
             progress?: number;
             remarks?: string;
-            assignedTo?: string;
-            sanctionAmount?: number;
-            sanctionedInterestRate?: number;
             rejectionReason?: string;
         }
     ) {
@@ -795,16 +794,20 @@ export class ApplicationService {
             historyData.fromStatus = application.status;
             historyData.toStatus = data.status;
 
-            // Set timestamps based on status
-            if (data.status === 'under_review') {
-                updateData.reviewStartedAt = new Date();
-            } else if (data.status === 'approved') {
-                updateData.approvedAt = new Date();
+            // Store rejection reason in remarks if rejecting
+            if (data.status === 'rejected' && data.rejectionReason) {
+                updateData.remarks = data.rejectionReason;
+            }
+
+            // Auto-update stage and progress based on status
+            if (data.status === 'approved') {
+                updateData.stage = 'sanction';
+                updateData.progress = 90;
             } else if (data.status === 'rejected') {
-                updateData.rejectedAt = new Date();
-                updateData.rejectionReason = data.rejectionReason;
-            } else if (data.status === 'disbursed') {
-                updateData.disbursedAt = new Date();
+                updateData.progress = 0;
+            } else if (data.status === 'processing') {
+                updateData.stage = 'document_verification';
+                updateData.progress = 40;
             }
         }
 
@@ -816,10 +819,7 @@ export class ApplicationService {
         }
 
         if (data.progress !== undefined) updateData.progress = data.progress;
-        if (data.remarks) updateData.remarks = data.remarks;
-        if (data.assignedTo) updateData.assignedTo = data.assignedTo;
-        if (data.sanctionAmount) updateData.sanctionAmount = data.sanctionAmount;
-        if (data.sanctionedInterestRate) updateData.sanctionedInterestRate = data.sanctionedInterestRate;
+        if (data.remarks && !updateData.remarks) updateData.remarks = data.remarks;
 
         const updated = await this.prisma.loanApplication.update({
             where: { id: applicationId },
@@ -1008,6 +1008,60 @@ export class ApplicationService {
                 }
             }
         };
+    }
+
+    // ==================== AI REVIEW ====================
+
+    /**
+     * AI-powered application review
+     */
+    async aiReviewApplication(applicationId: string, adminId: string, adminName: string) {
+        try {
+            console.log(`[ApplicationService] Fetching application ${applicationId} for AI review`);
+            const application = await this.getApplicationById(applicationId);
+
+            // Get documents
+            const documents = await this.prisma.applicationDocument.findMany({
+                where: { applicationId },
+            });
+            console.log(`[ApplicationService] Found ${documents.length} documents for application ${applicationId}`);
+
+            // Run the AI review
+            console.log(`[ApplicationService] Calling ApplicationReviewService for ${applicationId}`);
+            const reviewResult = await this.applicationReviewService.reviewApplication(application, documents);
+            console.log(`[ApplicationService] AI review result generated for ${applicationId}. Score: ${reviewResult.overallScore}`);
+
+            // Store the review as an internal note for audit trail
+            await this.prisma.applicationNote.create({
+                data: {
+                    applicationId,
+                    authorId: adminId,
+                    authorName: 'AI Review System',
+                    content: JSON.stringify(reviewResult),
+                    type: 'ai_review',
+                    isInternal: true,
+                }
+            });
+
+            // Create status history entry
+            await this.createStatusHistory(applicationId, {
+                fromStatus: application.status,
+                toStatus: application.status, // Status doesn't change from review alone
+                changedBy: adminId,
+                changedByName: adminName,
+                notes: `AI Review completed. Score: ${reviewResult.overallScore}/100. Recommendation: ${reviewResult.recommendation}`,
+                isAutomatic: true,
+            });
+
+            return {
+                success: true,
+                data: reviewResult,
+                message: 'AI review completed successfully',
+            };
+        } catch (error) {
+            console.error(`[ApplicationService] aiReviewApplication failed for ${applicationId}:`, error);
+            throw error;
+        }
     }
 
     // ==================== HELPER METHODS ====================

@@ -320,14 +320,31 @@ export class ApplicationController {
             stage?: string;
             progress?: number;
             remarks?: string;
-            assignedTo?: string;
-            sanctionAmount?: number;
-            sanctionedInterestRate?: number;
             rejectionReason?: string;
         }
     ) {
         const adminName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
         return this.applicationService.updateApplicationStatus(id, req.user.id, adminName, body);
+    }
+
+    /**
+     * AI-powered application review (Admin)
+     * POST /applications/admin/:id/ai-review
+     */
+    @Post('admin/:id/ai-review')
+    @UseGuards(AdminGuard)
+    async aiReviewApplication(
+        @Request() req,
+        @Param('id') id: string,
+    ) {
+        try {
+            const adminName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
+            console.log(`[AI Review] Starting review for application ${id} by admin ${adminName}`);
+            return await this.applicationService.aiReviewApplication(id, req.user.id, adminName);
+        } catch (error) {
+            console.error(`[AI Review] Controller Error for application ${id}:`, error);
+            throw error;
+        }
     }
 
     /**

@@ -21,6 +21,7 @@ interface ForumPost {
     commentCount?: number;
     isPinned?: boolean;
     views?: number;
+    isExpertOnly?: boolean;
 }
 
 interface Mentor {
@@ -160,6 +161,7 @@ function DiscussionsInner() {
                 .eng-post-card { background:rgba(255,255,255,0.85); border:1.5px solid rgba(255,255,255,0.6); border-radius:24px; padding:20px 22px; transition:all 0.25s cubic-bezier(0.4,0,0.2,1); display:block; text-decoration:none; backdrop-filter:blur(10px); }
                 .eng-post-card:hover { border-color:rgba(99,102,241,0.3); box-shadow:0 20px 40px -5px rgba(0,0,0,0.1); transform:translateY(-4px); }
                 .eng-post-card.pinned { border-color:#fcd34d; background:linear-gradient(135deg,rgba(255,251,235,0.9),rgba(255,255,255,0.9)); }
+                .eng-post-card.expert-only { border-color:#c4b5fd; background:linear-gradient(135deg,rgba(245,243,255,0.95),rgba(237,233,254,0.9)); }
                 .eng-avatar { border-radius:50%; background:linear-gradient(135deg,#7c3aed,#a855f7); display:flex; align-items:center; justify-content:center; color:white; font-weight:800; flex-shrink:0; }
                 .eng-badge { display:inline-block; padding:3px 9px; border-radius:9999px; font-size:10.5px; font-weight:700; }
                 .eng-cat-badge { background:#f3e8ff; color:#7e22ce; }
@@ -435,11 +437,19 @@ function DiscussionsInner() {
                                     </button>
                                 </div>
                             ) : (
-                                posts.map((post) => (
+                                [...posts].sort((a, b) => {
+                                    // Pinned posts first
+                                    if (a.isPinned && !b.isPinned) return -1;
+                                    if (!a.isPinned && b.isPinned) return 1;
+                                    // Expert-only posts second
+                                    if (a.isExpertOnly && !b.isExpertOnly) return -1;
+                                    if (!a.isExpertOnly && b.isExpertOnly) return 1;
+                                    return 0;
+                                }).map((post) => (
                                     <Link
                                         key={post.id}
                                         href={`/community/discussions/${post.id}`}
-                                        className={`eng-post-card ${post.isPinned ? "pinned" : ""}`}
+                                        className={`eng-post-card ${post.isPinned ? "pinned" : ""} ${post.isExpertOnly ? "expert-only" : ""}`}
                                     >
                                         <div style={{ display: "flex", alignItems: "flex-start", gap: 14 }}>
                                             <div
@@ -453,6 +463,9 @@ function DiscussionsInner() {
                                                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
                                                     {post.isPinned && (
                                                         <span className="eng-badge eng-pin-badge">📌 Pinned</span>
+                                                    )}
+                                                    {post.isExpertOnly && (
+                                                        <span className="eng-badge" style={{ background: "linear-gradient(135deg, #f5f3ff, #ede9fe)", color: "#6d28d9", border: "1px solid #c4b5fd" }}>🎓 Expert Only</span>
                                                     )}
                                                     {post.category && (
                                                         <span className="eng-badge eng-cat-badge">{post.category}</span>
@@ -582,8 +595,62 @@ function DiscussionsInner() {
                             </div>
                         )}
 
+                        {/* Ask the Mentor Widget */}
+                        <div className="sidebar-widget relative overflow-hidden group" style={{ background: "linear-gradient(135deg, rgba(102,5,199,0.03), rgba(13,148,136,0.03))" }}>
+                            <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-[60px] opacity-40" style={{ background: "linear-gradient(135deg, #7c3aed, #0d9488)" }} />
+                            <div className="relative z-10">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div
+                                        className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl"
+                                        style={{ background: "linear-gradient(135deg, #7c3aed, #6605c7)", boxShadow: "0 6px 20px rgba(102,5,199,0.3)" }}
+                                    >
+                                        🎓
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-gray-900" style={{ fontFamily: "'Noto Serif', serif" }}>
+                                            Ask a Mentor
+                                        </h3>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: "#0d9488" }}>Expert Answers Only</p>
+                                    </div>
+                                </div>
+                                <p className="text-sm text-gray-600 mb-5 leading-relaxed">
+                                    Get personalized guidance from verified students and alumni at top universities.
+                                </p>
+                                <ul className="space-y-2 mb-5">
+                                    <li className="flex items-center gap-2 text-xs text-gray-600">
+                                        <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px]" style={{ background: "rgba(102,5,199,0.1)", color: "#6605c7" }}>✓</span>
+                                        Verified mentors only reply
+                                    </li>
+                                    <li className="flex items-center gap-2 text-xs text-gray-600">
+                                        <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px]" style={{ background: "rgba(102,5,199,0.1)", color: "#6605c7" }}>✓</span>
+                                        Priority in mentor queues
+                                    </li>
+                                    <li className="flex items-center gap-2 text-xs text-gray-600">
+                                        <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px]" style={{ background: "rgba(102,5,199,0.1)", color: "#6605c7" }}>✓</span>
+                                        Expert-level insights
+                                    </li>
+                                </ul>
+                                <button
+                                    onClick={() => {
+                                        if (!isAuthenticated) {
+                                            window.location.href = "/login";
+                                            return;
+                                        }
+                                        setCreateOpen(true);
+                                    }}
+                                    className="w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all hover:shadow-lg hover:-translate-y-0.5"
+                                    style={{ background: "linear-gradient(135deg, #7c3aed, #6605c7)", color: "white", boxShadow: "0 4px 15px rgba(102,5,199,0.25)" }}
+                                >
+                                    <span>🎓</span> Ask an Expert Now
+                                </button>
+                                <p className="text-[10px] text-center text-gray-400 mt-3">
+                                    Toggle "Ask the Expert" when posting
+                                </p>
+                            </div>
+                        </div>
+
                         {/* Upcoming Events */}
-                        <div className="sidebar-widget">
+                        {/* <div className="sidebar-widget">
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-2">
                                     <span style={{ color: "#6605c7" }}>📅</span>
@@ -709,7 +776,7 @@ function DiscussionsInner() {
                                     </div>
                                 </div>
                             )}
-                        </div>
+                        </div> */}
 
                         {/* Explore More Topics */}
                         <div className="sidebar-widget">

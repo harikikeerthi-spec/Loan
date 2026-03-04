@@ -49,6 +49,7 @@ export default function CreatePostModal({
     const [category, setCategory] = useState(CATEGORIES[0]);
     const [tags, setTags] = useState<string[]>([]);
     const [suggestedTags, setSuggestedTags] = useState<string[]>([]);
+    const [isExpertOnly, setIsExpertOnly] = useState(false);
     const [titleError, setTitleError] = useState<string | null>(null);
     const [contentError, setContentError] = useState<string | null>(null);
     const [submitError, setSubmitError] = useState<string | null>(null);
@@ -66,6 +67,7 @@ export default function CreatePostModal({
             setCategory(CATEGORIES[0]);
             setTags([]);
             setSuggestedTags([]);
+            setIsExpertOnly(false);
             setTitleError(null);
             setContentError(null);
             setSubmitError(null);
@@ -196,7 +198,9 @@ export default function CreatePostModal({
             return;
         }
 
+        // Send the display name to the backend (server validates against display names)
         const categorySlug = CATEGORY_SLUG_MAP[category] || "general";
+        const categoryDisplay = category || "General";
 
         // If not forced, run duplicate-check first
         if (!force) {
@@ -205,7 +209,7 @@ export default function CreatePostModal({
                 const dup: any = await communityApi.checkDuplicate({
                     title: title.trim(),
                     content: content.trim(),
-                    category: categorySlug
+                    category: categoryDisplay
                 });
                 if (dup?.isDuplicate) {
                     setSimilarPosts(dup.similarQuestions || []);
@@ -224,8 +228,9 @@ export default function CreatePostModal({
             await communityApi.createPost({
                 title: title.trim(),
                 content: content.trim(),
-                category: categorySlug,
+                category: categoryDisplay,
                 tags,
+                isExpertOnly,
                 force
             } as any);
             setStep('done');
@@ -362,6 +367,48 @@ export default function CreatePostModal({
                                 </div>
                             </div>
                         )}
+
+                        {/* Ask the Expert Toggle */}
+                        <div style={{ marginBottom: 20, padding: 16, borderRadius: 16, background: isExpertOnly ? "linear-gradient(135deg, #f5f3ff, #ede9fe)" : "#f9fafb", border: isExpertOnly ? "1.5px solid #c4b5fd" : "1.5px solid #e5e7eb", transition: "all 0.2s" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                    <div style={{ width: 40, height: 40, borderRadius: 10, background: isExpertOnly ? "linear-gradient(135deg, #7c3aed, #6605c7)" : "#e5e7eb", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, transition: "all 0.2s" }}>
+                                        🎓
+                                    </div>
+                                    <div>
+                                        <h4 style={{ fontSize: 14, fontWeight: 700, color: "#1a1a2e", marginBottom: 2 }}>Ask the Expert</h4>
+                                        <p style={{ fontSize: 11, color: "#6b7280" }}>Only verified mentors can answer this question</p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsExpertOnly(!isExpertOnly)}
+                                    style={{
+                                        width: 52,
+                                        height: 28,
+                                        borderRadius: 9999,
+                                        border: "none",
+                                        background: isExpertOnly ? "linear-gradient(135deg, #7c3aed, #6605c7)" : "#d1d5db",
+                                        cursor: "pointer",
+                                        position: "relative",
+                                        transition: "all 0.2s",
+                                        flexShrink: 0
+                                    }}
+                                >
+                                    <span style={{
+                                        position: "absolute",
+                                        top: 3,
+                                        left: isExpertOnly ? 26 : 3,
+                                        width: 22,
+                                        height: 22,
+                                        borderRadius: "50%",
+                                        background: "white",
+                                        boxShadow: "0 2px 4px rgba(0,0,0,0.15)",
+                                        transition: "left 0.2s"
+                                    }} />
+                                </button>
+                            </div>
+                        </div>
 
                         <div style={{ display: "flex", gap: 10 }}>
                             <button className="cpm-btn-ghost" onClick={() => setStep("title")} style={{ flex: 1 }}>← Back</button>

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import JourneyPath from "../../components/JourneyPath";
+import AnimatedNumber from "../../components/AnimatedNumber";
+import InteractiveEMI from "../../components/InteractiveEMI";
 
 export const metadata: Metadata = {
     title: "Vidhya Loans - Fund Your Dream Education Abroad",
@@ -46,7 +48,7 @@ export default function HomePage() {
                         {/* Animated rings */}
                         <div className="absolute inset-0 animate-ping rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 opacity-20" />
                         <div className="absolute -inset-1 animate-pulse rounded-xl bg-gradient-to-r from-amber-400/30 to-orange-500/30 blur-md" />
-                        
+
                         {/* Main badge */}
                         <div className="relative flex items-center gap-0">
                             {/* Hover tooltip */}
@@ -56,31 +58,37 @@ export default function HomePage() {
                                     <span className="material-symbols-outlined text-sm">arrow_forward</span>
                                 </span>
                             </span>
-                            
+
                             {/* Custom Logo Container */}
                             <div className="relative w-14 h-14 group-hover:scale-110 transition-all duration-300">
                                 {/* Rotating border */}
                                 <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 animate-[spin_3s_linear_infinite] opacity-80" style={{ padding: '2px' }}>
                                     <div className="w-full h-full rounded-xl bg-white" />
                                 </div>
-                                
+
                                 {/* Icon container */}
                                 <div className="absolute inset-[2px] rounded-xl bg-gradient-to-br from-amber-400 via-orange-500 to-amber-600 flex items-center justify-center shadow-lg overflow-hidden">
                                     {/* Shine effect */}
                                     <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/30 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                                    
+
                                     {/* Custom referral icon - coins/gift mashup */}
                                     <div className="relative z-10 flex flex-col items-center">
                                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" className="text-white drop-shadow-lg">
-                                            <path d="M12 2L14.09 8.26L20.81 9.27L15.91 13.97L17.18 20.73L12 17.77L6.82 20.73L8.09 13.97L3.19 9.27L9.91 8.26L12 2Z" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-                                            <circle cx="12" cy="12" r="3" fill="#fbbf24" stroke="white" strokeWidth="1"/>
+                                            <path d="M12 2L14.09 8.26L20.81 9.27L15.91 13.97L17.18 20.73L12 17.77L6.82 20.73L8.09 13.97L3.19 9.27L9.91 8.26L12 2Z" fill="currentColor" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" />
+                                            <circle cx="12" cy="12" r="3" fill="#fbbf24" stroke="white" strokeWidth="1" />
                                         </svg>
                                     </div>
                                 </div>
-                                
+
                                 {/* Sparkle decorations */}
                                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-300 rounded-full animate-pulse shadow-lg shadow-yellow-400/50" />
                                 <div className="absolute -bottom-0.5 -left-0.5 w-2 h-2 bg-orange-300 rounded-full animate-pulse delay-300" />
+                            </div>
+                            {/* Refer Now label */}
+                            <div className="mt-1.5 text-center">
+                                <span className="text-[9px] font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600 whitespace-nowrap">
+                                    Refer Now
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -148,7 +156,7 @@ export default function HomePage() {
                                 </div>
                                 <div className="hidden sm:block w-px h-8 bg-gray-100" />
                                 {[
-                                    { val: '50+', label: 'Lenders' },
+                                    { val: '5+', label: 'Lenders' },
                                     { val: '48h', label: 'Approval' },
                                     { val: '₹500Cr+', label: 'Disbursed' },
                                 ].map(s => (
@@ -198,6 +206,16 @@ export default function HomePage() {
                                 </div>
                             </div>
                         </div>
+                        {/* Refer Now below the hero card */}
+                        {/* <div className="mt-6 flex justify-center lg:justify-start">
+                            <Link
+                                href="/referral"
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-black text-sm uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600"
+                            >
+                                Refer Now
+                                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                            </Link>
+                        </div> */}
                     </div>
                 </section>
 
@@ -206,7 +224,7 @@ export default function HomePage() {
                     <div className="max-w-7xl mx-auto px-6">
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
                             {[
-                                { icon: "account_balance", num: "50+", label: "Lending Partners" },
+                                { icon: "account_balance", num: "5+", label: "Lending Partners" },
                                 { icon: "speed", num: "48hrs", label: "Quick Approval" },
                                 { icon: "verified_user", num: "100%", label: "Secure & Trusted" },
                                 { icon: "public", num: "30+", label: "Countries Covered" },
@@ -216,7 +234,7 @@ export default function HomePage() {
                                         <span className="material-symbols-outlined text-2xl">{s.icon}</span>
                                     </div>
                                     <div>
-                                        <div className="text-xl font-black text-gray-900 leading-none mb-1">{s.num}</div>
+                                        <div className="text-xl font-black text-gray-900 leading-none mb-1"><AnimatedNumber value={s.num} /></div>
                                         <div className="text-[11px] text-gray-400 font-black uppercase tracking-widest">{s.label}</div>
                                     </div>
                                 </div>
@@ -293,7 +311,7 @@ export default function HomePage() {
                                     <span className="text-2xl">📚</span>
                                 </div>
                                 <div className="relative z-10 p-7">
-                                    <div className="text-3xl font-black text-white mb-1">200+</div>
+                                    <div className="text-3xl font-black text-white mb-1"><AnimatedNumber value="200+" /></div>
                                     <div className="text-white/40 text-[10px] uppercase tracking-widest font-black mb-3">Courses Available</div>
                                     <h3 className="text-xl font-bold text-white mb-2">Trending Courses</h3>
                                     <p className="text-white/60 text-[13px] mb-5 leading-relaxed font-medium">CS, Data Science, MBA & more. Filter by country, ROI.</p>
@@ -313,7 +331,7 @@ export default function HomePage() {
                                     </span>
                                 </div>
                                 <div className="relative z-10 p-6">
-                                    <div className="text-2xl font-black text-white mb-1">500+</div>
+                                    <div className="text-2xl font-black text-white mb-1"><AnimatedNumber value="500+" /></div>
                                     <h3 className="text-lg font-bold text-white mb-2">Popular Universities</h3>
                                     <p className="text-white/55 text-[13px] mb-4 leading-relaxed font-medium">MIT, Stanford, Oxford & more. AI match for your profile.</p>
                                     <span className="inline-flex items-center gap-2 text-blue-300 font-bold text-[13px] group-hover:gap-3 transition-all">
@@ -327,7 +345,7 @@ export default function HomePage() {
                                 <div className="absolute inset-0 opacity-20" style={{ background: "url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=400&q=80') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(120,53,15,0.9) 0%, rgba(120,53,15,0.3) 70%, transparent 100%)' }} />
                                 <div className="relative z-10 p-6">
-                                    <div className="text-2xl font-black text-white mb-1">₹50L+</div>
+                                    <div className="text-2xl font-black text-white mb-1">₹<AnimatedNumber value="50" />L+</div>
                                     <div className="text-amber-200/40 text-[10px] uppercase tracking-widest font-black mb-2">Avg. Award</div>
                                     <h3 className="text-lg font-bold text-white mb-4">HOT Scholarships</h3>
                                     <span className="inline-flex items-center gap-2 text-amber-300 font-bold text-[13px] group-hover:gap-3 transition-all">
@@ -349,7 +367,7 @@ export default function HomePage() {
                                     ))}
                                 </div>
                                 <div className="relative z-10 p-6">
-                                    <div className="text-2xl font-black text-white mb-1">5,000+</div>
+                                    <div className="text-2xl font-black text-white mb-1"><AnimatedNumber value="5000+" /></div>
                                     <h3 className="text-lg font-bold text-white mb-2">Exam Prep</h3>
                                     <p className="text-white/55 text-[13px] font-medium leading-relaxed mb-4">GRE, IELTS, TOEFL & more. AI‑adaptive tests.</p>
                                     <span className="inline-flex items-center gap-2 text-emerald-300 font-bold text-[13px] group-hover:gap-3 transition-all">
@@ -378,12 +396,12 @@ export default function HomePage() {
                                 { icon: '🏛️', val: '500+', label: 'Universities' },
                                 { icon: '📚', val: '200+', label: 'Courses' },
                                 { icon: '🏆', val: '150+', label: 'Scholarships' },
-                                { icon: '💰', val: '50+', label: 'Loan Partners' },
+                                { icon: '💰', val: '5+', label: 'Loan Partners' },
                             ].map(s => (
                                 <div key={s.label} className="flex items-center gap-2.5 px-5 py-3 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group">
                                     <span className="text-lg group-hover:scale-125 transition-transform">{s.icon}</span>
                                     <div>
-                                        <div className="font-black text-gray-900 text-sm leading-none">{s.val}</div>
+                                        <div className="font-black text-gray-900 text-sm leading-none"><AnimatedNumber value={s.val} /></div>
                                         <div className="text-gray-400 text-[10px] uppercase tracking-wider font-bold">{s.label}</div>
                                     </div>
                                 </div>
@@ -414,15 +432,15 @@ export default function HomePage() {
                             </div>
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                 <ToolCard href="/grade-converter" bg="bg-[#e1f0f7]" icon="https://img.icons8.com/isometric/50/6605c7/calculator.png" title="Grade Converter" desc="Convert your percentage or 10-point CGPA to GPA score with just a single click." cta="Convert Now" />
-                                <ToolCard href="/emi" bg="bg-white" icon="https://img.icons8.com/isometric/50/6605c7/sand-watch.png" title="EMI Calculator" desc="Determine your EMIs and repayment schedules before committing to a student loan." cta="Calculate Now" border />
+                                <ToolCard href="/emi" bg="bg-white" icon="https://img.icons8.com/isometric/50/6605c7/calculator.png" title="EMI Calculator" desc="Determine your EMIs and repayment schedules before committing to a student loan." cta="Calculate Now" border />
                                 <ToolCard href="/loan-eligibility" bg="bg-[#e7e1f7]" icon="https://img.icons8.com/isometric/50/6605c7/money.png" title="Loan Eligibility Checker" desc="Find the best education loan for you in just 2 minutes with our intelligent checker." cta="Check Eligibility" />
                             </div>
                         </div>
 
                         <div className="mt-12 flex flex-wrap justify-center gap-12 text-center border-t border-black/5 pt-12">
-                            {[{ num: "7", label: "AI Tools" }, { num: "3,000+", label: "Universities Covered" }, { num: "98%", label: "Accuracy Rate" }, { num: "50K+", label: "Students Helped" }].map((s) => (
+                            {[{ num: "7", label: "AI Tools" }, { num: "3000+", label: "Universities Covered" }, { num: "98%", label: "Accuracy Rate" }, { num: "50000+", label: "Students Helped" }].map((s) => (
                                 <div key={s.label}>
-                                    <div className="text-4xl font-bold text-gray-900">{s.num}</div>
+                                    <div className="text-4xl font-bold text-gray-900"><AnimatedNumber value={s.num} duration={2.5} /></div>
                                     <div className="text-xs text-gray-500 uppercase font-bold tracking-widest mt-1">{s.label}</div>
                                 </div>
                             ))}
@@ -460,7 +478,7 @@ export default function HomePage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 {[
                                     { num: '01', emoji: '📋', title: 'Check Eligibility', desc: 'Answer a few smart questions about your university, course, and financial profile.', time: '2 mins', chips: ['No credit score', 'AI-assisted'], color: '#7c3aed', bg: '#f5f0ff', border: '#c4b5fd' },
-                                    { num: '02', emoji: '⚖️', title: 'Compare Offers', desc: 'Get personalized loan offers from 50+ lenders. Compare rates and terms.', time: '5 mins', chips: ['50+ lenders', 'Best rates'], color: '#0284c7', bg: '#e0f2fe', border: '#7dd3fc' },
+                                    { num: '02', emoji: '⚖️', title: 'Compare Offers', desc: 'Get personalized loan offers from 5+ lenders. Compare rates and terms.', time: '5 mins', chips: ['5+ lenders', 'Best rates'], color: '#0284c7', bg: '#e0f2fe', border: '#7dd3fc' },
                                     { num: '03', emoji: '📁', title: 'Apply Online', desc: 'Complete your application digitally. Upload documents and e-sign securely.', time: '10 mins', chips: ['100% digital', 'e-KYC'], color: '#059669', bg: '#ecfdf5', border: '#6ee7b7' },
                                     { num: '04', emoji: '💸', title: 'Get Funded', desc: 'Receive your sanction letter in 48 hours. Funds disbursed to your university.', time: '48 hrs', chips: ['Fastest', 'Zero fees'], color: '#b45309', bg: '#fffbeb', border: '#fcd34d' },
                                 ].map((step, idx) => (
@@ -547,36 +565,7 @@ export default function HomePage() {
                                     </Link>
                                 </div>
                             </div>
-                            <div className="bg-white/70 backdrop-blur-md p-8 rounded-xl shadow-2xl border border-gray-100">
-                                <div className="space-y-8">
-                                    <div>
-                                        <div className="flex justify-between mb-4">
-                                            <label className="text-[11px] font-black uppercase tracking-widest text-gray-400">Loan Amount</label>
-                                            <span className="text-[#6605c7] font-black text-[13px]">₹ 20,00,000</span>
-                                        </div>
-                                        <div className="h-1.5 w-full bg-gray-100 rounded-full">
-                                            <div className="h-full bg-[#6605c7] w-2/3 rounded-full relative">
-                                                <div className="w-3.5 h-3.5 bg-white border-2 border-[#6605c7] rounded-full absolute right-0 top-1/2 -translate-y-1/2 shadow-md"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div className="flex justify-between mb-4">
-                                            <label className="text-[11px] font-black uppercase tracking-widest text-gray-400">Interest Rate</label>
-                                            <span className="text-[#6605c7] font-black text-[13px]">9.5%</span>
-                                        </div>
-                                        <div className="h-1.5 w-full bg-gray-100 rounded-full">
-                                            <div className="h-full bg-[#6605c7] w-1/3 rounded-full relative">
-                                                <div className="w-3.5 h-3.5 bg-white border-2 border-[#6605c7] rounded-full absolute right-0 top-1/2 -translate-y-1/2 shadow-md"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="pt-8 border-t border-gray-100 text-center">
-                                        <div className="text-[11px] text-gray-400 font-black uppercase tracking-widest mb-2">Monthly EMI</div>
-                                        <div className="text-4xl font-black text-gray-900 font-sans">₹ 42,004</div>
-                                    </div>
-                                </div>
-                            </div>
+                            <InteractiveEMI />
                         </div>
                     </div>
                 </section>
@@ -606,7 +595,7 @@ export default function HomePage() {
                                             <td className="p-6">
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-24 h-12 flex items-center justify-center p-1.5 overflow-hidden">
-                                                        <img src={l.logo} alt={l.name} className="w-full h-full object-contain filter grayscale hover:grayscale-0 transition-all duration-300" />
+                                                        <img src={l.logo} alt={l.name} className="w-full h-full object-contain transition-all duration-300" />
                                                     </div>
                                                     <div>
                                                         <div className="font-bold text-gray-900 text-[13px]">{l.name}</div>
@@ -629,25 +618,59 @@ export default function HomePage() {
                 <section className="py-24 bg-transparent">
                     <div className="max-w-7xl mx-auto px-6">
                         <div className="text-center mb-16">
-                            <span className="text-[#6605c7] font-bold text-sm tracking-widest uppercase mb-4 block">Testimonials</span>
-                            <h2 className="text-4xl md:text-5xl font-bold font-display text-gray-900">Loved by 10,000+ Students</h2>
+                            <span className="inline-block px-4 py-1.5 rounded-full bg-[#6605c7]/10 text-[#6605c7] text-[11px] font-black uppercase tracking-widest mb-4 border border-[#6605c7]/15">
+                                Testimonials
+                            </span>
+                            <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-4 leading-tight">
+                                Loved by <span className="text-[#6605c7] italic">10,000+</span> Students
+                            </h2>
+                            <p className="text-gray-500 text-[13px] font-medium">Real stories from students who funded their dreams with us</p>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            {testimonials.map((t) => (
-                                <div key={t.name} className="p-8 rounded-[2.5rem] bg-white shadow-sm hover:shadow-xl transition-all border border-gray-100">
-                                    <div className="flex gap-1 text-amber-500 mb-6">
-                                        {[...Array(5)].map((_, i) => <span key={i} className="material-symbols-outlined fill-1" style={{ fontVariationSettings: "'FILL' 1" }}>star</span>)}
-                                    </div>
-                                    <p className="text-gray-600 mb-8 leading-relaxed italic">&ldquo;{t.quote}&rdquo;</p>
-                                    <div className="flex items-center gap-4">
-                                        <Image src={`https://i.pravatar.cc/100?u=${t.avatar}`} className="w-12 h-12 rounded-full ring-2 ring-[#6605c7]/20" alt={t.name} width={48} height={48} />
-                                        <div>
-                                            <div className="font-bold text-gray-900 text-sm">{t.name}</div>
-                                            <div className="text-xs text-gray-500">{t.school}</div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {[
+                                { bg: "bg-[#e7e1f7]", borderColor: "border-[#6605c7]/10", accent: "text-[#6605c7]", highlight: "₹45L at 8.5%", highlightLabel: "Loan Secured" },
+                                { bg: "bg-[#fdfaf2]", borderColor: "border-amber-200/50", accent: "text-amber-600", highlight: "₹2.3L Saved", highlightLabel: "Interest Saved" },
+                                { bg: "bg-[#e1f0f7]", borderColor: "border-blue-200/50", accent: "text-blue-600", highlight: "3 Days", highlightLabel: "Disbursement" },
+                            ].map((style, idx) => {
+                                const t = testimonials[idx];
+                                return (
+                                    <div
+                                        key={t.name}
+                                        className={`flex flex-col p-8 rounded-xl ${style.bg} hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 group border ${style.borderColor}`}
+                                    >
+                                        <div className="flex items-start gap-5 mb-6">
+                                            <div className="w-14 h-14 bg-white/80 rounded-xl flex items-center justify-center shrink-0 shadow-sm overflow-hidden p-0.5">
+                                                <Image
+                                                    src={`https://i.pravatar.cc/100?u=${t.avatar}`}
+                                                    alt={t.name}
+                                                    width={56}
+                                                    height={56}
+                                                    className="w-full h-full object-cover rounded-lg"
+                                                />
+                                            </div>
+                                            <div className="flex-1">
+                                                <h3 className="text-[15px] font-bold text-gray-900 leading-tight">{t.name}</h3>
+                                                <p className="text-gray-500 text-[13px] font-medium">{t.school}</p>
+                                                <div className="flex gap-0.5 mt-1.5">
+                                                    {[...Array(5)].map((_, i) => (
+                                                        <span key={i} className={`material-symbols-outlined text-sm ${style.accent}`} style={{ fontVariationSettings: "'FILL' 1", fontSize: '14px' }}>star</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p className="text-gray-600 text-[13px] leading-relaxed font-medium mb-6 flex-1">{t.quote}</p>
+                                        <div className="flex items-center justify-between mt-auto pt-5 border-t border-black/5">
+                                            <div>
+                                                <div className={`text-lg font-black ${style.accent}`}>{style.highlight}</div>
+                                                <div className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{style.highlightLabel}</div>
+                                            </div>
+                                            <span className={`inline-flex items-center gap-2 ${style.accent} font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all`}>
+                                                Read More <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                            </span>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 </section>
@@ -662,14 +685,14 @@ export default function HomePage() {
                         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-16">
                             <div>
                                 <span className="inline-block px-4 py-1.5 rounded-full bg-[#6605c7]/10 text-[#6605c7] text-[11px] font-black uppercase tracking-widest mb-4 border border-[#6605c7]/15">
-                                    VALUE ADDED SERVICES
+                                    BEYOND LOANS 🎓
                                 </span>
                                 <h2 className="text-3xl md:text-5xl font-black text-gray-900 leading-tight">
-                                    Beyond Admissions: <br />
-                                    <span style={{ background: 'linear-gradient(135deg, #6605c7, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Post-Admission Services</span>
+                                    Post-Admission <br />
+                                    <span style={{ background: 'linear-gradient(135deg, #6605c7, #a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Services</span>
                                 </h2>
                                 <p className="text-gray-500 text-[13px] mt-4 max-w-lg leading-relaxed font-medium">
-                                    We stay with you even after your offer letter. Complete your pre-departure checklist with our curated global services.
+                                    Everything you need after getting your admit — banking, housing, visa & more
                                 </p>
                             </div>
                             <Link href="/explore" className="flex-shrink-0 inline-flex items-center gap-2 px-7 py-4 rounded-xl border-2 border-[#6605c7]/20 text-[#6605c7] font-black hover:bg-[#6605c7] hover:text-white hover:border-[#6605c7] transition-all group text-[11px] uppercase tracking-widest">
@@ -681,127 +704,128 @@ export default function HomePage() {
                         {/* Bento Grid */}
                         <div className="grid grid-cols-12 gap-5">
                             {/* Row 1 */}
-                            {/* 1 — Forex & Cards (large left) */}
-                            <Link href="/forex" className="col-span-12 lg:col-span-5 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[320px]" style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' }}>
-                                <div className="absolute inset-0 opacity-15" style={{ background: "url('https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=800&q=80') center/cover" }} />
+                            {/* 1 — US Credit Card (large left) */}
+                            <Link href="/us-credit-card" className="col-span-12 lg:col-span-5 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[320px]" style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' }}>
+                                <div className="absolute inset-0 opacity-15" style={{ background: "url('https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&q=80') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(30,58,138,0.97) 0%, rgba(30,58,138,0.3) 60%, transparent 100%)' }} />
                                 <div className="absolute top-6 left-6">
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest border border-white/20">
-                                        🌐 Global
+                                        🇺🇸 USA
                                     </span>
                                 </div>
                                 <div className="absolute top-4 right-4 w-14 h-14 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-transform border border-white/20">
                                     <span className="text-3xl">💳</span>
                                 </div>
                                 <div className="relative z-10 p-7">
-                                    <div className="text-4xl font-black text-white mb-1">0%</div>
-                                    <div className="text-white/50 text-[10px] uppercase tracking-widest font-black mb-3">Markup Fee</div>
-                                    <h3 className="text-xl font-black text-white mb-2">Forex & Cards</h3>
-                                    <p className="text-white/60 text-[13px] mb-5 leading-relaxed font-medium">Lock in the best exchange rates with zero-markup cards for all your expenses abroad.</p>
+                                    <div className="text-4xl font-black text-white mb-1">Day 1</div>
+                                    <div className="text-white/50 text-[10px] uppercase tracking-widest font-black mb-3">Start Building Credit</div>
+                                    <h3 className="text-xl font-black text-white mb-2">US Credit Card</h3>
+                                    <p className="text-white/60 text-[13px] mb-5 leading-relaxed font-medium">Build your US credit score from day one with a student credit card — no SSN required to apply.</p>
                                     <span className="inline-flex items-center gap-2 text-blue-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Get Your Card <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                        Get Started <span className="material-symbols-outlined text-sm">arrow_forward</span>
                                     </span>
                                 </div>
                             </Link>
 
-                            {/* 2 — Student Housing (top middle) */}
-                            <Link href="/housing" className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[320px]" style={{ background: 'linear-gradient(135deg, #4c1d95 0%, #5b21b6 100%)' }}>
-                                <div className="absolute inset-0 opacity-20" style={{ background: "url('https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600&q=80') center/cover" }} />
-                                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(76,29,149,0.98) 0%, rgba(76,29,149,0.3) 60%, transparent 100%)' }} />
+                            {/* 2 — German Blocked Account (top middle) */}
+                            <Link href="/german-blocked-account" className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[320px]" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)' }}>
+                                <div className="absolute inset-0 opacity-20" style={{ background: "url('https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=600&q=80') center/cover" }} />
+                                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(31,41,55,0.98) 0%, rgba(31,41,55,0.3) 60%, transparent 100%)' }} />
                                 <div className="absolute top-4 right-4">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-400/20 backdrop-blur-sm text-purple-200 text-[10px] font-black uppercase tracking-widest border border-purple-400/20">
-                                        ✅ Verified
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/20 backdrop-blur-sm text-yellow-200 text-[10px] font-black uppercase tracking-widest border border-yellow-400/20">
+                                        🇩🇪 Germany
                                     </span>
                                 </div>
                                 <div className="relative z-10 p-6">
-                                    <div className="text-3xl font-black text-white mb-1">1,000+</div>
-                                    <div className="text-white/40 text-[10px] uppercase tracking-widest font-black mb-2">Verified Listings</div>
-                                    <h3 className="text-lg font-black text-white mb-2">Student Housing</h3>
-                                    <p className="text-white/55 text-[13px] mb-4 leading-relaxed font-medium">Verified accommodations near top global universities with pre-booking support.</p>
-                                    <span className="inline-flex items-center gap-2 text-purple-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Find Housing <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                    <div className="text-3xl font-black text-white mb-1">€11,208</div>
+                                    <div className="text-white/40 text-[10px] uppercase tracking-widest font-black mb-2">Required Balance</div>
+                                    <h3 className="text-lg font-black text-white mb-2">German Blocked Account</h3>
+                                    <p className="text-white/55 text-[13px] mb-4 leading-relaxed font-medium">Open your mandatory blocked account hassle-free for Germany visa application.</p>
+                                    <span className="inline-flex items-center gap-2 text-yellow-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
+                                        Open Account <span className="material-symbols-outlined text-sm">arrow_forward</span>
                                     </span>
                                 </div>
                             </Link>
 
-                            {/* 3 — Visa Slot Booking (top right) */}
-                            <Link href="/visa-slots" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[320px]" style={{ background: 'linear-gradient(135deg, #7c2d12 0%, #9a3412 100%)' }}>
-                                <div className="absolute inset-0 opacity-15" style={{ background: "url('https://images.unsplash.com/photo-1436491865332-7a61a109db05?w=400&q=80') center/cover" }} />
-                                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(124,45,18,0.97) 0%, rgba(124,45,18,0.3) 70%, transparent 100%)' }} />
+                            {/* 3 — Forex Card (top right) */}
+                            <Link href="/forex" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[320px]" style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)' }}>
+                                <div className="absolute inset-0 opacity-15" style={{ background: "url('https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&q=80') center/cover" }} />
+                                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(5,150,105,0.97) 0%, rgba(5,150,105,0.3) 70%, transparent 100%)' }} />
                                 <div className="absolute top-4 left-4">
-                                    <span className="text-3xl">📅</span>
+                                    <span className="text-3xl">🌍</span>
                                 </div>
                                 <div className="relative z-10 p-6">
-                                    <div className="text-3xl font-black text-white mb-1">24/7</div>
-                                    <div className="text-orange-200/50 text-[10px] uppercase tracking-widest font-black mb-2">Slot Alerts</div>
-                                    <h3 className="text-lg font-black text-white mb-2">Visa Slot Booking</h3>
-                                    <span className="inline-flex items-center gap-2 text-orange-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Book Slot <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                    <div className="text-3xl font-black text-white mb-1"><AnimatedNumber value="0%" /></div>
+                                    <div className="text-emerald-200/50 text-[10px] uppercase tracking-widest font-black mb-2">Markup Fee</div>
+                                    <h3 className="text-lg font-black text-white mb-2">Forex Card</h3>
+                                    <p className="text-white/55 text-[13px] mb-4 leading-relaxed font-medium">Multi-currency forex card with the best exchange rates.</p>
+                                    <span className="inline-flex items-center gap-2 text-emerald-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
+                                        Get Card <span className="material-symbols-outlined text-sm">arrow_forward</span>
                                     </span>
                                 </div>
                             </Link>
 
                             {/* Row 2 */}
-                            {/* 4 — Mock Visa Interview (bottom left) */}
-                            <Link href="/visa-mock" className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[280px]" style={{ background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}>
-                                <div className="absolute inset-0 opacity-15" style={{ background: "url('https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=600&q=80') center/cover" }} />
-                                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(6,78,59,0.98) 0%, rgba(6,78,59,0.3) 70%, transparent 100%)' }} />
-                                <div className="absolute top-4 right-4 w-11 h-11 rounded-xl bg-emerald-400/20 backdrop-blur-sm flex items-center justify-center border border-emerald-400/20">
-                                    <span className="text-xl">🎙️</span>
+                            {/* 4 — Student Housing (bottom left) */}
+                            <Link href="/housing" className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[280px]" style={{ background: 'linear-gradient(135deg, #4c1d95 0%, #5b21b6 100%)' }}>
+                                <div className="absolute inset-0 opacity-15" style={{ background: "url('https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600&q=80') center/cover" }} />
+                                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(76,29,149,0.98) 0%, rgba(76,29,149,0.3) 70%, transparent 100%)' }} />
+                                <div className="absolute top-4 right-4 w-11 h-11 rounded-xl bg-purple-400/20 backdrop-blur-sm flex items-center justify-center border border-purple-400/20">
+                                    <span className="text-xl">🏠</span>
                                 </div>
-                                <div className="absolute top-4 left-4 flex gap-2">
-                                    {['F1', 'B1/B2', 'Schengen'].map(t => (
-                                        <span key={t} className="px-2 py-1 rounded-lg bg-emerald-400/20 backdrop-blur-sm text-emerald-300 text-[10px] font-black border border-emerald-400/20">{t}</span>
-                                    ))}
+                                <div className="absolute top-4 left-4">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-400/20 backdrop-blur-sm text-purple-200 text-[10px] font-black uppercase tracking-widest border border-purple-400/20">
+                                        ✅ Verified
+                                    </span>
                                 </div>
                                 <div className="relative z-10 p-6">
-                                    <div className="text-3xl font-black text-white mb-1">10K+</div>
-                                    <div className="text-emerald-200/50 text-[10px] uppercase tracking-widest font-black mb-2">Students Coached</div>
-                                    <h3 className="text-lg font-black text-white mb-2">Mock Visa Interview</h3>
-                                    <p className="text-white/55 text-[13px] mb-4 leading-relaxed font-medium">Practice with experts who have helped 10k+ students clear their visa interviews.</p>
-                                    <span className="inline-flex items-center gap-2 text-emerald-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Book Session <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                    <div className="text-3xl font-black text-white mb-1"><AnimatedNumber value="1000+" /></div>
+                                    <div className="text-purple-200/50 text-[10px] uppercase tracking-widest font-black mb-2">Verified Listings</div>
+                                    <h3 className="text-lg font-black text-white mb-2">Accommodation Support</h3>
+                                    <p className="text-white/55 text-[13px] mb-4 leading-relaxed font-medium">Find verified student housing near your university campus.</p>
+                                    <span className="inline-flex items-center gap-2 text-purple-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
+                                        Explore <span className="material-symbols-outlined text-sm">arrow_forward</span>
                                     </span>
                                 </div>
                             </Link>
 
-                            {/* 5 — Courier Services (bottom middle) */}
-                            <Link href="/courier" className="col-span-12 sm:col-span-6 lg:col-span-5 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[280px]" style={{ background: 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)' }}>
-                                <div className="absolute inset-0 opacity-15" style={{ background: "url('https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=600&q=80') center/cover" }} />
-                                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(127,29,29,0.97) 0%, rgba(127,29,29,0.3) 60%, transparent 100%)' }} />
+                            {/* 5 — UK Bank Account (bottom middle) */}
+                            <Link href="/uk-bank-account" className="col-span-12 sm:col-span-6 lg:col-span-5 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[280px]" style={{ background: 'linear-gradient(135deg, #7c2d12 0%, #9a3412 100%)' }}>
+                                <div className="absolute inset-0 opacity-15" style={{ background: "url('https://images.unsplash.com/photo-1486299267070-83823f5448dd?w=600&q=80') center/cover" }} />
+                                <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(124,45,18,0.97) 0%, rgba(124,45,18,0.3) 60%, transparent 100%)' }} />
                                 <div className="absolute top-6 left-6">
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest border border-white/20">
-                                        📦 Express
+                                        🇬🇧 UK
                                     </span>
                                 </div>
                                 <div className="absolute top-4 right-4 w-14 h-14 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform border border-white/20">
-                                    <span className="text-3xl">📦</span>
+                                    <span className="text-3xl">🏦</span>
                                 </div>
                                 <div className="relative z-10 p-7">
-                                    <div className="text-4xl font-black text-white mb-1">40%</div>
-                                    <div className="text-white/50 text-[10px] uppercase tracking-widest font-black mb-3">Student Discount</div>
-                                    <h3 className="text-xl font-black text-white mb-2">Courier Services</h3>
-                                    <p className="text-white/60 text-[13px] mb-5 leading-relaxed font-medium">Send your documents globally with special student discounts and real-time tracking.</p>
-                                    <span className="inline-flex items-center gap-2 text-red-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Ship Now <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                    <div className="text-4xl font-black text-white mb-1">Pre-Arrival</div>
+                                    <div className="text-white/50 text-[10px] uppercase tracking-widest font-black mb-3">Account Opening</div>
+                                    <h3 className="text-xl font-black text-white mb-2">UK Bank Account</h3>
+                                    <p className="text-white/60 text-[13px] mb-5 leading-relaxed font-medium">Pre-arrival UK bank account opening for Indian students — be ready before you land.</p>
+                                    <span className="inline-flex items-center gap-2 text-orange-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
+                                        Open Account <span className="material-symbols-outlined text-sm">arrow_forward</span>
                                     </span>
                                 </div>
                             </Link>
 
-                            {/* 6 — Bank Account (bottom right, featured purple) */}
-                            <Link href="/bank-account" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-2xl flex flex-col justify-end min-h-[280px]" style={{ background: 'linear-gradient(135deg, #164e63 0%, #155e75 100%)' }}>
-                                <div className="absolute inset-0 opacity-10" style={{ background: "url('https://images.unsplash.com/photo-1541354329998-f4d9a9f9297f?w=400&q=80') center/cover" }} />
-                                <div className="absolute top-6 right-6 w-20 h-20 rounded-full border-4 border-white/15 animate-ping opacity-20" />
-                                <div className="absolute top-6 right-6 w-20 h-20 rounded-xl border-4 border-white/10 flex items-center justify-center">
-                                    <span className="text-2xl">🏦</span>
+                            {/* 6 — Visa Counselling (bottom right) */}
+                            <Link href="/visa-counselling" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-2xl flex flex-col justify-end min-h-[280px]" style={{ background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}>
+                                <div className="absolute inset-0 opacity-10" style={{ background: "url('https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&q=80') center/cover" }} />
+                                <div className="absolute top-6 right-6 w-16 h-16 rounded-full border-4 border-white/15 animate-ping opacity-20" />
+                                <div className="absolute top-6 right-6 w-16 h-16 rounded-xl border-4 border-white/10 flex items-center justify-center">
+                                    <span className="text-2xl">✈️</span>
                                 </div>
                                 <div className="relative z-10 p-6">
-                                    <span className="inline-block px-2.5 py-1 rounded-lg bg-white/20 text-white text-[10px] font-black uppercase tracking-widest mb-3">🌟 Zero Balance</span>
-                                    <div className="text-3xl font-black text-white mb-1">₹0</div>
-                                    <div className="text-cyan-200/60 text-[10px] uppercase tracking-widest font-black mb-2">Min. Balance</div>
-                                    <h3 className="text-lg font-black text-white mb-2">Bank Account</h3>
-                                    <span className="inline-flex items-center gap-2 text-cyan-200 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Open Account <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                    <span className="inline-block px-2.5 py-1 rounded-lg bg-white/20 text-white text-[10px] font-black uppercase tracking-widest mb-3">🎯 Expert Guidance</span>
+                                    <div className="text-3xl font-black text-white mb-1"><AnimatedNumber value="98%" /></div>
+                                    <div className="text-emerald-200/60 text-[10px] uppercase tracking-widest font-black mb-2">Success Rate</div>
+                                    <h3 className="text-lg font-black text-white mb-2">Visa Counselling</h3>
+                                    <span className="inline-flex items-center gap-2 text-emerald-200 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
+                                        Get Guidance <span className="material-symbols-outlined text-sm">arrow_forward</span>
                                     </span>
                                 </div>
                             </Link>
@@ -810,17 +834,17 @@ export default function HomePage() {
                         {/* Stats Bar */}
                         <div className="mt-8 flex flex-wrap gap-4 justify-center">
                             {[
+                                { icon: '✅', val: '98%', label: 'Visa Success Rate' },
+                                { icon: '🏠', val: '1,000+', label: 'Verified Listings' },
+                                { icon: '🌍', val: '30+', label: 'Countries Covered' },
                                 { icon: '💳', val: '0%', label: 'Forex Markup' },
-                                { icon: '🏠', val: '1,000+', label: 'Verified Stays' },
-                                { icon: '📅', val: '24/7', label: 'Slot Alerts' },
-                                { icon: '🎙️', val: '10K+', label: 'Mock Sessions' },
-                                { icon: '📦', val: '40%', label: 'Courier Savings' },
-                                { icon: '🏦', val: '₹0', label: 'Min. Balance' },
+                                { icon: '🏦', val: 'Pre-Arrival', label: 'Bank Accounts' },
+                                { icon: '🎯', val: '10K+', label: 'Students Helped' },
                             ].map(s => (
                                 <div key={s.label} className="flex items-center gap-2.5 px-5 py-3 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group">
                                     <span className="text-lg group-hover:scale-125 transition-transform">{s.icon}</span>
                                     <div>
-                                        <div className="font-black text-gray-900 text-[13px] leading-none">{s.val}</div>
+                                        <div className="font-black text-gray-900 text-[13px] leading-none"><AnimatedNumber value={s.val} /></div>
                                         <div className="text-gray-400 text-[10px] uppercase tracking-wider font-bold">{s.label}</div>
                                     </div>
                                 </div>
@@ -836,27 +860,27 @@ export default function HomePage() {
                             {/* Animated gradient background */}
                             <div className="absolute inset-0 bg-gradient-to-br from-amber-400 via-orange-500 to-amber-600" />
                             <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 50%, rgba(255,255,255,0.2) 0%, transparent 40%)' }} />
-                            
+
                             {/* Pattern overlay */}
                             <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cpath d=\'M30 0L60 30L30 60L0 30L30 0z\' fill=\'%23fff\' fill-opacity=\'0.1\'/%3E%3C/svg%3E")', backgroundSize: '30px 30px' }} />
-                            
+
                             {/* Floating elements */}
                             <div className="absolute top-10 left-10 w-16 h-16 bg-white/10 rounded-2xl rotate-12 animate-pulse" />
                             <div className="absolute bottom-10 right-20 w-20 h-20 bg-white/10 rounded-full animate-bounce" style={{ animationDuration: '3s' }} />
                             <div className="absolute top-1/2 right-10 w-8 h-8 bg-yellow-300/30 rounded-lg rotate-45" />
-                            
+
                             <div className="relative z-10 p-10 md:p-16">
                                 <div className="flex flex-col lg:flex-row items-center gap-10">
                                     {/* Custom Referral Logo/Icon */}
                                     <div className="relative flex-shrink-0">
                                         {/* Outer glow */}
                                         <div className="absolute inset-0 bg-white/20 rounded-3xl blur-xl scale-110" />
-                                        
+
                                         {/* Main container */}
                                         <div className="relative w-32 h-32 md:w-40 md:h-40">
                                             {/* Rotating ring */}
                                             <div className="absolute inset-0 rounded-3xl border-4 border-dashed border-white/30 animate-[spin_20s_linear_infinite]" />
-                                            
+
                                             {/* Inner container */}
                                             <div className="absolute inset-2 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
                                                 {/* Custom SVG Logo */}
@@ -864,34 +888,34 @@ export default function HomePage() {
                                                     {/* Gift box base */}
                                                     <rect x="15" y="45" width="70" height="45" rx="8" fill="white" />
                                                     <rect x="15" y="45" width="70" height="45" rx="8" fill="url(#gift-gradient)" fillOpacity="0.3" />
-                                                    
+
                                                     {/* Gift box lid */}
                                                     <rect x="10" y="35" width="80" height="15" rx="4" fill="white" />
                                                     <rect x="10" y="35" width="80" height="15" rx="4" fill="url(#gift-gradient)" fillOpacity="0.2" />
-                                                    
+
                                                     {/* Ribbon vertical */}
                                                     <rect x="45" y="35" width="10" height="55" fill="#f59e0b" />
-                                                    
+
                                                     {/* Ribbon horizontal */}
                                                     <rect x="15" y="55" width="70" height="10" fill="#f59e0b" />
-                                                    
+
                                                     {/* Bow */}
                                                     <ellipse cx="35" cy="30" rx="12" ry="10" fill="#f59e0b" />
                                                     <ellipse cx="65" cy="30" rx="12" ry="10" fill="#f59e0b" />
                                                     <circle cx="50" cy="32" r="8" fill="#fbbf24" />
-                                                    
+
                                                     {/* Coins coming out */}
                                                     <circle cx="70" cy="20" r="8" fill="#fcd34d" stroke="#f59e0b" strokeWidth="2" />
                                                     <text x="70" y="24" textAnchor="middle" fill="#92400e" fontSize="10" fontWeight="bold">₹</text>
-                                                    
+
                                                     <circle cx="82" cy="28" r="6" fill="#fcd34d" stroke="#f59e0b" strokeWidth="2" />
                                                     <circle cx="25" cy="18" r="7" fill="#fcd34d" stroke="#f59e0b" strokeWidth="2" />
                                                     <text x="25" y="22" textAnchor="middle" fill="#92400e" fontSize="9" fontWeight="bold">₹</text>
-                                                    
+
                                                     {/* Sparkles */}
                                                     <path d="M88 15L90 10L92 15L97 17L92 19L90 24L88 19L83 17L88 15Z" fill="white" />
                                                     <path d="M15 25L16 22L17 25L20 26L17 27L16 30L15 27L12 26L15 25Z" fill="white" />
-                                                    
+
                                                     <defs>
                                                         <linearGradient id="gift-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
                                                             <stop offset="0%" stopColor="#f59e0b" />
@@ -900,7 +924,7 @@ export default function HomePage() {
                                                     </defs>
                                                 </svg>
                                             </div>
-                                            
+
                                             {/* Sparkle accents */}
                                             <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-300 rounded-full animate-ping" />
                                             <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-300 rounded-full flex items-center justify-center">
@@ -909,23 +933,23 @@ export default function HomePage() {
                                             <div className="absolute -bottom-1 -left-1 w-4 h-4 bg-white rounded-full animate-pulse" />
                                         </div>
                                     </div>
-                                    
+
                                     {/* Content */}
                                     <div className="flex-1 text-center lg:text-left">
                                         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm mb-4">
                                             <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
                                             <span className="text-white text-[11px] font-black uppercase tracking-widest">Exclusive Rewards Program</span>
                                         </div>
-                                        
+
                                         <h2 className="text-3xl md:text-5xl font-black text-white mb-4 leading-tight">
                                             Refer Friends,<br />
                                             <span className="text-yellow-200">Earn ₹3,000</span> Each!
                                         </h2>
-                                        
+
                                         <p className="text-white/90 text-[15px] mb-8 max-w-lg leading-relaxed font-medium">
                                             Know someone planning to study abroad? Refer them to VidhyaLoan and earn rewards for every successful loan disbursement. Plus, unlock ₹10,000 bonus when you hit 5 referrals!
                                         </p>
-                                        
+
                                         <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                                             <Link href="/referral" className="px-8 py-4 bg-white text-amber-600 font-black rounded-xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all text-[13px] uppercase tracking-widest flex items-center justify-center gap-2">
                                                 <span className="material-symbols-outlined">share</span>
@@ -936,7 +960,7 @@ export default function HomePage() {
                                                 Learn More
                                             </Link>
                                         </div>
-                                        
+
                                         {/* Stats */}
                                         <div className="flex flex-wrap gap-6 mt-8 justify-center lg:justify-start">
                                             {[
@@ -953,6 +977,19 @@ export default function HomePage() {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Refer Now CTA below card */}
+                        <div className="mt-10 flex justify-center">
+                            <Link
+                                href="/referral"
+                                className="group inline-flex items-center gap-3 px-10 py-4 rounded-xl font-black text-[13px] uppercase tracking-widest text-white transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
+                                style={{ background: 'linear-gradient(135deg, #f59e0b, #ea580c)', boxShadow: '0 8px 32px rgba(245,158,11,0.35)' }}
+                            >
+                                <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: '"FILL" 1' }}>redeem</span>
+                                Refer Now
+                                <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                            </Link>
                         </div>
                     </div>
                 </section>

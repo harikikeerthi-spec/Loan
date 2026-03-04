@@ -7,6 +7,7 @@ import { GradeConversionService } from './services/grade-conversion.service';
 import { UniversityComparisonService } from './services/university-comparison.service';
 import { AdmitPredictorService } from './services/admit-predictor.service';
 import { DocumentVerificationService } from './services/document-verification.service';
+import { ApplicationReviewService } from './services/application-review.service';
 import { GroqService } from './services/groq.service';
 import { UniversitySearchService } from './services/university-search.service';
 import { VisaInterviewService } from './services/visa-interview.service';
@@ -22,6 +23,7 @@ import { VisaInterviewService } from './services/visa-interview.service';
     UniversityComparisonService,
     AdmitPredictorService,
     DocumentVerificationService,
+    ApplicationReviewService,
     UniversitySearchService,
     VisaInterviewService,
   ],
@@ -34,6 +36,7 @@ import { VisaInterviewService } from './services/visa-interview.service';
     UniversityComparisonService,
     AdmitPredictorService,
     DocumentVerificationService,
+    ApplicationReviewService,
     UniversitySearchService,
     VisaInterviewService,
   ],
