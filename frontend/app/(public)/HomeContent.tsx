@@ -106,11 +106,11 @@ function ReferCard() {
     );
 }
 const lenders = [
-    { name: "IDFC First Bank", badge: "Digital First", rate: "10.50% - 12.50%", time: "48 hours", fee: "1% + GST", logo: "https://upload.wikimedia.org/wikipedia/commons/7/7b/IDFC_First_Bank_logo.jpg" },
-    { name: "HDFC Credila", badge: "Most Popular", rate: "10.75% - 12.50%", time: "5-7 days", fee: "1% of loan", logo: "https://www.credila.com/images/Credila-Logo.png" },
-    { name: "Auxilo Finserve", badge: "Fast Approval", rate: "11.25% - 13.50%", time: "3 days", fee: "1.5% + GST", logo: "https://www.studentcover.in/auxilo_no_bg.png" },
-    { name: "Avanse Financial", badge: "High Limits", rate: "10.99% - 13.00%", time: "4 days", fee: "1% + GST", logo: "https://mma.prnewswire.com/media/1986642/Avanse_Logo.jpg?p=facebook" },
-    { name: "Poonawalla Fincorp", badge: "Easy Process", rate: "11.50% - 14.50%", time: "3 days", fee: "1.5% + GST", logo: "https://collegepond.com/wp-content/uploads/2025/03/image-8.png" },
+    { name: "IDFC First Bank", badge: "Digital First", rate: "10.50% - 12.50%", time: "48 hours", fee: "1% + GST", logo: "/images/lenders/idfc-first-bank.jpg" },
+    { name: "HDFC Credila", badge: "Most Popular", rate: "10.75% - 12.50%", time: "5-7 days", fee: "1% of loan", logo: "/images/lenders/hdfc-credila.png" },
+    { name: "Auxilo Finserve", badge: "Fast Approval", rate: "11.25% - 13.50%", time: "3 days", fee: "1.5% + GST", logo: "/images/lenders/auxilo.png" },
+    { name: "Avanse Financial", badge: "High Limits", rate: "10.99% - 13.00%", time: "4 days", fee: "1% + GST", logo: "/images/lenders/avanse.jpg" },
+    { name: "Poonawalla Fincorp", badge: "Easy Process", rate: "11.50% - 14.50%", time: "3 days", fee: "1.5% + GST", logo: "/images/lenders/poonawalla.png" },
 ];
 
 const features = [
@@ -168,7 +168,7 @@ function TestimonialsCarousel() {
     };
 
     return (
-        <div 
+        <div
             className="relative"
             onMouseEnter={() => setIsAutoPlaying(false)}
             onMouseLeave={() => setIsAutoPlaying(true)}
@@ -223,11 +223,10 @@ function TestimonialsCarousel() {
                         <button
                             key={idx}
                             onClick={() => setCurrentIndex(idx)}
-                            className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                                idx === currentIndex 
-                                    ? 'bg-[#6605c7] w-8' 
+                            className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${idx === currentIndex
+                                    ? 'bg-[#6605c7] w-8'
                                     : 'bg-[#6605c7]/20 hover:bg-[#6605c7]/40'
-                            }`}
+                                }`}
                         />
                     ))}
                 </div>
@@ -251,20 +250,20 @@ function TestimonialsCarousel() {
     );
 }
 const testimonials = [
-    { quote: `Vidhya Loans helped me secure a ₹45L education loan at 8.5% interest. The process was seamless and I got my sanction letter in just 3 days!`, name: "Priya Sharma", school: "Stanford University, USA", avatar: "priya", bg: "bg-[#e7e1f7]", icon: "https://img.icons8.com/isometric/50/6605c7/graduation-cap.png" },
-    { quote: `I compared 12 lenders on the platform and saved ₹2.3L in total interest. The EMI calculator and expert counseling were invaluable.`, name: "Rahul Menon", school: "University of Toronto, Canada", avatar: "rahul", bg: "bg-[#fdfaf2]", icon: "https://img.icons8.com/isometric/50/6605c7/money-bag.png" },
-    { quote: `As a first-generation student going abroad, I was overwhelmed. The team guided me through every step — from choosing the right loan to disbursement.`, name: "Ananya Reddy", school: "Imperial College London, UK", avatar: "ananya", bg: "bg-[#e1f0f7]", icon: "https://img.icons8.com/isometric/50/6605c7/handshake.png" },
-    { quote: `The AI-powered SOP writer saved me weeks of effort. My application stood out and I got into my dream university with a full scholarship!`, name: "Vikram Patel", school: "MIT, USA", avatar: "vikram", bg: "bg-[#f0e7f7]", icon: "https://img.icons8.com/isometric/50/6605c7/artificial-intelligence.png" },
-    { quote: `Got my loan approved in just 48 hours! The customer support team was incredibly helpful and kept me updated throughout the process.`, name: "Sneha Krishnan", school: "University of Melbourne, Australia", avatar: "sneha", bg: "bg-[#e7f7e1]", icon: "https://img.icons8.com/isometric/50/6605c7/time.png" },
-    { quote: `The university comparison tool helped me make an informed decision. I could see ROI projections and recruiters for each university.`, name: "Arjun Desai", school: "NUS, Singapore", avatar: "arjun", bg: "bg-[#f7e7e1]", icon: "https://img.icons8.com/isometric/50/6605c7/university.png" },
+    { quote: `Vidhya Loans helped me secure a ₹45L education loan at 8.5% interest. The process was seamless and I got my sanction letter in just 3 days!`, name: "Priya Sharma", school: "Stanford University, USA", avatar: "priya", bg: "bg-[#e7e1f7]", icon: "/images/testimonials/graduation-cap.png" },
+    { quote: `I compared 12 lenders on the platform and saved ₹2.3L in total interest. The EMI calculator and expert counseling were invaluable.`, name: "Rahul Menon", school: "University of Toronto, Canada", avatar: "rahul", bg: "bg-[#fdfaf2]", icon: "/images/testimonials/money-bag.png" },
+    { quote: `As a first-generation student going abroad, I was overwhelmed. The team guided me through every step — from choosing the right loan to disbursement.`, name: "Ananya Reddy", school: "Imperial College London, UK", avatar: "ananya", bg: "bg-[#e1f0f7]", icon: "/images/testimonials/handshake.png" },
+    { quote: `The AI-powered SOP writer saved me weeks of effort. My application stood out and I got into my dream university with a full scholarship!`, name: "Vikram Patel", school: "MIT, USA", avatar: "vikram", bg: "bg-[#f0e7f7]", icon: "/images/testimonials/ai.png" },
+    { quote: `Got my loan approved in just 48 hours! The customer support team was incredibly helpful and kept me updated throughout the process.`, name: "Sneha Krishnan", school: "University of Melbourne, Australia", avatar: "sneha", bg: "bg-[#e7f7e1]", icon: "/images/testimonials/time.png" },
+    { quote: `The university comparison tool helped me make an informed decision. I could see ROI projections and recruiters for each university.`, name: "Arjun Desai", school: "NUS, Singapore", avatar: "arjun", bg: "bg-[#f7e7e1]", icon: "/images/testimonials/university.png" },
 ];
 const postAdmissionServices = [
-    { icon: "💳", title: "Forex & Cards", desc: "Lock in the best exchange rates with zero-markup cards.", color: "linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)", link: "/forex", img: "https://images.unsplash.com/photo-1580519542036-c47de6196ba5?w=500&q=80" },
-    { icon: "🏠", title: "Student Housing", desc: "Verified accommodations near top global universities.", color: "linear-gradient(135deg, #4c1d95 0%, #5b21b6 100%)", link: "/housing", img: "https://images.unsplash.com/photo-1555854816-802f18807568?w=500&q=80" },
-    { icon: "📅", title: "Visa Slot Booking", desc: "Priority assistance with automated alerts for availability.", color: "linear-gradient(135deg, #7c2d12 0%, #9a3412 100%)", link: "/visa-slots", img: "https://images.unsplash.com/photo-1544027993-37dbfe43562a?w=500&q=80" },
-    { icon: "🎙️", title: "Visa Interview", desc: "Practice with experts who have helped 10k+ students.", color: "linear-gradient(135deg, #064e3b 0%, #065f46 100%)", link: "/visa-mock", img: "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=500&q=80" },
-    { icon: "📦", title: "Courier Services", desc: "Send documents globally with student discounts.", color: "linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)", link: "/courier", img: "https://images.unsplash.com/photo-1566576721346-d4a3b4eaad5b?w=500&q=80" },
-    { icon: "🏦", title: "Bank Account", desc: "Global accounts with zero student fees.", color: "linear-gradient(135deg, #164e63 0%, #155e75 100%)", link: "/bank-account", img: "https://images.unsplash.com/photo-1501167786227-4cba60f6d58f?w=500&q=80" },
+    { icon: "💳", title: "Forex & Cards", desc: "Lock in the best exchange rates with zero-markup cards.", color: "linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)", link: "/forex", img: "/images/services/forex-cards.jpg" },
+    { icon: "🏠", title: "Student Housing", desc: "Verified accommodations near top global universities.", color: "linear-gradient(135deg, #4c1d95 0%, #5b21b6 100%)", link: "/housing", img: "/images/services/student-housing.jpg" },
+    { icon: "📅", title: "Visa Slot Booking", desc: "Priority assistance with automated alerts for availability.", color: "linear-gradient(135deg, #7c2d12 0%, #9a3412 100%)", link: "/visa-slots", img: "/images/services/visa-slot.jpg" },
+    { icon: "🎙️", title: "Visa Interview", desc: "Practice with experts who have helped 10k+ students.", color: "linear-gradient(135deg, #064e3b 0%, #065f46 100%)", link: "/visa-mock", img: "/images/services/visa-interview.jpg" },
+    { icon: "📦", title: "Courier Services", desc: "Send documents globally with student discounts.", color: "linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)", link: "/courier", img: "/images/services/courier.jpg" },
+    { icon: "🏦", title: "Bank Account", desc: "Global accounts with zero student fees.", color: "linear-gradient(135deg, #164e63 0%, #155e75 100%)", link: "/bank-account", img: "/images/services/bank-account.jpg" },
 ];
 export default function HomeContent() {
     return (
@@ -360,7 +359,7 @@ export default function HomeContent() {
                             <div className="absolute inset-x-0 bottom-[-10%] h-[100%] scale-105 rounded-xl blur-3xl opacity-20" style={{ background: 'linear-gradient(135deg, #d8b4fe, #fed7aa)' }} />
                             <div className="relative rounded-xl overflow-hidden shadow-2xl border-[6px] border-white/60 group">
                                 <Image
-                                    src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+                                    src="/images/hero/students-abroad.jpg"
                                     alt="Students studying abroad"
                                     width={1200}
                                     height={900}
@@ -533,7 +532,7 @@ export default function HomeContent() {
                                     <ToolCard
                                         href="/sop-writer"
                                         bg="bg-[#e7e1f7]"
-                                        icon="https://img.icons8.com/isometric/50/6605c7/edit-file.png"
+                                        icon="/images/tools/sop-writer.png"
                                         title="Automated SOP Writer"
                                         desc="Draft your Statement of Purpose evaluated on matter, grammar, and readability using AI."
                                         cta="Submit SOP"
@@ -543,7 +542,7 @@ export default function HomeContent() {
                                     <ToolCard
                                         href="/admit-predictor"
                                         bg="bg-[#fdfaf2]"
-                                        icon="https://img.icons8.com/isometric/50/6605c7/hourglass.png"
+                                        icon="/images/tools/earnings.png"
                                         title="Estimate Future Earnings"
                                         desc="Project your potential future earnings and compare countries based on ROI."
                                         cta="Estimate Now"
@@ -553,7 +552,7 @@ export default function HomeContent() {
                                     <ToolCard
                                         href="/compare-universities"
                                         bg="bg-[#e1f0f7]"
-                                        icon="https://img.icons8.com/isometric/50/6605c7/scales.png"
+                                        icon="/images/tools/compare-uni.png"
                                         title="University Compare"
                                         desc="Get insights on income, employability, costs, and top recruiters of up to 4 universities."
                                         cta="Compare Now"
@@ -566,7 +565,7 @@ export default function HomeContent() {
                                     <ToolCard
                                         href="/admit-predictor"
                                         bg="bg-[#e7e1f7]"
-                                        icon="https://img.icons8.com/isometric/50/6605c7/document.png"
+                                        icon="/images/tools/admit-predictor.png"
                                         title="Admit Predictor"
                                         desc="Check the probability of your MS in US admission. Predict your admission chances with 98% accuracy."
                                         cta="Evaluate Now"
@@ -580,7 +579,7 @@ export default function HomeContent() {
                                     <ToolCard
                                         href="/grade-converter"
                                         bg="bg-[#e1f0f7]"
-                                        icon="https://img.icons8.com/isometric/50/6605c7/calculator.png"
+                                        icon="/images/tools/calculator.png"
                                         title="Grade Converter"
                                         desc="Convert your percentage or 10-point CGPA to GPA score with just a single click."
                                         cta="Convert Now"
@@ -590,7 +589,7 @@ export default function HomeContent() {
                                     <ToolCard
                                         href="/emi"
                                         bg="bg-white"
-                                        icon="https://img.icons8.com/isometric/50/6605c7/calculator.png"
+                                        icon="/images/tools/calculator.png"
                                         title="EMI Calculator"
                                         desc="Determine your EMIs and repayment schedules before committing to a student loan."
                                         cta="Calculate Now"
@@ -601,7 +600,7 @@ export default function HomeContent() {
                                     <ToolCard
                                         href="/loan-eligibility"
                                         bg="bg-[#e7e1f7]"
-                                        icon="https://img.icons8.com/isometric/50/6605c7/money.png"
+                                        icon="/images/tools/loan-eligibility.png"
                                         title="Loan Eligibility Checker"
                                         desc="Find the best education loan for you in just 2 minutes with our intelligent checker."
                                         cta="Check Eligibility"

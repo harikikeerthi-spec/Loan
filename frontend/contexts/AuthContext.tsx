@@ -1,225 +1,224 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { User, AuthTokenPayload } from "@/types";
+import React, {
+    createContext,
+    useContext,
+    useState,
+    useEffect,
+    useCallback,
+} from "react";
 import { authApi } from "@/lib/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface AuthUser {
+    id: string;
+    email: string;
+    firstName?: string;
+    lastName?: string;
+    phoneNumber?: string;
+    dateOfBirth?: string;
+    mobile?: string;
+    role?: string;
+    goal?: string;
+    studyDestination?: string;
+    courseName?: string;
+    targetUniversity?: string;
+    intakeSeason?: string;
+    bachelorsDegree?: string;
+    workExp?: number;
+    gpa?: number;
+    entranceTest?: string;
+    entranceScore?: string;
+    englishTest?: string;
+    englishScore?: string;
+    budget?: string;
+    loanAmount?: string;
+    admitStatus?: string;
+    pincode?: string;
+    referralCode?: string;
+}
 
 interface AuthContextType {
-    user: User | null;
+    user: AuthUser | null;
     token: string | null;
-    isLoading: boolean;
     isAuthenticated: boolean;
     isAdmin: boolean;
-    login: (token: string, userData: Partial<User>) => void;
-    logout: () => void;
+    isLoading: boolean;
+    login: (accessToken: string, userData?: Partial<AuthUser>) => void;
+    logout: () => Promise<void>;
+    refreshAuth: () => Promise<boolean>;
     refreshUser: () => Promise<void>;
 }
 
+// ─── Context ──────────────────────────────────────────────────────────────────
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function parseJwt(token: string): AuthTokenPayload | null {
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function getStoredUser(): AuthUser | null {
+    if (typeof window === "undefined") return null;
     try {
-        const base64Url = token.split(".")[1];
-        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-        const jsonPayload = decodeURIComponent(
-            atob(base64)
-                .split("")
-                .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-                .join("")
-        );
-        return JSON.parse(jsonPayload);
+        const raw = localStorage.getItem("authUser");
+        return raw ? (JSON.parse(raw) as AuthUser) : null;
     } catch {
         return null;
     }
 }
 
+function getStoredToken(): string | null {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("accessToken");
+}
+
+function getStoredRefreshToken(): string | null {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem("refreshToken");
+}
+
+// ─── Provider ─────────────────────────────────────────────────────────────────
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<AuthUser | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const login = useCallback((accessToken: string, userData: Partial<User>) => {
-        localStorage.setItem("accessToken", accessToken);
-        if (userData.email) localStorage.setItem("userEmail", userData.email);
-        if (userData.firstName) localStorage.setItem("firstName", userData.firstName);
-        if (userData.lastName) localStorage.setItem("lastName", userData.lastName);
-        if (userData.phoneNumber) localStorage.setItem("phoneNumber", userData.phoneNumber);
-        if (userData.dateOfBirth) localStorage.setItem("dateOfBirth", userData.dateOfBirth);
+    // Initialise from localStorage on mount
+    useEffect(() => {
+        const storedUser = getStoredUser();
+        const storedToken = getStoredToken();
 
-        const decoded = parseJwt(accessToken);
-        const mergedUser: User = {
-            id: decoded?.sub || userData.id || "",
-            email: userData.email || decoded?.email || "",
-            firstName: userData.firstName,
-            lastName: userData.lastName,
-            role: (decoded?.role as User["role"]) || "user",
-        };
+        if (storedUser && storedToken) {
+            setUser(storedUser);
+            setToken(storedToken);
+        } else if (storedToken && !storedUser) {
+            // Token exists but no user object — try to reconstruct from stored email
+            const email = localStorage.getItem("userEmail");
+            const userId = localStorage.getItem("userId");
+            if (email && userId) {
+                setUser({ id: userId, email });
+            }
+            setToken(storedToken);
+        }
 
-        // Store userId for application creation and other features
-        if (mergedUser.id) localStorage.setItem("userId", mergedUser.id);
-
-        setToken(accessToken);
-        setUser(mergedUser);
+        setIsLoading(false);
     }, []);
 
-    const logout = useCallback(() => {
-        // Notify server (best-effort) and clear tokens locally
-        try { const email = localStorage.getItem("userEmail"); if (email) { void authApi.logout(email); } } catch { }
+    /** Re-fetch the latest user profile from the backend and update state */
+    const refreshUser = useCallback(async (): Promise<void> => {
+        const email = localStorage.getItem("userEmail");
+        const accessToken = getStoredToken();
+        if (!email || !accessToken) return;
+        try {
+            const data = await authApi.getDashboard(email) as {
+                success?: boolean;
+                user?: Partial<AuthUser>;
+                data?: Partial<AuthUser>;
+            };
+            const freshUser = data?.user ?? data?.data ?? null;
+            if (freshUser && (freshUser as AuthUser).email) {
+                const updated: AuthUser = {
+                    ...user,
+                    ...(freshUser as AuthUser),
+                };
+                setUser(updated);
+                localStorage.setItem("authUser", JSON.stringify(updated));
+            }
+        } catch (err) {
+            console.warn("refreshUser failed:", err);
+        }
+    }, [user]);
+
+    /** Called after a successful OTP verification / login */
+    const login = useCallback(
+        (
+            accessToken: string,
+            userData?: Partial<AuthUser>
+        ) => {
+            const email = userData?.email ?? localStorage.getItem("userEmail") ?? "";
+            const newUser: AuthUser = {
+                id: userData?.id ?? localStorage.getItem("userId") ?? "",
+                email,
+                firstName: userData?.firstName,
+                lastName: userData?.lastName,
+                role: userData?.role,
+                ...userData,
+            };
+
+            localStorage.setItem("accessToken", accessToken);
+            localStorage.setItem("userEmail", email);
+            if (newUser.id) localStorage.setItem("userId", newUser.id);
+            localStorage.setItem("authUser", JSON.stringify(newUser));
+
+            setToken(accessToken);
+            setUser(newUser);
+        },
+        []
+    );
+
+    /** Attempt a silent token refresh; returns true on success */
+    const refreshAuth = useCallback(async (): Promise<boolean> => {
+        const storedRefreshToken = getStoredRefreshToken();
+        if (!storedRefreshToken) return false;
+
+        try {
+            const data = (await authApi.refresh(storedRefreshToken)) as {
+                access_token?: string;
+                accessToken?: string;
+            };
+            const newToken = data.access_token ?? data.accessToken;
+            if (!newToken) return false;
+
+            localStorage.setItem("accessToken", newToken);
+            setToken(newToken);
+            return true;
+        } catch {
+            return false;
+        }
+    }, []);
+
+    const logout = useCallback(async () => {
+        const email = user?.email ?? localStorage.getItem("userEmail") ?? "";
+
+        // Best-effort server logout
+        if (email) {
+            try {
+                await authApi.logout(email);
+            } catch {
+                // ignore network errors on logout
+            }
+        }
+
+        // Clear all auth state
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("userEmail");
-        localStorage.removeItem("firstName");
-        localStorage.removeItem("lastName");
-        localStorage.removeItem("phoneNumber");
-        localStorage.removeItem("dateOfBirth");
         localStorage.removeItem("userId");
-        localStorage.removeItem("userRole");
-        localStorage.removeItem("token");
-        setToken(null);
+        localStorage.removeItem("authUser");
+
         setUser(null);
-    }, []);
+        setToken(null);
+    }, [user]);
 
-    const refreshUser = useCallback(async () => {
-        let storedToken = localStorage.getItem("accessToken");
-        const refreshToken = localStorage.getItem("refreshToken");
-
-        // If no access token or expired, try to refresh using refresh token
-        if (!storedToken) {
-            if (refreshToken) {
-                try {
-                    const data: any = await authApi.refresh(refreshToken);
-                    if (data?.access_token) {
-                        storedToken = data.access_token;
-                        localStorage.setItem("accessToken", storedToken!);
-                        if (data.refresh_token) localStorage.setItem("refreshToken", data.refresh_token);
-                    }
-                } catch (e) {
-                    // cannot refresh
-                    logout();
-                    setIsLoading(false);
-                    return;
-                }
-            } else {
-                setIsLoading(false);
-                return;
-            }
-        }
-
-        const decoded = parseJwt(storedToken!);
-        if (!decoded) {
-            logout();
-            setIsLoading(false);
-            return;
-        }
-
-        // If token expired, try refresh once
-        if (decoded.exp && decoded.exp * 1000 < Date.now()) {
-            if (refreshToken) {
-                try {
-                    const data: any = await authApi.refresh(refreshToken);
-                    if (data?.access_token) {
-                        storedToken = data.access_token;
-                        localStorage.setItem("accessToken", storedToken!);
-                        if (data.refresh_token) localStorage.setItem("refreshToken", data.refresh_token);
-                    } else {
-                        logout();
-                        setIsLoading(false);
-                        return;
-                    }
-                } catch {
-                    logout();
-                    setIsLoading(false);
-                    return;
-                }
-            } else {
-                logout();
-                setIsLoading(false);
-                return;
-            }
-        }
-
-        const email = localStorage.getItem("userEmail") || decoded.email;
-        try {
-            const res = await fetch(`${API_URL}/auth/dashboard`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${storedToken}`,
-                },
-                body: JSON.stringify({ email }),
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success && data.user) {
-                    const u = data.user;
-                    localStorage.setItem("userId", u.id);
-                    localStorage.setItem("firstName", u.firstName || "");
-                    localStorage.setItem("lastName", u.lastName || "");
-                    localStorage.setItem("phoneNumber", u.phoneNumber || "");
-                    localStorage.setItem("dateOfBirth", u.dateOfBirth || "");
-                    setUser({
-                        id: u.id,
-                        email: u.email,
-                        firstName: u.firstName,
-                        lastName: u.lastName,
-                        phoneNumber: u.phoneNumber,
-                        dateOfBirth: u.dateOfBirth,
-                        passportNumber: u.passportNumber,
-                        role: decoded.role as User["role"],
-                    });
-                }
-            }
-        } catch {
-            // If API fails, still use token data
-            if (decoded.sub) localStorage.setItem("userId", decoded.sub);
-            setUser({
-                id: decoded.sub,
-                email: email,
-                firstName: localStorage.getItem("firstName") || undefined,
-                lastName: localStorage.getItem("lastName") || undefined,
-                phoneNumber: localStorage.getItem("phoneNumber") || undefined,
-                dateOfBirth: localStorage.getItem("dateOfBirth") || undefined,
-                role: decoded.role as User["role"],
-            });
-        }
-
-        setToken(storedToken);
-        setIsLoading(false);
-    }, [logout]);
-
-    useEffect(() => {
-        refreshUser();
-    }, [refreshUser]);
-
-    const isAuthenticated = !!user && !!token;
-    const isAdmin =
-        user?.role === "admin" || user?.role === "super_admin";
+    const isAuthenticated = user !== null && !!getStoredToken();
+    const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
     return (
         <AuthContext.Provider
-            value={{
-                user,
-                token,
-                isLoading,
-                isAuthenticated,
-                isAdmin,
-                login,
-                logout,
-                refreshUser,
-            }}
+            value={{ user, token, isAuthenticated, isAdmin, isLoading, login, logout, refreshAuth, refreshUser }}
         >
             {children}
         </AuthContext.Provider>
     );
 }
 
-export function useAuth() {
-    const context = useContext(AuthContext);
-    if (!context) {
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
+export function useAuth(): AuthContextType {
+    const ctx = useContext(AuthContext);
+    if (!ctx) {
         throw new Error("useAuth must be used within an AuthProvider");
     }
-    return context;
+    return ctx;
 }

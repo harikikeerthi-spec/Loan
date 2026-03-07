@@ -41,6 +41,7 @@ export default function ApplyLoanPage() {
         dateOfBirth: "",
         address: "",
         notes: "",
+        admissionStatus: "waiting", // confirmed, conditional, waiting
     });
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
@@ -48,18 +49,26 @@ export default function ApplyLoanPage() {
     const [stepErrors, setStepErrors] = useState<Record<string, string>>({});
     const [profileLoaded, setProfileLoaded] = useState(false);
 
-    // Pre-fill personal info from user profile
+    // Pre-fill personal info from user profile and URL params
     useEffect(() => {
-        if (user && !profileLoaded) {
-            setFormData((prev) => ({
-                ...prev,
-                firstName: prev.firstName || user.firstName || "",
-                lastName: prev.lastName || user.lastName || "",
-                email: prev.email || user.email || "",
-                phone: prev.phone || user.phoneNumber || "",
-                dateOfBirth: prev.dateOfBirth || user.dateOfBirth || "",
-            }));
-            setProfileLoaded(true);
+        if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const uni = params.get("university");
+            const country = params.get("country");
+
+            if (uni || country || (user && !profileLoaded)) {
+                setFormData((prev) => ({
+                    ...prev,
+                    university: prev.university || uni || "",
+                    country: prev.country || country || "",
+                    firstName: prev.firstName || user?.firstName || "",
+                    lastName: prev.lastName || user?.lastName || "",
+                    email: prev.email || user?.email || "",
+                    phone: prev.phone || user?.phoneNumber || "",
+                    dateOfBirth: prev.dateOfBirth || user?.dateOfBirth || "",
+                }));
+                if (user) setProfileLoaded(true);
+            }
         }
     }, [user, profileLoaded]);
 
@@ -200,9 +209,41 @@ export default function ApplyLoanPage() {
             <div className="pt-28 pb-16 px-6">
                 <div className="max-w-3xl mx-auto">
                     <div className="text-center mb-10">
-                        <h1 className="text-4xl font-bold font-display mb-3">Apply for Education Loan</h1>
-                        <p className="text-gray-500 text-[13px]">Complete in 3 simple steps — takes only 5 minutes</p>
+                        <h1 className="text-4xl font-black font-display mb-3">
+                            {formData.university ? `Loan for ${formData.university}` : "Apply for Education Loan"}
+                        </h1>
+                        <p className="text-gray-500 font-medium text-sm">Complete in 3 simple steps — takes only 5 minutes</p>
                     </div>
+
+                    {formData.university && (
+                        <div className="mb-10 bg-white rounded-[2rem] p-6 border border-purple-100 shadow-xl shadow-purple-500/5 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-4 opacity-[0.03] group-hover:scale-110 transition-transform">
+                                <span className="material-symbols-outlined text-8xl">account_balance</span>
+                            </div>
+                            <div className="w-20 h-20 bg-purple-50 rounded-2xl flex items-center justify-center text-[#6605c7] shrink-0 border border-purple-100/50">
+                                <span className="material-symbols-outlined text-4xl">domain</span>
+                            </div>
+                            <div className="flex-1 text-center md:text-left">
+                                <div className="text-[10px] font-black text-purple-600 uppercase tracking-widest mb-1">Applying for</div>
+                                <h2 className="text-2xl font-black text-gray-900 leading-tight mb-1">{formData.university}</h2>
+                                <div className="flex items-center justify-center md:justify-start gap-4 text-xs font-bold text-gray-500">
+                                    <div className="flex items-center gap-1">
+                                        <span className="material-symbols-outlined text-sm">place</span>
+                                        {formData.country}
+                                    </div>
+                                    <div className="w-1 h-1 bg-gray-300 rounded-full" />
+                                    <div className="flex items-center gap-1">
+                                        <span className="material-symbols-outlined text-sm">verified</span>
+                                        VidhyaLoan Verified
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="bg-purple-50 py-3 px-6 rounded-2xl border border-purple-100 text-center">
+                                <div className="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-0.5">Loan Availability</div>
+                                <div className="text-lg font-black text-purple-600">Up to 100%</div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Progress */}
                     <div className="flex items-center justify-center gap-2 mb-10">
@@ -237,6 +278,13 @@ export default function ApplyLoanPage() {
                                     <InputField label="Loan Amount Required (₹)" value={formData.amount} onChange={(v) => update("amount", v)} placeholder="e.g. 4000000" type="number" error={stepErrors.amount} />
                                 </div>
                                 <InputField label="Estimated Living Cost (₹) — Optional" value={formData.livingCost} onChange={(v) => update("livingCost", v)} placeholder="e.g. 500000" type="number" />
+                                <SelectField label="Admission Status" value={formData.admissionStatus} onChange={(v) => update("admissionStatus", v)}
+                                    options={[
+                                        { value: "confirmed", label: "Confirmed Admission (Offer Letter Received)" },
+                                        { value: "conditional", label: "Conditional Offer" },
+                                        { value: "waiting", label: "Waiting for Results" },
+                                        { value: "planning", label: "Planning to Apply" }
+                                    ]} error={stepErrors.admissionStatus} required />
                             </div>
                         )}
 

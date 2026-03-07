@@ -16,7 +16,7 @@ const universeItems = [
         color: '#a855f7', // Purple
         gradient: 'linear-gradient(135deg, #a855f7, #6605c7)',
         label: 'Hot',
-        bgImage: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+        bgImage: '/images/ecosystem/education-tech.jpg',
         stats: '1,200+ Courses',
         cta: 'Browse Courses'
     },
@@ -30,7 +30,7 @@ const universeItems = [
         color: '#3b82f6', // Blue
         gradient: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
         label: 'Top',
-        bgImage: 'https://images.unsplash.com/photo-1523050335392-93851179ae22?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+        bgImage: '/images/ecosystem/university.jpg',
         stats: '500+ Partners',
         cta: 'Explore Unis'
     },
@@ -44,7 +44,7 @@ const universeItems = [
         color: '#f59e0b', // Amber
         gradient: 'linear-gradient(135deg, #f59e0b, #d97706)',
         label: 'Pro',
-        bgImage: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+        bgImage: '/images/ecosystem/study.jpg',
         stats: '98% Success Rate',
         cta: 'Start Prep'
     },
@@ -73,7 +73,7 @@ const universeItems = [
         color: '#ec4899', // Pink
         gradient: 'linear-gradient(135deg, #ec4899, #be185d)',
         label: 'Free',
-        bgImage: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+        bgImage: '/images/ecosystem/ai.jpg',
         stats: 'AI Powered',
         cta: 'Draft SOP'
     },
@@ -87,7 +87,7 @@ const universeItems = [
         color: '#6366f1', // Indigo
         gradient: 'linear-gradient(135deg, #6366f1, #4338ca)',
         label: 'New',
-        bgImage: 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+        bgImage: '/images/ecosystem/community.jpg',
         stats: '10K+ Members',
         cta: 'Join Now'
     }

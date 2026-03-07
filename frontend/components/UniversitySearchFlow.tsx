@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import UniversityCard from "./UniversityCard";
+import { useRouter } from "next/navigation";
 
 interface University {
   name: string;
@@ -19,6 +20,7 @@ interface University {
 }
 
 export default function UniversitySearchFlow() {
+  const router = useRouter();
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [availableCountries, setAvailableCountries] = useState<string[]>([]);
   const [universities, setUniversities] = useState<University[]>([]);
@@ -227,8 +229,13 @@ export default function UniversitySearchFlow() {
                       slug: uni.name.toLowerCase().replace(/\s+/g, "-"),
                       loan: true,
                     }}
-                    onDetails={() => {}}
-                    onApply={() => {}}
+                    onDetails={() => {
+                      const slug = uni.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                      router.push(`/university/${slug}`);
+                    }}
+                    onApply={() => {
+                      router.push(`/apply-loan?university=${encodeURIComponent(uni.name)}&country=${encodeURIComponent(uni.country)}`);
+                    }}
                   />
                 ))}
               </div>

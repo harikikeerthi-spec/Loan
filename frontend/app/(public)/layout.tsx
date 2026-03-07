@@ -8,16 +8,18 @@ import { usePathname } from "next/navigation";
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const isConnectedPage = pathname === "/connected";
+    const isVisaMockPage = pathname === "/visa-mock";
+    const showHeaderFooter = !isConnectedPage && !isVisaMockPage;
 
     return (
         <div className="min-h-screen text-gray-900 bg-transparent relative overflow-x-hidden">
-            {!isConnectedPage && <Navbar />}
+            {showHeaderFooter && <Navbar />}
             <main className="relative z-10">
                 <LoginWall>
                     {children}
                 </LoginWall>
             </main>
-            {!isConnectedPage && <Footer />}
+            {showHeaderFooter && <Footer />}
         </div>
     );
 }

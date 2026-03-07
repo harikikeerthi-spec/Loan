@@ -15,10 +15,14 @@ export default function Footer() {
                     {/* Brand Column */}
                     <div className="lg:col-span-3">
                         <Link href="/" className="flex items-center gap-2 mb-6 group">
-                            <div className="w-9 h-9 bg-[#6605c7] rounded-lg flex items-center justify-center text-white shadow-lg shadow-[#6605c7]/20 group-hover:shadow-[#6605c7]/30 transition-shadow">
-                                <span className="material-symbols-outlined text-white text-xl">school</span>
-                            </div>
-                            <span className="text-xl font-bold font-display tracking-tight text-white">VidhyaLoan</span>
+                            <Image
+                                src="/images/vidhyaloans-logo-transparent.png"
+                                alt="VidhyaLoans Logo"
+                                width={40}
+                                height={40}
+                                className="w-10 h-10 object-contain"
+                            />
+                            <span className="text-xl font-bold font-display tracking-tight text-white">VidhyaLoans</span>
                         </Link>
                         <p className="text-gray-400 text-[13px] leading-relaxed mb-8 max-w-xs font-normal">
                             Empowering students with transparent, flexible, and accessible education financing solutions worldwide.
@@ -26,11 +30,11 @@ export default function Footer() {
 
                         {/* Social Icons */}
                         <div className="flex items-center gap-2.5 mb-8">
-                            <SocialIcon href="#" icon="https://img.icons8.com/ios-filled/16/ffffff/instagram-new.png" alt="Instagram" color="hover:bg-[#E1306C]" />
-                            <SocialIcon href="#" icon="https://img.icons8.com/ios-filled/16/ffffff/linkedin.png" alt="LinkedIn" color="hover:bg-[#0077B5]" />
-                            <SocialIcon href="#" icon="https://img.icons8.com/ios-filled/16/ffffff/youtube-play.png" alt="YouTube" color="hover:bg-red-600" />
-                            <SocialIcon href="#" icon="https://img.icons8.com/ios-filled/16/ffffff/twitterx--v1.png" alt="Twitter" color="hover:bg-black" />
-                            <SocialIcon href="#" icon="https://img.icons8.com/ios-filled/16/ffffff/whatsapp.png" alt="WhatsApp" color="hover:bg-green-600" />
+                            <SocialIcon href="#" icon="/images/social/instagram.png" alt="Instagram" color="hover:bg-[#E1306C]" />
+                            <SocialIcon href="#" icon="/images/social/linkedin.png" alt="LinkedIn" color="hover:bg-[#0077B5]" />
+                            <SocialIcon href="#" icon="/images/social/youtube.png" alt="YouTube" color="hover:bg-red-600" />
+                            <SocialIcon href="#" icon="/images/social/twitter.png" alt="Twitter" color="hover:bg-black" />
+                            <SocialIcon href="#" icon="/images/social/whatsapp.png" alt="WhatsApp" color="hover:bg-green-600" />
                         </div>
 
                         {/* Contact */}

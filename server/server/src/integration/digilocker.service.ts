@@ -10,51 +10,119 @@ export interface VerificationResult {
 
 @Injectable()
 export class DigilockerService {
-    async verifyDocument(filePath: string, docType: string): Promise<VerificationResult> {
-        // START MOCK IMPLEMENTATION
-        // in a real implementation, this would:
-        // 1. Upload the file to Digilocker or send hash
-        // 2. Receive verification status
+    private readonly authUrl = 'https://sandbox.api-setu.in/v2/authorize';
+    private readonly tokenUrl = 'https://sandbox.api-setu.in/v2/token';
+    private readonly fileUrl = 'https://sandbox.api-setu.in/v2/files/issued';
+    private readonly clientId = process.env.DIGILOCKER_CLIENT_ID;
+    private readonly clientSecret = process.env.DIGILOCKER_CLIENT_SECRET;
+    private readonly apiSetuKey = process.env.API_SETU_KEY || '';
 
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
+    /**
+     * Generate the Authorization URL for the student to grant consent
+     */
+    getAuthUrl(state: string, redirectUri: string): string {
+        const scopes = 'openid';
+        return `${this.authUrl}?response_type=code&client_id=${this.clientId || ''}&state=${encodeURIComponent(state)}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}`;
+    }
 
-        // Mock Logic:
-        // If filename contains 'invalid', 'fail', or 'error', mark as failed.
-        // Otherwise success.
+    /**
+     * Exchange the authorization code for an access token
+     */
+    async getAccessToken(code: string, redirectUri: string): Promise<any> {
+        console.log('Exchanging code for token. Redirect URI:', redirectUri);
+        const response = await fetch(this.tokenUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                grant_type: 'authorization_code',
+                code: code,
+                client_id: this.clientId || '',
+                client_secret: this.clientSecret || '',
+                redirect_uri: redirectUri,
+            }).toString(),
+        });
 
-        // We don't have the original filename here easily without passing it, 
-        // but we can assume the caller passes metadata or we stick to a simple random mock
-        // or we just trust most documents for the demo unless specified.
+        if (!response.ok) {
+            const err = await response.text();
+            console.error('DigiLocker Token exchange failed:', err);
+            throw new Error(`DigiLocker Token Error: ${err}`);
+        }
 
-        // Let's rely on a random check for demo diversity if no specific indicator
-        // But better to be deterministic for testing.
-        // Let's assume if the docType ends with "_TEST_FAIL", it fails.
+        return await response.json();
+    }
 
-        const isSuccess = !filePath.toLowerCase().includes('fail');
+    /**
+     * Get a list of all issued documents in the user's DigiLocker
+     */
+    async listDocuments(token: string): Promise<any[]> {
+        const response = await fetch(this.fileUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'x-api-key': this.apiSetuKey,
+                'x-api-id': this.clientId || '',
+                'Accept': 'application/json'
+            }
+        });
 
-        if (isSuccess) {
-            return {
-                isValid: true,
-                txId: 'DGL-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-                code: 'VERIFIED',
-                details: {
-                    verified_at: new Date().toISOString(),
-                    issuer: 'DigiLocker Authority',
-                    confidence_score: 0.98
-                }
+        if (!response.ok) {
+            const err = await response.text();
+            throw new Error(`DigiLocker List Error: ${err}`);
+        }
+
+        const data = await response.json();
+        return data.items || [];
+    }
+
+    async verifyDocument(token: string, docType: string): Promise<VerificationResult> {
+        try {
+            const docs = await this.listDocuments(token);
+
+            // Map types to DigiLocker types
+            const typeMap: Record<string, string> = {
+                'pan_student': 'PANCR',
+                'pan_coapp': 'PANCR',
+                'pan_father': 'PANCR',
+                'pan_mother': 'PANCR',
+                'aadhar_student': 'ADHAR',
+                'aadhar_coapp': 'ADHAR',
+                'aadhar_father': 'ADHAR',
+                'aadhar_mother': 'ADHAR',
+                'marksheet_10th': '10TH',
+                'marksheet_12th': '12TH',
+                'passport': 'PASPT'
             };
-        } else {
+
+            const targetDlType = typeMap[docType] || docType.toUpperCase();
+            const doc = docs.find((item: any) => item.type === targetDlType);
+
+            if (doc) {
+                return {
+                    isValid: true,
+                    txId: doc.id || 'DGL-' + Math.random().toString(36).substring(7),
+                    code: 'VERIFIED_DIGILOCKER',
+                    details: {
+                        source: 'API Setu / DigiLocker',
+                        document_name: doc.name,
+                        status: 'Issued',
+                        verified_at: new Date().toISOString()
+                    }
+                };
+            }
+
             return {
                 isValid: false,
-                code: 'DOCUMENT_MISMATCH',
-                details: {
-                    error_code: 'ERR_DATA_MISMATCH',
-                    message: 'The document data does not match the records in the central repository.',
-                    discrepancy: 'Name mismatch or Document expired.'
-                }
+                code: 'DOC_NOT_FOUND',
+                details: { message: `We couldn't find a valid ${docType} in your DigiLocker account.` }
+            };
+        } catch (error) {
+            return {
+                isValid: false,
+                code: 'VERIFICATION_ERROR',
+                details: { message: error.message }
             };
         }
-        // END MOCK IMPLEMENTATION
     }
 }

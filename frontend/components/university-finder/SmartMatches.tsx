@@ -160,10 +160,15 @@ export default function SmartMatches({
       </div>
 
       {/* Universities List */}
-      <div className="space-y-4 mb-8">
-        {sortedUniversities.map((uni, idx) => (
+      {sortedUniversities.map((uni, idx) => {
+        const slug = uni.slug || uni.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+        return (
           <div key={uni.name} className="relative">
-            <UniversityCard university={uni} onDetails={() => {}} onApply={() => {}} />
+            <UniversityCard
+              university={uni}
+              onDetails={() => router.push(`/university/${slug}`)}
+              onApply={() => router.push(`/apply-loan?university=${encodeURIComponent(uni.name)}&country=${encodeURIComponent(uni.country)}`)}
+            />
 
             {/* Selection Checkbox Overlay */}
             <label className="absolute top-4 right-20 flex items-center gap-2 cursor-pointer">
@@ -176,8 +181,8 @@ export default function SmartMatches({
               <span className="text-sm font-medium text-gray-700">Select</span>
             </label>
           </div>
-        ))}
-      </div>
+        );
+      })}
 
       {/* Action Buttons */}
       <div className="flex gap-4">

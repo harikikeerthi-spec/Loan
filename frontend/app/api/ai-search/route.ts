@@ -22,11 +22,41 @@ export async function POST(req: Request) {
     if (API_KEY) {
       let prompt = '';
       if (type === 'university_detail') {
-        prompt = `Provide a detailed profile for the university: "${query || slug}". 
-        Context: It is a university in ${country} offering ${course}.
-        Return a single JSON object with: name, shortName, loc, country, countryCode, rank, acceptanceRate, tuition, currency, description, courses (array), loan (boolean), website, pros (array of 5), requirements (object with gpa, ielts, toefl, gre), stats (object with totalStudents, internationalStudents, facultyRatio, employmentRate).
+        prompt = `Provide a comprehensive, real-world detailed profile for the university: "${query || slug}". 
+        Location context: ${country}. Program interest: ${course}.
         
-        Respond ONLY with valid JSON.`;
+        CRITICAL: For the "websiteDomain" field, provide ONLY the real official domain of this university (e.g. "ed.ac.uk" for University of Edinburgh, "mit.edu" for MIT, "ox.ac.uk" for Oxford). Do NOT invent domains. This must be the actual domain students visit.
+
+        Return a single JSON object with EXACTLY these fields:
+        {
+          "name": "Full Official Name of the University",
+          "shortName": "Common Short Name",
+          "loc": "City, State/Province",
+          "country": "Country",
+          "countryCode": "2-letter ISO country code",
+          "websiteDomain": "the real official domain WITHOUT https:// (e.g. ed.ac.uk, mit.edu, stanford.edu, ox.ac.uk, tum.de)",
+          "founded": 1900,
+          "rank": 123,
+          "rankBy": "QS World Rankings",
+          "acceptanceRate": 15,
+          "tuition": 35000,
+          "currency": "USD",
+          "description": "Rich 2-3 paragraph history and academic standing. Be detailed and accurate.",
+          "programs": [
+            { "name": "M.S. in Computer Science", "degree": "Master's", "duration": "2 Years", "tuition": "$35,000/year", "icon": "code" },
+            { "name": "MBA", "degree": "Master's", "duration": "18 Months", "tuition": "$45,000/year", "icon": "payments" }
+          ],
+          "requirements": { "gpa": "3.5/4.0 or 8.0/10", "ielts": "7.0 (no band < 6.5)", "toefl": "100+", "gre": "Optional but 320+ recommended" },
+          "stats": { "totalStudents": "25,000+", "internationalStudents": "22%", "facultyRatio": "14:1", "employmentRate": "94%", "researchOutput": "Very High", "avgSalary": "$110k" },
+          "loan": true,
+          "pros": ["Point 1", "Point 2", "Point 3", "Point 4", "Point 5"],
+          "facilities": [{ "name": "Robotics Lab", "icon": "smart_toy" }, { "name": "Olympic Pool", "icon": "pool" }],
+          "funFacts": ["Fact 1", "Fact 2", "Fact 3"],
+          "whyStudyHere": ["Reason 1", "Reason 2", "Reason 3"],
+          "notableAlumni": [{ "name": "Full Name", "role": "Role description" }]
+        }
+        
+        Respond ONLY with valid JSON. Data must be accurate and real.`;
       } else if (type === 'course') {
         prompt = `Search for courses/majors matching "${query || course}". 
         Return a JSON array of up to 15 specific course names.
@@ -61,7 +91,7 @@ export async function POST(req: Request) {
           'Authorization': `Bearer ${API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'llama-3.1-8b-instant',
           messages: [{ role: 'user', content: prompt }],
           response_format: { type: 'json_object' }
         })
@@ -72,30 +102,34 @@ export async function POST(req: Request) {
         const content = data.choices[0].message.content;
         const parsed = JSON.parse(content);
 
-        if (type === 'university_detail') return NextResponse.json({ university: parsed });
+        if (type === 'university_detail') {
+          // Derive real URLs from the domain the AI returned
+          const domain = (parsed.websiteDomain || parsed.website || '').replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
+          const uniName = parsed.name || query || slug || 'University';
+          const nameForSearch = encodeURIComponent(uniName.replace(/\s+/g, ' ').trim());
+
+          // Official website from domain
+          parsed.website = domain ? `https://www.${domain}` : '';
+
+          // Real logo from Clearbit (uses the university domain — works for most .edu/.ac.uk domains)
+          parsed.logo = domain ? `https://logo.clearbit.com/${domain}` : '';
+
+          // Real campus images from Unsplash source (deterministic, no API key needed)
+          parsed.heroImage = `https://source.unsplash.com/1600x900/?${nameForSearch}+campus+university`;
+          parsed.campusImages = [
+            `https://source.unsplash.com/800x600/?${nameForSearch}+campus`,
+            `https://source.unsplash.com/800x600/?${nameForSearch}+university+building`,
+            `https://source.unsplash.com/800x600/?${nameForSearch}+library`,
+          ];
+
+          return NextResponse.json({ university: parsed });
+        }
         if (type === 'course') return NextResponse.json({ results: Array.isArray(parsed) ? parsed : (parsed.courses || parsed.results || []) });
         return NextResponse.json({ universities: parsed.universities || parsed.results || [] });
       }
     }
 
-    // ── Fallback: Real universities per country ──────────────────────────────
-    if (type === 'university_detail') {
-      return NextResponse.json({
-        university: {
-          name: query || slug || 'University',
-          shortName: (query || slug || 'University').split(' ')[0],
-          loc: country, country, countryCode: (country || '').slice(0, 2).toLowerCase(),
-          rank: 105, acceptanceRate: 25, tuition: 30000, currency: 'USD',
-          description: `${query || slug}: A leading research institution in ${country} offering advanced studies in ${course || 'various fields'}.`,
-          courses: [course || 'Advanced Research'], loan: true, slug: slug || 'university',
-          website: '', pros: ['Global ranking', 'Industry research', 'Strong alumni network', 'Scholarship programs', 'Research opportunities'],
-          requirements: { gpa: 7.5, ielts: 6.5, toefl: 95 },
-          stats: { totalStudents: '15,000+', internationalStudents: '20%', facultyRatio: '12:1', employmentRate: '92%' }
-        }
-      });
-    }
-
-    // Real universities map by country
+    // Real universities map by country (used by both fallback detail and listing)
     const REAL_UNIVERSITIES: Record<string, any[]> = {
       USA: [
         { name: 'Massachusetts Institute of Technology', loc: 'Cambridge, MA, USA', rank: 1, accept: 4, tuition: 57986, min_gpa: 9.0, min_ielts: 7.0, min_toefl: 100, website: 'https://mit.edu', slug: 'mit' },
@@ -172,6 +206,78 @@ export async function POST(req: Request) {
         { name: 'Universitat de Barcelona', loc: 'Barcelona, Spain', rank: 153, accept: 40, tuition: 8000, min_gpa: 7.0, min_ielts: 6.5, min_toefl: 88, website: 'https://ub.edu', slug: 'u-barcelona' },
       ],
     };
+
+    // ── Fallback: Real universities per country ──────────────────────────────
+    if (type === 'university_detail') {
+      // Try to find this university in our known database
+      const allKnown = Object.values(REAL_UNIVERSITIES).flat();
+      const matchSlug = (slug || '').toLowerCase();
+      const matchQuery = (query || '').toLowerCase();
+      const knownUni = allKnown.find(u =>
+        (u.slug && u.slug === matchSlug) ||
+        (u.name && u.name.toLowerCase().includes(matchQuery)) ||
+        (matchQuery && u.name && matchQuery.includes(u.name.toLowerCase().split(' ')[0]))
+      );
+
+      if (knownUni) {
+        const domain = (knownUni.website || '').replace(/^https?:\/\//, '').replace(/^www\./, '');
+        const nameForSearch = encodeURIComponent(knownUni.name.replace(/\s+/g, ' ').trim());
+        return NextResponse.json({
+          university: {
+            name: knownUni.name,
+            shortName: knownUni.name.split(' ')[0],
+            loc: knownUni.loc, country: knownUni.loc?.split(', ').pop() || country, countryCode: (knownUni.loc?.split(', ').pop() || 'US').slice(0, 2).toLowerCase(),
+            rank: knownUni.rank, rankBy: 'QS World Rankings', acceptanceRate: knownUni.accept, tuition: knownUni.tuition, currency: 'USD',
+            description: `${knownUni.name}: A leading research institution offering advanced studies and world-class research opportunities for international students.`,
+            programs: [
+              { name: 'Data Science', degree: 'M.S.', duration: '2 Years', tuition: `$${(knownUni.tuition || 30000).toLocaleString()}`, icon: 'monitoring' },
+              { name: 'Computer Science', degree: 'M.S.', duration: '2 Years', tuition: `$${(knownUni.tuition || 35000).toLocaleString()}`, icon: 'code' }
+            ],
+            loan: true, slug: knownUni.slug || slug || 'university',
+            website: knownUni.website,
+            logo: domain ? `https://logo.clearbit.com/${domain}` : '',
+            heroImage: `https://source.unsplash.com/1600x900/?${nameForSearch}+campus+university`,
+            campusImages: [
+              `https://source.unsplash.com/800x600/?${nameForSearch}+campus`,
+              `https://source.unsplash.com/800x600/?${nameForSearch}+university+building`,
+              `https://source.unsplash.com/800x600/?${nameForSearch}+library`,
+            ],
+            pros: ['Global ranking', 'Industry research', 'Strong alumni network', 'Scholarship programs', 'Research opportunities'],
+            requirements: { gpa: `${knownUni.min_gpa || 7.5}/10`, ielts: `${knownUni.min_ielts || 6.5}+`, toefl: `${knownUni.min_toefl || 95}+`, gre: 'Required' },
+            stats: { totalStudents: '15,000+', internationalStudents: '20%', facultyRatio: '12:1', employmentRate: '92%', researchOutput: 'High', avgSalary: '$85,000' },
+            funFacts: [`Founded and located in ${knownUni.loc}`],
+            whyStudyHere: ['Excellent research facilities', 'Strong industry connections'],
+          }
+        });
+      }
+
+      // Complete fallback for truly unknown universities
+      const fallbackName = query || slug?.split('-').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') || 'University';
+      const nameForSearch = encodeURIComponent(fallbackName.replace(/\s+/g, ' ').trim());
+      return NextResponse.json({
+        university: {
+          name: fallbackName,
+          shortName: fallbackName.split(' ')[0],
+          loc: country, country: country || 'United States', countryCode: (country || 'US').slice(0, 2).toLowerCase(),
+          rank: 105, rankBy: 'QS World Rankings', acceptanceRate: 25, tuition: 30000, currency: 'USD',
+          description: `${fallbackName}: A leading research institution offering advanced studies and world-class research opportunities for international students.`,
+          programs: [
+            { name: 'Data Science', degree: 'M.S.', duration: '2 Years', tuition: '$30,000', icon: 'monitoring' },
+            { name: 'Computer Science', degree: 'M.S.', duration: '2 Years', tuition: '$35,000', icon: 'code' }
+          ],
+          loan: true, slug: slug || 'university',
+          website: '',
+          logo: '',
+          heroImage: `https://source.unsplash.com/1600x900/?${nameForSearch}+campus+university`,
+          campusImages: [`https://source.unsplash.com/800x600/?${nameForSearch}+campus`],
+          pros: ['Global ranking', 'Industry research', 'Strong alumni network', 'Scholarship programs', 'Research opportunities'],
+          requirements: { gpa: '7.5/10', ielts: '6.5+', toefl: '95+', gre: 'Required' },
+          stats: { totalStudents: '15,000+', internationalStudents: '20%', facultyRatio: '12:1', employmentRate: '92%', researchOutput: 'High', avgSalary: '$85,000' },
+          funFacts: ['Located in the heart of the city'],
+          whyStudyHere: ['Excellent research facilities', 'Strong industry connections'],
+        }
+      });
+    }
 
     const normalizeCountry = (c: string) => {
       const map: Record<string, string> = {

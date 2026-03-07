@@ -10,6 +10,24 @@ export interface User {
     passportNumber?: string;
     role?: "user" | "admin" | "super_admin";
     createdAt?: string;
+
+    // Onboarding & Profile Preferences
+    goal?: string;
+    studyDestination?: string;
+    courseName?: string;
+    targetUniversity?: string;
+    intakeSeason?: string;
+    bachelorsDegree?: string;
+    workExp?: number;
+    gpa?: number;
+    entranceTest?: string;
+    entranceScore?: string;
+    englishTest?: string;
+    englishScore?: string;
+    budget?: string;
+    pincode?: string;
+    loanAmount?: string;
+    admitStatus?: string;
 }
 
 export interface AuthTokenPayload {

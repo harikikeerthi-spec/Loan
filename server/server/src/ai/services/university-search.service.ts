@@ -35,6 +35,10 @@ export interface UniversityDetails extends University {
     averageSalary?: string;
     topEmployers?: string[];
   };
+  facilities?: string[];
+  funFacts?: string[];
+  whyStudyHere?: string[];
+  notableAlumni?: string[];
 }
 
 @Injectable()
@@ -61,43 +65,68 @@ export class UniversitySearchService {
 
 For each country, list approximately ${limit} top universities that actually exist and are well-known.
 
-Return a JSON array with the following structure for each university:
-[
-  {
-    "name": "Full University Name",
-    "loc": "City, Country",
-    "country": "Country Name",
-    "rank": 15,
-    "worldRanking": 150,
-    "type": "Public/Private",
-    "website": "https://example.com",
-    "description": "Brief description of the university",
-    "courses": ["Engineering", "Business", "Medicine"],
-    "tuition": 25000,
-    "accept": 15,
-    "min_gpa": 7.5,
-    "min_ielts": 6.5,
-    "min_toefl": 90,
-    "scholarships": true,
-    "loan": true
-  }
-]
+Return a JSON object with a "universities" key. The value should be an array with this structure:
+{
+  "universities": [
+    {
+      "name": "Full University Name",
+      "loc": "City, Country",
+      "country": "Country Name",
+      "rank": 15,
+      "worldRanking": 150,
+      "type": "Public/Private",
+      "website": "https://example.com",
+      "description": "Brief description of the university",
+      "courses": ["Engineering", "Business", "Medicine"],
+      "tuition": 25000,
+      "accept": 15,
+      "min_gpa": 7.5,
+      "min_ielts": 6.5,
+      "min_toefl": 90,
+      "scholarships": true,
+      "loan": true
+    }
+  ]
+}
 
-Important:
-- ONLY include REAL universities that actually exist
-- "rank" should be the world QS ranking (integer)
-- "accept" should be the acceptance rate percentage as an integer (e.g., 15 for 15%)
-- "tuition" should be the approximate annual tuition in USD as an integer (e.g., 25000)
-- "min_gpa" should be on a 10.0 scale (float)
-- Return ONLY valid JSON array, no markdown or extra text`;
+CRITICAL RULES:
+1. ONLY include REAL universities that actually exist.
+2. Numeric fields MUST be single integers. DO NOT use ranges like "351-400". If a range is known, use the middle or lower bound as a single integer.
+3. "rank" and "worldRanking" MUST be integers.
+4. "accept" MUST be an integer (e.g. 15 for 15%).
+5. "tuition" MUST be an integer in USD.
+6. Return ONLY valid JSON.`;
 
     try {
-      const universities = await this.groqService.getJson<University[]>(prompt);
+      const response = await this.groqService.getJson<any>(prompt);
+      let universities = response.universities || (Array.isArray(response) ? response : []);
 
-      // Validate and filter results
+      // Robust Normalization Pass
       const validUniversities = universities.filter(uni =>
-        uni.name && uni.country && typeof uni.name === 'string' && typeof uni.country === 'string'
-      );
+        uni && typeof uni === 'object' && uni.name && typeof uni.name === 'string'
+      ).map(uni => {
+        // Map common hallucinations or string numbers back to integers
+        const toInt = (val: any) => {
+          if (typeof val === 'number') return Math.floor(val);
+          if (typeof val === 'string') {
+            // Handle "351-400" -> 351
+            const cleaned = val.split('-')[0].replace(/[^\d]/g, '');
+            return parseInt(cleaned, 10) || 0;
+          }
+          return 0;
+        };
+
+        return {
+          ...uni,
+          rank: toInt(uni.rank || uni.worldRanking),
+          worldRanking: toInt(uni.worldRanking || uni.rank),
+          accept: toInt(uni.accept || uni.acceptanceRate),
+          tuition: toInt(uni.tuition),
+          min_gpa: parseFloat(String(uni.min_gpa || 7.0)),
+          slug: uni.slug || uni.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+          courses: Array.isArray(uni.courses) ? uni.courses : []
+        };
+      });
 
       return validUniversities;
     } catch (error) {
@@ -130,7 +159,7 @@ Return detailed information as a JSON object with this structure:
   "ranking": 15,
   "worldRanking": 150,
   "type": "Public/Private/Research",
-  "website": "https://...",
+  "website": "https://www.university-official-domain.edu",
   "description": "Detailed description",
   "popularCourses": ["Course1", "Course2", "Course3"],
   "averageFees": "Tuition range per year",
@@ -142,20 +171,21 @@ Return detailed information as a JSON object with this structure:
     "languageRequirements": ["TOEFL 90+", "IELTS 6.5+"]
   },
   "programs": [
-    {
-      "name": "Program Name",
-      "description": "Program details",
-      "tuition": "Annual tuition"
-    }
+    { "name": "Program Name", "description": "Program details", "tuition": "Annual tuition" }
   ],
   "employmentStats": {
     "employmentRate": 95,
     "averageSalary": "Average graduate salary",
     "topEmployers": ["Company1", "Company2", "Company3"]
-  }
+  },
+  "facilities": ["Facility1", "Facility2"],
+  "funFacts": ["Fact1", "Fact2"],
+  "whyStudyHere": ["Reason1", "Reason2"],
+  "notableAlumni": ["Alumni1", "Alumni2"]
 }
 
-Provide accurate, real information based on the university's actual details. Return ONLY valid JSON, no markdown or extra text.`;
+CRITICAL: "website" MUST be the actual original official university domain (e.g. mit.edu, cam.ac.uk).
+Return ONLY valid JSON.`;
 
     try {
       const details = await this.groqService.getJson<UniversityDetails>(prompt);
@@ -224,15 +254,16 @@ Return ONLY the JSON array with validation results. No other text.`;
    * @returns Array of country names
    */
   async getPopularCountries(): Promise<string[]> {
-    const prompt = `List the top 15 most popular countries for international students seeking higher education. Return ONLY a JSON array of country names, nothing else.
-
-Example format:
-["United States", "United Kingdom", "Canada", "Australia", ...]
-
-Return ONLY the JSON array.`;
+    const prompt = `List the top 15 most popular countries for international students seeking higher education. Return a JSON object with a "countries" key.
+    
+    Example format:
+    { "countries": ["United States", "United Kingdom", "Canada", "Australia"] }
+    
+    MUST respond ONLY with JSON.`;
 
     try {
-      const countries = await this.groqService.getJson<string[]>(prompt);
+      const response = await this.groqService.getJson<any>(prompt);
+      const countries = response.countries || (Array.isArray(response) ? response : []);
       return Array.isArray(countries) ? countries : [];
     } catch (error) {
       console.error('Failed to fetch popular countries:', error);

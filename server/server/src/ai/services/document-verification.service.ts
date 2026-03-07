@@ -8,14 +8,16 @@ export class DocumentVerificationService {
 
     async explainRejection(docType: string, reason: string): Promise<string> {
         const prompt = `
-            You are a helpful banking assistant for a student loan application platform.
-            A user's document for "${docType}" was rejected during verification.
+            You are an expert document examiner for a student loan system.
+            A user's document ("${docType}") failed verification against DigiLocker/API Setu records.
             
-            Technical Reason: "${reason}"
+            Technical Error: "${reason}"
             
-            Please provide a friendly, clear, and actionable explanation for the user. 
-            Tell them why it was rejected and what they should do to fix it (e.g., upload a clearer copy, ensure details match, etc.).
-            Keep it concise (2-3 sentences max).
+            Please provide a high-quality, professional, and empathetic explanation for the student.
+            1. Clearly state the exact reason for the failure.
+            2. Tell them exactly what to double-check in their uploaded file or their profile (e.g. name spelling, date of birth, document quality).
+            3. Use a tone that is helpful and authoritative.
+            Avoid generic phrases. Maximum 40 words.
         `;
 
         try {

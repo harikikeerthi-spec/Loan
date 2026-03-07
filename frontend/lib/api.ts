@@ -2,7 +2,9 @@
  * Centralized API client for all backend requests
  */
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000") + "/api";
+// Relative path: works on localhost, Cloudflare tunnels, and production alike.
+// Next.js rewrites /api/* → http://localhost:5000/* on the server side.
+const API_URL = "/api";
 
 function getToken(): string | null {
     if (typeof window === "undefined") return null;
@@ -19,6 +21,22 @@ function authHeaders(): HeadersInit {
 async function handleResponse<T>(res: Response): Promise<T> {
     if (!res.ok) {
         const err = await res.json().catch(() => ({ message: res.statusText }));
+
+        // Handle Token Expiration globally
+        if (res.status === 401 && err?.message === 'Token has expired') {
+            if (typeof window !== "undefined") {
+                localStorage.removeItem("accessToken");
+                localStorage.removeItem("refreshToken");
+                localStorage.removeItem("userEmail");
+                localStorage.removeItem("userId");
+                localStorage.removeItem("authUser");
+                // Avoid infinite redirect loops if already on login
+                if (!window.location.pathname.startsWith('/login')) {
+                    window.location.href = '/login?expired=true';
+                }
+            }
+        }
+
         throw new Error(err.message || "API request failed");
     }
     return res.json();
@@ -96,8 +114,10 @@ export const authApi = {
 
 // ─── Blogs ────────────────────────────────────────────────────────────
 export const blogApi = {
-    getAll: (page = 1, limit = 10) =>
-        fetch(`${API_URL}/blogs?page=${page}&limit=${limit}`).then(handleResponse),
+    getAll: (page = 1, limit = 10) => {
+        const offset = (page - 1) * limit;
+        return fetch(`${API_URL}/blogs?offset=${offset}&limit=${limit}`).then(handleResponse);
+    },
 
     getBySlug: (slug: string) =>
         fetch(`${API_URL}/blogs/${slug}`).then(handleResponse),
@@ -335,23 +355,13 @@ export const aiApi = {
             body: JSON.stringify({ title }),
         }).then(handleResponse),
 
-    // Flexible AI search: prefers external API when NEXT_PUBLIC_API_URL set,
-    // otherwise falls back to the local Next.js serverless route `/api/ai-search`.
-    aiSearch: (data: Record<string, unknown>) => {
-        const externalConfigured = !!process.env.NEXT_PUBLIC_API_URL;
-        if (externalConfigured) {
-            return fetch(`${API_URL}/ai/search`, {
-                method: 'POST',
-                headers: authHeaders(),
-                body: JSON.stringify(data),
-            }).then(handleResponse);
-        }
-        return fetch('/api/ai-search', {
+    // Always use relative path; the Next.js rewrite proxy routes to the backend.
+    aiSearch: (data: Record<string, unknown>) =>
+        fetch(`${API_URL}/ai/search`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse);
-    },
+        }).then(handleResponse),
 };
 
 // ─── Reference Data ───────────────────────────────────────────────────
@@ -497,4 +507,45 @@ export const adminApi = {
         }).then(handleResponse),
     getAuditLogs: (limit = 20) =>
         fetch(`${API_URL}/blogs/super-admin/audit-logs?limit=${limit}`, { headers: authHeaders() }).then(handleResponse),
+};
+
+// ─── Documents ────────────────────────────────────────────────────────
+export const documentApi = {
+    getUsersDocuments: (userId: string) =>
+        fetch(`${API_URL}/documents/${userId}`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    delete: (userId: string, docType: string) =>
+        fetch(`${API_URL}/documents/${userId}/${docType}`, {
+            method: "DELETE",
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    initiateDigilocker: (userId: string, docType: string, redirectUri: string) =>
+        fetch(`${API_URL}/documents/digilocker/initiate`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ userId, docType, redirectUri }),
+        }).then(handleResponse),
+};
+
+// ─── Connected / Cohort ───────────────────────────────────────────────
+export const connectedApi = {
+    apply: (data: {
+        fullName: string;
+        email: string;
+        phone: string;
+        targetIntake: string;
+        destination?: string;
+        university?: string;
+        course?: string;
+        gapYear?: boolean;
+        message?: string;
+    }) =>
+        fetch(`${API_URL}/connected/apply`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...data, source: "connectED" }),
+        }).then(handleResponse),
 };

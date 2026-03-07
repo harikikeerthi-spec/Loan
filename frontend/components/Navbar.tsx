@@ -53,10 +53,15 @@ export default function Navbar() {
                 {/* Logo */}
                 <div className="flex items-center gap-8 lg:gap-12">
                     <Link href="/" className="flex items-center gap-2 group cursor-pointer relative z-10">
-                        <div className="w-10 h-10 rounded-xl bg-[#6605c7]/10 flex items-center justify-center shadow-lg backdrop-blur-sm border border-[#6605c7]/20">
-                            <span className="material-symbols-outlined text-2xl text-[#6605c7]">school</span>
-                        </div>
-                        <span className={`font-bold text-2xl tracking-tight font-display transition-colors duration-500 text-[#1a1626]`}>
+                        <Image
+                            src="/images/vidhyaloans-logo-transparent.png"
+                            alt="VidhyaLoans Logo"
+                            width={40}
+                            height={40}
+                            className="w-10 h-10 object-contain drop-shadow-sm"
+                            priority
+                        />
+                        <span className="font-bold text-2xl tracking-tight font-display transition-colors duration-500 text-[#1a1626]">
                             VidhyaLoans
                         </span>
                     </Link>
@@ -207,7 +212,7 @@ export default function Navbar() {
                             >
                                 <div className="w-8 h-8 rounded-full bg-[#6605c7]/10 flex items-center justify-center overflow-hidden border border-[#6605c7]/20">
                                     <Image
-                                        src={`https://i.pravatar.cc/80?u=${user?.email}`}
+                                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName || user?.email || 'U')}&background=6605c7&color=fff&size=80`}
                                         alt="Avatar"
                                         width={32}
                                         height={32}

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { authApi } from "@/lib/api";
+import { authApi, documentApi } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
 
@@ -50,6 +50,7 @@ export default function DocumentVaultPage() {
     const [uploading, setUploading] = useState<string | null>(null);
     const [profileType, setProfileType] = useState<"salaried" | "self-employed">("salaried");
     const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
+    const [rejections, setRejections] = useState<Record<string, string>>({});
 
     const loadDocs = useCallback(async () => {
         if (!user?.id) return;
@@ -68,6 +69,22 @@ export default function DocumentVaultPage() {
 
     useEffect(() => {
         loadDocs();
+    }, [loadDocs]);
+
+    useEffect(() => {
+        const searchParams = new URLSearchParams(window.location.search);
+        const status = searchParams.get('status');
+        const message = searchParams.get('message');
+
+        if (status === 'success') {
+            alert(message || "DigiLocker verification successful!");
+            // Remove query params from URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            loadDocs();
+        } else if (status === 'error') {
+            alert(message || "DigiLocker verification failed.");
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
     }, [loadDocs]);
 
     const triggerFileInput = (docType: string) => {
@@ -91,10 +108,9 @@ export default function DocumentVaultPage() {
             formData.append('userId', user.id);
             formData.append('docType', docType);
 
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
             const token = localStorage.getItem("accessToken");
-            
-            const response = await fetch(`${apiUrl}/api/documents/upload`, {
+
+            const response = await fetch(`/api/documents/upload`, {
                 method: 'POST',
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
                 body: formData
@@ -117,23 +133,55 @@ export default function DocumentVaultPage() {
         }
     };
 
-    const handleView = (docType: string) => {
-        // First check for local preview URL (current session uploads)
-        const localUrl = previewUrls[docType];
-        if (localUrl) {
-            window.open(localUrl, '_blank');
-            return;
-        }
+    const handleDigilockerVerify = async (docType: string) => {
+        if (!user?.id) return;
+        setUploading(docType);
+        try {
+            // Use the backend's own endpoint — the server handles the callback,
+            // so we pass the backend URL directly (localhost is valid server-side).
+            const redirectUri = `${window.location.protocol}//${window.location.host}/api/digilocker/callback`;
+            const result: any = await documentApi.initiateDigilocker(user.id, docType, redirectUri);
 
+            if (result.success && result.authUrl) {
+                // Redirect user to DigiLocker
+                window.location.href = result.authUrl;
+            } else {
+                alert(result.message || "Failed to initiate DigiLocker flow.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("An error occurred during verification.");
+        } finally {
+            setUploading(null);
+        }
+    };
+
+    const handleView = (docType: string) => {
         // Check if document exists in database with a file path
         const existing = docs.find(d => d.docType === docType);
-        if (existing?.filePath && user?.id) {
-            // Use the backend API endpoint to view the document
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-            const viewUrl = `${apiUrl}/api/documents/view/${user.id}/${docType}`;
+        if (existing?.uploaded && user?.id) {
+            // Use relative path through the Next.js proxy
+            const viewUrl = `/api/documents/view/${user.id}/${docType}`;
             window.open(viewUrl, '_blank');
         } else {
-            alert("Document file not available. Please re-upload the document.");
+            alert("Document file not available.");
+        }
+    };
+
+    const handleDelete = async (docType: string) => {
+        if (!user?.id) return;
+        if (!confirm("Are you sure you want to delete this document from the vault?")) return;
+
+        setUploading(docType);
+        try {
+            await documentApi.delete(user.id, docType);
+            await loadDocs();
+            alert("Document deleted successfully.");
+        } catch (e) {
+            console.error(e);
+            alert("Failed to delete document.");
+        } finally {
+            setUploading(null);
         }
     };
 
@@ -170,9 +218,16 @@ export default function DocumentVaultPage() {
                             </div>
 
                             <h3 className="text-[13px] font-bold text-gray-900 mb-1">{req.label}</h3>
-                            <p className="text-[11px] text-gray-500 mb-5">
+                            <p className="text-[11px] text-gray-500 mb-4">
                                 {isUploaded ? "Document successfully stored in vault" : "Click to upload your original document"}
                             </p>
+
+                            {rejections[req.type] && (
+                                <div className="mb-4 p-3 bg-red-50 rounded-lg border border-red-100 flex gap-2">
+                                    <span className="material-symbols-outlined text-red-500 text-[14px] shrink-0">info</span>
+                                    <p className="text-[10px] text-red-600 leading-relaxed font-medium">{rejections[req.type]}</p>
+                                </div>
+                            )}
 
                             <input
                                 id={`file-input-${req.type}`}
@@ -191,27 +246,64 @@ export default function DocumentVaultPage() {
                                         <span className="material-symbols-outlined text-[16px]">visibility</span> View
                                     </button>
                                     <button
-                                        onClick={() => triggerFileInput(req.type)}
+                                        onClick={() => handleDelete(req.type)}
                                         disabled={!!uploading}
-                                        className="w-9 h-9 bg-gray-50 text-gray-400 rounded-lg flex items-center justify-center hover:bg-gray-100 transition-all border border-gray-100"
-                                        title="Re-upload"
+                                        className="w-9 h-9 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-100 transition-all border border-red-100"
+                                        title="Delete Document"
                                     >
-                                        <span className="material-symbols-outlined text-[16px]">sync</span>
+                                        <span className="material-symbols-outlined text-[16px]">delete</span>
                                     </button>
                                 </div>
                             ) : (
-                                <button
-                                    onClick={() => triggerFileInput(req.type)}
-                                    disabled={!!uploading}
-                                    className="w-full py-2.5 bg-[#6605c7] text-white text-[11px] font-bold rounded-lg hover:bg-[#5504a6] transition-all flex items-center justify-center gap-2"
-                                >
-                                    {uploading === req.type ? (
-                                        <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
-                                    ) : (
-                                        <span className="material-symbols-outlined text-[16px]">upload</span>
-                                    )}
-                                    {uploading === req.type ? "Encrypting..." : "Upload to Vault"}
-                                </button>
+                                <div className="space-y-2">
+                                    {/* DigiLocker - First Priority */}
+                                    {([
+                                        'pan_student', 'pan_coapp', 'aadhar_student', 'aadhar_coapp',
+                                        'marksheet_10th', 'marksheet_12th', 'passport',
+                                        'pan_father', 'pan_mother', 'aadhar_father', 'aadhar_mother'
+                                    ].includes(req.type)) && !isUploaded && (
+                                            <div className="relative">
+                                                <div className="absolute -top-2 -right-1 z-10">
+                                                    <span className="bg-emerald-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm border border-white uppercase tracking-tighter animate-bounce">
+                                                        Priority 1
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleDigilockerVerify(req.type)}
+                                                    disabled={!!uploading}
+                                                    className="w-full py-2.5 bg-emerald-600 text-white text-[11px] font-bold rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
+                                                >
+                                                    <img src="https://upload.wikimedia.org/wikipedia/en/1/1d/DigiLocker_logo.png" alt="DigiLocker" className="h-4 w-auto brightness-0 invert" />
+                                                    Fetch from DigiLocker
+                                                </button>
+                                            </div>
+                                        )}
+
+                                    {/* Manual Upload - Second Priority */}
+                                    <button
+                                        onClick={() => triggerFileInput(req.type)}
+                                        disabled={!!uploading}
+                                        className={`w-full py-2.5 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${([
+                                            'pan_student', 'pan_coapp', 'aadhar_student', 'aadhar_coapp',
+                                            'marksheet_10th', 'marksheet_12th', 'passport',
+                                            'pan_father', 'pan_mother', 'aadhar_father', 'aadhar_mother'
+                                        ].includes(req.type))
+                                            ? 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+                                            : 'bg-[#6605c7] text-white hover:bg-[#5504a6]'
+                                            }`}
+                                    >
+                                        {uploading === req.type ? (
+                                            <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                                        ) : (
+                                            <span className="material-symbols-outlined text-[16px]">upload</span>
+                                        )}
+                                        {uploading === req.type ? "Processing..." : ([
+                                            'pan_student', 'pan_coapp', 'aadhar_student', 'aadhar_coapp',
+                                            'marksheet_10th', 'marksheet_12th', 'passport',
+                                            'pan_father', 'pan_mother', 'aadhar_father', 'aadhar_mother'
+                                        ].includes(req.type)) ? "Upload Manually (Priority 2)" : "Upload to Vault"}
+                                    </button>
+                                </div>
                             )}
                         </div>
                     );
@@ -249,6 +341,22 @@ export default function DocumentVaultPage() {
                                 className={`px-4 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all ${profileType === "self-employed" ? "bg-white text-[#6605c7] shadow-sm border border-gray-100" : "text-gray-500"}`}
                             >
                                 Self-Employed
+                            </button>
+                        </div>
+
+                        {/* Bulk Sync - First Priority */}
+                        <div className="relative">
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 w-max">
+                                <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg border-2 border-white uppercase tracking-wider animate-bounce">
+                                    Recommended First Priority
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => handleDigilockerVerify('ALL_SYNC')}
+                                className="px-6 py-2.5 bg-emerald-600 text-white border border-emerald-500 rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-emerald-700 transition-all flex items-center gap-2 group shadow-xl shadow-emerald-600/20 active:scale-95"
+                            >
+                                <span className="material-symbols-outlined text-[18px] group-hover:rotate-180 transition-transform duration-700">sync</span>
+                                Full Vault Sync with DigiLocker
                             </button>
                         </div>
 

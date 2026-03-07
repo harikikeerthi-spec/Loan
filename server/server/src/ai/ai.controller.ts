@@ -293,7 +293,7 @@ export class AiController {
   }
 
   @Post('search-advice')
-  async searchAdvice(@Body() data: { query: string; type: 'university' | 'course'; context?: any }) {
+  async searchAdvice(@Body() data: { query: string; type: 'university' | 'course' | 'ug_university'; context?: any }) {
     try {
       const results = await this.groqService.searchAdvice(data.query, data.type, data.context);
       return { success: true, results };
@@ -412,14 +412,16 @@ export class AiController {
     @Body() data: { userProfile: Record<string, any>; visaType?: string },
   ) {
     try {
-      const question = await this.visaInterviewService.startInterview(
+      const result = await this.visaInterviewService.startInterview(
         data.userProfile || {},
         data.visaType || 'F1 Student Visa',
       );
       return {
         success: true,
-        question,
-        currentSection: 'purpose',
+        question: result.question,
+        currentSection: result.currentSection || 'purpose',
+        completedSections: result.completedSections || [],
+        isInterviewOver: result.isInterviewOver || false,
         sections: this.visaInterviewService.getSections(),
       };
     } catch (error) {
@@ -441,7 +443,7 @@ export class AiController {
     },
   ) {
     try {
-      const question = await this.visaInterviewService.continueInterview(
+      const result = await this.visaInterviewService.continueInterview(
         data.userProfile || {},
         data.visaType || 'F1 Student Visa',
         data.previousQuestion,
@@ -451,7 +453,10 @@ export class AiController {
       );
       return {
         success: true,
-        question,
+        question: result.question,
+        currentSection: result.currentSection,
+        completedSections: result.completedSections,
+        isInterviewOver: result.isInterviewOver,
       };
     } catch (error) {
       console.error('Visa interview continue failed:', error);

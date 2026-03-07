@@ -2,6 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
+
+const VisaVideoInterview = dynamic(() => import("../../../components/VisaVideoInterview"), { ssr: false });
 
 /* ────────────────────────── Types ────────────────────────── */
 interface InterviewMessage {
@@ -56,8 +59,10 @@ const DEFAULT_SECTIONS: InterviewSection[] = [
 
 /* ────────────────────────── Main Page ────────────────────────── */
 export default function VisaMockPage() {
-    // Phase: "setup" | "interview" | "report"
-    const [phase, setPhase] = useState<"setup" | "interview" | "report">("setup");
+    // Phase: "setup" | "permission" | "interview" | "report"
+    const [phase, setPhase] = useState<"setup" | "permission" | "interview" | "report">("setup");
+    const [micPermissionGranted, setMicPermissionGranted] = useState(false);
+    const [micPermissionError, setMicPermissionError] = useState<string | null>(null);
 
     // Setup state
     const [visaType, setVisaType] = useState("F1 Student Visa");
@@ -83,6 +88,9 @@ export default function VisaMockPage() {
     const [questionCount, setQuestionCount] = useState(0);
     const [showEvalPanel, setShowEvalPanel] = useState(false);
 
+    // Interview mode: "text" (legacy chat) or "video" (WebRTC video call)
+    const [interviewMode, setInterviewMode] = useState<"text" | "video">("video");
+
     // Report state
     const [finalReport, setFinalReport] = useState<FinalReport | null>(null);
     const [reportLoading, setReportLoading] = useState(false);
@@ -94,55 +102,149 @@ export default function VisaMockPage() {
     // Voice status
     const [isListening, setIsListening] = useState(false);
     const recognitionRef = useRef<any>(null);
+    const textAccumulatorRef = useRef("");
+    const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const sendAnswerRef = useRef<(text?: string) => void>(() => { });
+    const phaseRef = useRef(phase);
+    const isListeningRef = useRef(isListening);
 
-    // Initialize Speech Recognition
+    useEffect(() => { phaseRef.current = phase; }, [phase]);
+    useEffect(() => { isListeningRef.current = isListening; }, [isListening]);
+
+    // Initialize Speech Recognition — only for TEXT mode
+    // Video mode has its own recognition inside VisaVideoInterview
+    // Chrome only allows ONE active SpeechRecognition session at a time
+    const interviewModeRef = useRef(interviewMode);
+    useEffect(() => { interviewModeRef.current = interviewMode; }, [interviewMode]);
+
     useEffect(() => {
-        if (typeof window !== "undefined") {
-            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-            if (SpeechRecognition) {
-                recognitionRef.current = new SpeechRecognition();
-                recognitionRef.current.continuous = true;
-                recognitionRef.current.interimResults = true;
+        if (typeof window === "undefined") return;
+        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+        if (!SpeechRecognition) return;
 
-                recognitionRef.current.onresult = (event: any) => {
-                    const transcript = Array.from(event.results)
-                        .map((result: any) => result[0])
-                        .map((result: any) => result.transcript)
-                        .join("");
-                    setCurrentInput(transcript);
-                };
+        const rec = new SpeechRecognition();
+        rec.continuous = true;
+        rec.interimResults = true;
+        rec.lang = "en-US";
 
-                recognitionRef.current.onend = () => {
-                    setIsListening(false);
-                };
+        rec.onresult = (event: any) => {
+            let interim = "";
+            let finalText = "";
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const t = event.results[i][0].transcript;
+                if (event.results[i].isFinal) finalText += t;
+                else interim += t;
             }
-        }
+
+            if (finalText) {
+                textAccumulatorRef.current = (textAccumulatorRef.current + " " + finalText).trim();
+                setCurrentInput(textAccumulatorRef.current);
+            } else if (interim) {
+                setCurrentInput((textAccumulatorRef.current + " " + interim).trim());
+            }
+
+            // Auto-send after 2s of silence
+            if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = setTimeout(() => {
+                const text = textAccumulatorRef.current.trim();
+                if (text) {
+                    textAccumulatorRef.current = "";
+                    sendAnswerRef.current(text);
+                }
+            }, 2000);
+        };
+
+        rec.onend = () => {
+            setIsListening(false);
+        };
+
+        recognitionRef.current = rec;
     }, []);
 
     const toggleSpeech = () => {
+        // Only used in text mode — video mode has its own toggle
+        if (interviewModeRef.current !== "text") return;
         if (isListening) {
             recognitionRef.current?.stop();
             setIsListening(false);
+            if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
         } else {
+            // Cancel AI speech when user wants to speak
+            if (typeof window !== "undefined") window.speechSynthesis.cancel();
+            textAccumulatorRef.current = "";
             setCurrentInput("");
-            recognitionRef.current?.start();
-            setIsListening(true);
+            try {
+                recognitionRef.current?.start();
+                setIsListening(true);
+            } catch (e) { }
         }
     };
 
-    // Auto-scroll and Auto-TTS for AI messages
+    // Track last spoken message index to avoid replays
+    const lastSpokenIndexRef = useRef(-1);
+
+    // Auto-scroll and Auto-TTS for AI messages + auto-start listening
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
 
-        // Speak last officer message
-        const lastMsg = messages[messages.length - 1];
-        if (lastMsg?.role === "officer" && typeof window !== "undefined") {
+        // Only handle TTS in text mode (video mode handles its own)
+        if (interviewMode !== "text") return;
+
+        const lastIdx = messages.length - 1;
+        const lastMsg = messages[lastIdx];
+        if (
+            lastMsg?.role === "officer" &&
+            lastIdx > lastSpokenIndexRef.current &&
+            typeof window !== "undefined"
+        ) {
+            lastSpokenIndexRef.current = lastIdx;
+            window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(lastMsg.content);
             utterance.rate = 1;
             utterance.pitch = 1;
-            window.speechSynthesis.speak(utterance);
+
+            utterance.onend = () => {
+                // Auto-start listening after AI finishes speaking
+                if (phaseRef.current === "interview" && recognitionRef.current && !isListeningRef.current) {
+                    textAccumulatorRef.current = "";
+                    setCurrentInput("");
+                    try {
+                        recognitionRef.current.start();
+                        setIsListening(true);
+                    } catch (e) { }
+                }
+            };
+
+            setTimeout(() => {
+                window.speechSynthesis.speak(utterance);
+            }, 300);
         }
-    }, [messages]);
+    }, [messages, interviewMode]);
+
+    /* ────── Microphone Permission ────── */
+    const requestMicPermission = useCallback(async () => {
+        setMicPermissionError(null);
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            // Stop the test stream immediately — actual stream will be created by the interview components
+            stream.getTracks().forEach((t) => t.stop());
+            setMicPermissionGranted(true);
+            return true;
+        } catch (err: any) {
+            const msg =
+                err.name === "NotAllowedError"
+                    ? "Microphone access was denied. Please allow microphone access in your browser settings and try again."
+                    : err.name === "NotFoundError"
+                        ? "No microphone detected. Please connect a microphone and try again."
+                        : `Microphone error: ${err.message || "Unknown error"}`;
+            setMicPermissionError(msg);
+            return false;
+        }
+    }, []);
+
+    const handleStartClick = useCallback(() => {
+        setPhase("permission");
+    }, []);
 
     /* ────── API Calls ────── */
     const startInterview = useCallback(async () => {
@@ -172,11 +274,21 @@ export default function VisaMockPage() {
         setIsLoading(false);
     }, [profile, visaType]);
 
-    const sendAnswer = useCallback(async () => {
-        if (!currentInput.trim() || isLoading) return;
-
-        const answer = currentInput.trim();
+    const sendAnswer = useCallback(async (overrideText?: string) => {
+        const answer = (overrideText || currentInput).trim();
+        if (!answer || isLoading) return;
         setCurrentInput("");
+
+        // Stop parent's text-mode recognition when sending (video mode manages its own)
+        if (interviewModeRef.current === "text" && recognitionRef.current && isListeningRef.current) {
+            try { recognitionRef.current.stop(); } catch (e) { }
+            setIsListening(false);
+        }
+        if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        textAccumulatorRef.current = "";
+
+        // Cancel any ongoing AI speech
+        if (typeof window !== "undefined") window.speechSynthesis.cancel();
 
         const applicantMsg: InterviewMessage = {
             role: "applicant",
@@ -251,7 +363,16 @@ export default function VisaMockPage() {
         inputRef.current?.focus();
     }, [currentInput, isLoading, messages, visaType, profile, currentSection, questionCount]);
 
+    // Keep sendAnswerRef in sync for auto-send from speech recognition
+    useEffect(() => { sendAnswerRef.current = sendAnswer; }, [sendAnswer]);
+
     const endInterview = useCallback(async () => {
+        // Stop all voice activity when ending
+        if (typeof window !== "undefined") window.speechSynthesis.cancel();
+        if (recognitionRef.current && isListeningRef.current) {
+            try { recognitionRef.current.stop(); } catch (e) { }
+            setIsListening(false);
+        }
         setReportLoading(true);
         setPhase("report");
         try {
@@ -275,6 +396,10 @@ export default function VisaMockPage() {
     }, [visaType, messages, evaluations]);
 
     const resetAll = useCallback(() => {
+        if (typeof window !== "undefined") window.speechSynthesis.cancel();
+        if (recognitionRef.current && isListeningRef.current) {
+            try { recognitionRef.current.stop(); } catch (e) { }
+        }
         setPhase("setup");
         setMessages([]);
         setEvaluations([]);
@@ -285,6 +410,10 @@ export default function VisaMockPage() {
         setFinalReport(null);
         setShowEvalPanel(false);
         setCurrentInput("");
+        setIsListening(false);
+        setMicPermissionGranted(false);
+        setMicPermissionError(null);
+        lastSpokenIndexRef.current = -1;
     }, []);
 
     /* ────── Key Handler ────── */
@@ -313,11 +442,42 @@ export default function VisaMockPage() {
                             setVisaType={setVisaType}
                             profile={profile}
                             setProfile={(p) => setProfile(prev => ({ ...prev, ...p }))}
-                            onStart={startInterview}
+                            onStart={handleStartClick}
                             isLoading={isLoading}
+                            interviewMode={interviewMode}
+                            setInterviewMode={setInterviewMode}
                         />
                     )}
-                    {phase === "interview" && (
+                    {phase === "permission" && (
+                        <PermissionPhase
+                            key="permission"
+                            micPermissionGranted={micPermissionGranted}
+                            micPermissionError={micPermissionError}
+                            onRequestPermission={requestMicPermission}
+                            onStartInterview={startInterview}
+                            onBack={() => setPhase("setup")}
+                            isLoading={isLoading}
+                            interviewMode={interviewMode}
+                        />
+                    )}
+                    {phase === "interview" && interviewMode === "video" && (
+                        <VisaVideoInterview
+                            key="video-interview"
+                            messages={messages}
+                            currentInput={currentInput}
+                            setCurrentInput={setCurrentInput}
+                            isLoading={isLoading}
+                            sections={sections}
+                            currentSection={currentSection}
+                            latestEval={latestEval}
+                            questionCount={questionCount}
+                            evaluations={evaluations}
+                            onSend={sendAnswer}
+                            onEnd={endInterview}
+                            visaType={visaType}
+                        />
+                    )}
+                    {phase === "interview" && interviewMode === "text" && (
                         <InterviewPhase
                             key="interview"
                             messages={messages}
@@ -361,10 +521,12 @@ export default function VisaMockPage() {
    SETUP PHASE
    ═══════════════════════════════════════════════════════════════ */
 function SetupPhase({
-    visaType, setVisaType, profile, setProfile, onStart, isLoading,
+    visaType, setVisaType, profile, setProfile, onStart, isLoading, interviewMode, setInterviewMode,
 }: {
     visaType: string;
     setVisaType: (v: string) => void;
+    interviewMode: "text" | "video";
+    setInterviewMode: (v: "text" | "video") => void;
     profile: any;
     setProfile: (p: any) => void;
     onStart: () => void;
@@ -487,12 +649,46 @@ function SetupPhase({
                         />
                     </div>
 
+                    {/* Interview Mode Selector */}
+                    <div className="mt-10 mb-2 relative z-10">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-1 h-5 bg-[#6605c7] rounded-full" />
+                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Interview Mode</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            {[
+                                { value: "video" as const, icon: "videocam", label: "Video Call", desc: "WebRTC camera + AI voice (recommended)" },
+                                { value: "text" as const, icon: "chat", label: "Text Chat", desc: "Classic text-based interview" },
+                            ].map((m) => (
+                                <button
+                                    key={m.value}
+                                    onClick={() => setInterviewMode(m.value)}
+                                    className={`p-5 rounded-3xl border-2 text-left transition-all ${interviewMode === m.value
+                                            ? "border-[#6605c7] bg-[#6605c7]/5 shadow-lg shadow-[#6605c7]/10"
+                                            : "border-white/5 bg-white/[0.02] hover:border-white/10"
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${interviewMode === m.value ? "bg-[#6605c7] text-white" : "bg-white/5 text-gray-500"
+                                            }`}>
+                                            <span className="material-symbols-outlined text-xl">{m.icon}</span>
+                                        </div>
+                                        <div>
+                                            <div className={`text-sm font-bold ${interviewMode === m.value ? "text-white" : "text-gray-400"}`}>{m.label}</div>
+                                            <div className="text-[10px] text-gray-600 mt-0.5">{m.desc}</div>
+                                        </div>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     <motion.button
                         whileHover={{ y: -4, boxShadow: "0 25px 50px -12px rgba(102, 5, 199, 0.5)" }}
                         whileTap={{ scale: 0.98 }}
                         onClick={onStart}
                         disabled={isLoading || !profile.fullName}
-                        className="w-full mt-12 px-8 py-6 bg-gradient-to-r from-[#6605c7] to-[#a855f7] text-white font-black rounded-3xl text-sm uppercase tracking-[0.2em] disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-500 flex items-center justify-center gap-4 relative z-10 shadow-2xl shadow-[#6605c7]/20"
+                        className="w-full mt-6 px-8 py-6 bg-gradient-to-r from-[#6605c7] to-[#a855f7] text-white font-black rounded-3xl text-sm uppercase tracking-[0.2em] disabled:opacity-20 disabled:cursor-not-allowed transition-all duration-500 flex items-center justify-center gap-4 relative z-10 shadow-2xl shadow-[#6605c7]/20"
                     >
                         {isLoading ? (
                             <>
@@ -510,6 +706,203 @@ function SetupPhase({
                     {/* Background Noise/Grid */}
                     <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: "radial-gradient(#fff 1px, transparent 1px)", backgroundSize: "20px 20px" }} />
                 </div>
+            </div>
+        </motion.div>
+    );
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PERMISSION PHASE — Mic access gate before interview starts
+   ═══════════════════════════════════════════════════════════════ */
+function PermissionPhase({
+    micPermissionGranted, micPermissionError, onRequestPermission, onStartInterview, onBack, isLoading, interviewMode,
+}: {
+    micPermissionGranted: boolean;
+    micPermissionError: string | null;
+    onRequestPermission: () => Promise<boolean>;
+    onStartInterview: () => void;
+    onBack: () => void;
+    isLoading: boolean;
+    interviewMode: "text" | "video";
+}) {
+    const [requesting, setRequesting] = useState(false);
+    const [granted, setGranted] = useState(micPermissionGranted);
+    const [error, setError] = useState(micPermissionError);
+
+    const handleRequest = async () => {
+        setRequesting(true);
+        setError(null);
+        const ok = await onRequestPermission();
+        setGranted(ok);
+        if (!ok) {
+            setError("Microphone access was denied. Please allow it and try again.");
+        }
+        setRequesting(false);
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.5 }}
+            className="flex flex-col items-center justify-center min-h-[80vh] py-12"
+        >
+            <div className="w-full max-w-lg text-center">
+                {/* Mic Icon */}
+                <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
+                    className="inline-flex items-center justify-center w-32 h-32 rounded-[40px] mb-10 relative mx-auto"
+                >
+                    <div className={`absolute inset-0 rounded-[40px] blur-[40px] transition-colors duration-500 ${granted ? "bg-green-500/30" : requesting ? "bg-[#6605c7]/30 animate-pulse" : error ? "bg-red-500/20" : "bg-[#6605c7]/20"
+                        }`} />
+                    <div className={`relative w-full h-full rounded-[40px] border flex items-center justify-center transition-all duration-500 ${granted
+                            ? "bg-green-500/10 border-green-500/30"
+                            : error
+                                ? "bg-red-500/5 border-red-500/20"
+                                : "bg-white/[0.03] border-white/10"
+                        }`}>
+                        {requesting ? (
+                            <div className="w-10 h-10 border-3 border-[#6605c7]/30 border-t-[#6605c7] rounded-full animate-spin" />
+                        ) : granted ? (
+                            <motion.span
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                transition={{ type: "spring", stiffness: 300 }}
+                                className="material-symbols-outlined text-green-400 text-6xl"
+                            >
+                                mic
+                            </motion.span>
+                        ) : (
+                            <span className={`material-symbols-outlined text-6xl ${error ? "text-red-400" : "text-gray-500"}`}>
+                                {error ? "mic_off" : "mic_none"}
+                            </span>
+                        )}
+                    </div>
+                </motion.div>
+
+                {/* Title & Status */}
+                <h2 className="text-3xl md:text-4xl font-black text-white uppercase tracking-tight mb-4">
+                    {granted ? "Microphone Ready" : requesting ? "Requesting Access..." : "Microphone Access"}
+                </h2>
+
+                {granted ? (
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                    >
+                        <p className="text-gray-400 text-base mb-3 leading-relaxed">
+                            Microphone access granted. The AI Consular Officer will speak to you and your
+                            responses will be captured through your microphone automatically.
+                        </p>
+                        <div className="flex items-center justify-center gap-2 mb-8">
+                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                            <span className="text-[10px] font-black text-green-400 uppercase tracking-[0.2em]">READY FOR TWO-WAY COMMUNICATION</span>
+                        </div>
+
+                        {/* How it works */}
+                        <div className="bg-white/[0.03] border border-white/5 rounded-3xl p-6 mb-8 text-left">
+                            <div className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">How it works</div>
+                            <div className="space-y-3">
+                                {[
+                                    { icon: "smart_toy", text: "AI Officer asks you a question via voice" },
+                                    { icon: "mic", text: "Your microphone captures your spoken answer" },
+                                    { icon: "send", text: "Answer auto-sends after a brief pause" },
+                                    { icon: "loop", text: "Conversation continues naturally back and forth" },
+                                ].map((step, i) => (
+                                    <div key={i} className="flex items-center gap-4">
+                                        <div className="w-8 h-8 rounded-xl bg-[#6605c7]/10 flex items-center justify-center shrink-0">
+                                            <span className="material-symbols-outlined text-[#a855f7] text-sm">{step.icon}</span>
+                                        </div>
+                                        <span className="text-sm text-gray-400 font-medium">{step.text}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <motion.button
+                            whileHover={{ y: -4, boxShadow: "0 25px 50px -12px rgba(102, 5, 199, 0.5)" }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={onStartInterview}
+                            disabled={isLoading}
+                            className="w-full px-8 py-6 bg-gradient-to-r from-[#6605c7] to-[#a855f7] text-white font-black rounded-3xl text-sm uppercase tracking-[0.2em] disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-500 flex items-center justify-center gap-4 shadow-2xl shadow-[#6605c7]/20"
+                        >
+                            {isLoading ? (
+                                <>
+                                    <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    CONNECTING...
+                                </>
+                            ) : (
+                                <>
+                                    <span className="material-symbols-outlined text-2xl">call</span>
+                                    BEGIN INTERVIEW
+                                </>
+                            )}
+                        </motion.button>
+                    </motion.div>
+                ) : error ? (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                        <p className="text-red-400/80 text-sm mb-6 leading-relaxed font-medium">
+                            {error}
+                        </p>
+                        <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-5 mb-8 text-left">
+                            <div className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-3">How to fix</div>
+                            <div className="space-y-2 text-xs text-gray-500 font-medium leading-relaxed">
+                                <p>1. Click the lock/camera icon in your browser address bar</p>
+                                <p>2. Set Microphone to &quot;Allow&quot;</p>
+                                <p>3. Click &quot;Try Again&quot; below</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={onBack}
+                                className="flex-1 px-6 py-4 rounded-3xl bg-white/5 border border-white/10 text-gray-400 font-black text-sm uppercase tracking-widest hover:bg-white/10 transition-colors"
+                            >
+                                GO BACK
+                            </button>
+                            <motion.button
+                                whileTap={{ scale: 0.98 }}
+                                onClick={handleRequest}
+                                disabled={requesting}
+                                className="flex-1 px-6 py-4 rounded-3xl bg-gradient-to-r from-[#6605c7] to-[#a855f7] text-white font-black text-sm uppercase tracking-widest disabled:opacity-40 flex items-center justify-center gap-3 shadow-xl"
+                            >
+                                <span className="material-symbols-outlined text-lg">refresh</span>
+                                TRY AGAIN
+                            </motion.button>
+                        </div>
+                    </motion.div>
+                ) : (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                        <p className="text-gray-400 text-base mb-3 leading-relaxed">
+                            This mock interview uses two-way voice communication.
+                            Please grant microphone access to continue.
+                        </p>
+                        <p className="text-gray-600 text-sm mb-8">
+                            Your browser will show a permission prompt when you click the button below.
+                        </p>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={onBack}
+                                className="flex-1 px-6 py-5 rounded-3xl bg-white/5 border border-white/10 text-gray-400 font-black text-sm uppercase tracking-widest hover:bg-white/10 transition-colors"
+                            >
+                                GO BACK
+                            </button>
+                            <motion.button
+                                whileHover={{ y: -2, boxShadow: "0 20px 40px -10px rgba(102, 5, 199, 0.4)" }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={handleRequest}
+                                disabled={requesting}
+                                className="flex-1 px-6 py-5 rounded-3xl bg-gradient-to-r from-[#6605c7] to-[#a855f7] text-white font-black text-sm uppercase tracking-widest disabled:opacity-40 flex items-center justify-center gap-3 shadow-xl"
+                            >
+                                <span className="material-symbols-outlined text-xl">mic</span>
+                                GRANT MIC ACCESS
+                            </motion.button>
+                        </div>
+                    </motion.div>
+                )}
             </div>
         </motion.div>
     );

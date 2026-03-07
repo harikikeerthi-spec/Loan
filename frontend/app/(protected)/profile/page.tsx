@@ -112,6 +112,32 @@ export default function ProfilePage() {
                                             Edit Profile
                                         </button>
                                     </div>
+
+                                    {/* Study Abroad Preferences */}
+                                    <div className="mt-8 pt-8 border-t border-gray-100">
+                                        <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#6605c7] mb-6 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-sm">school</span>
+                                            Study Abroad Preferences
+                                        </h3>
+                                        <div className="space-y-4">
+                                            {[
+                                                { label: "Goal", value: user?.goal || "—" },
+                                                { label: "Destination", value: user?.studyDestination || "—" },
+                                                { label: "University", value: user?.targetUniversity || "—" },
+                                                { label: "Desired Course", value: user?.courseName || "—" },
+                                                { label: "Target Intake", value: user?.intakeSeason || "—" },
+                                                { label: "Undergrad major", value: user?.bachelorsDegree || "—" },
+                                                { label: "GPA Score", value: user?.gpa ? `${user.gpa} / 10` : "—" },
+                                                { label: "Experience", value: user?.workExp ? `${user.workExp} months` : "—" },
+                                                { label: "Planning Budget", value: user?.budget || "—" },
+                                            ].map((f) => (
+                                                <div key={f.label} className="flex justify-between items-center py-4 border-b border-gray-50 last:border-0">
+                                                    <span className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{f.label}</span>
+                                                    <span className="text-[13px] font-semibold text-gray-900">{f.value}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="space-y-5">

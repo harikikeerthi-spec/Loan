@@ -4,12 +4,14 @@ import React, { useState } from 'react';
 import UniversityCard from '../../../components/UniversityCard';
 import UniversityDetailsModal from '../../../components/UniversityDetailsModal';
 import { useUniversity } from '@/context/UniversityContext';
+import { useRouter } from 'next/navigation';
 
 const POPULAR = [
   'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 'Netherlands', 'India', 'Singapore', 'Sweden', 'Switzerland', 'Japan', 'South Korea', 'China', 'New Zealand'
 ];
 
 export default function SearchUniversitiesPage() {
+  const router = useRouter();
   const [selected, setSelected] = useState<string[]>(['United States']);
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any[]>([]);
@@ -78,8 +80,8 @@ export default function SearchUniversitiesPage() {
                     key={c}
                     onClick={() => toggleCountry(c)}
                     className={`px-5 py-2.5 rounded-2xl border font-bold text-sm transition-all duration-300 ${selected.includes(c)
-                        ? 'bg-[#6605c7] text-white border-purple-600 shadow-lg shadow-purple-500/20'
-                        : 'bg-white text-gray-600 border-gray-100 hover:border-purple-200 hover:bg-purple-50/30'
+                      ? 'bg-[#6605c7] text-white border-purple-600 shadow-lg shadow-purple-500/20'
+                      : 'bg-white text-gray-600 border-gray-100 hover:border-purple-200 hover:bg-purple-50/30'
                       }`}
                   >
                     {c}
@@ -140,8 +142,13 @@ export default function SearchUniversitiesPage() {
               <UniversityCard
                 key={`${u.name}-${u.country}`}
                 university={u}
-                onDetails={(x) => setActive(x)}
-                onApply={(x) => setActive(x)}
+                onDetails={(x) => {
+                  const slug = x.slug || x.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                  router.push(`/university/${slug}`);
+                }}
+                onApply={(x) => {
+                  router.push(`/apply-loan?university=${encodeURIComponent(x.name)}&country=${encodeURIComponent(x.country)}`);
+                }}
               />
             ))}
           </div>

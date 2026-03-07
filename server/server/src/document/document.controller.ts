@@ -1,5 +1,5 @@
 
-import { Controller, Post, UseInterceptors, UploadedFile, Body, Get, Param, Delete, Res, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Controller, Post, UseInterceptors, UploadedFile, Body, Get, Query, Param, Delete, Res, BadRequestException, NotFoundException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from '../users/users.service';
 import { DigilockerService } from '../integration/digilocker.service';
@@ -60,22 +60,20 @@ export class DocumentController {
             throw new BadRequestException('userId and docType are required');
         }
 
-        // 1. Verify Document (Mock/External Service Check)
-        const verificationResult = await this.digilockerService.verifyDocument(file.path, docType);
-
+        // 1. For Manual Uploads, we mark as 'uploaded' or 'pending_review'
+        // In a full production system, this would trigger an OCR/AI check here.
         let status = 'uploaded';
         let rejectionReason: string | null = null;
         let aiExplanation: string | null = null;
 
-        if (verificationResult.isValid) {
-            status = 'verified';
-        } else {
-            status = 'rejected';
-            // 2. If rejected, get AI explanation
-            const reason = verificationResult.details?.message || 'Document verification failed';
-            rejectionReason = reason;
-            aiExplanation = await this.docVerificationService.explainRejection(docType, reason);
-        }
+        // Simulate a basic check (e.g. file size/type already done by Multer)
+        // We'll mark it as pending manual verification or use AI to scan it if OCR was integrated.
+        status = 'pending';
+        const verificationResult = {
+            isValid: false,
+            code: 'MANUAL_UPLOAD',
+            details: { message: 'Document uploaded manually. Awaiting automated or manual verification.' }
+        };
 
         // 3. Update database with verification results
         // Note: The UserDocument schema might need updates to store rejection details if not present.
@@ -105,6 +103,25 @@ export class DocumentController {
                 filename: file.filename,
                 path: file.path
             }
+        };
+    }
+
+    @Post('digilocker/initiate')
+    async initiateDigilockerFlow(
+        @Body('userId') userId: string,
+        @Body('docType') docType: string,
+        @Body('redirectUri') redirectUri: string
+    ) {
+        if (!userId || !docType) {
+            throw new BadRequestException('userId and docType are required');
+        }
+
+        const state = Buffer.from(JSON.stringify({ userId, docType, redirectUri })).toString('base64');
+        const authUrl = this.digilockerService.getAuthUrl(state, redirectUri);
+
+        return {
+            success: true,
+            authUrl
         };
     }
 
@@ -143,7 +160,6 @@ export class DocumentController {
         @Param('userId') userId: string,
         @Param('docType') docType: string
     ) {
-        // First get the document to find the file path
         const docs = await this.usersService.getUserDocuments(userId);
         const doc = docs.find(d => d.docType === docType);
 

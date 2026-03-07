@@ -32,6 +32,28 @@ model User {
   forumComments     ForumComment[]
   referralsMade     Referral[]          @relation("Referrer")
   referralReceived  Referral?           @relation("Referee")
+
+  // Onboarding & Profile Preferences
+  goal              String?
+  studyDestination  String?
+  courseName        String?
+  targetUniversity  String?
+  intakeSeason      String?
+  bachelorsDegree   String?
+  workExp           Int?
+  gpa               Float?
+  entranceTest      String?
+  entranceScore     String?
+  englishTest       String?
+  englishScore      String?
+  budget            String?
+  pincode           String?
+  loanAmount        String?
+  admitStatus       String?
+  onboardingApplication OnboardingApplication?
+  studyPreference       UserStudyPreference?
+  academicProfile       UserAcademicProfile?
+  financialProfile      UserFinancialProfile?
 }
 
 model AdminProfile {
@@ -732,4 +754,130 @@ model Course {
   @@index([level])
   @@index([field])
   @@index([isPopular])
+}
+
+// ==================== CONNECTED COHORT ====================
+
+model CohortApplication {
+  id           String   @id @default(uuid())
+
+  fullName     String
+  email        String
+  phone        String
+  targetIntake String                             // e.g., "Fall 2026"
+
+  // Optional extended fields
+  destination  String?                            // e.g., "USA", "UK"
+  university   String?
+  course       String?
+  gapYear      Boolean  @default(false)
+  message      String?  @db.Text
+
+  status       String   @default("pending")       // pending, shortlisted, rejected, accepted
+  reviewedBy   String?
+  reviewNotes  String?  @db.Text
+  reviewedAt   DateTime?
+
+  source       String?  @default("connectED")     // tracks which landing page
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([targetIntake])
+  @@index([createdAt])
+}
+
+// ==================== ONBOARDING LEADS ====================
+
+model OnboardingApplication {
+  id                String    @id @default(uuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Lead Details
+  email             String
+  fullName          String?
+  phone             String?
+  
+  // Requirement Details
+  goal              String?
+  studyDestination  String?
+  courseName        String?
+  targetUniversity  String?
+  intakeSeason      String?
+  
+  // Profile Details
+  bachelorsDegree   String?
+  gpa               Float?
+  workExp           Int?
+  entranceTest      String?
+  entranceScore     String?
+  englishTest       String?
+  englishScore      String?
+  
+  // Financial Details
+  budget            String?
+  pincode           String?
+  loanAmount        String?
+  admitStatus       String?
+
+  // Service Team Tracking
+  status            String    @default("pending") // pending, contacted, processing, closed
+  assignedTo        String?   // Admin/Team member assigned
+  serviceNotes      String?   @db.Text
+  source            String    @default("onboarding_bot")
+  
+  submittedAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+}
+// ==================== SPECIALIZED ONBOARDING TABLES ====================
+
+model UserStudyPreference {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  goal              String?
+  studyDestination  String?
+  courseName        String?
+  targetUniversity  String?
+  intakeSeason      String?
+  admitStatus       String?
+  
+  updatedAt         DateTime @updatedAt
+}
+
+model UserAcademicProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  bachelorsDegree   String?
+  gpa               Float?
+  workExp           Int?
+  entranceTest      String?
+  entranceScore     String?
+  englishTest       String?
+  englishScore      String?
+  
+  updatedAt         DateTime @updatedAt
+}
+
+model UserFinancialProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  budget            String?
+  pincode           String?
+  loanAmount        String?
+  
+  updatedAt         DateTime @updatedAt
 }

@@ -12,11 +12,11 @@ export const metadata: Metadata = {
 };
 
 const lenders = [
-    { name: "IDFC First Bank", badge: "Digital First", rate: "10.50% - 12.50%", time: "48 hours", fee: "1% + GST", logo: "https://upload.wikimedia.org/wikipedia/commons/7/7b/IDFC_First_Bank_logo.jpg" },
-    { name: "HDFC Credila", badge: "Most Popular", rate: "10.75% - 12.50%", time: "5-7 days", fee: "1% of loan", logo: "https://www.credila.com/images/Credila-Logo.png" },
-    { name: "Auxilo Finserve", badge: "Fast Approval", rate: "11.25% - 13.50%", time: "3 days", fee: "1.5% + GST", logo: "https://www.studentcover.in/auxilo_no_bg.png" },
-    { name: "Avanse Financial", badge: "High Limits", rate: "10.99% - 13.00%", time: "4 days", fee: "1% + GST", logo: "https://mma.prnewswire.com/media/1986642/Avanse_Logo.jpg?p=facebook" },
-    { name: "Poonawalla Fincorp", badge: "Easy Process", rate: "11.50% - 14.50%", time: "3 days", fee: "1.5% + GST", logo: "https://collegepond.com/wp-content/uploads/2025/03/image-8.png" },
+    { name: "IDFC First Bank", badge: "Digital First", rate: "10.50% - 12.50%", time: "48 hours", fee: "1% + GST", logo: "/images/lenders/idfc-first-bank.jpg" },
+    { name: "HDFC Credila", badge: "Most Popular", rate: "10.75% - 12.50%", time: "5-7 days", fee: "1% of loan", logo: "/images/lenders/hdfc-credila.png" },
+    { name: "Auxilo Finserve", badge: "Fast Approval", rate: "11.25% - 13.50%", time: "3 days", fee: "1.5% + GST", logo: "/images/lenders/auxilo.png" },
+    { name: "Avanse Financial", badge: "High Limits", rate: "10.99% - 13.00%", time: "4 days", fee: "1% + GST", logo: "/images/lenders/avanse.jpg" },
+    { name: "Poonawalla Fincorp", badge: "Easy Process", rate: "11.50% - 14.50%", time: "3 days", fee: "1.5% + GST", logo: "/images/lenders/poonawalla.png" },
 ];
 
 const features = [
@@ -50,7 +50,7 @@ export default function HomePage() {
                         <div className="absolute -inset-1 animate-pulse rounded-xl bg-gradient-to-r from-amber-400/30 to-orange-500/30 blur-md" />
 
                         {/* Main badge */}
-                        <div className="relative flex items-center gap-0">
+                        <div className="relative flex flex-col items-center gap-1">
                             {/* Hover tooltip */}
                             <span className="absolute left-full ml-3 whitespace-nowrap bg-gradient-to-r from-amber-500 to-orange-600 text-white text-[11px] font-black px-4 py-2 rounded-xl shadow-xl shadow-orange-500/30 opacity-0 -translate-x-2 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 uppercase tracking-wider">
                                 <span className="flex items-center gap-2">
@@ -85,9 +85,9 @@ export default function HomePage() {
                                 <div className="absolute -bottom-0.5 -left-0.5 w-2 h-2 bg-orange-300 rounded-full animate-pulse delay-300" />
                             </div>
                             {/* Refer Now label */}
-                            <div className="mt-1.5 text-center">
-                                <span className="text-[9px] font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600 whitespace-nowrap">
-                                    Refer Now
+                            <div className="text-center">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-[#1a1626] group-hover:text-[#6605c7] transition-colors whitespace-nowrap drop-shadow-sm">
+                                    Refer & Earn Now
                                 </span>
                             </div>
                         </div>
@@ -143,9 +143,14 @@ export default function HomePage() {
                             <div className="flex flex-wrap items-center gap-8">
                                 <div className="flex items-center gap-3">
                                     <div className="flex -space-x-2">
-                                        {[1, 2, 3, 4].map((i) => (
+                                        {[
+                                            { initials: 'PS', color: '6605c7' },
+                                            { initials: 'RM', color: '0891b2' },
+                                            { initials: 'AR', color: '7c3aed' },
+                                            { initials: 'VP', color: 'be185d' },
+                                        ].map((av, i) => (
                                             <div key={i} className="w-8 h-8 rounded-full border-2 border-white overflow-hidden shadow-sm">
-                                                <Image src={`https://i.pravatar.cc/80?u=${i + 10}`} className="w-full h-full object-cover" alt="Student" width={32} height={32} />
+                                                <Image src={`https://ui-avatars.com/api/?name=${av.initials}&background=${av.color}&color=fff&size=80`} className="w-full h-full object-cover" alt="Student" width={32} height={32} />
                                             </div>
                                         ))}
                                     </div>
@@ -172,7 +177,7 @@ export default function HomePage() {
                             <div className="absolute inset-0 scale-105 rounded-xl blur-2xl opacity-20" style={{ background: 'linear-gradient(135deg, #d8b4fe, #fed7aa)' }} />
                             <div className="relative rounded-xl overflow-hidden shadow-[0_30px_60px_-15px_rgba(102,5,199,0.15)] border-4 border-white/70 group">
                                 <Image
-                                    src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80"
+                                    src="/images/hero/students-abroad.jpg"
                                     alt="Students studying abroad"
                                     width={1200}
                                     height={900}
@@ -300,7 +305,7 @@ export default function HomePage() {
                         <div className="grid grid-cols-12 grid-rows-2 gap-5 h-auto lg:h-[550px]">
                             {/* 1 — Trending Courses */}
                             <Link href="/explore" className="col-span-12 lg:col-span-5 row-span-1 lg:row-span-2 group relative overflow-hidden rounded-xl shadow-lg flex flex-col justify-end min-h-[260px]" style={{ background: 'linear-gradient(135deg, #1a0533 0%, #3b0764 100%)' }}>
-                                <div className="absolute inset-0 opacity-30" style={{ background: "url('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&q=80') center/cover" }} />
+                                <div className="absolute inset-0 opacity-30" style={{ background: "url('/images/ecosystem/trending-courses.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(26,5,51,0.9) 0%, rgba(26,5,51,0.2) 60%, transparent 100%)' }} />
                                 <div className="absolute top-6 left-6">
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest border border-white/20">
@@ -323,7 +328,7 @@ export default function HomePage() {
 
                             {/* 2 — Popular Universities */}
                             <Link href="/explore" className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-lg flex flex-col justify-end min-h-[260px]" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
-                                <div className="absolute inset-0 opacity-25" style={{ background: "url('https://images.unsplash.com/photo-1592280771190-3e2e4d571952?w=600&q=80') center/cover" }} />
+                                <div className="absolute inset-0 opacity-25" style={{ background: "url('/images/ecosystem/universities.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(15,23,42,0.9) 0%, rgba(15,23,42,0.3) 60%, transparent 100%)' }} />
                                 <div className="absolute top-4 right-4">
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 backdrop-blur-sm text-blue-300 text-[10px] font-black uppercase tracking-widest border border-blue-400/20">
@@ -342,7 +347,7 @@ export default function HomePage() {
 
                             {/* 3 — Scholarships */}
                             <Link href="/explore" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-lg flex flex-col justify-end min-h-[260px]" style={{ background: 'linear-gradient(135deg, #78350f 0%, #b45309 100%)' }}>
-                                <div className="absolute inset-0 opacity-20" style={{ background: "url('https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=400&q=80') center/cover" }} />
+                                <div className="absolute inset-0 opacity-20" style={{ background: "url('/images/ecosystem/scholarships.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(120,53,15,0.9) 0%, rgba(120,53,15,0.3) 70%, transparent 100%)' }} />
                                 <div className="relative z-10 p-6">
                                     <div className="text-2xl font-black text-white mb-1">₹<AnimatedNumber value="50" />L+</div>
@@ -356,7 +361,7 @@ export default function HomePage() {
 
                             {/* 4 — Exam Prep */}
                             <Link href="/practice" className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-lg flex flex-col justify-end min-h-[240px]" style={{ background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}>
-                                <div className="absolute inset-0 opacity-20" style={{ background: "url('https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=600&q=80') center/cover" }} />
+                                <div className="absolute inset-0 opacity-20" style={{ background: "url('/images/ecosystem/exam-prep.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(6,78,59,0.9) 0%, rgba(6,78,59,0.3) 70%, transparent 100%)' }} />
                                 <div className="absolute top-4 right-4 w-11 h-11 rounded-xl bg-emerald-400/20 backdrop-blur-sm flex items-center justify-center">
                                     <span className="text-xl">✍️</span>
@@ -378,7 +383,7 @@ export default function HomePage() {
 
                             {/* 5 — Education Loan */}
                             <Link href="/apply-loan" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[240px]" style={{ background: 'linear-gradient(135deg, #6605c7 0%, #9333ea 100%)' }}>
-                                <div className="absolute inset-0 opacity-10" style={{ background: "url('https://images.unsplash.com/photo-1579621970590-9d624316904b?w=400&q=80') center/cover" }} />
+                                <div className="absolute inset-0 opacity-10" style={{ background: "url('/images/ecosystem/education-loan.jpg') center/cover" }} />
                                 <div className="relative z-10 p-6">
                                     <span className="inline-block px-2 py-0.5 rounded-lg bg-white/10 text-white text-[10px] font-black uppercase tracking-widest mb-3 border border-white/10">⭐ Best Rates</span>
                                     <h3 className="text-lg font-bold text-white mb-2">Education Loans</h3>
@@ -423,17 +428,17 @@ export default function HomePage() {
 
                         <div className="space-y-6">
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                <ToolCard href="/sop-writer" bg="bg-[#e7e1f7]" icon="https://img.icons8.com/isometric/50/6605c7/edit-file.png" title="Automated SOP Writer" desc="Draft your Statement of Purpose evaluated on matter, grammar, and readability using AI." cta="Submit SOP" />
-                                <ToolCard href="/admit-predictor" bg="bg-[#fdfaf2]" icon="https://img.icons8.com/isometric/50/6605c7/hourglass.png" title="Estimate Future Earnings" desc="Project your potential future earnings and compare countries based on ROI." cta="Estimate Now" />
-                                <ToolCard href="/compare-universities" bg="bg-[#e1f0f7]" icon="https://img.icons8.com/isometric/50/6605c7/scales.png" title="University Compare" desc="Get insights on income, employability, costs, and top recruiters of up to 4 universities." cta="Compare Now" />
+                                <ToolCard href="/sop-writer" bg="bg-[#e7e1f7]" icon="/images/tools/sop-writer.png" title="Automated SOP Writer" desc="Draft your Statement of Purpose evaluated on matter, grammar, and readability using AI." cta="Submit SOP" />
+                                <ToolCard href="/admit-predictor" bg="bg-[#fdfaf2]" icon="/images/tools/earnings.png" title="Estimate Future Earnings" desc="Project your potential future earnings and compare countries based on ROI." cta="Estimate Now" />
+                                <ToolCard href="/compare-universities" bg="bg-[#e1f0f7]" icon="/images/tools/compare-uni.png" title="University Compare" desc="Get insights on income, employability, costs, and top recruiters of up to 4 universities." cta="Compare Now" />
                             </div>
                             <div className="max-w-3xl mx-auto">
-                                <ToolCard href="/admit-predictor" bg="bg-[#e7e1f7]" icon="https://img.icons8.com/isometric/50/6605c7/document.png" title="Admit Predictor" desc="Check the probability of your MS in US admission. Predict your admission chances with 98% accuracy." cta="Evaluate Now" large />
+                                <ToolCard href="/admit-predictor" bg="bg-[#e7e1f7]" icon="/images/tools/admit-predictor.png" title="Admit Predictor" desc="Check the probability of your MS in US admission. Predict your admission chances with 98% accuracy." cta="Evaluate Now" large />
                             </div>
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                <ToolCard href="/grade-converter" bg="bg-[#e1f0f7]" icon="https://img.icons8.com/isometric/50/6605c7/calculator.png" title="Grade Converter" desc="Convert your percentage or 10-point CGPA to GPA score with just a single click." cta="Convert Now" />
-                                <ToolCard href="/emi" bg="bg-white" icon="https://img.icons8.com/isometric/50/6605c7/calculator.png" title="EMI Calculator" desc="Determine your EMIs and repayment schedules before committing to a student loan." cta="Calculate Now" border />
-                                <ToolCard href="/loan-eligibility" bg="bg-[#e7e1f7]" icon="https://img.icons8.com/isometric/50/6605c7/money.png" title="Loan Eligibility Checker" desc="Find the best education loan for you in just 2 minutes with our intelligent checker." cta="Check Eligibility" />
+                                <ToolCard href="/grade-converter" bg="bg-[#e1f0f7]" icon="/images/tools/calculator.png" title="Grade Converter" desc="Convert your percentage or 10-point CGPA to GPA score with just a single click." cta="Convert Now" />
+                                <ToolCard href="/emi" bg="bg-white" icon="/images/tools/calculator.png" title="EMI Calculator" desc="Determine your EMIs and repayment schedules before committing to a student loan." cta="Calculate Now" border />
+                                <ToolCard href="/loan-eligibility" bg="bg-[#e7e1f7]" icon="/images/tools/loan-eligibility.png" title="Loan Eligibility Checker" desc="Find the best education loan for you in just 2 minutes with our intelligent checker." cta="Check Eligibility" />
                             </div>
                         </div>
 
@@ -641,7 +646,7 @@ export default function HomePage() {
                                         <div className="flex items-start gap-5 mb-6">
                                             <div className="w-14 h-14 bg-white/80 rounded-xl flex items-center justify-center shrink-0 shadow-sm overflow-hidden p-0.5">
                                                 <Image
-                                                    src={`https://i.pravatar.cc/100?u=${t.avatar}`}
+                                                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=6605c7&color=fff&size=100`}
                                                     alt={t.name}
                                                     width={56}
                                                     height={56}
@@ -706,7 +711,7 @@ export default function HomePage() {
                             {/* Row 1 */}
                             {/* 1 — US Credit Card (large left) */}
                             <Link href="/us-credit-card" className="col-span-12 lg:col-span-5 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[320px]" style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%)' }}>
-                                <div className="absolute inset-0 opacity-15" style={{ background: "url('https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&q=80') center/cover" }} />
+                                <div className="absolute inset-0 opacity-15" style={{ background: "url('/images/services/us-credit-card.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(30,58,138,0.97) 0%, rgba(30,58,138,0.3) 60%, transparent 100%)' }} />
                                 <div className="absolute top-6 left-6">
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest border border-white/20">
@@ -729,7 +734,7 @@ export default function HomePage() {
 
                             {/* 2 — German Blocked Account (top middle) */}
                             <Link href="/german-blocked-account" className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[320px]" style={{ background: 'linear-gradient(135deg, #1f2937 0%, #374151 100%)' }}>
-                                <div className="absolute inset-0 opacity-20" style={{ background: "url('https://images.unsplash.com/photo-1467269204594-9661b134dd2b?w=600&q=80') center/cover" }} />
+                                <div className="absolute inset-0 opacity-20" style={{ background: "url('/images/services/german-account.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(31,41,55,0.98) 0%, rgba(31,41,55,0.3) 60%, transparent 100%)' }} />
                                 <div className="absolute top-4 right-4">
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/20 backdrop-blur-sm text-yellow-200 text-[10px] font-black uppercase tracking-widest border border-yellow-400/20">
@@ -749,7 +754,7 @@ export default function HomePage() {
 
                             {/* 3 — Forex Card (top right) */}
                             <Link href="/forex" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[320px]" style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)' }}>
-                                <div className="absolute inset-0 opacity-15" style={{ background: "url('https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=400&q=80') center/cover" }} />
+                                <div className="absolute inset-0 opacity-15" style={{ background: "url('/images/services/forex-card.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(5,150,105,0.97) 0%, rgba(5,150,105,0.3) 70%, transparent 100%)' }} />
                                 <div className="absolute top-4 left-4">
                                     <span className="text-3xl">🌍</span>
@@ -768,7 +773,7 @@ export default function HomePage() {
                             {/* Row 2 */}
                             {/* 4 — Student Housing (bottom left) */}
                             <Link href="/housing" className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[280px]" style={{ background: 'linear-gradient(135deg, #4c1d95 0%, #5b21b6 100%)' }}>
-                                <div className="absolute inset-0 opacity-15" style={{ background: "url('https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600&q=80') center/cover" }} />
+                                <div className="absolute inset-0 opacity-15" style={{ background: "url('/images/services/housing.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(76,29,149,0.98) 0%, rgba(76,29,149,0.3) 70%, transparent 100%)' }} />
                                 <div className="absolute top-4 right-4 w-11 h-11 rounded-xl bg-purple-400/20 backdrop-blur-sm flex items-center justify-center border border-purple-400/20">
                                     <span className="text-xl">🏠</span>
@@ -791,7 +796,7 @@ export default function HomePage() {
 
                             {/* 5 — UK Bank Account (bottom middle) */}
                             <Link href="/uk-bank-account" className="col-span-12 sm:col-span-6 lg:col-span-5 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[280px]" style={{ background: 'linear-gradient(135deg, #7c2d12 0%, #9a3412 100%)' }}>
-                                <div className="absolute inset-0 opacity-15" style={{ background: "url('https://images.unsplash.com/photo-1486299267070-83823f5448dd?w=600&q=80') center/cover" }} />
+                                <div className="absolute inset-0 opacity-15" style={{ background: "url('/images/services/uk-bank.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(124,45,18,0.97) 0%, rgba(124,45,18,0.3) 60%, transparent 100%)' }} />
                                 <div className="absolute top-6 left-6">
                                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest border border-white/20">
@@ -814,7 +819,7 @@ export default function HomePage() {
 
                             {/* 6 — Visa Counselling (bottom right) */}
                             <Link href="/visa-counselling" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-2xl flex flex-col justify-end min-h-[280px]" style={{ background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}>
-                                <div className="absolute inset-0 opacity-10" style={{ background: "url('https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=400&q=80') center/cover" }} />
+                                <div className="absolute inset-0 opacity-10" style={{ background: "url('/images/services/counselling.jpg') center/cover" }} />
                                 <div className="absolute top-6 right-6 w-16 h-16 rounded-full border-4 border-white/15 animate-ping opacity-20" />
                                 <div className="absolute top-6 right-6 w-16 h-16 rounded-xl border-4 border-white/10 flex items-center justify-center">
                                     <span className="text-2xl">✈️</span>

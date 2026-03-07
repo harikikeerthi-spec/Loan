@@ -15,6 +15,13 @@ export default function UniversityCard({ university, onDetails, onApply }: { uni
 
   const handleDetails = (uni: any) => {
     setSelectedUniversity(uni);
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('selectedUniversity', JSON.stringify(uni));
+      }
+    } catch (e) {
+      // ignore
+    }
     onDetails(uni);
   };
 

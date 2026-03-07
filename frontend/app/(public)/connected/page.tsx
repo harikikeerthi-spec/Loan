@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
@@ -225,7 +225,7 @@ export default function ConnectedPage() {
                                     </MagneticButton>
                                     <div className="flex flex-col justify-center">
                                         <span className="text-white font-black text-xs uppercase tracking-widest">Start Journey</span>
-                                        <span className="text-white/40 text-[10px] uppercase font-bold tracking-widest">Next Cohort Dec '25</span>
+                                        <span className="text-white/40 text-[10px] uppercase font-bold tracking-widest">Next Cohort Dec &apos;25</span>
                                     </div>
                                 </div>
                             </div>
@@ -236,7 +236,7 @@ export default function ConnectedPage() {
                 {/* Vertical Sidebar Text */}
                 <div className="absolute right-10 top-1/2 -translate-y-1/2 hidden xl:flex flex-col items-center gap-20 select-none">
                     <div className="w-px h-32 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
-                    <span className="text-white/20 uppercase font-black text-[10px] tracking-[1em] rotate-90 whitespace-nowrap">INDIA'S FIRST PEER COMMUNITY</span>
+                    <span className="text-white/20 uppercase font-black text-[10px] tracking-[1em] rotate-90 whitespace-nowrap">INDIA&apos;S FIRST PEER COMMUNITY</span>
                     <div className="w-px h-32 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
                 </div>
             </section>
@@ -365,7 +365,7 @@ export default function ConnectedPage() {
                 </div>
             </section>
 
-            {/* Registration CTA */}
+            {/* Registration CTA — Dynamic Form */}
             <section id="apply" className="py-40 bg-black text-white relative overflow-hidden">
                 <div className="max-w-7xl mx-auto px-6">
                     <div className="grid lg:grid-cols-2 gap-24 items-center">
@@ -396,43 +396,9 @@ export default function ConnectedPage() {
                             </div>
                         </div>
 
+                        {/* ─── Dynamic Application Form ─── */}
                         <div className="relative z-10">
-                            <motion.div
-                                initial={{ opacity: 0, x: 50 }}
-                                whileInView={{ opacity: 1, x: 0 }}
-                                className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-3xl p-12 rounded-[3.5rem] border border-white/10 shadow-2xl"
-                            >
-                                <form className="space-y-8">
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] uppercase font-black tracking-[0.5em] text-[#F7C600] px-2">Your Identity</label>
-                                        <input type="text" placeholder="Johnathan Doe" className="w-full bg-white/5 border border-white/10 rounded-2xl px-8 py-5 text-white placeholder:text-white/10 focus:outline-none focus:bg-white/10 focus:border-[#F7C600] transition-all" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] uppercase font-black tracking-[0.5em] text-[#F7C600] px-2">Digital Address</label>
-                                        <input type="email" placeholder="hello@aspirant.com" className="w-full bg-white/5 border border-white/10 rounded-2xl px-8 py-5 text-white placeholder:text-white/10 focus:outline-none focus:bg-white/10 focus:border-[#F7C600] transition-all" />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] uppercase font-black tracking-[0.5em] text-[#F7C600] px-2">Calling Code</label>
-                                            <input type="tel" placeholder="+91" className="w-full bg-white/5 border border-white/10 rounded-2xl px-8 py-5 text-white placeholder:text-white/10 focus:outline-none focus:bg-white/10 focus:border-[#F7C600] transition-all" />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[10px] uppercase font-black tracking-[0.5em] text-[#F7C600] px-2">Target Intake</label>
-                                            <select className="w-full bg-white/5 border border-white/10 rounded-2xl px-8 py-5 text-white focus:outline-none focus:bg-white/10 focus:border-[#F7C600] transition-all appearance-none cursor-pointer">
-                                                <option>Fall 2026</option>
-                                                <option>Spring 2026</option>
-                                                <option>Fall 2027</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <MagneticButton>
-                                        <button className="w-full py-6 bg-[#F7C600] hover:bg-white text-black text-xs font-black uppercase tracking-[0.6em] rounded-2xl shadow-xl transition-all">
-                                            SEND INTENT
-                                        </button>
-                                    </MagneticButton>
-                                </form>
-                            </motion.div>
+                            <CohortApplicationForm />
                         </div>
                     </div>
                 </div>
@@ -478,6 +444,271 @@ export default function ConnectedPage() {
                     </div>
                 </div>
             </footer>
+        </div>
+    );
+}
+
+// ─── Dynamic Cohort Application Form ─────────────────────────────────────────
+
+const INTAKE_OPTIONS = ["Fall 2025", "Spring 2026", "Fall 2026", "Fall 2027"];
+const DESTINATION_OPTIONS = ["USA", "UK", "Canada", "Australia", "Germany", "Ireland", "Other"];
+
+function CohortApplicationForm() {
+    const [form, setForm] = useState({
+        fullName: "",
+        email: "",
+        phone: "",
+        targetIntake: "Fall 2026",
+        destination: "",
+        university: "",
+        course: "",
+        message: "",
+    });
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [submitting, setSubmitting] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
+    const [serverError, setServerError] = useState("");
+
+    const validate = () => {
+        const e: Record<string, string> = {};
+        if (!form.fullName.trim()) e.fullName = "Name is required";
+        if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+            e.email = "Valid email required";
+        if (!form.phone.trim() || form.phone.trim().length < 7)
+            e.phone = "Valid phone required";
+        if (!form.targetIntake) e.targetIntake = "Select an intake";
+        return e;
+    };
+
+    const handleChange = (field: string, value: string) => {
+        setForm(prev => ({ ...prev, [field]: value }));
+        if (errors[field]) setErrors(prev => { const n = { ...prev }; delete n[field]; return n; });
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const errs = validate();
+        if (Object.keys(errs).length) { setErrors(errs); return; }
+
+        setSubmitting(true);
+        setServerError("");
+        try {
+            const { connectedApi } = await import("@/lib/api");
+            await connectedApi.apply({
+                fullName: form.fullName,
+                email: form.email,
+                phone: form.phone,
+                targetIntake: form.targetIntake,
+                destination: form.destination || undefined,
+                university: form.university || undefined,
+                course: form.course || undefined,
+                message: form.message || undefined,
+            });
+            setSubmitted(true);
+        } catch (err: any) {
+            setServerError(err?.message || "Something went wrong. Please try again.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    if (submitted) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-3xl p-12 rounded-[3.5rem] border border-white/10 shadow-2xl flex flex-col items-center text-center gap-6"
+            >
+                <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
+                    className="w-24 h-24 rounded-full bg-[#F7C600] flex items-center justify-center shadow-xl shadow-yellow-500/20"
+                >
+                    <span className="material-symbols-outlined text-black text-5xl font-black">check</span>
+                </motion.div>
+                <h3 className="text-3xl font-black text-white italic">Intent Received.</h3>
+                <p className="text-white/50 font-medium leading-relaxed max-w-xs">
+                    Welcome to the waitlist, <span className="text-[#F7C600] font-black">{form.fullName.split(" ")[0]}</span>. Our team will reach you within 48 hours.
+                </p>
+                <div className="mt-2 px-6 py-3 rounded-2xl bg-white/5 border border-white/10 text-white/30 text-xs font-bold uppercase tracking-widest">
+                    {form.targetIntake} Cohort · {form.destination || "Global"}
+                </div>
+                <button
+                    onClick={() => { setSubmitted(false); setForm({ fullName: "", email: "", phone: "", targetIntake: "Fall 2026", destination: "", university: "", course: "", message: "" }); }}
+                    className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white/60 transition-colors mt-2"
+                >
+                    Submit another application
+                </button>
+            </motion.div>
+        );
+    }
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, x: 50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-3xl p-10 rounded-[3.5rem] border border-white/10 shadow-2xl"
+        >
+            <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+                {/* Full Name */}
+                <FormField
+                    label="Your Identity"
+                    error={errors.fullName}
+                    inputId="connected-fullname"
+                >
+                    <input
+                        id="connected-fullname"
+                        type="text"
+                        placeholder="Johnathan Doe"
+                        value={form.fullName}
+                        onChange={e => handleChange("fullName", e.target.value)}
+                        className={formInputClass(!!errors.fullName)}
+                    />
+                </FormField>
+
+                {/* Email */}
+                <FormField
+                    label="Digital Address"
+                    error={errors.email}
+                    inputId="connected-email"
+                >
+                    <input
+                        id="connected-email"
+                        type="email"
+                        placeholder="hello@aspirant.com"
+                        value={form.email}
+                        onChange={e => handleChange("email", e.target.value)}
+                        className={formInputClass(!!errors.email)}
+                    />
+                </FormField>
+
+                {/* Phone + Intake */}
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField label="Calling Code" error={errors.phone} inputId="connected-phone">
+                        <input
+                            id="connected-phone"
+                            type="tel"
+                            placeholder="+91 98765 43210"
+                            value={form.phone}
+                            onChange={e => handleChange("phone", e.target.value)}
+                            className={formInputClass(!!errors.phone)}
+                        />
+                    </FormField>
+                    <FormField label="Target Intake" error={errors.targetIntake} inputId="connected-intake">
+                        <select
+                            id="connected-intake"
+                            value={form.targetIntake}
+                            onChange={e => handleChange("targetIntake", e.target.value)}
+                            className={formSelectClass(!!errors.targetIntake)}
+                        >
+                            {INTAKE_OPTIONS.map(o => (
+                                <option key={o} value={o} className="bg-[#111]">{o}</option>
+                            ))}
+                        </select>
+                    </FormField>
+                </div>
+
+                {/* Destination + University (optional) */}
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField label="Destination" inputId="connected-destination">
+                        <select
+                            id="connected-destination"
+                            value={form.destination}
+                            onChange={e => handleChange("destination", e.target.value)}
+                            className={formSelectClass(false)}
+                        >
+                            <option value="" className="bg-[#111]">— Choose —</option>
+                            {DESTINATION_OPTIONS.map(o => (
+                                <option key={o} value={o} className="bg-[#111]">{o}</option>
+                            ))}
+                        </select>
+                    </FormField>
+                    <FormField label="Target Course" inputId="connected-course">
+                        <input
+                            id="connected-course"
+                            type="text"
+                            placeholder="e.g. MS CS"
+                            value={form.course}
+                            onChange={e => handleChange("course", e.target.value)}
+                            className={formInputClass(false)}
+                        />
+                    </FormField>
+                </div>
+
+                {/* Message (optional) */}
+                <FormField label="Why This Cohort?" inputId="connected-message">
+                    <textarea
+                        id="connected-message"
+                        placeholder="Tell us about your goals in 2-3 sentences..."
+                        rows={3}
+                        value={form.message}
+                        onChange={e => handleChange("message", e.target.value)}
+                        className={`${formInputClass(false)} resize-none`}
+                    />
+                </FormField>
+
+                {/* Server error */}
+                {serverError && (
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-red-400 text-xs font-bold uppercase tracking-wider px-2"
+                    >
+                        {serverError}
+                    </motion.p>
+                )}
+
+                <MagneticButton>
+                    <button
+                        type="submit"
+                        disabled={submitting}
+                        className="w-full py-6 bg-[#F7C600] hover:bg-white text-black text-xs font-black uppercase tracking-[0.6em] rounded-2xl shadow-xl transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                    >
+                        {submitting ? (
+                            <>
+                                <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                                Sending Intent...
+                            </>
+                        ) : "SEND INTENT"}
+                    </button>
+                </MagneticButton>
+            </form>
+        </motion.div>
+    );
+}
+
+// ─── Form helpers ──────────────────────────────────────────────────────────────
+
+function formInputClass(hasError: boolean) {
+    return `w-full bg-white/5 border ${hasError ? "border-red-500/70" : "border-white/10"} rounded-2xl px-6 py-4 text-white placeholder:text-white/20 focus:outline-none focus:bg-white/10 focus:border-[#F7C600] transition-all text-sm`;
+}
+
+function formSelectClass(hasError: boolean) {
+    return `w-full bg-white/5 border ${hasError ? "border-red-500/70" : "border-white/10"} rounded-2xl px-6 py-4 text-white focus:outline-none focus:bg-white/10 focus:border-[#F7C600] transition-all appearance-none cursor-pointer text-sm`;
+}
+
+function FormField({
+    label,
+    inputId,
+    error,
+    children,
+}: {
+    label: string;
+    inputId: string;
+    error?: string;
+    children: React.ReactNode;
+}) {
+    return (
+        <div className="space-y-1.5">
+            <label htmlFor={inputId} className="text-[10px] uppercase font-black tracking-[0.4em] text-[#F7C600] px-2 block">
+                {label}
+                {!error && <span className="text-white/20 ml-2">·</span>}
+                {error && (
+                    <span className="text-red-400 normal-case font-semibold tracking-normal ml-2">{error}</span>
+                )}
+            </label>
+            {children}
         </div>
     );
 }

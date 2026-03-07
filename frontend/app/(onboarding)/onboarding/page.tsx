@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import UniversityCard from "@/components/UniversityCard";
 import UniDetailModal from "@/components/UniDetailModal";
-import { aiApi } from '@/lib/api';
+import { aiApi, onboardingApi } from '@/lib/api';
+import { useAuth } from "@/contexts/AuthContext";
 
 const COUNTRY_FLAGS: Record<string, string> = {
     'USA': '🇺🇸', 'UK': '🇬🇧', 'Canada': '🇨🇦', 'Australia': '🇦🇺', 'Germany': '🇩🇪', 'Ireland': '🇮🇪', 'Singapore': '🇸🇬', 'Other': '🌍'
@@ -228,6 +229,7 @@ const ANSWER_ALIASES: Record<string, string> = {
     plan_country: 'country', loan_country: 'country', compare_country: 'country',
     plan_course: 'course', loan_field: 'course', compare_course: 'course',
     plan_bachelors: 'bachelors_degree', loan_bachelors: 'bachelors_degree', compare_bachelors: 'bachelors_degree',
+    plan_ug_university: 'ug_university', loan_ug_university: 'ug_university', compare_ug_university: 'ug_university',
     plan_gpa: 'gpa', loan_cgpa: 'gpa', compare_cgpa: 'gpa',
     plan_work_exp: 'work_exp', loan_work_exp: 'work_exp', compare_work_exp: 'work_exp',
     plan_target_uni: 'target_university', loan_university: 'target_university', compare_uni_search: 'target_university',
@@ -236,6 +238,7 @@ const ANSWER_ALIASES: Record<string, string> = {
     plan_english_test: 'english_test', compare_english_test: 'english_test',
     plan_english_score: 'english_score', compare_english_score: 'english_score',
     plan_start_when: 'start_when', compare_intake: 'start_when',
+    loan_pincode: 'pincode',
 };
 
 const steps: any[] = [
@@ -286,6 +289,13 @@ const steps: any[] = [
         q: "Tell me about your undergrad — what did you study?",
         type: 'bachelors_search',
         placeholder: 'e.g. B.Tech in Computer Science',
+        flows: ['plan']
+    },
+    {
+        id: 'plan_ug_university',
+        q: "Which university did you complete your undergrad from?",
+        type: 'ug_university_search',
+        placeholder: 'e.g. Mumbai University, IIT Delhi',
         flows: ['plan']
     },
     {
@@ -400,6 +410,13 @@ const steps: any[] = [
         flows: ['loan']
     },
     {
+        id: 'loan_ug_university',
+        q: "Which university did you complete your undergrad from?",
+        type: 'ug_university_search',
+        placeholder: 'e.g. Delhi University, VIT',
+        flows: ['loan']
+    },
+    {
         id: 'loan_cgpa',
         q: "What was your graduation CGPA or percentage?",
         type: 'gpa_input',
@@ -456,6 +473,13 @@ const steps: any[] = [
         flows: ['loan']
     },
     {
+        id: 'loan_pincode',
+        q: "To personalise offers, what's your area pincode / postal code?",
+        type: 'text',
+        placeholder: 'e.g. 560001',
+        flows: ['loan']
+    },
+    {
         id: 'loan_repayment',
         q: "When would you prefer to start your EMI repayment?",
         type: 'cards',
@@ -498,6 +522,13 @@ const steps: any[] = [
         q: "What was your undergraduate major?",
         type: 'bachelors_search',
         placeholder: 'e.g. B.Tech, BBA, BSc',
+        flows: ['compare']
+    },
+    {
+        id: 'compare_ug_university',
+        q: "Which university did you complete your undergrad from?",
+        type: 'ug_university_search',
+        placeholder: 'e.g. Anna University, NIT',
         flows: ['compare']
     },
     {
@@ -584,6 +615,7 @@ export default function OnboardingPage() {
     const progressRef = useRef<HTMLDivElement | null>(null);
     const chatEndRef = useRef<HTMLDivElement | null>(null);
 
+    const { user, token, refreshUser } = useAuth();
     const [currentIdx, setCurrentIdx] = useState(0);
     const [answers, setAnswers] = useState<Record<string, { value: string; label: string }>>({});
     const [aiUniversities, setAiUniversities] = useState<any[]>([]);
@@ -601,6 +633,8 @@ export default function OnboardingPage() {
     const [showCourseSearch, setShowCourseSearch] = useState(false);
     const [bachelorsSearch, setBachelorsSearch] = useState('');
     const [showBachelorsSearch, setShowBachelorsSearch] = useState(false);
+    const [ugSearch, setUgSearch] = useState('');
+    const [showUgSearch, setShowUgSearch] = useState(false);
 
     // Welcome screen state
     const [hasStarted, setHasStarted] = useState(false);
@@ -628,6 +662,12 @@ export default function OnboardingPage() {
 
     // Selected university in search step (for preview before confirming)
     const [previewUniversity, setPreviewUniversity] = useState<any>(null);
+
+    // Pincode / postal lookup state (loan flow)
+    const [pincodeValue, setPincodeValue] = useState('');
+    const [pincodeError, setPincodeError] = useState<string | null>(null);
+    const [pincodeLoading, setPincodeLoading] = useState(false);
+    const [pincodeLocation, setPincodeLocation] = useState<{ office?: string; city?: string; state?: string } | null>(null);
 
     // Fetch AI results helper — used by ai_search and by preview "show all" actions
     const fetchAiResults = async (opts?: { advanceToMatch?: boolean }) => {
@@ -664,8 +704,8 @@ export default function OnboardingPage() {
                 if (idx >= 0) setCurrentIdx(idx);
             }
             return normalized;
-        } catch (err) {
-            console.error('AI fetch failed', err);
+        } catch (err: any) {
+            console.error('AI fetch failed:', err?.message || 'Failed to fetch AI results');
             return [];
         } finally {
             setIsAiSearching(false);
@@ -923,6 +963,17 @@ export default function OnboardingPage() {
         if (alias) updates[alias] = { value, label };
         const merged = { ...answers, ...updates };
         setAnswers(merged);
+
+        // Auto-save to DB if user is authenticated
+        if (token) {
+            onboardingApi.submit(merged).then(() => {
+                // Refresh context periodically so Profile/Dashboard always stay in sync
+                if (currentIdx % 3 === 0 || currentIdx >= steps.length - 2) {
+                    refreshUser();
+                }
+            }).catch(err => console.error("Auto-save progress failed:", err));
+        }
+
         setInputValue('');
         setGpaValue('');
         setAiSearchResults([]); // clear AI results
@@ -932,7 +983,7 @@ export default function OnboardingPage() {
         setCurrentIdx(getNextValidIdx(currentIdx + 1, merged));
     };
 
-    const handleAiSearch = async (type: 'university' | 'course', query: string) => {
+    const handleAiSearch = async (type: 'university' | 'course' | 'ug_university', query: string) => {
         if (!query.trim()) return;
         setIsSearchingAI(true);
         try {
@@ -946,8 +997,8 @@ export default function OnboardingPage() {
             const data: any = await aiApi.aiSearch({ query, type, ...context });
             const results = data?.universities || data?.results || [];
             setAiSearchResults(results.map((u: any, i: number) => ({ name: u.name || u.title || `Result ${i + 1}`, slug: u.slug || `r-${i + 1}`, ...u })));
-        } catch (error) {
-            console.error('AI Search Error:', error);
+        } catch (error: any) {
+            console.error('AI Search Error:', error?.message || 'Failed to search');
         } finally {
             setIsSearchingAI(false);
         }
@@ -974,6 +1025,42 @@ export default function OnboardingPage() {
 
         return () => { if (aiSearchDebounceRef.current) window.clearTimeout(aiSearchDebounceRef.current); };
     }, [inputValue, currentIdx, countryUniversities]);
+
+    // Auto-lookup when a 6-digit Indian pincode is entered
+    useEffect(() => {
+        if (!pincodeValue || pincodeValue.length !== 6) return;
+        // small delay so UX doesn't feel jumpy when pasting
+        const id = window.setTimeout(() => {
+            fetchPincodeDetails(pincodeValue);
+        }, 250);
+        return () => window.clearTimeout(id);
+    }, [pincodeValue]);
+
+    const fetchPincodeDetails = async (pin: string) => {
+        setPincodeError(null);
+        setPincodeLocation(null);
+        if (!/^[0-9]{6}$/.test(pin)) {
+            setPincodeError('Pincode must be 6 digits');
+            return;
+        }
+        setPincodeLoading(true);
+        try {
+            const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+            const data = await res.json();
+            if (Array.isArray(data) && data[0]?.Status === 'Success' && Array.isArray(data[0].PostOffice) && data[0].PostOffice.length > 0) {
+                const po = data[0].PostOffice[0];
+                setPincodeLocation({ office: po?.Name || '', city: po?.District || po?.Division || '', state: po?.State || '' });
+                setPincodeError(null);
+            } else {
+                setPincodeError('Pincode not found');
+            }
+        } catch (e) {
+            console.error('Pincode lookup failed', e);
+            setPincodeError('Lookup failed. Try again');
+        } finally {
+            setPincodeLoading(false);
+        }
+    };
 
     // Auto-fetch universities when entering university_search step
     useEffect(() => {
@@ -1327,7 +1414,7 @@ export default function OnboardingPage() {
                             </div>
 
                             {/* Programs */}
-                            {previewUniversity.courses && previewUniversity.courses.length > 0 && (
+                            {Array.isArray(previewUniversity.courses) && previewUniversity.courses.length > 0 && (
                                 <div style={{ marginBottom: 16 }}>
                                     <div style={{ fontSize: 11, color: '#6b7280', fontWeight: 600, marginBottom: 6 }}>Popular Programs</div>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -1602,6 +1689,92 @@ export default function OnboardingPage() {
             );
         }
 
+        if (step.type === 'ug_university_search') {
+            return (
+                <div>
+                    <div className="input-group">
+                        <input className="chat-input" placeholder={step.placeholder} value={ugSearch} onChange={e => { setUgSearch(e.target.value); setShowUgSearch(true); setAiSearchResults([]); }} onFocus={() => setShowUgSearch(true)} />
+                    </div>
+                    {showUgSearch && ugSearch && (
+                        <div className="country-search-box" style={{ display: 'block', marginTop: 4 }}>
+                            <div className="country-search-results">
+                                <div className="csr-item" style={{ background: '#f5f3ff', borderTop: '1px dashed #d8b4fe' }} onClick={() => handleAiSearch('ug_university', ugSearch)}>
+                                    <span style={{ marginRight: 8 }}>✨</span> AI Search for "{ugSearch}"...
+                                </div>
+                                {isSearchingAI && <div className="p-3 text-center text-xs text-gray-400">Searching universities...</div>}
+                                {aiSearchResults.length > 0 && aiSearchResults[0]?.name && aiSearchResults.map((u: any, i: number) => (
+                                    <div key={i} className="csr-item" onClick={() => {
+                                        setUgSearch(u.name);
+                                        setShowUgSearch(false);
+                                        // If loan flow, pre-populate the pincode
+                                        if (u.pincode && step.flows?.includes('loan')) {
+                                            setPincodeValue(String(u.pincode));
+                                        }
+                                        submitAnswer(step.id, u.name, u.name);
+                                    }}>
+                                        <div style={{ fontWeight: 600 }}>🎓 {u.name}</div>
+                                        <div style={{ fontSize: 10, color: '#666', marginTop: 2 }}>
+                                            {u.loc || 'India'} {u.pincode ? `• Pincode: ${u.pincode}` : ''}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <button className="chat-submit" style={{ marginTop: 12 }} onClick={() => submitAnswer(step.id, ugSearch, ugSearch)} disabled={!ugSearch}>Continue</button>
+                    </div>
+                </div>
+            );
+        }
+
+        if (step.id === 'loan_pincode') {
+            return (
+                <div>
+                    <div className="input-group">
+                        <input
+                            className="chat-input"
+                            type="text"
+                            inputMode="numeric"
+                            placeholder={step.placeholder}
+                            value={pincodeValue}
+                            onChange={e => {
+                                const raw = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                                setPincodeValue(raw);
+                                setPincodeError(null);
+                                setPincodeLocation(null);
+                                setInputValue('');
+                            }}
+                        />
+                        <button
+                            className="chat-submit"
+                            style={{ marginLeft: 8, height: 40 }}
+                            onClick={() => fetchPincodeDetails(pincodeValue)}
+                            disabled={pincodeValue.length !== 6 || pincodeLoading}
+                        >Lookup</button>
+                    </div>
+
+                    {pincodeLoading && <div className="text-xs" style={{ marginTop: 8, color: '#6b7280' }}>Looking up pincode...</div>}
+                    {pincodeError && <div style={{ color: 'crimson', fontSize: 13, marginTop: 8 }}>{pincodeError}</div>}
+                    {pincodeLocation && (
+                        <div style={{ marginTop: 8, fontSize: 13, color: '#374151' }}>
+                            {pincodeLocation.office ? <div style={{ fontWeight: 600 }}>{pincodeLocation.office}</div> : null}
+                            <div>{pincodeLocation.city}{pincodeLocation.state ? ', ' + pincodeLocation.state : ''}</div>
+                        </div>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <button className="chat-submit" style={{ marginTop: 12 }} onClick={() => {
+                            if (!pincodeValue) { setPincodeError('Please enter a pincode'); return; }
+                            if (pincodeValue.length !== 6) { setPincodeError('Pincode must be 6 digits'); return; }
+                            const label = pincodeLocation ? `${pincodeValue} — ${pincodeLocation.office || pincodeLocation.city || ''}${pincodeLocation.state ? ', ' + pincodeLocation.state : ''}` : pincodeValue;
+                            submitAnswer(step.id, pincodeValue, label);
+                        }} disabled={pincodeLoading || pincodeValue.length !== 6}>Continue</button>
+                    </div>
+                </div>
+            );
+        }
+
         if (step.type === 'text') {
             return (
                 <div>
@@ -1763,8 +1936,13 @@ export default function OnboardingPage() {
                                 <UniversityCard
                                     key={u.slug || u.name || i}
                                     university={u}
-                                    onDetails={(uni: any) => setSelectedUniForModal(uni)}
-                                    onApply={(uni: any) => setSelectedUniForModal(uni)}
+                                    onDetails={(uni: any) => {
+                                        const slug = uni.slug || uni.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                                        router.push(`/university/${slug}`);
+                                    }}
+                                    onApply={(uni: any) => {
+                                        router.push(`/apply-loan?university=${encodeURIComponent(uni.name)}&country=${encodeURIComponent(uni.country)}`);
+                                    }}
                                 />
                             ))}
                         </div>
