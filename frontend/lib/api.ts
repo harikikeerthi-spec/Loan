@@ -362,6 +362,13 @@ export const aiApi = {
             headers: authHeaders(),
             body: JSON.stringify(data),
         }).then(handleResponse),
+
+    saveVisaReport: (data: Record<string, unknown>) =>
+        fetch(`${API_URL}/ai/visa-interview/save-report`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
 };
 
 // ─── Reference Data ───────────────────────────────────────────────────
@@ -522,11 +529,17 @@ export const documentApi = {
             headers: authHeaders(),
         }).then(handleResponse),
 
-    initiateDigilocker: (userId: string, docType: string, redirectUri: string) =>
-        fetch(`${API_URL}/documents/digilocker/initiate`, {
+
+    initiateDigilocker: (userId: string, docType: string) => {
+        // Redirect directly — backend handles the OAuth flow
+        window.location.href = `/api/digilocker/authorize?userId=${encodeURIComponent(userId)}&docType=${encodeURIComponent(docType)}`;
+    },
+
+    syncFromDigilocker: (userId: string, docType: string) =>
+        fetch(`${API_URL}/digilocker/sync`, {
             method: "POST",
             headers: authHeaders(),
-            body: JSON.stringify({ userId, docType, redirectUri }),
+            body: JSON.stringify({ userId, docType }),
         }).then(handleResponse),
 };
 
@@ -548,4 +561,26 @@ export const connectedApi = {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ ...data, source: "connectED" }),
         }).then(handleResponse),
+};
+
+// ─── University ───────────────────────────────────────────────────────
+export const universityApi = {
+    submitInquiry: (data: {
+        userId?: string;
+        name: string;
+        email: string;
+        mobile: string;
+        universityName: string;
+        type: 'callback' | 'fasttrack';
+    }) =>
+        fetch(`${API_URL}/university-inquiry`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    checkInquiry: (email: string, universityName: string, type: string): Promise<{ exists: boolean }> =>
+        fetch(`${API_URL}/university-inquiry/check?email=${encodeURIComponent(email)}&universityName=${encodeURIComponent(universityName)}&type=${type}`, {
+            headers: authHeaders(),
+        }).then(res => handleResponse<{ exists: boolean }>(res)),
 };

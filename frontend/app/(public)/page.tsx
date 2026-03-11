@@ -4,6 +4,8 @@ import Image from "next/image";
 import JourneyPath from "../../components/JourneyPath";
 import AnimatedNumber from "../../components/AnimatedNumber";
 import InteractiveEMI from "../../components/InteractiveEMI";
+import ToolCard from "../../components/ToolCard";
+import { lenders, features, testimonials } from "../../data/home";
 
 export const metadata: Metadata = {
     title: "Vidhya Loans - Fund Your Dream Education Abroad",
@@ -11,28 +13,7 @@ export const metadata: Metadata = {
         "Compare education loans from 50+ banks & NBFCs. Get the best rates, quick approvals, and expert guidance — all in one place.",
 };
 
-const lenders = [
-    { name: "IDFC First Bank", badge: "Digital First", rate: "10.50% - 12.50%", time: "48 hours", fee: "1% + GST", logo: "/images/lenders/idfc-first-bank.jpg" },
-    { name: "HDFC Credila", badge: "Most Popular", rate: "10.75% - 12.50%", time: "5-7 days", fee: "1% of loan", logo: "/images/lenders/hdfc-credila.png" },
-    { name: "Auxilo Finserve", badge: "Fast Approval", rate: "11.25% - 13.50%", time: "3 days", fee: "1.5% + GST", logo: "/images/lenders/auxilo.png" },
-    { name: "Avanse Financial", badge: "High Limits", rate: "10.99% - 13.00%", time: "4 days", fee: "1% + GST", logo: "/images/lenders/avanse.jpg" },
-    { name: "Poonawalla Fincorp", badge: "Easy Process", rate: "11.50% - 14.50%", time: "3 days", fee: "1.5% + GST", logo: "/images/lenders/poonawalla.png" },
-];
-
-const features = [
-    { icon: "hub", title: "Top Lender Network", desc: "Access India's best education loan marketplace with our curated network of premium banks and NBFCs." },
-    { icon: "apartment", title: "University-Specific Offers", desc: "Get tailored loan offers based on your university, course, and country of study." },
-    { icon: "handshake", title: "Guaranteed Best Rate", desc: "We negotiate with lenders to get you the lowest interest rates available in the market." },
-    { icon: "devices", title: "Digital Application", desc: "Apply 100% online. Upload documents, e-sign, and track your application in real-time." },
-    { icon: "psychology", title: "Free Expert Counseling", desc: "Free 1-on-1 guidance from education loan experts throughout your journey." },
-    { icon: "bolt", title: "Quick Disbursement", desc: "Get your loan sanctioned in 48 hours and disbursed before your university deadline." },
-];
-
-const testimonials = [
-    { quote: `"Vidhya Loans helped me secure a ₹45L education loan at 8.5% interest. The process was seamless and I got my sanction letter in just 3 days!"`, name: "Priya Sharma", school: "Stanford University, USA", avatar: "priya" },
-    { quote: `"I compared 12 lenders on the platform and saved ₹2.3L in total interest. The EMI calculator and expert counseling were invaluable."`, name: "Rahul Menon", school: "University of Toronto, Canada", avatar: "rahul" },
-    { quote: `"As a first-generation student going abroad, I was overwhelmed. The team guided me through every step — from choosing the right loan to disbursement."`, name: "Ananya Reddy", school: "Imperial College London, UK", avatar: "ananya" },
-];
+const heroGradient = { background: 'linear-gradient(135deg, #ede0ff 0%, #f3eaff 25%, #fdf6ff 55%, #fef3e8 80%, #fde8c8 100%)' };
 
 export default function HomePage() {
     return (
@@ -41,13 +22,14 @@ export default function HomePage() {
                 {/* Floating Referral Badge - Premium Design */}
                 <Link
                     href="/referral"
-                    className="fixed left-6 top-[75%] -translate-y-1/2 z-50 group"
+                    aria-label="Refer and Earn ₹3,000 - Open referral program"
+                    className="hidden md:block fixed left-6 top-[75%] -translate-y-1/2 z-50 group"
                     title="Refer & Earn ₹3,000"
                 >
                     <div className="relative">
                         {/* Animated rings */}
-                        <div className="absolute inset-0 animate-ping rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 opacity-20" />
-                        <div className="absolute -inset-1 animate-pulse rounded-xl bg-gradient-to-r from-amber-400/30 to-orange-500/30 blur-md" />
+                        <div role="presentation" className="absolute inset-0 animate-[ping_1s_ease-in-out_3] rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 opacity-20" />
+                        <div role="presentation" className="absolute -inset-1 animate-pulse rounded-xl bg-gradient-to-r from-amber-400/30 to-orange-500/30 blur-md" />
 
                         {/* Main badge */}
                         <div className="relative flex flex-col items-center gap-1">
@@ -55,7 +37,7 @@ export default function HomePage() {
                             <span className="absolute left-full ml-3 whitespace-nowrap bg-gradient-to-r from-amber-500 to-orange-600 text-white text-[11px] font-black px-4 py-2 rounded-xl shadow-xl shadow-orange-500/30 opacity-0 -translate-x-2 pointer-events-none group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 uppercase tracking-wider">
                                 <span className="flex items-center gap-2">
                                     <span>Earn ₹3,000</span>
-                                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                    <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
                                 </span>
                             </span>
 
@@ -134,7 +116,7 @@ export default function HomePage() {
                                 </Link>
                                 <Link
                                     href="/emi"
-                                    className="px-8 py-3.5 bg-white text-[#1a1626] border border-gray-100 font-bold rounded-xl text-center text-[13px] whitespace-nowrap shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all backdrop-blur-sm"
+                                    className="px-8 py-3.5 bg-white text-[#1a1626] border border-gray-100 font-bold rounded-xl text-center text-[13px] whitespace-nowrap shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all backdrop-blur-sm will-change-transform"
                                 >
                                     Calculate EMI
                                 </Link>
@@ -150,7 +132,10 @@ export default function HomePage() {
                                             { initials: 'VP', color: 'be185d' },
                                         ].map((av, i) => (
                                             <div key={i} className="w-8 h-8 rounded-full border-2 border-white overflow-hidden shadow-sm">
-                                                <Image src={`https://ui-avatars.com/api/?name=${av.initials}&background=${av.color}&color=fff&size=80`} className="w-full h-full object-cover" alt="Student" width={32} height={32} />
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="32" height="32" className="w-full h-full object-cover">
+                                                    <rect width="100" height="100" fill={`#${av.color}`} />
+                                                    <text x="50" y="50" dominantBaseline="central" textAnchor="middle" fill="#fff" fontFamily="system-ui, sans-serif" fontSize="40" fontWeight="bold">{av.initials}</text>
+                                                </svg>
                                             </div>
                                         ))}
                                     </div>
@@ -161,7 +146,7 @@ export default function HomePage() {
                                 </div>
                                 <div className="hidden sm:block w-px h-8 bg-gray-100" />
                                 {[
-                                    { val: '5+', label: 'Lenders' },
+                                    { val: `${lenders.length}+`, label: 'Lenders' },
                                     { val: '48h', label: 'Approval' },
                                     { val: '₹500Cr+', label: 'Disbursed' },
                                 ].map(s => (
@@ -183,6 +168,9 @@ export default function HomePage() {
                                     height={900}
                                     className="w-full h-auto object-cover transition-transform duration-1000 group-hover:scale-105"
                                     priority
+                                    fetchPriority="high"
+                                    placeholder="blur"
+                                    blurDataURL="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlMGUwZTAiLz48L3N2Zz4="
                                 />
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                             </div>
@@ -192,7 +180,7 @@ export default function HomePage() {
                                 style={{ background: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(20px)' }}
                             >
                                 <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(102,5,199,0.1)', border: '1px solid rgba(102,5,199,0.2)' }}>
-                                    <span className="material-symbols-outlined text-[#6605c7] text-lg" style={{ fontVariationSettings: '"FILL" 1' }}>verified</span>
+                                    <span className="material-symbols-outlined text-[#6605c7] text-lg icon-filled" aria-hidden="true">verified</span>
                                 </div>
                                 <div>
                                     <div className="text-[10px] text-gray-400 uppercase font-black tracking-widest mb-0.5">Lowest Rate</div>
@@ -218,14 +206,14 @@ export default function HomePage() {
                                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg font-black text-sm uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600"
                             >
                                 Refer Now
-                                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
                             </Link>
                         </div> */}
                     </div>
                 </section>
 
                 {/* Trust Badges */}
-                <div className="bg-white/50 backdrop-blur-sm border-y border-gray-100 py-10">
+                <div className="bg-white/50 backdrop-blur-sm will-change-transform border-y border-gray-100 py-10">
                     <div className="max-w-7xl mx-auto px-6">
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
                             {[
@@ -236,7 +224,7 @@ export default function HomePage() {
                             ].map((s) => (
                                 <div key={s.label} className="flex items-center gap-4">
                                     <div className="w-11 h-11 bg-[#6605c7]/5 rounded-xl flex items-center justify-center text-[#6605c7]">
-                                        <span className="material-symbols-outlined text-2xl">{s.icon}</span>
+                                        <span className="material-symbols-outlined text-2xl" aria-hidden="true">{s.icon}</span>
                                     </div>
                                     <div>
                                         <div className="text-xl font-black text-gray-900 leading-none mb-1"><AnimatedNumber value={s.num} /></div>
@@ -262,9 +250,9 @@ export default function HomePage() {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {features.map((f) => (
-                                <div key={f.title} className="p-8 rounded-xl border border-gray-100 hover:border-[#6605c7]/20 transition-all hover:shadow-xl group bg-white/60 backdrop-blur-sm">
+                                <div key={f.title} className="p-8 rounded-xl border border-gray-100 hover:border-[#6605c7]/20 transition-all hover:shadow-xl group bg-white/60 backdrop-blur-sm will-change-transform">
                                     <div className="w-12 h-12 bg-[#6605c7]/5 rounded-xl flex items-center justify-center text-[#6605c7] mb-6 group-hover:scale-110 transition-transform">
-                                        <span className="material-symbols-outlined text-2xl">{f.icon}</span>
+                                        <span className="material-symbols-outlined text-2xl" aria-hidden="true">{f.icon}</span>
                                     </div>
                                     <h3 className="text-[15px] font-bold mb-3 text-gray-900">{f.title}</h3>
                                     <p className="text-[13px] text-gray-500 leading-relaxed font-medium">{f.desc}</p>
@@ -297,7 +285,7 @@ export default function HomePage() {
                             </div>
                             <Link href="/explore" className="flex-shrink-0 inline-flex items-center gap-2 px-6 py-3.5 rounded-xl border border-[#6605c7]/20 text-[#6605c7] font-bold hover:bg-[#6605c7] hover:text-white hover:border-[#6605c7] transition-all group text-[13px]">
                                 Explore All
-                                <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                                <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" aria-hidden="true">arrow_forward</span>
                             </Link>
                         </div>
 
@@ -308,11 +296,11 @@ export default function HomePage() {
                                 <div className="absolute inset-0 opacity-30" style={{ background: "url('/images/ecosystem/trending-courses.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(26,5,51,0.9) 0%, rgba(26,5,51,0.2) 60%, transparent 100%)' }} />
                                 <div className="absolute top-6 left-6">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest border border-white/20">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm will-change-transform text-white text-[10px] font-black uppercase tracking-widest border border-white/20">
                                         🔥 Trending
                                     </span>
                                 </div>
-                                <div className="absolute top-4 right-4 w-12 h-12 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <div className="absolute top-4 right-4 w-12 h-12 rounded-xl bg-white/10 backdrop-blur-sm will-change-transform flex items-center justify-center group-hover:scale-110 transition-transform">
                                     <span className="text-2xl">📚</span>
                                 </div>
                                 <div className="relative z-10 p-7">
@@ -321,7 +309,7 @@ export default function HomePage() {
                                     <h3 className="text-xl font-bold text-white mb-2">Trending Courses</h3>
                                     <p className="text-white/60 text-[13px] mb-5 leading-relaxed font-medium">CS, Data Science, MBA & more. Filter by country, ROI.</p>
                                     <span className="inline-flex items-center gap-2 text-purple-300 font-bold text-[13px] group-hover:gap-3 transition-all">
-                                        Explore Courses <span className="material-symbols-outlined text-[13px]">arrow_forward</span>
+                                        Explore Courses <span className="material-symbols-outlined text-[13px]" aria-hidden="true">arrow_forward</span>
                                     </span>
                                 </div>
                             </Link>
@@ -331,7 +319,7 @@ export default function HomePage() {
                                 <div className="absolute inset-0 opacity-25" style={{ background: "url('/images/ecosystem/universities.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(15,23,42,0.9) 0%, rgba(15,23,42,0.3) 60%, transparent 100%)' }} />
                                 <div className="absolute top-4 right-4">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 backdrop-blur-sm text-blue-300 text-[10px] font-black uppercase tracking-widest border border-blue-400/20">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 backdrop-blur-sm will-change-transform text-blue-300 text-[10px] font-black uppercase tracking-widest border border-blue-400/20">
                                         🏛️ Top Ranked
                                     </span>
                                 </div>
@@ -340,7 +328,7 @@ export default function HomePage() {
                                     <h3 className="text-lg font-bold text-white mb-2">Popular Universities</h3>
                                     <p className="text-white/55 text-[13px] mb-4 leading-relaxed font-medium">MIT, Stanford, Oxford & more. AI match for your profile.</p>
                                     <span className="inline-flex items-center gap-2 text-blue-300 font-bold text-[13px] group-hover:gap-3 transition-all">
-                                        Find Match <span className="material-symbols-outlined text-[13px]">arrow_forward</span>
+                                        Find Match <span className="material-symbols-outlined text-[13px]" aria-hidden="true">arrow_forward</span>
                                     </span>
                                 </div>
                             </Link>
@@ -354,7 +342,7 @@ export default function HomePage() {
                                     <div className="text-amber-200/40 text-[10px] uppercase tracking-widest font-black mb-2">Avg. Award</div>
                                     <h3 className="text-lg font-bold text-white mb-4">HOT Scholarships</h3>
                                     <span className="inline-flex items-center gap-2 text-amber-300 font-bold text-[13px] group-hover:gap-3 transition-all">
-                                        Apply Now <span className="material-symbols-outlined text-[13px]">arrow_forward</span>
+                                        Apply Now <span className="material-symbols-outlined text-[13px]" aria-hidden="true">arrow_forward</span>
                                     </span>
                                 </div>
                             </Link>
@@ -363,12 +351,12 @@ export default function HomePage() {
                             <Link href="/practice" className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-lg flex flex-col justify-end min-h-[240px]" style={{ background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}>
                                 <div className="absolute inset-0 opacity-20" style={{ background: "url('/images/ecosystem/exam-prep.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(6,78,59,0.9) 0%, rgba(6,78,59,0.3) 70%, transparent 100%)' }} />
-                                <div className="absolute top-4 right-4 w-11 h-11 rounded-xl bg-emerald-400/20 backdrop-blur-sm flex items-center justify-center">
+                                <div className="absolute top-4 right-4 w-11 h-11 rounded-xl bg-emerald-400/20 backdrop-blur-sm will-change-transform flex items-center justify-center">
                                     <span className="text-xl">✍️</span>
                                 </div>
                                 <div className="absolute top-4 left-4 flex gap-1.5">
                                     {['GRE', 'IELTS', 'TOEFL'].map(t => (
-                                        <span key={t} className="px-2 py-0.5 rounded-lg bg-emerald-400/20 backdrop-blur-sm text-emerald-300 text-[10px] font-black border border-emerald-400/20">{t}</span>
+                                        <span key={t} className="px-2 py-0.5 rounded-lg bg-emerald-400/20 backdrop-blur-sm will-change-transform text-emerald-300 text-[10px] font-black border border-emerald-400/20">{t}</span>
                                     ))}
                                 </div>
                                 <div className="relative z-10 p-6">
@@ -376,7 +364,7 @@ export default function HomePage() {
                                     <h3 className="text-lg font-bold text-white mb-2">Exam Prep</h3>
                                     <p className="text-white/55 text-[13px] font-medium leading-relaxed mb-4">GRE, IELTS, TOEFL & more. AI‑adaptive tests.</p>
                                     <span className="inline-flex items-center gap-2 text-emerald-300 font-bold text-[13px] group-hover:gap-3 transition-all">
-                                        Start <span className="material-symbols-outlined text-[13px]">arrow_forward</span>
+                                        Start <span className="material-symbols-outlined text-[13px]" aria-hidden="true">arrow_forward</span>
                                     </span>
                                 </div>
                             </Link>
@@ -388,7 +376,7 @@ export default function HomePage() {
                                     <span className="inline-block px-2 py-0.5 rounded-lg bg-white/10 text-white text-[10px] font-black uppercase tracking-widest mb-3 border border-white/10">⭐ Best Rates</span>
                                     <h3 className="text-lg font-bold text-white mb-2">Education Loans</h3>
                                     <span className="inline-flex items-center gap-2 text-purple-200 font-bold text-[13px] group-hover:gap-3 transition-all">
-                                        Check Now <span className="material-symbols-outlined text-[13px]">arrow_forward</span>
+                                        Check Now <span className="material-symbols-outlined text-[13px]" aria-hidden="true">arrow_forward</span>
                                     </span>
                                 </div>
                             </Link>
@@ -495,11 +483,11 @@ export default function HomePage() {
                                             <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ boxShadow: `0 12px 40px ${step.color}20` }} />
                                             <div className="absolute -top-2 -left-2 text-4xl font-black opacity-[0.06] select-none leading-none" style={{ color: step.color }}>{step.num}</div>
                                             <span className="text-3xl relative z-10">{step.emoji}</span>
-                                            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-black whitespace-nowrap backdrop-blur-sm" style={{ background: 'white', color: step.color, border: `1px solid ${step.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                                            <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-black whitespace-nowrap backdrop-blur-sm will-change-transform" style={{ background: 'white', color: step.color, border: `1px solid ${step.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                                                 ⏱ {step.time}
                                             </div>
                                         </div>
-                                        <div className="mt-2 px-4 py-6 rounded-xl w-full group-hover:shadow-xl transition-all duration-300 bg-white/60 backdrop-blur-sm border border-gray-100">
+                                        <div className="mt-2 px-4 py-6 rounded-xl w-full group-hover:shadow-xl transition-all duration-300 bg-white/60 backdrop-blur-sm will-change-transform border border-gray-100">
                                             <h3 className="text-[15px] font-black text-gray-900 mb-2 group-hover:text-[#6605c7] transition-colors">{step.title}</h3>
                                             <p className="text-gray-500 text-[13px] leading-relaxed mb-4">{step.desc}</p>
                                             <div className="flex flex-wrap gap-1.5 justify-center">
@@ -515,7 +503,7 @@ export default function HomePage() {
                             </div>
                         </div>
 
-                        <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-6 p-6 rounded-xl bg-white/60 backdrop-blur-sm border border-gray-100 shadow-lg">
+                        <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-6 p-6 rounded-xl bg-white/60 backdrop-blur-sm will-change-transform border border-gray-100 shadow-lg">
                             <div className="flex flex-wrap gap-6 justify-center sm:justify-start">
                                 {[
                                     { icon: 'security', text: 'Bank-grade security' },
@@ -523,7 +511,7 @@ export default function HomePage() {
                                     { icon: 'verified', text: 'RBI regulated' },
                                 ].map(t => (
                                     <div key={t.text} className="flex items-center gap-2 text-gray-500 text-[13px] font-bold">
-                                        <span className="material-symbols-outlined text-[#6605c7] text-base" style={{ fontVariationSettings: '"FILL" 1' }}>{t.icon}</span>
+                                        <span className="material-symbols-outlined text-[#6605c7] text-base icon-filled" aria-hidden="true">{t.icon}</span>
                                         <span>{t.text}</span>
                                     </div>
                                 ))}
@@ -533,7 +521,7 @@ export default function HomePage() {
                                 className="flex-shrink-0 flex items-center gap-2 px-7 py-3.5 rounded-xl font-bold text-white text-[13px] transition-all hover:opacity-90 hover:-translate-y-0.5"
                                 style={{ background: 'linear-gradient(135deg, #6605c7, #a855f7)', boxShadow: '0 8px 32px rgba(102,5,199,0.3)' }}
                             >
-                                <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: '"FILL" 1' }}>rocket_launch</span>
+                                <span className="material-symbols-outlined text-base icon-filled" aria-hidden="true">rocket_launch</span>
                                 Start Application — It&apos;s Free
                             </Link>
                         </div>
@@ -558,7 +546,7 @@ export default function HomePage() {
                                     ].map((p, i) => (
                                         <div key={i} className="flex items-start gap-3">
                                             <div className="w-5 h-5 rounded-full bg-green-100 text-green-600 flex items-center justify-center shrink-0">
-                                                <span className="material-symbols-outlined text-[10px] font-black">check</span>
+                                                <span className="material-symbols-outlined text-[10px] font-black" aria-hidden="true">check</span>
                                             </div>
                                             <p className="text-gray-600 font-medium text-[13px]">{p}</p>
                                         </div>
@@ -566,7 +554,7 @@ export default function HomePage() {
                                 </div>
                                 <div className="mt-12">
                                     <Link href="/emi" className="inline-flex items-center gap-2 text-[#6605c7] font-black text-[13px] hover:gap-4 transition-all">
-                                        Try Calculator Now <span className="material-symbols-outlined text-[13px]">arrow_forward</span>
+                                        Try Calculator Now <span className="material-symbols-outlined text-[13px]" aria-hidden="true">arrow_forward</span>
                                     </Link>
                                 </div>
                             </div>
@@ -585,7 +573,7 @@ export default function HomePage() {
                             <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-4 leading-tight">Our Lending Partners</h2>
                             <p className="text-gray-500 text-[13px] font-medium">Compare interest rates, processing times & fees from India&apos;s top lenders</p>
                         </div>
-                        <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-xl bg-white/40 backdrop-blur-sm">
+                        <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-xl bg-white/40 backdrop-blur-sm will-change-transform">
                             <table className="w-full text-left">
                                 <thead className="bg-gray-50/50 text-gray-900 border-b border-gray-100">
                                     <tr>
@@ -645,20 +633,19 @@ export default function HomePage() {
                                     >
                                         <div className="flex items-start gap-5 mb-6">
                                             <div className="w-14 h-14 bg-white/80 rounded-xl flex items-center justify-center shrink-0 shadow-sm overflow-hidden p-0.5">
-                                                <Image
-                                                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(t.name)}&background=6605c7&color=fff&size=100`}
-                                                    alt={t.name}
-                                                    width={56}
-                                                    height={56}
-                                                    className="w-full h-full object-cover rounded-lg"
-                                                />
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="56" height="56" className="w-full h-full object-cover rounded-lg">
+                                                    <rect width="100" height="100" fill="#6605c7" />
+                                                    <text x="50" y="50" dominantBaseline="central" textAnchor="middle" fill="#fff" fontFamily="system-ui, sans-serif" fontSize="40" fontWeight="bold">
+                                                        {t.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+                                                    </text>
+                                                </svg>
                                             </div>
                                             <div className="flex-1">
                                                 <h3 className="text-[15px] font-bold text-gray-900 leading-tight">{t.name}</h3>
                                                 <p className="text-gray-500 text-[13px] font-medium">{t.school}</p>
-                                                <div className="flex gap-0.5 mt-1.5">
+                                                <div className="flex gap-0.5 mt-1.5" role="img" aria-label="5 out of 5 stars">
                                                     {[...Array(5)].map((_, i) => (
-                                                        <span key={i} className={`material-symbols-outlined text-sm ${style.accent}`} style={{ fontVariationSettings: "'FILL' 1", fontSize: '14px' }}>star</span>
+                                                        <span key={i} aria-hidden="true" className={`material-symbols-outlined icon-filled text-[14px] ${style.accent}`}>star</span>
                                                     ))}
                                                 </div>
                                             </div>
@@ -670,7 +657,7 @@ export default function HomePage() {
                                                 <div className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{style.highlightLabel}</div>
                                             </div>
                                             <span className={`inline-flex items-center gap-2 ${style.accent} font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all`}>
-                                                Read More <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                                Read More <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
                                             </span>
                                         </div>
                                     </div>
@@ -702,7 +689,7 @@ export default function HomePage() {
                             </div>
                             <Link href="/explore" className="flex-shrink-0 inline-flex items-center gap-2 px-7 py-4 rounded-xl border-2 border-[#6605c7]/20 text-[#6605c7] font-black hover:bg-[#6605c7] hover:text-white hover:border-[#6605c7] transition-all group text-[11px] uppercase tracking-widest">
                                 View All Services
-                                <span className="material-symbols-outlined text-base group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                                <span className="material-symbols-outlined text-base group-hover:translate-x-1 transition-transform" aria-hidden="true">arrow_forward</span>
                             </Link>
                         </div>
 
@@ -714,11 +701,11 @@ export default function HomePage() {
                                 <div className="absolute inset-0 opacity-15" style={{ background: "url('/images/services/us-credit-card.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(30,58,138,0.97) 0%, rgba(30,58,138,0.3) 60%, transparent 100%)' }} />
                                 <div className="absolute top-6 left-6">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest border border-white/20">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm will-change-transform text-white text-[10px] font-black uppercase tracking-widest border border-white/20">
                                         🇺🇸 USA
                                     </span>
                                 </div>
-                                <div className="absolute top-4 right-4 w-14 h-14 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-transform border border-white/20">
+                                <div className="absolute top-4 right-4 w-14 h-14 rounded-xl bg-white/10 backdrop-blur-sm will-change-transform flex items-center justify-center group-hover:scale-110 group-hover:rotate-6 transition-transform border border-white/20">
                                     <span className="text-3xl">💳</span>
                                 </div>
                                 <div className="relative z-10 p-7">
@@ -727,7 +714,7 @@ export default function HomePage() {
                                     <h3 className="text-xl font-black text-white mb-2">US Credit Card</h3>
                                     <p className="text-white/60 text-[13px] mb-5 leading-relaxed font-medium">Build your US credit score from day one with a student credit card — no SSN required to apply.</p>
                                     <span className="inline-flex items-center gap-2 text-blue-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Get Started <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                        Get Started <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
                                     </span>
                                 </div>
                             </Link>
@@ -737,7 +724,7 @@ export default function HomePage() {
                                 <div className="absolute inset-0 opacity-20" style={{ background: "url('/images/services/german-account.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(31,41,55,0.98) 0%, rgba(31,41,55,0.3) 60%, transparent 100%)' }} />
                                 <div className="absolute top-4 right-4">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/20 backdrop-blur-sm text-yellow-200 text-[10px] font-black uppercase tracking-widest border border-yellow-400/20">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-yellow-400/20 backdrop-blur-sm will-change-transform text-yellow-200 text-[10px] font-black uppercase tracking-widest border border-yellow-400/20">
                                         🇩🇪 Germany
                                     </span>
                                 </div>
@@ -747,7 +734,7 @@ export default function HomePage() {
                                     <h3 className="text-lg font-black text-white mb-2">German Blocked Account</h3>
                                     <p className="text-white/55 text-[13px] mb-4 leading-relaxed font-medium">Open your mandatory blocked account hassle-free for Germany visa application.</p>
                                     <span className="inline-flex items-center gap-2 text-yellow-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Open Account <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                        Open Account <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
                                     </span>
                                 </div>
                             </Link>
@@ -765,7 +752,7 @@ export default function HomePage() {
                                     <h3 className="text-lg font-black text-white mb-2">Forex Card</h3>
                                     <p className="text-white/55 text-[13px] mb-4 leading-relaxed font-medium">Multi-currency forex card with the best exchange rates.</p>
                                     <span className="inline-flex items-center gap-2 text-emerald-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Get Card <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                        Get Card <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
                                     </span>
                                 </div>
                             </Link>
@@ -775,11 +762,11 @@ export default function HomePage() {
                             <Link href="/housing" className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[280px]" style={{ background: 'linear-gradient(135deg, #4c1d95 0%, #5b21b6 100%)' }}>
                                 <div className="absolute inset-0 opacity-15" style={{ background: "url('/images/services/housing.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(76,29,149,0.98) 0%, rgba(76,29,149,0.3) 70%, transparent 100%)' }} />
-                                <div className="absolute top-4 right-4 w-11 h-11 rounded-xl bg-purple-400/20 backdrop-blur-sm flex items-center justify-center border border-purple-400/20">
+                                <div className="absolute top-4 right-4 w-11 h-11 rounded-xl bg-purple-400/20 backdrop-blur-sm will-change-transform flex items-center justify-center border border-purple-400/20">
                                     <span className="text-xl">🏠</span>
                                 </div>
                                 <div className="absolute top-4 left-4">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-400/20 backdrop-blur-sm text-purple-200 text-[10px] font-black uppercase tracking-widest border border-purple-400/20">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-400/20 backdrop-blur-sm will-change-transform text-purple-200 text-[10px] font-black uppercase tracking-widest border border-purple-400/20">
                                         ✅ Verified
                                     </span>
                                 </div>
@@ -789,7 +776,7 @@ export default function HomePage() {
                                     <h3 className="text-lg font-black text-white mb-2">Accommodation Support</h3>
                                     <p className="text-white/55 text-[13px] mb-4 leading-relaxed font-medium">Find verified student housing near your university campus.</p>
                                     <span className="inline-flex items-center gap-2 text-purple-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Explore <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                        Explore <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
                                     </span>
                                 </div>
                             </Link>
@@ -799,11 +786,11 @@ export default function HomePage() {
                                 <div className="absolute inset-0 opacity-15" style={{ background: "url('/images/services/uk-bank.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(124,45,18,0.97) 0%, rgba(124,45,18,0.3) 60%, transparent 100%)' }} />
                                 <div className="absolute top-6 left-6">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest border border-white/20">
+                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm will-change-transform text-white text-[10px] font-black uppercase tracking-widest border border-white/20">
                                         🇬🇧 UK
                                     </span>
                                 </div>
-                                <div className="absolute top-4 right-4 w-14 h-14 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center group-hover:scale-110 transition-transform border border-white/20">
+                                <div className="absolute top-4 right-4 w-14 h-14 rounded-xl bg-white/10 backdrop-blur-sm will-change-transform flex items-center justify-center group-hover:scale-110 transition-transform border border-white/20">
                                     <span className="text-3xl">🏦</span>
                                 </div>
                                 <div className="relative z-10 p-7">
@@ -812,7 +799,7 @@ export default function HomePage() {
                                     <h3 className="text-xl font-black text-white mb-2">UK Bank Account</h3>
                                     <p className="text-white/60 text-[13px] mb-5 leading-relaxed font-medium">Pre-arrival UK bank account opening for Indian students — be ready before you land.</p>
                                     <span className="inline-flex items-center gap-2 text-orange-300 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Open Account <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                        Open Account <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
                                     </span>
                                 </div>
                             </Link>
@@ -830,7 +817,7 @@ export default function HomePage() {
                                     <div className="text-emerald-200/60 text-[10px] uppercase tracking-widest font-black mb-2">Success Rate</div>
                                     <h3 className="text-lg font-black text-white mb-2">Visa Counselling</h3>
                                     <span className="inline-flex items-center gap-2 text-emerald-200 font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all">
-                                        Get Guidance <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                                        Get Guidance <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
                                     </span>
                                 </div>
                             </Link>
@@ -887,7 +874,7 @@ export default function HomePage() {
                                             <div className="absolute inset-0 rounded-3xl border-4 border-dashed border-white/30 animate-[spin_20s_linear_infinite]" />
 
                                             {/* Inner container */}
-                                            <div className="absolute inset-2 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                            <div className="absolute inset-2 rounded-2xl bg-white/20 backdrop-blur-sm will-change-transform flex items-center justify-center">
                                                 {/* Custom SVG Logo */}
                                                 <svg width="80" height="80" viewBox="0 0 100 100" fill="none" className="drop-shadow-2xl">
                                                     {/* Gift box base */}
@@ -941,7 +928,7 @@ export default function HomePage() {
 
                                     {/* Content */}
                                     <div className="flex-1 text-center lg:text-left">
-                                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm mb-4">
+                                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 backdrop-blur-sm will-change-transform mb-4">
                                             <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
                                             <span className="text-white text-[11px] font-black uppercase tracking-widest">Exclusive Rewards Program</span>
                                         </div>
@@ -957,11 +944,11 @@ export default function HomePage() {
 
                                         <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                                             <Link href="/referral" className="px-8 py-4 bg-white text-amber-600 font-black rounded-xl shadow-xl hover:shadow-2xl hover:-translate-y-1 transition-all text-[13px] uppercase tracking-widest flex items-center justify-center gap-2">
-                                                <span className="material-symbols-outlined">share</span>
+                                                <span className="material-symbols-outlined" aria-hidden="true">share</span>
                                                 Start Referring
                                             </Link>
-                                            <Link href="/referral" className="px-8 py-4 bg-white/20 backdrop-blur-sm text-white border-2 border-white/30 font-bold rounded-xl hover:bg-white/30 transition-all text-[13px] uppercase tracking-widest flex items-center justify-center gap-2">
-                                                <span className="material-symbols-outlined">info</span>
+                                            <Link href="/referral" className="px-8 py-4 bg-white/20 backdrop-blur-sm will-change-transform text-white border-2 border-white/30 font-bold rounded-xl hover:bg-white/30 transition-all text-[13px] uppercase tracking-widest flex items-center justify-center gap-2">
+                                                <span className="material-symbols-outlined" aria-hidden="true">info</span>
                                                 Learn More
                                             </Link>
                                         </div>
@@ -991,9 +978,9 @@ export default function HomePage() {
                                 className="group inline-flex items-center gap-3 px-10 py-4 rounded-xl font-black text-[13px] uppercase tracking-widest text-white transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
                                 style={{ background: 'linear-gradient(135deg, #f59e0b, #ea580c)', boxShadow: '0 8px 32px rgba(245,158,11,0.35)' }}
                             >
-                                <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: '"FILL" 1' }}>redeem</span>
+                                <span className="material-symbols-outlined text-lg icon-filled" aria-hidden="true">redeem</span>
                                 Refer Now
-                                <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                                <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" aria-hidden="true">arrow_forward</span>
                             </Link>
                         </div>
                     </div>
@@ -1018,31 +1005,5 @@ export default function HomePage() {
                 </section>
             </div>
         </div>
-    );
-}
-
-function ToolCard({ href, bg, icon, title, desc, cta, large = false, border = false }: {
-    href: string; bg: string; icon: string; title: string; desc: string; cta: string; large?: boolean; border?: boolean;
-}) {
-    return (
-        <Link
-            href={href}
-            className={`flex ${large ? "flex-col md:flex-row md:items-center" : "flex-col"} p-8 rounded-xl ${bg} hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 group border ${border ? "border-[#6605c7]/10" : "border-white/50"}`}
-        >
-            <div className={`flex items-start ${large ? "gap-8 mb-0" : "gap-6 mb-8"}`}>
-                <div className={`${large ? "w-16 h-16" : "w-12 h-12"} bg-white/80 rounded-xl flex items-center justify-center shrink-0 shadow-sm overflow-hidden p-2.5`}>
-                    <img src={icon} alt={title} className="w-full h-full object-contain" />
-                </div>
-                <div className="flex-1">
-                    <h3 className={`${large ? "text-xl" : "text-[15px]"} font-bold mb-2 text-gray-900 leading-tight`}>{title}</h3>
-                    <p className="text-gray-500 text-[13px] leading-relaxed font-medium">{desc}</p>
-                </div>
-            </div>
-            <div className={`${large ? "mt-6 md:mt-0 md:ml-auto" : "mt-auto"} flex justify-end`}>
-                <span className={`inline-flex items-center gap-2 text-[#6605c7] font-bold ${large ? "text-[13px]" : "text-[11px]"} uppercase tracking-widest group-hover:gap-3 transition-all`}>
-                    {cta} <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                </span>
-            </div>
-        </Link>
     );
 }

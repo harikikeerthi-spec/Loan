@@ -1,11 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { aiApi } from "@/lib/api";
 
 export default function LoanEligibilityPage() {
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState<any>(null);
+    const [userId, setUserId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            setUserId(localStorage.getItem("userId"));
+        }
+    }, []);
+
     const [formData, setFormData] = useState({
         age: 22,
         credit: 750,
@@ -21,7 +29,7 @@ export default function LoanEligibilityPage() {
         e.preventDefault();
         setLoading(true);
         try {
-            const data = await aiApi.loanEligibility(formData);
+            const data = await aiApi.loanEligibility({ ...formData, userId });
             setResult(data);
         } catch (err) {
             console.error(err);

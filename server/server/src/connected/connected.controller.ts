@@ -16,10 +16,15 @@ import { CreateCohortApplicationDto } from './dto/create-cohort-application.dto'
 export class ConnectedController {
     constructor(private readonly connectedService: ConnectedService) { }
 
-    /** POST /api/connected/apply — public endpoint, saves form submission */
     @Post('apply')
     @HttpCode(HttpStatus.CREATED)
     create(@Body() dto: CreateCohortApplicationDto) {
+        if (!dto || !dto.email) {
+            return {
+                success: false,
+                message: 'Application data and email are required',
+            };
+        }
         return this.connectedService.create(dto);
     }
 
@@ -29,13 +34,18 @@ export class ConnectedController {
         return this.connectedService.findAll(status);
     }
 
-    /** PATCH /api/connected/applications/:id/status — admin */
     @Patch('applications/:id/status')
     updateStatus(
         @Param('id') id: string,
         @Body()
         body: { status: string; reviewedBy?: string; reviewNotes?: string },
     ) {
+        if (!body || !body.status) {
+            return {
+                success: false,
+                message: 'Status is required',
+            };
+        }
         return this.connectedService.updateStatus(
             id,
             body.status,

@@ -4,12 +4,15 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import { authApi } from "@/lib/api";
+import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
     const { user, refreshUser } = useAuth();
+    const router = useRouter();
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState(false);
+    const [savedUniversities, setSavedUniversities] = useState<any[]>([]);
     const [form, setForm] = useState({
         firstName: "",
         lastName: "",
@@ -28,6 +31,26 @@ export default function ProfilePage() {
             });
         }
     }, [user]);
+
+    // Load saved universities from localStorage
+    useEffect(() => {
+        if (user?.id) {
+            try {
+                const stored = localStorage.getItem(`savedUniversities_${user.id}`);
+                if (stored) {
+                    setSavedUniversities(JSON.parse(stored));
+                }
+            } catch (e) { /* ignore */ }
+        }
+    }, [user?.id]);
+
+    const removeSavedUniversity = (universityName: string) => {
+        if (!user?.id) return;
+        const key = `savedUniversities_${user.id}`;
+        const updated = savedUniversities.filter(u => u.name !== universityName);
+        localStorage.setItem(key, JSON.stringify(updated));
+        setSavedUniversities(updated);
+    };
 
     const handleSave = async () => {
         if (!user?.email) return;
@@ -114,7 +137,7 @@ export default function ProfilePage() {
                                     </div>
 
                                     {/* Study Abroad Preferences */}
-                                    <div className="mt-8 pt-8 border-t border-gray-100">
+                                    {/* <div className="mt-8 pt-8 border-t border-gray-100">
                                         <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#6605c7] mb-6 flex items-center gap-2">
                                             <span className="material-symbols-outlined text-sm">school</span>
                                             Study Abroad Preferences
@@ -137,7 +160,7 @@ export default function ProfilePage() {
                                                 </div>
                                             ))}
                                         </div>
-                                    </div>
+                                    </div> */}
                                 </div>
                             ) : (
                                 <div className="space-y-5">
@@ -172,6 +195,88 @@ export default function ProfilePage() {
                             )}
                         </div>
                     </div>
+
+                    {/* Saved Universities Section */}
+                    <div className="mt-8">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div className="p-6 bg-gray-50 border-b border-gray-100">
+                                <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-[#6605c7] flex items-center gap-2">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-[#6605c7]">
+                                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                                    </svg>
+                                    Saved Universities
+                                    {savedUniversities.length > 0 && (
+                                        <span className="ml-2 px-2 py-0.5 rounded-full bg-[#6605c7]/10 text-[#6605c7] text-[10px]">
+                                            {savedUniversities.length}
+                                        </span>
+                                    )}
+                                </h3>
+                            </div>
+                            <div className="p-6">
+                                {savedUniversities.length === 0 ? (
+                                    <div className="text-center py-8">
+                                        <div className="text-3xl mb-3">🎓</div>
+                                        <p className="text-sm text-gray-500 font-medium">No universities saved yet</p>
+                                        <p className="text-xs text-gray-400 mt-1">
+                                            Complete the onboarding to discover and save universities matched to your profile.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {savedUniversities.map((uni, i) => (
+                                            <div key={uni.name || i} className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-[#6605c7]/20 hover:shadow-sm transition-all group">
+                                                <div className="w-10 h-10 bg-gradient-to-br from-[#6605c7]/10 to-[#a855f7]/10 rounded-lg flex items-center justify-center text-[#6605c7] font-bold text-sm flex-shrink-0">
+                                                    {i + 1}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="font-bold text-sm text-gray-900 truncate">{uni.name}</div>
+                                                    <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                                        <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">{uni.country || uni.loc}</span>
+                                                        {uni.rank && (
+                                                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-50 text-gray-500">
+                                                                Rank #{uni.rank}
+                                                            </span>
+                                                        )}
+                                                        {uni.tuition && (
+                                                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">
+                                                                ${typeof uni.tuition === 'number' ? uni.tuition.toLocaleString() : uni.tuition}/yr
+                                                            </span>
+                                                        )}
+                                                        {uni._score && (
+                                                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600">
+                                                                {uni._score}% match
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 flex-shrink-0">
+                                                    <button
+                                                        onClick={() => {
+                                                            const slug = uni.slug || uni.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                                                            router.push(`/university/${slug}`);
+                                                        }}
+                                                        className="px-3 py-1.5 text-[10px] font-bold text-[#6605c7] bg-[#6605c7]/5 rounded-lg hover:bg-[#6605c7]/10 transition-all"
+                                                    >
+                                                        View
+                                                    </button>
+                                                    <button
+                                                        onClick={() => removeSavedUniversity(uni.name)}
+                                                        className="p-1.5 text-gray-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                                                        title="Remove from saved"
+                                                    >
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                            <path d="M18 6L6 18M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>

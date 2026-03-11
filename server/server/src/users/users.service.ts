@@ -17,6 +17,12 @@ export class UsersService {
     });
   }
 
+  async findByMobile(mobile: string) {
+    return this.prisma.user.findFirst({
+      where: { mobile },
+    });
+  }
+
   async create(data: {
     email: string;
     firstName?: string;
@@ -178,6 +184,9 @@ export class UsersService {
     uploaded: boolean;
     status?: string;
     filePath?: string;
+    digilockerTxId?: string;
+    verifiedAt?: Date;
+    verificationMetadata?: any;
   }) {
     return this.prisma.userDocument.upsert({
       where: {
@@ -191,6 +200,9 @@ export class UsersService {
         status: data.status || 'pending',
         filePath: data.filePath || null,
         uploadedAt: data.uploaded ? new Date() : null,
+        digilockerTxId: data.digilockerTxId || undefined,
+        verifiedAt: data.verifiedAt || undefined,
+        verificationMetadata: data.verificationMetadata || undefined,
       },
       create: {
         userId,
@@ -199,6 +211,9 @@ export class UsersService {
         status: data.status || 'pending',
         filePath: data.filePath || null,
         uploadedAt: data.uploaded ? new Date() : null,
+        digilockerTxId: data.digilockerTxId || null,
+        verifiedAt: data.verifiedAt || null,
+        verificationMetadata: data.verificationMetadata || null,
       },
     });
   }
@@ -221,10 +236,24 @@ export class UsersService {
     });
   }
 
-  // Get user dashboard data with all applications and documents
+  // Get user dashboard data with all applications, documents and full activity feed
   async getUserDashboardData(userId: string) {
     const applications = await this.getUserApplications(userId);
     const documents = await this.getUserDocuments(userId);
+
+    // Fetch more activity sources
+    const userWithActivity = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        eligibilityChecks: true,
+        visaMockInterviews: true,
+        forumPosts: true,
+        forumComments: true,
+        universityInquiries: true,
+      } as any,
+    }) as any;
+
+    const inquiries = userWithActivity?.universityInquiries || [];
 
     // Build activity feed from real data
     const activity: Array<{
@@ -259,13 +288,77 @@ export class UsersService {
       }
     }
 
+    // Add Inquiries
+    for (const inq of inquiries) {
+      activity.push({
+        type: inq.type === 'callback' ? 'callback' : 'inquiry',
+        title: inq.type === 'callback' ? 'Callback Requested' : 'Fasttrack Application',
+        description: `University: ${inq.universityName}. Status: ${inq.status}`,
+        timestamp: inq.createdAt.toISOString(),
+        link: '/explore',
+      });
+    }
+
+    // Add Eligibility Checks
+    if (userWithActivity?.eligibilityChecks) {
+      for (const check of userWithActivity.eligibilityChecks) {
+        activity.push({
+          type: 'eligibility',
+          title: `Eligibility Result: ${check.status}`,
+          description: `Score: ${check.score}% for loan of ₹${check.loan?.toLocaleString('en-IN')}`,
+          timestamp: check.createdAt.toISOString(),
+          link: '/loan-eligibility',
+        });
+      }
+    }
+
+    // Add Visa Mock Interviews
+    if (userWithActivity?.visaMockInterviews) {
+      for (const interview of userWithActivity.visaMockInterviews) {
+        activity.push({
+          type: 'visa_mock',
+          title: `Visa Mock Interview — ${interview.visaType}`,
+          description: `Likelihood: ${interview.approvalLikelihood}. Risk: ${interview.overallRisk}. Score: ${interview.overallScore}/10`,
+          timestamp: interview.createdAt.toISOString(),
+          link: '/visa-mock',
+        });
+      }
+    }
+
+    // Add Forum Activities
+    if (userWithActivity?.forumPosts) {
+      for (const post of userWithActivity.forumPosts) {
+        activity.push({
+          type: 'forum_post',
+          title: `Forum Post: ${post.title}`,
+          description: post.content.substring(0, 100) + '...',
+          timestamp: post.createdAt.toISOString(),
+          link: `/community/forum/${post.id}`,
+        });
+      }
+    }
+
+    if (userWithActivity?.forumComments) {
+      for (const comment of userWithActivity.forumComments) {
+        activity.push({
+          type: 'forum_comment',
+          title: `Commented on Forum`,
+          description: comment.content.substring(0, 100) + '...',
+          timestamp: comment.createdAt.toISOString(),
+          link: `/community/forum/${comment.postId}`,
+        });
+      }
+    }
+
     // Sort by timestamp descending
     activity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
     return {
       applications,
       documents,
-      activity,
+      activity: activity.slice(0, 15), // Top 15 activities
+      applicationCount: applications.length,
+      user: userWithActivity,
     };
   }
 }

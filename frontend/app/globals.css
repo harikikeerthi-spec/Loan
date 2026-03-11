@@ -286,6 +286,10 @@ h6,
   -webkit-font-smoothing: antialiased;
 }
 
+.icon-filled {
+  font-variation-settings: 'FILL' 1;
+}
+
 /* Onboarding */
 .onboarding-card {
   background: white;

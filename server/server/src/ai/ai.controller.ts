@@ -8,6 +8,8 @@ import { AdmitPredictorService } from './services/admit-predictor.service';
 import { GroqService } from './services/groq.service';
 import { UniversitySearchService, University, UniversityDetails } from './services/university-search.service';
 import { VisaInterviewService, InterviewMessage, EvaluationResult } from './services/visa-interview.service';
+import { Prisma } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('ai')
 export class AiController {
@@ -21,6 +23,7 @@ export class AiController {
     private readonly groqService: GroqService,
     private readonly universitySearchService: UniversitySearchService,
     private readonly visaInterviewService: VisaInterviewService,
+    private readonly prisma: PrismaService,
   ) { }
 
   @Post('eligibility-check')
@@ -39,6 +42,30 @@ export class AiController {
       data.collateral,
       data.study,
     );
+
+    try {
+      await this.prisma.loanEligibilityCheck.create({
+        data: {
+          age: Number(data.age) || 0,
+          credit: Number(data.credit) || 0,
+          income: Number(data.income) || 0,
+          loan: Number(data.loan) || 0,
+          employment: String(data.employment || 'unknown'),
+          study: String(data.study || 'unknown'),
+          coApplicant: String(data.coApplicant || 'no'),
+          collateral: String(data.collateral || 'no'),
+          // tracking payload
+          score: eligibilityResult.score,
+          status: eligibilityResult.status,
+          rateRange: eligibilityResult.rateRange,
+          coverage: eligibilityResult.coverage,
+          recommendations: loanRecommendations as unknown as Prisma.InputJsonValue,
+          userId: data.userId || null,
+        }
+      });
+    } catch (e) {
+      console.error('Failed to save loan eligibility record:', e);
+    }
 
     return {
       success: true,
@@ -505,6 +532,54 @@ export class AiController {
     } catch (error) {
       console.error('Final report generation failed:', error);
       return { success: false, message: error.message || 'Failed to generate report' };
+    }
+  }
+
+  @Post('visa-interview/save-report')
+  async saveVisaReport(
+    @Body()
+    data: {
+      userId?: string;
+      visaType: string;
+      agentType?: string;
+      overallScore: number;
+      overallRisk: string;
+      approvalLikelihood: string;
+      sectionScores: any;
+      strengths: string[];
+      weaknesses: string[];
+      criticalIssues: string[];
+      ds160Inconsistencies: string[];
+      tips: string[];
+      verdict: string;
+      messages: any;
+      evaluations: any;
+    },
+  ) {
+    try {
+      const result = await this.prisma.visaMockInterviewResult.create({
+        data: {
+          userId: data.userId || null,
+          visaType: data.visaType,
+          agentType: data.agentType || null,
+          overallScore: data.overallScore,
+          overallRisk: data.overallRisk,
+          approvalLikelihood: data.approvalLikelihood,
+          sectionScores: data.sectionScores || {},
+          strengths: data.strengths || [],
+          weaknesses: data.weaknesses || [],
+          criticalIssues: data.criticalIssues || [],
+          ds160Inconsistencies: data.ds160Inconsistencies || [],
+          tips: data.tips || [],
+          verdict: data.verdict || '',
+          messages: data.messages || [],
+          evaluations: data.evaluations || [],
+        }
+      });
+      return { success: true, result };
+    } catch (error) {
+      console.error('Failed to save visa interview result:', error);
+      return { success: false, message: 'Failed to save result' };
     }
   }
 }

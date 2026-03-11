@@ -663,6 +663,78 @@ export default function OnboardingPage() {
     // Selected university in search step (for preview before confirming)
     const [previewUniversity, setPreviewUniversity] = useState<any>(null);
 
+    // Saved universities state
+    const [savedUniversities, setSavedUniversities] = useState<Set<string>>(new Set());
+    const [saveSuccess, setSaveSuccess] = useState(false);
+
+    // Load saved universities from localStorage on mount
+    useEffect(() => {
+        if (user?.id) {
+            try {
+                const stored = localStorage.getItem(`savedUniversities_${user.id}`);
+                if (stored) {
+                    const parsed = JSON.parse(stored) as any[];
+                    setSavedUniversities(new Set(parsed.map((u: any) => u.name)));
+                }
+            } catch (e) { /* ignore */ }
+        }
+    }, [user?.id]);
+
+    const toggleSaveUniversity = (university: any) => {
+        if (!user?.id) return;
+        const key = `savedUniversities_${user.id}`;
+        try {
+            const stored = localStorage.getItem(key);
+            const list: any[] = stored ? JSON.parse(stored) : [];
+            const exists = list.findIndex((u: any) => u.name === university.name);
+            if (exists >= 0) {
+                list.splice(exists, 1);
+            } else {
+                list.push({
+                    name: university.name,
+                    country: university.country,
+                    loc: university.loc,
+                    rank: university.rank,
+                    accept: university.accept,
+                    min_gpa: university.min_gpa,
+                    min_ielts: university.min_ielts,
+                    min_toefl: university.min_toefl,
+                    tuition: university.tuition,
+                    courses: university.courses,
+                    loan: university.loan,
+                    slug: university.slug,
+                    website: university.website,
+                    _score: university._score,
+                    savedAt: new Date().toISOString(),
+                });
+            }
+            localStorage.setItem(key, JSON.stringify(list));
+            setSavedUniversities(new Set(list.map((u: any) => u.name)));
+        } catch (e) { /* ignore */ }
+    };
+
+    const saveAllUniversities = (universities: any[]) => {
+        if (!user?.id) return;
+        const key = `savedUniversities_${user.id}`;
+        try {
+            const stored = localStorage.getItem(key);
+            const existing: any[] = stored ? JSON.parse(stored) : [];
+            const existingNames = new Set(existing.map((u: any) => u.name));
+            const toAdd = universities.filter(u => !existingNames.has(u.name)).map(u => ({
+                name: u.name, country: u.country, loc: u.loc, rank: u.rank,
+                accept: u.accept, min_gpa: u.min_gpa, min_ielts: u.min_ielts,
+                min_toefl: u.min_toefl, tuition: u.tuition, courses: u.courses,
+                loan: u.loan, slug: u.slug, website: u.website, _score: u._score,
+                savedAt: new Date().toISOString(),
+            }));
+            const merged = [...existing, ...toAdd];
+            localStorage.setItem(key, JSON.stringify(merged));
+            setSavedUniversities(new Set(merged.map((u: any) => u.name)));
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 3000);
+        } catch (e) { /* ignore */ }
+    };
+
     // Pincode / postal lookup state (loan flow)
     const [pincodeValue, setPincodeValue] = useState('');
     const [pincodeError, setPincodeError] = useState<string | null>(null);
@@ -1930,23 +2002,63 @@ export default function OnboardingPage() {
 
                 <div className="section-label">Your Top Universities in {country}</div>
                 <div style={{ width: '100vw', position: 'relative', left: '50%', right: '50%', marginLeft: '-50vw', marginRight: '-50vw', padding: '0 32px', boxSizing: 'border-box' }}>
-                    <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 20, marginTop: 16 }}>
+                    <div style={{ maxWidth: 1000, margin: '0 auto' }}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
                             {scored.map((u, i) => (
-                                <UniversityCard
-                                    key={u.slug || u.name || i}
-                                    university={u}
-                                    onDetails={(uni: any) => {
-                                        const slug = uni.slug || uni.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-                                        router.push(`/university/${slug}`);
-                                    }}
-                                    onApply={(uni: any) => {
-                                        router.push(`/apply-loan?university=${encodeURIComponent(uni.name)}&country=${encodeURIComponent(uni.country)}`);
-                                    }}
-                                />
+                                <div key={u.slug || u.name || i}>
+                                    <UniversityCard
+                                        university={u}
+                                        onDetails={(uni: any) => {
+                                            const slug = uni.slug || uni.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                                            router.push(`/university/${slug}`);
+                                        }}
+                                        onApply={(uni: any) => {
+                                            router.push(`/apply-loan?university=${encodeURIComponent(uni.name)}&country=${encodeURIComponent(uni.country)}`);
+                                        }}
+                                        onSave={() => toggleSaveUniversity(u)}
+                                        isSaved={savedUniversities.has(u.name)}
+                                    />
+                                </div>
                             ))}
                         </div>
                     </div>
+                </div>
+
+                {/* Save Universities Button */}
+                <div style={{ margin: '32px 0 16px 44px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 12 }}>
+                    {saveSuccess && (
+                        <div style={{ padding: '8px 16px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 12, color: '#059669', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span>
+                            Universities saved to your profile!
+                        </div>
+                    )}
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <button
+                            onClick={() => saveAllUniversities(scored)}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 8,
+                                padding: '12px 24px', borderRadius: 12,
+                                background: 'linear-gradient(135deg, #6605c7, #a855f7)',
+                                color: 'white', border: 'none', cursor: 'pointer',
+                                fontSize: 14, fontWeight: 700,
+                                boxShadow: '0 4px 14px rgba(102,5,199,0.25)',
+                                transition: 'all 0.2s',
+                            }}
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+                            </svg>
+                            Save All Universities
+                        </button>
+                        {savedUniversities.size > 0 && (
+                            <span style={{ fontSize: 12, color: '#6605c7', fontWeight: 600 }}>
+                                {savedUniversities.size} university{savedUniversities.size !== 1 ? 'ies' : 'y'} saved
+                            </span>
+                        )}
+                    </div>
+                    <p style={{ fontSize: 11, color: '#9ca3af', margin: 0 }}>
+                        Saved universities will appear in your <strong>Profile</strong> for easy access later.
+                    </p>
                 </div>
             </div>
         );

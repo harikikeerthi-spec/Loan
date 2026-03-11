@@ -9,6 +9,12 @@ export class UsersController {
 
     @Post('profile')
     async getProfile(@Body() body: { email: string }) {
+        if (!body || !body.email) {
+            return {
+                success: false,
+                message: 'Email is required',
+            };
+        }
         const user = await this.usersService.findOne(body.email);
 
         if (!user) {
@@ -57,6 +63,12 @@ export class UsersController {
     @UseGuards(SuperAdminGuard)
     @Post('make-admin')
     async makeAdmin(@Body() body: { email: string; role: string }) {
+        if (!body || !body.email || !body.role) {
+            return {
+                success: false,
+                message: 'Email and role are required',
+            };
+        }
         const allowedRoles = ['admin', 'user'];
         if (!allowedRoles.includes(body.role)) {
             return {

@@ -30,6 +30,12 @@ export class AuthController {
    */
   @Post('send-otp')
   async sendOtp(@Body() body: { email: string }) {
+    if (!body || !body.email) {
+      return {
+        success: false,
+        message: 'Email address is required',
+      };
+    }
     return this.authService.sendOtpUnified(body.email);
   }
 
@@ -52,6 +58,12 @@ export class AuthController {
    */
   @Post('verify-otp')
   async verifyOtp(@Body() body: { email: string; otp: string }) {
+    if (!body || !body.email || !body.otp) {
+      return {
+        success: false,
+        message: 'Email and OTP are both required',
+      };
+    }
     return this.authService.verifyOtpUnified(body.email, body.otp);
   }
 
@@ -63,6 +75,12 @@ export class AuthController {
    */
   @Post('refresh')
   async refreshToken(@Body() body: { refresh_token: string }) {
+    if (!body || !body.refresh_token) {
+      return {
+        success: false,
+        message: 'Refresh token is required',
+      };
+    }
     return this.authService.refreshTokens(body.refresh_token);
   }
 
@@ -74,6 +92,12 @@ export class AuthController {
    */
   @Post('logout')
   async logout(@Body() body: { email: string }) {
+    if (!body || !body.email) {
+      return {
+        success: false,
+        message: 'Email is required',
+      };
+    }
     return this.authService.logout(body.email);
   }
 
@@ -87,6 +111,12 @@ export class AuthController {
    */
   @Post('dashboard')
   async getUserDashboard(@Body() body: { email: string }) {
+    if (!body || !body.email) {
+      return {
+        success: false,
+        message: 'Email is required to fetch dashboard',
+      };
+    }
     return this.authService.getUserDashboard(body.email);
   }
 
@@ -98,6 +128,12 @@ export class AuthController {
    */
   @Post('dashboard-data')
   async getDashboardData(@Body() body: { userId: string }) {
+    if (!body || !body.userId) {
+      return {
+        success: false,
+        message: 'User ID is required',
+      };
+    }
     try {
       const data = await this.usersService.getUserDashboardData(body.userId);
       return {
@@ -127,6 +163,12 @@ export class AuthController {
     phoneNumber: string;
     dateOfBirth: string;
   }) {
+    if (!body || !body.email) {
+      return {
+        success: false,
+        message: 'Email is required',
+      };
+    }
     return this.authService.updateUserDetails(
       body.email,
       body.firstName,
@@ -167,11 +209,28 @@ export class AuthController {
     address?: string;
     notes?: string;
   }) {
+    if (!body || !body.userId) {
+      return {
+        success: false,
+        message: 'User ID is required',
+      };
+    }
+
+    // Safely parse amount to a number
+    const amountVal = typeof body.amount === 'string' ? parseFloat(body.amount) : body.amount;
+
+    if (isNaN(amountVal)) {
+      return {
+        success: false,
+        message: 'Valid loan amount is required',
+      };
+    }
+
     try {
       const application = await this.usersService.createLoanApplication(body.userId, {
         bank: body.bank,
         loanType: body.loanType,
-        amount: body.amount,
+        amount: amountVal,
         purpose: body.purpose,
         courseType: body.courseType,
         country: body.country,
@@ -210,6 +269,12 @@ export class AuthController {
    */
   @Post('applications')
   async getApplications(@Body() body: { userId: string }) {
+    if (!body || !body.userId) {
+      return {
+        success: false,
+        message: 'User ID is required',
+      };
+    }
     try {
       const applications = await this.usersService.getUserApplications(body.userId);
       return {
@@ -235,6 +300,12 @@ export class AuthController {
     @Param('id') id: string,
     @Body() body: { status: string }
   ) {
+    if (!body || !body.status) {
+      return {
+        success: false,
+        message: 'Status is required',
+      };
+    }
     try {
       const application = await this.usersService.updateLoanApplicationStatus(id, body.status);
       return {
@@ -285,6 +356,12 @@ export class AuthController {
     uploaded: boolean;
     filePath?: string;
   }) {
+    if (!body || !body.userId || !body.docType) {
+      return {
+        success: false,
+        message: 'User ID and Document Type are required',
+      };
+    }
     try {
       const document = await this.usersService.upsertUserDocument(body.userId, body.docType, {
         uploaded: body.uploaded,
@@ -311,6 +388,12 @@ export class AuthController {
    */
   @Post('documents')
   async getDocuments(@Body() body: { userId: string }) {
+    if (!body || !body.userId) {
+      return {
+        success: false,
+        message: 'User ID is required',
+      };
+    }
     try {
       const documents = await this.usersService.getUserDocuments(body.userId);
       return {

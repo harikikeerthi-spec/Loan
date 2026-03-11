@@ -94,19 +94,19 @@ export default function UniversityPageClient({ serverUniversity, slug }: Props) 
   }, [uni]);
 
   if (!uni && loading) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#fdf8ff] p-10">
-      <div className="w-16 h-16 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin mb-6" />
-      <h2 className="text-2xl font-black text-gray-900 mb-2">Finding University Profile...</h2>
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#fcfaff] p-10">
+      <div className="w-16 h-16 border-4 border-purple-200 border-t-[#6605c7] rounded-full animate-spin mb-6" />
+      <h2 className="text-2xl font-display font-bold text-gray-900 mb-2" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>Finding University Profile...</h2>
       <p className="text-gray-500 font-medium">Gathering official data and rankings</p>
     </div>
   );
 
   if (!uni) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#fdf8ff] p-10">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#fcfaff] p-10">
       <span className="material-symbols-outlined text-gray-300 text-6xl mb-6">domain_disabled</span>
-      <h2 className="text-2xl font-black text-gray-900 mb-2">University Not Found</h2>
-      <p className="text-gray-500 font-medium mb-8">We couldn't locate this specific institution.</p>
-      <button onClick={() => window.history.back()} className="px-8 py-3 bg-purple-600 text-white font-black rounded-2xl shadow-xl">Go Back</button>
+      <h2 className="text-2xl font-display font-bold text-gray-900 mb-2" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>University Not Found</h2>
+      <p className="text-gray-500 font-medium mb-8">We couldn&apos;t locate this specific institution.</p>
+      <button onClick={() => window.history.back()} className="px-8 py-3 bg-[#6605c7] text-white font-bold rounded-2xl shadow-xl hover:shadow-purple-500/30 transition-all">Go Back</button>
     </div>
   );
 
@@ -127,8 +127,37 @@ export default function UniversityPageClient({ serverUniversity, slug }: Props) 
     tuition: uni.tuition || 0,
     currency: uni.currency || 'USD',
     description: uni.description || uni.summary || '',
-    heroImage: uni.heroImage || uni.image || '',
-    campusImages: uni.campusImages || uni.images || [],
+    heroImage: (() => {
+      const raw = uni.heroImage || uni.image || '';
+      // Filter out broken unsplash source URLs
+      if (raw && !raw.includes('source.unsplash.com')) return raw;
+      // Country-based fallback
+      const c = (uni.country || '').toLowerCase();
+      const fallbacks: Record<string, string> = {
+        'united kingdom': 'https://images.unsplash.com/photo-1607237138185-eedd9c632b0b?w=1600&q=80',
+        'uk': 'https://images.unsplash.com/photo-1607237138185-eedd9c632b0b?w=1600&q=80',
+        'usa': 'https://images.unsplash.com/photo-1562774053-701939374585?w=1600&q=80',
+        'united states': 'https://images.unsplash.com/photo-1562774053-701939374585?w=1600&q=80',
+        'canada': 'https://images.unsplash.com/photo-1580537659466-0a9bfa916a54?w=1600&q=80',
+        'australia': 'https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?w=1600&q=80',
+        'germany': 'https://images.unsplash.com/photo-1597672890275-702a4953ff1f?w=1600&q=80',
+        'ireland': 'https://images.unsplash.com/photo-1590089415225-401ed6f9db8e?w=1600&q=80',
+        'france': 'https://images.unsplash.com/photo-1549144511-f099e773c147?w=1600&q=80',
+        'singapore': 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1600&q=80',
+      };
+      return fallbacks[c] || 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1600&q=80';
+    })(),
+    campusImages: (() => {
+      const raw = uni.campusImages || uni.images || [];
+      // Filter out broken unsplash source URLs
+      const valid = raw.filter((img: string) => img && !img.includes('source.unsplash.com'));
+      if (valid.length > 0) return valid;
+      return [
+        'https://images.unsplash.com/photo-1562774053-701939374585?w=800&q=80',
+        'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&q=80',
+        'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&q=80',
+      ];
+    })(),
     logo: (() => {
       const raw = uni.logo || uni.logoUrl || '';
       if (raw && !raw.includes('placeholder') && !raw.includes('example')) return raw;

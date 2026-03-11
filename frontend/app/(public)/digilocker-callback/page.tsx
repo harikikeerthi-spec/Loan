@@ -1,53 +1,34 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function DigilockerCallbackPage() {
+function CallbackContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [status, setStatus] = useState("Processing verification...");
+    const [status, setStatus] = useState("Processing...");
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        const code = searchParams.get("code");
-        const state = searchParams.get("state");
+        const urlStatus = searchParams.get("status");
+        const message = searchParams.get("message");
 
-        if (!code || !state) {
-            setError("FRONTEND_MISSING_PARAMS: DigiLocker did not return the required code/state.");
-            return;
-        }
-
-        const verify = async () => {
-            try {
-                const token = localStorage.getItem("accessToken");
-                const redirectUri = window.location.origin + window.location.pathname;
-
-                // FIX: Use the correct backend endpoint path
-                const response = await fetch(`/api/digilocker/callback?code=${code}&state=${state}&redirectUri=${encodeURIComponent(redirectUri)}`, {
-                    method: 'GET',
-                    headers: {
-                        ...(token ? { Authorization: `Bearer ${token}` } : {})
-                    }
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    setStatus("Verification successful! Redirecting...");
-                    setTimeout(() => {
-                        router.push("/document-vault");
-                    }, 2000);
-                } else {
-                    setError(result.message || "Verification failed.");
-                }
-            } catch (e) {
-                console.error(e);
-                setError("An error occurred during verification.");
+        if (urlStatus === "success") {
+            setStatus(message || "Documents fetched successfully! Redirecting...");
+            setTimeout(() => router.push("/document-vault"), 2000);
+        } else if (urlStatus === "error") {
+            setError(message || "Something went wrong.");
+        } else {
+            // If we land here with code & state, redirect to backend callback
+            const code = searchParams.get("code");
+            const state = searchParams.get("state");
+            if (code && state) {
+                setStatus("Completing verification...");
+                window.location.href = `/api/digilocker/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
+            } else {
+                setError("Invalid callback. Missing parameters.");
             }
-        };
-
-        verify();
+        }
     }, [searchParams, router]);
 
     return (
@@ -82,5 +63,19 @@ export default function DigilockerCallbackPage() {
                 )}
             </div>
         </div>
+    );
+}
+
+export default function DigilockerCallbackPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 px-6">
+                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-500">
+                    <span className="material-symbols-outlined text-3xl animate-spin">progress_activity</span>
+                </div>
+            </div>
+        }>
+            <CallbackContent />
+        </Suspense>
     );
 }

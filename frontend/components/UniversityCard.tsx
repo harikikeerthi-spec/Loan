@@ -3,7 +3,7 @@ import React from 'react';
 import UniversityTemplate from './UniversityTemplate';
 import { useUniversity } from '@/context/UniversityContext';
 
-export default function UniversityCard({ university, onDetails, onApply }: { university: any; onDetails: (u: any) => void; onApply: (u: any) => void }) {
+export default function UniversityCard({ university, onDetails, onApply, onSave, isSaved }: { university: any; onDetails: (u: any) => void; onApply: (u: any) => void; onSave?: (u: any) => void; isSaved?: boolean }) {
   const { selectedUniversity, setSelectedUniversity } = useUniversity();
 
   const isActive = selectedUniversity?.name === university.name && selectedUniversity?.country === university.country;
@@ -32,6 +32,8 @@ export default function UniversityCard({ university, onDetails, onApply }: { uni
       isActive={isActive}
       onApply={handleApply}
       onDetails={handleDetails}
+      onSave={onSave}
+      isSaved={isSaved}
       aiEnhanced={selectedUniversity?.aiEnhanced}
     />
   );

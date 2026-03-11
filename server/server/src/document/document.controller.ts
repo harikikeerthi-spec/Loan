@@ -8,6 +8,7 @@ import { diskStorage } from 'multer';
 import { extname, resolve } from 'path';
 import { existsSync, mkdirSync, unlinkSync } from 'fs';
 import type { Response } from 'express';
+import * as crypto from 'crypto';
 
 // Multer configuration
 const storage = diskStorage({
@@ -116,8 +117,22 @@ export class DocumentController {
             throw new BadRequestException('userId and docType are required');
         }
 
-        const state = Buffer.from(JSON.stringify({ userId, docType, redirectUri })).toString('base64');
-        const authUrl = this.digilockerService.getAuthUrl(state, redirectUri);
+        // Generate PKCE code_verifier and code_challenge (required by DigiLocker)
+        const codeVerifier = crypto.randomBytes(32).toString('base64url');
+        const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
+
+        const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
+        const callbackUrl = process.env.DIGILOCKER_CALLBACK_URL || (backendUrl + '/api/digilocker/callback');
+
+        const stateData = {
+            userId,
+            docType,
+            redirectUri,
+            codeVerifier
+        };
+        const state = Buffer.from(JSON.stringify(stateData)).toString('base64')
+            .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        const authUrl = this.digilockerService.getAuthUrl(state, callbackUrl, codeChallenge);
 
         return {
             success: true,

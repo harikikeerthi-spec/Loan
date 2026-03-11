@@ -47,6 +47,7 @@ import { UserGuard } from './user.guard';
     AuthorizationService,
     AuditLogService,
     UserGuard,
+    EmailService,
   ],
 })
 export class AuthModule { }

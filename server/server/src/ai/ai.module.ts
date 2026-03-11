@@ -11,8 +11,10 @@ import { ApplicationReviewService } from './services/application-review.service'
 import { GroqService } from './services/groq.service';
 import { UniversitySearchService } from './services/university-search.service';
 import { VisaInterviewService } from './services/visa-interview.service';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
+  imports: [PrismaModule],
   controllers: [AiController],
   providers: [
     GroqService,

@@ -54,6 +54,33 @@ model User {
   studyPreference       UserStudyPreference?
   academicProfile       UserAcademicProfile?
   financialProfile      UserFinancialProfile?
+  eligibilityChecks     LoanEligibilityCheck[]
+  visaMockInterviews    VisaMockInterviewResult[]
+  universityInquiries   UniversityInquiry[]
+}
+
+model LoanEligibilityCheck {
+  id              String   @id @default(uuid())
+  age             Int
+  credit          Int
+  income          Float
+  loan            Float
+  employment      String
+  study           String
+  coApplicant     String
+  collateral      String
+  
+  // Results
+  score           Float
+  status          String
+  rateRange       String?
+  coverage        String?
+  recommendations Json?
+  
+  // Tracking
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt       DateTime @default(now())
 }
 
 model AdminProfile {
@@ -329,9 +356,15 @@ model UserDocument {
   userId    String
   docType   String   // aadhar, pan, passport, 10th, 12th, degree
   uploaded  Boolean  @default(false)
-  status    String   @default("pending") // pending, uploaded, verified, rejected
+  status    String   @default("pending") // pending, uploaded, verified, rejected, available_in_digilocker
   filePath  String?
   uploadedAt DateTime?
+  
+  // DigiLocker metadata
+  digilockerTxId        String?
+  verifiedAt            DateTime?
+  verificationMetadata  Json?
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
@@ -880,4 +913,65 @@ model UserFinancialProfile {
   loanAmount        String?
   
   updatedAt         DateTime @updatedAt
+}
+
+model DigilockerConsentRequest {
+  id              String   @id @default(uuid())
+  userId          String
+  studentEmail    String
+  documentTypes   String[]
+  status          String   @default("pending") // pending, approved, expired
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([studentEmail])
+}
+
+model VisaMockInterviewResult {
+  id              String   @id @default(uuid())
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  visaType        String
+  agentType       String?
+  
+  overallScore    Float
+  overallRisk     String
+  approvalLikelihood String
+  
+  sectionScores   Json?    
+  strengths       String[] 
+  weaknesses      String[]
+  criticalIssues  String[]
+  ds160Inconsistencies String[]
+  tips            String[]
+  verdict         String?  @db.Text
+  
+  messages        Json?    
+  evaluations     Json?    
+  
+  createdAt       DateTime @default(now())
+  
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model UniversityInquiry {
+  id             String   @id @default(uuid())
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name           String
+  email          String
+  mobile         String
+  universityName String
+  type           String   // "callback" or "fasttrack"
+  status         String   @default("pending")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([email])
+  @@index([mobile])
+  @@index([universityName])
 }

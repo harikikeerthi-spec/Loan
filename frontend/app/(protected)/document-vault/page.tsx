@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { authApi, documentApi } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
+import DigilockerConsentModal from "@/components/DigilockerConsentModal";
 
 const STUDENT_DOCS = [
     { type: "pan_student", label: "Student PAN Card", icon: "badge" },
@@ -51,6 +52,7 @@ export default function DocumentVaultPage() {
     const [profileType, setProfileType] = useState<"salaried" | "self-employed">("salaried");
     const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
     const [rejections, setRejections] = useState<Record<string, string>>({});
+    const [showConsentModal, setShowConsentModal] = useState(false);
 
     const loadDocs = useCallback(async () => {
         if (!user?.id) return;
@@ -135,22 +137,24 @@ export default function DocumentVaultPage() {
 
     const handleDigilockerVerify = async (docType: string) => {
         if (!user?.id) return;
+        // Redirect to backend authorize endpoint — DigiLocker handles mobile OTP login
+        window.location.href = `/api/digilocker/authorize?userId=${encodeURIComponent(user.id)}&docType=${encodeURIComponent(docType)}`;
+    };
+
+    const handleSyncFromDigilocker = async (docType: string) => {
+        if (!user?.id) return;
         setUploading(docType);
         try {
-            // Use the backend's own endpoint — the server handles the callback,
-            // so we pass the backend URL directly (localhost is valid server-side).
-            const redirectUri = `${window.location.protocol}//${window.location.host}/api/digilocker/callback`;
-            const result: any = await documentApi.initiateDigilocker(user.id, docType, redirectUri);
-
-            if (result.success && result.authUrl) {
-                // Redirect user to DigiLocker
-                window.location.href = result.authUrl;
+            const result: any = await documentApi.syncFromDigilocker(user.id, docType);
+            if (result.success) {
+                alert("Successfully synced from DigiLocker!");
+                await loadDocs();
             } else {
-                alert(result.message || "Failed to initiate DigiLocker flow.");
+                alert(result.message || "Failed to sync document.");
             }
         } catch (e) {
             console.error(e);
-            alert("An error occurred during verification.");
+            alert("An error occurred during sync.");
         } finally {
             setUploading(null);
         }
@@ -256,53 +260,74 @@ export default function DocumentVaultPage() {
                                 </div>
                             ) : (
                                 <div className="space-y-2">
-                                    {/* DigiLocker - First Priority */}
-                                    {([
-                                        'pan_student', 'pan_coapp', 'aadhar_student', 'aadhar_coapp',
-                                        'marksheet_10th', 'marksheet_12th', 'passport',
-                                        'pan_father', 'pan_mother', 'aadhar_father', 'aadhar_mother'
-                                    ].includes(req.type)) && !isUploaded && (
-                                            <div className="relative">
-                                                <div className="absolute -top-2 -right-1 z-10">
-                                                    <span className="bg-emerald-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm border border-white uppercase tracking-tighter animate-bounce">
-                                                        Priority 1
-                                                    </span>
-                                                </div>
-                                                <button
-                                                    onClick={() => handleDigilockerVerify(req.type)}
-                                                    disabled={!!uploading}
-                                                    className="w-full py-2.5 bg-emerald-600 text-white text-[11px] font-bold rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
-                                                >
-                                                    <img src="https://upload.wikimedia.org/wikipedia/en/1/1d/DigiLocker_logo.png" alt="DigiLocker" className="h-4 w-auto brightness-0 invert" />
-                                                    Fetch from DigiLocker
-                                                </button>
+                                    {/* Found in DigiLocker - Highest Priority */}
+                                    {existing?.status === 'available_in_digilocker' && !isUploaded ? (
+                                        <div className="relative">
+                                            <div className="absolute -top-2 -right-1 z-10">
+                                                <span className="bg-[#6605c7] text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm border border-white uppercase tracking-tighter animate-pulse">
+                                                    Found!
+                                                </span>
                                             </div>
-                                        )}
+                                            <button
+                                                onClick={() => handleSyncFromDigilocker(req.type)}
+                                                disabled={!!uploading}
+                                                className="w-full py-2.5 bg-[#6605c7] text-white text-[11px] font-bold rounded-lg hover:bg-[#5504a6] transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 active:scale-95 border border-[#6605c7]/20"
+                                            >
+                                                <span className="material-symbols-outlined text-[18px]">sync_alt</span>
+                                                Sync to Vault
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {/* DigiLocker Flow - First Priority */}
+                                            {([
+                                                'pan_student', 'pan_coapp', 'aadhar_student', 'aadhar_coapp',
+                                                'marksheet_10th', 'marksheet_12th', 'passport',
+                                                'pan_father', 'pan_mother', 'aadhar_father', 'aadhar_mother'
+                                            ].includes(req.type)) && !isUploaded && (
+                                                    <div className="relative">
+                                                        <div className="absolute -top-2 -right-1 z-10">
+                                                            <span className="bg-emerald-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm border border-white uppercase tracking-tighter animate-bounce">
+                                                                Priority 1
+                                                            </span>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => handleDigilockerVerify(req.type)}
+                                                            disabled={!!uploading}
+                                                            className="w-full py-2.5 bg-emerald-600 text-white text-[11px] font-bold rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 border border-emerald-500/20"
+                                                        >
+                                                            <img src="https://upload.wikimedia.org/wikipedia/en/1/1d/DigiLocker_logo.png" alt="DigiLocker" className="h-4 w-auto brightness-0 invert" />
+                                                            Fetch from DigiLocker
+                                                        </button>
+                                                    </div>
+                                                )}
 
-                                    {/* Manual Upload - Second Priority */}
-                                    <button
-                                        onClick={() => triggerFileInput(req.type)}
-                                        disabled={!!uploading}
-                                        className={`w-full py-2.5 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${([
-                                            'pan_student', 'pan_coapp', 'aadhar_student', 'aadhar_coapp',
-                                            'marksheet_10th', 'marksheet_12th', 'passport',
-                                            'pan_father', 'pan_mother', 'aadhar_father', 'aadhar_mother'
-                                        ].includes(req.type))
-                                            ? 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
-                                            : 'bg-[#6605c7] text-white hover:bg-[#5504a6]'
-                                            }`}
-                                    >
-                                        {uploading === req.type ? (
-                                            <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
-                                        ) : (
-                                            <span className="material-symbols-outlined text-[16px]">upload</span>
-                                        )}
-                                        {uploading === req.type ? "Processing..." : ([
-                                            'pan_student', 'pan_coapp', 'aadhar_student', 'aadhar_coapp',
-                                            'marksheet_10th', 'marksheet_12th', 'passport',
-                                            'pan_father', 'pan_mother', 'aadhar_father', 'aadhar_mother'
-                                        ].includes(req.type)) ? "Upload Manually (Priority 2)" : "Upload to Vault"}
-                                    </button>
+                                            {/* Manual Upload - Second Priority */}
+                                            <button
+                                                onClick={() => triggerFileInput(req.type)}
+                                                disabled={!!uploading}
+                                                className={`w-full py-2.5 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${([
+                                                    'pan_student', 'pan_coapp', 'aadhar_student', 'aadhar_coapp',
+                                                    'marksheet_10th', 'marksheet_12th', 'passport',
+                                                    'pan_father', 'pan_mother', 'aadhar_father', 'aadhar_mother'
+                                                ].includes(req.type))
+                                                    ? 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+                                                    : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                                                    }`}
+                                            >
+                                                {uploading === req.type ? (
+                                                    <span className="material-symbols-outlined animate-spin text-[16px]">progress_activity</span>
+                                                ) : (
+                                                    <span className="material-symbols-outlined text-[16px]">upload</span>
+                                                )}
+                                                {uploading === req.type ? "Processing..." : ([
+                                                    'pan_student', 'pan_coapp', 'aadhar_student', 'aadhar_coapp',
+                                                    'marksheet_10th', 'marksheet_12th', 'passport',
+                                                    'pan_father', 'pan_mother', 'aadhar_father', 'aadhar_mother'
+                                                ].includes(req.type)) ? "Upload Manually (Priority 2)" : "Upload to Vault"}
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -345,18 +370,35 @@ export default function DocumentVaultPage() {
                         </div>
 
                         {/* Bulk Sync - First Priority */}
-                        <div className="relative">
-                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 w-max">
-                                <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg border-2 border-white uppercase tracking-wider animate-bounce">
-                                    Recommended First Priority
-                                </span>
+                        <div className="flex gap-3">
+                            <div className="relative">
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 w-max">
+                                    <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg border-2 border-white uppercase tracking-wider animate-bounce">
+                                        Recommended
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={() => handleDigilockerVerify('ALL_SYNC')}
+                                    className="px-6 py-2.5 bg-emerald-600 text-white border border-emerald-500 rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-emerald-700 transition-all flex items-center gap-2 group shadow-xl shadow-emerald-600/20 active:scale-95"
+                                >
+                                    <span className="material-symbols-outlined text-[18px] group-hover:rotate-180 transition-transform duration-700">sync</span>
+                                    Instant Sync
+                                </button>
                             </div>
+
                             <button
-                                onClick={() => handleDigilockerVerify('ALL_SYNC')}
-                                className="px-6 py-2.5 bg-emerald-600 text-white border border-emerald-500 rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-emerald-700 transition-all flex items-center gap-2 group shadow-xl shadow-emerald-600/20 active:scale-95"
+                                onClick={() => {
+                                    console.log("Select & Fetch clicked, user:", user);
+                                    if (!user?.id) {
+                                        alert("You must be logged in. Please refresh the page or login again.");
+                                        return;
+                                    }
+                                    setShowConsentModal(true);
+                                }}
+                                className="px-6 py-2.5 bg-[#004791] text-white border border-[#003670] rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-[#003670] transition-all flex items-center gap-2 group shadow-xl shadow-blue-900/20 active:scale-95"
                             >
-                                <span className="material-symbols-outlined text-[18px] group-hover:rotate-180 transition-transform duration-700">sync</span>
-                                Full Vault Sync with DigiLocker
+                                <span className="material-symbols-outlined text-[18px]">checklist</span>
+                                Select & Fetch
                             </button>
                         </div>
 
@@ -414,6 +456,13 @@ export default function DocumentVaultPage() {
                     </div>
                 </div>
             </div>
+
+            {showConsentModal && user?.id && (
+                <DigilockerConsentModal
+                    userId={user.id}
+                    onClose={() => setShowConsentModal(false)}
+                />
+            )}
         </div>
     );
 }

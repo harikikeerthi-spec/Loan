@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import UniversityDetailView from "./UniversityDetailView";
 
@@ -32,6 +32,8 @@ interface UniversityTemplateProps {
   isActive?: boolean;
   onApply?: (uni: UniversityData) => void;
   onDetails?: (uni: UniversityData) => void;
+  onSave?: (uni: UniversityData) => void;
+  isSaved?: boolean;
   aiEnhanced?: boolean;
 }
 
@@ -39,9 +41,24 @@ function generateSlug(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-const COUNTRY_COLORS: Record<string, { bg: string; badge: string; glow: string }> = {
-  'USA': { bg: 'from-blue-600 to-indigo-700', badge: 'bg-blue-500/20 text-blue-200 border-blue-400/20', glow: 'bg-blue-500/20' },
-  'UK': { bg: 'from-red-700 to-rose-800', badge: 'bg-rose-500/20 text-rose-200 border-rose-400/20', glow: 'bg-rose-500/20' },
+function extractDomain(url?: string): string | null {
+  if (!url) return null;
+  try {
+    const parsed = new URL(url.startsWith('http') ? url : `http://${url}`);
+    return parsed.hostname.replace(/^www\./, '');
+  } catch (e) {
+    return null;
+  }
+}
+
+const COUNTRY_COLORS: Record<string, { badge: string; glow: string }> = {
+  'USA': { badge: 'bg-blue-50 text-blue-600 border-blue-200', glow: 'bg-blue-400' },
+  'UK': { badge: 'bg-rose-50 text-rose-600 border-rose-200', glow: 'bg-rose-400' },
+  'Canada': { badge: 'bg-red-50 text-red-600 border-red-200', glow: 'bg-red-400' },
+  'Australia': { badge: 'bg-amber-50 text-amber-600 border-amber-200', glow: 'bg-amber-400' },
+  'Germany': { badge: 'bg-emerald-50 text-emerald-600 border-emerald-200', glow: 'bg-emerald-400' },
+  'Ireland': { badge: 'bg-emerald-50 text-emerald-600 border-emerald-200', glow: 'bg-emerald-400' },
+  'Singapore': { badge: 'bg-red-50 text-red-600 border-red-200', glow: 'bg-red-400' },
 };
 
 const COUNTRY_FLAGS: Record<string, string> = {
@@ -55,12 +72,43 @@ export default function UniversityTemplate({
   isActive = false,
   onApply,
   onDetails,
+  onSave,
+  isSaved = false,
   aiEnhanced = false,
 }: UniversityTemplateProps) {
   const flag = COUNTRY_FLAGS[university.country] || '🌐';
   const acceptance = university.accept || university.acceptanceRate;
-  const colors = COUNTRY_COLORS[university.country] || { bg: 'from-[#6605c7] to-purple-900', badge: 'bg-purple-500/20 text-purple-200 border-purple-400/20', glow: 'bg-purple-500/20' };
+  const colors = COUNTRY_COLORS[university.country] || { badge: 'bg-purple-50 text-purple-600 border-purple-200', glow: 'bg-purple-400' };
   const slug = university.slug || generateSlug(university.name);
+
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    async function fetchLogo() {
+      try {
+        let domainToUse = university.domains?.[0] || extractDomain(university.website);
+
+        if (!domainToUse && university.name) {
+          const res = await fetch(`/api/university-logo?name=${encodeURIComponent(university.name)}&country=${encodeURIComponent(university.country || '')}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.domain) domainToUse = data.domain;
+          }
+        }
+
+        if (active && domainToUse) {
+          setLogoUrl(`https://logo.clearbit.com/${domainToUse}`);
+        }
+      } catch (err) {
+        console.error("Failed to load college logo", err);
+      }
+    }
+    setLogoError(false);
+    fetchLogo();
+    return () => { active = false; };
+  }, [university.name, university.country, university.domains, university.website]);
 
   if (showFullDetails) {
     // Transform props to match the expanded UniversityData in UniversityDetailView if needed
@@ -70,65 +118,86 @@ export default function UniversityTemplate({
 
   return (
     <div
-      className={`group relative overflow-hidden rounded-2xl transition-all duration-500 cursor-pointer ${isActive
-        ? "shadow-[0_25px_60px_rgba(102,5,199,0.15)] ring-2 ring-[#6605c7]/40 scale-[1.02]"
-        : "shadow-md hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] hover:-translate-y-1.5"
+      className={`group relative overflow-hidden rounded-[24px] transition-all duration-500 bg-white border ${isActive ? 'border-[#6605c7]' : 'border-gray-100'} ${isActive
+        ? "shadow-[0_20px_60px_rgba(102,5,199,0.15)] ring-4 ring-[#6605c7]/10 scale-[1.02]"
+        : "shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] hover:-translate-y-1"
         }`}
     >
-      <div className={`relative bg-gradient-to-r ${colors.bg} px-6 pt-5 pb-12`}>
-        <div className={`absolute -top-8 -right-8 w-28 h-28 ${colors.glow} rounded-full blur-2xl opacity-60`} />
-        <div className="relative z-10 flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-xl bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center text-white font-black text-lg">
-              {university.name?.charAt(0) || '🏛️'}
+      <div className="absolute top-0 inset-x-0 h-32 bg-gradient-to-br from-gray-50 to-gray-100/50" />
+      <div className={`absolute -top-10 -right-10 w-48 h-48 ${colors.glow} rounded-full blur-[60px] opacity-20 pointer-events-none`} />
+
+      <div className="relative p-6">
+        <div className="flex justify-between items-start mb-5">
+          <div className="flex gap-4 items-center">
+            <div className="w-14 h-14 rounded-[18px] bg-white shadow-sm border border-gray-100 flex items-center justify-center text-2xl shrink-0 overflow-hidden">
+              {logoUrl && !logoError ? (
+                <img
+                  src={logoUrl}
+                  alt={`${university.name} logo`}
+                  className="w-full h-full object-contain p-2 shrink-0"
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                <span className="font-bold text-[#6605c7]/60">
+                  {university.name?.charAt(0) || '🏛️'}
+                </span>
+              )}
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 mb-0.5">
-                <span className="text-base">{flag}</span>
+            <div>
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                <span className="text-lg">{flag}</span>
                 <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border ${colors.badge}`}>
                   {university.country}
                 </span>
+                {university.rank && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border bg-gray-50 text-gray-500 border-gray-200">
+                    QS #{university.rank}
+                  </span>
+                )}
               </div>
-              <h3 className="text-[15px] font-black text-white leading-tight line-clamp-1 tracking-tight">
+              <h3 className="text-[17px] font-black text-gray-900 leading-[1.2] line-clamp-2 tracking-tight pr-4">
                 {university.name}
               </h3>
             </div>
           </div>
-          {university.rank && (
-            <div className="flex flex-col items-center bg-white/10 backdrop-blur-sm rounded-lg px-2.5 py-1.5 border border-white/15 shrink-0">
-              <span className="text-white/50 text-[8px] font-black uppercase tracking-wider">QS</span>
-              <span className="text-white text-sm font-black leading-tight">#{university.rank}</span>
-            </div>
+          {onSave && (
+            <button
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); onSave(university); }}
+              className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${isSaved ? 'bg-[#6605c7] text-white shadow-md scale-110' : 'bg-gray-50 text-gray-400 hover:bg-gray-100 border border-gray-100 hover:text-gray-900'}`}
+              title={isSaved ? "Saved" : "Save University"}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+              </svg>
+            </button>
           )}
         </div>
-      </div>
 
-      <div className="bg-white px-6 -mt-6 relative z-10 rounded-t-2xl pt-5 pb-5">
-        <div className="flex gap-2 mb-5">
-          <div className="flex-1 py-2.5 px-3 bg-emerald-50 rounded-xl text-center border border-emerald-100/60">
-            <div className="text-emerald-600 text-sm font-black mb-0.5">{acceptance ? `${acceptance}%` : '—'}</div>
-            <div className="text-[8px] text-emerald-400 font-bold uppercase">Accept</div>
+        <div className="grid grid-cols-3 gap-3 my-6">
+          <div className="flex flex-col p-3 rounded-2xl bg-emerald-50/70 border border-emerald-100/80">
+            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600/70 mb-1">Accept Rate</span>
+            <span className="text-emerald-700 font-black text-[15px]">{acceptance ? `${acceptance}%` : '—'}</span>
           </div>
-          <div className="flex-1 py-2.5 px-3 bg-amber-50 rounded-xl text-center border border-amber-100/60">
-            <div className="text-amber-600 text-sm font-black mb-0.5">{university.tuition ? `$${Math.round(university.tuition / 1000)}k` : '—'}</div>
-            <div className="text-[8px] text-amber-400 font-bold uppercase">Tuition</div>
+          <div className="flex flex-col p-3 rounded-2xl bg-amber-50/70 border border-amber-100/80">
+            <span className="text-[9px] font-black uppercase tracking-widest text-amber-600/70 mb-1">Tuition Fee</span>
+            <span className="text-amber-700 font-black text-[15px]">{university.tuition ? `$${Math.round(university.tuition / 1000)}k` : '—'}</span>
           </div>
-          <div className="flex-1 py-2.5 px-3 bg-purple-50 rounded-xl text-center border border-purple-100/60">
-            <div className="text-purple-600 text-sm font-black mb-0.5">{university.min_gpa ? `${university.min_gpa}` : '—'}</div>
-            <div className="text-[8px] text-purple-400 font-bold uppercase">GPA</div>
+          <div className="flex flex-col p-3 rounded-2xl bg-purple-50/70 border border-purple-100/80">
+            <span className="text-[9px] font-black uppercase tracking-widest text-purple-600/70 mb-1">Min GPA</span>
+            <span className="text-purple-700 font-black text-[15px]">{university.min_gpa ? `${university.min_gpa}` : '—'}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/apply-loan?university=${encodeURIComponent(university.name)}&country=${encodeURIComponent(university.country)}`}
-            className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-[#6605c7] to-[#8b24e5] text-white font-black text-xs flex items-center justify-center gap-1.5"
-          >
-            Apply Loan
-          </Link>
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => onDetails?.(university)}
-            className="px-4 py-3 rounded-xl bg-gray-50 text-gray-600 font-bold text-xs hover:text-[#6605c7] transition-all border border-gray-100"
+            onClick={(e) => { e.stopPropagation(); onApply?.(university); }}
+            className="flex-1 py-3.5 px-4 rounded-xl bg-gradient-to-r from-[#6605c7] to-[#8b24e5] text-white font-black text-[12px] uppercase tracking-widest hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-md shadow-[#6605c7]/20"
+          >
+            Apply Loan <span className="material-symbols-outlined text-[16px] icon-filled" aria-hidden="true">arrow_forward</span>
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDetails?.(university); }}
+            className="flex-1 py-3.5 px-4 rounded-xl bg-gray-50 text-gray-700 font-black text-[12px] uppercase tracking-widest hover:bg-gray-100 transition-all border border-gray-200"
           >
             Details
           </button>

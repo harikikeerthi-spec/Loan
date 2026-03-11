@@ -15,7 +15,7 @@ import { UserGuard } from '../auth/user.guard';
 
 @Controller('referral')
 export class ReferralController {
-  constructor(private readonly referralService: ReferralService) {}
+  constructor(private readonly referralService: ReferralService) { }
 
   /**
    * GET /referral/my-code
@@ -108,6 +108,12 @@ export class ReferralController {
   async recordReferral(
     @Body() body: { referralCode: string; refereeEmail: string; refereeId?: string },
   ) {
+    if (!body || !body.referralCode || !body.refereeEmail) {
+      return {
+        success: false,
+        message: 'Referral code and referee email are required',
+      };
+    }
     try {
       const result = await this.referralService.recordReferral(
         body.referralCode,
@@ -130,6 +136,12 @@ export class ReferralController {
   @UseGuards(UserGuard)
   @Post('invite')
   async sendInvite(@Req() req: any, @Body() body: { email: string }) {
+    if (!body || !body.email) {
+      return {
+        success: false,
+        message: 'Email is required',
+      };
+    }
     try {
       const userId = req.user?.sub || req.user?.id;
       if (!userId) {

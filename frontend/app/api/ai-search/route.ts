@@ -105,8 +105,6 @@ export async function POST(req: Request) {
         if (type === 'university_detail') {
           // Derive real URLs from the domain the AI returned
           const domain = (parsed.websiteDomain || parsed.website || '').replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/$/, '');
-          const uniName = parsed.name || query || slug || 'University';
-          const nameForSearch = encodeURIComponent(uniName.replace(/\s+/g, ' ').trim());
 
           // Official website from domain
           parsed.website = domain ? `https://www.${domain}` : '';
@@ -114,13 +112,53 @@ export async function POST(req: Request) {
           // Real logo from Clearbit (uses the university domain — works for most .edu/.ac.uk domains)
           parsed.logo = domain ? `https://logo.clearbit.com/${domain}` : '';
 
-          // Real campus images from Unsplash source (deterministic, no API key needed)
-          parsed.heroImage = `https://source.unsplash.com/1600x900/?${nameForSearch}+campus+university`;
-          parsed.campusImages = [
-            `https://source.unsplash.com/800x600/?${nameForSearch}+campus`,
-            `https://source.unsplash.com/800x600/?${nameForSearch}+university+building`,
-            `https://source.unsplash.com/800x600/?${nameForSearch}+library`,
+          // Country-based curated campus images (Unsplash source API is deprecated)
+          const countryKey = (parsed.country || country || '').toLowerCase();
+          const HERO_IMAGES: Record<string, string> = {
+            'united kingdom': 'https://images.unsplash.com/photo-1607237138185-eedd9c632b0b?w=1600&q=80',
+            'uk': 'https://images.unsplash.com/photo-1607237138185-eedd9c632b0b?w=1600&q=80',
+            'usa': 'https://images.unsplash.com/photo-1562774053-701939374585?w=1600&q=80',
+            'united states': 'https://images.unsplash.com/photo-1562774053-701939374585?w=1600&q=80',
+            'canada': 'https://images.unsplash.com/photo-1580537659466-0a9bfa916a54?w=1600&q=80',
+            'australia': 'https://images.unsplash.com/photo-1523482580672-f109ba8cb9be?w=1600&q=80',
+            'germany': 'https://images.unsplash.com/photo-1597672890275-702a4953ff1f?w=1600&q=80',
+            'ireland': 'https://images.unsplash.com/photo-1590089415225-401ed6f9db8e?w=1600&q=80',
+            'france': 'https://images.unsplash.com/photo-1549144511-f099e773c147?w=1600&q=80',
+            'singapore': 'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1600&q=80',
+          };
+          const CAMPUS_IMAGES: Record<string, string[]> = {
+            'united kingdom': [
+              'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=800&q=80',
+              'https://images.unsplash.com/photo-1580537659466-0a9bfa916a54?w=800&q=80',
+              'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&q=80',
+            ],
+            'uk': [
+              'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=800&q=80',
+              'https://images.unsplash.com/photo-1580537659466-0a9bfa916a54?w=800&q=80',
+              'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&q=80',
+            ],
+            'usa': [
+              'https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?w=800&q=80',
+              'https://images.unsplash.com/photo-1519452635265-7b1fbfd1e4e0?w=800&q=80',
+              'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
+            ],
+            'united states': [
+              'https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?w=800&q=80',
+              'https://images.unsplash.com/photo-1519452635265-7b1fbfd1e4e0?w=800&q=80',
+              'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80',
+            ],
+          };
+          const defaultHero = 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1600&q=80';
+          const defaultCampus = [
+            'https://images.unsplash.com/photo-1562774053-701939374585?w=800&q=80',
+            'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&q=80',
+            'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=800&q=80',
           ];
+
+          parsed.heroImage = parsed.heroImage || HERO_IMAGES[countryKey] || defaultHero;
+          parsed.campusImages = (parsed.campusImages && parsed.campusImages.length > 0)
+            ? parsed.campusImages
+            : (CAMPUS_IMAGES[countryKey] || defaultCampus);
 
           return NextResponse.json({ university: parsed });
         }

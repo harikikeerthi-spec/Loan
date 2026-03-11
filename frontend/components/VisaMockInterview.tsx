@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { AGENT_TYPES } from "../app/(public)/visa-mock/page";
 
 /* ────────── Types (shared with page) ────────── */
 export interface InterviewMessage {
@@ -14,10 +15,16 @@ export interface EvaluationResult {
     clarity: number;
     confidence: number;
     relevance: number;
+    specificity: number;
+    consistency: number;
+    conciseness: number;
+    persuasiveness: number;
     risk: "Low" | "Medium" | "High";
     redFlags: string[];
     missingDetails: string[];
     suggestedImprovement: string[];
+    overallScore: number;
+    quickTip: string;
 }
 
 export interface InterviewSection {
@@ -27,7 +34,7 @@ export interface InterviewSection {
 }
 
 /* ────────── Props ────────── */
-interface VisaVideoInterviewProps {
+interface VisaMockInterviewProps {
     messages: InterviewMessage[];
     currentInput: string;
     setCurrentInput: (v: string) => void;
@@ -35,6 +42,7 @@ interface VisaVideoInterviewProps {
     onSend: (overrideText?: string) => void;
     onEnd: () => void;
     visaType: string;
+    agentType: string;
     latestEval: EvaluationResult | null;
     sections: InterviewSection[];
     currentSection: string;
@@ -43,9 +51,9 @@ interface VisaVideoInterviewProps {
 }
 
 /* ════════════════════════════════════════════════════════════
-   VisaVideoInterview – immersive WebRTC video‑call layout
+   VisaMockInterview – immersive WebRTC video‑call layout
    ════════════════════════════════════════════════════════════ */
-export default function VisaVideoInterview({
+export default function VisaMockInterview({
     messages,
     currentInput,
     setCurrentInput,
@@ -53,12 +61,13 @@ export default function VisaVideoInterview({
     onSend,
     onEnd,
     visaType,
+    agentType,
     latestEval,
     sections,
     currentSection,
     questionCount,
     evaluations,
-}: VisaVideoInterviewProps) {
+}: VisaMockInterviewProps) {
     /* ── Local media (WebRTC getUserMedia) ── */
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
@@ -77,13 +86,57 @@ export default function VisaVideoInterview({
     const [aiSpeaking, setAiSpeaking] = useState(false);
     const aiAudioLevel = aiSpeaking ? 0.4 + Math.random() * 0.5 : 0; // simulated waveform
 
+    /* ── Resolved agent info ── */
+    const agentInfo = AGENT_TYPES.find(a => a.value === agentType) || AGENT_TYPES[2];
+
+    /* ── Voice selection for distinct agent voices ── */
+    const selectedVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
+    useEffect(() => {
+        if (typeof window === "undefined" || !window.speechSynthesis) return;
+        const pickVoice = () => {
+            const voices = window.speechSynthesis.getVoices();
+            if (!voices.length) return;
+
+            const voicePrefs: Record<string, { patterns: RegExp[]; gender: string }> = {
+                agent_smith: {
+                    patterns: [/david/i, /daniel/i, /mark/i, /google uk english male/i, /male/i],
+                    gender: "male",
+                },
+                agent_sarah: {
+                    patterns: [/zira/i, /samantha/i, /karen/i, /victoria/i, /google uk english female/i, /female/i],
+                    gender: "female",
+                },
+                agent_michael: {
+                    patterns: [/alex/i, /tom/i, /james/i, /fred/i, /google us english/i, /male/i],
+                    gender: "male",
+                },
+            };
+
+            const pref = voicePrefs[agentType] || voicePrefs.agent_michael;
+            const englishVoices = voices.filter(v => v.lang.startsWith("en"));
+
+            let matchedVoice: SpeechSynthesisVoice | null = null;
+            for (const pat of pref.patterns) {
+                matchedVoice = englishVoices.find(v => pat.test(v.name)) || null;
+                if (matchedVoice) break;
+            }
+
+            selectedVoiceRef.current = matchedVoice || englishVoices[0] || voices[0];
+            console.log(`[VOICE_CHECK] Switch to Agent: ${agentType} | Voice Picked: ${selectedVoiceRef.current?.name || 'Default'}`);
+        };
+        pickVoice();
+        if (window.speechSynthesis.onvoiceschanged !== undefined) {
+            window.speechSynthesis.onvoiceschanged = pickVoice;
+        }
+    }, [agentType]);
+
     /* ── Speech Recognition ── */
     const recognitionRef = useRef<any>(null);
     const [isListening, setIsListening] = useState(false);
     const [interimTranscript, setInterimTranscript] = useState("");
     const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
     const accumulatedRef = useRef("");  // accumulates recognized text between sends
-    const autoSendRef = useRef<() => void>(() => {});
+    const autoSendRef = useRef<() => void>(() => { });
     const intentionalStopRef = useRef(false);  // track if we intentionally stopped recognition
 
     /* ── Transcript log ── */
@@ -182,11 +235,12 @@ export default function VisaVideoInterview({
                 setInterimTranscript(interim);
             }
 
-            // Auto-send after 2s of silence
+            // Auto-send after silence — longer pause for first answer so user can settle in
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+            const silenceDelay = questionCount <= 1 ? 3000 : 2200;
             silenceTimerRef.current = setTimeout(() => {
                 autoSendRef.current();
-            }, 2000);
+            }, silenceDelay);
         };
 
         rec.onend = () => {
@@ -197,7 +251,7 @@ export default function VisaVideoInterview({
                     try {
                         rec.start();
                         setIsListening(true);
-                    } catch (_) {}
+                    } catch (_) { }
                 }, 300);
             }
             intentionalStopRef.current = false;
@@ -216,7 +270,7 @@ export default function VisaVideoInterview({
             // Stop first if already running to avoid InvalidStateError
             if (isListening) {
                 intentionalStopRef.current = true;
-                try { recognitionRef.current.stop(); } catch (_) {}
+                try { recognitionRef.current.stop(); } catch (_) { }
             }
             setCurrentInput("");
             accumulatedRef.current = "";
@@ -231,7 +285,7 @@ export default function VisaVideoInterview({
                     try {
                         recognitionRef.current?.start();
                         setIsListening(true);
-                    } catch (_) {}
+                    } catch (_) { }
                 }, 200);
             }
         }
@@ -280,14 +334,18 @@ export default function VisaVideoInterview({
             window.speechSynthesis.cancel();
 
             const utterance = new SpeechSynthesisUtterance(last.content);
-            utterance.rate = 1;
-            utterance.pitch = 0.95;
+            // Use the agent-specific voice if available
+            if (selectedVoiceRef.current) {
+                utterance.voice = selectedVoiceRef.current;
+            }
+            utterance.rate = agentInfo.rate;
+            utterance.pitch = agentInfo.pitch;
 
             utterance.onstart = () => setAiSpeaking(true);
             utterance.onend = () => {
                 setAiSpeaking(false);
-                // Auto-start listening after AI finishes speaking
-                setTimeout(() => startListening(), 400);
+                // Brief pause before listening — feels like the officer is waiting for you
+                setTimeout(() => startListening(), 600);
             };
             utterance.onerror = () => setAiSpeaking(false);
 
@@ -427,8 +485,9 @@ export default function VisaVideoInterview({
                         </motion.div>
                         <div className="text-center">
                             <h3 className="text-lg font-black text-white uppercase tracking-[0.15em]">
-                                AI Consular Officer
+                                {agentInfo.label}
                             </h3>
+                            <p className="text-[10px] text-gray-600 font-medium mt-0.5 mb-1">{agentInfo.desc}</p>
                             <div className="flex items-center justify-center gap-2 mt-1.5">
                                 <div
                                     className={`w-2 h-2 rounded-full ${aiSpeaking
@@ -580,10 +639,15 @@ export default function VisaVideoInterview({
 
             {/* ─── Live evaluation strip ─── */}
             {latestEval && (
-                <div className="flex flex-wrap items-center justify-center gap-4 px-2">
+                <div className="flex flex-wrap items-center justify-center gap-3 px-2">
                     <EvalPill label="Clarity" value={latestEval.clarity} color="#6605c7" />
                     <EvalPill label="Confidence" value={latestEval.confidence} color="#a855f7" />
                     <EvalPill label="Relevance" value={latestEval.relevance} color="#7c3aed" />
+                    <EvalPill label="Specificity" value={latestEval.specificity} color="#6d28d9" />
+                    <EvalPill label="Persuasive" value={latestEval.persuasiveness} color="#5b21b6" />
+                    <div className="px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border bg-white/5 border-white/10 text-white">
+                        {latestEval.overallScore}/100
+                    </div>
                     <div
                         className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border ${latestEval.risk === "Low"
                             ? "text-green-400 border-green-500/20 bg-green-500/5"
@@ -597,31 +661,7 @@ export default function VisaVideoInterview({
                 </div>
             )}
 
-            {/* ─── Section progress dots ─── */}
-            <div className="flex items-center justify-center gap-3 flex-wrap">
-                {sections.map((s) => (
-                    <div
-                        key={s.id}
-                        className="flex items-center gap-2"
-                        title={s.label}
-                    >
-                        <div
-                            className={`w-2.5 h-2.5 rounded-full transition-colors ${s.completed
-                                ? "bg-green-500"
-                                : s.id === currentSection
-                                    ? "bg-[#6605c7] shadow-[0_0_10px_#6605c7]"
-                                    : "bg-white/10"
-                                }`}
-                        />
-                        <span
-                            className={`text-[9px] font-bold uppercase tracking-wider hidden lg:block ${s.id === currentSection ? "text-white" : "text-gray-600"
-                                }`}
-                        >
-                            {s.label}
-                        </span>
-                    </div>
-                ))}
-            </div>
+            {/* ─── Section progress dots Removed per request ─── */}
 
             {/* ═══ Sticky bottom input / controls bar ═══ */}
             <div className="fixed bottom-8 inset-x-4 md:inset-x-0 mx-auto max-w-4xl z-50">
@@ -646,8 +686,10 @@ export default function VisaVideoInterview({
                             onKeyDown={handleKey}
                             placeholder={
                                 isListening
-                                    ? "Listening… speak now"
-                                    : "Type or press mic to speak…"
+                                    ? "Listening… speak naturally"
+                                    : aiSpeaking
+                                        ? `${agentInfo.label} is speaking…`
+                                        : "Type your answer or press mic to speak…"
                             }
                             disabled={isLoading || aiSpeaking}
                             rows={1}
@@ -713,8 +755,7 @@ export default function VisaVideoInterview({
 
                 <div className="mt-2.5 text-center">
                     <span className="text-[9px] text-gray-600 font-black uppercase tracking-[0.2em]">
-                        WebRTC Media • AI Speech • Press ENTER to send • Practicing for{" "}
-                        {visaType}
+                        {agentInfo.label} • Voice Interview • Press ENTER to send • {visaType}
                     </span>
                 </div>
             </div>
