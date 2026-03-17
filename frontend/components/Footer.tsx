@@ -72,7 +72,7 @@ export default function Footer() {
                             <FooterLink href="/blog" label="Blogs & News" />
                             <FooterLink href="/bank-reviews" label="Bank Reviews" />
                             <FooterLink href="/faq" label="FAQ" />
-                            <FooterLink href="/explore" label="Community" />
+                            <FooterLink href="/community/discussions" label="Community" />
                         </ul>
                     </div>
 

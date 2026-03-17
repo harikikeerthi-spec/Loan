@@ -20,7 +20,14 @@ function authHeaders(): HeadersInit {
 
 async function handleResponse<T>(res: Response): Promise<T> {
     if (!res.ok) {
-        const err = await res.json().catch(() => ({ message: res.statusText }));
+        const text = await res.text().catch(() => "No body");
+        console.error(`API Error: ${res.status} ${res.url}`, text);
+        let err;
+        try {
+            err = JSON.parse(text);
+        } catch (e) {
+            err = { message: text || res.statusText };
+        }
 
         // Handle Token Expiration globally
         if (res.status === 401 && err?.message === 'Token has expired') {
@@ -39,7 +46,11 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
         throw new Error(err.message || "API request failed");
     }
-    return res.json();
+    const contentType = res.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+        return res.json();
+    }
+    return res.text() as unknown as T;
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────

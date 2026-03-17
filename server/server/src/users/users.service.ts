@@ -236,129 +236,142 @@ export class UsersService {
     });
   }
 
-  // Get user dashboard data with all applications, documents and full activity feed
-  async getUserDashboardData(userId: string) {
-    const applications = await this.getUserApplications(userId);
-    const documents = await this.getUserDocuments(userId);
+    // Get user dashboard data with all applications, documents and full activity feed
+    async getUserDashboardData(userId: string) {
+        try {
+            const applications = await this.getUserApplications(userId) || [];
+            const documents = await this.getUserDocuments(userId) || [];
 
-    // Fetch more activity sources
-    const userWithActivity = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        eligibilityChecks: true,
-        visaMockInterviews: true,
-        forumPosts: true,
-        forumComments: true,
-        universityInquiries: true,
-      } as any,
-    }) as any;
+            // Fetch more activity sources
+            const userWithActivity = await this.prisma.user.findUnique({
+                where: { id: userId },
+                include: {
+                    eligibilityChecks: true,
+                    visaMockInterviews: true,
+                    forumPosts: true,
+                    forumComments: true,
+                    universityInquiries: true,
+                } as any,
+            }) as any;
 
-    const inquiries = userWithActivity?.universityInquiries || [];
+            const inquiries = userWithActivity?.universityInquiries || [];
 
-    // Build activity feed from real data
-    const activity: Array<{
-      type: string;
-      title: string;
-      description: string;
-      timestamp: string;
-      link?: string;
-    }> = [];
+            // Build activity feed from real data
+            const activity: Array<{
+                type: string;
+                title: string;
+                description: string;
+                timestamp: string;
+                link?: string;
+            }> = [];
 
-    // Add application events
-    for (const app of applications) {
-      activity.push({
-        type: 'application',
-        title: `Loan Application — ${app.bank}`,
-        description: `₹${app.amount?.toLocaleString('en-IN')} ${app.loanType}${app.universityName ? ` for ${app.universityName}` : ''}. Status: ${app.status}`,
-        timestamp: (app.submittedAt || app.date)?.toISOString() || new Date().toISOString(),
-        link: '/dashboard',
-      });
+            // Add application events
+            for (const app of applications) {
+                const ts = app.submittedAt || app.date;
+                activity.push({
+                    type: 'application',
+                    title: `Loan Application — ${app.bank}`,
+                    description: `₹${(app.amount || 0).toLocaleString('en-IN')} ${app.loanType || ''}${app.universityName ? ` for ${app.universityName}` : ''}. Status: ${app.status || 'pending'}`,
+                    timestamp: ts instanceof Date ? ts.toISOString() : new Date(ts).toISOString(),
+                    link: '/dashboard',
+                });
+            }
+
+            // Add document upload events
+            for (const doc of documents) {
+                if (doc.uploaded) {
+                    const ts = doc.uploadedAt || doc.createdAt;
+                    activity.push({
+                        type: 'upload',
+                        title: `Document Uploaded`,
+                        description: `${(doc.docType || '').replace('_', ' ')} uploaded successfully`,
+                        timestamp: ts instanceof Date ? ts.toISOString() : new Date(ts).toISOString(),
+                        link: '/document-vault',
+                    });
+                }
+            }
+
+            // Add Inquiries
+            for (const inq of inquiries) {
+                activity.push({
+                    type: inq.type === 'callback' ? 'callback' : 'inquiry',
+                    title: inq.type === 'callback' ? 'Callback Requested' : 'Fasttrack Application',
+                    description: `University: ${inq.universityName || 'N/A'}. Status: ${inq.status || 'pending'}`,
+                    timestamp: (inq.createdAt instanceof Date ? inq.createdAt : new Date(inq.createdAt)).toISOString(),
+                    link: '/explore',
+                });
+            }
+
+            // Add Eligibility Checks
+            if (userWithActivity?.eligibilityChecks) {
+                for (const check of userWithActivity.eligibilityChecks) {
+                    activity.push({
+                        type: 'eligibility',
+                        title: `Eligibility Result: ${check.status || 'Success'}`,
+                        description: `Score: ${check.score || 0}% for loan of ₹${(check.loan || 0).toLocaleString('en-IN')}`,
+                        timestamp: (check.createdAt instanceof Date ? check.createdAt : new Date(check.createdAt)).toISOString(),
+                        link: '/loan-eligibility',
+                    });
+                }
+            }
+
+            // Add Visa Mock Interviews
+            if (userWithActivity?.visaMockInterviews) {
+                for (const interview of userWithActivity.visaMockInterviews) {
+                    activity.push({
+                        type: 'visa_mock',
+                        title: `Visa Mock Interview — ${interview.visaType || 'F1'}`,
+                        description: `Likelihood: ${interview.approvalLikelihood || 'High'}. Risk: ${interview.overallRisk || 'Low'}. Score: ${interview.overallScore || 0}/10`,
+                        timestamp: (interview.createdAt instanceof Date ? interview.createdAt : new Date(interview.createdAt)).toISOString(),
+                        link: '/visa-mock',
+                    });
+                }
+            }
+
+            // Add Forum Activities
+            if (userWithActivity?.forumPosts) {
+                for (const post of userWithActivity.forumPosts) {
+                    activity.push({
+                        type: 'forum_post',
+                        title: `Forum Post: ${post.title || 'Untitled'}`,
+                        description: (post.content || '').substring(0, 100) + '...',
+                        timestamp: (post.createdAt instanceof Date ? post.createdAt : new Date(post.createdAt)).toISOString(),
+                        link: `/community/forum/${post.id}`,
+                    });
+                }
+            }
+
+            if (userWithActivity?.forumComments) {
+                for (const comment of userWithActivity.forumComments) {
+                    activity.push({
+                        type: 'forum_comment',
+                        title: `Commented on Forum`,
+                        description: (comment.content || '').substring(0, 100) + '...',
+                        timestamp: (comment.createdAt instanceof Date ? comment.createdAt : new Date(comment.createdAt)).toISOString(),
+                        link: `/community/forum/${comment.postId}`,
+                    });
+                }
+            }
+
+            // Sort by timestamp descending
+            activity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+            const sanitizedUser = userWithActivity ? { ...userWithActivity } : null;
+            if (sanitizedUser) {
+                delete sanitizedUser.password;
+                delete sanitizedUser.refreshToken;
+            }
+
+            return {
+                applications,
+                documents,
+                activity: activity.slice(0, 15), // Top 15 activities
+                applicationCount: applications.length,
+                user: sanitizedUser,
+            };
+        } catch (error) {
+            console.error('Error in getUserDashboardData:', error);
+            throw error; // Re-throw to be caught by the controller
+        }
     }
-
-    // Add document upload events
-    for (const doc of documents) {
-      if (doc.uploaded) {
-        activity.push({
-          type: 'upload',
-          title: `Document Uploaded`,
-          description: `${doc.docType.replace('_', ' ')} uploaded successfully`,
-          timestamp: (doc.uploadedAt || doc.createdAt)?.toISOString() || new Date().toISOString(),
-          link: '/document-vault',
-        });
-      }
-    }
-
-    // Add Inquiries
-    for (const inq of inquiries) {
-      activity.push({
-        type: inq.type === 'callback' ? 'callback' : 'inquiry',
-        title: inq.type === 'callback' ? 'Callback Requested' : 'Fasttrack Application',
-        description: `University: ${inq.universityName}. Status: ${inq.status}`,
-        timestamp: inq.createdAt.toISOString(),
-        link: '/explore',
-      });
-    }
-
-    // Add Eligibility Checks
-    if (userWithActivity?.eligibilityChecks) {
-      for (const check of userWithActivity.eligibilityChecks) {
-        activity.push({
-          type: 'eligibility',
-          title: `Eligibility Result: ${check.status}`,
-          description: `Score: ${check.score}% for loan of ₹${check.loan?.toLocaleString('en-IN')}`,
-          timestamp: check.createdAt.toISOString(),
-          link: '/loan-eligibility',
-        });
-      }
-    }
-
-    // Add Visa Mock Interviews
-    if (userWithActivity?.visaMockInterviews) {
-      for (const interview of userWithActivity.visaMockInterviews) {
-        activity.push({
-          type: 'visa_mock',
-          title: `Visa Mock Interview — ${interview.visaType}`,
-          description: `Likelihood: ${interview.approvalLikelihood}. Risk: ${interview.overallRisk}. Score: ${interview.overallScore}/10`,
-          timestamp: interview.createdAt.toISOString(),
-          link: '/visa-mock',
-        });
-      }
-    }
-
-    // Add Forum Activities
-    if (userWithActivity?.forumPosts) {
-      for (const post of userWithActivity.forumPosts) {
-        activity.push({
-          type: 'forum_post',
-          title: `Forum Post: ${post.title}`,
-          description: post.content.substring(0, 100) + '...',
-          timestamp: post.createdAt.toISOString(),
-          link: `/community/forum/${post.id}`,
-        });
-      }
-    }
-
-    if (userWithActivity?.forumComments) {
-      for (const comment of userWithActivity.forumComments) {
-        activity.push({
-          type: 'forum_comment',
-          title: `Commented on Forum`,
-          description: comment.content.substring(0, 100) + '...',
-          timestamp: comment.createdAt.toISOString(),
-          link: `/community/forum/${comment.postId}`,
-        });
-      }
-    }
-
-    // Sort by timestamp descending
-    activity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-    return {
-      applications,
-      documents,
-      activity: activity.slice(0, 15), // Top 15 activities
-      applicationCount: applications.length,
-      user: userWithActivity,
-    };
-  }
 }

@@ -92,14 +92,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (storedUser && storedToken) {
             setUser(storedUser);
             setToken(storedToken);
+            
+            // If ID is missing, trigger a refresh immediately
+            if (!storedUser.id) {
+                setTimeout(() => refreshUser(), 100);
+            }
         } else if (storedToken && !storedUser) {
             // Token exists but no user object — try to reconstruct from stored email
             const email = localStorage.getItem("userEmail");
             const userId = localStorage.getItem("userId");
-            if (email && userId) {
-                setUser({ id: userId, email });
+            if (email) {
+                const partialUser = { id: userId || "", email };
+                setUser(partialUser);
+                setToken(storedToken);
+                // Trigger full refresh since we only have partial data
+                setTimeout(() => refreshUser(), 100);
             }
-            setToken(storedToken);
         }
 
         setIsLoading(false);
@@ -118,17 +126,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             };
             const freshUser = data?.user ?? data?.data ?? null;
             if (freshUser && (freshUser as AuthUser).email) {
-                const updated: AuthUser = {
-                    ...user,
-                    ...(freshUser as AuthUser),
-                };
-                setUser(updated);
-                localStorage.setItem("authUser", JSON.stringify(updated));
+                setUser(prev => {
+                    const updated: AuthUser = {
+                        ...(prev as AuthUser),
+                        ...(freshUser as AuthUser),
+                        id: (freshUser as any).id || (freshUser as any)._id || prev?.id || localStorage.getItem("userId") || ""
+                    };
+                    localStorage.setItem("authUser", JSON.stringify(updated));
+                    if (updated.id) localStorage.setItem("userId", updated.id);
+                    return updated;
+                });
             }
         } catch (err) {
             console.warn("refreshUser failed:", err);
         }
-    }, [user]);
+    }, []);
 
     /** Called after a successful OTP verification / login */
     const login = useCallback(

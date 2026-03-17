@@ -141,9 +141,10 @@ export class AuthController {
         data,
       };
     } catch (error) {
+      console.error('getDashboardData error:', error);
       return {
         success: false,
-        message: 'Failed to fetch dashboard data',
+        message: `Failed to fetch dashboard data: ${error.message}`,
       };
     }
   }

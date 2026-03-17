@@ -45,7 +45,7 @@ const PARENT_DOCS = [
 ];
 
 export default function DocumentVaultPage() {
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
     const [docs, setDocs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState<string | null>(null);
@@ -53,9 +53,19 @@ export default function DocumentVaultPage() {
     const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
     const [rejections, setRejections] = useState<Record<string, string>>({});
     const [showConsentModal, setShowConsentModal] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const loadDocs = useCallback(async () => {
-        if (!user?.id) return;
+        if (!user?.id) {
+            // If user ID is missing but we've stopped loading in AuthContext,
+            // we should stop loading here too to show the empty/entry state.
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
             const res = await authApi.getDashboardData(user.id) as any;
@@ -136,13 +146,22 @@ export default function DocumentVaultPage() {
     };
 
     const handleDigilockerVerify = async (docType: string) => {
-        if (!user?.id) return;
+        console.log("handleDigilockerVerify called for:", docType, "user:", user);
+        if (!user?.id) {
+            alert("User identity not found. Please refresh the page or wait a moment.");
+            refreshUser();
+            return;
+        }
         // Redirect to backend authorize endpoint — DigiLocker handles mobile OTP login
         window.location.href = `/api/digilocker/authorize?userId=${encodeURIComponent(user.id)}&docType=${encodeURIComponent(docType)}`;
     };
 
     const handleSyncFromDigilocker = async (docType: string) => {
-        if (!user?.id) return;
+        if (!user?.id) {
+            alert("User identity not found. Please refresh.");
+            refreshUser();
+            return;
+        }
         setUploading(docType);
         try {
             const result: any = await documentApi.syncFromDigilocker(user.id, docType);
@@ -285,21 +304,13 @@ export default function DocumentVaultPage() {
                                                 'marksheet_10th', 'marksheet_12th', 'passport',
                                                 'pan_father', 'pan_mother', 'aadhar_father', 'aadhar_mother'
                                             ].includes(req.type)) && !isUploaded && (
-                                                    <div className="relative">
-                                                        <div className="absolute -top-2 -right-1 z-10">
-                                                            <span className="bg-emerald-500 text-white text-[8px] font-black px-1.5 py-0.5 rounded-full shadow-sm border border-white uppercase tracking-tighter animate-bounce">
-                                                                Priority 1
-                                                            </span>
-                                                        </div>
-                                                        <button
-                                                            onClick={() => handleDigilockerVerify(req.type)}
-                                                            disabled={!!uploading}
+                                                         <Link
+                                                            href={`/document-vault/digilocker?docType=${req.type}`}
                                                             className="w-full py-2.5 bg-emerald-600 text-white text-[11px] font-bold rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 border border-emerald-500/20"
                                                         >
                                                             <img src="https://upload.wikimedia.org/wikipedia/en/1/1d/DigiLocker_logo.png" alt="DigiLocker" className="h-4 w-auto brightness-0 invert" />
-                                                            Fetch from DigiLocker
-                                                        </button>
-                                                    </div>
+                                                            Upload from DigiLocker
+                                                        </Link>
                                                 )}
 
                                             {/* Manual Upload - Second Priority */}
@@ -337,79 +348,142 @@ export default function DocumentVaultPage() {
         </div>
     );
 
+    if (!mounted) return null;
+
     return (
         <div className="min-h-screen bg-white">
             <Navbar />
             <div className="max-w-6xl mx-auto px-6 pt-24 pb-16">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
                     <div className="flex items-center gap-4">
-                        <Link href="/dashboard" className="w-10 h-10 bg-white rounded-xl flex items-center justify-center border border-gray-100 shadow-sm hover:border-gray-200 transition-all">
-                            <span className="material-symbols-outlined text-gray-500 text-[20px]">arrow_back</span>
+                        <Link href="/dashboard" className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-gray-100 shadow-sm hover:border-gray-200 transition-all">
+                            <span className="material-symbols-outlined text-gray-400 text-[20px]">arrow_back</span>
                         </Link>
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900">Document Vault</h1>
-                            <p className="text-gray-500 text-[13px]">Securely store and manage your loan documents</p>
+                            <h1 className="text-3xl font-black text-gray-900 tracking-tight">Document Vault</h1>
+                            <p className="text-gray-500 text-[13px] font-medium">Securely store and manage your loan documents</p>
                         </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-4">
                         {/* Profile Toggle */}
-                        <div className="flex bg-gray-50 p-1 rounded-xl border border-gray-100">
+                        <div className="flex bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
                             <button
                                 onClick={() => setProfileType("salaried")}
-                                className={`px-4 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all ${profileType === "salaried" ? "bg-white text-[#6605c7] shadow-sm border border-gray-100" : "text-gray-500"}`}
+                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${profileType === "salaried" ? "bg-white text-[#6605c7] shadow-sm border border-gray-100" : "text-gray-400 hover:text-gray-600"}`}
                             >
-                                Salaried Case
+                                Salaried
                             </button>
                             <button
                                 onClick={() => setProfileType("self-employed")}
-                                className={`px-4 py-1.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all ${profileType === "self-employed" ? "bg-white text-[#6605c7] shadow-sm border border-gray-100" : "text-gray-500"}`}
+                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${profileType === "self-employed" ? "bg-white text-[#6605c7] shadow-sm border border-gray-100" : "text-gray-400 hover:text-gray-600"}`}
                             >
                                 Self-Employed
                             </button>
                         </div>
 
-                        {/* Bulk Sync - First Priority */}
-                        <div className="flex gap-3">
-                            <div className="relative">
-                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10 w-max">
-                                    <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg border-2 border-white uppercase tracking-wider animate-bounce">
-                                        Recommended
-                                    </span>
+                        <div className="flex items-center gap-3 p-2.5 px-4 bg-emerald-50 rounded-2xl border border-emerald-100/50">
+                            <div className="w-8 h-8 bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                                <span className="material-symbols-outlined text-[16px] font-black">verified</span>
+                            </div>
+                            <div className="text-[13px] font-black text-emerald-700 tracking-tight">
+                                {uploadedCount} / {allRequiredDocs.length} Verified
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* DigiLocker Integrated Section */}
+                <div className="mb-12">
+                    <div className="bg-gradient-to-br from-[#004791] to-[#0b84ff] rounded-[32px] p-8 text-white relative overflow-hidden shadow-2xl shadow-blue-500/20">
+                        {/* Semi-circles for design */}
+                        <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
+                        <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-blue-900/30 rounded-full blur-3xl" />
+
+                        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                            <div className="max-w-xl">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 rounded-lg text-[10px] font-black uppercase tracking-[0.2em] mb-4 border border-white/10 backdrop-blur-md">
+                                    <span className="material-symbols-outlined text-[14px]">bolt</span>
+                                    Instant Import
                                 </div>
+                                <h2 className="text-2xl md:text-3xl font-black mb-3">One-Click Document Upload</h2>
+                                <p className="text-white/70 text-[13px] font-medium leading-relaxed">
+                                    Link your DigiLocker account to instantly fetch and verify your identity documents. 
+                                    Faster processing, zero paperwork, and maximum security.
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-4 shrink-0">
+                                <Link
+                                    href="/document-vault/digilocker"
+                                    className="px-8 py-4 bg-white text-[#004791] rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-blue-50 transition-all flex items-center justify-center gap-3 shadow-xl shadow-black/10 active:scale-95 border border-blue-200"
+                                >
+                                    <span className="material-symbols-outlined text-[20px]">open_in_new</span>
+                                    Open DigiLocker Portal
+                                </Link>
                                 <button
                                     onClick={() => handleDigilockerVerify('ALL_SYNC')}
-                                    className="px-6 py-2.5 bg-emerald-600 text-white border border-emerald-500 rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-emerald-700 transition-all flex items-center gap-2 group shadow-xl shadow-emerald-600/20 active:scale-95"
+                                    className="px-8 py-4 bg-emerald-500 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-emerald-400 transition-all flex items-center justify-center gap-3 shadow-xl shadow-black/10 active:scale-95 group"
                                 >
-                                    <span className="material-symbols-outlined text-[18px] group-hover:rotate-180 transition-transform duration-700">sync</span>
+                                    <span className="material-symbols-outlined text-[20px] group-hover:rotate-180 transition-transform duration-700">sync</span>
                                     Instant Sync
                                 </button>
                             </div>
+                        </div>
 
-                            <button
-                                onClick={() => {
-                                    console.log("Select & Fetch clicked, user:", user);
-                                    if (!user?.id) {
-                                        alert("You must be logged in. Please refresh the page or login again.");
-                                        return;
-                                    }
-                                    setShowConsentModal(true);
-                                }}
-                                className="px-6 py-2.5 bg-[#004791] text-white border border-[#003670] rounded-xl text-[11px] font-bold uppercase tracking-wider hover:bg-[#003670] transition-all flex items-center gap-2 group shadow-xl shadow-blue-900/20 active:scale-95"
+                {/* Fetched from DigiLocker - Dedicated "Folder" Section */}
+                {docs.some(d => d.status === 'available_in_digilocker' && !d.uploaded) && (
+                    <div className="mb-12 bg-gray-50/50 rounded-[32px] p-8 border border-dashed border-gray-200">
+                        <div className="flex items-center justify-between mb-8">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center">
+                                    <span className="material-symbols-outlined text-emerald-600">folder_zip</span>
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-black text-gray-900">Fetched from DigiLocker</h2>
+                                    <p className="text-gray-500 text-[11px] font-medium uppercase tracking-widest">Select documents to sync with your vault</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={loadDocs}
+                                className="w-10 h-10 bg-white rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:text-[#6605c7] hover:border-[#6605c7] transition-all"
+                                title="Refresh"
                             >
-                                <span className="material-symbols-outlined text-[18px]">checklist</span>
-                                Select & Fetch
+                                <span className="material-symbols-outlined text-[18px]">refresh</span>
                             </button>
                         </div>
 
-                        <div className="flex items-center gap-3 p-2 px-3 bg-[#6605c7]/[0.02] rounded-xl border border-[#6605c7]/[0.05]">
-                            <div className="w-7 h-7 bg-[#6605c7] text-white rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/20">
-                                <span className="material-symbols-outlined text-[14px]">verified</span>
-                            </div>
-                            <div className="text-[13px] font-bold text-gray-900 tracking-tight">
-                                {uploadedCount} / {allRequiredDocs.length} Docs
-                            </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {docs.filter(d => d.status === 'available_in_digilocker' && !d.uploaded).map(d => {
+                                const req = allRequiredDocs.find(rd => rd.type === d.docType);
+                                return (
+                                    <div key={d.id || d.docType} className="bg-white rounded-2xl p-5 border border-emerald-100 shadow-sm flex flex-col items-center text-center group hover:shadow-md transition-all">
+                                        <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                                            <span className="material-symbols-outlined text-emerald-500">{req?.icon || 'description'}</span>
+                                        </div>
+                                        <h3 className="text-[13px] font-bold text-gray-900 mb-1 line-clamp-1">{req?.label || d.docType}</h3>
+                                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-md text-[8px] font-black uppercase tracking-tighter mb-4">
+                                            <span className="material-symbols-outlined text-[10px]">verified</span>
+                                            Verified Source
+                                        </div>
+                                        <button
+                                            onClick={() => handleSyncFromDigilocker(d.docType)}
+                                            disabled={!!uploading}
+                                            className="w-full py-2 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            {uploading === d.docType ? (
+                                                <span className="material-symbols-outlined animate-spin text-[14px]">progress_activity</span>
+                                            ) : (
+                                                <span className="material-symbols-outlined text-[14px]">sync</span>
+                                            )}
+                                            {uploading === d.docType ? "Syncing..." : "Sync to Vault"}
+                                        </button>
+                                    </div>
+                                );
+                            })}
                         </div>
+                    </div>
+                )}
                     </div>
                 </div>
 

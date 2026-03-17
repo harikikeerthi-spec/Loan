@@ -14,12 +14,12 @@ export default function ToolCard({ href, bg, icon, title, desc, cta, large = fal
                     <Image src={icon} alt={title} width={48} height={48} className="w-full h-full object-contain" />
                 </div>
                 <div className="flex-1">
-                    <h3 className={`${large ? "text-xl" : "text-[15px]"} font-bold mb-2 text-gray-900 leading-tight`}>{title}</h3>
+                    <h3 className="text-xl font-black mb-2 text-gray-900 leading-tight">{title}</h3>
                     <p className="text-gray-500 text-[13px] leading-relaxed font-medium">{desc}</p>
                 </div>
             </div>
             <div className={`${large ? "mt-6 md:mt-0 md:ml-auto" : "mt-auto"} flex justify-end`}>
-                <span className={`inline-flex items-center gap-2 text-[#6605c7] font-bold ${large ? "text-[13px]" : "text-[11px]"} uppercase tracking-widest group-hover:gap-3 transition-all`}>
+                <span className="inline-flex items-center gap-2 text-[#6605c7] font-bold text-[10px] uppercase tracking-widest group-hover:gap-3 transition-all">
                     {cta} <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>
                 </span>
             </div>

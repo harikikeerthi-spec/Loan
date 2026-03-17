@@ -97,10 +97,17 @@ CONSTRAINTS:
         userProfile: Record<string, any>,
         visaType: string,
         currentSection: string,
-        historyContext: string = ''
+        historyContext: string = '',
+        agentType: string = 'agent_michael'
     ): string {
         const sections = INTERVIEW_SECTIONS.map((s, i) => `${s.id}: ${s.label}`).join('\n');
         const evaluations = `- Consistency\n- Ties to Home Country\n- Financial Capability\n- Travel Intent`;
+
+        const agentLabels: Record<string, string> = {
+            'agent_smith': 'Officer Smith (Strict and intimidating)',
+            'agent_sarah': 'Officer Sarah (Friendly and conversational)',
+            'agent_michael': 'Officer Michael (Neutral and methodical)',
+        };
 
         let prompt = this.getSystemPromptTemplate()
             .replace('{{sectionList}}', sections)
@@ -110,17 +117,22 @@ CONSTRAINTS:
             .replace('{{userProfile}}', JSON.stringify(userProfile, null, 2))
             .replace('{{currentSection}}', currentSection);
 
+        prompt += `\n\nYou are acting as: ${agentLabels[agentType] || agentLabels['agent_michael']}`;
+
         if (historyContext) {
             prompt += `\n\nCONVERSATION HISTORY:\n${historyContext}\n\nNEXT JSON RESPONSE:`;
         } else {
-            prompt += `\n\nFIRST JSON RESPONSE (start with the first question):`;
+            prompt += `\n\nFIRST JSON RESPONSE:
+1. Start by INTRODUCING YOURSELF briefly based on your persona (e.g., "Good morning, I am Officer Smith...").
+2. Then, ask the first question related to the applicant's background or purpose of travel.
+3. Ensure the introduction and the question are part of the "question" field in the JSON.`;
         }
 
         return prompt;
     }
 
-    async startInterview(userProfile: Record<string, any>, visaType: string): Promise<any> {
-        const prompt = this.buildPrompt(userProfile, visaType, 'purpose');
+    async startInterview(userProfile: Record<string, any>, visaType: string, agentType: string): Promise<any> {
+        const prompt = this.buildPrompt(userProfile, visaType, 'purpose', '', agentType);
         return this.groqService.getJson(prompt);
     }
 
@@ -131,6 +143,7 @@ CONSTRAINTS:
         transcript: string,
         currentSection: string,
         conversationHistory: InterviewMessage[],
+        agentType: string = 'agent_michael'
     ): Promise<any> {
         let historyContext = '';
         if (conversationHistory && conversationHistory.length > 0) {
@@ -139,7 +152,7 @@ CONSTRAINTS:
                 .join('\n');
         }
 
-        const prompt = this.buildPrompt(userProfile, visaType, currentSection, historyContext);
+        const prompt = this.buildPrompt(userProfile, visaType, currentSection, historyContext, agentType);
         return this.groqService.getJson(prompt);
     }
 

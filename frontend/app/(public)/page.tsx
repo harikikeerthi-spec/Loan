@@ -283,7 +283,7 @@ export default function HomePage() {
                                     Everything you need to kickstart your global education journey — all in one place.
                                 </p>
                             </div>
-                            <Link href="/explore" className="flex-shrink-0 inline-flex items-center gap-2 px-6 py-3.5 rounded-xl border border-[#6605c7]/20 text-[#6605c7] font-bold hover:bg-[#6605c7] hover:text-white hover:border-[#6605c7] transition-all group text-[13px]">
+                            <Link href="/community/discussions" className="flex-shrink-0 inline-flex items-center gap-2 px-6 py-3.5 rounded-xl border border-[#6605c7]/20 text-[#6605c7] font-bold hover:bg-[#6605c7] hover:text-white hover:border-[#6605c7] transition-all group text-[13px]">
                                 Explore All
                                 <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" aria-hidden="true">arrow_forward</span>
                             </Link>
@@ -292,7 +292,7 @@ export default function HomePage() {
                         {/* Bento Grid */}
                         <div className="grid grid-cols-12 grid-rows-2 gap-5 h-auto lg:h-[550px]">
                             {/* 1 — Trending Courses */}
-                            <Link href="/explore" className="col-span-12 lg:col-span-5 row-span-1 lg:row-span-2 group relative overflow-hidden rounded-xl shadow-lg flex flex-col justify-end min-h-[260px]" style={{ background: 'linear-gradient(135deg, #1a0533 0%, #3b0764 100%)' }}>
+                            <Link href="/community/discussions" className="col-span-12 lg:col-span-5 row-span-1 lg:row-span-2 group relative overflow-hidden rounded-xl shadow-lg flex flex-col justify-end min-h-[260px]" style={{ background: 'linear-gradient(135deg, #1a0533 0%, #3b0764 100%)' }}>
                                 <div className="absolute inset-0 opacity-30" style={{ background: "url('/images/ecosystem/trending-courses.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(26,5,51,0.9) 0%, rgba(26,5,51,0.2) 60%, transparent 100%)' }} />
                                 <div className="absolute top-6 left-6">
@@ -315,7 +315,7 @@ export default function HomePage() {
                             </Link>
 
                             {/* 2 — Popular Universities */}
-                            <Link href="/explore" className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-lg flex flex-col justify-end min-h-[260px]" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
+                            <Link href="/community/discussions" className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-lg flex flex-col justify-end min-h-[260px]" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
                                 <div className="absolute inset-0 opacity-25" style={{ background: "url('/images/ecosystem/universities.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(15,23,42,0.9) 0%, rgba(15,23,42,0.3) 60%, transparent 100%)' }} />
                                 <div className="absolute top-4 right-4">
@@ -334,7 +334,7 @@ export default function HomePage() {
                             </Link>
 
                             {/* 3 — Scholarships */}
-                            <Link href="/explore" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-lg flex flex-col justify-end min-h-[260px]" style={{ background: 'linear-gradient(135deg, #78350f 0%, #b45309 100%)' }}>
+                            <Link href="/community/discussions" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-lg flex flex-col justify-end min-h-[260px]" style={{ background: 'linear-gradient(135deg, #78350f 0%, #b45309 100%)' }}>
                                 <div className="absolute inset-0 opacity-20" style={{ background: "url('/images/ecosystem/scholarships.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(120,53,15,0.9) 0%, rgba(120,53,15,0.3) 70%, transparent 100%)' }} />
                                 <div className="relative z-10 p-6">
@@ -477,12 +477,12 @@ export default function HomePage() {
                                 ].map((step, idx) => (
                                     <div key={step.num} className="group relative flex flex-col items-center text-center">
                                         <div
-                                            className="relative w-24 h-24 rounded-xl flex items-center justify-center mb-6 transition-all duration-500 group-hover:scale-110 shadow-lg"
+                                            className="relative w-28 h-28 rounded-xl flex items-center justify-center mb-6 transition-all duration-500 group-hover:scale-110 shadow-lg"
                                             style={{ background: step.bg, border: `1.5px solid ${step.border}`, boxShadow: `0 8px 32px ${step.color}15` }}
                                         >
                                             <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{ boxShadow: `0 12px 40px ${step.color}20` }} />
                                             <div className="absolute -top-2 -left-2 text-4xl font-black opacity-[0.06] select-none leading-none" style={{ color: step.color }}>{step.num}</div>
-                                            <span className="text-3xl relative z-10">{step.emoji}</span>
+                                            <span className="text-5xl relative z-10">{step.emoji}</span>
                                             <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-black whitespace-nowrap backdrop-blur-sm will-change-transform" style={{ background: 'white', color: step.color, border: `1px solid ${step.border}`, boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
                                                 ⏱ {step.time}
                                             </div>
@@ -587,8 +587,8 @@ export default function HomePage() {
                                         <tr key={l.name} className="hover:bg-gray-50/30 transition-colors">
                                             <td className="p-6">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-24 h-12 flex items-center justify-center p-1.5 overflow-hidden">
-                                                        <img src={l.logo} alt={l.name} className="w-full h-full object-contain transition-all duration-300" />
+                                                    <div className={`flex items-center justify-center p-1.5 overflow-hidden transition-all duration-300 ${l.name.includes('Auxilo') ? 'w-36 h-14 scale-110' : 'w-28 h-12'}`}>
+                                                        <img src={l.logo} alt={l.name} className="w-full h-full object-contain" />
                                                     </div>
                                                     <div>
                                                         <div className="font-bold text-gray-900 text-[13px]">{l.name}</div>
@@ -687,7 +687,7 @@ export default function HomePage() {
                                     Everything you need after getting your admit — banking, housing, visa & more
                                 </p>
                             </div>
-                            <Link href="/explore" className="flex-shrink-0 inline-flex items-center gap-2 px-7 py-4 rounded-xl border-2 border-[#6605c7]/20 text-[#6605c7] font-black hover:bg-[#6605c7] hover:text-white hover:border-[#6605c7] transition-all group text-[11px] uppercase tracking-widest">
+                            <Link href="/community/discussions" className="flex-shrink-0 inline-flex items-center gap-2 px-7 py-4 rounded-xl border-2 border-[#6605c7]/20 text-[#6605c7] font-black hover:bg-[#6605c7] hover:text-white hover:border-[#6605c7] transition-all group text-[11px] uppercase tracking-widest">
                                 View All Services
                                 <span className="material-symbols-outlined text-base group-hover:translate-x-1 transition-transform" aria-hidden="true">arrow_forward</span>
                             </Link>
@@ -805,7 +805,7 @@ export default function HomePage() {
                             </Link>
 
                             {/* 6 — Visa Counselling (bottom right) */}
-                            <Link href="/visa-counselling" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-2xl flex flex-col justify-end min-h-[280px]" style={{ background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}>
+                            <Link href="/visa-mock" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-2xl flex flex-col justify-end min-h-[280px]" style={{ background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}>
                                 <div className="absolute inset-0 opacity-10" style={{ background: "url('/images/services/counselling.jpg') center/cover" }} />
                                 <div className="absolute top-6 right-6 w-16 h-16 rounded-full border-4 border-white/15 animate-ping opacity-20" />
                                 <div className="absolute top-6 right-6 w-16 h-16 rounded-xl border-4 border-white/10 flex items-center justify-center">

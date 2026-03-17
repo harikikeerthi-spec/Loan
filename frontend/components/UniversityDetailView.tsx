@@ -74,10 +74,65 @@ interface UniversityDetailViewProps {
 
 export default function UniversityDetailView({ university: initialUni, onApply, onClose }: UniversityDetailViewProps) {
     const router = useRouter();
-    const [u, setU] = useState<UniversityData>(initialUni);
+    const normalizeUni = (data: any): UniversityData => {
+        if (!data) return {} as UniversityData;
+        return {
+            ...data,
+            shortName: data.shortName || (data.name ? data.name.split(' ')[0] : 'University'),
+            location: data.location || data.loc || '',
+            country: data.country || '',
+            founded: data.founded || 1900,
+            rank: data.rank || 0,
+            rankBy: data.rankBy || 'QS',
+            acceptanceRate: data.acceptanceRate || data.accept || 0,
+            tuition: data.tuition || 0,
+            currency: data.currency || 'USD',
+            description: data.description || '',
+            programs: (Array.isArray(data.programs) ? data.programs : (Array.isArray(data.courses) ? data.courses : [])).map((p: any) => {
+                if (typeof p === 'string') return { name: p, degree: "Master's", duration: '2 Years', tuition: 'See Website', icon: 'school' };
+                return {
+                    name: p.name || p.title || 'Program',
+                    degree: p.degree || "Master's",
+                    duration: p.duration || '2 Years',
+                    tuition: p.tuition || 'See Website',
+                    icon: p.icon || 'auto_stories'
+                };
+            }),
+            pros: Array.isArray(data.pros) ? data.pros : [],
+            stats: {
+                totalStudents: String(data.stats?.totalStudents || '—'),
+                internationalStudents: String(data.stats?.internationalStudents || '—'),
+                facultyRatio: String(data.stats?.facultyRatio || '—'),
+                researchOutput: String(data.stats?.researchOutput || '—'),
+                employmentRate: String(data.stats?.employmentRate || '—'),
+                avgSalary: String(data.stats?.avgSalary || '—'),
+            },
+            requirements: {
+                gpa: String(data.requirements?.gpa || '—'),
+                ielts: String(data.requirements?.ielts || '—'),
+                toefl: String(data.requirements?.toefl || '—'),
+                gre: String(data.requirements?.gre || '—'),
+            },
+            loanInfo: {
+                availableLenders: Array.isArray(data.loanInfo?.availableLenders) ? data.loanInfo.availableLenders : [],
+                avgLoanAmount: data.loanInfo?.avgLoanAmount || '—',
+                collateralFree: !!data.loanInfo?.collateralFree,
+                fastTrack: !!data.loanInfo?.fastTrack,
+                notes: data.loanInfo?.notes || '',
+            },
+            campusFacilities: Array.isArray(data.campusFacilities) ? data.campusFacilities : [],
+            topRecruiters: Array.isArray(data.topRecruiters) ? data.topRecruiters : [],
+            campusImages: Array.isArray(data.campusImages) ? data.campusImages : (Array.isArray(data.images) ? data.images : []),
+            funFacts: Array.isArray(data.funFacts) ? data.funFacts : [],
+            whyStudyHere: Array.isArray(data.whyStudyHere) ? data.whyStudyHere : [],
+            notableAlumni: Array.isArray(data.notableAlumni) ? data.notableAlumni : [],
+        };
+    };
+
+    const [u, setU] = useState<UniversityData>(normalizeUni(initialUni));
 
     useEffect(() => {
-        setU(initialUni);
+        setU(normalizeUni(initialUni));
     }, [initialUni]);
     const [loading, setLoading] = useState(false);
     const [activeSection, setActiveSection] = useState("overview");
@@ -217,6 +272,7 @@ export default function UniversityDetailView({ university: initialUni, onApply, 
         { id: 'scholarships', label: 'Scholarships', icon: 'card_giftcard' },
         { id: 'campus-life', label: 'Campus life', icon: 'apartment' },
         { id: 'alumni', label: 'Alumni', icon: 'groups_3' },
+        { id: 'admission-support', label: 'Admission Support', icon: 'support_agent' },
         { id: 'financing', label: 'Financing', icon: 'payments' },
     ];
 
@@ -297,23 +353,23 @@ export default function UniversityDetailView({ university: initialUni, onApply, 
                                 <a href={u.website} target="_blank" rel="noreferrer" className="px-5 py-3 bg-white text-gray-900 font-black text-sm rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all text-center">Visit Website</a>
                             )}
 
-                            {!hasInquiry.callback && (
-                                <button
-                                    onClick={() => openInquiry('callback')}
-                                    className="px-5 py-3 bg-amber-500 text-white font-black text-sm rounded-xl shadow-lg shadow-amber-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all text-center flex items-center justify-center gap-2"
-                                >
-                                    <span className="material-symbols-outlined text-sm">call</span> Request a Callback
-                                </button>
-                            )}
+                            <button
+                                onClick={() => openInquiry('callback')}
+                                disabled={hasInquiry.callback}
+                                className={`px-5 py-3 font-black text-sm rounded-xl shadow-lg transition-all text-center flex items-center justify-center gap-2 ${hasInquiry.callback ? 'bg-green-100 text-green-700 border border-green-200 cursor-default' : 'bg-amber-500 text-white shadow-amber-500/30 hover:shadow-xl hover:-translate-y-0.5'}`}
+                            >
+                                <span className="material-symbols-outlined text-sm">{hasInquiry.callback ? 'check_circle' : 'call'}</span> 
+                                {hasInquiry.callback ? 'Thanks for Requesting' : 'Request a Callback'}
+                            </button>
 
-                            {!hasInquiry.fasttrack && (
-                                <button
-                                    onClick={() => openInquiry('fasttrack')}
-                                    className="px-5 py-3 bg-indigo-600 text-white font-black text-sm rounded-xl shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all text-center flex items-center justify-center gap-2"
-                                >
-                                    <span className="material-symbols-outlined text-sm">bolt</span> Fastrack Application
-                                </button>
-                            )}
+                            <button
+                                onClick={() => openInquiry('fasttrack')}
+                                disabled={hasInquiry.fasttrack}
+                                className={`px-5 py-3 font-black text-sm rounded-xl shadow-lg transition-all text-center flex items-center justify-center gap-2 ${hasInquiry.fasttrack ? 'bg-green-100 text-green-700 border border-green-200 cursor-default' : 'bg-indigo-600 text-white shadow-indigo-500/30 hover:shadow-xl hover:-translate-y-0.5'}`}
+                            >
+                                <span className="material-symbols-outlined text-sm">{hasInquiry.fasttrack ? 'check_circle' : 'bolt'}</span>
+                                {hasInquiry.fasttrack ? 'Thanks for Fastracking' : 'Fastrack Application'}
+                            </button>
 
                             <Link href={`/apply-loan?university=${encodeURIComponent(u.name)}&country=${encodeURIComponent(u.country)}`} className="px-5 py-3 bg-gradient-to-r from-[#6605c7] to-[#a855f7] text-white font-black text-sm rounded-xl shadow-lg shadow-purple-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all text-center">Start Loan Application</Link>
                         </div>
@@ -340,22 +396,22 @@ export default function UniversityDetailView({ university: initialUni, onApply, 
                         ))}
                     </div>
                     <div className="flex items-center gap-3">
-                        {!hasInquiry.callback && (
-                            <button
-                                onClick={() => openInquiry('callback')}
-                                className="px-5 py-2.5 bg-amber-50 rounded-xl text-amber-600 text-[10px] font-black uppercase tracking-widest border border-amber-200 hover:bg-amber-100 transition-all flex items-center gap-2"
-                            >
-                                <span className="material-symbols-outlined text-sm">call</span> Callback
-                            </button>
-                        )}
-                        {!hasInquiry.fasttrack && (
-                            <button
-                                onClick={() => openInquiry('fasttrack')}
-                                className="px-5 py-2.5 bg-indigo-50 rounded-xl text-indigo-600 text-[10px] font-black uppercase tracking-widest border border-indigo-200 hover:bg-indigo-100 transition-all flex items-center gap-2"
-                            >
-                                <span className="material-symbols-outlined text-sm">bolt</span> Fastrack
-                            </button>
-                        )}
+                        <button
+                            onClick={() => openInquiry('callback')}
+                            disabled={hasInquiry.callback}
+                            className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${hasInquiry.callback ? 'bg-green-50 text-green-600 border-green-200 cursor-default' : 'bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100'}`}
+                        >
+                            <span className="material-symbols-outlined text-sm">{hasInquiry.callback ? 'check_circle' : 'call'}</span>
+                            {hasInquiry.callback ? 'Callback Sent' : 'Callback'}
+                        </button>
+                        <button
+                            onClick={() => openInquiry('fasttrack')}
+                            disabled={hasInquiry.fasttrack}
+                            className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all flex items-center gap-2 ${hasInquiry.fasttrack ? 'bg-green-50 text-green-600 border-green-200 cursor-default' : 'bg-indigo-50 text-indigo-600 border-indigo-200 hover:bg-indigo-100'}`}
+                        >
+                            <span className="material-symbols-outlined text-sm">{hasInquiry.fasttrack ? 'check_circle' : 'bolt'}</span>
+                            {hasInquiry.fasttrack ? 'Fastrack Sent' : 'Fastrack'}
+                        </button>
                         <Link
                             href={`/apply-loan?university=${encodeURIComponent(u.name)}&country=${encodeURIComponent(u.country)}`}
                             className="px-6 py-3 bg-gradient-to-r from-[#6605c7] to-[#8b24e5] text-white font-bold text-xs uppercase tracking-[0.15em] rounded-xl shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 transition-all hover:-translate-y-0.5"
@@ -419,7 +475,7 @@ export default function UniversityDetailView({ university: initialUni, onApply, 
                                 {lightboxImage && <ImageLightbox src={lightboxImage} onClose={() => setLightboxImage(null)} />}
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
-                                    {u.pros.map((pro, i) => (
+                                    {u.pros?.map((pro, i) => (
                                         <div key={i} className="flex items-start gap-4 p-5 bg-purple-50/50 rounded-2xl border border-purple-100/50 group hover:bg-purple-50 transition-colors">
                                             <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600 shrink-0">
                                                 <span className="material-symbols-outlined text-sm">verified</span>
@@ -464,7 +520,7 @@ export default function UniversityDetailView({ university: initialUni, onApply, 
                                 </div>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {u.programs.map((p, i) => (
+                                {u.programs?.map((p, i) => (
                                     <div key={i} className="group p-6 bg-white rounded-3xl border border-gray-100 hover:border-purple-200 hover:shadow-2xl hover:shadow-purple-500/10 transition-all duration-300 relative overflow-hidden">
                                         <div className="absolute -top-12 -right-12 w-32 h-32 bg-purple-50 rounded-full transition-transform duration-500 group-hover:scale-150" />
                                         <div className="relative z-10">
@@ -509,11 +565,11 @@ export default function UniversityDetailView({ university: initialUni, onApply, 
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="p-4 bg-gray-50 rounded-2xl">
                                                 <div className="text-[10px] font-black text-gray-400 uppercase mb-1">GPA Req.</div>
-                                                <div className="text-lg font-black text-gray-900">{u.requirements.gpa}</div>
+                                                <div className="text-lg font-black text-gray-900">{u.requirements?.gpa || '—'}</div>
                                             </div>
                                             <div className="p-4 bg-gray-50 rounded-2xl">
                                                 <div className="text-[10px] font-black text-gray-400 uppercase mb-1">IELTS</div>
-                                                <div className="text-lg font-black text-gray-900">{u.requirements.ielts}</div>
+                                                <div className="text-lg font-black text-gray-900">{u.requirements?.ielts || '—'}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -595,7 +651,82 @@ export default function UniversityDetailView({ university: initialUni, onApply, 
                             </section>
                         )}
 
-                        {/* Financing Section */}
+                        {/* Admission Support Cards */}
+                        <section id="admission-support" className="scroll-mt-32">
+                            <div className="flex items-center gap-4 mb-8">
+                                <div className="w-12 h-12 bg-rose-100 rounded-2xl flex items-center justify-center text-rose-600">
+                                    <span className="material-symbols-outlined">support_agent</span>
+                                </div>
+                                <h2 className="text-3xl font-display font-bold text-gray-900 tracking-tight" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>Admission Support</h2>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Callback Card */}
+                                <div className="relative group overflow-hidden bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-xl shadow-amber-500/5 hover:shadow-amber-500/10 transition-all duration-500">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full -translate-y-12 translate-x-12 group-hover:scale-150 transition-transform duration-700" />
+                                    <div className="relative z-10">
+                                        <div className="w-16 h-16 bg-amber-500 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-amber-500/20 transform group-hover:rotate-6 transition-transform">
+                                            <span className="material-symbols-outlined text-3xl">call</span>
+                                        </div>
+                                        <h3 className="text-2xl font-black text-gray-900 mb-3">Expert Counseling</h3>
+                                        <p className="text-gray-500 text-sm font-medium mb-8 leading-relaxed">
+                                            Get a dedicated counselor to help you navigate through the admission process of {u.shortName}.
+                                        </p>
+                                        <button 
+                                            onClick={() => openInquiry('callback')}
+                                            disabled={hasInquiry.callback}
+                                            className={`w-full py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-3 ${
+                                                hasInquiry.callback 
+                                                ? 'bg-green-50 text-green-600 cursor-default border border-green-100' 
+                                                : 'bg-amber-500 text-white hover:bg-amber-600 shadow-lg shadow-amber-500/20 hover:scale-[1.02]'
+                                            }`}
+                                        >
+                                            <span className="material-symbols-outlined">
+                                                {hasInquiry.callback ? 'check_circle' : 'contact_support'}
+                                            </span>
+                                            {hasInquiry.callback ? 'Thanks for Requesting' : 'Request Callback'}
+                                        </button>
+                                        {hasInquiry.callback && (
+                                            <p className="text-center text-[10px] font-black text-green-500 uppercase tracking-widest mt-4 animate-pulse">
+                                                Our team will reach out shortly!
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Fastrack Card */}
+                                <div className="relative group overflow-hidden bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-xl shadow-indigo-500/5 hover:shadow-indigo-500/10 transition-all duration-500">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-600/5 rounded-full -translate-y-12 translate-x-12 group-hover:scale-150 transition-transform duration-700" />
+                                    <div className="relative z-10">
+                                        <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-indigo-600/20 transform group-hover:-rotate-6 transition-transform">
+                                            <span className="material-symbols-outlined text-3xl">bolt</span>
+                                        </div>
+                                        <h3 className="text-2xl font-black text-gray-900 mb-3">Fastrack Admission</h3>
+                                        <p className="text-gray-500 text-sm font-medium mb-8 leading-relaxed">
+                                            Skip the long wait times. We'll directly coordinate with {u.shortName} to get your application prioritized.
+                                        </p>
+                                        <button 
+                                            onClick={() => openInquiry('fasttrack')}
+                                            disabled={hasInquiry.fasttrack}
+                                            className={`w-full py-4 rounded-2xl font-black transition-all flex items-center justify-center gap-3 ${
+                                                hasInquiry.fasttrack 
+                                                ? 'bg-green-50 text-green-600 cursor-default border border-green-100' 
+                                                : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 hover:scale-[1.02]'
+                                            }`}
+                                        >
+                                            <span className="material-symbols-outlined">
+                                                {hasInquiry.fasttrack ? 'verified' : 'rocket_launch'}
+                                            </span>
+                                            {hasInquiry.fasttrack ? 'Thanks for Fastracking' : 'Start Fastrack'}
+                                        </button>
+                                        {hasInquiry.fasttrack && (
+                                            <p className="text-center text-[10px] font-black text-green-500 uppercase tracking-widest mt-4 animate-pulse">
+                                                Priority processing initiated!
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
                         <section id="financing">
                             <div className="flex items-center gap-4 mb-8">
                                 <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600">
@@ -613,7 +744,7 @@ export default function UniversityDetailView({ university: initialUni, onApply, 
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="p-4 bg-purple-50 rounded-2xl">
-                                            <div className="text-2xl font-black text-purple-600">{u.stats.employmentRate}</div>
+                                            <div className="text-2xl font-black text-purple-600">{u.stats?.employmentRate || '—'}</div>
                                             <div className="text-[10px] text-purple-400 font-black uppercase tracking-widest mt-1">Employment Rate</div>
                                         </div>
                                         <div className="p-4 bg-emerald-50 rounded-2xl">
@@ -661,10 +792,10 @@ export default function UniversityDetailView({ university: initialUni, onApply, 
                                 <h3 className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mb-6">Key Stats</h3>
                                 <div className="space-y-6">
                                     {[
-                                        { label: 'Total Students', val: u.stats.totalStudents, icon: 'groups' },
-                                        { label: 'International', val: u.stats.internationalStudents, icon: 'public' },
-                                        { label: 'Faculty Ratio', val: u.stats.facultyRatio, icon: 'person_search' },
-                                        { label: 'Avg Graduate Salary', val: u.stats.avgSalary, icon: 'payments' }
+                                        { label: 'Total Students', val: u.stats?.totalStudents || '—', icon: 'groups' },
+                                        { label: 'International', val: u.stats?.internationalStudents || '—', icon: 'public' },
+                                        { label: 'Faculty Ratio', val: u.stats?.facultyRatio || '—', icon: 'person_search' },
+                                        { label: 'Avg Graduate Salary', val: u.stats?.avgSalary || '—', icon: 'payments' }
                                     ].map((stat, i) => (
                                         <div key={i} className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">

@@ -54,9 +54,9 @@ const VISA_TYPES = [
 ];
 
 export const AGENT_TYPES = [
-    { value: "agent_smith", label: "Officer Smith", icon: "security", desc: "Strict and intimidating. Short sentences. No small talk. 20 years of experience.", pitch: 0.55, rate: 0.9 },
-    { value: "agent_sarah", label: "Officer Sarah", icon: "psychology", desc: "Friendly and conversational, but catches everything. Feels like a real chat.", pitch: 1.3, rate: 1.05 },
-    { value: "agent_michael", label: "Officer Michael", icon: "badge", desc: "Completely neutral and methodical. Clinical, efficient, by-the-book.", pitch: 0.85, rate: 0.98 },
+    { value: "agent_smith", label: "Officer Smith", icon: "face_6", desc: "Strict and intimidating. Short sentences. No small talk. 20 years of experience.", pitch: 0.55, rate: 0.9 },
+    { value: "agent_sarah", label: "Officer Sarah", icon: "face_3", desc: "Friendly and conversational, but catches everything. Feels like a real chat.", pitch: 1.3, rate: 1.05 },
+    { value: "agent_michael", label: "Officer Michael", icon: "face_4", desc: "Completely neutral and methodical. Clinical, efficient, by-the-book.", pitch: 0.85, rate: 0.98 },
 ];
 
 
@@ -499,7 +499,7 @@ function SetupPhase({
                                             {a.label}
                                         </div>
                                     </div>
-                                    <div className="text-xs text-gray-500 mb-2Pr">{a.desc}</div>
+                                    <div className="text-xs text-gray-500 mb-2">{a.desc}</div>
                                     {agentType === a.value && (
                                         <motion.div
                                             initial={{ scale: 0 }}
@@ -791,7 +791,7 @@ function ReportPhase({
                 <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6" style={{ background: "linear-gradient(135deg, #6605c7, #a855f7)" }}>
                     <div className="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin" />
                 </div>
-                <h2 className="text-xl font-black text-gray-900 mb-2">Generating Your Report</h2>
+                <h2 className="text-xl font-black text-white mb-2">Generating Your Report</h2>
                 <p className="text-[13px] text-gray-500 font-medium">Analyzing {messages.length} messages and {evaluations.length} evaluations...</p>
             </motion.div>
         );

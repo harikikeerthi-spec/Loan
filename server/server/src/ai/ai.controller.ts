@@ -436,12 +436,13 @@ export class AiController {
 
   @Post('visa-interview/start')
   async startVisaInterview(
-    @Body() data: { userProfile: Record<string, any>; visaType?: string },
+    @Body() data: { userProfile: Record<string, any>; visaType?: string; agentType?: string },
   ) {
     try {
       const result = await this.visaInterviewService.startInterview(
         data.userProfile || {},
         data.visaType || 'F1 Student Visa',
+        data.agentType || 'agent_michael'
       );
       return {
         success: true,
@@ -463,6 +464,7 @@ export class AiController {
     data: {
       userProfile: Record<string, any>;
       visaType?: string;
+      agentType?: string;
       previousQuestion: string;
       transcript: string;
       currentSection: string;
@@ -477,6 +479,7 @@ export class AiController {
         data.transcript,
         data.currentSection,
         data.conversationHistory || [],
+        data.agentType || 'agent_michael',
       );
       return {
         success: true,

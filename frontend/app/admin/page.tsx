@@ -368,7 +368,7 @@ export default function AdminDashboardPage() {
                                         <div className="grid grid-cols-1 gap-3">
                                             <Link href="/admin/blogs/create" className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 hover:bg-[#6605c7]/5 transition-all group border border-gray-100">
                                                 <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform"><span className="material-symbols-outlined">post_add</span></div>
-                                                <span className="text-xs font-black uppercase tracking-widest text-gray-700">Canva Editor</span>
+                                                <span className="text-xs font-black uppercase tracking-widest text-gray-700">Blog Editor</span>
                                             </Link>
                                             <button onClick={() => setActiveSection('users')} className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 hover:bg-[#6605c7]/5 transition-all group border border-gray-100">
                                                 <div className="w-10 h-10 rounded-xl bg-green-500/10 text-green-500 flex items-center justify-center group-hover:scale-110 transition-transform"><span className="material-symbols-outlined">person_add</span></div>

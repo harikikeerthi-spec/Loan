@@ -176,12 +176,12 @@ export default function UniversityPageClient({ serverUniversity, slug }: Props) 
     badge: uni.badge || 'AI Verified',
     website: uni.website || uni.web_pages || (uni.website && uni.website[0]) || '',
     stats: (uni.stats && typeof uni.stats === 'object') ? {
-      totalStudents: uni.stats.totalStudents || '—',
-      internationalStudents: uni.stats.internationalStudents || '—',
-      facultyRatio: uni.stats.facultyRatio || '—',
-      researchOutput: uni.stats.researchOutput || '—',
-      employmentRate: uni.stats.employmentRate || '—',
-      avgSalary: uni.stats.avgSalary || '—'
+      totalStudents: String(uni.stats.totalStudents || '—'),
+      internationalStudents: String(uni.stats.internationalStudents || '—'),
+      facultyRatio: String(uni.stats.facultyRatio || '—'),
+      researchOutput: String(uni.stats.researchOutput || '—'),
+      employmentRate: String(uni.stats.employmentRate || (uni.employmentStats?.employmentRate ? uni.employmentStats.employmentRate + '%' : '—')),
+      avgSalary: String(uni.stats.avgSalary || uni.employmentStats?.averageSalary || '—'),
     } : { totalStudents: '—', internationalStudents: '—', facultyRatio: '—', researchOutput: '—', employmentRate: '—', avgSalary: '—' },
     programs: (Array.isArray(uni.programs) ? uni.programs : (Array.isArray(uni.courses) ? uni.courses : [])).map((p: any) => {
       if (typeof p === 'string') return { name: p, degree: 'Master\'s', duration: '2 Years', tuition: 'See Website', icon: 'school' };
@@ -193,7 +193,7 @@ export default function UniversityPageClient({ serverUniversity, slug }: Props) 
         icon: p.icon || 'auto_stories'
       };
     }),
-    topRecruiters: typeof uni.topRecruiters === 'string' ? uni.topRecruiters.split(',').map((s: string) => s.trim()) : (uni.topRecruiters || []),
+    topRecruiters: (typeof uni.topRecruiters === 'string' ? uni.topRecruiters.split(',').map((s: string) => s.trim()) : (Array.isArray(uni.topRecruiters) ? uni.topRecruiters : [])).map((r: any) => String(typeof r === 'object' ? (r.name || JSON.stringify(r)) : r)),
     requirements: (uni.requirements && typeof uni.requirements === 'object') ? {
       gpa: uni.requirements.gpa || '—',
       ielts: uni.requirements.ielts || '—',
@@ -202,10 +202,24 @@ export default function UniversityPageClient({ serverUniversity, slug }: Props) 
     } : { gpa: '—', ielts: '—', toefl: '—', gre: '—' },
     loanInfo: typeof uni.loanInfo === 'object' && uni.loanInfo !== null ? uni.loanInfo : { availableLenders: [], avgLoanAmount: '', collateralFree: false, fastTrack: false, notes: '' },
     pros: Array.isArray(uni.pros) ? uni.pros : (typeof uni.pros === 'string' ? uni.pros.split('\n').filter(Boolean) : []),
-    campusFacilities: Array.isArray(uni.campusFacilities) ? uni.campusFacilities : [],
-    funFacts: Array.isArray(uni.funFacts) ? uni.funFacts : [],
-    whyStudyHere: Array.isArray(uni.whyStudyHere) ? uni.whyStudyHere : [],
-    notableAlumni: Array.isArray(uni.notableAlumni) ? uni.notableAlumni : [],
+    campusFacilities: (Array.isArray(uni.campusFacilities) ? uni.campusFacilities : []).map((f: any) => {
+      if (typeof f === 'string') return f;
+      return { 
+        name: String(f.name || f.title || 'Facility'), 
+        icon: String(f.icon || 'apartment') 
+      };
+    }),
+    funFacts: (Array.isArray(uni.funFacts) ? uni.funFacts : []).map((f: any) => typeof f === 'object' ? String(f.fact || f.text || JSON.stringify(f)) : String(f)),
+    whyStudyHere: (Array.isArray(uni.whyStudyHere) ? uni.whyStudyHere : []).map((f: any) => typeof f === 'object' ? String(f.reason || f.text || JSON.stringify(f)) : String(f)),
+    notableAlumni: (Array.isArray(uni.notableAlumni) ? uni.notableAlumni : []).map((f: any) => {
+      if (typeof f === 'string') return f;
+      return {
+        name: String(f.name || f.title || 'Notable Alumni'),
+        role: String(f.role || f.position || 'Professional'),
+        company: String(f.company || f.org || ''),
+        img: String(f.img || f.image || '')
+      };
+    }),
   } as any;
 
   return <UniversityDetailView university={normalized} />;
