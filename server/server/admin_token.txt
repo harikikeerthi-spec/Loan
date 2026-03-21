@@ -1,8 +1,0 @@
-
-✅ ADMIN TOKEN GENERATED:
----------------------------------------------------
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhcmlraWtlZXJ0aGlAZ21haWwuY29tIiwic3ViIjoiMWYzZDNhMzktMzMxYy00YjQxLWJjODEtYzMxMzc2MWUxNzAyIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzY5ODY5MDI5LCJleHAiOjE3Njk5NTU0Mjl9.cA9MU05DlB958Mg8M5a0s-w3p7eCKzbtcjOU711TvMI
----------------------------------------------------
-
-Use this command to test:
-curl -X GET "http://localhost:3000/blogs/admin/all" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImhhcmlraWtlZXJ0aGlAZ21haWwuY29tIiwic3ViIjoiMWYzZDNhMzktMzMxYy00YjQxLWJjODEtYzMxMzc2MWUxNzAyIiwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzY5ODY5MDI5LCJleHAiOjE3Njk5NTU0Mjl9.cA9MU05DlB958Mg8M5a0s-w3p7eCKzbtcjOU711TvMI"
