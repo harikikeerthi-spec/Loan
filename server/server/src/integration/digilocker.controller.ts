@@ -21,10 +21,25 @@ export class DigilockerController {
      * This endpoint redirects the user to the DigiLocker authorization page.
      * DigiLocker handles mobile OTP authentication — we never ask for mobile/email directly.
      */
+    @Get('status')
+    async getStatus() {
+        return {
+            mockMode: process.env.DIGILOCKER_MOCK_MODE === 'true',
+            clientId: process.env.DIGILOCKER_CLIENT_ID ? '✓ Set' : '✗ Missing',
+            clientSecret: process.env.DIGILOCKER_CLIENT_SECRET ? '✓ Set' : '✗ Missing',
+            apiSetuKey: process.env.API_SETU_KEY ? (process.env.API_SETU_KEY === 'sandbox_api_setu_key' ? '⚠️ Sandbox' : '✓ Production') : '✗ Missing',
+            callbackUrl: process.env.DIGILOCKER_CALLBACK_URL || 'http://localhost:5000/api/digilocker/callback',
+            message: process.env.DIGILOCKER_MOCK_MODE === 'true' 
+                ? '✓ Mock mode enabled - documents will be simulated' 
+                : '⚠️ Real mode - requires valid API Setu credentials'
+        };
+    }
+
     @Get('authorize')
     async authorize(
         @Query('userId') userId: string,
         @Query('docType') docType: string,
+        @Query('source') source: string,
         @Res() res: Response,
     ) {
         if (!userId) throw new BadRequestException('userId is required');
@@ -36,6 +51,7 @@ export class DigilockerController {
         const stateData = {
             userId,
             docType: docType || 'ALL_SYNC',
+            source: source || 'vault',
             codeVerifier,
         };
         const state = Buffer.from(JSON.stringify(stateData)).toString('base64')
@@ -285,45 +301,95 @@ export class DigilockerController {
         const { code, state, error, error_description } = query;
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
+        console.log('===== DIGILOCKER CALLBACK START =====');
+        console.log('State received:', state ? '✓ Yes' : '✗ No');
+        console.log('Code received:', code ? '✓ Yes' : '✗ No');
+        console.log('Error from DigiLocker:', error || 'No error');
+
         if (error) {
-            return res.redirect(frontendUrl + '/document-vault?status=error&message=' + encodeURIComponent(error_description || error));
+            console.log('Redirecting to error page...');
+            return res.redirect(frontendUrl + '/document-vault/digilocker?status=error&message=' + encodeURIComponent(error_description || error));
         }
         if (!code || !state) {
-            return res.redirect(frontendUrl + '/document-vault?status=error&message=' + encodeURIComponent('Missing authorization code or state'));
+            console.log('Missing code or state, redirecting to error');
+            return res.redirect(frontendUrl + '/document-vault/digilocker?status=error&message=' + encodeURIComponent('Missing authorization code or state'));
         }
 
         try {
-            const base64 = state.replace(/-/g, '+').replace(/_/g, '/');
+            const base64 = state
+                .replace(/-/g, '+')
+                .replace(/_/g, '/')
+                .padEnd(Math.ceil(state.length / 4) * 4, '=');
             const decodedState = JSON.parse(Buffer.from(base64, 'base64').toString());
-            const { userId, docType } = decodedState;
+            const { userId, docType, source } = decodedState;
+            console.log('✓ State decoded:', { userId, docType, source });
+            const redirectPath = source === 'portal' ? '/document-vault/digilocker' : '/document-vault';
 
             const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000';
             const redirectUri = process.env.DIGILOCKER_CALLBACK_URL || (backendUrl + '/api/digilocker/callback');
+            const mockMode = process.env.DIGILOCKER_MOCK_MODE === 'true';
 
-            if (process.env.DIGILOCKER_MOCK_MODE === 'true') {
+            console.log('Mode:', mockMode ? 'MOCK' : 'REAL');
+
+            if (mockMode) {
                 // Mock mode: simulate document fetch without calling DigiLocker APIs
+                console.log('Processing mock documents for userId:', userId);
                 await this.processMockDocuments(userId, docType);
+                console.log('✓ Mock documents processed');
             } else {
                 // Real mode: exchange authorization code for access token (with PKCE code_verifier)
+                console.log('Exchanging code for token...');
                 const tokenData = await this.digilockerService.getAccessToken(code, redirectUri, decodedState.codeVerifier);
                 const accessToken = tokenData.access_token;
+                console.log('✓ Access token obtained');
 
                 // Fetch and store documents using the access token
+                console.log('Fetching and storing documents...');
                 await this.fetchAndStoreDocuments(userId, accessToken, docType);
+                console.log('✓ Documents stored');
             }
 
-            return res.redirect(frontendUrl + '/document-vault?status=success&message=' + encodeURIComponent('Documents fetched from DigiLocker'));
+            console.log('✓ Redirecting to:', redirectPath);
+            console.log('===== DIGILOCKER CALLBACK END (SUCCESS) =====');
+            return res.redirect(frontendUrl + redirectPath + '?status=success&message=' + encodeURIComponent('Documents fetched from DigiLocker'));
         } catch (error) {
-            console.error('DigiLocker callback error:', error);
+            console.error('❌ DigiLocker callback error:', error);
             const errMsg = error instanceof Error ? error.message : String(error);
-            return res.redirect(frontendUrl + '/document-vault?status=error&message=' + encodeURIComponent('Failed to process DigiLocker response: ' + errMsg));
+            console.log('===== DIGILOCKER CALLBACK END (ERROR) =====');
+            return res.redirect(frontendUrl + '/document-vault/digilocker?status=error&message=' + encodeURIComponent('Failed to process DigiLocker response: ' + errMsg));
         }
+    }
+
+    private normalizeDigilockerType(rawDoc: any): string {
+        const candidates = [
+            rawDoc?.type,
+            rawDoc?.docType,
+            rawDoc?.doctype,
+            rawDoc?.documentType,
+            rawDoc?.issuerDocType,
+        ]
+            .filter(Boolean)
+            .map((value: string) => String(value).toUpperCase().trim());
+
+        if (candidates.length > 0) {
+            return candidates[0];
+        }
+
+        const uri = String(rawDoc?.uri || rawDoc?.id || '');
+        const uriMatch = uri.match(/(PANCR|ADHAR|AADHAR|10TH|12TH|SSCER|HSCER|PASPT|DGCTR|MKST)/i);
+        if (uriMatch?.[1]) {
+            return uriMatch[1].toUpperCase();
+        }
+
+        return '';
     }
 
     /**
      * Mock document processing for development/testing
      */
     private async processMockDocuments(userId: string, docType: string) {
+        console.log('📋 Mock processor started - userId:', userId, 'docType:', docType);
+        
         const mockDocs = [
             { type: 'PANCR', name: 'PAN Card' },
             { type: 'ADHAR', name: 'Aadhar Card' },
@@ -333,20 +399,29 @@ export class DigilockerController {
             { type: 'MKST', name: 'Graduation Marksheets' }
         ];
 
+        const syncMap: Record<string, string> = {
+            'pan_student': 'PANCR', 'pan_coapp': 'PANCR', 'pan_father': 'PANCR', 'pan_mother': 'PANCR',
+            'aadhar_student': 'ADHAR', 'aadhar_coapp': 'ADHAR', 'aadhar_father': 'ADHAR', 'aadhar_mother': 'ADHAR',
+            'marksheet_10th': '10TH', 'marksheet_12th': '12TH', 'marksheet_degree': 'DGCTR', 'passport': 'PASPT'
+        };
+
         const reverseMap: Record<string, string[]> = {
-            'PANCR': ['pan_student', 'pan_coapp', 'pan_father', 'pan_mother'],
-            'ADHAR': ['aadhar_student', 'aadhar_coapp', 'aadhar_father', 'aadhar_mother'],
+            'PANCR': ['pan_student'],
+            'ADHAR': ['aadhar_student'],
             '10TH': ['marksheet_10th'],
-            '12TH': ['marksheet_12th'],
             'SSCER': ['marksheet_10th'],
+            '12TH': ['marksheet_12th'],
             'HSCER': ['marksheet_12th'],
-            'DGCTR': ['degree_certificate', 'btech_degree'],
-            'MKST': ['graduation_marksheet'],
+            'DGCTR': ['marksheet_degree'],
+            'MKST': ['marksheet_degree'],
+            'PASPT': ['passport'],
         };
 
         if (docType === 'ALL_SYNC') {
+            console.log('🔄 Processing ALL documents...');
             for (const diDoc of mockDocs) {
                 const internalTypes = reverseMap[diDoc.type] || [];
+                console.log(`  - ${diDoc.type} -> ${internalTypes.join(', ')}`);
                 for (const type of internalTypes) {
                     await this.usersService.upsertUserDocument(userId, type, {
                         uploaded: false,
@@ -354,60 +429,113 @@ export class DigilockerController {
                         digilockerTxId: 'MOCK_TX_' + Date.now(),
                         verificationMetadata: diDoc,
                     });
+                    console.log(`    ✓ Upserted ${type} with status available_in_digilocker`);
                 }
             }
         } else {
-            const internalTypes = reverseMap[docType] || [docType];
-            const diDoc = mockDocs.find(d => d.type === docType) || { type: docType, name: docType };
-            for (const type of internalTypes) {
-                await this.usersService.upsertUserDocument(userId, type, {
-                    uploaded: false,
-                    status: 'available_in_digilocker',
-                    digilockerTxId: 'MOCK_TX_' + Date.now(),
-                    verificationMetadata: diDoc,
-                });
-            }
+            // Specific doc sync
+            console.log('🎯 Processing specific document:', docType);
+            const mappedDlType = syncMap[docType] || docType;
+            const diDoc = mockDocs.find(d => d.type === mappedDlType) || { type: mappedDlType, name: docType };
+            console.log(`  Mapped ${docType} -> ${mappedDlType}`);
+            await this.usersService.upsertUserDocument(userId, docType, {
+                uploaded: false,
+                status: 'available_in_digilocker',
+                digilockerTxId: 'MOCK_TX_' + Date.now(),
+                verificationMetadata: diDoc,
+            });
+            console.log(`    ✓ Upserted ${docType} with status available_in_digilocker`);
         }
+        
+        console.log('✓ Mock processing complete');
     }
 
     /**
      * Fetch documents from DigiLocker using access token and store them
      */
     private async fetchAndStoreDocuments(userId: string, accessToken: string, docType: string) {
+        console.log('🔍 Fetching documents from DigiLocker...');
         const documents = await this.digilockerService.listDocuments(accessToken);
+        console.log(`✓ Retrieved ${documents.length} documents from DigiLocker`);
+
+        const syncMap: Record<string, string> = {
+            'pan_student': 'PANCR', 'pan_coapp': 'PANCR', 'pan_father': 'PANCR', 'pan_mother': 'PANCR',
+            'aadhar_student': 'ADHAR', 'aadhar_coapp': 'ADHAR', 'aadhar_father': 'ADHAR', 'aadhar_mother': 'ADHAR',
+            'marksheet_10th': '10TH', 'marksheet_12th': '12TH', 'marksheet_degree': 'DGCTR', 'passport': 'PASPT'
+        };
 
         const reverseMap: Record<string, string[]> = {
-            'PANCR': ['pan_student', 'pan_coapp', 'pan_father', 'pan_mother'],
-            'ADHAR': ['aadhar_student', 'aadhar_coapp', 'aadhar_father', 'aadhar_mother'],
+            'PANCR': ['pan_student'],
+            'ADHAR': ['aadhar_student'],
+            'AADHAR': ['aadhar_student'],
             '10TH': ['marksheet_10th'],
             '12TH': ['marksheet_12th'],
             'SSCER': ['marksheet_10th'],
             'HSCER': ['marksheet_12th'],
             'PASPT': ['passport'],
-            'DGCTR': ['degree_certificate', 'btech_degree'],
-            'MKST': ['graduation_marksheet'],
+            'DGCTR': ['marksheet_degree'],
+            'MKST': ['marksheet_degree'],
         };
 
+        const aliasToCanonical: Record<string, string> = {
+            'AADHAR': 'ADHAR',
+            'SSC': '10TH',
+            'HSC': '12TH',
+        };
+
+        let upsertCount = 0;
         for (const doc of documents) {
-            const dlType = doc.type || doc.doctype;
-            const internalTypes = reverseMap[dlType] || [];
+            const normalizedType = this.normalizeDigilockerType(doc);
+            console.log(`  Processing: ${JSON.stringify(doc).substring(0, 100)}... -> normalized: ${normalizedType}`);
+            
+            const dlType = aliasToCanonical[normalizedType] || normalizedType;
 
-            if (docType !== 'ALL_SYNC' && dlType !== docType) continue;
+            if (!dlType) {
+                console.log(`    ⚠️  Could not normalize type, skipping`);
+                continue;
+            }
 
-            for (const type of internalTypes) {
-                await this.usersService.upsertUserDocument(userId, type, {
-                    uploaded: false,
-                    status: 'available_in_digilocker',
-                    digilockerTxId: doc.id || doc.uri || ('DGL_' + Date.now()),
-                    verificationMetadata: {
-                        source: 'DigiLocker',
-                        document_name: doc.name || doc.description,
-                        type: dlType,
-                        verified_at: new Date().toISOString(),
-                    },
-                });
+            if (docType !== 'ALL_SYNC') {
+                const mappedDlType = aliasToCanonical[syncMap[docType] || docType] || (syncMap[docType] || docType);
+                if (dlType === mappedDlType) {
+                    console.log(`    ✓ Matched! Upserting ${docType} (${dlType})`);
+                    await this.usersService.upsertUserDocument(userId, docType, {
+                        uploaded: false,
+                        status: 'available_in_digilocker',
+                        digilockerTxId: doc.id || doc.uri || ('DGL_' + Date.now()),
+                        verificationMetadata: {
+                            source: 'DigiLocker',
+                            document_name: doc.name || doc.description,
+                            type: dlType,
+                            verified_at: new Date().toISOString(),
+                        },
+                    });
+                    upsertCount++;
+                } else {
+                    console.log(`    ⚠️  Type mismatch: expected ${mappedDlType}, got ${dlType}`);
+                }
+            } else {
+                const internalTypes = reverseMap[dlType] || [];
+                console.log(`    ALL_SYNC: ${dlType} -> [${internalTypes.join(', ')}]`);
+                for (const type of internalTypes) {
+                    await this.usersService.upsertUserDocument(userId, type, {
+                        uploaded: false,
+                        status: 'available_in_digilocker',
+                        digilockerTxId: doc.id || doc.uri || ('DGL_' + Date.now()),
+                        verificationMetadata: {
+                            source: 'DigiLocker',
+                            document_name: doc.name || doc.description,
+                            type: dlType,
+                            verified_at: new Date().toISOString(),
+                        },
+                    });
+                    console.log(`      ✓ Upserted ${type}`);
+                    upsertCount++;
+                }
             }
         }
+        
+        console.log(`✓ Completed - upserted ${upsertCount} documents`);
     }
 
     @Post('sync')

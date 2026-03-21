@@ -937,6 +937,8 @@ model VisaMockInterviewResult {
   visaType        String
   agentType       String?
   
+  userProfile     Json?
+  
   overallScore    Float
   overallRisk     String
   approvalLikelihood String

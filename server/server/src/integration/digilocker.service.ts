@@ -104,7 +104,8 @@ export class DigilockerService {
      * Get a list of all issued documents in the user's DigiLocker
      */
     async listDocuments(token: string): Promise<any[]> {
-        const response = await fetch(this.fileUrl, {
+        console.log('DIGILOCKER_DEBUG: Fetching issued documents...');
+        const issuedResponse = await fetch(this.fileUrl, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -114,13 +115,51 @@ export class DigilockerService {
             }
         });
 
-        if (!response.ok) {
-            const err = await response.text();
-            throw new Error(`DigiLocker List Error: ${err}`);
+        let issuedData: any = {};
+        if (issuedResponse.ok) {
+            issuedData = await issuedResponse.json();
+            console.log('DIGILOCKER_DEBUG: raw issued list response:', JSON.stringify(issuedData, null, 2));
+        } else {
+            console.error('DIGILOCKER_DEBUG: Failed to fetch issued docs:', await issuedResponse.text());
         }
 
-        const data = await response.json();
-        return data.items || [];
+        console.log('DIGILOCKER_DEBUG: Fetching uploaded documents...');
+        const uploadedResponse = await fetch('https://digilocker.meripehchaan.gov.in/public/oauth2/1/files/uploaded', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'x-api-key': this.apiSetuKey,
+                'x-api-id': this.clientId || '',
+                'Accept': 'application/json'
+            }
+        });
+
+        let uploadedData: any = {};
+        if (uploadedResponse.ok) {
+            uploadedData = await uploadedResponse.json();
+            console.log('DIGILOCKER_DEBUG: raw uploaded list response:', JSON.stringify(uploadedData, null, 2));
+        } else {
+            console.error('DIGILOCKER_DEBUG: Failed to fetch uploaded docs:', await uploadedResponse.text());
+        }
+
+        // Helper to extract array from various possible DigiLocker response formats
+        const extractArray = (data: any): any[] => {
+            if (Array.isArray(data)) return data;
+            if (Array.isArray(data?.items)) return data.items;
+            if (Array.isArray(data?.documents)) return data.documents;
+            if (Array.isArray(data?.issued_documents)) return data.issued_documents;
+            if (Array.isArray(data?.issuedDocuments)) return data.issuedDocuments;
+            if (Array.isArray(data?.result?.items)) return data.result.items;
+            return [];
+        };
+
+        const issuedDocs = extractArray(issuedData);
+        const uploadedDocs = extractArray(uploadedData);
+
+        const allDocs = [...issuedDocs, ...uploadedDocs];
+
+        console.log(`DIGILOCKER_DEBUG: Combined total documents found: ${allDocs.length} (${issuedDocs.length} issued, ${uploadedDocs.length} uploaded)`);
+        return allDocs;
     }
 
     /**

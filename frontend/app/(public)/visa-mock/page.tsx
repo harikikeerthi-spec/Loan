@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
+import Image from "next/image";
+import { getConsularVoice } from "../../../lib/consularVoices";
+import { aiApi } from "../../../lib/api";
 
 const VisaMockInterview = dynamic(() => import("../../../components/VisaMockInterview"), { ssr: false });
 
@@ -49,14 +52,26 @@ interface FinalReport {
 }
 
 const VISA_TYPES = [
-    { value: "F1 Student Visa", label: "F-1 Student Visa", icon: "school", desc: "For full-time students at accredited US institutions" },
-    { value: "Tier 4 UK Student Visa", label: "Tier 4 UK Visa", icon: "potted_plant", desc: "General student visa for studying in the United Kingdom" },
+    {
+        value: "F1 Student Visa",
+        label: "F-1 Student Visa",
+        desc: "For full-time students at accredited US institutions",
+        image: "/images/services/visa-interview.jpg",
+        countryTag: "USA",
+    },
+    {
+        value: "Tier 4 UK Student Visa",
+        label: "Tier 4 UK Visa",
+        desc: "General student visa for studying in the United Kingdom",
+        image: "/images/services/uk-bank.jpg",
+        countryTag: "UK",
+    },
 ];
 
 export const AGENT_TYPES = [
-    { value: "agent_smith", label: "Officer Smith", icon: "face_6", desc: "Strict and intimidating. Short sentences. No small talk. 20 years of experience.", pitch: 0.55, rate: 0.9 },
-    { value: "agent_sarah", label: "Officer Sarah", icon: "face_3", desc: "Friendly and conversational, but catches everything. Feels like a real chat.", pitch: 1.3, rate: 1.05 },
-    { value: "agent_michael", label: "Officer Michael", icon: "face_4", desc: "Completely neutral and methodical. Clinical, efficient, by-the-book.", pitch: 0.85, rate: 0.98 },
+    { value: "agent_smith", label: "Officer Smith", icon: "security", desc: "Strict and intimidating. Short sentences. No small talk. 20 years of experience.", pitch: 0.55, rate: 0.9 },
+    { value: "agent_sarah", label: "Officer Sarah", icon: "psychology", desc: "Friendly and conversational, but catches everything. Feels like a real chat.", pitch: 1.3, rate: 1.05 },
+    { value: "agent_michael", label: "Officer Michael", icon: "badge", desc: "Completely neutral and methodical. Clinical, efficient, by-the-book.", pitch: 0.85, rate: 0.98 },
 ];
 
 
@@ -184,17 +199,6 @@ export default function VisaMockPage() {
         setMessages(updatedMessages);
         setIsLoading(true);
 
-        // ROTATION LOGIC: Switch interviewer every 2 questions to create a "Panel" feel
-        // This ensures the user sees and hears the transition between the 3 voices.
-        let activeAgentType = agentType;
-        if (questionCount > 0 && questionCount % 2 === 0) {
-            const currentIndex = AGENT_TYPES.findIndex(a => a.value === agentType);
-            const nextIndex = (currentIndex + 1) % AGENT_TYPES.length;
-            activeAgentType = AGENT_TYPES[nextIndex].value;
-            setAgentType(activeAgentType);
-            console.log(`[PANEL_MODE] Switching to ${activeAgentType} for the next set of questions.`);
-        }
-
         // Get the last officer question
         const lastOfficerMsg = [...messages].reverse().find(m => m.role === "officer");
 
@@ -221,7 +225,7 @@ export default function VisaMockPage() {
                     currentSection,
                     conversationHistory: updatedMessages,
                     questionNumber: questionCount + 1,
-                    agentType: activeAgentType,
+                    agentType,
                 }),
             }).then(r => r.json()).catch(() => null),
         ]);
@@ -286,12 +290,35 @@ export default function VisaMockPage() {
             const data = await res.json();
             if (data.success) {
                 setFinalReport(data.report);
+                const userId = typeof window !== "undefined" ? localStorage.getItem("userId") || undefined : undefined;
+                try {
+                    await aiApi.saveVisaReport({
+                        userId,
+                        visaType,
+                        agentType,
+                        userProfile: profile,
+                        overallScore: data.report.overallScore || 0,
+                        overallRisk: data.report.overallRisk || "Unknown",
+                        approvalLikelihood: data.report.approvalLikelihood || "Unknown",
+                        sectionScores: data.report.sectionScores || {},
+                        strengths: data.report.strengths || [],
+                        weaknesses: data.report.weaknesses || [],
+                        criticalIssues: data.report.criticalIssues || [],
+                        ds160Inconsistencies: data.report.ds160Inconsistencies || [],
+                        tips: data.report.tips || [],
+                        verdict: data.report.verdict || "",
+                        messages,
+                        evaluations,
+                    });
+                } catch (saveErr) {
+                    console.error("Failed to save report to database:", saveErr);
+                }
             }
         } catch (err) {
             console.error("Failed to generate report:", err);
         }
         setReportLoading(false);
-    }, [visaType, messages, evaluations]);
+    }, [visaType, agentType, profile, messages, evaluations]);
 
     const resetAll = useCallback(() => {
         if (typeof window !== "undefined") window.speechSynthesis.cancel();
@@ -445,13 +472,27 @@ function SetupPhase({
                         >
                             <div className="relative z-10 flex items-center justify-between">
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${visaType === v.value ? "bg-[#6605c7] text-white" : "bg-white/5 text-gray-400 group-hover:text-white"
-                                        }`}>
-                                        <span className="material-symbols-outlined text-3xl">{v.icon}</span>
+                                    <div
+                                        className={`relative w-14 h-14 rounded-2xl overflow-hidden border transition-colors ${visaType === v.value
+                                            ? "border-[#a855f7]/50"
+                                            : "border-white/10 group-hover:border-white/20"
+                                            }`}
+                                    >
+                                        <Image
+                                            src={v.image}
+                                            alt={`${v.label} visual`}
+                                            fill
+                                            sizes="56px"
+                                            className="object-cover"
+                                        />
+                                        <div className="absolute inset-0 bg-black/20" />
                                     </div>
                                     <div>
                                         <div className={`text-xl font-bold transition-colors ${visaType === v.value ? "text-white" : "text-gray-400 group-hover:text-white"}`}>{v.label}</div>
                                         <div className="text-sm text-gray-500 mt-1">{v.desc}</div>
+                                        <div className="mt-2 inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-black tracking-widest text-gray-300 uppercase">
+                                            {v.countryTag}
+                                        </div>
                                     </div>
                                 </div>
                                 {visaType === v.value && (
@@ -499,7 +540,7 @@ function SetupPhase({
                                             {a.label}
                                         </div>
                                     </div>
-                                    <div className="text-xs text-gray-500 mb-2">{a.desc}</div>
+                                    <div className="text-xs text-gray-500 mb-2Pr">{a.desc}</div>
                                     {agentType === a.value && (
                                         <motion.div
                                             initial={{ scale: 0 }}
@@ -525,11 +566,12 @@ function SetupPhase({
                                         const utt = new SpeechSynthesisUtterance(text);
                                         utt.pitch = a.pitch;
                                         utt.rate = a.rate;
-                                        // Try to find a good voice
-                                        const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
-                                        const genderHint = a.value === "agent_sarah" ? /female|woman|zira/i : /male|man|david|daniel/i;
-                                        const match = voices.find(v => genderHint.test(v.name)) || voices[0];
-                                        if (match) utt.voice = match;
+                                        utt.volume = 1;
+
+                                        const voices = window.speechSynthesis.getVoices();
+                                        const voice = getConsularVoice(a.value, voices);
+                                        if (voice) utt.voice = voice;
+
                                         window.speechSynthesis.speak(utt);
                                     }
                                 }}
@@ -791,7 +833,7 @@ function ReportPhase({
                 <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6" style={{ background: "linear-gradient(135deg, #6605c7, #a855f7)" }}>
                     <div className="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin" />
                 </div>
-                <h2 className="text-xl font-black text-white mb-2">Generating Your Report</h2>
+                <h2 className="text-xl font-black text-gray-900 mb-2">Generating Your Report</h2>
                 <p className="text-[13px] text-gray-500 font-medium">Analyzing {messages.length} messages and {evaluations.length} evaluations...</p>
             </motion.div>
         );

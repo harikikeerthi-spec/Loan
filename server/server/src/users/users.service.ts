@@ -18,8 +18,21 @@ export class UsersService {
   }
 
   async findByMobile(mobile: string) {
+    // Strip non-numeric characters for comparison just in case
+    const cleanMobile = mobile.replace(/\D/g, '');
+    const cleanMobileNoCountry = cleanMobile.length > 10 && cleanMobile.startsWith('91') ? cleanMobile.substring(2) : cleanMobile;
+
     return this.prisma.user.findFirst({
-      where: { mobile },
+      where: {
+        OR: [
+          { mobile: mobile },
+          { phoneNumber: mobile },
+          { mobile: cleanMobileNoCountry },
+          { phoneNumber: cleanMobileNoCountry },
+          { mobile: { endsWith: cleanMobileNoCountry } },
+          { phoneNumber: { endsWith: cleanMobileNoCountry } }
+        ],
+      },
     });
   }
 

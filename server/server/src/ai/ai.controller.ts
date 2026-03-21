@@ -545,6 +545,7 @@ export class AiController {
       userId?: string;
       visaType: string;
       agentType?: string;
+      userProfile?: any;
       overallScore: number;
       overallRisk: string;
       approvalLikelihood: string;
@@ -565,6 +566,7 @@ export class AiController {
           userId: data.userId || null,
           visaType: data.visaType,
           agentType: data.agentType || null,
+          userProfile: data.userProfile || null,
           overallScore: data.overallScore,
           overallRisk: data.overallRisk,
           approvalLikelihood: data.approvalLikelihood,

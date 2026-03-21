@@ -587,7 +587,7 @@ export default function HomePage() {
                                         <tr key={l.name} className="hover:bg-gray-50/30 transition-colors">
                                             <td className="p-6">
                                                 <div className="flex items-center gap-4">
-                                                    <div className={`flex items-center justify-center p-1.5 overflow-hidden transition-all duration-300 ${l.name.includes('Auxilo') ? 'w-36 h-14 scale-110' : 'w-28 h-12'}`}>
+                                                    <div className="flex items-center justify-center p-1.5 overflow-hidden transition-all duration-300 w-28 h-12">
                                                         <img src={l.logo} alt={l.name} className="w-full h-full object-contain" />
                                                     </div>
                                                     <div>
@@ -972,7 +972,7 @@ export default function HomePage() {
                         </div>
 
                         {/* Refer Now CTA below card */}
-                        <div className="mt-10 flex justify-center">
+                        {/* <div className="mt-10 flex justify-center">
                             <Link
                                 href="/referral"
                                 className="group inline-flex items-center gap-3 px-10 py-4 rounded-xl font-black text-[13px] uppercase tracking-widest text-white transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl"
@@ -982,7 +982,7 @@ export default function HomePage() {
                                 Refer Now
                                 <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform" aria-hidden="true">arrow_forward</span>
                             </Link>
-                        </div>
+                        </div> */}
                     </div>
                 </section>
 
