@@ -1,0 +1,12 @@
+[phases.setup]
+nixPkgs = ["nodejs"]
+
+[phases.build]
+cmds = [
+  "cd server/server && npm install",
+  "cd server/server && npx prisma generate",
+  "cd server/server && npm run build"
+]
+
+[start]
+cmd = "cd server/server && npm run start:prod"
