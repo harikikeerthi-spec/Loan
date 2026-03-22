@@ -27,11 +27,10 @@ export class DigilockerController {
             mockMode: process.env.DIGILOCKER_MOCK_MODE === 'true',
             clientId: process.env.DIGILOCKER_CLIENT_ID ? '✓ Set' : '✗ Missing',
             clientSecret: process.env.DIGILOCKER_CLIENT_SECRET ? '✓ Set' : '✗ Missing',
-            apiSetuKey: process.env.API_SETU_KEY ? (process.env.API_SETU_KEY === 'sandbox_api_setu_key' ? '⚠️ Sandbox' : '✓ Production') : '✗ Missing',
             callbackUrl: process.env.DIGILOCKER_CALLBACK_URL || 'http://localhost:5000/api/digilocker/callback',
             message: process.env.DIGILOCKER_MOCK_MODE === 'true' 
                 ? '✓ Mock mode enabled - documents will be simulated' 
-                : '⚠️ Real mode - requires valid API Setu credentials'
+                : '✓ Real mode - DigiLocker Requestor flow ready'
         };
     }
 

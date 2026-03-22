@@ -16,7 +16,7 @@ export const features = [
 ];
 
 export const testimonials = [
-    { quote: "Vidhya Loans helped me secure a ₹45L education loan at 8.5% interest. The process was seamless and I got my sanction letter in just 3 days!", name: "Priya Sharma", school: "Stanford University, USA", avatar: "priya" },
-    { quote: "I compared 12 lenders on the platform and saved ₹2.3L in total interest. The EMI calculator and expert counseling were invaluable.", name: "Rahul Menon", school: "University of Toronto, Canada", avatar: "rahul" },
-    { quote: "As a first-generation student going abroad, I was overwhelmed. The team guided me through every step — from choosing the right loan to disbursement.", name: "Ananya Reddy", school: "Imperial College London, UK", avatar: "ananya" },
+    { quote: "I had an excellent experience with Vidhya Loans! The team was very professional, knowledgeable, and responsive. They helped me in each and every step of my journey from university selection to my loan, and everything went very smoothly.", name: "Rahul S", school: "University of Windsor, Canada", avatar: "rahul", highlight: "100%", highlightLabel: "Success Rate" },
+    { quote: "Highly recommend their services! They are very prompt and genuinely supportive at every step. Thanks to their meticulous documentation process and guidance, my educational loan was sanctioned within just 15 days.", name: "Snigdha Reddy", school: "Texas A&M University, USA", avatar: "snigdha", highlight: "15 Days", highlightLabel: "Loan Sanctioned" },
+    { quote: "The personalized counseling and mock interview sessions were invaluable. I received very good guidance at every single step, from loan processing to ultimately getting my F1 & B1/B2 visa approved effortlessly.", name: "Gourav Ch", school: "Pace University, USA", avatar: "gourav", highlight: "Approved", highlightLabel: "US Visa" },
 ];

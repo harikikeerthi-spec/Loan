@@ -621,9 +621,9 @@ export default function HomePage() {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             {[
-                                { bg: "bg-[#e7e1f7]", borderColor: "border-[#6605c7]/10", accent: "text-[#6605c7]", highlight: "₹45L at 8.5%", highlightLabel: "Loan Secured" },
-                                { bg: "bg-[#fdfaf2]", borderColor: "border-amber-200/50", accent: "text-amber-600", highlight: "₹2.3L Saved", highlightLabel: "Interest Saved" },
-                                { bg: "bg-[#e1f0f7]", borderColor: "border-blue-200/50", accent: "text-blue-600", highlight: "3 Days", highlightLabel: "Disbursement" },
+                                { bg: "bg-[#e7e1f7]", borderColor: "border-[#6605c7]/10", accent: "text-[#6605c7]" },
+                                { bg: "bg-[#fdfaf2]", borderColor: "border-amber-200/50", accent: "text-amber-600" },
+                                { bg: "bg-[#e1f0f7]", borderColor: "border-blue-200/50", accent: "text-blue-600" },
                             ].map((style, idx) => {
                                 const t = testimonials[idx];
                                 return (
@@ -653,8 +653,8 @@ export default function HomePage() {
                                         <p className="text-gray-600 text-[13px] leading-relaxed font-medium mb-6 flex-1">{t.quote}</p>
                                         <div className="flex items-center justify-between mt-auto pt-5 border-t border-black/5">
                                             <div>
-                                                <div className={`text-lg font-black ${style.accent}`}>{style.highlight}</div>
-                                                <div className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{style.highlightLabel}</div>
+                                                <div className={`text-lg font-black ${style.accent}`}>{t.highlight}</div>
+                                                <div className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{t.highlightLabel}</div>
                                             </div>
                                             <span className={`inline-flex items-center gap-2 ${style.accent} font-bold text-[11px] uppercase tracking-widest group-hover:gap-3 transition-all`}>
                                                 Read More <span className="material-symbols-outlined text-sm" aria-hidden="true">arrow_forward</span>

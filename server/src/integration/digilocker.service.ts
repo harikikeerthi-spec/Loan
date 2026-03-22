@@ -10,51 +10,15 @@ export interface VerificationResult {
 
 @Injectable()
 export class DigilockerService {
-    private readonly apiSetuBaseUrl = 'https://api.apisetu.gov.in/v2';
     private readonly authUrl = 'https://digilocker.meripehchaan.gov.in/public/oauth2/1/authorize';
     private readonly tokenUrl = 'https://digilocker.meripehchaan.gov.in/public/oauth2/1/token';
-    private readonly fileUrl = 'https://digilocker.meripehchaan.gov.in/public/oauth2/1/files/issued';
+    private readonly documentsUrl = 'https://digilocker.meripehchaan.gov.in/public/api/documents';
     private readonly fileDownloadUrl = 'https://digilocker.meripehchaan.gov.in/public/api/files';
     private readonly clientId = process.env.DIGILOCKER_CLIENT_ID;
     private readonly clientSecret = process.env.DIGILOCKER_CLIENT_SECRET;
-    private readonly apiSetuKey = process.env.API_SETU_KEY || '';
-
-    constructor() {
-        // Disable SSL certificate validation for API Setu in non-production
-        if (process.env.NODE_ENV !== 'production') {
-            process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-        }
-    }
 
     /**
-     * Call API Setu to get the official authorization link
-     */
-    async initiateSession(redirectUri: string): Promise<{ authorization_url: string; txnID: string }> {
-        console.log('DIGILOCKER_DEBUG: Initiating session with API Setu...');
-
-        const response = await fetch(`${this.apiSetuBaseUrl}/digilocker/session`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': this.apiSetuKey,
-                'x-api-id': this.clientId || ''
-            },
-            body: JSON.stringify({
-                redirectUrl: redirectUri
-            })
-        });
-
-        if (!response.ok) {
-            const err = await response.text();
-            console.error('API Setu Session Initiation Failed:', err);
-            throw new Error(`API Setu Error: ${err}`);
-        }
-
-        return await response.json();
-    }
-
-    /**
-     * Generate the Authorization URL (Fallback/Legacy)
+     * Generate the DigiLocker authorization URL.
      */
     getAuthUrl(state: string, redirectUri: string, codeChallenge: string): string {
         return `${this.authUrl}?response_type=code&client_id=${this.clientId || ''}&state=${encodeURIComponent(state)}&redirect_uri=${encodeURIComponent(redirectUri)}&code_challenge=${encodeURIComponent(codeChallenge)}&code_challenge_method=S256`;
@@ -101,46 +65,26 @@ export class DigilockerService {
     }
 
     /**
-     * Get a list of all issued documents in the user's DigiLocker
+     * Get a list of documents from the official DigiLocker Requestor API.
      */
     async listDocuments(token: string): Promise<any[]> {
-        console.log('DIGILOCKER_DEBUG: Fetching issued documents...');
-        const issuedResponse = await fetch(this.fileUrl, {
+        console.log('DIGILOCKER_DEBUG: Fetching documents...');
+        const response = await fetch(this.documentsUrl, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
-                'x-api-key': this.apiSetuKey,
-                'x-api-id': this.clientId || '',
                 'Accept': 'application/json'
             }
         });
 
-        let issuedData: any = {};
-        if (issuedResponse.ok) {
-            issuedData = await issuedResponse.json();
-            console.log('DIGILOCKER_DEBUG: raw issued list response:', JSON.stringify(issuedData, null, 2));
-        } else {
-            console.error('DIGILOCKER_DEBUG: Failed to fetch issued docs:', await issuedResponse.text());
+        if (!response.ok) {
+            const err = await response.text();
+            console.error('DIGILOCKER_DEBUG: Failed to fetch documents:', err);
+            throw new Error(`DigiLocker Documents Error: ${err}`);
         }
 
-        console.log('DIGILOCKER_DEBUG: Fetching uploaded documents...');
-        const uploadedResponse = await fetch('https://digilocker.meripehchaan.gov.in/public/oauth2/1/files/uploaded', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'x-api-key': this.apiSetuKey,
-                'x-api-id': this.clientId || '',
-                'Accept': 'application/json'
-            }
-        });
-
-        let uploadedData: any = {};
-        if (uploadedResponse.ok) {
-            uploadedData = await uploadedResponse.json();
-            console.log('DIGILOCKER_DEBUG: raw uploaded list response:', JSON.stringify(uploadedData, null, 2));
-        } else {
-            console.error('DIGILOCKER_DEBUG: Failed to fetch uploaded docs:', await uploadedResponse.text());
-        }
+        const data: any = await response.json();
+        console.log('DIGILOCKER_DEBUG: raw documents response:', JSON.stringify(data, null, 2));
 
         // Helper to extract array from various possible DigiLocker response formats
         const extractArray = (data: any): any[] => {
@@ -153,12 +97,8 @@ export class DigilockerService {
             return [];
         };
 
-        const issuedDocs = extractArray(issuedData);
-        const uploadedDocs = extractArray(uploadedData);
-
-        const allDocs = [...issuedDocs, ...uploadedDocs];
-
-        console.log(`DIGILOCKER_DEBUG: Combined total documents found: ${allDocs.length} (${issuedDocs.length} issued, ${uploadedDocs.length} uploaded)`);
+        const allDocs = extractArray(data);
+        console.log(`DIGILOCKER_DEBUG: Total documents found: ${allDocs.length}`);
         return allDocs;
     }
 
@@ -223,7 +163,7 @@ export class DigilockerService {
                     txId: doc.id || 'DGL-' + Math.random().toString(36).substring(7),
                     code: 'VERIFIED_DIGILOCKER',
                     details: {
-                        source: 'API Setu / DigiLocker',
+                        source: 'DigiLocker',
                         document_name: doc.name,
                         status: 'Issued',
                         verified_at: new Date().toISOString()

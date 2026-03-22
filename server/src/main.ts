@@ -6,8 +6,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');
   app.enableCors();
-  await app.listen(5000, '0.0.0.0');
-  console.log('Server running on http://localhost:5000');
-  console.log('Android Emulator: http://10.0.2.2:5000');
+  
+  const port = process.env.PORT || 5000;
+  await app.listen(port, '0.0.0.0');
+  
+  console.log(`Server running on port ${port}`);
+  console.log(`Android Emulator: http://10.0.2.2:${port}`);
 }
 bootstrap();
