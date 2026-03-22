@@ -588,7 +588,11 @@ export default function HomePage() {
                                             <td className="p-6">
                                                 <div className="flex items-center gap-4">
                                                     <div className="flex items-center justify-center p-1.5 overflow-hidden transition-all duration-300 w-28 h-12">
-                                                        <img src={l.logo} alt={l.name} className="w-full h-full object-contain" />
+                                                        <img
+                                                            src={l.logo}
+                                                            alt={l.name}
+                                                            className={`w-full h-full object-contain ${l.name.includes("Auxilo") ? "scale-175" : ""}`}
+                                                        />
                                                     </div>
                                                     <div>
                                                         <div className="font-bold text-gray-900 text-[13px]">{l.name}</div>
