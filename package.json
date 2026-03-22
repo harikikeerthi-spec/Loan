@@ -2,7 +2,9 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:frontend\"",
     "dev:server": "cd server/server && npm run start:dev",
-    "dev:frontend": "cd frontend && npm run dev"
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "tsc",
+    "start:prod": "node dist/main.js"
   },
   "dependencies": {
     "@types/nodemailer": "^7.0.5",
