@@ -4,7 +4,7 @@
     "dev:server": "cd server/server && npm run start:dev",
     "dev:frontend": "cd frontend && npm run dev",
     "build": "tsc",
-    "start:prod": "node dist/main.js"
+    "start:prod": "node dist/main"
   },
   "dependencies": {
     "@types/nodemailer": "^7.0.5",
