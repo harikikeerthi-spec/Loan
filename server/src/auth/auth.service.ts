@@ -275,22 +275,31 @@ export class AuthService {
       return { success: false, message: 'Please enter a valid email address (e.g., username@example.com)' };
     }
 
-    // Check if user exists
-    const existingUser = await this.usersService.findOne(email);
+    try {
+      // Check if user exists
+      const existingUser = await this.usersService.findOne(email);
 
-    // Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    this.otps.set(email, otp);
-    console.log(`[AuthService] OTP generated for ${email}: ${otp}`);
+      // Generate OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      this.otps.set(email, otp);
+      console.log(`[AuthService] OTP generated for ${email}: ${otp}`);
 
-    // Send OTP via email
-    await this.emailService.sendOtp(email, otp);
+      // Send OTP via email
+      await this.emailService.sendOtp(email, otp);
 
-    return {
-      success: true,
-      message: 'OTP sent successfully',
-      userExists: !!existingUser // Return whether user exists or not
-    };
+      return {
+        success: true,
+        message: 'OTP sent successfully',
+        userExists: !!existingUser // Return whether user exists or not
+      };
+    } catch (error) {
+      console.error('[AuthService] Database or Email error in sendOtpUnified:', error);
+      return {
+        success: false,
+        message: 'Internal error: Could not connect to the database or email service. Please check your Railway environment variables and ensure the database is migrated.',
+        error: error.message
+      };
+    }
   }
 
   /**
