@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config'; // ← add this
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -22,6 +23,7 @@ import { join } from 'path';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }), // ← add this as the FIRST import
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',
@@ -47,4 +49,3 @@ import { join } from 'path';
   providers: [AppService],
 })
 export class AppModule { }
-
