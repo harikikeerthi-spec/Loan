@@ -5,7 +5,8 @@ import JourneyPath from "../../components/JourneyPath";
 import AnimatedNumber from "../../components/AnimatedNumber";
 import InteractiveEMI from "../../components/InteractiveEMI";
 import ToolCard from "../../components/ToolCard";
-import { lenders, features, testimonials } from "../../data/home";
+import { lenders, features } from "../../data/home";
+import { fetchTopGoogleReviews } from "../../lib/googleReviews";
 
 export const metadata: Metadata = {
     title: "Vidhya Loans - Fund Your Dream Education Abroad",
@@ -15,7 +16,8 @@ export const metadata: Metadata = {
 
 const heroGradient = { background: 'linear-gradient(135deg, #ede0ff 0%, #f3eaff 25%, #fdf6ff 55%, #fef3e8 80%, #fde8c8 100%)' };
 
-export default function HomePage() {
+export default async function HomePage() {
+    const dynamicTestimonials = await fetchTopGoogleReviews();
     return (
         <div className="relative min-h-screen text-gray-900">
             <div className="relative z-10">
@@ -629,7 +631,7 @@ export default function HomePage() {
                                 { bg: "bg-[#fdfaf2]", borderColor: "border-amber-200/50", accent: "text-amber-600" },
                                 { bg: "bg-[#e1f0f7]", borderColor: "border-blue-200/50", accent: "text-blue-600" },
                             ].map((style, idx) => {
-                                const t = testimonials[idx];
+                                const t = dynamicTestimonials[idx] || dynamicTestimonials[0];
                                 return (
                                     <div
                                         key={t.name}

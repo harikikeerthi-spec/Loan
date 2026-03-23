@@ -2,6 +2,7 @@
 import { banks } from "@/lib/bankData";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { fetchTopGoogleReviews } from "@/lib/googleReviews";
 
 interface Props {
     params: Promise<{
@@ -22,6 +23,7 @@ export async function generateMetadata({ params }: Props) {
 export default async function BankPage({ params }: Props) {
     const { slug } = await params;
     const bank = banks[slug];
+    const dynamicTestimonials = await fetchTopGoogleReviews();
 
     if (!bank) {
         notFound();
@@ -404,11 +406,7 @@ export default async function BankPage({ params }: Props) {
                         <h2 className="text-4xl font-bold font-display text-gray-900">Our Customers. Our Pride.</h2>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {[
-                            { name: "Rahul S.", uni: "Stanford University, USA", course: "MS Computer Science", quote: "VidhyaLoan made my dream of studying at Stanford a reality. The process was seamless!" },
-                            { name: "Priya M.", uni: "University of Toronto, Canada", course: "MBA", quote: "Got my loan approved in just 5 days. The team was incredibly supportive throughout." },
-                            { name: "Amit K.", uni: "Imperial College London, UK", course: "MS Data Science", quote: "Best interest rates and zero hassle. Highly recommend applying through VidhyaLoan." }
-                        ].map((testimonial, i) => (
+                        {dynamicTestimonials.slice(0, 3).map((testimonial, i) => (
                             <div key={i} className="bg-white/80 backdrop-blur-xl border border-gray-100 p-8 rounded-2xl shadow-lg hover:shadow-xl transition-all">
                                 <div className="flex items-center gap-3 mb-6">
                                     <div className="w-14 h-14 rounded-full bg-gradient-to-br from-[#6605c7] to-[#8b2fd6] flex items-center justify-center text-white text-xl font-bold">
@@ -416,13 +414,13 @@ export default async function BankPage({ params }: Props) {
                                     </div>
                                     <div>
                                         <p className="font-bold text-gray-900">{testimonial.name}</p>
-                                        <p className="text-sm text-[#6605c7]">{testimonial.course}</p>
+                                        <p className="text-sm text-[#6605c7]">{testimonial.school || "Student"}</p>
                                     </div>
                                 </div>
                                 <p className="text-gray-600 italic mb-4">"{testimonial.quote}"</p>
                                 <div className="flex items-center gap-2 text-sm text-gray-500">
-                                    <span className="material-symbols-outlined text-lg">school</span>
-                                    {testimonial.uni}
+                                    <span className="material-symbols-outlined text-lg">star</span>
+                                    {testimonial.highlight || "5 Stars"}
                                 </div>
                             </div>
                         ))}
