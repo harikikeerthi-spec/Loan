@@ -6,7 +6,43 @@ interface VoiceProfile {
     hints: RegExp[];
     langPriority: string[];
     preferredGender: "male" | "female";
+    avoidHints?: RegExp[];
 }
+
+const NATURAL_QUALITY_HINTS = [
+    /natural/i,
+    /neural/i,
+    /online/i,
+    /premium/i,
+    /enhanced/i,
+    /wavenet/i,
+    /google us english/i,
+    /google uk english/i,
+    /microsoft.*online/i,
+    /aria/i,
+    /jenny/i,
+    /guy/i,
+    /davis/i,
+    /roger/i,
+    /ryan/i,
+    /libby/i,
+    /sonia/i,
+    /natasha/i,
+];
+
+const ROBOTIC_HINTS = [
+    /espeak/i,
+    /festival/i,
+    /mbrola/i,
+    /sam/i,
+    /compact/i,
+    /sapi 4/i,
+    /old/i,
+    /default/i,
+    /robot/i,
+    /basic/i,
+    /classic/i,
+];
 
 const FEMALE_HINTS = [
     /female/i,
@@ -19,6 +55,9 @@ const FEMALE_HINTS = [
     /aria/i,
     /susan/i,
     /hazel/i,
+    /libby/i,
+    /sonia/i,
+    /natasha/i,
 ];
 
 const MALE_HINTS = [
@@ -32,26 +71,79 @@ const MALE_HINTS = [
     /tom/i,
     /fred/i,
     /george/i,
+    /roger/i,
+    /ryan/i,
+    /davis/i,
 ];
 
+/**
+ * Voice profiles for 3 distinct consular officers.
+ * Each officer should sound clearly different from the others:
+ * - Smith: Deep, authoritative British-accented male voice (commanding presence)
+ * - Sarah: Warm, approachable American female voice (conversational and clear)
+ * - Michael: Neutral, flat American male voice (procedural and measured)
+ */
 const VOICE_PROFILES: Record<KnownConsularAgent, VoiceProfile> = {
     agent_smith: {
-        // Authoritative, grounded tone
-        hints: [/david/i, /daniel/i, /mark/i, /guy/i, /male/i, /google uk english male/i],
-        langPriority: ["en-gb", "en-us", "en-au", "en"],
+        // Deep, authoritative, commanding voice — British accent preferred for gravitas
+        // Prioritize the deepest male voices available in the browser
+        hints: [
+            /roger/i,       // Roger is one of the deepest male voices
+            /guy/i,         // Guy has a deep, authoritative tone
+            /george/i,      // George is deep and British-sounding
+            /davis/i,       // Davis is deep American male
+            /daniel/i,      // Daniel is a strong male voice
+            /microsoft.*roger/i,
+            /microsoft.*guy/i,
+            /google uk english male/i,
+            /google us english.*male/i,
+            /male/i,
+        ],
+        langPriority: ["en-gb", "en-au", "en-us", "en"],
         preferredGender: "male",
+        avoidHints: [/zira/i, /samantha/i, /victoria/i, /jenny/i, /aria/i, /libby/i, /sonia/i, /natasha/i, /karen/i, /susan/i, /hazel/i, /female/i],
     },
     agent_sarah: {
-        // Warm and approachable tone
-        hints: [/zira/i, /samantha/i, /victoria/i, /karen/i, /female/i, /google uk english female/i],
+        // Warm, conversational, clear female voice — American accent preferred
+        hints: [
+            /jenny/i,
+            /aria/i,
+            /libby/i,
+            /natasha/i,
+            /sonia/i,
+            /zira/i,
+            /samantha/i,
+            /victoria/i,
+            /karen/i,
+            /female/i,
+            /hazel/i,
+            /susan/i,
+            /google us english female/i,
+            /microsoft.*aria/i,
+            /microsoft.*jenny/i,
+        ],
         langPriority: ["en-us", "en-gb", "en-au", "en"],
         preferredGender: "female",
+        avoidHints: [/fred/i, /tom/i, /david/i, /guy/i, /roger/i],
     },
     agent_michael: {
-        // Neutral and methodical tone
-        hints: [/david/i, /mark/i, /james/i, /tom/i, /google us english/i, /male/i],
+        // Neutral, flat, measured male voice — American accent preferred
+        hints: [
+            /david/i,
+            /mark/i,
+            /davis/i,
+            /ryan/i,
+            /tom/i,
+            /james/i,
+            /google us english/i,
+            /male/i,
+            /microsoft.*david/i,
+            /microsoft.*mark/i,
+            /microsoft.*davis/i,
+        ],
         langPriority: ["en-us", "en-in", "en-gb", "en"],
         preferredGender: "male",
+        avoidHints: [/zira/i, /samantha/i, /guy/i, /roger/i],
     },
 };
 
@@ -63,6 +155,24 @@ function scoreVoice(voice: SpeechSynthesisVoice, profile: VoiceProfile): number 
         profile.preferredGender === "female" ? MALE_HINTS : FEMALE_HINTS;
     const preferredGenderHints =
         profile.preferredGender === "female" ? FEMALE_HINTS : MALE_HINTS;
+
+    NATURAL_QUALITY_HINTS.forEach((hint, index) => {
+        if (hint.test(searchable)) {
+            score += 55 - index;
+        }
+    });
+
+    ROBOTIC_HINTS.forEach((hint, index) => {
+        if (hint.test(searchable)) {
+            score -= 30 - Math.min(index, 10);
+        }
+    });
+
+    profile.avoidHints?.forEach((hint, index) => {
+        if (hint.test(searchable)) {
+            score -= 24 - Math.min(index, 8);
+        }
+    });
 
     profile.hints.forEach((hint, index) => {
         if (hint.test(searchable)) {
@@ -92,6 +202,15 @@ function scoreVoice(voice: SpeechSynthesisVoice, profile: VoiceProfile): number 
         score += 8;
     }
 
+    // Browser-provided cloud voices are often more natural than local fallback voices.
+    if (voice.localService === false) {
+        score += 18;
+    }
+
+    if (voice.default) {
+        score += 4;
+    }
+
     return score;
 }
 
@@ -103,6 +222,8 @@ export function buildConsularVoiceMap(
     const candidates = englishVoices.length ? englishVoices : voices;
     const usedVoiceKeys = new Set<string>();
 
+    // Pick Sarah first (female), then Smith (British male), then Michael (American male)
+    // This order maximizes voice diversity across the three officers.
     const pickOrder: KnownConsularAgent[] = ["agent_sarah", "agent_smith", "agent_michael"];
 
     for (const agentKey of pickOrder) {

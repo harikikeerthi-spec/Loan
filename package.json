@@ -1,10 +1,11 @@
 {
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:frontend\"",
-    "dev:server": "cd server/server && npm run start:dev",
+    "dev:server": "cd server && npm run start:dev",
     "dev:frontend": "cd frontend && npm run dev",
-    "build": "tsc",
-    "start:prod": "node dist/main"
+    "build": "cd server && npm run build && cd ../frontend && npm run build",
+    "start": "cd server && npm run start",
+    "start:prod": "cd server && npm run start:prod"
   },
   "dependencies": {
     "@nestjs/config": "^4.0.3",

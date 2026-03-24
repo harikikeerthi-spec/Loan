@@ -42,6 +42,9 @@ interface FinalReport {
     overallScore: number;
     overallRisk: string;
     approvalLikelihood: string;
+    interviewComplete: boolean;
+    topicsCovered: string[];
+    topicsNotCovered: string[];
     strengths: string[];
     weaknesses: string[];
     criticalIssues: string[];
@@ -49,6 +52,19 @@ interface FinalReport {
     ds160Inconsistencies: string[];
     tips: string[];
     verdict: string;
+}
+
+interface InterviewDraft {
+    visaType: string;
+    agentType: string;
+    profile: Record<string, string>;
+    messages: InterviewMessage[];
+    sections: InterviewSection[];
+    currentSection: string;
+    questionCount: number;
+    evaluations: EvaluationResult[];
+    latestEval: EvaluationResult | null;
+    updatedAt: string;
 }
 
 const VISA_TYPES = [
@@ -69,25 +85,41 @@ const VISA_TYPES = [
 ];
 
 export const AGENT_TYPES = [
-    { value: "agent_smith", label: "Officer Smith", icon: "security", desc: "Strict and intimidating. Short sentences. No small talk. 20 years of experience.", pitch: 0.55, rate: 0.9 },
-    { value: "agent_sarah", label: "Officer Sarah", icon: "psychology", desc: "Friendly and conversational, but catches everything. Feels like a real chat.", pitch: 1.3, rate: 1.05 },
-    { value: "agent_michael", label: "Officer Michael", icon: "badge", desc: "Completely neutral and methodical. Clinical, efficient, by-the-book.", pitch: 0.85, rate: 0.98 },
+    { value: "agent_smith", label: "Officer Smith", icon: "security", desc: "Strict and intimidating. Deep voice, short sentences. No small talk. 20+ years of experience. Will catch every inconsistency.", pitch: 0.70, rate: 0.82, avatar: "/images/agents/officer_smith.png" },
+    { value: "agent_sarah", label: "Officer Sarah", icon: "psychology", desc: "Warm and conversational, but extremely sharp. Catches everything behind a friendly tone. Feels like a real conversation.", pitch: 1.12, rate: 1.02, avatar: "/images/agents/officer_sarah.png" },
+    { value: "agent_michael", label: "Officer Michael", icon: "badge", desc: "Completely neutral and methodical. Clinical, efficient, by-the-book. Follows procedure exactly.", pitch: 0.92, rate: 0.95, avatar: "/images/agents/officer_michael.png" },
 ];
 
 
 const DEFAULT_SECTIONS: InterviewSection[] = [
     { id: "personal_background", label: "Personal Background", completed: false },
-    { id: "purpose_of_travel", label: "Purpose of Travel", completed: false },
-    { id: "university_program", label: "University & Program", completed: false },
-    { id: "academic_history", label: "Academic History", completed: false },
-    { id: "funding_finances", label: "Funding & Finances", completed: false },
-    { id: "sponsor_details", label: "Sponsor Details", completed: false },
-    { id: "ties_home", label: "Ties to Home Country", completed: false },
-    { id: "travel_history", label: "Travel History", completed: false },
-    { id: "post_study_plans", label: "Post-Study Plans", completed: false },
-    { id: "accommodation", label: "Accommodation & Logistics", completed: false },
+    { id: "university_selection", label: "University Selection", completed: false },
+    { id: "course_selection", label: "Course Selection", completed: false },
+    { id: "financial_capability", label: "Financial Capability", completed: false },
+    { id: "career_goals", label: "Career Goals", completed: false },
     { id: "immigration_intent", label: "Immigration Intent", completed: false },
+    { id: "university_knowledge", label: "University & Location Knowledge", completed: false },
+    { id: "academic_history", label: "Academic History", completed: false },
+    { id: "academic_gap", label: "Academic Gap Justification", completed: false },
+    { id: "work_experience", label: "Work Experience", completed: false },
+    { id: "post_study_plans", label: "Post-Study & Work Plans", completed: false },
 ];
+
+const INTERVIEW_DRAFT_STORAGE_KEY = "visa_mock_interview_draft_v1";
+
+async function fetchJsonWithTimeout(url: string, options: RequestInit, timeoutMs = 18000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal,
+        });
+        return await response.json();
+    } finally {
+        clearTimeout(timer);
+    }
+}
 
 /* ────────────────────────── Main Page ────────────────────────── */
 export default function VisaMockPage() {
@@ -124,10 +156,76 @@ export default function VisaMockPage() {
     const [evaluations, setEvaluations] = useState<EvaluationResult[]>([]);
     const [latestEval, setLatestEval] = useState<EvaluationResult | null>(null);
     const [questionCount, setQuestionCount] = useState(0);
+    const [recoveryHint, setRecoveryHint] = useState<string | null>(null);
 
     // Report state
     const [finalReport, setFinalReport] = useState<FinalReport | null>(null);
     const [reportLoading, setReportLoading] = useState(false);
+
+    const saveInterviewDraft = useCallback(() => {
+        if (typeof window === "undefined") return;
+        if (phase !== "interview") return;
+
+        const payload: InterviewDraft = {
+            visaType,
+            agentType,
+            profile,
+            messages,
+            sections,
+            currentSection,
+            questionCount,
+            evaluations,
+            latestEval,
+            updatedAt: new Date().toISOString(),
+        };
+
+        localStorage.setItem(INTERVIEW_DRAFT_STORAGE_KEY, JSON.stringify(payload));
+    }, [
+        phase,
+        visaType,
+        agentType,
+        profile,
+        messages,
+        sections,
+        currentSection,
+        questionCount,
+        evaluations,
+        latestEval,
+    ]);
+
+    const clearInterviewDraft = useCallback(() => {
+        if (typeof window === "undefined") return;
+        localStorage.removeItem(INTERVIEW_DRAFT_STORAGE_KEY);
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        try {
+            const raw = localStorage.getItem(INTERVIEW_DRAFT_STORAGE_KEY);
+            if (!raw) return;
+
+            const draft = JSON.parse(raw) as InterviewDraft;
+            if (!draft.messages?.length) return;
+
+            setVisaType(draft.visaType || "F1 Student Visa");
+            setAgentType(draft.agentType || "agent_michael");
+            setProfile((prev) => ({ ...prev, ...(draft.profile || {}) }));
+            setMessages(draft.messages || []);
+            setSections(draft.sections?.length ? draft.sections : DEFAULT_SECTIONS);
+            setCurrentSection(draft.currentSection || "personal_background");
+            setQuestionCount(draft.questionCount || 0);
+            setEvaluations(draft.evaluations || []);
+            setLatestEval(draft.latestEval || null);
+            setPhase("interview");
+            setRecoveryHint("Recovered previous mock interview session.");
+        } catch {
+            localStorage.removeItem(INTERVIEW_DRAFT_STORAGE_KEY);
+        }
+    }, []);
+
+    useEffect(() => {
+        saveInterviewDraft();
+    }, [saveInterviewDraft]);
 
     /* ────── Microphone Permission ────── */
     const requestMicPermission = useCallback(async () => {
@@ -157,13 +255,17 @@ export default function VisaMockPage() {
     /* ────── API Calls ────── */
     const startInterview = useCallback(async () => {
         setIsLoading(true);
+        setRecoveryHint(null);
         try {
-            const res = await fetch("/api/ai/visa-interview/start", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ userProfile: profile, visaType, agentType }),
-            });
-            const data = await res.json();
+            const data = await fetchJsonWithTimeout(
+                "/api/ai/visa-interview/start",
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ userProfile: profile, visaType, agentType }),
+                },
+                22000
+            );
             if (data.success) {
                 const officerMsg: InterviewMessage = {
                     role: "officer",
@@ -175,17 +277,22 @@ export default function VisaMockPage() {
                 if (data.sections) setSections(data.sections);
                 setQuestionCount(1);
                 setPhase("interview");
+                return;
             }
+            setRecoveryHint(data?.message || "Unable to start interview. Please retry.");
         } catch (err) {
             console.error("Failed to start interview:", err);
+            setRecoveryHint("Connection issue while starting interview. Please try again.");
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     }, [profile, visaType, agentType]);
 
     const sendAnswer = useCallback(async (overrideText?: string) => {
         const answer = (overrideText || currentInput).trim();
         if (!answer || isLoading) return;
         setCurrentInput("");
+        setRecoveryHint(null);
 
         // Cancel any ongoing AI speech
         if (typeof window !== "undefined") window.speechSynthesis.cancel();
@@ -202,81 +309,130 @@ export default function VisaMockPage() {
         // Get the last officer question
         const lastOfficerMsg = [...messages].reverse().find(m => m.role === "officer");
 
-        // Parallel: evaluate + get next question
-        const [evalRes, continueRes] = await Promise.all([
-            fetch("/api/ai/visa-interview/evaluate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    visaType,
-                    question: lastOfficerMsg?.content || "",
-                    transcript: answer,
-                }),
-            }).then(r => r.json()).catch(() => null),
+        try {
+            // Parallel: evaluate + get next question
+            const [evalRes, continueRes] = await Promise.all([
+                fetchJsonWithTimeout(
+                    "/api/ai/visa-interview/evaluate",
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            visaType,
+                            question: lastOfficerMsg?.content || "",
+                            transcript: answer,
+                        }),
+                    },
+                    18000
+                ).catch(() => null),
 
-            fetch("/api/ai/visa-interview/continue", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    userProfile: profile,
-                    visaType,
-                    previousQuestion: lastOfficerMsg?.content || "",
-                    transcript: answer,
-                    currentSection,
-                    conversationHistory: updatedMessages,
-                    questionNumber: questionCount + 1,
-                    agentType,
-                }),
-            }).then(r => r.json()).catch(() => null),
-        ]);
+                fetchJsonWithTimeout(
+                    "/api/ai/visa-interview/continue",
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            userProfile: profile,
+                            visaType,
+                            previousQuestion: lastOfficerMsg?.content || "",
+                            transcript: answer,
+                            currentSection,
+                            conversationHistory: updatedMessages,
+                            questionNumber: questionCount + 1,
+                            agentType,
+                        }),
+                    },
+                    22000
+                ).catch(() => null),
+            ]);
 
-        // Handle evaluation
-        if (evalRes?.success && evalRes.evaluation) {
-            setLatestEval(evalRes.evaluation);
-            setEvaluations(prev => [...prev, evalRes.evaluation]);
-        }
+            // Handle evaluation
+            if (evalRes?.success && evalRes.evaluation) {
+                setLatestEval(evalRes.evaluation);
+                setEvaluations(prev => [...prev, evalRes.evaluation]);
+            }
 
-        // Handle next question
-        if (continueRes?.success) {
-            if (continueRes.endInterview) {
-                // AI decided to end the interview
-                setIsLoading(false);
-                endInterview();
+            // Handle next question
+            if (continueRes?.success && continueRes.question) {
+                const completedCount = sections.filter((s) => s.completed).length;
+                const totalSections = sections.length;
+                const hasCompletedAllSections = completedCount >= totalSections;
+                const hasAskedMinimumQuestions = questionCount >= totalSections;
+
+                // End only after full topic coverage and enough questions.
+                if (continueRes.endInterview && hasCompletedAllSections && hasAskedMinimumQuestions) {
+                    setIsLoading(false);
+                    setTimeout(() => {
+                        void endInterview();
+                    }, 0);
+                    return;
+                }
+
+                const officerMsg: InterviewMessage = {
+                    role: "officer",
+                    content: continueRes.question,
+                    timestamp: new Date().toISOString(),
+                };
+                setMessages(prev => [...prev, officerMsg]);
+                setQuestionCount(prev => prev + 1);
+
+                // Update current section from AI response
+                if (continueRes.currentSection) {
+                    setCurrentSection(continueRes.currentSection);
+                }
+
+                // Mark completed topics from AI response
+                if (continueRes.completedTopics && Array.isArray(continueRes.completedTopics)) {
+                    setSections(prev =>
+                        prev.map(s => ({
+                            ...s,
+                            completed: continueRes.completedTopics.includes(s.id),
+                        }))
+                    );
+                }
+
                 return;
             }
 
-            const officerMsg: InterviewMessage = {
+            // Fallback question prevents dead-end when continue API fails mid-session
+            const fallbackOfficerMsg: InterviewMessage = {
                 role: "officer",
-                content: continueRes.question,
+                content: "I could not process that response fully. Please continue: why is this program and university the right fit for your goals?",
                 timestamp: new Date().toISOString(),
             };
-            setMessages(prev => [...prev, officerMsg]);
+            setMessages(prev => [...prev, fallbackOfficerMsg]);
             setQuestionCount(prev => prev + 1);
-
-            // Update current section from AI response
-            if (continueRes.currentSection) {
-                setCurrentSection(continueRes.currentSection);
-            }
-
-            // Mark completed topics from AI response
-            if (continueRes.completedTopics && Array.isArray(continueRes.completedTopics)) {
-                setSections(prev =>
-                    prev.map(s => ({
-                        ...s,
-                        completed: continueRes.completedTopics.includes(s.id),
-                    }))
-                );
-            }
+            setRecoveryHint("Recovered from a temporary connection issue. Interview continued.");
+        } catch (err) {
+            console.error("Failed to continue interview:", err);
+            setRecoveryHint("Temporary interruption detected. Please resend your answer.");
+        } finally {
+            setIsLoading(false);
         }
-
-        setIsLoading(false);
-    }, [currentInput, isLoading, messages, visaType, profile, currentSection, questionCount]);
+    }, [
+        currentInput,
+        isLoading,
+        messages,
+        visaType,
+        profile,
+        currentSection,
+        questionCount,
+        agentType,
+        sections,
+    ]);
 
     const endInterview = useCallback(async () => {
         // Stop all voice activity when ending
         if (typeof window !== "undefined") window.speechSynthesis.cancel();
         setReportLoading(true);
         setPhase("report");
+        clearInterviewDraft();
+
+        // Determine if the interview was stopped midway
+        const applicantAnswerCount = messages.filter(m => m.role === "applicant").length;
+        const allTopicsCompleted = sections.filter(s => s.completed).length >= sections.length;
+        const interviewStopped = !allTopicsCompleted && applicantAnswerCount < sections.length;
+
         try {
             const res = await fetch("/api/ai/visa-interview/final-report", {
                 method: "POST",
@@ -285,6 +441,7 @@ export default function VisaMockPage() {
                     visaType,
                     conversationHistory: messages,
                     evaluations,
+                    interviewStopped,
                 }),
             });
             const data = await res.json();
@@ -318,7 +475,7 @@ export default function VisaMockPage() {
             console.error("Failed to generate report:", err);
         }
         setReportLoading(false);
-    }, [visaType, agentType, profile, messages, evaluations]);
+    }, [visaType, agentType, profile, messages, evaluations, sections, clearInterviewDraft]);
 
     const resetAll = useCallback(() => {
         if (typeof window !== "undefined") window.speechSynthesis.cancel();
@@ -333,7 +490,9 @@ export default function VisaMockPage() {
         setCurrentInput("");
         setMicPermissionGranted(false);
         setMicPermissionError(null);
-    }, []);
+        setRecoveryHint(null);
+        clearInterviewDraft();
+    }, [clearInterviewDraft]);
 
     /* ────── Render ────── */
     return (
@@ -371,22 +530,29 @@ export default function VisaMockPage() {
                         />
                     )}
                     {phase === "interview" && (
-                        <VisaMockInterview
-                            key="video-interview"
-                            messages={messages}
-                            currentInput={currentInput}
-                            setCurrentInput={setCurrentInput}
-                            isLoading={isLoading}
-                            sections={sections}
-                            currentSection={currentSection}
-                            latestEval={latestEval}
-                            questionCount={questionCount}
-                            evaluations={evaluations}
-                            onSend={sendAnswer}
-                            onEnd={endInterview}
-                            visaType={visaType}
-                            agentType={agentType}
-                        />
+                        <>
+                            {recoveryHint && (
+                                <div className="mx-auto max-w-5xl mt-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-100 font-medium">
+                                    {recoveryHint}
+                                </div>
+                            )}
+                            <VisaMockInterview
+                                key="video-interview"
+                                messages={messages}
+                                currentInput={currentInput}
+                                setCurrentInput={setCurrentInput}
+                                isLoading={isLoading}
+                                sections={sections}
+                                currentSection={currentSection}
+                                latestEval={latestEval}
+                                questionCount={questionCount}
+                                evaluations={evaluations}
+                                onSend={sendAnswer}
+                                onEnd={endInterview}
+                                visaType={visaType}
+                                agentType={agentType}
+                            />
+                        </>
                     )}
                     {phase === "report" && (
                         <ReportPhase
@@ -448,7 +614,7 @@ function SetupPhase({
                 </h1>
                 <p className="text-gray-400 text-lg max-w-2xl mx-auto font-medium leading-relaxed">
                     Practice your visa interview with our AI consular officer.
-                    Real-time evaluation, DS-160 consistency checking, and detailed scoring across 11 interview topics.
+                    Structured across 11 real interview topics — from personal background to post-study plans — with real-time evaluation and detailed scoring.
                 </p>
             </div>
 
@@ -532,9 +698,9 @@ function SetupPhase({
                             >
                                 <div className="relative z-10 flex flex-col items-start justify-between min-h-[120px]">
                                     <div className="flex items-center gap-4 mb-4">
-                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${agentType === a.value ? "bg-[#6605c7] text-white" : "bg-white/5 text-gray-400 group-hover:text-white"
+                                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center overflow-hidden transition-colors border ${agentType === a.value ? "border-[#a855f7]" : "border-white/10 group-hover:border-white/20"
                                             }`}>
-                                            <span className="material-symbols-outlined text-2xl">{a.icon}</span>
+                                            <img src={a.avatar} alt={a.label} className="w-full h-full object-cover" />
                                         </div>
                                         <div className={`text-lg font-bold transition-colors ${agentType === a.value ? "text-white" : "text-gray-400 group-hover:text-white"}`}>
                                             {a.label}
@@ -560,9 +726,9 @@ function SetupPhase({
                                     e.stopPropagation();
                                     if (typeof window !== 'undefined') {
                                         window.speechSynthesis.cancel();
-                                        const text = a.value === "agent_smith" ? "I am Officer Smith. State your name and purpose." :
-                                            a.value === "agent_sarah" ? "Hi, I'm Officer Sarah. Great to meet you! Why are you visiting us today?" :
-                                                "I am Officer Michael. Please provide the required information for your visa application.";
+                                        const text = a.value === "agent_smith" ? "Good morning. Name and purpose of visit. Make it quick." :
+                                            a.value === "agent_sarah" ? "Hi there, good morning! Could you start by telling me your full name and what brings you here today?" :
+                                                "Good morning. Please state your full name and the purpose of your visit today.";
                                         const utt = new SpeechSynthesisUtterance(text);
                                         utt.pitch = a.pitch;
                                         utt.rate = a.rate;
@@ -833,8 +999,8 @@ function ReportPhase({
                 <div className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6" style={{ background: "linear-gradient(135deg, #6605c7, #a855f7)" }}>
                     <div className="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin" />
                 </div>
-                <h2 className="text-xl font-black text-gray-900 mb-2">Generating Your Report</h2>
-                <p className="text-[13px] text-gray-500 font-medium">Analyzing {messages.length} messages and {evaluations.length} evaluations...</p>
+                <h2 className="text-2xl font-black text-white mb-2">Generating Your Report</h2>
+                <p className="text-[13px] text-gray-400 font-medium">Analyzing {messages.length} messages and {evaluations.length} evaluations...</p>
             </motion.div>
         );
     }
@@ -858,46 +1024,162 @@ function ReportPhase({
         "Very Unlikely": "text-red-600 bg-red-50 border-red-200",
     }[report.approvalLikelihood] || "text-gray-600 bg-gray-50 border-gray-200";
 
+    const scoreColor = report.overallScore >= 70
+        ? "text-green-400"
+        : report.overallScore >= 40
+            ? "text-amber-400"
+            : "text-red-400";
+
+    const handleDownloadReport = () => {
+        const timestamp = new Date();
+        const dateLabel = timestamp.toISOString().slice(0, 10);
+
+        const sectionEntries = Object.entries(report.sectionScores || {});
+        const sectionLines = sectionEntries.length
+            ? sectionEntries.map(([key, value]) => {
+                const label = key.replace(/([A-Z])/g, " $1").replace(/_/g, " ").trim();
+                return `- ${label}: ${Number(value) * 10}%`;
+            })
+            : ["- No section scores available"];
+
+        const lines = [
+            "VISA MOCK INTERVIEW REPORT",
+            "==========================",
+            `Generated On: ${timestamp.toLocaleString()}`,
+            `Interview Status: ${report.interviewComplete !== false ? "Complete" : "INCOMPLETE — Stopped Midway"}`,
+            "",
+            `Overall Score: ${report.overallScore}/100`,
+            `Overall Risk: ${report.overallRisk}`,
+            `Approval Likelihood: ${report.approvalLikelihood}`,
+            `Officer Questions: ${messages.filter((m) => m.role === "officer").length}`,
+            `Evaluated Answers: ${evaluations.length}`,
+            "",
+            ...(report.topicsCovered?.length ? [
+                "TOPICS COVERED",
+                "--------------",
+                ...report.topicsCovered.map((t: string) => `✅ ${t.replace(/_/g, ' ')}`),
+                "",
+            ] : []),
+            ...(report.topicsNotCovered?.length ? [
+                "TOPICS NOT COVERED",
+                "------------------",
+                ...report.topicsNotCovered.map((t: string) => `❌ ${t.replace(/_/g, ' ')}`),
+                "",
+            ] : []),
+            "SECTION SCORES (out of 10)",
+            "--------------------------",
+            ...sectionLines,
+            "",
+            "KEY STRENGTHS",
+            "-------------",
+            ...(report.strengths?.length ? report.strengths.map((item) => `- ${item}`) : ["- None"]),
+            "",
+            "AREAS OF CONCERN",
+            "----------------",
+            ...(report.weaknesses?.length ? report.weaknesses.map((item) => `- ${item}`) : ["- None"]),
+            "",
+            "CRITICAL ISSUES",
+            "--------------",
+            ...(report.criticalIssues?.length ? report.criticalIssues.map((item) => `- ${item}`) : ["- None"]),
+            "",
+            "DS-160 INCONSISTENCIES",
+            "----------------------",
+            ...(report.ds160Inconsistencies?.length ? report.ds160Inconsistencies.map((item) => `- ${item}`) : ["- None"]),
+            "",
+            "IMPROVEMENT STRATEGY",
+            "--------------------",
+            ...(report.tips?.length ? report.tips.map((item) => `- ${item}`) : ["- None"]),
+            "",
+            "CONSULAR VERDICT",
+            "----------------",
+            report.verdict || "No verdict provided.",
+        ];
+
+        const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `visa-mock-report-${dateLabel}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.6, type: "spring" }}
-            className="flex flex-col items-center py-20"
+            className="flex flex-col items-center py-12 md:py-16"
         >
-            {/* Report Header */}
-            <div className="text-center mb-16">
-                <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ type: "spring", stiffness: 200, delay: 0.2 }}
-                    className="inline-flex items-center justify-center w-28 h-28 rounded-[40px] mb-8 relative"
-                >
-                    <div className="absolute inset-0 blur-[30px] opacity-40" style={{ background: report.overallScore >= 70 ? "#10b981" : report.overallScore >= 40 ? "#f59e0b" : "#ef4444" }} />
-                    <div className="relative w-full h-full rounded-[40px] border border-white/20 bg-white/5 flex items-center justify-center">
-                        <span className="text-5xl font-black text-white">{report.overallScore}</span>
+            <div className="w-full max-w-5xl bg-white/[0.03] border border-white/10 rounded-[28px] p-6 md:p-8 mb-8">
+                {/* Incomplete interview warning */}
+                {report.interviewComplete === false && (
+                    <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+                        <div className="flex items-center gap-3 mb-2">
+                            <span className="material-symbols-outlined text-amber-400 text-lg">warning</span>
+                            <span className="text-[11px] font-black text-amber-300 uppercase tracking-[0.16em]">Interview Incomplete</span>
+                        </div>
+                        <p className="text-xs text-amber-200/80 font-medium leading-relaxed">
+                            The interview was ended before all topics were covered. The report below is based only on the topics that were discussed. Your overall score has been adjusted to reflect the incomplete coverage.
+                        </p>
+                        {report.topicsNotCovered && report.topicsNotCovered.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                <span className="text-[10px] text-amber-400 font-black uppercase tracking-widest mr-1">Not covered:</span>
+                                {report.topicsNotCovered.map((t: string, i: number) => (
+                                    <span key={i} className="text-[10px] px-2 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 font-bold">
+                                        {t.replace(/_/g, ' ')}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                     </div>
-                </motion.div>
-                <h1 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter mb-4">
-                    SIMULATION <span className="text-[#6605c7] italic">REPORT</span>
-                </h1>
-                <div className={`inline-flex items-center gap-2 px-6 py-2.5 rounded-full border text-[11px] font-black uppercase tracking-[0.2em] ${likelihoodColor}`}>
-                    <span className="material-symbols-outlined text-base">
-                        {report.approvalLikelihood.includes("Likely") && !report.approvalLikelihood.includes("Unlikely") ? "verified" : report.approvalLikelihood === "Uncertain" ? "help" : "error"}
-                    </span>
-                    VISA PROBABILITY: {report.approvalLikelihood}
+                )}
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+                    <div>
+                        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-2">Mock Interview Report</div>
+                        <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">Visa Interview Performance</h1>
+                        <p className="text-sm text-gray-400 mt-2">Comprehensive assessment across 11 interview topics with actionable improvement advice.</p>
+                    </div>
+                    <div className="flex flex-col items-start md:items-end gap-2">
+                        <div className={`text-5xl font-black ${scoreColor}`}>{report.overallScore}<span className="text-base text-gray-500">/100</span></div>
+                        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border text-[11px] font-black uppercase tracking-[0.16em] ${likelihoodColor}`}>
+                            <span className="material-symbols-outlined text-base">
+                                {report.approvalLikelihood.includes("Likely") && !report.approvalLikelihood.includes("Unlikely") ? "verified" : report.approvalLikelihood === "Uncertain" ? "help" : "error"}
+                            </span>
+                            {report.approvalLikelihood}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                    <button
+                        onClick={handleDownloadReport}
+                        className="px-5 py-3 bg-white text-black font-black rounded-2xl text-xs uppercase tracking-[0.15em] transition-all hover:opacity-90 flex items-center justify-center gap-2"
+                    >
+                        <span className="material-symbols-outlined text-base">download</span>
+                        Download Report
+                    </button>
+                    <button
+                        onClick={onRestart}
+                        className="px-5 py-3 bg-white/5 border border-white/10 text-white font-black rounded-2xl text-xs uppercase tracking-[0.15em] transition-all hover:bg-white/10 flex items-center justify-center gap-2"
+                    >
+                        <span className="material-symbols-outlined text-base">replay</span>
+                        New Interview
+                    </button>
                 </div>
             </div>
 
             {/* Score Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 w-full max-w-5xl">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 w-full max-w-5xl">
                 <ReportCard title="OVERALL GRADE" icon="analytics">
-                    <div className="text-6xl font-black text-white">{report.overallScore}
+                    <div className="text-5xl font-black text-white">{report.overallScore}
                         <span className="text-xl text-gray-600 font-bold ml-1">/100</span>
                     </div>
                 </ReportCard>
                 <ReportCard title="RISK INDEX" icon="security">
-                    <div className={`text-4xl font-black uppercase tracking-tighter ${report.overallRisk === "Low" ? "text-green-500" : report.overallRisk === "Medium" ? "text-amber-500" : "text-red-500"
+                    <div className={`text-3xl font-black uppercase tracking-tight ${report.overallRisk === "Low" ? "text-green-500" : report.overallRisk === "Medium" ? "text-amber-500" : "text-red-500"
                         }`}>{report.overallRisk} RISK</div>
                 </ReportCard>
                 <ReportCard title="ENGAGEMENT" icon="forum">
@@ -917,19 +1199,26 @@ function ReportPhase({
 
             {/* Section Scores */}
             {report.sectionScores && (
-                <div className="bg-white/[0.02] border border-white/5 backdrop-blur-3xl rounded-[40px] p-8 mb-8 w-full max-w-5xl">
-                    <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-8 flex items-center gap-3">
+                <div className="bg-white/[0.02] border border-white/10 backdrop-blur-3xl rounded-[24px] p-6 mb-8 w-full max-w-5xl">
+                    <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-6 flex items-center gap-3">
                         <div className="w-1 h-4 bg-[#6605c7] rounded-full" />
-                        SECTION METRICS
+                        Section Metrics
                     </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {Object.entries(report.sectionScores).map(([key, val]) => (
-                            <div key={key} className="p-4 rounded-3xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors group">
-                                <div className={`text-3xl font-black mb-1 ${(val as number) >= 7 ? "text-green-500" : (val as number) >= 4 ? "text-amber-500" : "text-red-500"}`}>
-                                    {(val as number) * 10}
-                                    <span className="text-xs text-gray-600 ml-1">%</span>
+                            <div key={key} className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-colors">
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="text-[11px] text-gray-300 uppercase font-black tracking-[0.08em]">{key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ')}</div>
+                                    <div className={`text-xl font-black ${(val as number) >= 7 ? "text-green-500" : (val as number) >= 4 ? "text-amber-500" : "text-red-500"}`}>
+                                        {(val as number) * 10}%
+                                    </div>
                                 </div>
-                                <div className="text-[9px] text-gray-500 uppercase font-black tracking-widest group-hover:text-white transition-colors">{key.replace(/([A-Z])/g, ' $1')}</div>
+                                <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                                    <div
+                                        className={`h-full rounded-full ${(val as number) >= 7 ? "bg-green-500" : (val as number) >= 4 ? "bg-amber-500" : "bg-red-500"}`}
+                                        style={{ width: `${Math.max(0, Math.min(100, (val as number) * 10))}%` }}
+                                    />
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -937,7 +1226,7 @@ function ReportPhase({
             )}
 
             {/* Detailed Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl mb-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-5xl mb-8">
                 {report.strengths.length > 0 && (
                     <ListCard title="Key Strengths" icon="verified" color="green" items={report.strengths} />
                 )}
@@ -957,8 +1246,8 @@ function ReportPhase({
 
             {/* Verdict */}
             {report.verdict && (
-                <div className="w-full max-w-5xl mb-12">
-                    <div className="bg-gradient-to-br from-[#6605c7]/10 to-transparent border border-[#6605c7]/20 rounded-[40px] p-10 relative overflow-hidden">
+                <div className="w-full max-w-5xl mb-8">
+                    <div className="bg-gradient-to-br from-[#6605c7]/10 to-transparent border border-[#6605c7]/20 rounded-[24px] p-6 md:p-8 relative overflow-hidden">
                         <div className="absolute top-0 right-0 p-8 opacity-5">
                             <span className="material-symbols-outlined text-9xl">gavel</span>
                         </div>
@@ -968,22 +1257,10 @@ function ReportPhase({
                             </div>
                             <span className="text-[10px] font-black text-[#6605c7] uppercase tracking-[0.2em]">CONSULAR VERDICT</span>
                         </div>
-                        <p className="text-lg text-gray-300 leading-relaxed font-medium relative z-10 italic">"{report.verdict}"</p>
+                        <p className="text-base md:text-lg text-gray-300 leading-relaxed font-medium relative z-10">{report.verdict}</p>
                     </div>
                 </div>
             )}
-
-            {/* Action Buttons */}
-            <div className="flex justify-center gap-6">
-                <motion.button
-                    whileHover={{ y: -4, boxShadow: "0 25px 50px -12px rgba(102, 5, 199, 0.5)" }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={onRestart}
-                    className="px-12 py-6 bg-white text-black font-black rounded-[32px] text-sm uppercase tracking-[0.2em] transition-all"
-                >
-                    INITIATE NEW SESSION
-                </motion.button>
-            </div>
         </motion.div>
     );
 }
