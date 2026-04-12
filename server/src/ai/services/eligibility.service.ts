@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { GroqService } from './groq.service';
+import { SupabaseService } from '../../supabase/supabase.service';
 
 export interface EligibilityCheckDto {
   age: number;
@@ -24,7 +25,10 @@ export interface EligibilityResult {
 
 @Injectable()
 export class EligibilityService {
-  constructor(private readonly groq: GroqService) { }
+  constructor(
+    private readonly groq: GroqService,
+    private readonly supabase: SupabaseService,
+  ) {}
 
   async calculateEligibilityScore(data: EligibilityCheckDto): Promise<EligibilityResult> {
     const prompt = `
@@ -64,7 +68,6 @@ export class EligibilityService {
       return await this.groq.getJson<EligibilityResult>(prompt);
     } catch (error) {
       console.error('Eligibility check failed', error);
-      // Fallback
       return {
         score: 50,
         status: 'borderline',
@@ -72,8 +75,32 @@ export class EligibilityService {
         rateRange: '10-15%',
         coverage: 'Unknown',
         summary: 'AI Service Unavailable. Please try again later.',
-        recommendations: ['Check internet connection', 'Try again later']
+        recommendations: ['Check internet connection', 'Try again later'],
       };
     }
   }
+
+  async saveLog(data: any): Promise<void> {
+    try {
+      await this.supabase.getClient().from('LoanEligibilityCheck').insert({
+        age: data.age,
+        credit: data.credit,
+        income: data.income,
+        loan: data.loan,
+        employment: data.employment,
+        study: data.study,
+        coApplicant: data.coApplicant,
+        collateral: data.collateral,
+        score: data.score,
+        status: data.status,
+        rateRange: data.rateRange,
+        coverage: data.coverage,
+        recommendations: data.recommendations,
+        userId: data.userId || null,
+      });
+    } catch (e) {
+      console.error('Failed to save eligibility log:', e);
+    }
+  }
 }
+

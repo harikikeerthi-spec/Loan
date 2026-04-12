@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { CommunityService } from './community.service';
 import { AdminGuard } from '../auth/admin.guard';
+import { StaffGuard } from '../auth/staff.guard';
 import { UserGuard } from '../auth/user.guard';
 import { JwtService } from '@nestjs/jwt';
 
@@ -589,7 +590,7 @@ export class CommunityController {
      * GET /community/admin/stats
      */
     @Get('admin/stats')
-    @UseGuards(AdminGuard)
+    @UseGuards(StaffGuard)
     async getCommunityStats() {
         return this.communityService.getCommunityStats();
     }
@@ -605,7 +606,7 @@ export class CommunityController {
      * GET /community/admin/forum/posts
      */
     @Get('admin/forum/posts')
-    @UseGuards(AdminGuard)
+    @UseGuards(StaffGuard)
     async getAllForumPostsAdmin(
         @Query('category') category?: string,
         @Query('limit') limit?: string,

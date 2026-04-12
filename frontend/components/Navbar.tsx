@@ -135,7 +135,7 @@ export default function Navbar() {
                                         <div>
                                             <h3 className="text-[9px] font-bold uppercase tracking-widest text-purple-500 mb-4 border-b border-purple-500/10 pb-2">Research</h3>
                                             <NavItem href="/compare-universities" icon="school" title="Compare Universities" desc="Find your best fit" color="text-purple-500" />
-                                            <NavItem href="/search-universities" icon="verified" title="GradRight Insights" desc="ROI & Data intelligence" color="text-purple-600 font-black" />
+                                            <NavItem href="/search-universities" icon="verified" title="Insights" desc="ROI & Data intelligence" color="text-purple-600 font-black" />
                                             <div className="px-3 opacity-50">
                                                 <div className="flex items-center gap-2 mt-4">
                                                     <span className="material-symbols-outlined text-sm text-gray-400">paid</span>
@@ -251,6 +251,14 @@ export default function Navbar() {
                             )}
                         </div>
                     )}
+
+                    {/* Apply Now Button */}
+                    <Link
+                        href="/apply-loan"
+                        className="hidden lg:flex items-center justify-center px-5 py-2.5 bg-gradient-to-r from-primary to-purple-600 text-white text-[11px] font-bold uppercase tracking-wider rounded-lg hover:opacity-95 transition-all shadow-md hover:shadow-lg"
+                    >
+                        Apply Now
+                    </Link>
 
                     {/* Mobile hamburger */}
                     <button

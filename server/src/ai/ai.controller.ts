@@ -8,8 +8,7 @@ import { AdmitPredictorService } from './services/admit-predictor.service';
 import { GroqService } from './services/groq.service';
 import { UniversitySearchService, University, UniversityDetails } from './services/university-search.service';
 import { VisaInterviewService, InterviewMessage, EvaluationResult } from './services/visa-interview.service';
-import { Prisma } from '@prisma/client';
-import { PrismaService } from '../prisma/prisma.service';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Controller('ai')
 export class AiController {
@@ -23,7 +22,7 @@ export class AiController {
     private readonly groqService: GroqService,
     private readonly universitySearchService: UniversitySearchService,
     private readonly visaInterviewService: VisaInterviewService,
-    private readonly prisma: PrismaService,
+    private readonly supabase: SupabaseService,
   ) { }
 
   @Post('eligibility-check')
@@ -44,24 +43,21 @@ export class AiController {
     );
 
     try {
-      await this.prisma.loanEligibilityCheck.create({
-        data: {
-          age: Number(data.age) || 0,
-          credit: Number(data.credit) || 0,
-          income: Number(data.income) || 0,
-          loan: Number(data.loan) || 0,
-          employment: String(data.employment || 'unknown'),
-          study: String(data.study || 'unknown'),
-          coApplicant: String(data.coApplicant || 'no'),
-          collateral: String(data.collateral || 'no'),
-          // tracking payload
-          score: eligibilityResult.score,
-          status: eligibilityResult.status,
-          rateRange: eligibilityResult.rateRange,
-          coverage: eligibilityResult.coverage,
-          recommendations: loanRecommendations as unknown as Prisma.InputJsonValue,
-          userId: data.userId || null,
-        }
+      await this.eligibilityService.saveLog({
+        age: Number(data.age) || 0,
+        credit: Number(data.credit) || 0,
+        income: Number(data.income) || 0,
+        loan: Number(data.loan) || 0,
+        employment: String(data.employment || 'unknown'),
+        study: String(data.study || 'unknown'),
+        coApplicant: String(data.coApplicant || 'no'),
+        collateral: String(data.collateral || 'no'),
+        score: eligibilityResult.score,
+        status: eligibilityResult.status,
+        rateRange: eligibilityResult.rateRange,
+        coverage: eligibilityResult.coverage,
+        recommendations: loanRecommendations,
+        userId: data.userId || null,
       });
     } catch (e) {
       console.error('Failed to save loan eligibility record:', e);
@@ -561,8 +557,7 @@ export class AiController {
     },
   ) {
     try {
-      const result = await this.prisma.visaMockInterviewResult.create({
-        data: {
+      const { data: result, error } = await this.supabase.getClient().from('VisaMockInterviewResult').insert({
           userId: data.userId || null,
           visaType: data.visaType,
           agentType: data.agentType || null,
@@ -579,8 +574,8 @@ export class AiController {
           verdict: data.verdict || '',
           messages: data.messages || [],
           evaluations: data.evaluations || [],
-        }
-      });
+      }).select().single();
+      if (error) throw error;
       return { success: true, result };
     } catch (error) {
       console.error('Failed to save visa interview result:', error);

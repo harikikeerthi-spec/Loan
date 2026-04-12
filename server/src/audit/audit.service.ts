@@ -1,140 +1,107 @@
-
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class AuditService {
-    constructor(private prisma: PrismaService) { }
+  private get db() {
+    return this.supabase.getClient();
+  }
 
-    async getRecentActivity(limit = 20) {
-        // Fetch recent activities from multiple sources
-        const [
-            applications,
-            blogs,
-            forumPosts,
-            users,
-            mentors,
-        ] = await Promise.all([
-            // Recent Applications
-            this.prisma.loanApplication.findMany({
-                take: limit,
-                orderBy: { date: 'desc' }, // Used date as per schema
-                select: {
-                    id: true,
-                    applicationNumber: true,
-                    status: true,
-                    date: true,
-                    user: {
-                        select: { firstName: true, lastName: true },
-                    },
-                }
-            }),
-            // Recent Blogs
-            this.prisma.blog.findMany({
-                take: limit,
-                orderBy: { publishedAt: 'desc' },
-                where: { isPublished: true },
-                select: {
-                    id: true,
-                    title: true,
-                    authorName: true,
-                    publishedAt: true,
-                    createdAt: true
-                }
-            }),
-            // Recent Forum Posts
-            this.prisma.forumPost.findMany({
-                take: limit,
-                orderBy: { createdAt: 'desc' },
-                include: {
-                    author: { select: { firstName: true, lastName: true } }
-                }
-            }),
-            // New Users
-            this.prisma.user.findMany({
-                take: limit,
-                orderBy: { createdAt: 'desc' },
-                select: {
-                    id: true,
-                    firstName: true,
-                    lastName: true,
-                    email: true,
-                    createdAt: true
-                }
-            }),
-            // New Mentors
-            this.prisma.mentor.findMany({
-                take: limit,
-                orderBy: { createdAt: 'desc' },
-                select: {
-                    id: true,
-                    name: true,
-                    expertise: true,
-                    createdAt: true
-                }
-            })
-        ]);
+  constructor(private supabase: SupabaseService) {}
 
-        const formatName = (f: string | null, l: string | null) => {
-            return `${f || ''} ${l || ''}`.trim() || 'Unknown User';
-        };
+  async getRecentActivity(limit = 20) {
+    const [
+      { data: applications },
+      { data: blogs },
+      { data: forumPosts },
+      { data: users },
+      { data: mentors },
+    ] = await Promise.all([
+      this.db
+        .from('LoanApplication')
+        .select('id, applicationNumber, status, date, user:User!userId(firstName, lastName)')
+        .order('date', { ascending: false })
+        .limit(limit),
+      this.db
+        .from('Blog')
+        .select('id, title, authorName, publishedAt, createdAt')
+        .eq('isPublished', true)
+        .order('publishedAt', { ascending: false })
+        .limit(limit),
+      this.db
+        .from('ForumPost')
+        .select('id, title, createdAt, author:User!authorId(firstName, lastName)')
+        .order('createdAt', { ascending: false })
+        .limit(limit),
+      this.db
+        .from('User')
+        .select('id, firstName, lastName, email, createdAt')
+        .order('createdAt', { ascending: false })
+        .limit(limit),
+      this.db
+        .from('Mentor')
+        .select('id, name, expertise, createdAt')
+        .order('createdAt', { ascending: false })
+        .limit(limit),
+    ]);
 
-        // Normalize data
-        const activities = [
-            ...applications.map(app => ({
-                id: app.id,
-                type: 'application',
-                title: `Application #${app.applicationNumber}`,
-                description: `${formatName(app.user?.firstName, app.user?.lastName)} - ${app.status}`,
-                status: app.status,
-                date: app.date,
-                link: '#', // TODO: Link to application details
-            })),
-            ...blogs.map(blog => ({
-                id: blog.id,
-                type: 'blog',
-                title: `Blog Published: ${blog.title}`,
-                description: `By ${blog.authorName}`,
-                status: 'published',
-                date: blog.publishedAt || blog.createdAt,
-                link: `/blog/${blog.id}`,
-            })),
-            ...forumPosts.map(post => ({
-                id: post.id,
-                type: 'forum',
-                title: `Forum Post: ${post.title}`,
-                description: `By ${formatName(post.author.firstName, post.author.lastName)}`,
-                status: 'discussion',
-                date: post.createdAt,
-                link: `/community/forum/${post.id}`, // Placeholder
-            })),
-            ...users.map(user => ({
-                id: user.id,
-                type: 'user',
-                title: `New User Joined`,
-                description: `${formatName(user.firstName, user.lastName)} (${user.email})`,
-                status: 'active',
-                date: user.createdAt,
-                link: `/user/${user.id}`,
-            })),
-            ...mentors.map(mentor => ({
-                id: mentor.id,
-                type: 'mentor',
-                title: `New Mentor Profile`,
-                description: `${mentor.name} - ${mentor.expertise.join(', ')}`,
-                status: 'pending',
-                date: mentor.createdAt,
-                link: `/mentor/${mentor.id}`,
-            }))
-        ];
+    const formatName = (f: string | null, l: string | null) =>
+      `${f || ''} ${l || ''}`.trim() || 'Unknown User';
 
-        // Sort by date descending
-        return activities
-            .sort((a, b) => {
-                const dateA = a.date ? new Date(a.date).getTime() : 0;
-                const dateB = b.date ? new Date(b.date).getTime() : 0;
-                return dateB - dateA;
-            })
-            .slice(0, limit);
-    }
+    const activities = [
+      ...(applications || []).map((app: any) => ({
+        id: app.id,
+        type: 'application',
+        title: `Application #${app.applicationNumber}`,
+        description: `${formatName(app.user?.firstName, app.user?.lastName)} - ${app.status}`,
+        status: app.status,
+        date: app.date,
+        link: '#',
+      })),
+      ...(blogs || []).map((blog: any) => ({
+        id: blog.id,
+        type: 'blog',
+        title: `Blog Published: ${blog.title}`,
+        description: `By ${blog.authorName}`,
+        status: 'published',
+        date: blog.publishedAt || blog.createdAt,
+        link: `/blog/${blog.id}`,
+      })),
+      ...(forumPosts || []).map((post: any) => ({
+        id: post.id,
+        type: 'forum',
+        title: `Forum Post: ${post.title}`,
+        description: `By ${formatName(post.author?.firstName, post.author?.lastName)}`,
+        status: 'discussion',
+        date: post.createdAt,
+        link: `/community/forum/${post.id}`,
+      })),
+      ...(users || []).map((user: any) => ({
+        id: user.id,
+        type: 'user',
+        title: `New User Joined`,
+        description: `${formatName(user.firstName, user.lastName)} (${user.email})`,
+        status: 'active',
+        date: user.createdAt,
+        link: `/user/${user.id}`,
+      })),
+      ...(mentors || []).map((mentor: any) => ({
+        id: mentor.id,
+        type: 'mentor',
+        title: `New Mentor Profile`,
+        description: `${mentor.name} - ${(mentor.expertise || []).join(', ')}`,
+        status: 'pending',
+        date: mentor.createdAt,
+        link: `/mentor/${mentor.id}`,
+      })),
+    ];
+
+    return activities
+      .sort((a, b) => {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateB - dateA;
+      })
+      .slice(0, limit);
+  }
 }

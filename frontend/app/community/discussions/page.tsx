@@ -83,7 +83,7 @@ function DiscussionsInner() {
     const [offset, setOffset] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [createOpen, setCreateOpen] = useState(false);
-    const [mentorTip] = useState(MENTOR_TIPS[Math.floor(Math.random() * MENTOR_TIPS.length)]);
+    const [mentorTip, setMentorTip] = useState(MENTOR_TIPS[0]);
     const LIMIT = 15;
 
     const CATEGORIES = [
@@ -126,6 +126,10 @@ function DiscussionsInner() {
         },
         [category, sort, offset]
     );
+
+    useEffect(() => {
+        setMentorTip(MENTOR_TIPS[Math.floor(Math.random() * MENTOR_TIPS.length)]);
+    }, []);
 
     useEffect(() => {
         fetchPosts(true);

@@ -1,141 +1,80 @@
-import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { User } from '@prisma/client';
+import { Injectable } from '@nestjs/common';
+import { SupabaseService } from '../supabase/supabase.service';
+
+// Simple User type (replaces @prisma/client User)
+export type AppUser = {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  role: string;
+  [key: string]: any;
+};
 
 @Injectable()
 export class AuthorizationService {
-  constructor(private prisma: PrismaService) {}
+  private get db() {
+    return this.supabase.getClient();
+  }
 
-  /**
-   * Check if user can edit a blog
-   */
-  async canEditBlog(blogId: string, user: User): Promise<boolean> {
-    const blog = await this.prisma.blog.findUnique({
-      where: { id: blogId },
-      select: { authorId: true },
-    });
+  constructor(private supabase: SupabaseService) {}
 
-    if (!blog) {
-      throw new NotFoundException('Blog not found');
-    }
+  async canEditBlog(blogId: string, user: AppUser): Promise<boolean> {
+    const { data: blog } = await this.db
+      .from('Blog')
+      .select('authorId')
+      .eq('id', blogId)
+      .single();
 
-    // Super admin can edit any blog
-    if (user.role === 'super_admin') {
-      return true;
-    }
+    if (!blog) throw new Error('Blog not found');
 
-    // Regular admin can only edit own blogs
+    if (user.role === 'super_admin') return true;
+
     if (blog.authorId !== user.id) {
-      throw new ForbiddenException('Cannot edit another admin\'s blog');
+      throw new Error("Cannot edit another admin's blog");
     }
 
     return true;
   }
 
-  /**
-   * Check if user can view a blog (in admin context)
-   */
-  async canViewBlog(blogId: string, user: User): Promise<boolean> {
-    const blog = await this.prisma.blog.findUnique({
-      where: { id: blogId },
-      select: { authorId: true, status: true, visibility: true },
-    });
+  async canViewBlog(blogId: string, user: AppUser): Promise<boolean> {
+    const { data: blog } = await this.db
+      .from('Blog')
+      .select('authorId, status, visibility')
+      .eq('id', blogId)
+      .single();
 
-    if (!blog) {
-      return false;
-    }
-
-    // Super admin can view any blog
-    if (user.role === 'super_admin') {
-      return true;
-    }
-
-    // Own blog: view all statuses
-    if (blog.authorId === user.id) {
-      return true;
-    }
-
-    // Other admin's blog: only view if published
-    if (blog.status === 'published' && blog.visibility === 'public') {
-      return true;
-    }
-
+    if (!blog) return false;
+    if (user.role === 'super_admin') return true;
+    if (blog.authorId === user.id) return true;
+    if (blog.status === 'published' && blog.visibility === 'public') return true;
     return false;
   }
 
-  /**
-   * Check if user can delete a blog
-   */
-  async canDeleteBlog(blogId: string, user: User): Promise<boolean> {
-    const blog = await this.prisma.blog.findUnique({
-      where: { id: blogId },
-      select: { authorId: true },
-    });
+  async canDeleteBlog(blogId: string, user: AppUser): Promise<boolean> {
+    const { data: blog } = await this.db
+      .from('Blog')
+      .select('authorId')
+      .eq('id', blogId)
+      .single();
 
-    if (!blog) {
-      throw new NotFoundException('Blog not found');
-    }
-
-    // Super admin can delete any blog
-    if (user.role === 'super_admin') {
-      return true;
-    }
-
-    // Regular admin can only delete own blogs
+    if (!blog) throw new Error('Blog not found');
+    if (user.role === 'super_admin') return true;
     if (blog.authorId !== user.id) {
-      throw new ForbiddenException('Cannot delete another admin\'s blog');
+      throw new Error("Cannot delete another admin's blog");
     }
-
     return true;
   }
 
-  /**
-   * Get visibility filters for blog queries (scoped to user's permissions)
-   */
-  getVisibilityFilter(user: User, scope?: 'own' | 'other' | 'all') {
-    if (user.role === 'super_admin') {
-      // Super admin sees all
-      return {};
-    }
-
-    if (scope === 'own') {
-      return { authorId: user.id };
-    }
-
-    if (scope === 'other') {
-      return {
-        authorId: { not: user.id },
-        isPublished: true,
-        visibility: 'public',
-      };
-    }
-
-    if (scope === 'all') {
-      return {
-        OR: [
-          { authorId: user.id },
-          {
-            AND: [
-              { authorId: { not: user.id } },
-              { isPublished: true },
-              { visibility: 'public' },
-            ],
-          },
-        ],
-      };
-    }
-
-    return {};
+  getVisibilityFilter(user: AppUser, scope?: 'own' | 'other' | 'all') {
+    // Returns a filter descriptor for Supabase usage in the calling service
+    return { role: user.role, userId: user.id, scope };
   }
 
-  /**
-   * Get filter for public blog listing (no auth required)
-   */
   getPublicFilter() {
     return {
       isPublished: true,
       visibility: 'public',
-      publishedAt: { lte: new Date() }, // Embargo support
     };
   }
 }

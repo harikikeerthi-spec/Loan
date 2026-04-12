@@ -69,7 +69,7 @@ export class UsersController {
                 message: 'Email and role are required',
             };
         }
-        const allowedRoles = ['admin', 'user'];
+        const allowedRoles = ['admin', 'user', 'staff', 'super_admin'];
         if (!allowedRoles.includes(body.role)) {
             return {
                 success: false,
@@ -85,7 +85,7 @@ export class UsersController {
             };
         }
 
-        const updated = await this.usersService.updateUserRole(body.email, body.role as 'admin' | 'user');
+        const updated = await this.usersService.updateUserRole(body.email, body.role as any);
         return {
             success: true,
             message: `User ${body.email} role updated to '${body.role}'`,

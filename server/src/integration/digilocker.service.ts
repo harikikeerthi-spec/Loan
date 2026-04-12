@@ -10,10 +10,13 @@ export interface VerificationResult {
 
 @Injectable()
 export class DigilockerService {
-    private readonly authUrl = 'https://digilocker.meripehchaan.gov.in/public/oauth2/1/authorize';
-    private readonly tokenUrl = 'https://digilocker.meripehchaan.gov.in/public/oauth2/1/token';
-    private readonly documentsUrl = 'https://digilocker.meripehchaan.gov.in/public/api/documents';
-    private readonly fileDownloadUrl = 'https://digilocker.meripehchaan.gov.in/public/api/files';
+    // DigiLocker Production API base
+    private readonly baseUrl = 'https://api.digitallocker.gov.in';
+    private readonly authUrl = 'https://api.digitallocker.gov.in/public/oauth2/1/authorize';
+    private readonly tokenUrl = 'https://api.digitallocker.gov.in/public/oauth2/1/token';
+    // Issued documents endpoint (v2)
+    private readonly issuedDocsUrl = 'https://api.digitallocker.gov.in/public/oauth2/2/files/issued';
+
     private readonly clientId = process.env.DIGILOCKER_CLIENT_ID;
     private readonly clientSecret = process.env.DIGILOCKER_CLIENT_SECRET;
 
@@ -21,14 +24,22 @@ export class DigilockerService {
      * Generate the DigiLocker authorization URL.
      */
     getAuthUrl(state: string, redirectUri: string, codeChallenge: string): string {
-        return `${this.authUrl}?response_type=code&client_id=${this.clientId || ''}&state=${encodeURIComponent(state)}&redirect_uri=${encodeURIComponent(redirectUri)}&code_challenge=${encodeURIComponent(codeChallenge)}&code_challenge_method=S256`;
+        const params = new URLSearchParams({
+            response_type: 'code',
+            client_id: this.clientId || '',
+            redirect_uri: redirectUri,
+            state: state,
+            code_challenge: codeChallenge,
+            code_challenge_method: 'S256',
+        });
+        return `${this.authUrl}?${params.toString()}`;
     }
 
     /**
      * Exchange the authorization code for an access token
      */
     async getAccessToken(code: string, redirectUri: string, codeVerifier?: string): Promise<any> {
-        console.log('DIGILOCKER_DEBUG: Exchanging code for token.');
+        console.log('DIGILOCKER_DEBUG: Exchanging code for token...');
 
         const bodyParams: Record<string, string> = {
             grant_type: 'authorization_code',
@@ -43,7 +54,8 @@ export class DigilockerService {
         }
 
         const body = new URLSearchParams(bodyParams).toString();
-        console.log('DIGILOCKER_DEBUG: Token Request Body (masked):', body.replace(this.clientSecret || 'SECRET', '****'));
+        console.log('DIGILOCKER_DEBUG: Token Request to:', this.tokenUrl);
+        console.log('DIGILOCKER_DEBUG: redirect_uri used:', redirectUri);
 
         const response = await fetch(this.tokenUrl, {
             method: 'POST',
@@ -55,25 +67,27 @@ export class DigilockerService {
 
         if (!response.ok) {
             const err = await response.text();
-            console.error('DIGILOCKER_DEBUG: DigiLocker Token exchange failed:', err);
+            console.error('DIGILOCKER_DEBUG: Token exchange failed:', err);
             throw new Error(`DigiLocker Token Error: ${err}`);
         }
 
         const data = await response.json();
-        console.log('DIGILOCKER_DEBUG: Token exchange success.');
+        console.log('DIGILOCKER_DEBUG: Token exchange success. access_token present:', !!data.access_token);
         return data;
     }
 
     /**
-     * Get a list of documents from the official DigiLocker Requestor API.
+     * Get the list of issued documents from DigiLocker.
+     * Real API response: { items: [{ uri, name, doctype, issuerid, date, description, ... }] }
      */
     async listDocuments(token: string): Promise<any[]> {
-        console.log('DIGILOCKER_DEBUG: Fetching documents...');
-        const response = await fetch(this.documentsUrl, {
+        console.log('DIGILOCKER_DEBUG: Fetching issued documents from:', this.issuedDocsUrl);
+
+        const response = await fetch(this.issuedDocsUrl, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${token}`,
-                'Accept': 'application/json'
+                'Accept': 'application/json',
             }
         });
 
@@ -84,32 +98,36 @@ export class DigilockerService {
         }
 
         const data: any = await response.json();
-        console.log('DIGILOCKER_DEBUG: raw documents response:', JSON.stringify(data, null, 2));
+        console.log('DIGILOCKER_DEBUG: Raw documents response:', JSON.stringify(data, null, 2));
 
-        // Helper to extract array from various possible DigiLocker response formats
-        const extractArray = (data: any): any[] => {
-            if (Array.isArray(data)) return data;
-            if (Array.isArray(data?.items)) return data.items;
-            if (Array.isArray(data?.documents)) return data.documents;
-            if (Array.isArray(data?.issued_documents)) return data.issued_documents;
-            if (Array.isArray(data?.issuedDocuments)) return data.issuedDocuments;
-            if (Array.isArray(data?.result?.items)) return data.result.items;
+        // Real API returns: { items: [{ uri, name, doctype, issuerid, ... }] }
+        const extractArray = (resp: any): any[] => {
+            if (Array.isArray(resp)) return resp;
+            if (Array.isArray(resp?.items)) return resp.items;
+            if (Array.isArray(resp?.documents)) return resp.documents;
+            if (Array.isArray(resp?.issued_documents)) return resp.issued_documents;
+            if (Array.isArray(resp?.issuedDocuments)) return resp.issuedDocuments;
+            if (Array.isArray(resp?.result?.items)) return resp.result.items;
             return [];
         };
 
         const allDocs = extractArray(data);
-        console.log(`DIGILOCKER_DEBUG: Total documents found: ${allDocs.length}`);
+        console.log(`DIGILOCKER_DEBUG: Total issued documents: ${allDocs.length}`);
+        allDocs.forEach((d, i) => {
+            console.log(`  [${i}] doctype="${d.doctype || d.type}" name="${d.name}" uri="${d.uri}"`);
+        });
         return allDocs;
     }
 
     /**
-     * Download a specific document file from DigiLocker
+     * Download a specific document file from DigiLocker by URI
      */
     async downloadDocument(token: string, uri: string): Promise<Buffer> {
-        const response = await fetch(`${this.fileDownloadUrl}/${encodeURIComponent(uri)}`, {
+        const url = `${this.baseUrl}/public/oauth2/1/file/${encodeURIComponent(uri)}`;
+        const response = await fetch(url, {
             headers: {
                 'Authorization': `Bearer ${token}`,
-                'Accept': 'application/pdf'
+                'Accept': 'application/pdf',
             }
         });
 
@@ -126,7 +144,7 @@ export class DigilockerService {
         try {
             const docs = await this.listDocuments(token);
 
-            // Map types to DigiLocker types
+            // Map internal doc types to DigiLocker doctype field values
             const typeMap: Record<string, string> = {
                 'pan_student': 'PANCR',
                 'pan_coapp': 'PANCR',
@@ -136,37 +154,31 @@ export class DigilockerService {
                 'aadhar_coapp': 'ADHAR',
                 'aadhar_father': 'ADHAR',
                 'aadhar_mother': 'ADHAR',
-                'marksheet_10th': '10TH',
-                'marksheet_12th': '12TH',
+                'marksheet_10th': 'HSCER',
+                'marksheet_12th': 'HSCER',
                 'passport': 'PASPT',
-                'degree_certificate': 'DGCTR',
-                'graduation_marksheet': 'MKST',
+                'marksheet_degree': 'DGCTR',
                 'btech_degree': 'DGCTR',
-                'intermediate_marksheet': 'HSCER'
-            };
-
-            // Add back-mappings to ensure flexibility (e.g. if docType is already DGCTR)
-            const fallbackDlType = docType.toUpperCase();
-            const alternateDlTypeMap: Record<string, string> = {
-                'SSCER': '10TH',
-                'HSCER': '12TH',
-                'DGCTR': 'DGCTR',
-                'MKST': 'MKST'
+                'graduation_marksheet': 'MKST',
             };
 
             const targetDlType = typeMap[docType] || docType.toUpperCase();
-            const doc = docs.find((item: any) => item.type === targetDlType);
+            const doc = docs.find((item: any) =>
+                (item.doctype || '').toUpperCase() === targetDlType ||
+                (item.type || '').toUpperCase() === targetDlType
+            );
 
             if (doc) {
                 return {
                     isValid: true,
-                    txId: doc.id || 'DGL-' + Math.random().toString(36).substring(7),
+                    txId: doc.uri || 'DGL-' + Math.random().toString(36).substring(7),
                     code: 'VERIFIED_DIGILOCKER',
                     details: {
                         source: 'DigiLocker',
-                        document_name: doc.name,
+                        document_name: doc.name || doc.description,
+                        issuer: doc.issuerid,
                         status: 'Issued',
-                        verified_at: new Date().toISOString()
+                        verified_at: new Date().toISOString(),
                     }
                 };
             }
@@ -174,7 +186,7 @@ export class DigilockerService {
             return {
                 isValid: false,
                 code: 'DOC_NOT_FOUND',
-                details: { message: `We couldn't find a valid ${docType} in your DigiLocker account.` }
+                details: { message: `Could not find ${docType} in your DigiLocker account.` }
             };
         } catch (error) {
             return {

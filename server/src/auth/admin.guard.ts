@@ -40,9 +40,10 @@ export class AdminGuard implements CanActivate {
                 throw new UnauthorizedException('User not found');
             }
 
-            // Check if user is admin or super_admin
-            if (user.role !== 'admin' && user.role !== 'super_admin') {
-                throw new ForbiddenException('Access denied. Admin privileges required.');
+            // Check if user is admin, super_admin, staff, or bank
+            const allowedRoles = ['admin', 'super_admin', 'staff', 'bank', 'partner_bank'];
+            if (!allowedRoles.includes(user.role)) {
+                throw new ForbiddenException('Access denied. Elevated privileges required.');
             }
 
             // Attach user to request for use in controllers

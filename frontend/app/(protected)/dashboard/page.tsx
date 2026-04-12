@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
-import { authApi } from "@/lib/api";
+import { authApi, chatApi } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import ProgressTracker from "@/components/ProgressTracker";
 
@@ -39,6 +39,10 @@ interface DashboardData {
         timestamp: string;
         link?: string;
     }>;
+}
+
+interface ChatConnectResponse {
+    whatsappUrl?: string;
 }
 
 export default function DashboardPage() {
@@ -152,6 +156,25 @@ export default function DashboardPage() {
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-3">
+                            <button 
+                                onClick={async () => {
+                                    try {
+                                        const res = await chatApi.connect() as ChatConnectResponse;
+                                        const whatsappUrl = res?.whatsappUrl;
+                                        if (whatsappUrl) {
+                                            window.open(whatsappUrl, '_blank');
+                                            return;
+                                        }
+                                        window.open(`https://wa.me/${process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER || '+14155238886'}`, '_blank');
+                                    } catch (e) {
+                                        window.open(`https://wa.me/${process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER || '+14155238886'}`, '_blank');
+                                    }
+                                }}
+                                className="px-5 py-2.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-all shadow-sm flex items-center gap-2"
+                            >
+                                <span className="material-symbols-outlined text-sm">chat</span>
+                                Connect with Support
+                            </button>
                             <Link href="/apply-loan" className="px-5 py-2.5 bg-[#6605c7] text-white text-xs font-bold rounded-lg hover:bg-[#5504a8] transition-all shadow-sm">
                                 Apply for Loan
                             </Link>

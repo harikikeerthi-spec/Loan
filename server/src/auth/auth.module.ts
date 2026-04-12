@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersModule } from '../users/users.module';
 import { EmailService } from './email.service';
@@ -7,13 +7,18 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AdminGuard } from './admin.guard';
 import { SuperAdminGuard } from './super-admin.guard';
+import { StaffGuard } from './staff.guard';
 import { AuthorizationService } from './authorization.service';
 import { AuditLogService } from './audit-log.service';
-import { PrismaService } from '../prisma/prisma.service';
+
 import { UserGuard } from './user.guard';
+import { ReferralModule } from '../referral/referral.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
+    EventEmitterModule,
+    forwardRef(() => ReferralModule),
     UsersModule,
     ConfigModule,
     JwtModule.registerAsync({
@@ -33,9 +38,10 @@ import { UserGuard } from './user.guard';
     EmailService,
     AdminGuard,
     SuperAdminGuard,
+    StaffGuard,
     AuthorizationService,
     AuditLogService,
-    PrismaService,
+
     UserGuard,
   ],
   exports: [
@@ -44,6 +50,7 @@ import { UserGuard } from './user.guard';
     UsersModule,
     AdminGuard,
     SuperAdminGuard,
+    StaffGuard,
     AuthorizationService,
     AuditLogService,
     UserGuard,

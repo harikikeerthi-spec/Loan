@@ -1,110 +1,73 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { User } from '@prisma/client';
+import { SupabaseService } from '../supabase/supabase.service';
+
+export type AppUser = {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  role?: string;
+  [key: string]: any;
+};
 
 @Injectable()
 export class AuditLogService {
-  constructor(private prisma: PrismaService) {}
+  private get db() {
+    return this.supabase.getClient();
+  }
 
-  /**
-   * Create an audit log entry
-   */
+  constructor(private supabase: SupabaseService) {}
+
   async logAction(
     action: string,
     entityType: string,
     entityId: string,
-    user: User,
+    user: AppUser,
     changes: any,
     request?: any,
   ) {
     try {
-      await this.prisma.auditLog.create({
-        data: {
-          action,
-          entityType,
-          entityId,
-          initiatedBy: user.id,
-          changes: changes || {},
-          ipAddress: request?.ip || null,
-          userAgent: request?.get?.('user-agent') || null,
-        },
+      await this.db.from('AuditLog').insert({
+        action,
+        entityType,
+        entityId,
+        initiatedBy: user.id,
+        changes: changes || {},
+        ipAddress: request?.ip || null,
+        userAgent: request?.get?.('user-agent') || null,
       });
     } catch (error) {
-      // Log errors but don't throw - audit logging should not break the operation
       console.error('Failed to create audit log:', error);
     }
   }
 
-  /**
-   * Get audit logs for an entity (blog, user, etc.)
-   */
   async getEntityLogs(entityType: string, entityId: string, limit: number = 50) {
-    return this.prisma.auditLog.findMany({
-      where: {
-        entityType,
-        entityId,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      take: limit,
-      select: {
-        id: true,
-        action: true,
-        initiatedBy: true,
-        initiator: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        changes: true,
-        createdAt: true,
-      },
-    });
+    const { data } = await this.db
+      .from('AuditLog')
+      .select('id, action, initiatedBy, changes, createdAt, initiator:User!initiatedBy(firstName, lastName, email)')
+      .eq('entityType', entityType)
+      .eq('entityId', entityId)
+      .order('createdAt', { ascending: false })
+      .limit(limit);
+    return data || [];
   }
 
-  /**
-   * Get all audit logs (super admin only)
-   */
   async getAllLogs(
     entityType?: string,
     initiatedBy?: string,
     limit: number = 100,
     offset: number = 0,
   ) {
-    const where: any = {};
+    let query = this.db
+      .from('AuditLog')
+      .select('id, action, entityType, entityId, createdAt, initiator:User!initiatedBy(firstName, lastName, email)')
+      .order('createdAt', { ascending: false })
+      .range(offset, offset + limit - 1);
 
-    if (entityType) {
-      where.entityType = entityType;
-    }
+    if (entityType) query = query.eq('entityType', entityType);
+    if (initiatedBy) query = query.eq('initiatedBy', initiatedBy);
 
-    if (initiatedBy) {
-      where.initiatedBy = initiatedBy;
-    }
-
-    return this.prisma.auditLog.findMany({
-      where,
-      orderBy: {
-        createdAt: 'desc',
-      },
-      skip: offset,
-      take: limit,
-      select: {
-        id: true,
-        action: true,
-        entityType: true,
-        entityId: true,
-        initiator: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        createdAt: true,
-      },
-    });
+    const { data } = await query;
+    return data || [];
   }
 }

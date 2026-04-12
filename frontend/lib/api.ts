@@ -62,11 +62,11 @@ export const authApi = {
             body: JSON.stringify({ email }),
         }).then(handleResponse),
 
-    verifyOtp: (email: string, otp: string) =>
+    verifyOtp: (email: string, otp: string, referralCode?: string) =>
         fetch(`${API_URL}/auth/verify-otp`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, otp }),
+            body: JSON.stringify({ email, otp, referralCode }),
         }).then(handleResponse),
 
     refresh: (refreshToken: string) =>
@@ -453,6 +453,13 @@ export const referralApi = {
         fetch(`${API_URL}/referral/leaderboard?limit=${limit}`, {
             headers: authHeaders(),
         }).then(handleResponse),
+
+    // Record a visit to a referral link
+    recordVisit: (code: string) =>
+        fetch(`${API_URL}/referral/visit/${code}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+        }).then(handleResponse),
 };
 
 // ─── Admin ────────────────────────────────────────────────────────────
@@ -595,3 +602,23 @@ export const universityApi = {
             headers: authHeaders(),
         }).then(res => handleResponse<{ exists: boolean }>(res)),
 };
+
+// ─── Chat ─────────────────────────────────────────────────────────────
+export const chatApi = {
+    connect: () =>
+        fetch(`${API_URL}/chat/connect`, {
+            method: "POST",
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    getConversations: () =>
+        fetch(`${API_URL}/chat/conversations`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    getMessages: (conversationId: string) =>
+        fetch(`${API_URL}/chat/messages/${conversationId}`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+};
+

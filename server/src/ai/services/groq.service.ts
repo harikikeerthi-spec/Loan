@@ -17,7 +17,7 @@ export class GroqService {
             messages: [
                 { role: 'user', content: prompt }
             ],
-            max_tokens: 4096, // Ensure we don't truncate large JSONs
+            max_tokens: 2048, // Ensure we don't truncate large JSONs
         };
 
         const maskedKey = this.apiKey ? `${this.apiKey.slice(0, 4)}...${this.apiKey.slice(-4)} (len ${this.apiKey.length})` : '[NOT SET]';
@@ -84,7 +84,7 @@ export class GroqService {
                     model: model,
                     messages: [{ role: 'user', content: jsonPrompt }],
                     response_format: { type: "json_object" },
-                    max_tokens: 4096,
+                    max_tokens: 2048,
                 }),
             });
 

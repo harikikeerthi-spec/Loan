@@ -23,6 +23,7 @@ import type { Response } from 'express';
 import { ApplicationService } from './application.service';
 import { UserGuard } from '../auth/user.guard';
 import { AdminGuard } from '../auth/admin.guard';
+import { StaffGuard } from '../auth/staff.guard';
 
 // Multer configuration for application documents
 const storage = diskStorage({
@@ -267,7 +268,7 @@ export class ApplicationController {
      * @query sortOrder - Sort order (asc/desc)
      */
     @Get('admin/all')
-    @UseGuards(AdminGuard)
+    @UseGuards(StaffGuard)
     async getAllApplications(
         @Query('status') status?: string,
         @Query('stage') stage?: string,
@@ -301,7 +302,7 @@ export class ApplicationController {
      * GET /applications/admin/stats
      */
     @Get('admin/stats')
-    @UseGuards(AdminGuard)
+    @UseGuards(StaffGuard)
     async getApplicationStats() {
         return this.applicationService.getApplicationStats();
     }
@@ -311,7 +312,7 @@ export class ApplicationController {
      * PUT /applications/admin/:id/status
      */
     @Put('admin/:id/status')
-    @UseGuards(AdminGuard)
+    @UseGuards(StaffGuard)
     async updateApplicationStatus(
         @Request() req,
         @Param('id') id: string,
@@ -332,7 +333,7 @@ export class ApplicationController {
      * POST /applications/admin/:id/ai-review
      */
     @Post('admin/:id/ai-review')
-    @UseGuards(AdminGuard)
+    @UseGuards(StaffGuard)
     async aiReviewApplication(
         @Request() req,
         @Param('id') id: string,
@@ -352,7 +353,7 @@ export class ApplicationController {
      * GET /applications/admin/:id/documents
      */
     @Get('admin/:id/documents')
-    @UseGuards(AdminGuard)
+    @UseGuards(StaffGuard)
     async getDocumentsAdmin(@Param('id') id: string) {
         return this.applicationService.getApplicationDocuments(id);
     }
@@ -362,7 +363,7 @@ export class ApplicationController {
      * GET /applications/admin/:id/documents/:documentId/view
      */
     @Get('admin/:id/documents/:documentId/view')
-    @UseGuards(AdminGuard)
+    @UseGuards(StaffGuard)
     async viewDocumentAdmin(
         @Param('id') applicationId: string,
         @Param('documentId') documentId: string,
@@ -388,7 +389,7 @@ export class ApplicationController {
      * PUT /applications/admin/documents/:documentId/verify
      */
     @Put('admin/documents/:documentId/verify')
-    @UseGuards(AdminGuard)
+    @UseGuards(StaffGuard)
     async verifyDocument(
         @Request() req,
         @Param('documentId') documentId: string,
@@ -405,7 +406,7 @@ export class ApplicationController {
      * GET /applications/admin/:id/tracking
      */
     @Get('admin/:id/tracking')
-    @UseGuards(AdminGuard)
+    @UseGuards(StaffGuard)
     async getTrackingAdmin(@Param('id') id: string) {
         return this.applicationService.getApplicationTracking(id);
     }
@@ -415,7 +416,7 @@ export class ApplicationController {
      * GET /applications/admin/:id/notes
      */
     @Get('admin/:id/notes')
-    @UseGuards(AdminGuard)
+    @UseGuards(StaffGuard)
     async getApplicationNotes(@Param('id') id: string) {
         return this.applicationService.getApplicationNotes(id, true);
     }
@@ -425,7 +426,7 @@ export class ApplicationController {
      * POST /applications/admin/:id/notes
      */
     @Post('admin/:id/notes')
-    @UseGuards(AdminGuard)
+    @UseGuards(StaffGuard)
     async addApplicationNote(
         @Request() req,
         @Param('id') id: string,

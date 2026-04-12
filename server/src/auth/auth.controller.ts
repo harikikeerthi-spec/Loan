@@ -1,12 +1,14 @@
 import { Controller, Post, Body, Get, Param, Delete } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
+import { ReferralService } from '../referral/referral.service';
 
 @Controller('auth')
 export class AuthController {
   constructor(
     private authService: AuthService,
     private usersService: UsersService,
+    private referralService: ReferralService,
   ) { }
 
   /**
@@ -57,14 +59,25 @@ export class AuthController {
    * - If userExists: false → Navigate to user-details.html (new user)
    */
   @Post('verify-otp')
-  async verifyOtp(@Body() body: { email: string; otp: string }) {
+  async verifyOtp(@Body() body: { email: string; otp: string; referralCode?: string }) {
     if (!body || !body.email || !body.otp) {
       return {
         success: false,
         message: 'Email and OTP are both required',
       };
     }
-    return this.authService.verifyOtpUnified(body.email, body.otp);
+    const result = await this.authService.verifyOtpUnified(body.email, body.otp);
+    
+    // If signup is successful and a referral code is provided, record it
+    if (result.success && !result.userExists && body.referralCode) {
+      try {
+        await this.referralService.recordReferral(body.referralCode, body.email, result.userId);
+      } catch (error) {
+        console.error('Failed to record referral during signup:', error);
+      }
+    }
+    
+    return result;
   }
 
   /**

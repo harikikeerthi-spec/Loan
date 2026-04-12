@@ -9,6 +9,22 @@ interface VoiceProfile {
     avoidHints?: RegExp[];
 }
 
+function hasAnyHint(value: string, hints: RegExp[]): boolean {
+    return hints.some((hint) => hint.test(value));
+}
+
+function matchesPreferredGender(voice: SpeechSynthesisVoice, preferredGender: "male" | "female"): boolean {
+    const searchable = `${voice.name} ${voice.voiceURI}`;
+    const hasFemale = hasAnyHint(searchable, FEMALE_HINTS);
+    const hasMale = hasAnyHint(searchable, MALE_HINTS);
+
+    if (preferredGender === "female") {
+        return hasFemale && !hasMale;
+    }
+
+    return hasMale && !hasFemale;
+}
+
 const NATURAL_QUALITY_HINTS = [
     /natural/i,
     /neural/i,
@@ -228,7 +244,14 @@ export function buildConsularVoiceMap(
 
     for (const agentKey of pickOrder) {
         const profile = VOICE_PROFILES[agentKey];
-        const ranked = [...candidates].sort(
+        const strictGenderCandidates = candidates.filter((voice) =>
+            matchesPreferredGender(voice, profile.preferredGender),
+        );
+
+        // Prefer strict gender-matched voices first, then gracefully fall back if unavailable.
+        const pool = strictGenderCandidates.length ? strictGenderCandidates : candidates;
+
+        const ranked = [...pool].sort(
             (a, b) => scoreVoice(b, profile) - scoreVoice(a, profile),
         );
 
@@ -250,7 +273,12 @@ export function getConsularVoice(
     voiceMap?: Record<string, SpeechSynthesisVoice | null>,
 ): SpeechSynthesisVoice | null {
     const map = voiceMap || buildConsularVoiceMap(voices);
+    const targetProfile = VOICE_PROFILES[agentType as KnownConsularAgent];
+    const genderMatchedFallback = targetProfile
+        ? voices.find((voice) => matchesPreferredGender(voice, targetProfile.preferredGender)) || null
+        : null;
     const fallbackVoice =
+        genderMatchedFallback ||
         map.agent_michael ||
         voices.find((voice) => voice.lang.toLowerCase().startsWith("en")) ||
         voices[0] ||

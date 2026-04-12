@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config'; // ← add this
+import { ConfigModule } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
-import { PrismaModule } from './prisma/prisma.module';
+import { SupabaseModule } from './supabase/supabase.module';
 import { BlogModule } from './blog/blog.module';
 import { DocumentModule } from './document/document.module';
 import { AiModule } from './ai/ai.module';
@@ -18,17 +19,19 @@ import { AuditModule } from './audit/audit.module';
 import { ReferralModule } from './referral/referral.module';
 import { ConnectedModule } from './connected/connected.module';
 import { UniversityModule } from './university/university.module';
+import { ChatModule } from './chat/chat.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true }), // ← add this as the FIRST import
+    ConfigModule.forRoot({ isGlobal: true }),
+    EventEmitterModule.forRoot(),
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'uploads'),
       serveRoot: '/uploads',
     }),
-    PrismaModule,
+    SupabaseModule,
     AuthModule,
     UsersModule,
     BlogModule,
@@ -44,6 +47,7 @@ import { join } from 'path';
     ReferralModule,
     ConnectedModule,
     UniversityModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],

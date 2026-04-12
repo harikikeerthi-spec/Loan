@@ -175,4 +175,24 @@ export class ReferralController {
       );
     }
   }
+
+  /**
+   * POST /referral/visit/:code
+   * Record a click/visit on a referral link (public endpoint)
+   */
+  @Post('visit/:code')
+  async recordVisit(
+    @Param('code') code: string,
+    @Req() req: any,
+  ) {
+    try {
+      const ip = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+      const userAgent = req.headers['user-agent'];
+      await this.referralService.recordVisit(code, ip, userAgent);
+      return { success: true };
+    } catch (error) {
+      // Don't fail the visit just because recording it failed
+      return { success: false, message: error.message };
+    }
+  }
 }

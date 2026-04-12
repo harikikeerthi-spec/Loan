@@ -1,10 +1,10 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ReferralService } from './referral.service';
 import { ReferralController } from './referral.controller';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({
-  imports: [AuthModule],
+  imports: [forwardRef(() => AuthModule)],
   controllers: [ReferralController],
   providers: [ReferralService],
   exports: [ReferralService],

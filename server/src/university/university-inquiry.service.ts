@@ -1,13 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { SupabaseService } from '../supabase/supabase.service';
 import { EmailService } from '../auth/email.service';
 
 @Injectable()
 export class UniversityInquiryService {
+  private get db() {
+    return this.supabase.getClient();
+  }
+
   constructor(
-    private prisma: PrismaService,
+    private supabase: SupabaseService,
     private emailService: EmailService,
-  ) { }
+  ) {}
 
   async createInquiry(data: {
     userId?: string;
@@ -17,45 +21,48 @@ export class UniversityInquiryService {
     universityName: string;
     type: 'callback' | 'fasttrack';
   }) {
-    const inquiry = await this.prisma.universityInquiry.create({
-      data: {
+    const { data: inquiry, error } = await this.db
+      .from('UniversityInquiry')
+      .insert({
         userId: data.userId,
         name: data.name,
         email: data.email,
         mobile: data.mobile,
         universityName: data.universityName,
         type: data.type,
-      },
-    });
+      })
+      .select()
+      .single();
 
-    // Send notification email
+    if (error) throw error;
+
     await this.sendInquiryEmails(data);
-
     return inquiry;
   }
 
   async getInquiriesByUser(userId: string) {
-    return this.prisma.universityInquiry.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-    });
+    const { data } = await this.db
+      .from('UniversityInquiry')
+      .select('*')
+      .eq('userId', userId)
+      .order('createdAt', { ascending: false });
+    return data || [];
   }
 
   async checkInquiry(email: string, universityName: string, type: string) {
-    const existing = await this.prisma.universityInquiry.findFirst({
-      where: {
-        email,
-        universityName,
-        type,
-      },
-    });
+    const { data: existing } = await this.db
+      .from('UniversityInquiry')
+      .select('id')
+      .eq('email', email)
+      .eq('universityName', universityName)
+      .eq('type', type)
+      .single();
     return { exists: !!existing };
   }
 
   private async sendInquiryEmails(data: any) {
     const typeLabel = data.type === 'callback' ? 'Request a Callback' : 'Fasttrack Application';
 
-    // User Confirmation Email
     const userHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
         <div style="background: linear-gradient(135deg, #6605c7 0%, #8b5cf6 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 24px;">
@@ -76,7 +83,6 @@ export class UniversityInquiryService {
       </div>
     `;
 
-    // Admin Lead Email
     const adminHtml = `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
         <h2>New Lead Generated</h2>
@@ -89,9 +95,7 @@ export class UniversityInquiryService {
     `;
 
     try {
-      // Send to user
       await this.emailService.sendMail(data.email, `Inquiry Received: ${data.universityName}`, userHtml);
-      // Send to admin
       await this.emailService.sendMail(process.env.ADMIN_EMAIL || 'admin@vidhyaloan.com', `NEW LEAD: ${data.name} - ${typeLabel}`, adminHtml);
     } catch (e) {
       console.error('Error sending lead emails', e);

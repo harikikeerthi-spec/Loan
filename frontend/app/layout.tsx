@@ -3,6 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { UniversityProvider } from "@/context/UniversityContext";
 import SelectedUniversityWidget from "@/components/SelectedUniversityWidget";
+import ReferralTracker from "@/components/ReferralTracker";
 
 export const metadata: Metadata = {
   title: {
@@ -56,6 +57,7 @@ export default function RootLayout({
 
         <div className="relative z-10">
           <AuthProvider>
+            <ReferralTracker />
             <UniversityProvider>
               {children}
               <SelectedUniversityWidget />

@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { BlogService } from './blog.service';
 import { AdminGuard } from '../auth/admin.guard';
+import { StaffGuard } from '../auth/staff.guard';
 import { SuperAdminGuard } from '../auth/super-admin.guard';
 import { AuthorizationService } from '../auth/authorization.service';
 import { AuditLogService } from '../auth/audit-log.service';
@@ -34,7 +35,7 @@ export class BlogController {
      * @returns { success: boolean, data: { total, published, draft, featured } }
      */
     @Get('admin/stats')
-    @UseGuards(AdminGuard)
+    @UseGuards(StaffGuard)
     async getBlogStatistics() {
         return this.blogService.getBlogStatistics();
     }
@@ -302,7 +303,7 @@ export class BlogController {
      * @returns { success: boolean, data: Blog[], pagination }
      */
     @Get('admin/all')
-    @UseGuards(AdminGuard)
+    @UseGuards(StaffGuard)
     async getAllBlogsAdmin(
         @Query('limit') limit?: string,
         @Query('offset') offset?: string,
@@ -323,7 +324,7 @@ export class BlogController {
      * @returns { success: boolean, message: string, data: Blog }
      */
     @Post()
-    @UseGuards(AdminGuard)
+    @UseGuards(StaffGuard)
     async createBlog(
         @Body()
         body: {
@@ -369,7 +370,7 @@ export class BlogController {
      * @returns { success: boolean, message: string, data: Blog }
      */
     @Put(':id')
-    @UseGuards(AdminGuard)
+    @UseGuards(StaffGuard)
     async updateBlog(
         @Param('id') id: string,
         @Body()

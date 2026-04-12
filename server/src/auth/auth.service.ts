@@ -3,6 +3,7 @@ import { UsersService } from '../users/users.service';
 import { EmailService } from './email.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class AuthService {
@@ -18,7 +19,8 @@ export class AuthService {
     private usersService: UsersService,
     private emailService: EmailService,
     private jwtService: JwtService,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private eventEmitter: EventEmitter2
   ) { }
 
   /**
@@ -30,6 +32,7 @@ export class AuthService {
       sub: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
+      phoneNumber: user.phoneNumber,
       role: user.role
     };
 
@@ -339,6 +342,15 @@ export class AuthService {
 
       // Generate JWT tokens (access + refresh)
       const tokens = await this.generateTokens(user);
+
+      // Notify other modules (like Chat) about user activity
+      this.eventEmitter.emit('user.login', {
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phoneNumber: user.phoneNumber,
+          isNewUser
+      });
 
       return {
         success: true,

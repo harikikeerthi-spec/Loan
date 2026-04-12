@@ -1,364 +1,253 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class ReferenceService {
-    constructor(private prisma: PrismaService) { }
+  private get db() {
+    return this.supabase.getClient();
+  }
 
-    // ==================== LOAN TYPES ====================
+  constructor(private supabase: SupabaseService) {}
 
-    async getAllLoanTypes() {
-        const loanTypes = await this.prisma.loanType.findMany({
-            orderBy: [{ isPopular: 'desc' }, { name: 'asc' }],
-        });
+  // ==================== LOAN TYPES ====================
 
-        return {
-            success: true,
-            data: loanTypes,
-        };
-    }
+  async getAllLoanTypes() {
+    const { data } = await this.db
+      .from('LoanType')
+      .select('*')
+      .order('isPopular', { ascending: false })
+      .order('name', { ascending: true });
+    return { success: true, data: data || [] };
+  }
 
-    async getPopularLoanTypes() {
-        const loanTypes = await this.prisma.loanType.findMany({
-            where: { isPopular: true },
-            orderBy: { name: 'asc' },
-        });
+  async getPopularLoanTypes() {
+    const { data } = await this.db
+      .from('LoanType')
+      .select('*')
+      .eq('isPopular', true)
+      .order('name', { ascending: true });
+    return { success: true, data: data || [] };
+  }
 
-        return {
-            success: true,
-            data: loanTypes,
-        };
-    }
+  async getLoanTypeById(id: string) {
+    const { data } = await this.db.from('LoanType').select('*').eq('id', id).single();
+    return { success: true, data };
+  }
 
-    async getLoanTypeById(id: string) {
-        const loanType = await this.prisma.loanType.findUnique({
-            where: { id },
-        });
+  // ==================== UNIVERSITIES ====================
 
-        return {
-            success: true,
-            data: loanType,
-        };
-    }
+  async getAllUniversities(filters: any) {
+    const { country, ranking, limit = 20, offset = 0 } = filters;
 
-    // ==================== UNIVERSITIES ====================
+    let query = this.db
+      .from('University')
+      .select('*', { count: 'exact' })
+      .order('isFeatured', { ascending: false })
+      .order('ranking', { ascending: true })
+      .range(offset, offset + limit - 1);
 
-    async getAllUniversities(filters: any) {
-        const { country, ranking, limit, offset } = filters;
-        const where: any = {};
+    if (country) query = query.ilike('country', `%${country}%`);
+    if (ranking) query = query.lte('ranking', parseInt(ranking));
 
-        if (country) {
-            where.country = { contains: country, mode: 'insensitive' };
-        }
-        if (ranking) {
-            where.ranking = { lte: parseInt(ranking) };
-        }
+    const { data, count } = await query;
+    return {
+      success: true,
+      data: data || [],
+      pagination: { total: count || 0, limit, offset, hasMore: offset + (data?.length || 0) < (count || 0) },
+    };
+  }
 
-        const [universities, total] = await Promise.all([
-            this.prisma.university.findMany({
-                where,
-                take: limit,
-                skip: offset,
-                orderBy: [{ isFeatured: 'desc' }, { ranking: 'asc' }],
-            }),
-            this.prisma.university.count({ where }),
-        ]);
+  async getFeaturedUniversities(limit: number) {
+    const { data } = await this.db
+      .from('University')
+      .select('*')
+      .eq('isFeatured', true)
+      .order('ranking', { ascending: true })
+      .limit(limit);
+    return { success: true, data: data || [] };
+  }
 
-        return {
-            success: true,
-            data: universities,
-            pagination: {
-                total,
-                limit,
-                offset,
-                hasMore: offset + universities.length < total,
-            },
-        };
-    }
+  async getUniversityById(id: string) {
+    const { data } = await this.db.from('University').select('*').eq('id', id).single();
+    return { success: true, data };
+  }
 
-    async getFeaturedUniversities(limit: number) {
-        const universities = await this.prisma.university.findMany({
-            where: { isFeatured: true },
-            take: limit,
-            orderBy: { ranking: 'asc' },
-        });
+  async getUniversitiesByCountry(country: string) {
+    const { data } = await this.db
+      .from('University')
+      .select('*')
+      .ilike('country', country)
+      .order('ranking', { ascending: true });
+    return { success: true, data: data || [] };
+  }
 
-        return {
-            success: true,
-            data: universities,
-        };
-    }
+  // ==================== BANKS ====================
 
-    async getUniversityById(id: string) {
-        const university = await this.prisma.university.findUnique({
-            where: { id },
-        });
+  async getAllBanks() {
+    const { data } = await this.db
+      .from('Bank')
+      .select('*')
+      .order('isPopular', { ascending: false })
+      .order('name', { ascending: true });
+    return { success: true, data: data || [] };
+  }
 
-        return {
-            success: true,
-            data: university,
-        };
-    }
+  async getPopularBanks() {
+    const { data } = await this.db
+      .from('Bank')
+      .select('*')
+      .eq('isPopular', true)
+      .order('name', { ascending: true });
+    return { success: true, data: data || [] };
+  }
 
-    async getUniversitiesByCountry(country: string) {
-        const universities = await this.prisma.university.findMany({
-            where: { country: { equals: country, mode: 'insensitive' } },
-            orderBy: { ranking: 'asc' },
-        });
+  async getBankById(id: string) {
+    const { data } = await this.db.from('Bank').select('*').eq('id', id).single();
+    return { success: true, data };
+  }
 
-        return {
-            success: true,
-            data: universities,
-        };
-    }
+  async getBanksByType(type: string) {
+    const { data } = await this.db
+      .from('Bank')
+      .select('*')
+      .eq('type', type)
+      .order('name', { ascending: true });
+    return { success: true, data: data || [] };
+  }
 
-    // ==================== BANKS ====================
+  // ==================== COUNTRIES ====================
 
-    async getAllBanks() {
-        const banks = await this.prisma.bank.findMany({
-            orderBy: [{ isPopular: 'desc' }, { name: 'asc' }],
-        });
+  async getAllCountries() {
+    const { data } = await this.db
+      .from('Country')
+      .select('*')
+      .order('popularForStudy', { ascending: false })
+      .order('name', { ascending: true });
+    return { success: true, data: data || [] };
+  }
 
-        return {
-            success: true,
-            data: banks,
-        };
-    }
+  async getPopularCountries() {
+    const { data } = await this.db
+      .from('Country')
+      .select('*')
+      .eq('popularForStudy', true)
+      .order('name', { ascending: true });
+    return { success: true, data: data || [] };
+  }
 
-    async getPopularBanks() {
-        const banks = await this.prisma.bank.findMany({
-            where: { isPopular: true },
-            orderBy: { name: 'asc' },
-        });
+  async getCountryById(id: string) {
+    const { data } = await this.db.from('Country').select('*').eq('id', id).single();
+    return { success: true, data };
+  }
 
-        return {
-            success: true,
-            data: banks,
-        };
-    }
+  async getCountryByCode(code: string) {
+    const { data } = await this.db
+      .from('Country')
+      .select('*')
+      .eq('code', code.toUpperCase())
+      .single();
+    return { success: true, data };
+  }
 
-    async getBankById(id: string) {
-        const bank = await this.prisma.bank.findUnique({
-            where: { id },
-        });
+  async getCountriesByRegion(region: string) {
+    const { data } = await this.db
+      .from('Country')
+      .select('*')
+      .ilike('region', `%${region}%`)
+      .order('name', { ascending: true });
+    return { success: true, data: data || [] };
+  }
 
-        return {
-            success: true,
-            data: bank,
-        };
-    }
+  // ==================== SCHOLARSHIPS ====================
 
-    async getBanksByType(type: string) {
-        const banks = await this.prisma.bank.findMany({
-            where: { type },
-            orderBy: { name: 'asc' },
-        });
+  async getAllScholarships(filters: any) {
+    const { country, type, limit = 20, offset = 0 } = filters;
 
-        return {
-            success: true,
-            data: banks,
-        };
-    }
+    let query = this.db
+      .from('Scholarship')
+      .select('*', { count: 'exact' })
+      .eq('isActive', true)
+      .order('createdAt', { ascending: false })
+      .range(offset, offset + limit - 1);
 
-    // ==================== COUNTRIES ====================
+    if (country) query = query.ilike('country', `%${country}%`);
+    if (type) query = query.eq('type', type);
 
-    async getAllCountries() {
-        const countries = await this.prisma.country.findMany({
-            orderBy: [{ popularForStudy: 'desc' }, { name: 'asc' }],
-        });
+    const { data, count } = await query;
+    return {
+      success: true,
+      data: data || [],
+      pagination: { total: count || 0, limit, offset, hasMore: offset + (data?.length || 0) < (count || 0) },
+    };
+  }
 
-        return {
-            success: true,
-            data: countries,
-        };
-    }
+  async getScholarshipById(id: string) {
+    const { data } = await this.db.from('Scholarship').select('*').eq('id', id).single();
+    return { success: true, data };
+  }
 
-    async getPopularCountries() {
-        const countries = await this.prisma.country.findMany({
-            where: { popularForStudy: true },
-            orderBy: { name: 'asc' },
-        });
+  async getScholarshipsByCountry(country: string) {
+    const { data } = await this.db
+      .from('Scholarship')
+      .select('*')
+      .ilike('country', country)
+      .eq('isActive', true)
+      .order('createdAt', { ascending: false });
+    return { success: true, data: data || [] };
+  }
 
-        return {
-            success: true,
-            data: countries,
-        };
-    }
+  // ==================== COURSES ====================
 
-    async getCountryById(id: string) {
-        const country = await this.prisma.country.findUnique({
-            where: { id },
-        });
+  async getAllCourses(filters: any) {
+    const { level, field, limit = 20, offset = 0 } = filters;
 
-        return {
-            success: true,
-            data: country,
-        };
-    }
+    let query = this.db
+      .from('Course')
+      .select('*', { count: 'exact' })
+      .order('isPopular', { ascending: false })
+      .order('name', { ascending: true })
+      .range(offset, offset + limit - 1);
 
-    async getCountryByCode(code: string) {
-        const country = await this.prisma.country.findUnique({
-            where: { code: code.toUpperCase() },
-        });
+    if (level) query = query.ilike('level', `%${level}%`);
+    if (field) query = query.ilike('field', `%${field}%`);
 
-        return {
-            success: true,
-            data: country,
-        };
-    }
+    const { data, count } = await query;
+    return {
+      success: true,
+      data: data || [],
+      pagination: { total: count || 0, limit, offset, hasMore: offset + (data?.length || 0) < (count || 0) },
+    };
+  }
 
-    async getCountriesByRegion(region: string) {
-        const countries = await this.prisma.country.findMany({
-            where: { region: { contains: region, mode: 'insensitive' } },
-            orderBy: { name: 'asc' },
-        });
+  async getPopularCourses() {
+    const { data } = await this.db
+      .from('Course')
+      .select('*')
+      .eq('isPopular', true)
+      .order('name', { ascending: true });
+    return { success: true, data: data || [] };
+  }
 
-        return {
-            success: true,
-            data: countries,
-        };
-    }
+  async getCourseById(id: string) {
+    const { data } = await this.db.from('Course').select('*').eq('id', id).single();
+    return { success: true, data };
+  }
 
-    // ==================== SCHOLARSHIPS ====================
+  async getCoursesByLevel(level: string) {
+    const { data } = await this.db
+      .from('Course')
+      .select('*')
+      .ilike('level', `%${level}%`)
+      .order('name', { ascending: true });
+    return { success: true, data: data || [] };
+  }
 
-    async getAllScholarships(filters: any) {
-        const { country, type, limit, offset } = filters;
-        const where: any = { isActive: true };
-
-        if (country) {
-            where.country = { contains: country, mode: 'insensitive' };
-        }
-        if (type) {
-            where.type = type;
-        }
-
-        const [scholarships, total] = await Promise.all([
-            this.prisma.scholarship.findMany({
-                where,
-                take: limit,
-                skip: offset,
-                orderBy: { createdAt: 'desc' },
-            }),
-            this.prisma.scholarship.count({ where }),
-        ]);
-
-        return {
-            success: true,
-            data: scholarships,
-            pagination: {
-                total,
-                limit,
-                offset,
-                hasMore: offset + scholarships.length < total,
-            },
-        };
-    }
-
-    async getScholarshipById(id: string) {
-        const scholarship = await this.prisma.scholarship.findUnique({
-            where: { id },
-        });
-
-        return {
-            success: true,
-            data: scholarship,
-        };
-    }
-
-    async getScholarshipsByCountry(country: string) {
-        const scholarships = await this.prisma.scholarship.findMany({
-            where: {
-                country: { equals: country, mode: 'insensitive' },
-                isActive: true,
-            },
-            orderBy: { createdAt: 'desc' },
-        });
-
-        return {
-            success: true,
-            data: scholarships,
-        };
-    }
-
-    // ==================== COURSES ====================
-
-    async getAllCourses(filters: any) {
-        const { level, field, limit, offset } = filters;
-        const where: any = {};
-
-        if (level) {
-            where.level = { contains: level, mode: 'insensitive' };
-        }
-        if (field) {
-            where.field = { contains: field, mode: 'insensitive' };
-        }
-
-        const [courses, total] = await Promise.all([
-            this.prisma.course.findMany({
-                where,
-                take: limit,
-                skip: offset,
-                orderBy: [{ isPopular: 'desc' }, { name: 'asc' }],
-            }),
-            this.prisma.course.count({ where }),
-        ]);
-
-        return {
-            success: true,
-            data: courses,
-            pagination: {
-                total,
-                limit,
-                offset,
-                hasMore: offset + courses.length < total,
-            },
-        };
-    }
-
-    async getPopularCourses() {
-        const courses = await this.prisma.course.findMany({
-            where: { isPopular: true },
-            orderBy: { name: 'asc' },
-        });
-
-        return {
-            success: true,
-            data: courses,
-        };
-    }
-
-    async getCourseById(id: string) {
-        const course = await this.prisma.course.findUnique({
-            where: { id },
-        });
-
-        return {
-            success: true,
-            data: course,
-        };
-    }
-
-    async getCoursesByLevel(level: string) {
-        const courses = await this.prisma.course.findMany({
-            where: { level: { contains: level, mode: 'insensitive' } },
-            orderBy: { name: 'asc' },
-        });
-
-        return {
-            success: true,
-            data: courses,
-        };
-    }
-
-    async getCoursesByField(field: string) {
-        const courses = await this.prisma.course.findMany({
-            where: { field: { contains: field, mode: 'insensitive' } },
-            orderBy: { name: 'asc' },
-        });
-
-        return {
-            success: true,
-            data: courses,
-        };
-    }
+  async getCoursesByField(field: string) {
+    const { data } = await this.db
+      .from('Course')
+      .select('*')
+      .ilike('field', `%${field}%`)
+      .order('name', { ascending: true });
+    return { success: true, data: data || [] };
+  }
 }

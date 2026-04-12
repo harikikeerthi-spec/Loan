@@ -1,18 +1,23 @@
 import { NextResponse } from "next/server";
-
-const OPENAI_TTS_URL = "https://api.openai.com/v1/audio/speech";
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+import { MsEdgeTTS, OUTPUT_FORMAT } from "msedge-tts";
 
 const AGENT_VOICE_MAP: Record<string, string> = {
-    agent_smith: "onyx",
-    agent_sarah: "shimmer",
-    agent_michael: "echo",
+    agent_smith: "en-US-ChristopherNeural",
+    agent_sarah: "en-US-JennyNeural",
+    agent_michael: "en-US-GuyNeural",
 };
+
+function resolveOfficerVoice(agentType: unknown): string {
+    const key = String(agentType || "").trim();
+    return AGENT_VOICE_MAP[key] || AGENT_VOICE_MAP.agent_michael;
+}
 
 function clampSpeed(value: unknown): number {
     const parsed = Number(value);
-    if (Number.isNaN(parsed)) return 1;
-    return Math.min(1.35, Math.max(0.8, parsed));
+    if (Number.isNaN(parsed)) return 0; // msedge-tts uses percentage offset from 0 (e.g. +10%)
+    // Map 0.8-1.35 range to percentage offset (-20% to +35%)
+    const offset = Math.round((parsed - 1) * 100);
+    return Math.min(35, Math.max(-20, offset));
 }
 
 export async function POST(req: Request) {
@@ -27,49 +32,45 @@ export async function POST(req: Request) {
             );
         }
 
-        if (!OPENAI_API_KEY) {
-            return NextResponse.json(
-                { success: false, message: "Neural TTS is not configured on the server." },
-                { status: 503 }
-            );
-        }
+        const tts = new MsEdgeTTS();
+        await tts.setMetadata(resolveOfficerVoice(agentType), OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+        
+        const speedOffset = clampSpeed(speed);
+        const pitch = 0;
 
-        const ttsRes = await fetch(OPENAI_TTS_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${OPENAI_API_KEY}`,
-            },
-            body: JSON.stringify({
-                model: process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts",
-                voice: AGENT_VOICE_MAP[String(agentType)] || "alloy",
-                input: normalizedText.slice(0, 2200),
-                format: "mp3",
-                speed: clampSpeed(speed),
-            }),
+        // toStream returns an object with audioStream and metadataStream
+        const { audioStream } = tts.toStream(normalizedText.slice(0, 2200), {
+            rate: speedOffset >= 0 ? `+${speedOffset}%` : `${speedOffset}%`,
+            pitch: `+${pitch}Hz`
         });
 
-        if (!ttsRes.ok) {
-            const raw = await ttsRes.text();
-            console.error("Neural TTS upstream error:", raw);
-            return NextResponse.json(
-                { success: false, message: "Failed to generate neural speech." },
-                { status: 502 }
-            );
-        }
+        // Convert Node.js Readable to Web ReadableStream for Next.js Response
+        const webStream = new ReadableStream({
+            start(controller) {
+                audioStream.on("data", (chunk: any) => controller.enqueue(chunk));
+                audioStream.on("end", () => controller.close());
+                audioStream.on("error", (err: any) => controller.error(err));
+            },
+            cancel() {
+                audioStream.destroy();
+            },
+        });
 
-        const audioBuffer = await ttsRes.arrayBuffer();
-        return new Response(audioBuffer, {
+        return new Response(webStream, {
             status: 200,
             headers: {
                 "Content-Type": "audio/mpeg",
-                "Cache-Control": "no-store",
+                "Cache-Control": "public, max-age=3600",
             },
         });
     } catch (error: any) {
-        console.error("Neural TTS route error:", error);
+        console.error("Free TTS Route Error:", error);
         return NextResponse.json(
-            { success: false, message: error?.message || "Failed to synthesize speech." },
+            { 
+                success: false, 
+                message: "Neural voice service temporarily unavailable. Falling back to local synthesis.",
+                error: error?.message 
+            },
             { status: 500 }
         );
     }

@@ -1,65 +1,71 @@
 import { Injectable, ConflictException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { SupabaseService } from '../supabase/supabase.service';
 import { CreateCohortApplicationDto } from './dto/create-cohort-application.dto';
 
 @Injectable()
 export class ConnectedService {
-    constructor(private readonly prisma: PrismaService) { }
+  private get db() {
+    return this.supabase.getClient();
+  }
 
-    /** Submit a new cohort application (public) */
-    async create(dto: CreateCohortApplicationDto) {
-        // Prevent duplicate submissions from the same email for the same intake
-        const existing = await this.prisma.cohortApplication.findFirst({
-            where: { email: dto.email, targetIntake: dto.targetIntake },
-        });
+  constructor(private readonly supabase: SupabaseService) {}
 
-        if (existing) {
-            throw new ConflictException(
-                'An application with this email already exists for the selected intake.',
-            );
-        }
+  async create(dto: CreateCohortApplicationDto) {
+    const { data: existing } = await this.db
+      .from('CohortApplication')
+      .select('id')
+      .eq('email', dto.email)
+      .eq('targetIntake', dto.targetIntake)
+      .single();
 
-        const application = await this.prisma.cohortApplication.create({
-            data: {
-                fullName: dto.fullName,
-                email: dto.email,
-                phone: dto.phone,
-                targetIntake: dto.targetIntake,
-                destination: dto.destination,
-                university: dto.university,
-                course: dto.course,
-                gapYear: dto.gapYear ?? false,
-                message: dto.message,
-                source: dto.source ?? 'connectED',
-            },
-        });
-
-        return { success: true, id: application.id };
+    if (existing) {
+      throw new ConflictException(
+        'An application with this email already exists for the selected intake.',
+      );
     }
 
-    /** List all applications — admin use */
-    async findAll(status?: string) {
-        return this.prisma.cohortApplication.findMany({
-            where: status ? { status } : undefined,
-            orderBy: { createdAt: 'desc' },
-        });
-    }
+    const { data: application, error } = await this.db
+      .from('CohortApplication')
+      .insert({
+        fullName: dto.fullName,
+        email: dto.email,
+        phone: dto.phone,
+        targetIntake: dto.targetIntake,
+        destination: dto.destination,
+        university: dto.university,
+        course: dto.course,
+        gapYear: dto.gapYear ?? false,
+        message: dto.message,
+        source: dto.source ?? 'connectED',
+      })
+      .select()
+      .single();
 
-    /** Update status — admin use */
-    async updateStatus(
-        id: string,
-        status: string,
-        reviewedBy?: string,
-        reviewNotes?: string,
-    ) {
-        return this.prisma.cohortApplication.update({
-            where: { id },
-            data: {
-                status,
-                reviewedBy,
-                reviewNotes,
-                reviewedAt: new Date(),
-            },
-        });
-    }
+    if (error) throw error;
+    return { success: true, id: application.id };
+  }
+
+  async findAll(status?: string) {
+    let query = this.db
+      .from('CohortApplication')
+      .select('*')
+      .order('createdAt', { ascending: false });
+
+    if (status) query = query.eq('status', status);
+
+    const { data } = await query;
+    return data || [];
+  }
+
+  async updateStatus(id: string, status: string, reviewedBy?: string, reviewNotes?: string) {
+    const { data, error } = await this.db
+      .from('CohortApplication')
+      .update({ status, reviewedBy, reviewNotes, reviewedAt: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
 }

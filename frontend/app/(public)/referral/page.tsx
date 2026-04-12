@@ -10,11 +10,21 @@ interface ReferralStats {
     completedReferrals: number;
     signedUpReferrals: number;
     pendingReferrals: number;
+    totalVisits: number;
     tier: string;
     rewards: {
         earned: number;
         pending: number;
     };
+}
+
+interface ReferralItem {
+    id: string;
+    refereeEmail: string;
+    refereeName: string;
+    status: string;
+    reward: string;
+    createdAt: string;
 }
 
 export default function ReferralPage() {
@@ -27,9 +37,11 @@ export default function ReferralPage() {
         completedReferrals: 0,
         signedUpReferrals: 0,
         pendingReferrals: 0,
+        totalVisits: 0,
         tier: "bronze",
         rewards: { earned: 0, pending: 0 }
     });
+    const [referrals, setReferrals] = useState<ReferralItem[]>([]);
 
     useEffect(() => {
         const fetchReferralData = async () => {
@@ -40,13 +52,15 @@ export default function ReferralPage() {
 
             try {
                 setLoading(true);
-                const [codeData, statsData] = await Promise.all([
+                const [codeData, statsData, listData] = await Promise.all([
                     referralApi.getMyCode() as Promise<{ code: string }>,
-                    referralApi.getStats() as Promise<ReferralStats>
+                    referralApi.getStats() as Promise<ReferralStats>,
+                    referralApi.getList() as Promise<{ referrals: ReferralItem[] }>
                 ]);
 
                 setReferralCode(codeData.code || "");
                 setStats(statsData);
+                setReferrals(listData.referrals || []);
             } catch (error) {
                 console.error("Failed to fetch referral data:", error);
             } finally {
@@ -192,12 +206,70 @@ export default function ReferralPage() {
                                 </div>
 
                                 {/* Stats Grid */}
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                    <StatCard value={stats.totalReferrals} label="Total Referrals" icon="people" />
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                    <StatCard value={stats.totalVisits} label="Link Clicks" icon="ads_click" color="text-blue-500" />
+                                    <StatCard value={stats.signedUpReferrals} label="Registered" icon="person_add" color="text-amber-500" />
                                     <StatCard value={stats.completedReferrals} label="Successful" icon="check_circle" color="text-green-500" />
-                                    <StatCard value={stats.pendingReferrals} label="Pending" icon="schedule" color="text-amber-500" />
-                                    <StatCard value={`₹${(stats.rewards.earned / 1000).toFixed(1)}k`} label="Earned" icon="account_balance_wallet" color="text-orange-500" />
+                                    <StatCard value={stats.pendingReferrals} label="Pending" icon="schedule" color="text-gray-400" />
+                                    <StatCard value={`₹${((stats.completedReferrals * 3000) / 1000).toFixed(1)}k`} label="Earned" icon="account_balance_wallet" color="text-orange-500" />
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* Referrals List Table */}
+                        <div className="mt-12 bg-white/70 backdrop-blur-xl rounded-3xl border border-white shadow-xl shadow-amber-100/50 overflow-hidden">
+                            <div className="p-8">
+                                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-amber-500">group</span>
+                                    Referred Friends
+                                </h3>
+                                
+                                {referrals.length === 0 ? (
+                                    <div className="text-center py-12 bg-gray-50/50 rounded-2xl border border-dashed border-gray-200">
+                                        <span className="material-symbols-outlined text-4xl text-gray-300 mb-3">group_off</span>
+                                        <p className="text-gray-500 text-sm">No referrals yet. Start sharing your link to earn rewards!</p>
+                                    </div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full">
+                                            <thead>
+                                                <tr className="border-b border-gray-100">
+                                                    <th className="text-left py-4 px-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Friend</th>
+                                                    <th className="text-left py-4 px-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Date</th>
+                                                    <th className="text-left py-4 px-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Status</th>
+                                                    <th className="text-right py-4 px-4 text-[11px] font-bold text-gray-400 uppercase tracking-widest">Reward</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {referrals.map((item) => (
+                                                    <tr key={item.id} className="border-b border-gray-50 last:border-0 hover:bg-gray-50/50 transition-colors">
+                                                        <td className="py-4 px-4">
+                                                            <div className="font-semibold text-gray-900">{item.refereeName || 'Anonymous'}</div>
+                                                            <div className="text-xs text-gray-500">{item.refereeEmail}</div>
+                                                        </td>
+                                                        <td className="py-4 px-4 text-sm text-gray-500">
+                                                            {new Date(item.createdAt).toLocaleDateString()}
+                                                        </td>
+                                                        <td className="py-4 px-4">
+                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                                                item.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                                                item.status === 'signed_up' ? 'bg-blue-100 text-blue-700' :
+                                                                'bg-amber-100 text-amber-700'
+                                                            }`}>
+                                                                {item.status.replace('_', ' ')}
+                                                            </span>
+                                                        </td>
+                                                        <td className="py-4 px-4 text-right">
+                                                            <span className={`font-bold ${item.status === 'completed' ? 'text-green-600' : 'text-gray-400'}`}>
+                                                                {item.status === 'completed' ? '₹3,000' : 'Pending'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

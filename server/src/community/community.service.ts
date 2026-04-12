@@ -1,1752 +1,734 @@
 import { Injectable, NotFoundException, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
-import { randomUUID } from 'crypto';
+import { SupabaseService } from '../supabase/supabase.service';
 import { GroqService } from '../ai/services/groq.service';
 
 @Injectable()
 export class CommunityService {
-    constructor(
-        private prisma: PrismaService,
-        private groqService: GroqService
-    ) { }
+  private get db() {
+    return this.supabase.getClient();
+  }
 
-    // ==================== MENTORSHIP METHODS ====================
+  private otpStore = new Map<string, { otp: string; expiresAt: Date }>();
 
-    async getAllMentors(filters: any) {
-        const { university, country, loanType, category, limit, offset } = filters;
+  constructor(
+    private supabase: SupabaseService,
+    private groqService: GroqService,
+  ) {}
 
-        const where: any = { isActive: true, isApproved: true };
+  // ==================== MENTORSHIP METHODS ====================
 
-        if (university) {
-            where.university = { contains: university, mode: 'insensitive' };
-        }
-        if (country) {
-            where.country = { contains: country, mode: 'insensitive' };
-        }
-        if (loanType) {
-            where.loanType = { contains: loanType, mode: 'insensitive' };
-        }
-        if (category) {
-            where.category = { contains: category, mode: 'insensitive' };
-        }
+  async getAllMentors(filters: any) {
+    const { university, country, loanType, category, limit, offset } = filters;
 
-        const [mentors, total] = await Promise.all([
-            this.prisma.mentor.findMany({
-                where,
-                take: limit,
-                skip: offset,
-                orderBy: [{ rating: 'desc' }, { studentsMentored: 'desc' }],
-            }),
-            this.prisma.mentor.count({ where }),
-        ]);
+    let query = this.db
+      .from('Mentor')
+      .select('*', { count: 'exact' })
+      .eq('isActive', true)
+      .eq('isApproved', true)
+      .order('rating', { ascending: false })
+      .order('studentsMentored', { ascending: false });
 
-        return {
-            success: true,
-            data: mentors,
-            pagination: {
-                total,
-                limit,
-                offset,
-                hasMore: offset + mentors.length < total,
-            },
-        };
+    if (university) query = query.ilike('university', `%${university}%`);
+    if (country) query = query.ilike('country', `%${country}%`);
+    if (loanType) query = query.ilike('loanType', `%${loanType}%`);
+    if (category) query = query.ilike('category', `%${category}%`);
+    if (limit) query = query.limit(limit);
+    if (offset) query = query.range(offset, offset + (limit || 20) - 1);
+
+    const { data: mentors, count } = await query;
+    return { success: true, data: mentors || [], pagination: { total: count || 0, limit, offset, hasMore: (offset || 0) + (mentors?.length || 0) < (count || 0) } };
+  }
+
+  async getFeaturedMentors(limit: number) {
+    const { data } = await this.db.from('Mentor').select('*').eq('isActive', true).eq('isApproved', true).gte('rating', 4.5).order('rating', { ascending: false }).order('studentsMentored', { ascending: false }).limit(limit);
+    return { success: true, data: data || [] };
+  }
+
+  async getMentorById(id: string) {
+    const { data: mentor } = await this.db.from('Mentor').select('*').eq('id', id).single();
+    if (!mentor) throw new NotFoundException('Mentor not found');
+    return { success: true, data: mentor };
+  }
+
+  async bookMentorSession(mentorId: string, bookingData: any) {
+    const { data: mentor } = await this.db.from('Mentor').select('id, isActive').eq('id', mentorId).single();
+    if (!mentor) throw new NotFoundException('Mentor not found');
+    if (!mentor.isActive) throw new BadRequestException('Mentor is not currently accepting bookings');
+
+    const { data: booking, error } = await this.db.from('MentorBooking').insert({ mentorId, ...bookingData, status: 'pending' }).select().single();
+    if (error) throw error;
+    return { success: true, message: 'Booking request submitted successfully', data: booking };
+  }
+
+  async applyAsMentor(applicationData: any) {
+    if (!applicationData?.email) throw new BadRequestException('Email is required');
+    if (!applicationData.name) throw new BadRequestException('Name is required');
+    if (!applicationData.university) throw new BadRequestException('University is required');
+    if (!applicationData.country) throw new BadRequestException('Country is required');
+
+    const { data: existing } = await this.db.from('Mentor').select('id').eq('email', applicationData.email).single();
+    if (existing) throw new BadRequestException('A mentor with this email already exists');
+
+    const { data: mentor, error } = await this.db.from('Mentor').insert({
+      name: applicationData.name, email: applicationData.email, phone: applicationData.phone || null,
+      university: applicationData.university, degree: applicationData.degree || '', country: applicationData.country,
+      loanBank: applicationData.loanBank || '', loanAmount: applicationData.loanAmount || '',
+      interestRate: applicationData.interestRate || null, loanType: applicationData.loanType || null,
+      category: applicationData.category || null, bio: applicationData.bio || '',
+      expertise: applicationData.expertise || [], linkedIn: applicationData.linkedIn || null,
+      image: applicationData.image || null, isActive: false, isApproved: false, rating: 0, studentsMentored: 0,
+    }).select().single();
+    if (error) throw error;
+    return { success: true, message: 'Mentor application submitted successfully. We will review and get back to you soon.', data: mentor };
+  }
+
+  async getMentorStats() {
+    const [{ count: total }, { count: active }, { data: mentors }] = await Promise.all([
+      this.db.from('Mentor').select('*', { count: 'exact', head: true }).eq('isApproved', true),
+      this.db.from('Mentor').select('*', { count: 'exact', head: true }).eq('isActive', true).eq('isApproved', true),
+      this.db.from('Mentor').select('rating, studentsMentored').eq('isApproved', true),
+    ]);
+
+    const avgRating = mentors?.length ? mentors.reduce((s: number, m: any) => s + (m.rating || 0), 0) / mentors.length : 0;
+    const totalMentored = mentors?.reduce((s: number, m: any) => s + (m.studentsMentored || 0), 0) || 0;
+
+    return { success: true, data: { totalMentors: total || 0, activeMentors: active || 0, averageRating: avgRating, totalStudentsMentored: totalMentored } };
+  }
+
+  // ==================== EVENTS METHODS ====================
+
+  async getAllEvents(filters: any) {
+    const { type, category, featured, limit, offset } = filters;
+
+    let query = this.db.from('CommunityEvent').select('*', { count: 'exact' }).order('date', { ascending: true });
+    if (type) query = query.eq('type', type);
+    if (category) query = query.eq('category', category);
+    if (featured !== undefined) query = query.eq('isFeatured', featured);
+    if (limit) query = query.limit(limit);
+    if (offset) query = query.range(offset, offset + (limit || 20) - 1);
+
+    const { data: events, count } = await query;
+    return { success: true, data: events || [], pagination: { total: count || 0, limit, offset, hasMore: (offset || 0) + (events?.length || 0) < (count || 0) } };
+  }
+
+  async getUpcomingEvents(limit: number) {
+    const { data } = await this.db.from('CommunityEvent').select('*').gte('date', new Date().toISOString()).order('date', { ascending: true }).limit(limit);
+    return { success: true, data: data || [] };
+  }
+
+  async getPastEvents(limit: number, offset: number) {
+    const { data, count } = await this.db.from('CommunityEvent').select('*', { count: 'exact' }).lt('date', new Date().toISOString()).order('date', { ascending: false }).range(offset, offset + limit - 1);
+    return { success: true, data: data || [], pagination: { total: count || 0, limit, offset, hasMore: offset + (data?.length || 0) < (count || 0) } };
+  }
+
+  async getEventById(id: string) {
+    const { data: event } = await this.db.from('CommunityEvent').select('*').eq('id', id).single();
+    if (!event) throw new NotFoundException('Event not found');
+    const { count: registeredCount } = await this.db.from('EventRegistration').select('*', { count: 'exact', head: true }).eq('eventId', id);
+    return { success: true, data: { ...event, registeredCount: registeredCount || 0 } };
+  }
+
+  async registerForEvent(eventId: string, registrationData: any) {
+    const { data: event } = await this.db.from('CommunityEvent').select('*').eq('id', eventId).single();
+    if (!event) throw new NotFoundException('Event not found');
+    if (new Date(event.date) < new Date()) throw new BadRequestException('Cannot register for past events');
+
+    const { count: registeredCount } = await this.db.from('EventRegistration').select('*', { count: 'exact', head: true }).eq('eventId', eventId);
+    if (event.maxAttendees && (registeredCount || 0) >= event.maxAttendees) throw new BadRequestException('Event is full');
+
+    const { data: existingReg } = await this.db.from('EventRegistration').select('id').eq('eventId', eventId).eq('email', registrationData.email).single();
+    if (existingReg) throw new BadRequestException('You are already registered for this event');
+
+    const { data: registration, error } = await this.db.from('EventRegistration').insert({ eventId, ...registrationData }).select().single();
+    if (error) throw error;
+
+    await this.db.from('CommunityEvent').update({ attendeesCount: (event.attendeesCount || 0) + 1 }).eq('id', eventId);
+    return { success: true, message: 'Successfully registered for the event', data: registration };
+  }
+
+  // ==================== SUCCESS STORIES METHODS ====================
+
+  async getAllStories(filters: any) {
+    const { country, category, limit, offset } = filters;
+
+    let query = this.db.from('SuccessStory').select('*', { count: 'exact' }).eq('isApproved', true).order('createdAt', { ascending: false });
+    if (country) query = query.ilike('country', `%${country}%`);
+    if (category) query = query.ilike('category', `%${category}%`);
+    if (limit) query = query.limit(limit);
+    if (offset) query = query.range(offset, offset + (limit || 20) - 1);
+
+    const { data: stories, count } = await query;
+    return { success: true, data: stories || [], pagination: { total: count || 0, limit, offset, hasMore: (offset || 0) + (stories?.length || 0) < (count || 0) } };
+  }
+
+  async getFeaturedStories(limit: number) {
+    const { data } = await this.db.from('SuccessStory').select('*').eq('isApproved', true).eq('isFeatured', true).order('createdAt', { ascending: false }).limit(limit);
+    return { success: true, data: data || [] };
+  }
+
+  async getStoryById(id: string) {
+    const { data: story } = await this.db.from('SuccessStory').select('*').eq('id', id).single();
+    if (!story) throw new NotFoundException('Story not found');
+    return { success: true, data: story };
+  }
+
+  async submitStory(storyData: any) {
+    const { data: story, error } = await this.db.from('SuccessStory').insert({ ...storyData, isApproved: false, isFeatured: false }).select().single();
+    if (error) throw error;
+    return { success: true, message: 'Success story submitted successfully. We will review and publish it soon.', data: story };
+  }
+
+  // ==================== RESOURCES METHODS ====================
+
+  async getAllResources(filters: any) {
+    const { type, category, limit, offset } = filters;
+
+    let query = this.db.from('CommunityResource').select('*', { count: 'exact' }).order('createdAt', { ascending: false });
+    if (type) query = query.eq('type', type);
+    if (category) query = query.ilike('category', `%${category}%`);
+    if (limit) query = query.limit(limit);
+    if (offset) query = query.range(offset, offset + (limit || 20) - 1);
+
+    const { data: resources, count } = await query;
+    return { success: true, data: resources || [], pagination: { total: count || 0, limit, offset, hasMore: (offset || 0) + (resources?.length || 0) < (count || 0) } };
+  }
+
+  async getPopularResources(limit: number) {
+    const { data } = await this.db.from('CommunityResource').select('*').order('downloads', { ascending: false }).limit(limit);
+    return { success: true, data: data || [] };
+  }
+
+  async getResourceById(id: string) {
+    const { data: resource } = await this.db.from('CommunityResource').select('*').eq('id', id).single();
+    if (!resource) throw new NotFoundException('Resource not found');
+    return { success: true, data: resource };
+  }
+
+  async trackResourceView(resourceId: string) {
+    const { data: resource } = await this.db.from('CommunityResource').select('downloads').eq('id', resourceId).single();
+    const { data: updated } = await this.db.from('CommunityResource').update({ downloads: (resource?.downloads || 0) + 1 }).eq('id', resourceId).select('downloads').single();
+    return { success: true, data: { downloads: updated?.downloads } };
+  }
+
+  // ==================== ADMIN METHODS ====================
+
+  async createMentor(mentorData: any) {
+    const { data: mentor, error } = await this.db.from('Mentor').insert({ ...mentorData, expertise: mentorData.expertise || [], isActive: mentorData.isActive !== undefined ? mentorData.isActive : true, isApproved: true, rating: mentorData.rating || 0, studentsMentored: mentorData.studentsMentored || 0 }).select().single();
+    if (error) throw error;
+    return { success: true, message: 'Mentor created successfully', data: mentor };
+  }
+
+  async updateMentor(id: string, updateData: any) {
+    const { data: mentor, error } = await this.db.from('Mentor').update(updateData).eq('id', id).select().single();
+    if (error) throw error;
+    return { success: true, message: 'Mentor updated successfully', data: mentor };
+  }
+
+  async deleteMentor(id: string) {
+    await this.db.from('Mentor').delete().eq('id', id);
+    return { success: true, message: 'Mentor deleted successfully' };
+  }
+
+  async createEvent(eventData: any) {
+    const { data: event, error } = await this.db.from('CommunityEvent').insert({ ...eventData, attendeesCount: 0, isFeatured: eventData.isFeatured || false }).select().single();
+    if (error) throw error;
+    return { success: true, message: 'Event created successfully', data: event };
+  }
+
+  async updateEvent(id: string, updateData: any) {
+    const { data: event, error } = await this.db.from('CommunityEvent').update(updateData).eq('id', id).select().single();
+    if (error) throw error;
+    return { success: true, message: 'Event updated successfully', data: event };
+  }
+
+  async deleteEvent(id: string) {
+    await this.db.from('CommunityEvent').delete().eq('id', id);
+    return { success: true, message: 'Event deleted successfully' };
+  }
+
+  async createResource(resourceData: any) {
+    const { data: resource, error } = await this.db.from('CommunityResource').insert({ ...resourceData, downloads: 0, isFeatured: resourceData.isFeatured || false }).select().single();
+    if (error) throw error;
+    return { success: true, message: 'Resource created successfully', data: resource };
+  }
+
+  async updateResource(id: string, updateData: any) {
+    const { data: resource, error } = await this.db.from('CommunityResource').update(updateData).eq('id', id).select().single();
+    if (error) throw error;
+    return { success: true, message: 'Resource updated successfully', data: resource };
+  }
+
+  async deleteResource(id: string) {
+    await this.db.from('CommunityResource').delete().eq('id', id);
+    return { success: true, message: 'Resource deleted successfully' };
+  }
+
+  async createStory(storyData: any) {
+    const { data: story, error } = await this.db.from('SuccessStory').insert({ ...storyData, isApproved: storyData.isApproved !== undefined ? storyData.isApproved : true, isFeatured: storyData.isFeatured || false }).select().single();
+    if (error) throw error;
+    return { success: true, message: 'Success story created successfully', data: story };
+  }
+
+  async updateStory(id: string, updateData: any) {
+    const { data: story, error } = await this.db.from('SuccessStory').update(updateData).eq('id', id).select().single();
+    if (error) throw error;
+    return { success: true, message: 'Success story updated successfully', data: story };
+  }
+
+  async deleteStory(id: string) {
+    await this.db.from('SuccessStory').delete().eq('id', id);
+    return { success: true, message: 'Success story deleted successfully' };
+  }
+
+  async approveMentor(id: string, approved: boolean, reason?: string) {
+    const { data: mentor, error } = await this.db.from('Mentor').update({ isApproved: approved, isActive: approved, rejectionReason: approved ? null : reason }).eq('id', id).select().single();
+    if (error) throw error;
+    return { success: true, message: approved ? 'Mentor approved' : 'Mentor rejected', data: mentor };
+  }
+
+  async approveStory(id: string, approved: boolean, reason?: string) {
+    const { data: story, error } = await this.db.from('SuccessStory').update({ isApproved: approved, rejectionReason: approved ? null : reason }).eq('id', id).select().single();
+    if (error) throw error;
+    return { success: true, message: approved ? 'Story approved' : 'Story rejected', data: story };
+  }
+
+  async getAllBookings(filters: any) {
+    const { status, mentorId, limit, offset } = filters;
+
+    let query = this.db.from('MentorBooking').select('*, mentor:Mentor!mentorId(name, email, university)', { count: 'exact' }).order('createdAt', { ascending: false });
+    if (status) query = query.eq('status', status);
+    if (mentorId) query = query.eq('mentorId', mentorId);
+    if (limit) query = query.limit(limit);
+    if (offset) query = query.range(offset, offset + (limit || 20) - 1);
+
+    const { data: bookings, count } = await query;
+    return { success: true, data: bookings || [], pagination: { total: count || 0, limit, offset, hasMore: (offset || 0) + (bookings?.length || 0) < (count || 0) } };
+  }
+
+  async getAllRegistrations(filters: any) {
+    const { eventId, limit, offset } = filters;
+
+    let query = this.db.from('EventRegistration').select('*, event:CommunityEvent!eventId(title, date, type)', { count: 'exact' }).order('createdAt', { ascending: false });
+    if (eventId) query = query.eq('eventId', eventId);
+    if (limit) query = query.limit(limit);
+    if (offset) query = query.range(offset, offset + (limit || 20) - 1);
+
+    const { data: registrations, count } = await query;
+    return { success: true, data: registrations || [], pagination: { total: count || 0, limit, offset, hasMore: (offset || 0) + (registrations?.length || 0) < (count || 0) } };
+  }
+
+  async getCommunityStats() {
+    const [
+      { count: mentorCount },
+      { count: eventCount },
+      { count: storyCount },
+      { count: resourceCount },
+      { count: bookingCount },
+      { count: registrationCount },
+      { count: forumPostCount },
+    ] = await Promise.all([
+      this.db.from('Mentor').select('*', { count: 'exact', head: true }).eq('isApproved', true),
+      this.db.from('CommunityEvent').select('*', { count: 'exact', head: true }),
+      this.db.from('SuccessStory').select('*', { count: 'exact', head: true }).eq('isApproved', true),
+      this.db.from('CommunityResource').select('*', { count: 'exact', head: true }),
+      this.db.from('MentorBooking').select('*', { count: 'exact', head: true }),
+      this.db.from('EventRegistration').select('*', { count: 'exact', head: true }),
+      this.db.from('ForumPost').select('*', { count: 'exact', head: true }),
+    ]);
+
+    return { success: true, data: { mentors: mentorCount || 0, events: eventCount || 0, stories: storyCount || 0, resources: resourceCount || 0, bookings: bookingCount || 0, registrations: registrationCount || 0, forumPosts: forumPostCount || 0 } };
+  }
+
+  // ==================== FORUM/TOPIC METHODS ====================
+
+  async getForumPosts(filters: any, userId?: string) {
+    const { category, tag, limit, offset, sort } = filters;
+
+    let query = this.db
+      .from('ForumPost')
+      .select('*, author:User!authorId(firstName, lastName, role), commentCount:ForumComment(count)', { count: 'exact' })
+      .order(sort === 'popular' ? 'likes' : 'createdAt', { ascending: false });
+
+    if (category) query = query.ilike('category', `%${category}%`);
+    if (tag) query = query.contains('tags', [tag]);
+    if (limit) query = query.limit(limit);
+    if (offset) query = query.range(offset, offset + (limit || 20) - 1);
+
+    const { data: posts, count } = await query;
+
+    // Check which posts are liked by the userId
+    let likedPostIds = new Set<string>();
+    if (userId && posts && posts.length > 0) {
+      const { data: likedPosts } = await this.db
+        .from('PostLike')
+        .select('postId')
+        .eq('userId', userId)
+        .in('postId', posts.map((p: any) => p.id));
+      likedPostIds = new Set((likedPosts || []).map((l: any) => l.postId));
     }
 
-    async getFeaturedMentors(limit: number) {
-        const mentors = await this.prisma.mentor.findMany({
-            where: {
-                isActive: true,
-                isApproved: true,
-                rating: { gte: 4.5 },
-            },
-            take: limit,
-            orderBy: [{ rating: 'desc' }, { studentsMentored: 'desc' }],
-        });
+    return {
+      success: true,
+      data: (posts || []).map((post: any) => ({
+        ...post,
+        commentCount: Array.isArray(post.commentCount) ? post.commentCount.length : (post.commentCount || 0),
+        liked: likedPostIds.has(post.id),
+      })),
+      pagination: { total: count || 0, limit, offset, hasMore: (offset || 0) + (posts?.length || 0) < (count || 0) },
+    };
+  }
 
-        return {
-            success: true,
-            data: mentors,
-        };
+  async getForumPostById(id: string, userId?: string) {
+    const { data: post } = await this.db
+      .from('ForumPost')
+      .select('*, author:User!authorId(firstName, lastName, id, role), comments:ForumComment!postId(*, author:User!authorId(firstName, lastName, id, role), replies:ForumComment!parentId(*, author:User!authorId(firstName, lastName, id, role)))')
+      .eq('id', id)
+      .single();
+
+    if (!post) throw new NotFoundException('Post not found');
+
+    // Increment views
+    this.db.from('ForumPost').update({ views: (post.views || 0) + 1 }).eq('id', id).then(() => {});
+
+    let liked = false;
+    const likedCommentIds = new Set<string>();
+
+    if (userId) {
+      const { data: postLike } = await this.db.from('PostLike').select('id').eq('postId', id).eq('userId', userId).single();
+      liked = !!postLike;
+
+      const allCommentIds: string[] = [];
+      (post.comments || []).forEach((c: any) => {
+        allCommentIds.push(c.id);
+        (c.replies || []).forEach((r: any) => allCommentIds.push(r.id));
+      });
+
+      if (allCommentIds.length > 0) {
+        const { data: commentLikes } = await this.db.from('ForumCommentLike').select('commentId').eq('userId', userId).in('commentId', allCommentIds);
+        (commentLikes || []).forEach((l: any) => likedCommentIds.add(l.commentId));
+      }
     }
 
-    async getMentorById(id: string) {
-        const mentor = await this.prisma.mentor.findUnique({
-            where: { id },
-        });
+    const topLevelComments = (post.comments || []).filter((c: any) => !c.parentId);
+    const commentsWithLikes = topLevelComments.map((c: any) => ({
+      ...c,
+      liked: likedCommentIds.has(c.id),
+      replies: (c.replies || []).map((r: any) => ({ ...r, liked: likedCommentIds.has(r.id) })),
+    }));
 
-        if (!mentor) {
-            throw new NotFoundException('Mentor not found');
-        }
+    return { success: true, data: { ...post, comments: commentsWithLikes, commentCount: (post.comments || []).length, liked } };
+  }
 
-        return {
-            success: true,
-            data: mentor,
-        };
+  async searchSimilarPosts(query: string) {
+    if (!query || query.trim().length < 3) return { success: true, data: [] };
+
+    const stopwords = new Set(['the', 'and', 'for', 'how', 'can', 'what', 'why', 'which', 'does', 'are', 'was', 'get', 'not', 'any', 'but', 'you', 'your', 'that', 'this', 'have', 'with', 'will', 'from', 'its', 'into', 'than', 'then', 'about']);
+    const keywords = query.trim().toLowerCase().split(/\s+/).filter((w) => w.length >= 3 && !stopwords.has(w));
+    if (keywords.length === 0) return { success: true, data: [] };
+
+    // Search posts matching any keyword
+    const { data: posts } = await this.db
+      .from('ForumPost')
+      .select('id, title, category, createdAt, comments:ForumComment(count)')
+      .or(keywords.map((kw) => `title.ilike.%${kw}%`).join(','))
+      .order('createdAt', { ascending: false })
+      .limit(20);
+
+    const scored = (posts || []).map((p: any) => {
+      const t = (p.title || '').toLowerCase();
+      const score = keywords.reduce((acc: number, kw: string) => acc + (t.includes(kw) ? 1 : 0), 0);
+      return { ...p, score };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    const top5 = scored.slice(0, 5).map(({ score, ...p }: any) => ({
+      ...p,
+      commentCount: Array.isArray(p.comments) ? p.comments.length : 0,
+    }));
+
+    return { success: true, data: top5 };
+  }
+
+  async getHubs() {
+    try {
+      const { data } = await this.db.from('ForumPost').select('category').order('category', { ascending: true });
+      const unique = Array.from(new Set((data || []).map((r: any) => r.category).filter(Boolean)));
+      return { success: true, data: unique };
+    } catch (error) {
+      console.error('[CommunityService] getHubs failed:', error);
+      return { success: true, data: [] };
+    }
+  }
+
+  async createForumPost(userId: string, data: any) {
+    const { data: user } = await this.db.from('User').select('id').eq('id', userId).single();
+    if (!user) throw new NotFoundException('User not found');
+
+    // Idempotency check
+    const sixtySecondsAgo = new Date(Date.now() - 60000).toISOString();
+    const { data: recentPost } = await this.db
+      .from('ForumPost')
+      .select('*')
+      .eq('authorId', userId)
+      .eq('title', data.title)
+      .gte('createdAt', sixtySecondsAgo)
+      .single();
+
+    if (recentPost && data.force !== true) {
+      return { success: true, message: 'Post already created recently', data: recentPost, isDuplicate: true };
     }
 
-    async bookMentorSession(mentorId: string, bookingData: any) {
-        const mentor = await this.prisma.mentor.findUnique({
-            where: { id: mentorId },
-        });
+    const { data: post, error } = await this.db
+      .from('ForumPost')
+      .insert({ title: data.title, content: data.content, excerpt: data.excerpt || null, category: data.category || 'General', tags: data.tags || [], authorId: userId, isMentorOnly: data.isMentorOnly || false })
+      .select('*, author:User!authorId(firstName, lastName, role, id)')
+      .single();
 
-        if (!mentor) {
-            throw new NotFoundException('Mentor not found');
-        }
+    if (error) throw error;
+    return { success: true, message: 'Post created successfully', data: post };
+  }
 
-        if (!mentor.isActive) {
-            throw new BadRequestException('Mentor is not currently accepting bookings');
-        }
+  async createForumComment(userId: string, postId: string, content: string, parentId?: string) {
+    const tenSecondsAgo = new Date(Date.now() - 10000).toISOString();
+    const { data: recentComment } = await this.db.from('ForumComment').select('*').eq('authorId', userId).eq('postId', postId).eq('content', content).gte('createdAt', tenSecondsAgo).single();
+    if (recentComment) return { success: true, data: recentComment };
 
-        const booking = await this.prisma.mentorBooking.create({
-            data: {
-                mentorId,
-                ...bookingData,
-                status: 'pending',
-            },
-        });
+    const { data: post } = await this.db.from('ForumPost').select('id').eq('id', postId).single();
+    if (!post) throw new NotFoundException('Post not found');
 
-        return {
-            success: true,
-            message: 'Booking request submitted successfully',
-            data: booking,
-        };
+    const { data: comment, error } = await this.db.from('ForumComment').insert({ content, postId, authorId: userId, parentId: parentId || null }).select('*, author:User!authorId(firstName, lastName, role)').single();
+    if (error) throw error;
+    return { success: true, message: 'Comment added successfully', data: comment };
+  }
+
+  async likeForumComment(userId: string, id: string) {
+    try {
+      const { data: existing } = await this.db.from('ForumCommentLike').select('id').eq('commentId', id).eq('userId', userId).single();
+      const { data: comment } = await this.db.from('ForumComment').select('likes').eq('id', id).single();
+      const currentLikes = comment?.likes || 0;
+
+      if (existing) {
+        await this.db.from('ForumCommentLike').delete().eq('id', existing.id);
+        await this.db.from('ForumComment').update({ likes: Math.max(0, currentLikes - 1) }).eq('id', id);
+        const { data: updated } = await this.db.from('ForumComment').select('likes').eq('id', id).single();
+        return { success: true, likes: updated?.likes || 0, liked: false };
+      } else {
+        await this.db.from('ForumCommentLike').insert({ commentId: id, userId });
+        await this.db.from('ForumComment').update({ likes: currentLikes + 1 }).eq('id', id);
+        const { data: updated } = await this.db.from('ForumComment').select('likes').eq('id', id).single();
+        return { success: true, likes: updated?.likes || 0, liked: true };
+      }
+    } catch (error) {
+      console.error('[CommunityService] likeForumComment failed:', error);
+      throw new BadRequestException('Failed to process like action on comment');
     }
+  }
 
-    async applyAsMentor(applicationData: any) {
-        // Validate required fields
-        if (!applicationData || !applicationData.email) {
-            throw new BadRequestException('Email is required');
-        }
-        if (!applicationData.name) {
-            throw new BadRequestException('Name is required');
-        }
-        if (!applicationData.university) {
-            throw new BadRequestException('University is required');
-        }
-        if (!applicationData.country) {
-            throw new BadRequestException('Country is required');
-        }
+  async likeForumPost(userId: string, id: string) {
+    try {
+      const { data: existing } = await this.db.from('PostLike').select('id').eq('postId', id).eq('userId', userId).single();
+      const { data: post } = await this.db.from('ForumPost').select('likes').eq('id', id).single();
+      const currentLikes = post?.likes || 0;
 
-        // Check if email already exists
-        const existingMentor = await this.prisma.mentor.findUnique({
-            where: { email: applicationData.email },
-        });
-
-        if (existingMentor) {
-            throw new BadRequestException('A mentor with this email already exists');
-        }
-
-        const mentor = await this.prisma.mentor.create({
-            data: {
-                name: applicationData.name,
-                email: applicationData.email,
-                phone: applicationData.phone || null,
-                university: applicationData.university,
-                degree: applicationData.degree || '',
-                country: applicationData.country,
-                loanBank: applicationData.loanBank || '',
-                loanAmount: applicationData.loanAmount || '',
-                interestRate: applicationData.interestRate || null,
-                loanType: applicationData.loanType || null,
-                category: applicationData.category || null,
-                bio: applicationData.bio || '',
-                expertise: applicationData.expertise || [],
-                linkedIn: applicationData.linkedIn || null,
-                image: applicationData.image || null,
-                isActive: false,
-                isApproved: false,
-                rating: 0,
-                studentsMentored: 0,
-            },
-        });
-
-        return {
-            success: true,
-            message: 'Mentor application submitted successfully. We will review and get back to you soon.',
-            data: mentor,
-        };
+      if (existing) {
+        await this.db.from('PostLike').delete().eq('id', existing.id);
+        await this.db.from('ForumPost').update({ likes: Math.max(0, currentLikes - 1) }).eq('id', id);
+        const { data: updated } = await this.db.from('ForumPost').select('likes').eq('id', id).single();
+        return { success: true, likes: updated?.likes || 0, liked: false };
+      } else {
+        await this.db.from('PostLike').insert({ postId: id, userId });
+        await this.db.from('ForumPost').update({ likes: currentLikes + 1 }).eq('id', id);
+        const { data: updated } = await this.db.from('ForumPost').select('likes').eq('id', id).single();
+        return { success: true, likes: updated?.likes || 0, liked: true };
+      }
+    } catch (error) {
+      console.error('[CommunityService] likeForumPost failed:', error);
+      throw new BadRequestException('Failed to process like action on post');
     }
+  }
 
-    async getMentorStats() {
-        const [total, active, averageRating] = await Promise.all([
-            this.prisma.mentor.count({ where: { isApproved: true } }),
-            this.prisma.mentor.count({ where: { isActive: true, isApproved: true } }),
-            this.prisma.mentor.aggregate({
-                where: { isApproved: true },
-                _avg: { rating: true },
-            }),
-        ]);
-
-        const totalMentored = await this.prisma.mentor.aggregate({
-            where: { isApproved: true },
-            _sum: { studentsMentored: true },
-        });
-
-        return {
-            success: true,
-            data: {
-                totalMentors: total,
-                activeMentors: active,
-                averageRating: averageRating._avg.rating || 0,
-                totalStudentsMentored: totalMentored._sum.studentsMentored || 0,
-            },
-        };
+  async shareForumPost(id: string) {
+    try {
+      const { data: post } = await this.db.from('ForumPost').select('views').eq('id', id).single();
+      await this.db.from('ForumPost').update({ views: (post?.views || 0) + 1 }).eq('id', id);
+      return { success: true, message: 'Post shared' };
+    } catch (error) {
+      throw new NotFoundException('Post not found');
     }
+  }
 
-    // ==================== EVENTS METHODS ====================
-
-    async getAllEvents(filters: any) {
-        const { type, category, featured, limit, offset } = filters;
-
-        const where: any = {};
-
-        if (type) {
-            where.type = type;
-        }
-        if (category) {
-            where.category = category;
-        }
-        if (featured !== undefined) {
-            where.isFeatured = featured;
-        }
-
-        const [events, total] = await Promise.all([
-            this.prisma.communityEvent.findMany({
-                where,
-                take: limit,
-                skip: offset,
-                orderBy: { date: 'asc' },
-            }),
-            this.prisma.communityEvent.count({ where }),
-        ]);
-
-        return {
-            success: true,
-            data: events,
-            pagination: {
-                total,
-                limit,
-                offset,
-                hasMore: offset + events.length < total,
-            },
-        };
+  async deleteForumPost(id: string) {
+    try {
+      await this.db.from('ForumPost').delete().eq('id', id);
+      return { success: true, message: 'Post deleted successfully' };
+    } catch (error) {
+      throw new NotFoundException('Post not found');
     }
+  }
 
-    async getUpcomingEvents(limit: number) {
-        const now = new Date();
+  async deleteForumComment(userId: string, userRole: string, commentId: string) {
+    const { data: comment } = await this.db.from('ForumComment').select('id, authorId').eq('id', commentId).single();
+    if (!comment) throw new NotFoundException('Comment not found');
+    if (comment.authorId !== userId && userRole !== 'admin') throw new HttpException('You can only delete your own comments', HttpStatus.FORBIDDEN);
+    await this.db.from('ForumComment').delete().eq('id', commentId);
+    return { success: true, message: 'Comment deleted successfully' };
+  }
 
-        const events = await this.prisma.communityEvent.findMany({
-            where: {
-                date: { gte: now.toISOString() },
-            },
-            take: limit,
-            orderBy: { date: 'asc' },
-        });
+  // ==================== MENTOR AUTH & DASHBOARD METHODS ====================
 
-        return {
-            success: true,
-            data: events,
-        };
+  async requestMentorOTP(email: string) {
+    const { data: mentor } = await this.db.from('Mentor').select('*').eq('email', email).single();
+    if (!mentor) throw new NotFoundException('Mentor not found with this email');
+    if (!mentor.isApproved) throw new BadRequestException('Your mentor application is pending approval');
+    if (!mentor.isActive) throw new BadRequestException('Your mentor account is not active');
+
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    this.otpStore.set(email, { otp, expiresAt });
+
+    console.log(`\n🔐 OTP for ${email}: ${otp}\n`);
+    return { success: true, message: 'OTP sent to your email. Please check your inbox.', data: { email, expiresIn: 300 } };
+  }
+
+  async verifyMentorOTP(email: string, otp: string) {
+    const { data: mentor } = await this.db.from('Mentor').select('*').eq('email', email).single();
+    if (!mentor) throw new NotFoundException('Mentor not found');
+
+    const storedOTP = this.otpStore.get(email);
+    if (!storedOTP) throw new BadRequestException('OTP not found. Please request a new OTP.');
+    if (new Date() > storedOTP.expiresAt) { this.otpStore.delete(email); throw new BadRequestException('OTP has expired. Please request a new OTP.'); }
+    if (storedOTP.otp !== otp) throw new BadRequestException('Invalid OTP. Please try again.');
+
+    this.otpStore.delete(email);
+    return { success: true, message: 'Login successful', data: { id: mentor.id, name: mentor.name, email: mentor.email, university: mentor.university, isApproved: mentor.isApproved, isActive: mentor.isActive } };
+  }
+
+  async getMentorProfile(mentorId: string) {
+    const { data: mentor } = await this.db.from('Mentor').select('*').eq('id', mentorId).single();
+    if (!mentor) throw new NotFoundException('Mentor not found');
+
+    const { data: bookings } = await this.db.from('MentorBooking').select('status').eq('mentorId', mentorId);
+    const stats = { total: 0, pending: 0, approved: 0, rejected: 0, completed: 0 };
+    (bookings || []).forEach((b: any) => { stats.total++; if (stats[b.status] !== undefined) stats[b.status]++; });
+
+    return { success: true, data: { mentor, stats } };
+  }
+
+  async getMentorBookings(mentorId: string, filters: any) {
+    const { status, limit, offset } = filters;
+
+    let query = this.db.from('MentorBooking').select('*', { count: 'exact' }).eq('mentorId', mentorId).order('createdAt', { ascending: false });
+    if (status) query = query.eq('status', status);
+    if (limit) query = query.limit(limit || 20);
+    if (offset) query = query.range(offset || 0, (offset || 0) + (limit || 20) - 1);
+
+    const { data: bookings, count } = await query;
+    return { success: true, data: bookings || [], pagination: { total: count || 0, limit: limit || 20, offset: offset || 0, hasMore: (offset || 0) + (bookings?.length || 0) < (count || 0) } };
+  }
+
+  async updateBookingStatus(mentorId: string, bookingId: string, status: string) {
+    const { data: booking } = await this.db.from('MentorBooking').select('id').eq('id', bookingId).eq('mentorId', mentorId).single();
+    if (!booking) throw new NotFoundException('Booking not found or not authorized');
+
+    const { data: updatedBooking, error } = await this.db.from('MentorBooking').update({ status }).eq('id', bookingId).select().single();
+    if (error) throw error;
+    return { success: true, message: `Booking ${status} successfully`, data: updatedBooking };
+  }
+
+  async updateMentorProfile(mentorId: string, updateData: any) {
+    const allowedFields = ['phone', 'bio', 'expertise', 'linkedIn', 'image', 'isActive'];
+    const dataToUpdate: any = {};
+    Object.keys(updateData).forEach((key) => { if (allowedFields.includes(key)) dataToUpdate[key] = updateData[key]; });
+
+    const { data: mentor, error } = await this.db.from('Mentor').update(dataToUpdate).eq('id', mentorId).select().single();
+    if (error) throw error;
+    return { success: true, message: 'Profile updated successfully', data: mentor };
+  }
+
+  async getAllForumPostsAdmin(filters: any) {
+    const { category, limit, offset, sort } = filters;
+
+    let query = this.db
+      .from('ForumPost')
+      .select('*, author:User!authorId(firstName, lastName, role, email), comments:ForumComment(count)', { count: 'exact' })
+      .order('isPinned', { ascending: false })
+      .order(sort === 'popular' ? 'likes' : 'createdAt', { ascending: false });
+
+    if (category) query = query.ilike('category', `%${category}%`);
+    if (limit) query = query.limit(limit);
+    if (offset) query = query.range(offset, offset + (limit || 20) - 1);
+
+    const { data: posts, count } = await query;
+    return {
+      success: true,
+      data: (posts || []).map((p: any) => ({ ...p, commentCount: Array.isArray(p.comments) ? p.comments.length : 0 })),
+      pagination: { total: count || 0, limit, offset, hasMore: (offset || 0) + (posts?.length || 0) < (count || 0) },
+    };
+  }
+
+  async togglePinForumPost(id: string, isPinned: boolean) {
+    try {
+      const { data: post, error } = await this.db.from('ForumPost').update({ isPinned }).eq('id', id).select().single();
+      if (error) throw error;
+      return { success: true, message: isPinned ? 'Post pinned successfully' : 'Post unpinned successfully', data: post };
+    } catch (error) {
+      throw new NotFoundException('Post not found');
     }
+  }
 
-    async getPastEvents(limit: number, offset: number) {
-        const now = new Date();
+  // ==================== AI DUPLICATE QUESTION DETECTION ====================
 
-        const [events, total] = await Promise.all([
-            this.prisma.communityEvent.findMany({
-                where: {
-                    date: { lt: now.toISOString() },
-                },
-                take: limit,
-                skip: offset,
-                orderBy: { date: 'desc' },
-            }),
-            this.prisma.communityEvent.count({
-                where: { date: { lt: now.toISOString() } },
-            }),
-        ]);
+  async checkDuplicateQuestion(questionData: { title: string; content: string; category: string }) {
+    try {
+      // Exact match check
+      const { data: exactMatch } = await this.db
+        .from('ForumPost')
+        .select('id, title, createdAt, comments:ForumComment(count)')
+        .ilike('title', questionData.title.trim())
+        .eq('category', questionData.category)
+        .single();
 
-        return {
-            success: true,
-            data: events,
-            pagination: {
-                total,
-                limit,
-                offset,
-                hasMore: offset + events.length < total,
-            },
-        };
+      if (exactMatch) {
+        return { isDuplicate: true, similarQuestions: [{ id: exactMatch.id, title: exactMatch.title, similarity: 1.0, reason: 'Exact title match found in this category.', url: `/community/discussions/${exactMatch.id}` }], message: 'A question with this exact title already exists.' };
+      }
+
+      const stopwords = new Set(['the', 'and', 'for', 'how', 'can', 'what', 'why', 'which', 'does', 'are', 'was', 'get', 'not', 'any', 'but', 'you', 'your', 'that', 'this', 'have', 'with', 'will', 'from', 'its', 'into', 'than', 'then', 'about']);
+      const keywords = questionData.title.toLowerCase().split(/\s+/).filter((w) => w.length >= 3 && !stopwords.has(w));
+
+      let existingQuestions: any[] = [];
+      if (keywords.length > 0) {
+        const { data } = await this.db
+          .from('ForumPost')
+          .select('id, title, content, createdAt')
+          .ilike('category', `%${questionData.category}%`)
+          .or(keywords.map((kw) => `title.ilike.%${kw}%`).join(','))
+          .order('createdAt', { ascending: false })
+          .limit(50);
+        existingQuestions = data || [];
+      }
+
+      if (existingQuestions.length === 0) {
+        const { data } = await this.db.from('ForumPost').select('id, title, content, createdAt').ilike('category', `%${questionData.category}%`).order('createdAt', { ascending: false }).limit(20);
+        existingQuestions = data || [];
+      }
+
+      if (existingQuestions.length === 0) return { isDuplicate: false, similarQuestions: [], message: 'No similar questions found' };
+
+      const existingQuestionsText = existingQuestions.map((q, i) => `${i + 1}. ID: ${q.id}\n   Title: "${q.title}"\n   Preview: ${(q.content || '').substring(0, 150)}...`).join('\n\n');
+
+      const prompt = `You are an expert at detecting duplicate or highly similar questions in a community forum.\n\nNew Question:\nTitle: "${questionData.title}"\nContent: ${questionData.content}\n\nExisting Questions in the ${questionData.category} category:\n${existingQuestionsText}\n\nTask: Identify if the new question is substantially similar to any existing questions. Questions are considered similar if they ask for the same information, even if worded differently.\nHigh similarity (>= 0.8) means they should be merged or the user should be directed to the existing one.\n\nProvide your analysis in JSON format with the following structure:\n{\n  "matches": [\n    {\n      "id": "question_id",\n      "title": "question title",\n      "similarity": 0.0-1.0,\n      "reason": "brief explanation of why they're similar"\n    }\n  ]\n}\n\nIMPORTANT RULES:\n1. Only include questions with similarity >= 0.7\n2. Similarity of 0.9-1.0 means essentially the same question or intent\n3. Similarity of 0.7-0.8 means related topics but maybe slightly different focus\n4. Maximum 5 matches\n5. Respond ONLY with valid JSON, no markdown formatting`;
+
+      const aiResponse = await this.groqService.getJson<{ matches: Array<{ id: string; title: string; similarity: number; reason: string }> }>(prompt);
+
+      const validMatches = (aiResponse.matches || [])
+        .filter((m) => m.similarity >= 0.7)
+        .slice(0, 5)
+        .map((m) => ({ id: m.id, title: m.title, similarity: m.similarity, reason: m.reason, url: `/community/discussions/${m.id}` }));
+
+      return { isDuplicate: validMatches.length > 0, similarQuestions: validMatches, message: validMatches.length > 0 ? `Found ${validMatches.length} similar question(s)` : 'No similar questions found' };
+    } catch (error) {
+      console.error('Error in duplicate question detection:', error);
+      return { isDuplicate: false, similarQuestions: [], message: 'Duplicate check unavailable, but you can still post your question', error: error.message };
     }
-
-    async getEventById(id: string) {
-        const event = await this.prisma.communityEvent.findUnique({
-            where: { id },
-            include: {
-                _count: {
-                    select: { registrations: true },
-                },
-            },
-        });
-
-        if (!event) {
-            throw new NotFoundException('Event not found');
-        }
-
-        return {
-            success: true,
-            data: {
-                ...event,
-                registeredCount: event._count.registrations,
-            },
-        };
-    }
-
-    async registerForEvent(eventId: string, registrationData: any) {
-        const event = await this.prisma.communityEvent.findUnique({
-            where: { id: eventId },
-            include: {
-                _count: {
-                    select: { registrations: true },
-                },
-            },
-        });
-
-        if (!event) {
-            throw new NotFoundException('Event not found');
-        }
-
-        // Check if event is in the past
-        if (new Date(event.date) < new Date()) {
-            throw new BadRequestException('Cannot register for past events');
-        }
-
-        // Check if event is full
-        if (event.maxAttendees && event._count.registrations >= event.maxAttendees) {
-            throw new BadRequestException('Event is full');
-        }
-
-        // Check if already registered
-        const existingRegistration = await this.prisma.eventRegistration.findFirst({
-            where: {
-                eventId,
-                email: registrationData.email,
-            },
-        });
-
-        if (existingRegistration) {
-            throw new BadRequestException('You are already registered for this event');
-        }
-
-        const registration = await this.prisma.eventRegistration.create({
-            data: {
-                eventId,
-                ...registrationData,
-            },
-        });
-
-        // Update attendees count
-        await this.prisma.communityEvent.update({
-            where: { id: eventId },
-            data: {
-                attendeesCount: { increment: 1 },
-            },
-        });
-
-        return {
-            success: true,
-            message: 'Successfully registered for the event',
-            data: registration,
-        };
-    }
-
-    // ==================== SUCCESS STORIES METHODS ====================
-
-    async getAllStories(filters: any) {
-        const { country, category, limit, offset } = filters;
-
-        const where: any = { isApproved: true };
-
-        if (country) {
-            where.country = { contains: country, mode: 'insensitive' };
-        }
-        if (category) {
-            where.category = { contains: category, mode: 'insensitive' };
-        }
-
-        const [stories, total] = await Promise.all([
-            this.prisma.successStory.findMany({
-                where,
-                take: limit,
-                skip: offset,
-                orderBy: { createdAt: 'desc' },
-            }),
-            this.prisma.successStory.count({ where }),
-        ]);
-
-        return {
-            success: true,
-            data: stories,
-            pagination: {
-                total,
-                limit,
-                offset,
-                hasMore: offset + stories.length < total,
-            },
-        };
-    }
-
-    async getFeaturedStories(limit: number) {
-        const stories = await this.prisma.successStory.findMany({
-            where: {
-                isApproved: true,
-                isFeatured: true,
-            },
-            take: limit,
-            orderBy: { createdAt: 'desc' },
-        });
-
-        return {
-            success: true,
-            data: stories,
-        };
-    }
-
-    async getStoryById(id: string) {
-        const story = await this.prisma.successStory.findUnique({
-            where: { id },
-        });
-
-        if (!story) {
-            throw new NotFoundException('Story not found');
-        }
-
-        return {
-            success: true,
-            data: story,
-        };
-    }
-
-    async submitStory(storyData: any) {
-        const story = await this.prisma.successStory.create({
-            data: {
-                ...storyData,
-                isApproved: false,
-                isFeatured: false,
-            },
-        });
-
-        return {
-            success: true,
-            message: 'Success story submitted successfully. We will review and publish it soon.',
-            data: story,
-        };
-    }
-
-    // ==================== RESOURCES METHODS ====================
-
-    async getAllResources(filters: any) {
-        const { type, category, limit, offset } = filters;
-
-        const where: any = {};
-
-        if (type) {
-            where.type = type;
-        }
-        if (category) {
-            where.category = { contains: category, mode: 'insensitive' };
-        }
-
-        const [resources, total] = await Promise.all([
-            this.prisma.communityResource.findMany({
-                where,
-                take: limit,
-                skip: offset,
-                orderBy: { createdAt: 'desc' },
-            }),
-            this.prisma.communityResource.count({ where }),
-        ]);
-
-        return {
-            success: true,
-            data: resources,
-            pagination: {
-                total,
-                limit,
-                offset,
-                hasMore: offset + resources.length < total,
-            },
-        };
-    }
-
-    async getPopularResources(limit: number) {
-        const resources = await this.prisma.communityResource.findMany({
-            take: limit,
-            orderBy: { downloads: 'desc' },
-        });
-
-        return {
-            success: true,
-            data: resources,
-        };
-    }
-
-    async getResourceById(id: string) {
-        const resource = await this.prisma.communityResource.findUnique({
-            where: { id },
-        });
-
-        if (!resource) {
-            throw new NotFoundException('Resource not found');
-        }
-
-        return {
-            success: true,
-            data: resource,
-        };
-    }
-
-    async trackResourceView(resourceId: string) {
-        const resource = await this.prisma.communityResource.update({
-            where: { id: resourceId },
-            data: {
-                downloads: { increment: 1 },
-            },
-        });
-
-        return {
-            success: true,
-            data: { downloads: resource.downloads },
-        };
-    }
-
-    // ==================== ADMIN METHODS ====================
-
-    async createMentor(mentorData: any) {
-        const mentor = await this.prisma.mentor.create({
-            data: {
-                ...mentorData,
-                expertise: mentorData.expertise || [],
-                isActive: mentorData.isActive !== undefined ? mentorData.isActive : true,
-                isApproved: true,
-                rating: mentorData.rating || 0,
-                studentsMentored: mentorData.studentsMentored || 0,
-            },
-        });
-
-        return {
-            success: true,
-            message: 'Mentor created successfully',
-            data: mentor,
-        };
-    }
-
-    async updateMentor(id: string, updateData: any) {
-        const mentor = await this.prisma.mentor.update({
-            where: { id },
-            data: updateData,
-        });
-
-        return {
-            success: true,
-            message: 'Mentor updated successfully',
-            data: mentor,
-        };
-    }
-
-    async deleteMentor(id: string) {
-        await this.prisma.mentor.delete({
-            where: { id },
-        });
-
-        return {
-            success: true,
-            message: 'Mentor deleted successfully',
-        };
-    }
-
-    async createEvent(eventData: any) {
-        const event = await this.prisma.communityEvent.create({
-            data: {
-                ...eventData,
-                attendeesCount: 0,
-                isFeatured: eventData.isFeatured || false,
-            },
-        });
-
-        return {
-            success: true,
-            message: 'Event created successfully',
-            data: event,
-        };
-    }
-
-    async updateEvent(id: string, updateData: any) {
-        const event = await this.prisma.communityEvent.update({
-            where: { id },
-            data: updateData,
-        });
-
-        return {
-            success: true,
-            message: 'Event updated successfully',
-            data: event,
-        };
-    }
-
-    async deleteEvent(id: string) {
-        await this.prisma.communityEvent.delete({
-            where: { id },
-        });
-
-        return {
-            success: true,
-            message: 'Event deleted successfully',
-        };
-    }
-
-    async createResource(resourceData: any) {
-        const resource = await this.prisma.communityResource.create({
-            data: {
-                ...resourceData,
-                downloads: 0,
-                isFeatured: resourceData.isFeatured || false,
-            },
-        });
-
-        return {
-            success: true,
-            message: 'Resource created successfully',
-            data: resource,
-        };
-    }
-
-    async updateResource(id: string, updateData: any) {
-        const resource = await this.prisma.communityResource.update({
-            where: { id },
-            data: updateData,
-        });
-
-        return {
-            success: true,
-            message: 'Resource updated successfully',
-            data: resource,
-        };
-    }
-
-    async deleteResource(id: string) {
-        await this.prisma.communityResource.delete({
-            where: { id },
-        });
-
-        return {
-            success: true,
-            message: 'Resource deleted successfully',
-        };
-    }
-
-    async createStory(storyData: any) {
-        const story = await this.prisma.successStory.create({
-            data: {
-                ...storyData,
-                isApproved: storyData.isApproved !== undefined ? storyData.isApproved : true,
-                isFeatured: storyData.isFeatured || false,
-            },
-        });
-
-        return {
-            success: true,
-            message: 'Success story created successfully',
-            data: story,
-        };
-    }
-
-    async updateStory(id: string, updateData: any) {
-        const story = await this.prisma.successStory.update({
-            where: { id },
-            data: updateData,
-        });
-
-        return {
-            success: true,
-            message: 'Success story updated successfully',
-            data: story,
-        };
-    }
-
-    async deleteStory(id: string) {
-        await this.prisma.successStory.delete({
-            where: { id },
-        });
-
-        return {
-            success: true,
-            message: 'Success story deleted successfully',
-        };
-    }
-
-    async approveMentor(id: string, approved: boolean, reason?: string) {
-        const mentor = await this.prisma.mentor.update({
-            where: { id },
-            data: {
-                isApproved: approved,
-                isActive: approved,
-                rejectionReason: approved ? null : reason,
-            },
-        });
-
-        return {
-            success: true,
-            message: approved ? 'Mentor approved' : 'Mentor rejected',
-            data: mentor,
-        };
-    }
-
-    async approveStory(id: string, approved: boolean, reason?: string) {
-        const story = await this.prisma.successStory.update({
-            where: { id },
-            data: {
-                isApproved: approved,
-                rejectionReason: approved ? null : reason,
-            },
-        });
-
-        return {
-            success: true,
-            message: approved ? 'Story approved' : 'Story rejected',
-            data: story,
-        };
-    }
-
-    async getAllBookings(filters: any) {
-        const { status, mentorId, limit, offset } = filters;
-
-        const where: any = {};
-
-        if (status) {
-            where.status = status;
-        }
-        if (mentorId) {
-            where.mentorId = mentorId;
-        }
-
-        const [bookings, total] = await Promise.all([
-            this.prisma.mentorBooking.findMany({
-                where,
-                take: limit,
-                skip: offset,
-                include: {
-                    mentor: {
-                        select: {
-                            name: true,
-                            email: true,
-                            university: true,
-                        },
-                    },
-                },
-                orderBy: { createdAt: 'desc' },
-            }),
-            this.prisma.mentorBooking.count({ where }),
-        ]);
-
-        return {
-            success: true,
-            data: bookings,
-            pagination: {
-                total,
-                limit,
-                offset,
-                hasMore: offset + bookings.length < total,
-            },
-        };
-    }
-
-    async getAllRegistrations(filters: any) {
-        const { eventId, limit, offset } = filters;
-
-        const where: any = {};
-
-        if (eventId) {
-            where.eventId = eventId;
-        }
-
-        const [registrations, total] = await Promise.all([
-            this.prisma.eventRegistration.findMany({
-                where,
-                take: limit,
-                skip: offset,
-                include: {
-                    event: {
-                        select: {
-                            title: true,
-                            date: true,
-                            type: true,
-                        },
-                    },
-                },
-                orderBy: { createdAt: 'desc' },
-            }),
-            this.prisma.eventRegistration.count({ where }),
-        ]);
-
-        return {
-            success: true,
-            data: registrations,
-            pagination: {
-                total,
-                limit,
-                offset,
-                hasMore: offset + registrations.length < total,
-            },
-        };
-    }
-
-    async getCommunityStats() {
-        const [
-            mentorCount,
-            eventCount,
-            storyCount,
-            resourceCount,
-            bookingCount,
-            registrationCount,
-            forumPostCount,
-        ] = await Promise.all([
-            this.prisma.mentor.count({ where: { isApproved: true } }),
-            this.prisma.communityEvent.count(),
-            this.prisma.successStory.count({ where: { isApproved: true } }),
-            this.prisma.communityResource.count(),
-            this.prisma.mentorBooking.count(),
-            this.prisma.eventRegistration.count(),
-            this.prisma.forumPost.count(),
-        ]);
-
-        return {
-            success: true,
-            data: {
-                mentors: mentorCount,
-                events: eventCount,
-                stories: storyCount,
-                resources: resourceCount,
-                bookings: bookingCount,
-                registrations: registrationCount,
-                forumPosts: forumPostCount,
-            },
-        };
-    }
-    // ==================== FORUM/TOPIC METHODS ====================
-
-    async getForumPosts(filters: any, userId?: string) {
-        const { category, tag, limit, offset, sort } = filters;
-        const where: any = {};
-
-        if (category) {
-            where.category = { contains: category, mode: 'insensitive' };
-        }
-        if (tag) {
-            where.tags = { has: tag };
-        }
-
-        const orderBy: any = sort === 'popular' ? { likes: 'desc' } : { createdAt: 'desc' };
-
-        const [posts, total] = await Promise.all([
-            this.prisma.forumPost.findMany({
-                where,
-                include: {
-                    author: {
-                        select: {
-                            firstName: true,
-                            lastName: true,
-                            role: true,
-                        }
-                    },
-                    _count: {
-                        select: { comments: true }
-                    }
-                },
-                take: limit,
-                skip: offset,
-                orderBy,
-            }),
-            this.prisma.forumPost.count({ where }),
-        ]);
-
-        // If userId is provided, check for likes
-        let likedPostIds = new Set<string>();
-        if (userId && posts.length > 0) {
-            try {
-                // Use raw query as fallback
-                const userLikes: any[] = await this.prisma.$queryRaw`
-                    SELECT "postId" FROM "PostLike" 
-                    WHERE "userId" = ${userId} 
-                    AND "postId" IN (${Prisma.join(posts.map(p => p.id))})
-                `;
-                likedPostIds = new Set(userLikes.map(l => l.postId));
-            } catch (e) {
-                console.error('Failed to fetch likes via raw query:', e);
-            }
-        }
-
-        return {
-            success: true,
-            data: posts.map(post => ({
-                ...post,
-                commentCount: post._count.comments,
-                liked: likedPostIds.has(post.id)
-            })),
-            pagination: {
-                total,
-                limit,
-                offset,
-                hasMore: offset + posts.length < total,
-            },
-        };
-    }
-
-    async getForumPostById(id: string, userId?: string) {
-        const post = await this.prisma.forumPost.findUnique({
-            where: { id },
-            include: {
-                author: {
-                    select: {
-                        firstName: true,
-                        lastName: true,
-                        id: true,
-                        role: true,
-                    }
-                },
-                comments: {
-                    where: { parentId: null },
-                    include: {
-                        author: {
-                            select: {
-                                firstName: true,
-                                lastName: true,
-                                id: true,
-                                role: true,
-                            },
-                        },
-                        replies: {
-                            include: {
-                                author: {
-                                    select: {
-                                        firstName: true,
-                                        lastName: true,
-                                        id: true,
-                                        role: true,
-                                    },
-                                },
-                            },
-                            orderBy: { createdAt: 'asc' },
-                        },
-                    },
-                    orderBy: { createdAt: 'asc' },
-                },
-                _count: {
-                    select: { comments: true },
-                },
-            }
-        });
-
-        if (!post) throw new NotFoundException('Post not found');
-
-        // Increment views
-        await this.prisma.forumPost.update({
-            where: { id },
-            data: { views: { increment: 1 } }
-        });
-
-        let liked = false;
-        const likedCommentIds = new Set<string>();
-
-        if (userId) {
-            try {
-                // Check if post is liked
-                const postLikes: any[] = await this.prisma.$queryRaw`
-                    SELECT * FROM "PostLike" WHERE "postId" = ${id} AND "userId" = ${userId} LIMIT 1
-                `;
-                liked = postLikes.length > 0;
-
-                // Check for liked comments
-                const allCommentIds: string[] = [];
-                post.comments.forEach(c => {
-                    allCommentIds.push(c.id);
-                    if (c.replies) c.replies.forEach(r => allCommentIds.push(r.id));
-                });
-
-                if (allCommentIds.length > 0) {
-                    const commentLikes: any[] = await this.prisma.$queryRaw`
-                        SELECT "commentId" FROM "ForumCommentLike" 
-                        WHERE "userId" = ${userId} 
-                        AND "commentId" IN (${Prisma.join(allCommentIds)})
-                    `;
-                    commentLikes.forEach(l => likedCommentIds.add(l.commentId));
-                }
-            } catch (e) {
-                console.error('Failed to fetch likes via raw query:', e);
-            }
-        }
-
-        // Map comments to include liked status
-        const commentsWithLikes = post.comments.map(c => ({
-            ...c,
-            liked: likedCommentIds.has(c.id),
-            replies: c.replies.map(r => ({
-                ...r,
-                liked: likedCommentIds.has(r.id)
-            }))
-        }));
-
-        return {
-            success: true,
-            data: {
-                ...post,
-                comments: commentsWithLikes,
-                liked
-            }
-        };
-    }
-
-    /**
-     * Search for similar/duplicate forum posts by title keywords
-     * Returns top 5 matches with id, title, category, commentCount, createdAt
-     */
-    async searchSimilarPosts(query: string) {
-        if (!query || query.trim().length < 3) {
-            return { success: true, data: [] };
-        }
-
-        // Extract meaningful keywords (>= 3 chars, ignore stopwords)
-        const stopwords = new Set(['the', 'and', 'for', 'how', 'can', 'what', 'why', 'which', 'does', 'are', 'was', 'get', 'not', 'any', 'but', 'you', 'your', 'that', 'this', 'have', 'with', 'will', 'from', 'its', 'into', 'than', 'then', 'about']);
-        const keywords = query.trim().toLowerCase().split(/\s+/).filter(w => w.length >= 3 && !stopwords.has(w));
-
-        if (keywords.length === 0) {
-            return { success: true, data: [] };
-        }
-
-        // Search: posts whose title contains ANY of the keywords
-        const orConditions = keywords.map(kw => ({
-            title: { contains: kw, mode: 'insensitive' as const }
-        }));
-
-        const posts = await this.prisma.forumPost.findMany({
-            where: { OR: orConditions },
-            select: {
-                id: true,
-                title: true,
-                category: true,
-                createdAt: true,
-                _count: { select: { comments: true } },
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 20,
-        });
-
-        // Score by how many keywords match the title
-        const scored = posts.map(p => {
-            // title can be nullable in Prisma schema; guard against null
-            const t = (p.title || '').toLowerCase();
-            const score = keywords.reduce((acc, kw) => acc + (t.includes(kw) ? 1 : 0), 0);
-            return { ...p, score };
-        });
-
-        // Sort by score desc, take top 5
-        scored.sort((a, b) => b.score - a.score);
-        const top5 = scored.slice(0, 5).map(({ score, ...p }) => ({
-            ...p,
-            commentCount: p._count.comments,
-        }));
-
-        return { success: true, data: top5 };
-    }
-
-    /**
-     * Return a list of hub categories (distinct categories from forum posts)
-     */
-    async getHubs() {
-        try {
-            const rows = await this.prisma.forumPost.findMany({
-                select: { category: true },
-                orderBy: { category: 'asc' },
-            });
-            const unique = Array.from(new Set(rows.map(r => r.category).filter(Boolean)));
-            return { success: true, data: unique };
-        } catch (error) {
-            console.error('[CommunityService] getHubs failed:', error);
-            return { success: true, data: [] };
-        }
-    }
-
-    async createForumPost(userId: string, data: any) {
-        const user = await this.prisma.user.findUnique({ where: { id: userId } });
-        if (!user) throw new NotFoundException('User not found');
-
-        // IDEMPOTENCY CHECK: Prevent duplicate posts by same user with same title in last 60s
-        const recentPost = await this.prisma.forumPost.findFirst({
-            where: {
-                authorId: userId,
-                title: data.title,
-                createdAt: { gte: new Date(Date.now() - 60000) } // 60 seconds
-            }
-        });
-
-        if (recentPost && data.force !== true) {
-            return {
-                success: true,
-                message: 'Post already created recently',
-                data: recentPost,
-                isDuplicate: true
-            };
-        }
-
-        const post = await this.prisma.forumPost.create({
-            data: {
-                title: data.title,
-                content: data.content,
-                excerpt: data.excerpt || null,
-                // category is required in Prisma schema — default to 'General' when missing
-                category: data.category || 'General',
-                tags: data.tags || [],
-                authorId: userId,
-                isMentorOnly: data.isMentorOnly || false
-            },
-            include: {
-                author: {
-                    select: {
-                        firstName: true,
-                        lastName: true,
-                        role: true,
-                        id: true
-                    }
-                }
-            }
-        });
-
-        return {
-            success: true,
-            message: 'Post created successfully',
-            data: post
-        };
-    }
-
-    async createForumComment(
-        userId: string,
-        postId: string,
-        content: string,
-        parentId?: string,
-    ) {
-        // Prevent double comment submission (idempotency)
-        const recentComment = await this.prisma.forumComment.findFirst({
-            where: {
-                authorId: userId,
-                postId,
-                content,
-                createdAt: { gte: new Date(Date.now() - 10000) } // 10 seconds
-            }
-        });
-        if (recentComment) return { success: true, data: recentComment };
-
-        const post = await this.prisma.forumPost.findUnique({
-            where: { id: postId },
-        });
-        if (!post) throw new NotFoundException('Post not found');
-
-        const comment = await this.prisma.forumComment.create({
-            data: {
-                content,
-                postId,
-                authorId: userId,
-                parentId: parentId || null,
-            },
-            include: {
-                author: {
-                    select: { firstName: true, lastName: true, role: true },
-                },
-            },
-        });
-
-        return {
-            success: true,
-            message: 'Comment added successfully',
-            data: comment,
-        };
-    }
-
-    async likeForumComment(userId: string, id: string) {
-        try {
-            // Use raw query checks
-            const existingLikes: any[] = await this.prisma.$queryRaw`
-                SELECT id FROM "ForumCommentLike" 
-                WHERE "commentId" = ${id} AND "userId" = ${userId}
-                LIMIT 1
-            `;
-            const existingLike = existingLikes[0];
-
-            if (existingLike) {
-                // Un-like: remove the like record and decrement count
-                await this.prisma.$transaction([
-                    this.prisma.$executeRaw`DELETE FROM "ForumCommentLike" WHERE id = ${existingLike.id}`,
-                    this.prisma.forumComment.update({
-                        where: { id },
-                        data: { likes: { decrement: 1 } }
-                    })
-                ]);
-
-                const updatedComment = await this.prisma.forumComment.findUnique({
-                    where: { id },
-                    select: { likes: true }
-                });
-
-                return { success: true, likes: updatedComment?.likes || 0, liked: false };
-            } else {
-                // Like: create a new like record and increment count
-                const newId = randomUUID();
-                await this.prisma.$transaction([
-                    this.prisma.$executeRaw`
-                        INSERT INTO "ForumCommentLike" (id, "commentId", "userId", "createdAt") 
-                        VALUES (${newId}, ${id}, ${userId}, ${new Date()})
-                    `,
-                    this.prisma.forumComment.update({
-                        where: { id },
-                        data: { likes: { increment: 1 } }
-                    })
-                ]);
-
-                const updatedComment = await this.prisma.forumComment.findUnique({
-                    where: { id },
-                    select: { likes: true }
-                });
-
-                return { success: true, likes: updatedComment?.likes || 0, liked: true };
-            }
-        } catch (error) {
-            console.error('[CommunityService] likeForumComment failed:', error);
-            throw new BadRequestException('Failed to process like action on comment');
-        }
-    }
-
-    async likeForumPost(userId: string, id: string) {
-        console.log(`[CommunityService] likeForumPost called for user ${userId} and post ${id}`);
-        try {
-            // Use raw query to bypass stale Prisma Client
-            const existingLikes: any[] = await this.prisma.$queryRaw`
-                SELECT id FROM "PostLike" 
-                WHERE "postId" = ${id} AND "userId" = ${userId}
-                LIMIT 1
-            `;
-            const existingLike = existingLikes[0];
-
-            if (existingLike) {
-                await this.prisma.$transaction([
-                    this.prisma.$executeRaw`DELETE FROM "PostLike" WHERE id = ${existingLike.id}`,
-                    this.prisma.forumPost.update({
-                        where: { id },
-                        data: { likes: { decrement: 1 } }
-                    })
-                ]);
-                const updatedPost = await this.prisma.forumPost.findUnique({
-                    where: { id },
-                    select: { likes: true }
-                });
-                return { success: true, likes: updatedPost?.likes || 0, liked: false };
-            } else {
-                const newId = randomUUID();
-                await this.prisma.$transaction([
-                    this.prisma.$executeRaw`
-                        INSERT INTO "PostLike" (id, "postId", "userId", "createdAt") 
-                        VALUES (${newId}, ${id}, ${userId}, ${new Date()})
-                    `,
-                    this.prisma.forumPost.update({
-                        where: { id },
-                        data: { likes: { increment: 1 } }
-                    })
-                ]);
-                const updatedPost = await this.prisma.forumPost.findUnique({
-                    where: { id },
-                    select: { likes: true }
-                });
-                return { success: true, likes: updatedPost?.likes || 0, liked: true };
-            }
-        } catch (error) {
-            console.error('[CommunityService] likeForumPost failed:', error);
-            throw new BadRequestException('Failed to process like action on post');
-        }
-    }
-
-    async shareForumPost(id: string) {
-        // Increment views as a proxy for share engagement since we track shares on client side mostly
-        try {
-            await this.prisma.forumPost.update({
-                where: { id },
-                data: { views: { increment: 1 } }
-            });
-            return { success: true, message: 'Post shared' };
-        } catch (error) {
-            throw new NotFoundException('Post not found');
-        }
-    }
-
-    async deleteForumPost(id: string) {
-        try {
-            // Delete the post (cascade will delete comments and likes)
-            await this.prisma.forumPost.delete({
-                where: { id }
-            });
-            return { success: true, message: 'Post deleted successfully' };
-        } catch (error) {
-            throw new NotFoundException('Post not found');
-        }
-    }
-
-    async deleteForumComment(userId: string, userRole: string, commentId: string) {
-        // Find the comment
-        const comment = await this.prisma.forumComment.findUnique({
-            where: { id: commentId }
-        });
-
-        if (!comment) {
-            throw new NotFoundException('Comment not found');
-        }
-
-        // Check if user is the author or admin
-        if (comment.authorId !== userId && userRole !== 'admin') {
-            throw new HttpException('You can only delete your own comments', HttpStatus.FORBIDDEN);
-        }
-
-        // Delete the comment (cascade will delete replies and likes)
-        await this.prisma.forumComment.delete({
-            where: { id: commentId }
-        });
-
-        return { success: true, message: 'Comment deleted successfully' };
-    }
-
-    // ==================== MENTOR AUTH & DASHBOARD METHODS ====================
-
-    // In-memory OTP storage (in production, use Redis or database)
-    private otpStore = new Map<string, { otp: string; expiresAt: Date }>();
-
-    async requestMentorOTP(email: string) {
-        const mentor = await this.prisma.mentor.findUnique({
-            where: { email },
-        });
-
-        if (!mentor) {
-            throw new NotFoundException('Mentor not found with this email');
-        }
-
-        if (!mentor.isApproved) {
-            throw new BadRequestException('Your mentor application is pending approval');
-        }
-
-        if (!mentor.isActive) {
-            throw new BadRequestException('Your mentor account is not active');
-        }
-
-        // Generate 6-digit OTP
-        const otp = Math.floor(100000 + Math.random() * 900000).toString();
-
-        // Store OTP with 5-minute expiry
-        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
-        this.otpStore.set(email, { otp, expiresAt });
-
-        // In production, send OTP via email service (SendGrid, AWS SES, etc.)
-        console.log(`\n🔐 OTP for ${email}: ${otp}\n`);
-        console.log(`OTP expires at: ${expiresAt.toLocaleTimeString()}\n`);
-
-        // TODO: Send email with OTP
-        // await this.emailService.sendOTP(email, otp);
-
-        return {
-            success: true,
-            message: 'OTP sent to your email. Please check your inbox.',
-            data: {
-                email,
-                expiresIn: 300, // seconds
-            },
-        };
-    }
-
-    async verifyMentorOTP(email: string, otp: string) {
-        const mentor = await this.prisma.mentor.findUnique({
-            where: { email },
-        });
-
-        if (!mentor) {
-            throw new NotFoundException('Mentor not found');
-        }
-
-        // Check if OTP exists
-        const storedOTP = this.otpStore.get(email);
-        if (!storedOTP) {
-            throw new BadRequestException('OTP not found. Please request a new OTP.');
-        }
-
-        // Check if OTP is expired
-        if (new Date() > storedOTP.expiresAt) {
-            this.otpStore.delete(email);
-            throw new BadRequestException('OTP has expired. Please request a new OTP.');
-        }
-
-        // Verify OTP
-        if (storedOTP.otp !== otp) {
-            throw new BadRequestException('Invalid OTP. Please try again.');
-        }
-
-        // Clear OTP after successful verification
-        this.otpStore.delete(email);
-
-        return {
-            success: true,
-            message: 'Login successful',
-            data: {
-                id: mentor.id,
-                name: mentor.name,
-                email: mentor.email,
-                university: mentor.university,
-                isApproved: mentor.isApproved,
-                isActive: mentor.isActive,
-            },
-        };
-    }
-
-    async getMentorProfile(mentorId: string) {
-        const mentor = await this.prisma.mentor.findUnique({
-            where: { id: mentorId },
-        });
-
-        if (!mentor) {
-            throw new NotFoundException('Mentor not found');
-        }
-
-        // Get booking statistics
-        const bookingStats = await this.prisma.mentorBooking.groupBy({
-            by: ['status'],
-            where: { mentorId },
-            _count: true,
-        });
-
-        const stats = {
-            total: 0,
-            pending: 0,
-            approved: 0,
-            rejected: 0,
-            completed: 0,
-        };
-
-        bookingStats.forEach(stat => {
-            stats.total += stat._count;
-            stats[stat.status] = stat._count;
-        });
-
-        return {
-            success: true,
-            data: {
-                mentor,
-                stats,
-            },
-        };
-    }
-
-    async getMentorBookings(mentorId: string, filters: any) {
-        const { status, limit, offset } = filters;
-
-        const where: any = { mentorId };
-
-        if (status) {
-            where.status = status;
-        }
-
-        const [bookings, total] = await Promise.all([
-            this.prisma.mentorBooking.findMany({
-                where,
-                take: limit || 20,
-                skip: offset || 0,
-                orderBy: { createdAt: 'desc' },
-            }),
-            this.prisma.mentorBooking.count({ where }),
-        ]);
-
-        return {
-            success: true,
-            data: bookings,
-            pagination: {
-                total,
-                limit: limit || 20,
-                offset: offset || 0,
-                hasMore: (offset || 0) + bookings.length < total,
-            },
-        };
-    }
-
-    async updateBookingStatus(
-        mentorId: string,
-        bookingId: string,
-        status: string,
-    ) {
-        // Verify booking belongs to mentor
-        const booking = await this.prisma.mentorBooking.findFirst({
-            where: {
-                id: bookingId,
-                mentorId,
-            },
-        });
-
-        if (!booking) {
-            throw new NotFoundException('Booking not found or not authorized');
-        }
-
-        const updatedBooking = await this.prisma.mentorBooking.update({
-            where: { id: bookingId },
-            data: {
-                status,
-            },
-        });
-
-        return {
-            success: true,
-            message: `Booking ${status} successfully`,
-            data: updatedBooking,
-        };
-    }
-
-    async updateMentorProfile(mentorId: string, updateData: any) {
-        const allowedFields = [
-            'phone',
-            'bio',
-            'expertise',
-            'linkedIn',
-            'image',
-            'isActive',
-        ];
-
-        const dataToUpdate = {};
-        Object.keys(updateData).forEach(key => {
-            if (allowedFields.includes(key)) {
-                dataToUpdate[key] = updateData[key];
-            }
-        });
-
-        const mentor = await this.prisma.mentor.update({
-            where: { id: mentorId },
-            data: dataToUpdate,
-        });
-
-        return {
-            success: true,
-            message: 'Profile updated successfully',
-            data: mentor,
-        };
-    }
-
-    async getAllForumPostsAdmin(filters: any) {
-        const { category, limit, offset, sort } = filters;
-        const where: any = {};
-
-        if (category) {
-            where.category = { contains: category, mode: 'insensitive' };
-        }
-
-        const orderBy: any = sort === 'popular'
-            ? [{ isPinned: 'desc' }, { likes: 'desc' }]
-            : [{ isPinned: 'desc' }, { createdAt: 'desc' }];
-
-        const [posts, total] = await Promise.all([
-            this.prisma.forumPost.findMany({
-                where,
-                include: {
-                    author: {
-                        select: {
-                            firstName: true,
-                            lastName: true,
-                            role: true,
-                            email: true,
-                        }
-                    },
-                    _count: {
-                        select: { comments: true }
-                    }
-                },
-                take: limit,
-                skip: offset,
-                orderBy,
-            }),
-            this.prisma.forumPost.count({ where }),
-        ]);
-
-        return {
-            success: true,
-            data: posts.map(post => ({
-                ...post,
-                commentCount: post._count.comments,
-            })),
-            pagination: {
-                total,
-                limit,
-                offset,
-                hasMore: offset + posts.length < total,
-            },
-        };
-    }
-
-    async togglePinForumPost(id: string, isPinned: boolean) {
-        try {
-            const post = await this.prisma.forumPost.update({
-                where: { id },
-                data: { isPinned }
-            });
-
-            return {
-                success: true,
-                message: isPinned ? 'Post pinned successfully' : 'Post unpinned successfully',
-                data: post
-            };
-        } catch (error) {
-            throw new NotFoundException('Post not found');
-        }
-    }
-
-    // ==================== AI DUPLICATE QUESTION DETECTION ====================
-
-    async checkDuplicateQuestion(questionData: {
-        title: string;
-        content: string;
-        category: string;
-    }) {
-        try {
-            // 0. CHECK FOR EXACT TITLE MATCH (Fast)
-            const exactMatch = await this.prisma.forumPost.findFirst({
-                where: {
-                    title: { equals: questionData.title.trim(), mode: 'insensitive' },
-                    category: questionData.category
-                },
-                select: { id: true, title: true, createdAt: true, _count: { select: { comments: true } } }
-            });
-
-            if (exactMatch) {
-                return {
-                    isDuplicate: true,
-                    similarQuestions: [{
-                        id: exactMatch.id,
-                        title: exactMatch.title,
-                        similarity: 1.0,
-                        reason: 'Exact title match found in this category.',
-                        url: `/community/discussions/${exactMatch.id}`
-                    }],
-                    message: 'A question with this exact title already exists.'
-                };
-            }
-
-            // 1. EXTRACT KEYWORDS for pre-filtering (Fast keyword match)
-            const stopwords = new Set(['the', 'and', 'for', 'how', 'can', 'what', 'why', 'which', 'does', 'are', 'was', 'get', 'not', 'any', 'but', 'you', 'your', 'that', 'this', 'have', 'with', 'will', 'from', 'its', 'into', 'than', 'then', 'about']);
-            const keywords = questionData.title.toLowerCase().split(/\s+/).filter(w => w.length >= 3 && !stopwords.has(w));
-
-            let existingQuestions: any[] = [];
-
-            if (keywords.length > 0) {
-                existingQuestions = await this.prisma.forumPost.findMany({
-                    where: {
-                        category: { contains: questionData.category, mode: 'insensitive' },
-                        OR: keywords.map(kw => ({ title: { contains: kw, mode: 'insensitive' } }))
-                    },
-                    orderBy: { createdAt: 'desc' },
-                    take: 50,
-                    select: { id: true, title: true, content: true, createdAt: true }
-                });
-            }
-
-            // If no keyword matches, fallback to recent 20 in category
-            if (existingQuestions.length === 0) {
-                existingQuestions = await this.prisma.forumPost.findMany({
-                    where: { category: { contains: questionData.category, mode: 'insensitive' } },
-                    orderBy: { createdAt: 'desc' },
-                    take: 20,
-                    select: { id: true, title: true, content: true, createdAt: true }
-                });
-            }
-
-            if (existingQuestions.length === 0) {
-                return {
-                    isDuplicate: false,
-                    similarQuestions: [],
-                    message: 'No similar questions found'
-                };
-            }
-
-            // 2. Prepare AI prompt for deep semantic analysis
-            const existingQuestionsText = existingQuestions
-                .map((q, i) => `${i + 1}. ID: ${q.id}\n   Title: "${q.title}"\n   Preview: ${q.content.substring(0, 150)}...`)
-                .join('\n\n');
-
-            const prompt = `You are an expert at detecting duplicate or highly similar questions in a community forum.
-
-New Question:
-Title: "${questionData.title}"
-Content: ${questionData.content}
-
-Existing Questions in the ${questionData.category} category:
-${existingQuestionsText}
-
-Task: Identify if the new question is substantially similar to any existing questions. Questions are considered similar if they ask for the same information, even if worded differently. 
-High similarity (>= 0.8) means they should be merged or the user should be directed to the existing one.
-
-Provide your analysis in JSON format with the following structure:
-{
-  "matches": [
-    {
-      "id": "question_id",
-      "title": "question title",
-      "similarity": 0.0-1.0,
-      "reason": "brief explanation of why they're similar"
-    }
-  ]
-}
-
-IMPORTANT RULES:
-1. Only include questions with similarity >= 0.7
-2. Similarity of 0.9-1.0 means essentially the same question or intent
-3. Similarity of 0.7-0.8 means related topics but maybe slightly different focus
-4. Maximum 5 matches
-5. Respond ONLY with valid JSON, no markdown formatting`;
-
-            // 3. Call Groq AI service
-            const aiResponse = await this.groqService.getJson<{
-                matches: Array<{
-                    id: string;
-                    title: string;
-                    similarity: number;
-                    reason: string;
-                }>
-            }>(prompt);
-
-            // 4. Filter and validate matches
-            const validMatches = (aiResponse.matches || [])
-                .filter(m => m.similarity >= 0.7)
-                .slice(0, 5)
-                .map(m => ({
-                    id: m.id,
-                    title: m.title,
-                    similarity: m.similarity,
-                    reason: m.reason,
-                    url: `/community/discussions/${m.id}`
-                }));
-
-            return {
-                isDuplicate: validMatches.length > 0,
-                similarQuestions: validMatches,
-                message: validMatches.length > 0
-                    ? `Found ${validMatches.length} similar question(s)`
-                    : 'No similar questions found'
-            };
-
-        } catch (error) {
-            console.error('Error in duplicate question detection:', error);
-            // Fail gracefully - don't block question posting if AI fails
-            return {
-                isDuplicate: false,
-                similarQuestions: [],
-                message: 'Duplicate check unavailable, but you can still post your question',
-                error: error.message
-            };
-        }
-    }
+  }
 }

@@ -2,7 +2,7 @@
 import { Controller, Get, Post, Body, Query, Res, BadRequestException } from '@nestjs/common';
 import { DigilockerService } from './digilocker.service';
 import { UsersService } from '../users/users.service';
-import { PrismaService } from '../prisma/prisma.service';
+import { SupabaseService } from '../supabase/supabase.service';
 import type { Response } from 'express';
 import * as crypto from 'crypto';
 
@@ -11,7 +11,7 @@ export class DigilockerController {
     constructor(
         private readonly digilockerService: DigilockerService,
         private readonly usersService: UsersService,
-        private readonly prisma: PrismaService,
+        private readonly supabase: SupabaseService,
     ) { }
 
     private mockOtps = new Map<string, string>();
@@ -28,8 +28,8 @@ export class DigilockerController {
             clientId: process.env.DIGILOCKER_CLIENT_ID ? '✓ Set' : '✗ Missing',
             clientSecret: process.env.DIGILOCKER_CLIENT_SECRET ? '✓ Set' : '✗ Missing',
             callbackUrl: process.env.DIGILOCKER_CALLBACK_URL || 'http://localhost:5000/api/digilocker/callback',
-            message: process.env.DIGILOCKER_MOCK_MODE === 'true' 
-                ? '✓ Mock mode enabled - documents will be simulated' 
+            message: process.env.DIGILOCKER_MOCK_MODE === 'true'
+                ? '✓ Mock mode enabled - documents will be simulated'
                 : '✓ Real mode - DigiLocker Requestor flow ready'
         };
     }
@@ -69,188 +69,469 @@ export class DigilockerController {
 
     @Get('mock-login')
     getMockLoginPage(@Query('state') state: string, @Res() res) {
-        // Sanitize state to prevent XSS injection in the HTML template
         const safeState = (state || '').replace(/[^a-zA-Z0-9_\-]/g, '');
-        // We use string concatenation for the inner template parts to avoid nested backtick escaping issues
         const html = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>DigiLocker | Select Account</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <script src="https://cdn.tailwindcss.com"></script>
-            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-            <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
-            <style>
-                body { font-family: 'Inter', sans-serif; background-color: #f7f9fc; }
-                .account-card:hover { border-color: #5e5ce6; background-color: #f0f7ff; }
-                .loader { border: 3px solid #f3f3f3; border-top: 3px solid #5e5ce6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
-                @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-            </style>
-        </head>
-        <body class="min-h-screen flex flex-col">
-            <div class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between shadow-sm">
-                <div class="flex items-center gap-4">
-                    <img src="https://upload.wikimedia.org/wikipedia/en/1/1d/DigiLocker_logo.png" class="h-10" alt="DigiLocker">
-                    <div class="h-8 w-[1px] bg-gray-200 mx-2"></div>
-                    <span class="text-sm font-medium text-gray-500">Government of India</span>
-                </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MeriPehchaan | DigiLocker Sign In</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #e8edf2;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 30px 16px 60px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 22px;
+        }
+        .header-logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+        .header-logo img.emblem { width: 54px; }
+        .header-title {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .header-title .mp { font-size: 26px; font-weight: 800; color: #e77600; letter-spacing: -0.5px; }
+        .header-title .mp span { color: #1a6bb5; }
+        .header-title .sso { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; color: #555; text-transform: uppercase; margin-top: -4px; }
+        .header-logos {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            margin-top: 8px;
+        }
+        .header-logos img { height: 18px; opacity: 0.85; }
+
+        .card {
+            background: white;
+            width: 100%;
+            max-width: 500px;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border-bottom: 4px solid #6633cc;
+        }
+        .card-title {
+            text-align: center;
+            padding: 28px 24px 12px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #222;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .card-title span { color: #1a6bb5; font-weight: 700; }
+
+        /* TABS */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 14px 8px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            background: transparent;
+            color: #1a6bb5;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .tab-btn.active {
+            background: #1a6bb5;
+            color: white;
+        }
+        .tab-btn:hover:not(.active) { background: #f0f6ff; }
+
+        /* FORM */
+        .form-body { padding: 24px 32px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .form-group { margin-bottom: 16px; }
+        .form-control {
+            width: 100%;
+            padding: 11px 14px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            outline: none;
+            transition: border-color 0.2s;
+            color: #333;
+        }
+        .form-control:focus { border-color: #1a6bb5; box-shadow: 0 0 0 2px rgba(26,107,181,0.1); }
+        .mobile-wrap { display: flex; gap: 8px; }
+        .flag-box {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #333;
+            white-space: nowrap;
+            font-weight: 600;
+        }
+        select.form-control { background: white; }
+        .forgot-link {
+            text-align: right;
+            font-size: 12.5px;
+            color: #1a6bb5;
+            text-decoration: none;
+            display: block;
+            margin-top: 4px;
+            cursor: pointer;
+        }
+        .checkbox-group { display: flex; align-items: center; gap: 10px; margin: 12px 0; font-size: 13px; color: #444; }
+        .checkbox-group input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; accent-color: #1a6bb5; }
+        .checkbox-group a { color: #1a6bb5; text-decoration: none; font-weight: 600; }
+        .btn-signin {
+            width: 100%;
+            padding: 13px;
+            font-size: 16px;
+            font-weight: 700;
+            background: #4a9d5c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            letter-spacing: 0.3px;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .btn-signin:hover { background: #3d8a4e; }
+        .loader { border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid white; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .signup-link { text-align: center; font-size: 13px; color: #555; margin-top: 16px; }
+        .signup-link a { color: #1a6bb5; font-weight: 700; text-decoration: none; }
+        .or-sep { display: flex; align-items: center; gap: 12px; margin: 16px 0; color: #aaa; font-size: 12px; font-weight: 600; }
+        .or-sep::before, .or-sep::after { content: ''; flex: 1; height: 1px; background: #e0e0e0; }
+        .continue-with { text-align: center; font-size: 13px; color: #555; margin-bottom: 10px; }
+        .sso-logos { display: flex; justify-content: center; gap: 20px; }
+        .sso-logos img { height: 36px; cursor: pointer; opacity: 0.8; transition: opacity 0.2s; }
+        .sso-logos img:hover { opacity: 1; }
+
+        .error-box { background: #fff0f0; border: 1px solid #ffcccc; color: #c00; border-radius: 6px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; display: none; }
+
+        /* OTP Step */
+        .otp-step { padding: 32px; text-align: center; }
+        .otp-icon { width: 60px; height: 60px; background: #e8f0fe; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 28px; }
+        .otp-step h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+        .otp-step p { color: #666; font-size: 14px; margin-bottom: 24px; }
+        .otp-input { text-align: center; font-size: 28px; font-weight: 700; letter-spacing: 12px; }
+        .otp-resend { display: flex; justify-content: space-between; font-size: 12px; margin-top: 12px; color: #888; }
+        .otp-resend a { color: #1a6bb5; font-weight: 700; text-decoration: none; cursor: pointer; }
+
+        /* Account Step */
+        .acct-step { padding: 28px 32px; }
+        .acct-step h2 { font-size: 18px; font-weight: 700; margin-bottom: 20px; }
+        .acct-card {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 14px 16px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 12px;
+            transition: all 0.15s;
+        }
+        .acct-card:hover { border-color: #1a6bb5; background: #f0f6ff; }
+        .acct-avatar { width: 42px; height: 42px; background: #1a6bb5; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; margin-right: 14px; text-transform: uppercase; }
+        .acct-info p { font-weight: 700; font-size: 15px; text-transform: uppercase; }
+        .acct-info small { color: #4a9d5c; font-size: 11px; font-weight: 600; }
+        .acct-chevron { color: #bbb; font-size: 22px; }
+
+        /* Consent Step */
+        .consent-step { }
+        .consent-header { padding: 24px; background: #f8f9fa; border-bottom: 1px solid #eee; text-align: center; }
+        .consent-header img { height: 40px; margin-bottom: 10px; }
+        .consent-header p { font-size: 13px; color: #666; }
+        .consent-header h3 { font-size: 18px; font-weight: 700; color: #1a3a6b; margin-top: 4px; }
+        .consent-body { padding: 28px 32px; }
+        .consent-item { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; }
+        .consent-check { width: 20px; height: 20px; background: #4a9d5c; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: white; font-size: 12px; font-weight: 700; }
+        .btn-allow { width: 100%; padding: 14px; background: #004791; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 24px; transition: background 0.2s; }
+        .btn-allow:hover { background: #003366; }
+        .btn-deny { width: 100%; padding: 11px; background: transparent; color: #888; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; cursor: pointer; margin-top: 8px; }
+        .btn-deny:hover { background: #f5f5f5; }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-logo">
+            <img class="emblem" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/800px-Emblem_of_India.svg.png" alt="Ashoka Emblem">
+            <div class="header-title">
+                <div class="mp">Meri<span>Pehchaan</span></div>
+                <div class="sso">Single Sign-On Service</div>
+            </div>
+        </div>
+        <div class="header-logos" style="margin-top:10px;">
+            <img src="https://upload.wikimedia.org/wikipedia/en/1/1d/DigiLocker_logo.png" alt="DigiLocker">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/e/e0/Digital_India_logo.png" alt="Digital India">
+        </div>
+    </div>
+
+    <!-- Login Card -->
+    <div class="card" id="login-card">
+
+        <!-- ===== STEP: LOGIN ===== -->
+        <div id="step-login">
+            <div class="card-title">Sign In to your account via <span>DigiLocker</span></div>
+
+            <div class="tabs">
+                <button class="tab-btn active" id="tab-mobile" onclick="switchTab('mobile')">Mobile</button>
+                <button class="tab-btn" id="tab-username" onclick="switchTab('username')">Username</button>
+                <button class="tab-btn" id="tab-others" onclick="switchTab('others')">Others</button>
             </div>
 
-            <div class="flex-1 flex items-center justify-center p-6">
-                <!-- STEP 1 -->
-                <div id="step-mobile" class="bg-white w-full max-w-[480px] rounded-3xl shadow-2xl border border-gray-100 p-10">
-                    <h1 class="text-2xl font-bold text-gray-800 mb-2">Login or Create Account</h1>
-                    <p class="text-gray-500 text-sm mb-10">Enter your mobile number to proceed</p>
-                    <div class="space-y-6">
-                        <div class="relative">
-                            <span class="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 font-bold">+91</span>
-                            <input type="text" id="phone-input" placeholder="Enter Mobile Number" class="w-full pl-16 pr-6 py-4 bg-gray-50 border-2 border-transparent rounded-2xl focus:border-blue-600 focus:bg-white outline-none transition-all text-xl font-medium">
+            <div class="form-body">
+                <div id="error-box" class="error-box"></div>
+
+                <!-- Mobile Tab -->
+                <div class="tab-content active" id="content-mobile">
+                    <div class="form-group">
+                        <div class="mobile-wrap">
+                            <div class="flag-box">🇮🇳 +91</div>
+                            <input type="tel" id="phone-input" class="form-control" placeholder="Mobile*" maxlength="10">
                         </div>
-                        <div id="error-msg" class="hidden p-4 bg-red-50 text-red-600 rounded-xl text-sm font-bold border border-red-100 text-center"></div>
-                        <button id="mobile-btn" onclick="sendOtp()" class="w-full py-4 bg-[#5e5ce6] text-white rounded-2xl font-bold text-lg hover:shadow-xl hover:scale-[1.01] transition-all flex items-center justify-center gap-3">
-                            <span>Continue</span>
-                        </button>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="mobile-pin" class="form-control" placeholder="PIN*" maxlength="6">
+                        <a class="forgot-link">Forgot security PIN?</a>
                     </div>
                 </div>
 
-                <!-- STEP 2 -->
-                <div id="step-otp" class="hidden bg-white w-full max-w-[480px] rounded-3xl shadow-2xl border border-gray-100 p-10 text-center">
-                    <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                         <span class="material-symbols-outlined text-3xl">sms</span>
+                <!-- Username Tab -->
+                <div class="tab-content" id="content-username">
+                    <div class="form-group">
+                        <input type="text" id="username-input" class="form-control" placeholder="Username*">
                     </div>
-                    <h1 class="text-2xl font-bold text-gray-800 mb-2">Verify Mobile</h1>
-                    <p class="text-gray-500 text-sm mb-4">Enter the 6-digit OTP sent to <b id="display-phone"></b></p>
-                    <div class="mb-10">
-                        <input type="text" id="otp-raw" class="w-full py-4 text-center text-3xl font-bold bg-gray-50 border-2 border-gray-100 rounded-2xl focus:border-blue-600 outline-none transition-all" placeholder="000000" maxlength="6">
+                    <div class="form-group">
+                        <input type="password" id="username-pin" class="form-control" placeholder="PIN*" maxlength="6">
+                        <a class="forgot-link">Forgot security PIN?</a>
                     </div>
-                    <button id="otp-btn" onclick="verifyOtp()" class="w-full py-4 bg-[#5e5ce6] text-white rounded-2xl font-bold text-lg hover:shadow-xl transition-all">Verify & Login</button>
                 </div>
 
-                <!-- STEP 3 -->
-                <div id="step-account" class="hidden bg-white w-full max-w-[480px] rounded-3xl shadow-2xl border border-gray-100 p-10">
-                    <h1 class="text-2xl font-bold text-gray-800 mb-8">Select Account</h1>
-                    <div id="account-list" class="space-y-4 mb-10"></div>
-                    <button class="w-full py-4 border-2 border-dashed border-gray-200 text-gray-500 rounded-2xl font-bold text-sm hover:border-blue-300 hover:text-blue-600 transition-all">+ Create New Account</button>
+                <!-- Others Tab -->
+                <div class="tab-content" id="content-others">
+                    <div class="form-group">
+                        <select class="form-control" id="others-id-type">
+                            <option value="">-- Select ID --</option>
+                            <option value="aadhaar">Aadhaar</option>
+                            <option value="pan">PAN</option>
+                            <option value="vid">Virtual ID (VID)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="others-id-num" class="form-control" placeholder="Enter ID / Number*">
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="others-pin" class="form-control" placeholder="PIN*" maxlength="6">
+                        <a class="forgot-link">Forgot security PIN?</a>
+                    </div>
                 </div>
 
-                <!-- STEP 4 -->
-                <div id="step-consent" class="hidden bg-white w-full max-w-[520px] rounded-3xl shadow-2xl border border-gray-100">
-                    <div class="bg-blue-50/50 p-8 border-b border-gray-100 flex items-center gap-6">
-                        <div class="w-20 h-20 bg-white rounded-3xl shadow-sm border border-gray-100 p-4 flex items-center justify-center">
-                           <img src="https://ui-avatars.com/api/?name=Vidhya+Loan&background=6605c7&color=fff&bold=true&size=128" alt="VidhyaLoan" class="rounded-xl">
-                        </div>
-                        <div>
-                            <h2 class="text-xl font-extrabold text-gray-900 tracking-tight">Consent Request</h2>
-                            <p class="text-gray-500 text-sm">Requested by <b>VidhyaLoan</b></p>
-                        </div>
-                    </div>
-                    <div class="p-10">
-                        <p class="text-sm text-gray-600 mb-8 leading-relaxed font-medium">To proceed with your application, VidhyaLoan needs your permission to securely access Identification & Documents.</p>
-                        <div class="flex gap-4">
-                            <button onclick="window.location.href='/document-vault'" class="flex-1 py-4 text-gray-400 font-bold hover:bg-gray-50 rounded-2xl transition-all">Deny</button>
-                            <button onclick="grantAccess()" class="flex-1 py-4 bg-[#004791] text-white rounded-2xl font-bold text-lg hover:bg-blue-900 hover:shadow-xl hover:scale-[1.02] transition-all">Allow Access</button>
-                        </div>
-                    </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="pinless">
+                    <label for="pinless">PIN less authentication</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="consent-check">
+                    <label for="consent-check">I consent to <a href="#">terms of use.</a></label>
+                </div>
+
+                <button class="btn-signin" id="signin-btn" onclick="handleSignIn()">
+                    <span id="btn-label">Sign In</span>
+                </button>
+
+                <div class="signup-link" style="margin-top:18px;">New user? <a href="#">Sign up</a></div>
+                <div class="or-sep">OR</div>
+                <div class="continue-with">Continue with</div>
+                <div class="sso-logos">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/E-pramaan_logo.svg/320px-E-pramaan_logo.svg.png" alt="e-Pramaan" onerror="this.style.display='none'">
+                    <div style="background:#1a3a6b;color:white;padding:8px 16px;border-radius:4px;font-size:13px;font-weight:700;cursor:pointer;">🇮🇳 JanParichay</div>
                 </div>
             </div>
+        </div>
 
-            <script>
-                let currentMobile = "";
-                const state = "${safeState}";
+        <!-- ===== STEP: OTP ===== -->
+        <div id="step-otp" class="otp-step" style="display:none;">
+            <div class="otp-icon">📲</div>
+            <h2>Verify OTP</h2>
+            <p>A 6-digit OTP has been sent to your registered mobile number <b id="mask-mobile"></b></p>
+            <div class="form-group">
+                <input type="text" id="otp-input" class="form-control otp-input" placeholder="• • • • • •" maxlength="6">
+            </div>
+            <button class="btn-signin" onclick="verifyOtp()">Submit OTP</button>
+            <div class="otp-resend">
+                <span>Didn't receive? Wait 60s</span>
+                <a>Resend OTP</a>
+            </div>
+        </div>
 
-                async function sendOtp() {
-                    const mobile = document.getElementById('phone-input').value;
-                    if (!mobile) return alert('Enter mobile number');
-                    
-                    const btn = document.getElementById('mobile-btn');
-                    const errorDiv = document.getElementById('error-msg');
-                    
-                    currentMobile = mobile;
-                    btn.innerHTML = '<div class="loader mx-auto"></div>';
-                    btn.disabled = true;
-                    errorDiv.classList.add('hidden');
-                    
-                    try {
-                        const response = await fetch('/api/digilocker/mock/send-otp', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ mobile })
-                        });
-                        
-                        const data = await response.json();
-                        
-                        if (!response.ok) {
-                            errorDiv.innerText = data.message || 'Account not found';
-                            errorDiv.classList.remove('hidden');
-                            return;
-                        }
-                        
-                        document.getElementById('display-phone').innerText = '+91 ' + mobile;
-                        document.getElementById('step-mobile').classList.add('hidden');
-                        document.getElementById('step-otp').classList.remove('hidden');
-                    } catch (e) { 
-                        errorDiv.innerText = 'Connection error. Try again.';
-                        errorDiv.classList.remove('hidden');
-                    }
-                    finally { 
-                        btn.innerText = 'Continue'; 
-                        btn.disabled = false;
-                    }
-                }
+        <!-- ===== STEP: ACCOUNT SELECTION ===== -->
+        <div id="step-account" class="acct-step" style="display:none;">
+            <h2>Select your account</h2>
+            <div id="account-list"></div>
+            <div style="text-align:center;margin-top:20px;font-size:13px;color:#888;">
+                Not your account? <a href="#" style="color:#1a6bb5;font-weight:700;" onclick="location.reload()">Try again</a>
+            </div>
+        </div>
 
-                async function verifyOtp() {
-                    const otp = document.getElementById('otp-raw').value;
-                    if (!otp) return alert('Enter OTP');
-                    try {
-                        const res = await fetch('/api/digilocker/mock/verify-otp', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ mobile: currentMobile, otp })
-                        });
-                        const data = await res.json();
-                        if (data.success) {
-                            renderAccounts(data.user);
-                            document.getElementById('step-otp').classList.add('hidden');
-                            document.getElementById('step-account').classList.remove('hidden');
-                        } else { alert('Invalid OTP'); }
-                    } catch (e) { alert('Error'); }
-                }
+        <!-- ===== STEP: CONSENT ===== -->
+        <div id="step-consent" style="display:none;">
+            <div class="consent-header">
+                <img src="https://upload.wikimedia.org/wikipedia/en/1/1d/DigiLocker_logo.png" alt="DigiLocker">
+                <p>You are providing consent to share your data with</p>
+                <h3>VidhyaLoan</h3>
+            </div>
+            <div class="consent-body">
+                <p style="font-size:14px;font-weight:600;margin-bottom:16px;">VidhyaLoan will receive the following:</p>
+                <div class="consent-item">
+                    <div class="consent-check">✓</div>
+                    <p style="font-size:14px;">Aadhaar Card, PAN Card &amp; Academic Certificates</p>
+                </div>
+                <div class="consent-item">
+                    <div class="consent-check">✓</div>
+                    <p style="font-size:14px;">Basic profile — Name, Date of Birth, Gender</p>
+                </div>
+                <button class="btn-allow" onclick="grantAccess()">Allow Access</button>
+                <button class="btn-deny" onclick="window.location.href='/document-vault'">Deny</button>
+                <p style="font-size:11px;color:#aaa;text-align:center;margin-top:12px;">By clicking Allow, you agree to the DigiLocker terms of service.</p>
+            </div>
+        </div>
+    </div>
 
-                function renderAccounts(user) {
-                    const list = document.getElementById('account-list');
-                    let items = [];
-                    
-                    // ONLY show account if it exists (Strict Mode)
-                    if (user) {
-                        items.push(
-                            '<div onclick="gotoPermission()" class="account-card flex items-center justify-between p-5 border-2 border-gray-100 rounded-2xl cursor-pointer transition-all">' +
-                                '<div class="flex items-center gap-4">' +
-                                    '<div class="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center font-bold text-xl uppercase">' + user.firstName[0] + '</div>' +
-                                    '<div>' +
-                                        '<p class="font-bold text-gray-900 uppercase">' + user.firstName + ' ' + (user.lastName || "") + '</p>' +
-                                        '<p class="text-xs text-green-600 font-medium font-bold">Original DigiLocker Account Found ✅</p>' +
-                                    '</div>' +
-                                '</div>' +
-                                '<span class="material-symbols-outlined text-gray-300">chevron_right</span>' +
-                            '</div>'
-                        );
-                    }
-                    
-                    list.innerHTML = items.join("");
-                }
+    <script>
+        let currentMobile = "";
+        let activeTab = "mobile";
+        const state = "${safeState}";
 
-                function gotoPermission() {
-                    document.getElementById('step-account').classList.add('hidden');
-                    document.getElementById('step-consent').classList.remove('hidden');
+        function switchTab(tab) {
+            activeTab = tab;
+            ['mobile', 'username', 'others'].forEach(t => {
+                document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+                document.getElementById('content-' + t).classList.toggle('active', t === tab);
+            });
+            document.getElementById('error-box').style.display = 'none';
+        }
+
+        function showError(msg) {
+            const box = document.getElementById('error-box');
+            box.innerText = msg;
+            box.style.display = 'block';
+        }
+
+        async function handleSignIn() {
+            const consentChecked = document.getElementById('consent-check').checked;
+            if (!consentChecked) { showError('Please consent to the terms of use to continue.'); return; }
+
+            let mobileVal = "";
+            if (activeTab === 'mobile') {
+                mobileVal = document.getElementById('phone-input').value.trim();
+                if (!mobileVal || mobileVal.length < 10) { showError('Enter a valid 10-digit mobile number.'); return; }
+            } else {
+                // For Username/Others tab in mock mode, use a simulated mobile
+                mobileVal = "9000000000";
+            }
+
+            const btn = document.getElementById('signin-btn');
+            const lbl = document.getElementById('btn-label');
+            currentMobile = mobileVal;
+            lbl.innerHTML = '<div class="loader"></div>';
+            btn.disabled = true;
+            document.getElementById('error-box').style.display = 'none';
+
+            try {
+                const resp = await fetch('/api/digilocker/mock/send-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mobile: mobileVal })
+                });
+                const data = await resp.json();
+                if (!resp.ok) { showError(data.message || 'Account not found. Please check your mobile number.'); return; }
+
+                document.getElementById('mask-mobile').innerText = 'XXXXXX' + mobileVal.slice(-4);
+                document.getElementById('step-login').style.display = 'none';
+                document.getElementById('step-otp').style.display = 'block';
+            } catch (e) {
+                showError('Service unavailable. Please try again later.');
+            } finally {
+                lbl.innerText = 'Sign In';
+                btn.disabled = false;
+            }
+        }
+
+        async function verifyOtp() {
+            const otp = document.getElementById('otp-input').value.trim();
+            if (!otp || otp.length < 4) { alert('Enter the OTP received on your mobile.'); return; }
+            try {
+                const res = await fetch('/api/digilocker/mock/verify-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mobile: currentMobile, otp })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    renderAccounts(data.user);
+                    document.getElementById('step-otp').style.display = 'none';
+                    document.getElementById('step-account').style.display = 'block';
+                } else {
+                    alert('Invalid OTP. (Hint: use 123456 in development)');
                 }
-                
-                function grantAccess() {
-                    window.location.href = "/api/digilocker/callback?code=mock_code&state=" + state;
-                }
-            </script>
-        </body>
-        </html>
+            } catch (e) { alert('Error verifying OTP. Please try again.'); }
+        }
+
+        function renderAccounts(user) {
+            const list = document.getElementById('account-list');
+            if (user) {
+                list.innerHTML =
+                    '<div class="acct-card" onclick="gotoConsent()">' +
+                        '<div style="display:flex;align-items:center;">' +
+                            '<div class="acct-avatar">' + user.firstName[0] + '</div>' +
+                            '<div class="acct-info">' +
+                                '<p>' + user.firstName.toUpperCase() + ' ' + (user.lastName || '').toUpperCase() + '</p>' +
+                                '<small>✔ Verified DigiLocker Account</small>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="acct-chevron">›</div>' +
+                    '</div>';
+            } else {
+                list.innerHTML = '<p style="color:#888;font-size:14px;">No account found.</p>';
+            }
+        }
+
+        function gotoConsent() {
+            document.getElementById('step-account').style.display = 'none';
+            document.getElementById('step-consent').style.display = 'block';
+        }
+
+        function grantAccess() {
+            window.location.href = '/api/digilocker/callback?code=mock_code&state=' + state;
+        }
+    </script>
+</body>
+</html>
         `;
         res.send(html);
     }
@@ -360,10 +641,11 @@ export class DigilockerController {
     }
 
     private normalizeDigilockerType(rawDoc: any): string {
+        // Real DigiLocker API uses 'doctype' field; mock/legacy may use 'type'
         const candidates = [
+            rawDoc?.doctype,   // Real API field name
             rawDoc?.type,
             rawDoc?.docType,
-            rawDoc?.doctype,
             rawDoc?.documentType,
             rawDoc?.issuerDocType,
         ]
@@ -374,6 +656,7 @@ export class DigilockerController {
             return candidates[0];
         }
 
+        // Try to extract from URI (e.g., in.gov.cbse-SSCER-1234)
         const uri = String(rawDoc?.uri || rawDoc?.id || '');
         const uriMatch = uri.match(/(PANCR|ADHAR|AADHAR|10TH|12TH|SSCER|HSCER|PASPT|DGCTR|MKST)/i);
         if (uriMatch?.[1]) {
@@ -388,7 +671,7 @@ export class DigilockerController {
      */
     private async processMockDocuments(userId: string, docType: string) {
         console.log('📋 Mock processor started - userId:', userId, 'docType:', docType);
-        
+
         const mockDocs = [
             { type: 'PANCR', name: 'PAN Card' },
             { type: 'ADHAR', name: 'Aadhar Card' },
@@ -445,7 +728,7 @@ export class DigilockerController {
             });
             console.log(`    ✓ Upserted ${docType} with status available_in_digilocker`);
         }
-        
+
         console.log('✓ Mock processing complete');
     }
 
@@ -486,7 +769,7 @@ export class DigilockerController {
         for (const doc of documents) {
             const normalizedType = this.normalizeDigilockerType(doc);
             console.log(`  Processing: ${JSON.stringify(doc).substring(0, 100)}... -> normalized: ${normalizedType}`);
-            
+
             const dlType = aliasToCanonical[normalizedType] || normalizedType;
 
             if (!dlType) {
@@ -533,16 +816,19 @@ export class DigilockerController {
                 }
             }
         }
-        
+
         console.log(`✓ Completed - upserted ${upsertCount} documents`);
     }
 
     @Post('sync')
     async syncDocument(@Body() body: { userId: string; docType: string }) {
         const { userId, docType } = body;
-        const doc = await this.prisma.userDocument.findUnique({
-            where: { userId_docType: { userId, docType } }
-        }) as any;
+        const { data: doc, error } = await this.supabase.getClient()
+            .from('UserDocument')
+            .select('*')
+            .eq('userId', userId)
+            .eq('docType', docType)
+            .single();
         if (!doc) throw new BadRequestException('Document not found');
         await this.usersService.upsertUserDocument(userId, docType, {
             status: 'verified',

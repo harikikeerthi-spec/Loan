@@ -90,8 +90,18 @@ export default function MentorsPage() {
                                         <div className="text-[10px] text-gray-400 font-bold uppercase">Rating</div>
                                     </div>
                                 </div>
-                                <button className="mt-6 w-full py-3 rounded-2xl bg-[#6605c7] text-white font-bold text-xs uppercase tracking-widest hover:shadow-lg transition-all">
-                                    Book Session
+                                <button 
+                                    onClick={async () => {
+                                        try {
+                                            const res = await chatApi.connect();
+                                            window.open(res.whatsappUrl, '_blank');
+                                        } catch (e) {
+                                            window.open(`https://wa.me/` + (process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER || '+14155238886'), '_blank');
+                                        }
+                                    }}
+                                    className="mt-6 w-full py-3 rounded-2xl bg-[#6605c7] text-white font-bold text-xs uppercase tracking-widest hover:shadow-lg transition-all"
+                                >
+                                    Chat via WhatsApp
                                 </button>
                             </div>
                         ))}

@@ -27,11 +27,10 @@ function LoginContent() {
         const ref = searchParams.get("ref");
         if (ref) {
             setReferralCode(ref);
-            // Store in sessionStorage in case user refreshes
-            sessionStorage.setItem("referralCode", ref);
+            localStorage.setItem("referralCode", ref);
         } else {
             // Check if there's a stored referral code
-            const stored = sessionStorage.getItem("referralCode");
+            const stored = localStorage.getItem("referralCode");
             if (stored) setReferralCode(stored);
         }
     }, [searchParams]);
@@ -93,7 +92,10 @@ function LoginContent() {
         setLoading(true);
         setError("");
         try {
-            const data = await authApi.verifyOtp(email.trim(), code) as {
+            // Get referral code from state or storage
+            const currentRef = referralCode || localStorage.getItem("referralCode");
+            
+            const data = await authApi.verifyOtp(email.trim(), code, currentRef || undefined) as {
                 success: boolean;
                 access_token: string;
                 userExists: boolean;
@@ -112,20 +114,10 @@ function LoginContent() {
                 role: data.role as any
             });
 
-            // Record referral for new users
-            if (!data.userExists && referralCode) {
-                try {
-                    // Try to record the referral - backend will validate the code
-                    await referralApi.recordReferral({
-                        referralCode,
-                        referredUserId: data.userId || email.trim() // Use email as fallback identifier
-                    });
-                    // Clear stored referral code after successful recording
-                    sessionStorage.removeItem("referralCode");
-                } catch (refError) {
-                    // Don't block login if referral recording fails
-                    console.error("Failed to record referral:", refError);
-                }
+            // Clear stored referral code after login/signup
+            localStorage.removeItem("referralCode");
+            if (typeof window !== 'undefined') {
+                sessionStorage.removeItem("referralCode");
             }
 
             // Role-based redirection
