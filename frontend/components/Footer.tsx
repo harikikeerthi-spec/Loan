@@ -34,7 +34,6 @@ export default function Footer() {
                             <SocialIcon href="#" icon="/images/social/linkedin.png" alt="LinkedIn" color="hover:bg-[#0077B5]" />
                             <SocialIcon href="#" icon="/images/social/youtube.png" alt="YouTube" color="hover:bg-red-600" />
                             <SocialIcon href="#" icon="/images/social/twitter.png" alt="Twitter" color="hover:bg-black" />
-                            <SocialIcon href="#" icon="/images/social/whatsapp.png" alt="WhatsApp" color="hover:bg-green-600" />
                         </div>
 
                         {/* Contact */}

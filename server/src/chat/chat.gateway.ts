@@ -37,6 +37,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleConnection(client: Socket) {
     try {
       const token = client.handshake.auth.token || client.handshake.headers['authorization']?.split(' ')[1];
+      
+      // Allow simulator connections without full JWT if flagged
+      const isSimulator = client.handshake.auth.simulator === true;
+      const simPhone = client.handshake.auth.phone;
+
+      if (isSimulator && simPhone) {
+        const cleanPhone = String(simPhone).replace('whatsapp:', '');
+        client.join(`sim_${cleanPhone}`);
+        this.logger.log(`Simulator connected for phone: ${cleanPhone}`);
+        return;
+      }
+
       if (!token) {
         throw new Error('No token provided');
       }
@@ -103,23 +115,77 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
 
       // 2. Broadcast to other dashboards observing this conversation
-      // We emit to everyone in the room EXCEPT the sender (handled automatically by broadcast to room)
-      // or we can emit to everyone including sender so they see it appear.
       this.server.to(`conv_${payload.conversationId}`).emit('new_message', msg);
       
       // Also notify general dashboard rooms for list updates
-      this.server.to('room_staff').to('room_bank').emit('conversation_updated', {
+      if (user.role === 'bank' || user.role === 'partner_bank') {
+        this.server.to('room_bank').emit('conversation_updated', {
           conversationId: payload.conversationId,
           lastMessage: msg
-      });
+        });
+      } else {
+        this.server.to('room_staff').emit('conversation_updated', {
+          conversationId: payload.conversationId,
+          lastMessage: msg
+        });
+      }
 
-      // 3. Send out via Twilio WhatsApp
-      await this.twilioService.sendWhatsAppMessage(payload.customerPhone, payload.content);
+      // 3. Update WhatsApp Simulator if connected
+      const cleanPhone = payload.customerPhone.replace('whatsapp:', '');
+      this.server.to(`sim_${cleanPhone}`).emit('wa_message_received', msg);
+
+      // 4. Send out via Twilio WhatsApp (Real)
+      if (payload.customerPhone) {
+        await this.twilioService.sendWhatsAppMessage(payload.customerPhone, payload.content).catch(e => {
+            this.logger.error('Twilio Error (ignoring for simulation): ' + e.message);
+        });
+      }
       
       return { success: true, message: msg };
     } catch (e) {
       this.logger.error('Failed to process outgoing message', e);
       return { success: false, error: e.message };
+    }
+  }
+
+  @SubscribeMessage('sim_customer_reply')
+  async handleSimReply(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { phone: string, content: string }
+  ) {
+    try {
+        const from = payload.phone.startsWith('whatsapp:') ? payload.phone : `whatsapp:${payload.phone}`;
+        
+        // Use existing logic from service/controller
+        const conversation = await this.chatService.getOrCreateConversation(from);
+        const msg = await this.chatService.saveMessage({
+            conversationId: conversation.id,
+            senderType: 'customer',
+            senderId: payload.phone.replace('whatsapp:', ''),
+            content: payload.content,
+            status: 'delivered'
+        });
+
+        // Broadcast to relevant rooms
+        this.server.to(`conv_${conversation.id}`).emit('new_message', msg);
+        
+        const type = conversation.metadata?.type || 'staff';
+        if (type === 'bank') {
+          this.server.to('room_bank').emit('conversation_updated', {
+            conversationId: conversation.id,
+            lastMessage: msg
+          });
+        } else {
+          this.server.to('room_staff').emit('conversation_updated', {
+            conversationId: conversation.id,
+            lastMessage: msg
+          });
+        }
+
+        return { success: true, message: msg };
+    } catch (e) {
+        this.logger.error('Simulator reply failed', e);
+        return { success: false, error: e.message };
     }
   }
 

@@ -6,8 +6,95 @@
 // Next.js rewrites /api/* → http://localhost:5000/* on the server side.
 const API_URL = "/api";
 
+type Portal = "student" | "staff" | "admin" | "bank";
+
+function getPortalFromPathname(pathname?: string): Portal {
+    if (!pathname) return "student";
+    if (pathname.startsWith("/admin")) return "admin";
+    if (pathname.startsWith("/staff")) return "staff";
+    if (pathname.startsWith("/bank")) return "bank";
+    return "student";
+}
+
+function getStorageKeys(portal: Portal) {
+    if (portal === "admin") {
+        return {
+            token: "adminAccessToken",
+            refreshToken: "adminRefreshToken",
+            email: "adminUserEmail",
+            userId: "adminUserId",
+            user: "adminAuthUser",
+            loginPath: "/admin/login",
+        };
+    }
+    if (portal === "staff") {
+        return {
+            token: "staffAccessToken",
+            refreshToken: "staffRefreshToken",
+            email: "staffUserEmail",
+            userId: "staffUserId",
+            user: "staffAuthUser",
+            loginPath: "/staff/login",
+        };
+    }
+    if (portal === "bank") {
+        return {
+            token: "bankAccessToken",
+            refreshToken: "bankRefreshToken",
+            email: "bankUserEmail",
+            userId: "bankUserId",
+            user: "bankAuthUser",
+            loginPath: "/login",
+        };
+    }
+    return {
+        token: "accessToken",
+        refreshToken: "refreshToken",
+        email: "userEmail",
+        userId: "userId",
+        user: "authUser",
+        loginPath: "/login",
+    };
+}
+
+function clearAllPortalAuthStorage() {
+    const portals: Portal[] = ["student", "staff", "admin", "bank"];
+    for (const portal of portals) {
+        const keys = getStorageKeys(portal);
+        localStorage.removeItem(keys.token);
+        localStorage.removeItem(keys.refreshToken);
+        localStorage.removeItem(keys.email);
+        localStorage.removeItem(keys.userId);
+        localStorage.removeItem(keys.user);
+    }
+}
+
+// ─── Agent ────────────────────────────────────────────────────────────
+export const agentApi = {
+    getStats: () =>
+        fetch(`${API_URL}/applications/agent/stats`, { headers: authHeaders() }).then(handleResponse),
+    getApplications: () =>
+        fetch(`${API_URL}/applications/agent/list`, { headers: authHeaders() }).then(handleResponse),
+};
+
 function getToken(): string | null {
     if (typeof window === "undefined") return null;
+    const portal = getPortalFromPathname(window.location.pathname);
+    const keys = getStorageKeys(portal);
+    
+    // 1. Try portal-specific token
+    const portalToken = localStorage.getItem(keys.token);
+    if (portalToken) return portalToken;
+
+    // 2. Try Admin token (highest privilege) - useful for super_admins accessing staff/bank portals
+    const adminToken = localStorage.getItem("adminAccessToken");
+    if (adminToken) return adminToken;
+
+    // 3. Try Staff token - useful if staff navigates to other common areas
+    const staffToken = localStorage.getItem("staffAccessToken");
+    if (staffToken) return staffToken;
+
+    // 4. Fallback to generic student token
     return localStorage.getItem("accessToken");
 }
 
@@ -32,14 +119,12 @@ async function handleResponse<T>(res: Response): Promise<T> {
         // Handle Token Expiration globally
         if (res.status === 401 && err?.message === 'Token has expired') {
             if (typeof window !== "undefined") {
-                localStorage.removeItem("accessToken");
-                localStorage.removeItem("refreshToken");
-                localStorage.removeItem("userEmail");
-                localStorage.removeItem("userId");
-                localStorage.removeItem("authUser");
+                clearAllPortalAuthStorage();
+                const portal = getPortalFromPathname(window.location.pathname);
+                const { loginPath } = getStorageKeys(portal);
                 // Avoid infinite redirect loops if already on login
-                if (!window.location.pathname.startsWith('/login')) {
-                    window.location.href = '/login?expired=true';
+                if (!window.location.pathname.startsWith(loginPath)) {
+                    window.location.href = `${loginPath}?expired=true`;
                 }
             }
         }
@@ -531,7 +616,25 @@ export const adminApi = {
             headers: authHeaders(),
         }).then(handleResponse),
     getAuditLogs: (limit = 20) =>
-        fetch(`${API_URL}/blogs/super-admin/audit-logs?limit=${limit}`, { headers: authHeaders() }).then(handleResponse),
+        fetch(`${API_URL}/blogs/admin/matrix-logs?limit=${limit}`, { headers: authHeaders() }).then(handleResponse),
+    sendEmail: (data: { to?: string; subject: string; content: string; role?: string; isBulk?: boolean }) =>
+        fetch(`${API_URL}/users/admin/send-email`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+    createUser: (data: { email: string; firstName: string; lastName: string; mobile: string; role: string }) =>
+        fetch(`${API_URL}/users/admin/create`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+    updateUserDetails: (data: { email: string; firstName: string; lastName: string; phoneNumber: string; dateOfBirth: string }) =>
+        fetch(`${API_URL}/users/admin/update-details`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
 };
 
 // ─── Documents ────────────────────────────────────────────────────────

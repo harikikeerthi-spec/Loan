@@ -130,7 +130,16 @@ export class AuthController {
         message: 'Email is required to fetch dashboard',
       };
     }
-    return this.authService.getUserDashboard(body.email);
+    try {
+      return await this.authService.getUserDashboard(body.email);
+    } catch (error) {
+      console.error('[AuthController.getUserDashboard] Fatal Error:', error);
+      return {
+        success: false,
+        message: 'Internal server error occurred while fetching dashboard',
+        error: error.message
+      };
+    }
   }
 
   /**

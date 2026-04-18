@@ -184,8 +184,8 @@ export default function UniverseEcosystem() {
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_12px_#34d399]" />
                                         {currentItem.stats}
                                     </div>
-                                    <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-4xl shadow-2xl transition-transform hover:scale-110">
-                                        {currentItem.icon}
+                                    <div className="w-24 h-24 rounded-3xl bg-white/10 backdrop-blur-3xl border border-white/20 flex items-center justify-center shadow-2xl transition-all duration-500 hover:scale-110 hover:border-white/40">
+                                        <span className="material-symbols-outlined text-6xl text-white" style={{ fontVariationSettings: "'FILL' 1, 'wght' 400" }}>{currentItem.materialIcon}</span>
                                     </div>
                                 </div>
 
@@ -234,8 +234,8 @@ export default function UniverseEcosystem() {
                                 >
                                     <div className="relative h-full w-full bg-white rounded-[1.4rem] overflow-hidden">
                                         <div className="relative h-full p-6 flex flex-col justify-end items-center text-center">
-                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl mb-3 transition-all duration-500 ${isActive ? 'bg-[#6605c7] text-white shadow-lg -translate-y-1' : 'bg-gray-50 text-gray-400 group-hover:bg-purple-50'}`}>
-                                                {item.icon}
+                                            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-500 ${isActive ? 'bg-[#6605c7] text-white shadow-lg -translate-y-1' : 'bg-gray-50 text-gray-400 group-hover:bg-purple-50'}`}>
+                                                <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: isActive ? "'FILL' 1" : "" }}>{item.materialIcon}</span>
                                             </div>
 
                                             <div className={`text-[9px] font-black uppercase tracking-[0.15em] mb-1 transition-colors ${isActive ? 'text-[#6605c7]' : 'text-gray-400'}`}>

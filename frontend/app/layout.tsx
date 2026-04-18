@@ -5,6 +5,7 @@ import { UniversityProvider } from "@/context/UniversityContext";
 import SelectedUniversityWidget from "@/components/SelectedUniversityWidget";
 import ReferralTracker from "@/components/ReferralTracker";
 
+
 export const metadata: Metadata = {
   title: {
     default: "Vidhya Loans - Fund Your Dream Education Abroad",
@@ -61,6 +62,7 @@ export default function RootLayout({
             <UniversityProvider>
               {children}
               <SelectedUniversityWidget />
+
             </UniversityProvider>
           </AuthProvider>
         </div>

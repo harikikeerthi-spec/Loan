@@ -4,16 +4,16 @@ import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-    Chart as ChartJS, 
-    CategoryScale, 
-    LinearScale, 
-    PointElement, 
-    LineElement, 
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
     BarElement,
-    Title, 
-    Tooltip, 
-    Legend, 
+    Title,
+    Tooltip,
+    Legend,
     ArcElement,
     Filler
 } from 'chart.js';
@@ -22,14 +22,14 @@ import { adminApi } from "@/lib/api";
 import ChatInterface from "@/components/Chat/ChatInterface";
 
 ChartJS.register(
-    CategoryScale, 
-    LinearScale, 
-    PointElement, 
-    LineElement, 
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
     BarElement,
-    Title, 
-    Tooltip, 
-    Legend, 
+    Title,
+    Tooltip,
+    Legend,
     ArcElement,
     Filler
 );
@@ -37,7 +37,7 @@ ChartJS.register(
 // --- Components ---
 
 const QuickAction = ({ icon, label, sublabel, bgColor, iconColor, onClick }: any) => (
-    <button 
+    <button
         onClick={onClick}
         className="glass-card p-6 rounded-[2.5rem] bg-white group hover:bg-[#6605c7]/5 transition-all text-left border-[#6605c7]/10"
     >
@@ -109,10 +109,10 @@ export default function BankDashboard() {
     // Derived Charts Data
     const statusDistribution = useMemo(() => {
         if (!stats?.statusStats) return null;
-        
+
         const labels = Object.keys(stats.statusStats).map(s => s.charAt(0).toUpperCase() + s.slice(1));
         const data = Object.values(stats.statusStats);
-        
+
         return {
             labels,
             datasets: [{
@@ -188,36 +188,36 @@ export default function BankDashboard() {
 
             {/* Matrix Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatMiniCard 
-                    label="Active Portfolio" 
-                    value={`₹${(stats?.loanTypeStats?.reduce((acc: number, curr: any) => acc + (curr.totalAmount || 0), 0) / 10000000).toFixed(2)}Cr`} 
-                    trend={stats?.monthlyComparison?.change} 
-                    icon="account_balance_wallet" 
+                <StatMiniCard
+                    label="Active Portfolio"
+                    value={`₹${(stats?.loanTypeStats?.reduce((acc: number, curr: any) => acc + (curr.totalAmount || 0), 0) / 10000000).toFixed(2)}Cr`}
+                    trend={stats?.monthlyComparison?.change}
+                    icon="account_balance_wallet"
                     iconColor="text-[#6605c7]"
                     bgColor="bg-[#6605c7]/10"
                 />
-                <StatMiniCard 
-                    label="Current Transmission" 
-                    value={`${stats?.total || 0} Units`} 
-                    trend="+4%" 
-                    icon="receipt_long" 
-                    iconColor="text-amber-500" 
+                <StatMiniCard
+                    label="Current Transmission"
+                    value={`${stats?.total || 0} Units`}
+                    trend="+4%"
+                    icon="receipt_long"
+                    iconColor="text-amber-500"
                     bgColor="bg-amber-500/10"
                 />
-                <StatMiniCard 
-                    label="Pulse Conversion" 
-                    value={`${((stats?.statusStats?.disbursed || 0) / (stats?.total || 1) * 100).toFixed(1)}%`} 
-                    trend="-2.1%" 
-                    icon="electric_bolt" 
-                    iconColor="text-emerald-500" 
+                <StatMiniCard
+                    label="Pulse Conversion"
+                    value={`${((stats?.statusStats?.disbursed || 0) / (stats?.total || 1) * 100).toFixed(1)}%`}
+                    trend="-2.1%"
+                    icon="electric_bolt"
+                    iconColor="text-emerald-500"
                     bgColor="bg-emerald-500/10"
                 />
-                <StatMiniCard 
-                    label="Pending Audit" 
-                    value={`${stats?.statusStats?.submitted || 0} Nodes`} 
-                    trend="+0.01%" 
-                    icon="monitoring" 
-                    iconColor="text-rose-500" 
+                <StatMiniCard
+                    label="Pending Audit"
+                    value={`${stats?.statusStats?.submitted || 0} Nodes`}
+                    trend="+0.01%"
+                    icon="monitoring"
+                    iconColor="text-rose-500"
                     bgColor="bg-rose-500/10"
                 />
             </div>
@@ -237,8 +237,8 @@ export default function BankDashboard() {
                         </div>
                     </div>
                     <div className="h-[300px]">
-                        <Line 
-                            data={disbursementData} 
+                        <Line
+                            data={disbursementData}
                             options={{
                                 responsive: true,
                                 maintainAspectRatio: false,
@@ -257,12 +257,12 @@ export default function BankDashboard() {
                     <h3 className="text-xl font-black font-display text-gray-900 mb-8 text-center uppercase tracking-tighter italic">Status Matrix</h3>
                     <div className="h-[250px] relative">
                         {statusDistribution && (
-                            <Doughnut 
-                                data={statusDistribution} 
+                            <Doughnut
+                                data={statusDistribution}
                                 options={{
                                     cutout: '75%',
                                     plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 20, font: { weight: 'bold', size: 10 } } } }
-                                }} 
+                                }}
                             />
                         )}
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none mb-6">
@@ -333,9 +333,9 @@ export default function BankDashboard() {
                         <h3 className="text-xl font-black font-display text-gray-900 mb-8 tracking-tight italic">Direct Commands</h3>
                         <div className="grid grid-cols-1 gap-4">
                             <QuickAction icon="chat_bubble" label="Initialize Chat" sublabel="Student WhatsApp" onClick={() => setShowChat(true)} />
-                            <QuickAction icon="assignment_add" label="Allocate Nodes" sublabel="Task Delegation" onClick={() => {}} />
-                            <QuickAction icon="rate_review" label="Set Multipliers" sublabel="Interest Rate Config" iconColor="text-amber-500" bgColor="bg-amber-500/10" onClick={() => {}} />
-                            <QuickAction icon="verified" label="Finalize Audit" sublabel="Protocol Validation" iconColor="text-emerald-500" bgColor="bg-emerald-500/10" onClick={() => {}} />
+                            <QuickAction icon="assignment_add" label="Allocate Nodes" sublabel="Task Delegation" onClick={() => { }} />
+                            <QuickAction icon="rate_review" label="Set Multipliers" sublabel="Interest Rate Config" iconColor="text-amber-500" bgColor="bg-amber-500/10" onClick={() => { }} />
+                            <QuickAction icon="verified" label="Finalize Audit" sublabel="Protocol Validation" iconColor="text-emerald-500" bgColor="bg-emerald-500/10" onClick={() => { }} />
                         </div>
                     </div>
 

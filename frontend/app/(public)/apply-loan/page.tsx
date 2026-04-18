@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { applicationApi, authApi } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import DatePicker from "@/components/DatePicker";
 
 const banks = [
     { id: "idfc", name: "IDFC First Bank", rate: "10.5 - 12.5%" },
@@ -55,6 +56,19 @@ export default function ApplyLoanPage() {
             const params = new URLSearchParams(window.location.search);
             const uni = params.get("university");
             const country = params.get("country");
+
+            // Look for saved application data in sessionStorage
+            const savedData = sessionStorage.getItem("pending_loan_application");
+            if (savedData) {
+                try {
+                    const parsed = JSON.parse(savedData);
+                    if (parsed.formData) setFormData(prev => ({ ...prev, ...parsed.formData }));
+                    if (parsed.step) setStep(parsed.step);
+                    // Don't remove it yet, only remove after successful submission
+                } catch (e) {
+                    console.error("Failed to parse saved application data:", e);
+                }
+            }
 
             if (uni || country || (user && !profileLoaded)) {
                 setFormData((prev) => ({
@@ -127,6 +141,8 @@ export default function ApplyLoanPage() {
 
     const handleSubmit = async () => {
         if (!isAuthenticated || !user?.id) {
+            // Save form data and current step to session storage before redirecting
+            sessionStorage.setItem("pending_loan_application", JSON.stringify({ formData, step }));
             router.push(`/login?redirect=/apply-loan`);
             return;
         }
@@ -148,18 +164,11 @@ export default function ApplyLoanPage() {
             // Sync personal details to main user profile if authenticated
             if (user?.email) {
                 try {
-                    // Convert YYYY-MM-DD from date input to DD-MM-YYYY for backend profile update
-                    let profileDob = formData.dateOfBirth;
-                    if (profileDob && profileDob.includes('-') && profileDob.split('-')[0].length === 4) {
-                        const [y, m, d] = profileDob.split('-');
-                        profileDob = `${d}-${m}-${y}`;
-                    }
-
                     await authApi.updateDetails(user.email, {
                         firstName: formData.firstName,
                         lastName: formData.lastName,
                         phoneNumber: formData.phone,
-                        dateOfBirth: profileDob,
+                        dateOfBirth: formData.dateOfBirth, // Custom DatePicker already returns DD-MM-YYYY
                     });
                     await refreshUser();
                 } catch (err) {
@@ -176,6 +185,8 @@ export default function ApplyLoanPage() {
                 // ignore
             }
 
+            // Clear saved data on success
+            sessionStorage.removeItem("pending_loan_application");
             setSubmitted(true);
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : "Failed to submit");
@@ -210,7 +221,7 @@ export default function ApplyLoanPage() {
                     </p>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 group">
-                        <Link href="/dashboard" className="px-8 py-5 bg-[#6605c7] text-white text-[11px] uppercase tracking-[0.2em] font-black rounded-2xl hover:bg-[#7a0de8] hover:shadow-2xl hover:shadow-[#6605c7]/30 transition-all flex items-center justify-center gap-3">
+                        <Link href="/dashboard#applications" className="px-8 py-5 bg-[#6605c7] text-white text-[11px] uppercase tracking-[0.2em] font-black rounded-2xl hover:bg-[#7a0de8] hover:shadow-2xl hover:shadow-[#6605c7]/30 transition-all flex items-center justify-center gap-3">
                             <span className="material-symbols-outlined text-lg">dashboard_customize</span>
                             Control Center
                         </Link>
@@ -393,7 +404,11 @@ export default function ApplyLoanPage() {
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <InputField label="Date of Birth" icon="calendar_today" value={formData.dateOfBirth} onChange={(v) => update("dateOfBirth", v)} type="date" />
+                                    <DatePicker
+                                        label="Date of Birth"
+                                        value={formData.dateOfBirth}
+                                        onChange={(v) => update("dateOfBirth", v)}
+                                    />
                                     <InputField label="Residential Address" icon="location_on" value={formData.address} onChange={(v) => update("address", v)} placeholder="City, State" />
                                 </div>
 

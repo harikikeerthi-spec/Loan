@@ -7,6 +7,9 @@ import Navbar from "@/components/Navbar";
 import { authApi } from "@/lib/api";
 
 
+import DatePicker from "@/components/DatePicker";
+
+
 export default function UserDetailsPage() {
     const { user, token, refreshUser } = useAuth();
     const router = useRouter();
@@ -142,24 +145,13 @@ export default function UserDetailsPage() {
                                 />
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 ml-1">
-                                    Date of Birth
-                                </label>
-                                <input
-                                    type="text"
-                                    placeholder="DD-MM-YYYY"
-                                    value={form.dateOfBirth}
-                                    onChange={(e) =>
-                                        setForm((p) => ({ ...p, dateOfBirth: e.target.value }))
-                                    }
-                                    required
-                                    pattern={"^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\\d{4}$"}
-                                    title="Please enter date in DD-MM-YYYY format (e.g., 15-01-1990)"
-                                    maxLength={10}
-                                    className="w-full px-4 py-3 bg-gray-50/50 border border-gray-100 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 transition-all"
-                                />
-                            </div>
+                            <DatePicker
+                                label="Date of Birth"
+                                value={form.dateOfBirth}
+                                onChange={(val) => setForm(p => ({ ...p, dateOfBirth: val }))}
+                                required
+                                placeholder="Select DOB"
+                            />
 
                             <button
                                 type="submit"

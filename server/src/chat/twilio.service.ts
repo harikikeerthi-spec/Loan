@@ -41,7 +41,12 @@ export class TwilioService {
       this.logger.log(`WhatsApp message sent to ${formattedTo}. SID: ${message.sid}`);
       return message;
     } catch (error) {
-      this.logger.error(`Failed to send WhatsApp message to ${formattedTo}: ${error.message}`, error.stack);
+      if (error.code === 20003) {
+        this.logger.warn(`[TWILIO AUTH ERROR] Could not send message to ${formattedTo}. Please check your SID/Token in .env. Simulator will still receive this.`);
+      } else {
+        this.logger.error(`Failed to send WhatsApp message to ${formattedTo}: ${error.message}`);
+      }
+      // We throw a specialized error that we can catch in the gateway
       throw error;
     }
   }

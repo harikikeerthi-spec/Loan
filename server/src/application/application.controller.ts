@@ -24,6 +24,7 @@ import { ApplicationService } from './application.service';
 import { UserGuard } from '../auth/user.guard';
 import { AdminGuard } from '../auth/admin.guard';
 import { StaffGuard } from '../auth/staff.guard';
+import { AgentGuard } from '../auth/agent.guard';
 
 // Multer configuration for application documents
 const storage = diskStorage({
@@ -303,8 +304,8 @@ export class ApplicationController {
      */
     @Get('admin/stats')
     @UseGuards(StaffGuard)
-    async getApplicationStats() {
-        return this.applicationService.getApplicationStats();
+    async getApplicationStats(@Request() req) {
+        return this.applicationService.getApplicationStats(req.user);
     }
 
     /**
@@ -325,7 +326,7 @@ export class ApplicationController {
         }
     ) {
         const adminName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
-        return this.applicationService.updateApplicationStatus(id, req.user.id, adminName, body);
+        return this.applicationService.updateApplicationStatus(id, req.user.id, adminName, body, req.user.role);
     }
 
     /**
@@ -440,5 +441,26 @@ export class ApplicationController {
         return this.applicationService.addApplicationNote(id, req.user.id, authorName, body);
     }
 
+    // ==================== AGENT ENDPOINTS ====================
+
+    /**
+     * Get agent's referral stats
+     * GET /applications/agent/stats
+     */
+    @Get('agent/stats')
+    @UseGuards(AgentGuard)
+    async getAgentStats(@Request() req) {
+        return this.applicationService.getAgentStats(req.user.id);
+    }
+
+    /**
+     * Get applications referred by this agent
+     * GET /applications/agent/list
+     */
+    @Get('agent/list')
+    @UseGuards(AgentGuard)
+    async getAgentApplications(@Request() req) {
+        return this.applicationService.getAgentApplications(req.user.id);
+    }
 
 }

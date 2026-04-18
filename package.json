@@ -9,8 +9,10 @@
   },
   "dependencies": {
     "@nestjs/config": "^4.0.3",
+    "@supabase/supabase-js": "^2.103.3",
     "@types/nodemailer": "^7.0.5",
     "cache-manager": "^7.2.8",
+    "dotenv": "^17.4.2",
     "framer-motion": "^12.34.3",
     "nodemailer": "^7.0.12"
   },

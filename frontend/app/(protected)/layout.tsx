@@ -5,14 +5,32 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
-    const { isAuthenticated, isLoading } = useAuth();
+    const { isAuthenticated, isLoading, isAdmin, isStaff, isBank } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
-        if (!isLoading && !isAuthenticated) {
+        if (isLoading) return;
+
+        if (!isAuthenticated) {
             router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
+            return;
         }
-    }, [isAuthenticated, isLoading, router]);
+
+        // Keep portal sessions isolated: student routes are for student users only.
+        if (isAdmin) {
+            router.replace("/admin");
+            return;
+        }
+
+        if (isBank) {
+            router.replace("/bank/dashboard");
+            return;
+        }
+
+        if (isStaff) {
+            router.replace("/staff/dashboard");
+        }
+    }, [isAuthenticated, isLoading, isAdmin, isStaff, isBank, router]);
 
     if (isLoading) {
         return (
@@ -25,7 +43,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
         );
     }
 
-    if (!isAuthenticated) return null;
+    if (!isAuthenticated || isAdmin || isStaff || isBank) return null;
 
     return <>{children}</>;
 }

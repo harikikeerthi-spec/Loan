@@ -7,11 +7,50 @@ export class UsersService {
     return this.supabase.getClient();
   }
 
-  constructor(private supabase: SupabaseService) {}
+  constructor(private supabase: SupabaseService) { }
+
+  private parseDate(dateStr: string | null | undefined): string | null {
+    if (!dateStr) return null;
+
+    // Try native parsing first (e.g., ISO, YYYY-MM-DD)
+    let d = new Date(dateStr);
+    if (!isNaN(d.getTime())) return d.toISOString();
+
+    // Try DD-MM-YYYY or DD/MM/YYYY
+    const parts = dateStr.split(/[-/]/);
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+
+      // Simple validation for numbers
+      if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+        d = new Date(year, month, day);
+        if (!isNaN(d.getTime())) return d.toISOString();
+      }
+    }
+
+    return null;
+  }
+
+  private safeISO(dateSource: any): string {
+    if (!dateSource) return new Date().toISOString();
+    const d = dateSource instanceof Date ? dateSource : new Date(dateSource);
+    return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+  }
+
 
   async findOne(email: string) {
-    const { data } = await this.db.from('User').select('*').eq('email', email).single();
-    return data;
+    try {
+      const { data, error } = await this.db.from('User').select('*').eq('email', email).single();
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        console.error(`[UsersService.findOne] Supabase error for ${email}:`, error);
+      }
+      return data;
+    } catch (e) {
+      console.error(`[UsersService.findOne] Fatal error for ${email}:`, e);
+      throw e;
+    }
   }
 
   async findById(id: string) {
@@ -45,17 +84,10 @@ export class UsersService {
     dateOfBirth?: string;
     mobile?: string;
     password?: string;
+    role?: string;
   }) {
-    let dobDate: string | null = null;
-    if (data.dateOfBirth) {
-      const dobParts = data.dateOfBirth.split('-');
-      if (dobParts.length === 3) {
-        const day = parseInt(dobParts[0], 10);
-        const month = parseInt(dobParts[1], 10) - 1;
-        const year = parseInt(dobParts[2], 10);
-        dobDate = new Date(year, month, day).toISOString();
-      }
-    }
+    const dobDate = this.parseDate(data.dateOfBirth);
+
 
     const { data: user, error } = await this.db
       .from('User')
@@ -67,6 +99,7 @@ export class UsersService {
         dateOfBirth: dobDate,
         mobile: data.mobile || '',
         password: data.password || '',
+        role: data.role || 'user',
       })
       .select()
       .single();
@@ -87,16 +120,8 @@ export class UsersService {
     phoneNumber: string,
     dateOfBirth: string,
   ) {
-    let dobDate: string | null = null;
-    if (dateOfBirth) {
-      const dobParts = dateOfBirth.split('-');
-      if (dobParts.length === 3) {
-        const day = parseInt(dobParts[0], 10);
-        const month = parseInt(dobParts[1], 10) - 1;
-        const year = parseInt(dobParts[2], 10);
-        dobDate = new Date(year, month, day).toISOString();
-      }
-    }
+    const dobDate = this.parseDate(dateOfBirth);
+
 
     const { data, error } = await this.db
       .from('User')
@@ -121,7 +146,7 @@ export class UsersService {
     return data;
   }
 
-  async updateUserRole(email: string, role: 'admin' | 'user' | 'staff' | 'super_admin') {
+  async updateUserRole(email: string, role: 'admin' | 'user' | 'staff' | 'super_admin' | 'agent' | 'bank') {
     const { data, error } = await this.db
       .from('User')
       .update({ role })
@@ -158,9 +183,20 @@ export class UsersService {
       notes?: string;
     },
   ) {
+    const now = new Date().toISOString();
+    
+    // Generate application number
+    const prefix = ({ education: 'EDU', home: 'HME', personal: 'PRS', business: 'BUS', vehicle: 'VEH' })[data.loanType] || 'APP';
+    const applicationNumber = `${prefix}${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    
+    // Calculate estimated completion (14 days from now)
+    const estimatedCompletionAt = new Date();
+    estimatedCompletionAt.setDate(estimatedCompletionAt.getDate() + 14);
+    
     const { data: application, error } = await this.db
       .from('LoanApplication')
       .insert({
+        applicationNumber,
         userId,
         bank: data.bank,
         loanType: data.loanType,
@@ -173,7 +209,8 @@ export class UsersService {
         lastName: data.lastName || null,
         email: data.email || null,
         phone: data.phone || null,
-        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth).toISOString() : null,
+        dateOfBirth: this.parseDate(data.dateOfBirth),
+
         address: data.address || null,
         hasCoApplicant: !!data.coApplicant && data.coApplicant !== 'none',
         coApplicantRelation: data.coApplicant !== 'none' ? data.coApplicant : null,
@@ -184,7 +221,9 @@ export class UsersService {
         status: 'pending',
         stage: 'application_submitted',
         progress: 10,
-        submittedAt: new Date().toISOString(),
+        submittedAt: now,
+        estimatedCompletionAt: estimatedCompletionAt.toISOString(),
+        updatedAt: now,
       })
       .select()
       .single();
@@ -194,11 +233,22 @@ export class UsersService {
   }
 
   async getUserApplications(userId: string) {
-    const { data } = await this.db
+    // Also try to find applications by email as a fallback
+    const user = await this.findById(userId);
+    const email = user?.email;
+
+    let query = this.db
       .from('LoanApplication')
       .select('*')
-      .eq('userId', userId)
-      .order('date', { ascending: false });
+      .order('id', { ascending: false });
+
+    if (email) {
+      query = query.or(`userId.eq.${userId},email.eq.${email}`);
+    } else {
+      query = query.eq('userId', userId);
+    }
+
+    const { data } = await query;
     return data || [];
   }
 
@@ -322,7 +372,7 @@ export class UsersService {
           type: 'application',
           title: `Loan Application — ${app.bank}`,
           description: `₹${(app.amount || 0).toLocaleString('en-IN')} ${app.loanType || ''}${app.universityName ? ` for ${app.universityName}` : ''}. Status: ${app.status || 'pending'}`,
-          timestamp: ts ? new Date(ts).toISOString() : new Date().toISOString(),
+          timestamp: this.safeISO(ts),
           link: '/dashboard',
         });
       }
@@ -334,7 +384,7 @@ export class UsersService {
             type: 'upload',
             title: `Document Uploaded`,
             description: `${(doc.docType || '').replace('_', ' ')} uploaded successfully`,
-            timestamp: ts ? new Date(ts).toISOString() : new Date().toISOString(),
+            timestamp: this.safeISO(ts),
             link: '/document-vault',
           });
         }
@@ -345,7 +395,7 @@ export class UsersService {
           type: inq.type === 'callback' ? 'callback' : 'inquiry',
           title: inq.type === 'callback' ? 'Callback Requested' : 'Fasttrack Application',
           description: `University: ${inq.universityName || 'N/A'}. Status: ${inq.status || 'pending'}`,
-          timestamp: new Date(inq.createdAt).toISOString(),
+          timestamp: this.safeISO(inq.createdAt),
           link: '/explore',
         });
       }
@@ -356,7 +406,7 @@ export class UsersService {
             type: 'eligibility',
             title: `Eligibility Result: ${check.status || 'Success'}`,
             description: `Score: ${check.score || 0}% for loan of ₹${(check.loan || 0).toLocaleString('en-IN')}`,
-            timestamp: new Date(check.createdAt).toISOString(),
+            timestamp: this.safeISO(check.createdAt),
             link: '/loan-eligibility',
           });
         }
@@ -368,7 +418,7 @@ export class UsersService {
             type: 'visa_mock',
             title: `Visa Mock Interview — ${interview.visaType || 'F1'}`,
             description: `Likelihood: ${interview.approvalLikelihood || 'High'}. Risk: ${interview.overallRisk || 'Low'}. Score: ${interview.overallScore || 0}/10`,
-            timestamp: new Date(interview.createdAt).toISOString(),
+            timestamp: this.safeISO(interview.createdAt),
             link: '/visa-mock',
           });
         }
@@ -380,7 +430,7 @@ export class UsersService {
             type: 'forum_post',
             title: `Forum Post: ${post.title || 'Untitled'}`,
             description: (post.content || '').substring(0, 100) + '...',
-            timestamp: new Date(post.createdAt).toISOString(),
+            timestamp: this.safeISO(post.createdAt),
             link: `/community/forum/${post.id}`,
           });
         }
@@ -392,11 +442,12 @@ export class UsersService {
             type: 'forum_comment',
             title: `Commented on Forum`,
             description: (comment.content || '').substring(0, 100) + '...',
-            timestamp: new Date(comment.createdAt).toISOString(),
+            timestamp: this.safeISO(comment.createdAt),
             link: `/community/forum/${comment.postId}`,
           });
         }
       }
+
 
       activity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 

@@ -89,6 +89,13 @@ export default function DashboardPage() {
 
     useEffect(() => {
         loadData();
+        // Set tab from hash if present
+        if (typeof window !== "undefined" && window.location.hash) {
+            const hashTab = window.location.hash.replace("#", "");
+            if (["overview", "applications", "documents", "profile"].includes(hashTab)) {
+                setActiveTab(hashTab);
+            }
+        }
     }, [loadData]);
 
     // Listen for dashboard updates from other pages/tabs
@@ -175,6 +182,10 @@ export default function DashboardPage() {
                                 <span className="material-symbols-outlined text-sm">chat</span>
                                 Connect with Support
                             </button>
+                            <Link href="/whatsapp-simulator" className="px-5 py-2.5 bg-white text-[#6605c7] border border-[#6605c7]/20 text-xs font-bold rounded-lg hover:bg-[#6605c7]/5 transition-all flex items-center gap-2">
+                                <span className="material-symbols-outlined text-sm">sensors</span>
+                                Simulate Chat
+                            </Link>
                             <Link href="/apply-loan" className="px-5 py-2.5 bg-[#6605c7] text-white text-xs font-bold rounded-lg hover:bg-[#5504a8] transition-all shadow-sm">
                                 Apply for Loan
                             </Link>

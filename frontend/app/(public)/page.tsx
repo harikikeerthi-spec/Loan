@@ -302,8 +302,8 @@ export default async function HomePage() {
                                         🔥 Trending
                                     </span>
                                 </div>
-                                <div className="absolute top-4 right-4 w-12 h-12 rounded-xl bg-white/10 backdrop-blur-sm will-change-transform flex items-center justify-center group-hover:scale-110 transition-transform">
-                                    <span className="text-2xl">📚</span>
+                                <div className="absolute top-4 right-4 w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-md will-change-transform flex items-center justify-center group-hover:scale-110 transition-transform border border-white/20">
+                                    <span className="material-symbols-outlined text-5xl text-white">auto_stories</span>
                                 </div>
                                 <div className="relative z-10 p-7">
                                     <div className="text-3xl font-black text-white mb-1"><AnimatedNumber value="200+" /></div>
@@ -320,10 +320,8 @@ export default async function HomePage() {
                             <Link href="/community/discussions" className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-lg flex flex-col justify-end min-h-[260px]" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' }}>
                                 <div className="absolute inset-0 opacity-25" style={{ background: "url('/images/ecosystem/universities.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(15,23,42,0.9) 0%, rgba(15,23,42,0.3) 60%, transparent 100%)' }} />
-                                <div className="absolute top-4 right-4">
-                                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 backdrop-blur-sm will-change-transform text-blue-300 text-[10px] font-black uppercase tracking-widest border border-blue-400/20">
-                                        🏛️ Top Ranked
-                                    </span>
+                                <div className="absolute top-4 right-4 w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-md will-change-transform flex items-center justify-center group-hover:scale-110 transition-transform border border-white/20">
+                                    <span className="material-symbols-outlined text-5xl text-white font-light opacity-80">account_balance</span>
                                 </div>
                                 <div className="relative z-10 p-6">
                                     <div className="text-2xl font-black text-white mb-1"><AnimatedNumber value="500+" /></div>
@@ -339,6 +337,9 @@ export default async function HomePage() {
                             <Link href="/community/discussions" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-lg flex flex-col justify-end min-h-[260px]" style={{ background: 'linear-gradient(135deg, #78350f 0%, #b45309 100%)' }}>
                                 <div className="absolute inset-0 opacity-20" style={{ background: "url('/images/ecosystem/scholarships.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(120,53,15,0.9) 0%, rgba(120,53,15,0.3) 70%, transparent 100%)' }} />
+                                <div className="absolute top-4 right-4 w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-md will-change-transform flex items-center justify-center group-hover:scale-110 transition-transform border border-white/20">
+                                    <span className="material-symbols-outlined text-5xl text-white font-light opacity-80">military_tech</span>
+                                </div>
                                 <div className="relative z-10 p-6">
                                     <div className="text-2xl font-black text-white mb-1">₹<AnimatedNumber value="50" />L+</div>
                                     <div className="text-amber-200/40 text-[10px] uppercase tracking-widest font-black mb-2">Avg. Award</div>
@@ -353,8 +354,8 @@ export default async function HomePage() {
                             <Link href="/practice" className="col-span-12 sm:col-span-6 lg:col-span-4 row-span-1 group relative overflow-hidden rounded-xl shadow-lg flex flex-col justify-end min-h-[240px]" style={{ background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}>
                                 <div className="absolute inset-0 opacity-20" style={{ background: "url('/images/ecosystem/exam-prep.jpg') center/cover" }} />
                                 <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(6,78,59,0.9) 0%, rgba(6,78,59,0.3) 70%, transparent 100%)' }} />
-                                <div className="absolute top-4 right-4 w-11 h-11 rounded-xl bg-emerald-400/20 backdrop-blur-sm will-change-transform flex items-center justify-center">
-                                    <span className="text-xl">✍️</span>
+                                <div className="absolute top-4 right-4 w-20 h-20 rounded-2xl bg-emerald-400/20 backdrop-blur-md will-change-transform flex items-center justify-center border border-emerald-400/30">
+                                    <span className="material-symbols-outlined text-5xl text-white font-light">edit_note</span>
                                 </div>
                                 <div className="absolute top-4 left-4 flex gap-1.5">
                                     {['GRE', 'IELTS', 'TOEFL'].map(t => (
@@ -374,6 +375,9 @@ export default async function HomePage() {
                             {/* 5 — Education Loan */}
                             <Link href="/apply-loan" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-xl flex flex-col justify-end min-h-[240px]" style={{ background: 'linear-gradient(135deg, #6605c7 0%, #9333ea 100%)' }}>
                                 <div className="absolute inset-0 opacity-10" style={{ background: "url('/images/ecosystem/education-loan.jpg') center/cover" }} />
+                                <div className="absolute top-4 right-4 w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-md will-change-transform flex items-center justify-center group-hover:scale-110 transition-transform border border-white/20">
+                                    <span className="material-symbols-outlined text-5xl text-white font-light">payments</span>
+                                </div>
                                 <div className="relative z-10 p-6">
                                     <span className="inline-block px-2 py-0.5 rounded-lg bg-white/10 text-white text-[10px] font-black uppercase tracking-widest mb-3 border border-white/10">⭐ Best Rates</span>
                                     <h3 className="text-lg font-bold text-white mb-2">Education Loans</h3>
@@ -813,9 +817,8 @@ export default async function HomePage() {
                             {/* 6 — Visa Counselling (bottom right) */}
                             <Link href="/visa-mock" className="col-span-12 sm:col-span-6 lg:col-span-3 row-span-1 group relative overflow-hidden rounded-xl shadow-2xl flex flex-col justify-end min-h-[280px]" style={{ background: 'linear-gradient(135deg, #064e3b 0%, #065f46 100%)' }}>
                                 <div className="absolute inset-0 opacity-10" style={{ background: "url('/images/services/counselling.jpg') center/cover" }} />
-                                <div className="absolute top-6 right-6 w-16 h-16 rounded-full border-4 border-white/15 animate-ping opacity-20" />
-                                <div className="absolute top-6 right-6 w-16 h-16 rounded-xl border-4 border-white/10 flex items-center justify-center">
-                                    <span className="text-2xl">✈️</span>
+                                <div className="absolute top-4 right-4 w-20 h-20 rounded-2xl bg-white/10 backdrop-blur-md will-change-transform flex items-center justify-center group-hover:scale-110 transition-transform border border-white/20">
+                                    <span className="material-symbols-outlined text-5xl text-white font-light">flight</span>
                                 </div>
                                 <div className="relative z-10 p-6">
                                     <span className="inline-block px-2.5 py-1 rounded-lg bg-white/20 text-white text-[10px] font-black uppercase tracking-widest mb-3">🎯 Expert Guidance</span>
@@ -832,15 +835,15 @@ export default async function HomePage() {
                         {/* Stats Bar */}
                         <div className="mt-8 flex flex-wrap gap-4 justify-center">
                             {[
-                                { icon: '✅', val: '98%', label: 'Visa Success Rate' },
-                                { icon: '🏠', val: '1,000+', label: 'Verified Listings' },
-                                { icon: '🌍', val: '30+', label: 'Countries Covered' },
-                                { icon: '💳', val: '0%', label: 'Forex Markup' },
-                                { icon: '🏦', val: 'Pre-Arrival', label: 'Bank Accounts' },
-                                { icon: '🎯', val: '10K+', label: 'Students Helped' },
+                                { icon: 'verified', val: '98%', label: 'Visa Success Rate' },
+                                { icon: 'home_pin', val: '1,000+', label: 'Verified Listings' },
+                                { icon: 'public', val: '30+', label: 'Countries Covered' },
+                                { icon: 'payments', val: '0%', label: 'Forex Markup' },
+                                { icon: 'account_balance', val: 'Pre-Arrival', label: 'Bank Accounts' },
+                                { icon: 'target', val: '10K+', label: 'Students Helped' },
                             ].map(s => (
                                 <div key={s.label} className="flex items-center gap-2.5 px-5 py-3 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all group">
-                                    <span className="text-lg group-hover:scale-125 transition-transform">{s.icon}</span>
+                                    <span className="material-symbols-outlined text-[#6605c7] text-2xl group-hover:scale-125 transition-transform">{s.icon}</span>
                                     <div>
                                         <div className="font-black text-gray-900 text-[13px] leading-none"><AnimatedNumber value={s.val} /></div>
                                         <div className="text-gray-400 text-[10px] uppercase tracking-wider font-bold">{s.label}</div>

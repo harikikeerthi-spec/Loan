@@ -30,6 +30,32 @@ export class BlogController {
     // ==================== ADMIN ENDPOINTS (High Priority) ====================
 
     /**
+     * Get all audit logs (Admin Hub)
+     * GET /blogs/admin/matrix-logs
+     */
+    @Get('admin/matrix-logs')
+    @UseGuards(AdminGuard)
+    async getAllAuditLogs(
+        @Query('entityType') entityType?: string,
+        @Query('initiatedBy') initiatedBy?: string,
+        @Query('limit') limit?: string,
+        @Query('offset') offset?: string,
+    ) {
+        const logs = await this.auditLog.getAllLogs(
+            entityType,
+            initiatedBy,
+            limit ? parseInt(limit, 10) : 100,
+            offset ? parseInt(offset, 10) : 0,
+        );
+
+        return {
+            success: true,
+            data: logs,
+        };
+    }
+
+
+    /**
      * Get blog statistics - ADMIN ONLY
      * GET /blogs/admin/stats
      * @returns { success: boolean, data: { total, published, draft, featured } }
@@ -435,6 +461,7 @@ export class BlogController {
 
     // ==================== NEW ADMIN ENDPOINTS (WITH AUTHORIZATION) ====================
 
+
     /**
      * Get admin blogs with scope filtering (My Blogs, Other Admin Blogs)
      * GET /admin/blogs
@@ -697,7 +724,7 @@ export class BlogController {
      * GET /super-admin/blogs
      */
     @Get('super-admin/all')
-    @UseGuards(SuperAdminGuard)
+    @UseGuards(AdminGuard)
     async getSuperAdminBlogs(
         @Query('status') status?: string,
         @Query('owner') ownerAdminId?: string,
@@ -725,7 +752,7 @@ export class BlogController {
      * POST /super-admin/blogs/:id/approve
      */
     @Post('super-admin/:id/approve')
-    @UseGuards(SuperAdminGuard)
+    @UseGuards(AdminGuard)
     async approveBlog(
         @Request() req,
         @Param('id') blogId: string,
@@ -755,7 +782,7 @@ export class BlogController {
      * POST /super-admin/blogs/:id/reject
      */
     @Post('super-admin/:id/reject')
-    @UseGuards(SuperAdminGuard)
+    @UseGuards(AdminGuard)
     async rejectBlog(
         @Request() req,
         @Param('id') blogId: string,
@@ -777,31 +804,6 @@ export class BlogController {
             success: true,
             message: 'Blog rejected',
             data: blog,
-        };
-    }
-
-    /**
-     * Get all audit logs (super admin only)
-     * GET /super-admin/audit-logs
-     */
-    @Get('super-admin/audit-logs')
-    @UseGuards(SuperAdminGuard)
-    async getAllAuditLogs(
-        @Query('entityType') entityType?: string,
-        @Query('initiatedBy') initiatedBy?: string,
-        @Query('limit') limit?: string,
-        @Query('offset') offset?: string,
-    ) {
-        const logs = await this.auditLog.getAllLogs(
-            entityType,
-            initiatedBy,
-            limit ? parseInt(limit, 10) : 100,
-            offset ? parseInt(offset, 10) : 0,
-        );
-
-        return {
-            success: true,
-            data: logs,
         };
     }
 }

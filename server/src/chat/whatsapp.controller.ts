@@ -1,4 +1,4 @@
-import { Controller, Post, Res, Req, Body, Logger } from '@nestjs/common';
+import { Controller, Post, Res, Req, Body, Logger, Get, Param } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ChatService } from './chat.service';
 import { ChatGateway } from './chat.gateway';
@@ -48,10 +48,18 @@ export class WhatsappController {
       this.chatGateway.server.to(`conv_${conversation.id}`).emit('new_message', msg);
       
       // Notify global dashboard lists to move conversation to top
-      this.chatGateway.server.to('room_staff').to('room_bank').emit('conversation_updated', {
-          conversationId: conversation.id,
-          lastMessage: msg
-      });
+      const type = conversation.metadata?.type || 'staff';
+      if (type === 'bank') {
+          this.chatGateway.server.to('room_bank').emit('conversation_updated', {
+              conversationId: conversation.id,
+              lastMessage: msg
+          });
+      } else {
+          this.chatGateway.server.to('room_staff').emit('conversation_updated', {
+              conversationId: conversation.id,
+              lastMessage: msg
+          });
+      }
 
       // Respond to Twilio (empty TwiML so no automated response is sent)
       const twiml = new twilio.twiml.MessagingResponse();
@@ -61,5 +69,10 @@ export class WhatsappController {
       this.logger.error('Failed to process incoming WhatsApp message', error);
       res.status(500).send('Internal Server Error');
     }
+  }
+
+  @Get('history/:phone')
+  async getHistory(@Param('phone') phone: string) {
+    return this.chatService.getMessagesByPhone(phone);
   }
 }

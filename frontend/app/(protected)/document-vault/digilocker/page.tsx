@@ -41,7 +41,7 @@ function DigilockerIntegrationContent() {
     const { user, refreshUser } = useAuth();
     const searchParams = useSearchParams();
     const targetDoc = searchParams.get('docType');
-    
+
     const [docs, setDocs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState<string | null>(null);
@@ -141,7 +141,7 @@ function DigilockerIntegrationContent() {
                             {/* Design decorations */}
                             <div className="absolute -top-20 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-pulse" />
                             <div className="absolute top-1/2 left-0 w-40 h-40 bg-blue-900/30 rounded-full blur-3xl" />
-                            
+
                             <div className="relative z-10">
                                 <div className="flex items-center gap-4 mb-8">
                                     <div className="w-16 h-16 bg-white rounded-2xl p-3 flex items-center justify-center shadow-lg">
@@ -154,7 +154,7 @@ function DigilockerIntegrationContent() {
                                 </div>
 
                                 <p className="text-white/80 text-[15px] leading-relaxed mb-10 max-w-2xl font-medium">
-                                    No more scanning or manual uploads. Connect your DigiLocker to VidhyaLoan 
+                                    No more scanning or manual uploads. Connect your DigiLocker to VidhyaLoan
                                     to instantly verify your KYC documents, academic marksheets, and more using your Aadhaar-linked mobile.
                                 </p>
 
@@ -183,7 +183,7 @@ function DigilockerIntegrationContent() {
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
                                 {/* Connector lines for desktop */}
                                 <div className="hidden md:block absolute top-8 left-[15%] right-[15%] h-[2px] bg-gray-200 border-dashed border-t-[2px] border-emerald-500/30" />
-                                
+
                                 {INTEGRATION_STEPS.map((step, idx) => (
                                     <div key={idx} className="relative z-10 flex flex-col items-center text-center">
                                         <div className={`w-16 h-16 ${step.color} text-white rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-black/5`}>
@@ -204,8 +204,8 @@ function DigilockerIntegrationContent() {
                             <div className="space-y-4">
                                 {docs.length === 0 ? (
                                     <div className="py-10 text-center">
-                                         <span className="material-symbols-outlined text-gray-200 text-5xl mb-4">folder_open</span>
-                                         <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">No documents yet</p>
+                                        <span className="material-symbols-outlined text-gray-200 text-5xl mb-4">folder_open</span>
+                                        <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">No documents yet</p>
                                     </div>
                                 ) : (
                                     docs.slice(0, 5).map(doc => (
@@ -255,7 +255,7 @@ function DigilockerIntegrationContent() {
                     <div className="flex items-center justify-between mb-8">
                         <div className="flex items-center gap-4">
                             <div className="w-14 h-14 bg-emerald-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                                 <span className="material-symbols-outlined text-[28px]">move_to_inbox</span>
+                                <span className="material-symbols-outlined text-[28px]">move_to_inbox</span>
                             </div>
                             <div>
                                 <h2 className="text-xl font-black text-gray-900">DigiLocker Documents Section</h2>
@@ -305,7 +305,7 @@ function DigilockerIntegrationContent() {
                             </div>
                             <h3 className="text-gray-900 font-black text-lg mb-2">No documents discovered yet</h3>
                             <p className="text-gray-500 text-xs max-w-sm font-medium leading-relaxed">
-                                Connect your DigiLocker above to find your identity and academic documents. 
+                                Connect your DigiLocker above to find your identity and academic documents.
                                 Once verified, they will appear here for one-click syncing.
                             </p>
                         </div>

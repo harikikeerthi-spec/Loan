@@ -108,6 +108,7 @@ function LoginContent() {
             };
             if (data.refresh_token) localStorage.setItem("refreshToken", data.refresh_token);
             login(data.access_token, {
+                id: data.userId, // Include the ID so it's ready immediately
                 email: email.trim(),
                 firstName: data.firstName,
                 lastName: data.lastName,

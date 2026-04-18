@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { communityApi } from "@/lib/api";
+import { communityApi, chatApi } from "@/lib/api";
 
 interface Mentor {
     id: string;
@@ -93,7 +93,7 @@ export default function MentorsPage() {
                                 <button 
                                     onClick={async () => {
                                         try {
-                                            const res = await chatApi.connect();
+                                            const res = await chatApi.connect() as any;
                                             window.open(res.whatsappUrl, '_blank');
                                         } catch (e) {
                                             window.open(`https://wa.me/` + (process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER || '+14155238886'), '_blank');

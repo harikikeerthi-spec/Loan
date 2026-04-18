@@ -66,7 +66,31 @@ export class ApplicationService {
     private digilockerService: DigilockerService,
     private verificationService: DocumentVerificationService,
     private applicationReviewService: ApplicationReviewService,
-  ) {}
+  ) { }
+
+  private parseDate(dateStr: string | null | undefined): string | null {
+    if (!dateStr) return null;
+
+    // Try native parsing first
+    let d = new Date(dateStr);
+    if (!isNaN(d.getTime())) return d.toISOString();
+
+    // Try DD-MM-YYYY or DD/MM/YYYY
+    const parts = dateStr.split(/[-/]/);
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+
+      if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+        d = new Date(year, month, day);
+        if (!isNaN(d.getTime())) return d.toISOString();
+      }
+    }
+
+    return null;
+  }
+
 
   async createApplication(userId: string, data: any) {
     const applicationNumber = this.generateApplicationNumber(data.loanType);
@@ -87,7 +111,8 @@ export class ApplicationService {
         lastName: data.lastName,
         email: data.email,
         phone: data.phone,
-        dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth).toISOString() : null,
+        dateOfBirth: this.parseDate(data.dateOfBirth),
+
         gender: data.gender,
         nationality: data.nationality,
         address: data.address,
@@ -103,7 +128,8 @@ export class ApplicationService {
         universityName: data.universityName,
         courseName: data.courseName,
         courseDuration: data.courseDuration ? parseInt(data.courseDuration) : null,
-        courseStartDate: data.courseStartDate ? new Date(data.courseStartDate).toISOString() : null,
+        courseStartDate: this.parseDate(data.courseStartDate),
+
         admissionStatus: data.admissionStatus,
         hasCoApplicant: data.hasCoApplicant || false,
         coApplicantName: data.coApplicantName,
@@ -207,8 +233,9 @@ export class ApplicationService {
       amount: data.amount ? parseFloat(data.amount) : undefined,
       tenure: data.tenure ? parseInt(data.tenure) : undefined,
       annualIncome: data.annualIncome ? parseFloat(data.annualIncome) : undefined,
-      dateOfBirth: data.dateOfBirth ? new Date(data.dateOfBirth).toISOString() : undefined,
-      courseStartDate: data.courseStartDate ? new Date(data.courseStartDate).toISOString() : undefined,
+      dateOfBirth: data.dateOfBirth ? this.parseDate(data.dateOfBirth) : undefined,
+      courseStartDate: data.courseStartDate ? this.parseDate(data.courseStartDate) : undefined,
+
     };
 
     const { data: updated, error } = await this.db
@@ -383,30 +410,42 @@ export class ApplicationService {
     return { success: true, data: applications || [], pagination: { total: count || 0, limit: filters?.limit || 20, offset: filters?.offset || 0 } };
   }
 
-  async updateApplicationStatus(applicationId: string, adminId: string, adminName: string, data: { status?: string; stage?: string; progress?: number; remarks?: string; rejectionReason?: string }) {
+  async updateApplicationStatus(applicationId: string, adminId: string, adminName: string, data: { status?: string; stage?: string; progress?: number; remarks?: string; rejectionReason?: string }, role?: string) {
     const application = await this.getApplicationById(applicationId);
     const updateData: any = {};
     const historyData: any = { changedBy: adminId, changedByName: adminName };
 
+    const isAuthorizedToChangeStatus = ['staff', 'super_admin', 'bank'].includes(role || '');
+
     if (data.status && data.status !== application.status) {
-      updateData.status = data.status;
-      historyData.fromStatus = application.status;
-      historyData.toStatus = data.status;
-      if (data.status === 'rejected' && data.rejectionReason) updateData.remarks = data.rejectionReason;
-      if (data.status === 'approved') { updateData.stage = 'sanction'; updateData.progress = 90; }
-      else if (data.status === 'rejected') { updateData.progress = 0; }
-      else if (data.status === 'processing') { updateData.stage = 'document_verification'; updateData.progress = 40; }
+      if (!isAuthorizedToChangeStatus) {
+        // If not authorized to change status, we only proceed if status is actually the SAME (just saving remarks)
+        // In the frontend we pass selectedApp.status for admins.
+      } else {
+        updateData.status = data.status;
+        historyData.fromStatus = application.status;
+        historyData.toStatus = data.status;
+        if (data.status === 'rejected' && data.rejectionReason) updateData.remarks = data.rejectionReason;
+        if (data.status === 'approved') { updateData.stage = 'sanction'; updateData.progress = 90; }
+        else if (data.status === 'rejected') { updateData.progress = 0; }
+        else if (data.status === 'processing') { updateData.stage = 'document_verification'; updateData.progress = 40; }
+      }
     }
 
     if (data.stage && data.stage !== application.stage) {
-      updateData.stage = data.stage;
-      updateData.progress = APPLICATION_STAGES[data.stage as keyof typeof APPLICATION_STAGES]?.progress || application.progress;
-      historyData.fromStage = application.stage;
-      historyData.toStage = data.stage;
+      if (isAuthorizedToChangeStatus) {
+        updateData.stage = data.stage;
+        updateData.progress = APPLICATION_STAGES[data.stage as keyof typeof APPLICATION_STAGES]?.progress || application.progress;
+        historyData.fromStage = application.stage;
+        historyData.toStage = data.stage;
+      }
     }
 
-    if (data.progress !== undefined) updateData.progress = data.progress;
-    if (data.remarks && !updateData.remarks) updateData.remarks = data.remarks;
+    if (data.progress !== undefined && isAuthorizedToChangeStatus) updateData.progress = data.progress;
+    if (data.remarks) {
+        // Remarks can be updated by anyone in the StaffGuard (including admin)
+        if (!updateData.remarks) updateData.remarks = data.remarks;
+    }
 
     const { data: updated, error } = await this.db.from('LoanApplication').update(updateData).eq('id', applicationId).select().single();
     if (error) throw error;
@@ -451,41 +490,135 @@ export class ApplicationService {
     return { success: true, data: notes || [] };
   }
 
-  async getApplicationStats() {
-    const now = new Date();
-    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+  async getApplicationStats(user?: any) {
+    try {
+      const now = new Date();
+      const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
 
-    const [
-      { count: total },
-      { data: allApps },
-      { data: recentApps },
-      { count: thisMonth },
-      { count: lastMonth },
-    ] = await Promise.all([
-      this.db.from('LoanApplication').select('*', { count: 'exact', head: true }),
-      this.db.from('LoanApplication').select('status, loanType, amount'),
-      this.db.from('LoanApplication').select('id, applicationNumber, loanType, amount, status, date, firstName, lastName').order('date', { ascending: false }).limit(5),
-      this.db.from('LoanApplication').select('*', { count: 'exact', head: true }).gte('date', thisMonthStart),
-      this.db.from('LoanApplication').select('*', { count: 'exact', head: true }).gte('date', lastMonthStart).lt('date', thisMonthStart),
-    ]);
+      const isBank = (user?.role === 'bank' || user?.role === 'partner_bank');
+      const bankName = user?.firstName; // Following the convention used in ChatService
 
-    const statusStats: Record<string, number> = {};
-    const loanTypeMap: Record<string, { count: number; totalAmount: number }> = {};
-    for (const app of allApps || []) {
-      statusStats[app.status] = (statusStats[app.status] || 0) + 1;
-      if (!loanTypeMap[app.loanType]) loanTypeMap[app.loanType] = { count: 0, totalAmount: 0 };
-      loanTypeMap[app.loanType].count++;
-      loanTypeMap[app.loanType].totalAmount += app.amount || 0;
+      let totalQuery = this.db.from('LoanApplication').select('*', { count: 'exact', head: true });
+      let allAppsQuery = this.db.from('LoanApplication').select('status, loanType, amount');
+      let recentAppsQuery = this.db.from('LoanApplication').select('id, applicationNumber, loanType, amount, status, date, firstName, lastName');
+      let thisMonthQuery = this.db.from('LoanApplication').select('*', { count: 'exact', head: true });
+      let lastMonthQuery = this.db.from('LoanApplication').select('*', { count: 'exact', head: true });
+
+      if (isBank && bankName) {
+        totalQuery = totalQuery.eq('bank', bankName);
+        allAppsQuery = allAppsQuery.eq('bank', bankName);
+        recentAppsQuery = recentAppsQuery.eq('bank', bankName);
+        thisMonthQuery = thisMonthQuery.eq('bank', bankName);
+        lastMonthQuery = lastMonthQuery.eq('bank', bankName);
+      }
+
+      console.log(`[Stats] Executing queries for ${bankName || 'all banks'}...`);
+      const [
+        totalRes,
+        allAppsRes,
+        recentAppsRes,
+        thisMonthRes,
+        lastMonthRes,
+      ] = await Promise.all([
+        Promise.resolve(totalQuery).catch(e => { console.error('Total query failed:', e); return { count: 0 } as any; }),
+        Promise.resolve(allAppsQuery).catch(e => { console.error('All apps query failed:', e); return { data: [] } as any; }),
+        Promise.resolve(recentAppsQuery.order('date', { ascending: false }).limit(5)).catch(e => { console.error('Recent apps query failed:', e); return { data: [] } as any; }),
+        Promise.resolve(thisMonthQuery.gte('date', thisMonthStart)).catch(e => { console.error('This month query failed:', e); return { count: 0 } as any; }),
+        Promise.resolve(lastMonthQuery.gte('date', lastMonthStart).lt('date', thisMonthStart)).catch(e => { console.error('Last month query failed:', e); return { count: 0 } as any; }),
+      ]);
+
+      console.log(`[Stats] Queries completed. Success: ${!!allAppsRes.data}, Count: ${allAppsRes.data?.length}`);
+
+      const total = totalRes.count || 0;
+      const allApps = allAppsRes.data || [];
+      const recentApps = recentAppsRes.data || [];
+      const thisMonth = thisMonthRes.count || 0;
+      const lastMonth = lastMonthRes.count || 0;
+
+      const statusStats: Record<string, number> = {};
+      const loanTypeMap: Record<string, { count: number; totalAmount: number }> = {};
+      const bankMap: Record<string, { approved: number; rejected: number; underView: number; total: number }> = {};
+      
+      let totalAmount = 0;
+      let disbursedAmount = 0;
+      for (const app of allApps) {
+        const amt = app.amount || 0;
+        totalAmount += amt;
+        if (app.status === 'disbursed') {
+          disbursedAmount += amt;
+        }
+        
+        // General status stats
+        statusStats[app.status] = (statusStats[app.status] || 0) + 1;
+        
+        // Loan type stats
+        if (!loanTypeMap[app.loanType]) loanTypeMap[app.loanType] = { count: 0, totalAmount: 0 };
+        loanTypeMap[app.loanType].count++;
+        loanTypeMap[app.loanType].totalAmount += amt;
+
+        // Bank stats
+        const bankNameRaw = app.bank || 'Unknown Bank';
+        if (!bankMap[bankNameRaw]) bankMap[bankNameRaw] = { approved: 0, rejected: 0, underView: 0, total: 0 };
+        
+        bankMap[bankNameRaw].total++;
+        if (['approved', 'disbursed'].includes(app.status)) {
+          bankMap[bankNameRaw].approved++;
+        } else if (app.status === 'rejected') {
+          bankMap[bankNameRaw].rejected++;
+        } else if (['submitted', 'processing', 'pending', 'documents_pending', 'verification_pending'].includes(app.status) || !['cancelled', 'draft'].includes(app.status)) {
+          // If it's not approved, rejected, cancelled or draft, it's under view
+          bankMap[bankNameRaw].underView++;
+        }
+      }
+      
+      const loanTypeStats = Object.entries(loanTypeMap).map(([type, stats]) => ({ 
+        type, 
+        count: stats.count, 
+        totalAmount: stats.totalAmount 
+      }));
+
+      const bankWiseStats = Object.entries(bankMap).map(([bank, stats]) => ({
+        bank,
+        ...stats
+      })).sort((a, b) => b.total - a.total);
+
+      const tm = thisMonth || 0;
+      const lm = lastMonth || 0;
+
+      return {
+        success: true,
+        data: { 
+          total, 
+          totalAmount,
+          disbursedAmount,
+          statusStats, 
+          loanTypeStats, 
+          bankWiseStats,
+          recentApplications: recentApps, 
+          monthlyComparison: { 
+            thisMonth: tm, 
+            lastMonth: lm, 
+            change: lm > 0 ? ((tm - lm) / lm * 100).toFixed(1) : (tm > 0 ? '100.0' : '0.0') 
+          } 
+        },
+      };
+    } catch (error) {
+      console.error('[ApplicationService] getApplicationStats Error:', error);
+      // Return empty stats instead of throwing to prevent 500
+      return {
+        success: true,
+        data: {
+          total: 0,
+          totalAmount: 0,
+          disbursedAmount: 0,
+          statusStats: {},
+          loanTypeStats: [],
+          recentApplications: [],
+          monthlyComparison: { thisMonth: 0, lastMonth: 0, change: '0.0' }
+        }
+      };
     }
-    const loanTypeStats = Object.entries(loanTypeMap).map(([type, stats]) => ({ type, count: stats.count, totalAmount: stats.totalAmount }));
-    const tm = thisMonth || 0;
-    const lm = lastMonth || 0;
-
-    return {
-      success: true,
-      data: { total: total || 0, statusStats, loanTypeStats, recentApplications: recentApps || [], monthlyComparison: { thisMonth: tm, lastMonth: lm, change: lm > 0 ? ((tm - lm) / lm * 100).toFixed(1) : 0 } },
-    };
   }
 
   async aiReviewApplication(applicationId: string, adminId: string, adminName: string) {
@@ -511,6 +644,77 @@ export class ApplicationService {
 
   private async createStatusHistory(applicationId: string, data: { fromStatus?: string; toStatus?: string; fromStage?: string; toStage?: string; changedBy?: string; changedByName?: string; changeReason?: string; notes?: string; isAutomatic?: boolean }) {
     await this.db.from('ApplicationStatusHistory').insert({ applicationId, ...data });
+  }
+
+  async getAgentApplications(agentId: string) {
+    try {
+      // 1. Get all referees referred by this agent
+      const { data: referrals } = await this.db.from('Referral').select('refereeId').eq('referrerId', agentId);
+      if (!referrals || referrals.length === 0) return { success: true, data: [] };
+
+      const refereeIds = referrals.map(r => r.refereeId);
+
+      // 2. Get applications for these students
+      const { data: applications } = await this.db
+        .from('LoanApplication')
+        .select('*, user:User!userId(id, email, firstName, lastName)')
+        .in('userId', refereeIds)
+        .order('submittedAt', { ascending: false });
+
+      return { success: true, data: applications || [] };
+    } catch (error) {
+      console.error('[ApplicationService] getAgentApplications Error:', error);
+      return { success: false, data: [] };
+    }
+  }
+
+  async getAgentStats(agentId: string) {
+    try {
+      // 1. Get all referees referred by this agent
+      const { data: referrals } = await this.db.from('Referral').select('refereeId').eq('referrerId', agentId);
+      if (!referrals || referrals.length === 0) {
+        return { success: true, data: { total: 0, totalAmount: 0, revenue: 0, disbursedAmount: 0, recentApplications: [] } };
+      }
+
+      const refereeIds = referrals.map(r => r.refereeId);
+
+      // 2. Get applications for these students
+      const { data: applications } = await this.db
+        .from('LoanApplication')
+        .select('*')
+        .in('userId', refereeIds);
+
+      let totalAmount = 0;
+      let disbursedAmount = 0;
+
+      for (const app of applications || []) {
+        const amt = parseFloat(app.amount) || 0;
+        totalAmount += amt;
+        if (app.status === 'disbursed' || app.status === 'approved') {
+          disbursedAmount += amt;
+        }
+      }
+
+      // Revenue generation logic (e.g., 0.5% commission on disbursed amount)
+      const revenue = disbursedAmount * 0.005;
+
+      return {
+        success: true,
+        data: {
+          total: (applications || []).length,
+          totalAmount,
+          revenue,
+          disbursedAmount,
+          recentApplications: (applications || []).slice(0, 5)
+        }
+      };
+    } catch (error) {
+      console.error('[ApplicationService] getAgentStats Error:', error);
+      return {
+        success: true,
+        data: { total: 0, totalAmount: 0, revenue: 0, disbursedAmount: 0, recentApplications: [] }
+      };
+    }
   }
 
   getRequiredDocuments(loanType: string) {

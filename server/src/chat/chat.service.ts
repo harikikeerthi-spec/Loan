@@ -11,7 +11,7 @@ export class ChatService {
     return this.supabase.getClient();
   }
 
-  async getOrCreateConversation(customerPhone: string, customerEmail?: string, conversationType: string = 'staff', customerName?: string) {
+  async getOrCreateConversation(customerPhone: string, customerEmail?: string, conversationType: string = 'staff', customerName?: string, bankName?: string) {
     if (!customerPhone) {
         throw new HttpException('A valid phone number is required to start a chat. Please update your profile.', HttpStatus.BAD_REQUEST);
     }
@@ -24,7 +24,7 @@ export class ChatService {
       .select('*')
       .eq('customerPhone', phone)
       .eq('status', 'active')
-      .single();
+      .maybeSingle(); // Changed .single() to .maybeSingle() to handle no results more gracefully
 
     if (!conv) {
       // Create new
@@ -35,7 +35,7 @@ export class ChatService {
             status: 'active',
             customerEmail: customerEmail || null,
             customerName: customerName || null,
-            metadata: { type: conversationType }
+            metadata: { type: conversationType, bank: bankName }
         })
         .select()
         .single();
@@ -83,8 +83,8 @@ export class ChatService {
     return message;
   }
 
-  async getConversations(status: string = 'active') {
-      const { data, error } = await this.db
+  async getConversations(status: string = 'active', user?: any) {
+      let query = this.db
       .from('Conversation')
       .select(`
           id, customerPhone, customerEmail, customerName, metadata, status, updatedAt, createdAt,
@@ -92,6 +92,23 @@ export class ChatService {
       `)
       .eq('status', status)
       .order('updatedAt', { ascending: false });
+
+      // Role-based filtering
+      if (user && (user.role === 'bank' || user.role === 'partner_bank')) {
+          // Bank partners should only see conversations explicitly marked for banks
+          query = query.contains('metadata', { type: 'bank' });
+          
+          // If the user has an associated bank, filter by it.
+          const bankName = user.bankName || (user.firstName && user.firstName.includes('Bank') ? user.firstName : null);
+          if (bankName) {
+              query = query.contains('metadata', { bank: bankName });
+          }
+      } else if (user && user.role === 'agent') {
+          // Agents see conversations marked for agents
+          query = query.contains('metadata', { type: 'agent' });
+      }
+
+      const { data, error } = await query;
       
       if (error) {
           throw new HttpException('Db Error', HttpStatus.INTERNAL_SERVER_ERROR);
@@ -118,5 +135,21 @@ export class ChatService {
     }
 
     return data;
+  }
+
+  async getMessagesByPhone(phone: string) {
+    const cleanPhone = phone.replace('whatsapp:', '');
+    
+    // Find conversation first
+    const { data: conv } = await this.db
+      .from('Conversation')
+      .select('id')
+      .eq('customerPhone', cleanPhone)
+      .eq('status', 'active')
+      .single();
+
+    if (!conv) return [];
+
+    return this.getMessages(conv.id);
   }
 }

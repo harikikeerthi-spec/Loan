@@ -427,34 +427,56 @@ export class AuthService {
   }
 
   async getUserDashboard(email: string) {
-    const user = await this.usersService.findOne(email);
+    console.log(`[AuthService.getUserDashboard] Fetching dashboard for: ${email}`);
+    try {
+      const user = await this.usersService.findOne(email);
 
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-
-    // Format date of birth if it exists
-    let formattedDob: string | null = null;
-    if (user.dateOfBirth) {
-      const date = new Date(user.dateOfBirth);
-      const day = String(date.getDate()).padStart(2, '0');
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const year = date.getFullYear();
-      formattedDob = `${day}-${month}-${year}`;
-    }
-
-    return {
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phoneNumber: user.phoneNumber,
-        dateOfBirth: formattedDob,
-        createdAt: user.createdAt,
+      if (!user) {
+        console.warn(`[AuthService.getUserDashboard] User not found: ${email}`);
+        throw new UnauthorizedException('User not found');
       }
-    };
+
+      console.log(`[AuthService.getUserDashboard] User found: ${user.id}, DOB: ${user.dateOfBirth}`);
+
+      // Format date of birth if it exists
+      let formattedDob: string | null = null;
+      if (user.dateOfBirth) {
+        try {
+          const date = new Date(user.dateOfBirth);
+          if (!isNaN(date.getTime())) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            formattedDob = `${day}-${month}-${year}`;
+            console.log(`[AuthService.getUserDashboard] Formatted DOB: ${formattedDob}`);
+          } else {
+            console.warn(`[AuthService.getUserDashboard] Invalid DOB in DB: ${user.dateOfBirth}`);
+          }
+        } catch (e) {
+          console.error('[AuthService.getUserDashboard] DOB parsing failed:', e);
+        }
+      }
+
+      return {
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phoneNumber: user.phoneNumber,
+          dateOfBirth: formattedDob,
+          createdAt: user.createdAt,
+        }
+      };
+    } catch (error) {
+      console.error('[AuthService.getUserDashboard] Error:', error);
+      return {
+        success: false,
+        message: 'Failed to fetch user dashboard profile',
+        error: error.message
+      };
+    }
   }
 
   async updateUserDetails(
