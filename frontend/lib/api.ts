@@ -623,7 +623,7 @@ export const adminApi = {
             headers: authHeaders(),
             body: JSON.stringify(data),
         }).then(handleResponse),
-    createUser: (data: { email: string; firstName: string; lastName: string; mobile: string; role: string }) =>
+    createUser: (data: any) =>
         fetch(`${API_URL}/users/admin/create`, {
             method: "POST",
             headers: authHeaders(),

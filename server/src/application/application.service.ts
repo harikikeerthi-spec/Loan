@@ -538,7 +538,6 @@ export class ApplicationService {
 
       const statusStats: Record<string, number> = {};
       const loanTypeMap: Record<string, { count: number; totalAmount: number }> = {};
-      const bankMap: Record<string, { approved: number; rejected: number; underView: number; total: number }> = {};
       
       let totalAmount = 0;
       let disbursedAmount = 0;
@@ -548,28 +547,10 @@ export class ApplicationService {
         if (app.status === 'disbursed') {
           disbursedAmount += amt;
         }
-        
-        // General status stats
         statusStats[app.status] = (statusStats[app.status] || 0) + 1;
-        
-        // Loan type stats
         if (!loanTypeMap[app.loanType]) loanTypeMap[app.loanType] = { count: 0, totalAmount: 0 };
         loanTypeMap[app.loanType].count++;
         loanTypeMap[app.loanType].totalAmount += amt;
-
-        // Bank stats
-        const bankNameRaw = app.bank || 'Unknown Bank';
-        if (!bankMap[bankNameRaw]) bankMap[bankNameRaw] = { approved: 0, rejected: 0, underView: 0, total: 0 };
-        
-        bankMap[bankNameRaw].total++;
-        if (['approved', 'disbursed'].includes(app.status)) {
-          bankMap[bankNameRaw].approved++;
-        } else if (app.status === 'rejected') {
-          bankMap[bankNameRaw].rejected++;
-        } else if (['submitted', 'processing', 'pending', 'documents_pending', 'verification_pending'].includes(app.status) || !['cancelled', 'draft'].includes(app.status)) {
-          // If it's not approved, rejected, cancelled or draft, it's under view
-          bankMap[bankNameRaw].underView++;
-        }
       }
       
       const loanTypeStats = Object.entries(loanTypeMap).map(([type, stats]) => ({ 
@@ -577,11 +558,6 @@ export class ApplicationService {
         count: stats.count, 
         totalAmount: stats.totalAmount 
       }));
-
-      const bankWiseStats = Object.entries(bankMap).map(([bank, stats]) => ({
-        bank,
-        ...stats
-      })).sort((a, b) => b.total - a.total);
 
       const tm = thisMonth || 0;
       const lm = lastMonth || 0;
@@ -594,7 +570,6 @@ export class ApplicationService {
           disbursedAmount,
           statusStats, 
           loanTypeStats, 
-          bankWiseStats,
           recentApplications: recentApps, 
           monthlyComparison: { 
             thisMonth: tm, 

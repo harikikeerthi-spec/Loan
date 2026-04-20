@@ -65,8 +65,8 @@ export default function AgentDashboardPage() {
                 agentApi.getStats(),
                 agentApi.getApplications()
             ]);
-            setStats(statsRes.data);
-            setApplications(appsRes.data || []);
+            setStats((statsRes as any).data);
+            setApplications((appsRes as any).data || []);
         } catch (e) {
             console.error("Failed to load agent data", e);
         } finally {

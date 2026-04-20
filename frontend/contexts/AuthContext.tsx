@@ -60,7 +60,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-type Portal = "student" | "staff" | "admin" | "bank";
+type Portal = "student" | "staff" | "admin" | "bank" | "agent";
 
 function getPortalFromPathname(pathname?: string): Portal {
     if (!pathname) return "student";
