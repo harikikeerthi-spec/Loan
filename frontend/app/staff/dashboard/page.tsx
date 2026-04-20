@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { adminApi } from "@/lib/api";
@@ -60,6 +60,11 @@ export default function StaffDashboardPage() {
     const [filterStatus, setFilterStatus] = useState("all");
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [autoStartUser, setAutoStartUser] = useState<any>(null);
+
+    // Real-time updates
+    const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+    const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
+    const autoRefreshInterval = useRef<NodeJS.Timeout | null>(null);
 
     // Tasks State
     const [tasks, setTasks] = useState([
@@ -149,6 +154,41 @@ export default function StaffDashboardPage() {
         if (activeSection === "overview") loadOverview();
         else loadData();
     }, [activeSection, loadOverview, loadData]);
+
+    // Auto-refresh for real-time updates
+    useEffect(() => {
+        if (!autoRefreshEnabled) return;
+
+        if (activeSection === "overview") {
+            // Refresh overview every 20 seconds
+            autoRefreshInterval.current = setInterval(() => {
+                loadOverview();
+                setLastRefresh(new Date());
+            }, 20000);
+        } else if (activeSection === "applications") {
+            // Refresh applications every 15 seconds for real-time pipeline
+            autoRefreshInterval.current = setInterval(() => {
+                loadData();
+                setLastRefresh(new Date());
+            }, 15000);
+        } else if (activeSection === "performance") {
+            // Refresh metrics every 30 seconds
+            autoRefreshInterval.current = setInterval(() => {
+                loadOverview();
+                setLastRefresh(new Date());
+            }, 30000);
+        } else if (activeSection === "users") {
+            // Refresh users every 25 seconds
+            autoRefreshInterval.current = setInterval(() => {
+                loadData();
+                setLastRefresh(new Date());
+            }, 25000);
+        }
+
+        return () => {
+            if (autoRefreshInterval.current) clearInterval(autoRefreshInterval.current);
+        };
+    }, [activeSection, autoRefreshEnabled, loadOverview, loadData]);
 
     const handleAppStatus = async (appId: string, status: string) => {
         setActionLoading(true);
@@ -328,19 +368,22 @@ export default function StaffDashboardPage() {
                         <h1 className="text-[20px] font-bold text-slate-900 tracking-tight flex items-center gap-3">
                             {activeSection.replace('chat_', '').replace(/_/g, ' ').toUpperCase()}
                             <span className="w-1.5 h-1.5 rounded-full bg-slate-200"></span>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-2 py-1 rounded">STAFF_AUTH_LEVEL_2</span>
+                            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded border ${autoRefreshEnabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'} flex items-center gap-1.5`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${autoRefreshEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                                {autoRefreshEnabled ? 'LIVE_SYNC' : 'MANUAL_MODE'}
+                            </span>
                         </h1>
                     </div>
                     <div className="flex items-center gap-6">
                         <div className="text-right hidden md:block border-r border-slate-100 pr-6">
                             <p className="text-[10px] font-black tracking-widest uppercase text-slate-400">Node Sync Time</p>
-                            <p className="text-[13px] font-bold text-slate-600 mt-0.5">{format(new Date(), 'HH:mm • MMM d, yyyy')}</p>
+                            <p className="text-[13px] font-bold text-slate-600 mt-0.5">{format(new Date(), 'HH:mm:ss • MMM d')}</p>
                         </div>
                         <div className="relative group">
                             <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 cursor-pointer transition-all hover:bg-white hover:shadow-sm">
                                 <span className="material-symbols-outlined text-[20px]">notifications</span>
                             </div>
-                            <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-rose-500 border-2 border-white"></div>
+                            <div className={`absolute top-0 right-0 w-2 h-2 rounded-full border-2 border-white ${autoRefreshEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></div>
                         </div>
                     </div>
                 </header>
@@ -356,14 +399,31 @@ export default function StaffDashboardPage() {
                             <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-slate-100 pb-8">
                                 <div>
                                     <h2 className="text-[32px] font-black text-slate-900 tracking-tighter">Operational Overview</h2>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
-                                        <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Real-time Infrastructure Monitoring</p>
+                                    <div className="flex items-center gap-3 mt-2">
+                                        <div className={`w-2 h-2 rounded-full ${autoRefreshEnabled ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-slate-400'} ${autoRefreshEnabled ? 'animate-pulse' : ''}`}></div>
+                                        <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">{autoRefreshEnabled ? 'Live Real-time Monitoring' : 'Manual Refresh Mode'}</p>
+                                        <span className="text-slate-400 text-[9px] font-medium">Updated: {format(lastRefresh, 'HH:mm:ss')}</span>
                                     </div>
                                 </div>
-                                <div className="px-4 py-2 rounded-lg bg-slate-50 border border-slate-200 text-[11px] font-black uppercase tracking-widest text-slate-400 shadow-sm flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-[16px]">sync_alt</span>
-                                    {pendingCount > 0 ? `${pendingCount} Nodes Awaiting Clearance` : 'System Fully Syncronized'}
+                                <div className="flex gap-3">
+                                    <button 
+                                        onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+                                        className={`px-3 py-2 rounded-lg font-bold text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 border shadow-sm ${autoRefreshEnabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'}`}
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">{autoRefreshEnabled ? 'sync' : 'sync_disabled'}</span>
+                                        {autoRefreshEnabled ? 'Live' : 'Off'}
+                                    </button>
+                                    <button 
+                                        onClick={() => { loadOverview(); setLastRefresh(new Date()); }}
+                                        className="px-3 py-2 rounded-lg bg-slate-50 text-slate-700 border border-slate-200 font-bold text-[10px] uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center gap-2 shadow-sm"
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">refresh</span>
+                                        Now
+                                    </button>
+                                    <div className="px-4 py-2 rounded-lg bg-slate-50 border border-slate-200 text-[11px] font-black uppercase tracking-widest text-slate-600 shadow-sm flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[16px]">info</span>
+                                        {pendingCount > 0 ? `${pendingCount} Nodes Awaiting Clearance` : 'System Synchronized'}
+                                    </div>
                                 </div>
                             </div>
 
@@ -478,11 +538,37 @@ export default function StaffDashboardPage() {
                             <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-slate-100 pb-8">
                                 <div>
                                     <h2 className="text-[32px] font-black text-slate-900 tracking-tighter">Performance Metrics</h2>
-                                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mt-2 flex items-center gap-2">Staff operational efficiency and KPIs</p>
+                                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mt-2 flex items-center gap-3">
+                                        Staff operational efficiency and KPIs
+                                        <span className={`w-2 h-2 rounded-full ${autoRefreshEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                                        <span className="text-slate-400 font-medium">{autoRefreshEnabled ? 'Live metrics' : 'Manual update'}</span>
+                                    </p>
                                 </div>
-                                <div className="px-4 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] font-black uppercase tracking-widest text-emerald-600 shadow-sm flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-[16px]">trending_up</span>
-                                    Top 10% Contributor
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+                                        className={`px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 border shadow-sm ${autoRefreshEnabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'}`}
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">{autoRefreshEnabled ? 'sync' : 'sync_disabled'}</span>
+                                        {autoRefreshEnabled ? 'Live' : 'Off'}
+                                    </button>
+                                    <div className="px-4 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] font-black uppercase tracking-widest text-emerald-600 shadow-sm flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[16px]">trending_up</span>
+                                        Top 10% Contributor
+                                    </div>
+                                </div>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+                                        className={`px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 border shadow-sm ${autoRefreshEnabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'}`}
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">{autoRefreshEnabled ? 'sync' : 'sync_disabled'}</span>
+                                        {autoRefreshEnabled ? 'Live' : 'Off'}
+                                    </button>
+                                    <div className="px-4 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] font-black uppercase tracking-widest text-emerald-600 shadow-sm flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[16px]">trending_up</span>
+                                        Top 10% Contributor
+                                    </div>
                                 </div>
                             </div>
                             
@@ -620,12 +706,27 @@ export default function StaffDashboardPage() {
                             <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-slate-100 pb-8">
                                 <div>
                                     <h2 className="text-[32px] font-black text-slate-900 tracking-tight capitalize">{activeSection} Management</h2>
-                                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mt-2 flex items-center gap-2">
-                                        <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
-                                        System-wide Data Access & Control
+                                    <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mt-2 flex items-center gap-3">
+                                        <span className={`w-2 h-2 rounded-full ${autoRefreshEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                                        {autoRefreshEnabled ? 'Live Real-time Access' : 'Manual Mode'}
+                                        <span className="text-slate-400 font-medium">Last sync: {format(lastRefresh, 'HH:mm:ss')}</span>
                                     </p>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+                                    <button
+                                        onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+                                        className={`px-3 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all flex items-center gap-2 border shadow-sm ${autoRefreshEnabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'}`}
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">{autoRefreshEnabled ? 'sync' : 'sync_disabled'}</span>
+                                        {autoRefreshEnabled ? 'Live' : 'Off'}
+                                    </button>
+                                    <button
+                                        onClick={() => { loadData(); setLastRefresh(new Date()); }}
+                                        className="px-3 py-2 bg-slate-50 text-slate-700 border border-slate-200 rounded-lg text-[11px] font-bold uppercase tracking-widest hover:bg-slate-100 transition-all flex items-center gap-2 shadow-sm"
+                                    >
+                                        <span className="material-symbols-outlined text-[16px]">refresh</span>
+                                        Refresh
+                                    </button>
                                     {activeSection === 'users' && (
                                         <button 
                                             onClick={() => setIsAddModalOpen(true)}

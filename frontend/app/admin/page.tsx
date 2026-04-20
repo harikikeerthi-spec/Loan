@@ -11,26 +11,23 @@ import ChatInterface from "@/components/Chat/ChatInterface";
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
 const StatCard = ({ label, value, icon, color, trend, loading }: any) => (
-    <div className="glass-card stat-card-gradient p-8 rounded-[2rem] relative overflow-hidden group transition-all duration-500 hover:shadow-[0_20px_50px_rgba(102,5,199,0.12)] hover:-translate-y-1 cursor-default border border-white/20 bg-white/40">
-        <div className="flex justify-between items-start relative z-10 w-full mb-6">
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${color} bg-opacity-10 border border-current border-opacity-20 shadow-lg shadow-current/10 group-hover:scale-110 group-hover:rotate-6`}>
-                <span className="material-symbols-outlined text-[28px]" style={{ color: 'currentColor' }}>{icon}</span>
+    <div className="bg-white border border-slate-200 p-4 rounded-lg shadow-sm group hover:border-indigo-200 transition-colors">
+        <div className="flex justify-between items-start mb-3">
+            <div className={`w-8 h-8 rounded bg-slate-50 flex items-center justify-center border border-slate-100 ${color.includes('text-') ? color : 'text-slate-600'}`}>
+                <span className="material-symbols-outlined text-[16px]">{icon}</span>
             </div>
             {trend !== undefined && !loading && (
-                <span className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black tracking-wide uppercase ${trend >= 0 ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-rose-50 text-rose-600 border border-rose-200'}`}>
-                    <span className="material-symbols-outlined text-[14px]">{trend >= 0 ? 'trending_up' : 'trending_down'}</span>
+                <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${trend >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                    <span className="material-symbols-outlined text-[12px]">{trend >= 0 ? 'trending_up' : 'trending_down'}</span>
                     {Math.abs(trend)}%
                 </span>
             )}
         </div>
-        <div className="relative z-10">
-            <p className="text-gray-500 text-[11px] font-black tracking-wider mb-2 uppercase">{label}</p>
-            <div className="text-3xl font-black tracking-tight text-gray-900 font-display leading-none">
-                {loading ? <span className="h-10 bg-gray-200 animate-pulse rounded-lg block w-40 mt-1" /> : value ?? "—"}
+        <div>
+            <p className="text-slate-500 text-[11px] font-medium mb-0.5">{label}</p>
+            <div className="text-[20px] font-semibold text-slate-900 tracking-tight">
+                {loading ? <span className="h-6 bg-slate-100 animate-pulse rounded block w-16" /> : value ?? "—"}
             </div>
-        </div>
-        <div className="absolute -right-8 -bottom-8 opacity-[0.03] pointer-events-none group-hover:scale-125 transition-transform duration-1000">
-            <span className="material-symbols-outlined text-9xl" style={{ color: 'currentColor' }}>{icon}</span>
         </div>
     </div>
 );
@@ -38,12 +35,12 @@ const StatCard = ({ label, value, icon, color, trend, loading }: any) => (
 const NavItem = ({ section, active, icon, label, badge, onClick }: any) => (
     <button
         onClick={() => onClick(section)}
-        className={`w-full text-left px-4 py-3 rounded-xl flex items-center gap-3 group transition-all duration-300 border font-medium ${active === section ? "bg-gradient-to-r from-[#6605c7] to-[#7c3aed] text-white border-[#6605c7]/20 shadow-lg shadow-purple-500/20" : "text-slate-600 border-transparent hover:bg-white hover:text-slate-900 hover:border-slate-200/50"}`}
+        className={`w-full text-left px-3 py-1.5 rounded flex items-center gap-3 transition-colors text-xs font-medium ${active === section ? "bg-indigo-500/10 text-indigo-400" : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"}`}
     >
-        <span className={`material-symbols-outlined transition-all text-[18px] ${active === section ? "text-white group-hover:scale-110" : "text-slate-400 group-hover:text-slate-700 group-hover:scale-110"}`}>{icon}</span>
-        <span className={`font-semibold text-[13px] flex-1 ${active === section ? "font-bold" : ""}`}>{label}</span>
+        <span className={`material-symbols-outlined text-[16px] ${active === section ? "text-indigo-400" : "text-slate-500"}`}>{icon}</span>
+        <span className="flex-1">{label}</span>
         {badge > 0 && (
-            <span className={`px-2.5 py-0.5 min-w-[24px] rounded-full text-[9px] font-black text-center transition-all ${active === section ? 'bg-white/25 text-white font-bold' : 'bg-red-50 text-red-600 font-bold'}`}>
+            <span className={`px-1.5 py-0.5 rounded-sm text-[9px] font-medium ${active === section ? 'bg-indigo-500 text-white' : 'bg-slate-700 text-slate-300'}`}>
                 {badge}
             </span>
         )}
@@ -51,7 +48,7 @@ const NavItem = ({ section, active, icon, label, badge, onClick }: any) => (
 );
 
 const TableHeader = ({ children }: { children: React.ReactNode }) => (
-    <thead className="admin-table">
+    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] uppercase tracking-wider font-semibold">
         <tr>{children}</tr>
     </thead>
 );
@@ -136,55 +133,31 @@ const HealthDot = ({ ok, label }: { ok: boolean; label: string }) => (
     </div>
 );
 
-// ─── Portal Access Card ───────────────────────────────────────────────────────
-const PortalCard = ({ name, description, icon, href, color, users, status }: any) => (
-    <div className={`relative p-8 rounded-[2rem] border ${color} transition-all duration-500 hover:shadow-lg hover:-translate-y-2 overflow-hidden group bg-white/70 glass-card`}>
-        <div className="flex justify-between items-start mb-6">
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform ${color.replace('border-', 'bg-').replace('/60', '/15')}`}>
-                <span className="material-symbols-outlined text-3xl opacity-80" style={{ color: color.split('-')[1] && `var(--color-${color.split('-')[1]}-600)` }}>{ icon}</span>
-            </div>
-            <div className="flex items-center gap-2">
-                <div className={`w-2.5 h-2.5 rounded-full ${status === 'online' ? 'bg-emerald-500 animate-pulse shadow-[0_0_10px_#10b981]' : 'bg-red-400'}`} />
-                <span className="text-[9px] font-black uppercase tracking-wider text-gray-500">{status}</span>
-            </div>
-        </div>
-        <h3 className="font-black text-gray-900 mb-2 text-[16px] font-display">{name}</h3>
-        <p className="text-xs text-gray-600 font-medium mb-6 leading-relaxed">{description}</p>
-        <div className="flex items-center justify-between">
-            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{users} active users</span>
-            <a href={href} className="px-4 py-2 rounded-xl bg-[#6605c7]/10 hover:bg-[#6605c7]/20 text-[#6605c7] text-[9px] font-black uppercase tracking-wider transition-all hover:translate-x-0.5 border border-[#6605c7]/20">
-                Access →
-            </a>
-        </div>
-        <div className="absolute -right-8 -bottom-8 opacity-[0.03] pointer-events-none group-hover:scale-110 transition-transform duration-1000">
-            <span className="material-symbols-outlined text-9xl">{icon}</span>
-        </div>
-    </div>
-);
+
 
 // ─── Announcement Banner ──────────────────────────────────────────────────────
 const AnnouncementItem = ({ ann, onDelete }: { ann: any; onDelete: (id: string) => void }) => (
-    <div className="flex items-start gap-4 p-6 bg-white rounded-2xl border border-slate-200/50 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all group glass-card">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-lg group-hover:scale-110 transition-transform ${ann.type === 'warning' ? 'bg-amber-100/60 text-amber-600 border border-amber-200/50' : ann.type === 'error' ? 'bg-red-100/60 text-red-600 border border-red-200/50' : 'bg-blue-100/60 text-blue-600 border border-blue-200/50'}`}>
-            <span className="material-symbols-outlined text-2xl">
+    <div className="flex items-start gap-3 p-4 bg-white rounded-lg border border-slate-200 shadow-sm transition-all group">
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${ann.type === 'warning' ? 'bg-amber-50 text-amber-600' : ann.type === 'error' ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'}`}>
+            <span className="material-symbols-outlined text-[16px]">
                 {ann.type === 'warning' ? 'warning' : ann.type === 'error' ? 'error' : 'info'}
             </span>
         </div>
         <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
-                <p className="text-sm font-black text-gray-900 leading-snug font-display">{ann.title}</p>
-                <span className="text-[9px] font-bold text-gray-400 whitespace-nowrap uppercase tracking-wider">{formatDistanceToNow(new Date(ann.createdAt), { addSuffix: true })}</span>
+                <p className="text-xs font-semibold text-slate-900 leading-tight">{ann.title}</p>
+                <span className="text-[10px] text-slate-400 border border-slate-100 px-1.5 py-0.5 rounded bg-slate-50 whitespace-nowrap">{formatDistanceToNow(new Date(ann.createdAt), { addSuffix: true })}</span>
             </div>
-            <p className="text-xs text-gray-600 mt-2 font-medium leading-relaxed">{ann.message}</p>
-            <div className="flex items-center gap-2 mt-3">
-                <span className={`text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-full border ${ann.target === 'all' ? 'bg-[#6605c7]/10 text-[#6605c7] border-[#6605c7]/20' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
-                    → {ann.target === 'all' ? 'All Portals' : ann.target}
+            <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">{ann.message}</p>
+            <div className="flex items-center justify-between mt-2">
+                <span className={`text-[9px] font-medium px-2 py-0.5 rounded ${ann.target === 'all' ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-600'}`}>
+                    Target: {ann.target === 'all' ? 'System-wide' : ann.target}
                 </span>
+                <button onClick={() => onDelete(ann.id)} className="opacity-0 group-hover:opacity-100 p-1 text-rose-400 hover:text-rose-600 rounded transition-all">
+                    <span className="material-symbols-outlined text-[14px]">delete</span>
+                </button>
             </div>
         </div>
-        <button onClick={() => onDelete(ann.id)} className="opacity-0 group-hover:opacity-100 p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all flex-shrink-0">
-            <span className="material-symbols-outlined text-lg">delete</span>
-        </button>
     </div>
 );
 
@@ -272,6 +245,13 @@ export default function AdminDashboardPage() {
     // Real-time updates
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
     const autoRefreshInterval = useRef<NodeJS.Timeout | null>(null);
+
+    // User Profile Modal State
+    const [selectedUserProfile, setSelectedUserProfile] = useState<any>(null);
+    const [userLoans, setUserLoans] = useState<any[]>([]);
+    const [userCredentials, setUserCredentials] = useState<any>(null);
+    const [userProfileLoading, setUserProfileLoading] = useState(false);
+    const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
 
     // ─── Data loaders ──────────────────────────────────────────────────────────
 
@@ -374,9 +354,6 @@ export default function AdminDashboardPage() {
             } else if (activeSection === "audit_logs") {
                 const logs: any = await adminApi.getAuditLogs(100).catch(() => ({ data: [] }));
                 setAllAuditLogs(logs.data || []);
-            } else if (activeSection === "portal_control") {
-                res = await adminApi.getUsers();
-                setData(res.data || []);
             }
         } catch (e) {
             console.error(e);
@@ -414,11 +391,13 @@ export default function AdminDashboardPage() {
                 setLastRefresh(new Date());
             }, 20000);
         } else if (activeSection === "applications") {
-            // Refresh applications every 45 seconds
-            autoRefreshInterval.current = setInterval(() => {
-                loadData();
-                setLastRefresh(new Date());
-            }, 45000);
+            // Refresh applications every 15 seconds for real-time updates
+            if (autoRefreshEnabled) {
+                autoRefreshInterval.current = setInterval(() => {
+                    loadData();
+                    setLastRefresh(new Date());
+                }, 15000);
+            }
         } else if (activeSection === "analytics") {
             // Refresh analytics every 60 seconds
             autoRefreshInterval.current = setInterval(() => {
@@ -437,7 +416,7 @@ export default function AdminDashboardPage() {
             if (autoRefreshInterval.current) clearInterval(autoRefreshInterval.current);
             clearInterval(userCountInterval);
         };
-    }, [activeSection, loadOverview, loadData, loadCommunityData, stats.userCount]);
+    }, [activeSection, loadOverview, loadData, loadCommunityData, stats.userCount, autoRefreshEnabled]);
 
     // Initial load of community data
     useEffect(() => {
@@ -447,6 +426,27 @@ export default function AdminDashboardPage() {
     }, [activeSection, loadCommunityData]);
 
     // ─── Handlers ──────────────────────────────────────────────────────────────
+
+    // Handler to view user credentials and all their loans
+    const handleViewUserProfile = useCallback(async (applicant: any) => {
+        setUserProfileLoading(true);
+        try {
+            // Fetch user details
+            const userRes: any = await adminApi.getUsers().catch(() => ({ data: [] }));
+            const selectedUser = (userRes.data || []).find((u: any) => u.email === applicant.email);
+            
+            // Fetch all applications for this user
+            const appsRes: any = await adminApi.getApplications({ search: applicant.email }).catch(() => ({ data: [] }));
+            
+            setSelectedUserProfile(selectedUser || applicant);
+            setUserCredentials(selectedUser);
+            setUserLoans(appsRes.data || []);
+        } catch (e) {
+            console.error('Error loading user profile:', e);
+        } finally {
+            setUserProfileLoading(false);
+        }
+    }, []);
 
     const handleBlogStatus = async (blogId: string, currentStatus: boolean) => {
         try {
@@ -587,10 +587,11 @@ export default function AdminDashboardPage() {
     const filteredData = data.filter(item => {
         const query = searchQuery.toLowerCase();
         let passesRole = true;
-        if (activeSection === 'portal_control' && roleFilter !== 'all') {
-            passesRole = item.role === roleFilter;
-        }
-        if (activeSection === 'users' || activeSection === 'portal_control') {
+
+        if (activeSection === 'users') {
+            if (roleFilter !== 'all') {
+                passesRole = item.role === roleFilter;
+            }
             return passesRole && (item.email?.toLowerCase().includes(query) || item.firstName?.toLowerCase().includes(query) || item.lastName?.toLowerCase().includes(query));
         }
         if (activeSection === 'blogs') {
@@ -651,7 +652,6 @@ export default function AdminDashboardPage() {
         { section: "overview", icon: "dashboard", label: "Dashboard", badge: 0 },
         { section: "analytics", icon: "analytics", label: "Analytics", badge: 0 },
         { section: "applications", icon: "description", label: "Applications", badge: pendingCount },
-        { section: "portal_control", icon: "manage_accounts", label: "Portal Control", badge: 0 },
         { section: "system", icon: "admin_panel_settings", label: "System Control", badge: announcements.length },
         { section: "users", icon: "people", label: "Users", badge: 0 },
         { section: "blogs", icon: "article", label: "Blogs", badge: 0 },
@@ -666,7 +666,6 @@ export default function AdminDashboardPage() {
         overview: 'Dashboard',
         analytics: 'Platform Analytics',
         applications: 'Applications',
-        portal_control: 'Portal Control Center',
         system: 'System Control',
         users: 'User Management',
         blogs: 'Blog Management',
@@ -687,228 +686,210 @@ export default function AdminDashboardPage() {
     );
 
     return (
-        <div className="h-screen overflow-hidden flex bg-gray-50 text-gray-900 font-sans">
+        <div className="h-screen overflow-hidden flex bg-slate-50 text-slate-900 font-sans text-sm selection:bg-indigo-100 selection:text-indigo-900">
             {/* Mobile overlay */}
             {sidebarOpen && (
-                <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
             )}
 
             {/* Sidebar */}
-            <aside className={`fixed inset-y-0 left-0 z-50 w-[280px] bg-white border-r border-slate-200/60 transform transition-transform duration-300 lg:translate-x-0 shadow-lg shadow-slate-900/5 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-                <div className="flex flex-col h-full">
-                    <div className="h-20 px-6 flex items-center border-b border-slate-200/50 bg-gradient-to-r from-[#6605c7]/5 to-transparent">
-                        <div className="flex items-center gap-2.5">
-                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#6605c7] to-[#7c3aed] flex items-center justify-center text-white shadow-lg shadow-purple-500/30 group-hover:scale-110 transition-transform">
-                                <span className="material-symbols-outlined text-[20px] font-bold">dashboard</span>
-                            </div>
-                            <span className="font-bold text-[15px] tracking-tight text-slate-900">Vidhya<span className="text-[#6605c7] font-bold">Admin</span></span>
+            <aside className={`fixed inset-y-0 left-0 z-50 w-[240px] bg-[#0f172a] text-slate-300 transform transition-transform duration-200 lg:translate-x-0 border-r border-slate-800 flex flex-col shadow-xl ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+                <div className="h-14 px-4 flex items-center border-b border-slate-800 flex-shrink-0">
+                    <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded bg-indigo-500 flex items-center justify-center text-white shadow-sm">
+                            <span className="material-symbols-outlined text-[16px]">layers</span>
+                        </div>
+                        <span className="font-semibold text-[13px] text-white tracking-wide">Admin<span className="text-indigo-400">Portal</span></span>
+                    </div>
+                </div>
+
+                <nav className="flex-1 px-2 py-4 space-y-0.5 overflow-y-auto custom-scrollbar">
+                    <div className="px-3 mb-2 mt-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest leading-none">Menu</div>
+                    {navItems.map(item => (
+                        <NavItem key={item.section} {...item} active={activeSection} onClick={setActiveSection} />
+                    ))}
+                </nav>
+
+                <div className="p-4 border-t border-slate-800 bg-slate-900/50 flex-shrink-0">
+                    <div className="flex items-center gap-3 mb-3 p-1">
+                        <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} alt="Avatar" className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 object-cover" />
+                        <div className="min-w-0">
+                            <p className="text-[12px] font-medium text-slate-200 truncate">{user?.firstName || 'Admin'}</p>
+                            <p className="text-[10px] text-slate-500 capitalize truncate">{user?.role?.replace('_', ' ')}</p>
                         </div>
                     </div>
-
-                    <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto no-scrollbar">
-                        <div className="px-3 mb-4 text-[10px] font-black text-gray-400 uppercase tracking-widest">Main Navigation</div>
-                        {navItems.map(item => (
-                            <NavItem key={item.section} {...item} active={activeSection} onClick={setActiveSection} />
-                        ))}
-                    </nav>
-
-                    <div className="p-4 border-t border-slate-200/50 bg-white/50">
-                        <div className="px-4 py-3 rounded-xl bg-gradient-to-r from-[#6605c7]/5 to-transparent border border-[#6605c7]/10 flex items-center gap-3 mb-4 hover:border-[#6605c7]/20 transition-all group">
-                            <div className="w-10 h-10 rounded-lg border-2 border-[#6605c7]/20 shadow-sm overflow-hidden flex-shrink-0 group-hover:scale-110 transition-transform">
-                                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`} alt="Avatar" className="w-full h-full object-cover" />
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-[12px] font-bold text-gray-900 truncate leading-none">{user?.firstName || 'Admin'}</p>
-                                <p className="text-[9px] text-gray-500 mt-1 uppercase tracking-wider font-black">{user?.role?.replace('_', ' ')}</p>
-                            </div>
-                        </div>
-                        <button onClick={logout} className="w-full px-4 py-2.5 rounded-xl flex items-center gap-3 text-red-600 hover:bg-red-50 hover:text-red-700 transition-all font-bold text-[12px] border border-red-100/30 uppercase tracking-wider">
-                            <span className="material-symbols-outlined text-[18px]">logout</span>
-                            Sign Out
-                        </button>
-                    </div>
+                    <button onClick={logout} className="w-full px-3 py-2 rounded bg-slate-800 hover:bg-rose-500/10 hover:text-rose-400 text-slate-300 border border-slate-700 hover:border-rose-500/30 transition-all text-[11px] font-semibold flex items-center justify-center gap-2">
+                        <span className="material-symbols-outlined text-[14px]">logout</span>
+                        Sign Out
+                    </button>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden lg:ml-[280px]">
+            <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden lg:ml-[240px] bg-slate-50 rounded-tl-xl border-l border-t border-slate-200/60 shadow-inner mt-2 lg:mt-0 lg:rounded-none lg:border-none lg:shadow-none">
                 {/* Header */}
-                <header className="h-20 bg-white/80 backdrop-blur-xl border-b border-slate-200/40 px-6 lg:px-10 flex justify-between items-center sticky top-0 z-40 shadow-[0_2px_12px_rgba(102,5,199,0.06)]">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-all">
-                            <span className="material-symbols-outlined">menu</span>
+                <header className="h-14 bg-white border-b border-slate-200 px-5 flex justify-between items-center sticky top-0 z-40 flex-shrink-0 shadow-sm">
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden p-1.5 text-slate-500 hover:bg-slate-100 rounded transition-all">
+                            <span className="material-symbols-outlined text-[20px]">menu</span>
                         </button>
-                        <h1 className="text-[22px] font-black text-gray-900 tracking-tight flex items-center gap-3 font-display italic">
+                        <h1 className="text-[14px] font-semibold text-slate-800 flex items-center gap-2">
                             {sectionTitles[activeSection] || activeSection}
-                            <span className="text-[9px] font-black text-[#6605c7] bg-[#6605c7]/10 px-3 py-1.5 rounded-full border border-[#6605c7]/20 uppercase tracking-widest">Live</span>
+                            <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-100 tracking-wide">Live</span>
                         </h1>
                     </div>
 
                     <div className="flex items-center gap-3">
                         <div className="relative hidden md:block">
-                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">search</span>
                             <input
                                 type="text"
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
-                                placeholder="Quick search..."
-                                className="pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7]/40 w-64 transition-all font-medium hover:border-slate-300"
+                                placeholder="Search..."
+                                className="pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded text-[12px] focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 w-56 transition-all text-slate-700 placeholder:text-slate-400"
                             />
                         </div>
 
                         <div className="relative">
                             <button
                                 onClick={() => setNotifOpen(!notifOpen)}
-                                className="w-10 h-10 flex items-center justify-center text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all relative group"
+                                className="relative p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded transition-all flex items-center justify-center"
                             >
-                                <span className="material-symbols-outlined text-[22px]">notifications</span>
-                                {pendingCount > 0 && <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white shadow-lg shadow-red-500/50" />}
+                                <span className="material-symbols-outlined text-[18px]">notifications</span>
+                                {pendingCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 border-2 border-white shadow-sm" />}
                             </button>
                             {notifOpen && (
-                                <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-2xl shadow-xl shadow-slate-900/10 border border-slate-200/50 z-50 overflow-hidden py-2 backdrop-blur-sm">
-                                    <div className="px-5 py-3 border-b border-slate-100 mb-1 bg-gradient-to-r from-slate-50 to-transparent">
-                                        <h4 className="font-bold text-slate-900 text-sm uppercase tracking-wide">Notifications</h4>
-                                    </div>
+                                <div className="absolute right-0 top-full mt-1 w-72 bg-white rounded-lg shadow-lg shadow-slate-200/50 border border-slate-200 z-50 overflow-hidden py-1">
+                                    <div className="px-4 py-2 border-b border-slate-100 bg-slate-50/80"><h4 className="font-semibold text-slate-700 text-[11px] uppercase tracking-wider">Notifications</h4></div>
                                     {pendingCount > 0 ? (
-                                        <button className="w-full text-left px-5 py-4 hover:bg-slate-50 transition-all flex items-center gap-3 border-b border-slate-100 last:border-0 group">
-                                            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform"><span className="material-symbols-outlined text-[18px]">assignment_late</span></div>
-                                            <div><p className="text-[13px] font-bold text-slate-900">{pendingCount} Applications</p><p className="text-[11px] text-slate-500 font-medium">Awaiting your approval</p></div>
+                                        <button className="w-full text-left px-4 py-3 hover:bg-slate-50 transition-all flex items-start gap-3 border-b border-slate-50">
+                                            <div className="w-8 h-8 rounded bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0 mt-0.5 border border-amber-100"><span className="material-symbols-outlined text-[16px]">assignment</span></div>
+                                            <div><p className="text-[12px] font-semibold text-slate-800">{pendingCount} Pending Applications</p><p className="text-[11px] text-slate-500 mt-0.5">Awaiting review</p></div>
                                         </button>
-                                    ) : <div className="p-8 text-center text-slate-400"><span className="material-symbols-outlined text-4xl mb-2 opacity-30 block">notifications_none</span><p className="text-xs font-semibold">No new notifications</p></div>}
+                                    ) : <div className="p-6 text-center text-slate-400 bg-white"><span className="material-symbols-outlined text-2xl mb-1 text-slate-300">task_alt</span><p className="text-[11px]">All caught up</p></div>}
                                 </div>
                             )}
                         </div>
                     </div>
                 </header>
 
-                <div className="p-6 lg:p-10 space-y-10 overflow-y-auto no-scrollbar flex-1 bg-gradient-to-b from-slate-50/50 to-white">
+                <div className="p-6 lg:p-8 space-y-6 overflow-y-auto custom-scrollbar flex-1 bg-slate-50/50">
                     {activeSection === "overview" && (
-                        <div className="space-y-10 animate-fade-in">
-                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                        <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in">
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                 <div>
-                                    <h2 className="text-[32px] font-black font-display text-gray-900 tracking-tight mb-2 italic">System Control Matrix</h2>
-                                    <p className="text-slate-500 text-[12px] font-bold uppercase tracking-widest flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-xs">calendar_today</span>
-                                        Node Synchronized: {format(new Date(), 'EEEE, MMMM do, yyyy')}
+                                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight">System Matrix</h2>
+                                    <p className="text-slate-500 text-[11px] mt-1 font-medium flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[14px]">calendar_today</span>
+                                        Synced: {format(new Date(), 'MMM do, yyyy')}
                                     </p>
                                 </div>
-                                <div className="flex gap-3 flex-wrap">
-                                    <button onClick={() => setShowCreateUserModal(true)} className="px-5 py-3 rounded-xl border border-slate-200/50 bg-white text-slate-600 font-bold text-[11px] uppercase tracking-wider hover:bg-white hover:border-slate-300 transition-all flex items-center gap-2 shadow-sm">
-                                        <span className="material-symbols-outlined text-[18px]">person_add</span> Add User
+                                <div className="flex gap-2">
+                                    <button onClick={() => setShowCreateUserModal(true)} className="px-3 py-1.5 rounded bg-white border border-slate-200 text-slate-700 font-medium text-[11px] hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center gap-1.5 shadow-sm">
+                                        <span className="material-symbols-outlined text-[16px]">person_add</span> User Node
                                     </button>
-                                    <Link href="/admin/blogs/create" className="bg-gradient-to-r from-[#6605c7] to-[#7c3aed] text-white px-6 py-3 rounded-xl font-black text-[11px] uppercase tracking-wider hover:shadow-lg hover:shadow-purple-500/30 transition-all flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-[18px]">add</span> Create Post
+                                    <Link href="/admin/blogs/create" className="px-3 py-1.5 bg-indigo-600 text-white rounded text-[11px] font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[16px]">add</span> Post
                                     </Link>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                <StatCard label="Capital Portfolio" value={`₹${(stats.totalAmount || 0).toLocaleString('en-IN')}`} icon="account_balance_wallet" color="text-[#6605c7]" loading={loading} trend={12} />
-                                <StatCard label="Disbursed Pulse" value={`₹${(stats.disbursedAmount || 0).toLocaleString('en-IN')}`} icon="electric_bolt" color="text-emerald-500" loading={loading} trend={-5} />
-                                <StatCard label="Active Transmission" value={stats.appCount || 0} icon="receipt_long" color="text-amber-500" loading={loading} trend={8} />
-                                <StatCard label="Total Nodes" value={stats.userCount || 0} icon="public" color="text-blue-500" loading={loading} trend={24} />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <StatCard label="Capital Portfolio" value={`₹${(stats.totalAmount || 0).toLocaleString('en-IN')}`} icon="account_balance_wallet" color="text-indigo-600" loading={loading} trend={12} />
+                                <StatCard label="Disbursed Pulse" value={`₹${(stats.disbursedAmount || 0).toLocaleString('en-IN')}`} icon="electric_bolt" color="text-emerald-600" loading={loading} trend={-5} />
+                                <StatCard label="Active Transmission" value={stats.appCount || 0} icon="receipt_long" color="text-amber-600" loading={loading} trend={8} />
+                                <StatCard label="Total Nodes" value={stats.userCount || 0} icon="public" color="text-blue-600" loading={loading} trend={24} />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <StatCard
                                     label="Avg Unit Size"
                                     value={`₹${Math.round((stats.totalAmount || 0) / (stats.appCount || 1)).toLocaleString('en-IN')}`}
                                     icon="analytics"
-                                    color="text-indigo-500"
+                                    color="text-indigo-600"
                                     loading={loading}
                                 />
                                 <StatCard
                                     label="Conversion Rate"
                                     value={`${Math.round(((stats.disbursedCount || 0) / (stats.appCount || 1)) * 100)}%`}
                                     icon="trending_up"
-                                    color="text-emerald-500"
+                                    color="text-emerald-600"
                                     loading={loading}
                                 />
+                                <StatCard label="Protocol Managers" value={stats.staffCount} icon="badge" color="text-slate-600" loading={loading} />
+                                <StatCard label="Banking Partners" value={stats.bankCount} icon="account_balance" color="text-slate-600" loading={loading} />
                             </div>
 
-                            {/* System Stats */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                <StatCard label="Protocol Articles" value={stats.blogs?.total} icon="article" color="text-blue-500" loading={loading} trend={12} />
-                                <StatCard label="Pending Nodes" value={stats.apps?.total} icon="description" color="text-[#6605c7]" loading={loading} trend={8} />
-                                <StatCard label="Portal Users" value={stats.userCount} icon="person" color="text-emerald-500" loading={loading} trend={5} />
-                                <StatCard label="Pending Audit" value={pendingCount} icon="pending_actions" color="text-amber-500" loading={loading} />
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <StatCard label="Protocol Managers" value={stats.staffCount} icon="badge" color="text-blue-600" loading={loading} />
-                                <StatCard label="Banking Partners" value={stats.bankCount} icon="account_balance" color="text-emerald-600" loading={loading} />
-                                <StatCard label="Channel Operators" value={stats.agentCount} icon="support_agent" color="text-amber-600" loading={loading} />
-                            </div>
-
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                 {/* Recent Activity */}
-                                <div className="lg:col-span-2 glass-card p-10 rounded-[2.5rem] border-[#6605c7]/10 bg-white/60">
-                                    <div className="flex justify-between items-center mb-8">
+                                <div className="lg:col-span-2 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+                                    <div className="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50/50 text-[12px]">
                                         <div>
-                                            <h3 className="text-xl font-black font-display text-gray-900 tracking-tight italic">Recent Signal Sync</h3>
-                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">System Activity Log</p>
+                                            <h3 className="font-semibold text-slate-900 tracking-wide text-sm">System Audit Log</h3>
                                         </div>
-                                        <button onClick={loadOverview} className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all">
-                                            <span className="material-symbols-outlined">refresh</span>
+                                        <button onClick={loadOverview} className="p-1 text-slate-400 hover:text-slate-700 bg-white border border-slate-200 rounded shadow-sm transition-colors">
+                                            <span className="material-symbols-outlined text-[14px]">refresh</span>
                                         </button>
                                     </div>
-                                    <div className="space-y-6">
-                                        {auditLogs.length > 0 ? auditLogs.map((log: any, i: number) => (
-                                            <div key={i} className="flex gap-5 group animate-fade-in-up" style={{ animationDelay: `${i * 50}ms` }}>
-                                                <div className="flex flex-col items-center">
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-[11px] border group-hover:scale-110 transition-transform flex-shrink-0 ${log.action === 'update' ? 'bg-blue-500/10 text-blue-600 border-blue-200' : log.action === 'create' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-200' : 'bg-red-500/10 text-red-600 border-red-200'}`}>
-                                                        <span className="material-symbols-outlined text-[20px]">
-                                                            {log.action === 'update' ? 'edit_square' : log.action === 'create' ? 'add_box' : 'delete'}
-                                                        </span>
-                                                    </div>
-                                                    {i < auditLogs.length - 1 && <div className="w-px h-12 bg-gradient-to-b from-slate-200 to-transparent my-2" />}
-                                                </div>
-                                                <div className="pb-4 border-b border-slate-100 flex-1 last:border-0 text-[13px]">
-                                                    <div className="flex justify-between mb-1">
-                                                        <p className="font-black text-slate-900 capitalize tracking-tight uppercase text-[11px]">{log.action} {log.entityType}</p>
-                                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{format(new Date(log.createdAt), 'MMM d, p')}</span>
-                                                    </div>
-                                                    <p className="text-slate-600 font-medium mb-2">By <span className="text-slate-900 font-bold">{log.initiator?.firstName || 'System'}</span></p>
-                                                    <div className="bg-slate-50 rounded-lg px-3 py-1.5 text-[10px] font-mono text-slate-500 overflow-hidden truncate border border-slate-100">
-                                                        ID: {log.entityId}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )) : (
-                                            <div className="text-center py-16 text-slate-400">
-                                                <span className="material-symbols-outlined text-6xl mb-3 opacity-20 block">history</span>
-                                                <p className="text-sm font-medium text-slate-500">No recent activity detected</p>
-                                            </div>
-                                        )}
+                                    <div className="p-0 flex-1 overflow-y-auto max-h-[360px] custom-scrollbar">
+                                        <table className="w-full text-left border-collapse">
+                                            <tbody className="divide-y divide-slate-100">
+                                                {auditLogs.length > 0 ? auditLogs.map((log: any, i: number) => (
+                                                    <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                                                        <td className="px-4 py-2.5 w-10">
+                                                            <div className={`w-6 h-6 rounded flex items-center justify-center text-white ${log.action === 'update' ? 'bg-blue-500' : log.action === 'create' ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+                                                                <span className="material-symbols-outlined text-[12px]">
+                                                                    {log.action === 'update' ? 'edit' : log.action === 'create' ? 'add' : 'delete'}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-2.5">
+                                                            <p className="font-medium text-slate-800 text-[12px] capitalize leading-snug">{log.action} {log.entityType}</p>
+                                                            <p className="text-[10px] text-slate-500 leading-snug mt-0.5">By <span className="font-medium text-slate-600">{log.initiator?.firstName || 'System'}</span></p>
+                                                        </td>
+                                                        <td className="px-4 py-2.5">
+                                                            <div className="bg-slate-100/60 rounded px-1.5 py-0.5 text-[9px] font-mono text-slate-600 border border-slate-200/60 inline-block w-20 truncate">
+                                                                {log.entityId}
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-2.5 text-right text-[10px] text-slate-400 font-medium whitespace-nowrap">
+                                                            {formatDistanceToNow(new Date(log.createdAt), { addSuffix: true })}
+                                                        </td>
+                                                    </tr>
+                                                )) : (
+                                                    <tr>
+                                                        <td colSpan={4} className="text-center py-10 text-slate-400">
+                                                            <span className="material-symbols-outlined text-3xl mb-2 opacity-30">history</span>
+                                                            <p className="text-xs">No activity detected</p>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
 
                                 <div className="space-y-6">
                                     {/* Quick Actions */}
-                                    <div className="glass-card p-10 rounded-[2.5rem] border-[#6605c7]/10 bg-white/60">
-                                        <h3 className="text-xl font-black font-display text-gray-900 mb-8 tracking-tight italic">Direct Commands</h3>
-                                        <div className="grid grid-cols-1 gap-4">
+                                    <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden p-4">
+                                        <h3 className="text-xs font-semibold text-slate-900 mb-3 ml-1">Direct Commands</h3>
+                                        <div className="grid grid-cols-2 gap-3">
                                             {[
-                                                { href: '/admin/blogs/create', icon: 'post_add', label: 'Write Blog', sublabel: 'Create Content' },
-                                                { section: 'users', icon: 'person_add', label: 'Manage Users', sublabel: 'Portal Users' },
-                                                { section: 'applications', icon: 'receipt_long', label: 'Review Applications', sublabel: 'Transmission Queue' },
-                                                { section: 'system', icon: 'admin_panel_settings', label: 'System Control', sublabel: 'Protocol Config' },
+                                                { href: '/admin/blogs/create', label: 'Write Post', icon: 'post_add' },
+                                                { section: 'users', label: 'Users', icon: 'people' },
+                                                { section: 'applications', label: 'Review Apps', icon: 'receipt_long' },
+                                                { section: 'system', label: 'Settings', icon: 'settings' },
                                             ].map((action, i) => (
                                                 action.href ? (
-                                                    <Link key={i} href={action.href} className="glass-card p-6 rounded-[2.5rem] bg-white group hover:bg-[#6605c7]/5 transition-all text-left border-[#6605c7]/10">
-                                                        <div className={`w-12 h-12 rounded-2xl bg-[#6605c7]/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                                                            <span className={`material-symbols-outlined text-2xl opacity-80 text-[#6605c7]`}>{action.icon}</span>
-                                                        </div>
-                                                        <h4 className="text-sm font-black text-gray-900 group-hover:text-[#6605c7] transition-colors">{action.label}</h4>
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{action.sublabel}</p>
+                                                    <Link key={i} href={action.href} className="p-3 rounded border border-slate-100 bg-slate-50 hover:bg-slate-100 hover:border-slate-200 transition-colors flex flex-col gap-2 items-start justify-center group">
+                                                        <span className={`material-symbols-outlined text-[18px] text-indigo-500`}>{action.icon}</span>
+                                                        <h4 className="text-[11px] font-medium text-slate-700">{action.label}</h4>
                                                     </Link>
                                                 ) : (
-                                                    <button key={i} onClick={() => setActiveSection(action.section!)} className="glass-card p-6 rounded-[2.5rem] bg-white group hover:bg-[#6605c7]/5 transition-all text-left border-[#6605c7]/10 w-full">
-                                                        <div className={`w-12 h-12 rounded-2xl bg-[#6605c7]/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                                                            <span className={`material-symbols-outlined text-2xl opacity-80 text-[#6605c7]`}>{action.icon}</span>
-                                                        </div>
-                                                        <h4 className="text-sm font-black text-gray-900 group-hover:text-[#6605c7] transition-colors">{action.label}</h4>
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{action.sublabel}</p>
+                                                    <button key={i} onClick={() => setActiveSection(action.section!)} className="p-3 rounded border border-slate-100 bg-slate-50 hover:bg-slate-100 hover:border-slate-200 transition-colors flex flex-col gap-2 items-start justify-center group text-left">
+                                                        <span className={`material-symbols-outlined text-[18px] text-indigo-500`}>{action.icon}</span>
+                                                        <h4 className="text-[11px] font-medium text-slate-700">{action.label}</h4>
                                                     </button>
                                                 )
                                             ))}
@@ -916,23 +897,19 @@ export default function AdminDashboardPage() {
                                     </div>
 
                                     {/* System Health */}
-                                    <div className="glass-card p-10 rounded-[2.5rem] bg-gradient-to-br from-[#6605c7] to-[#7c3aed] text-white overflow-hidden relative shadow-lg shadow-purple-500/20 border border-[#6605c7]/20">
+                                    <div className="bg-slate-900 rounded-lg p-5 text-white shadow-sm overflow-hidden relative border border-slate-800">
                                         <div className="relative z-10">
-                                            <h3 className="text-xl font-black font-display mb-4 uppercase tracking-tighter italic">Compliance Shield</h3>
-                                            <div className="space-y-0 bg-white/10 rounded-xl p-4 backdrop-blur-sm border border-white/20">
-                                                <HealthDot ok={true} label="API Server" />
+                                            <h3 className="text-xs font-semibold mb-3 tracking-wide rounded">System Status</h3>
+                                            <div className="space-y-0.5 mt-2 bg-slate-800/50 rounded-lg border border-slate-700/50 p-2">
+                                                <HealthDot ok={true} label="API Core" />
                                                 <HealthDot ok={true} label="Database" />
-                                                <HealthDot ok={true} label="Auth Service" />
-                                                <HealthDot ok={!maintenanceMode} label="Public Portal" />
-                                                <HealthDot ok={true} label="Email SMTP" />
+                                                <HealthDot ok={true} label="Auth Node" />
+                                                <HealthDot ok={!maintenanceMode} label="Public API" />
                                             </div>
-                                            <div className="flex items-center gap-3 mt-4">
-                                                <div className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_15px_#4ade80]" />
-                                                <span className="text-[10px] font-black uppercase tracking-[0.3em]">Guardian Engine Live</span>
+                                            <div className="flex items-center gap-2 mt-4 ml-1">
+                                                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                                <span className="text-[9px] font-medium tracking-widest uppercase text-slate-300">Operational</span>
                                             </div>
-                                        </div>
-                                        <div className="absolute -right-6 -bottom-6 opacity-5 pointer-events-none">
-                                            <span className="material-symbols-outlined text-9xl">verified_user</span>
                                         </div>
                                     </div>
                                 </div>
@@ -940,13 +917,15 @@ export default function AdminDashboardPage() {
                         </div>
                     )}
 
-                    {/* ─── ANALYTICS ────────────────────────────────────────────── */}
                     {activeSection === "analytics" && (
-                        <div className="space-y-10 animate-fade-in">
+                        <div className="space-y-8 animate-fade-in max-w-[1400px] mx-auto">
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                                 <div>
-                                    <h2 className="text-[32px] font-black font-display text-gray-900 tracking-tight mb-2 italic">Platform Analytics</h2>
-                                    <p className="text-slate-500 text-[12px] font-bold uppercase tracking-widest">Real-time insights across the VidhyaLoan ecosystem</p>
+                                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight">Performance Matrix</h2>
+                                    <p className="text-slate-500 text-[11px] mt-1 font-medium flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[14px]">analytics</span>
+                                        Real-time insights across the platform ecosystem
+                                    </p>
                                 </div>
                                 <div className="flex items-center gap-3 flex-wrap">
                                     <button onClick={() => { setAnalyticsLoading(true); loadData(); }} disabled={analyticsLoading} className="px-5 py-3 rounded-xl border border-slate-200/50 bg-white text-slate-600 font-bold text-[11px] uppercase tracking-wider hover:bg-white transition-all flex items-center gap-2 disabled:opacity-50">
@@ -961,60 +940,56 @@ export default function AdminDashboardPage() {
                             </div>
 
                             {analyticsLoading || loading ? (
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                    {[1, 2, 3, 4].map(i => <div key={i} className="h-40 bg-slate-100 animate-pulse rounded-[2rem]" />)}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-slate-100 animate-pulse rounded-lg" />)}
                                 </div>
                             ) : (
                                 <>
                                     {/* Key Performance Metrics */}
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                        <div className="glass-card stat-card-gradient p-8 rounded-[2rem] relative overflow-hidden group transition-all duration-500 hover:shadow-lg border border-purple-200/30 bg-gradient-to-br from-purple-50/40 to-indigo-50/40">
-                                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Total Loan Value</p>
-                                            <p className="text-3xl font-black text-purple-600 font-display">₹{(analyticsData.appStats?.totalAmount || 0).toLocaleString('en-IN')}</p>
-                                            <p className="text-[10px] text-gray-500 mt-3 font-bold">Across all applications</p>
-                                            <div className="absolute -right-6 -bottom-6 opacity-[0.05] pointer-events-none"><span className="material-symbols-outlined text-8xl">account_balance_wallet</span></div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <div className="bg-white border border-slate-200 p-4 rounded-lg shadow-sm relative overflow-hidden group">
+                                            <p className="text-[11px] font-medium text-slate-500 mb-0.5">Total Loan Value</p>
+                                            <p className="text-[20px] font-semibold text-slate-900 tracking-tight">₹{(analyticsData.appStats?.totalAmount || 0).toLocaleString('en-IN')}</p>
+                                            <p className="text-[10px] text-slate-400 mt-1">Across all applications</p>
                                         </div>
-                                        <div className="glass-card stat-card-gradient p-8 rounded-[2rem] relative overflow-hidden group transition-all duration-500 hover:shadow-lg border border-emerald-200/30 bg-gradient-to-br from-emerald-50/40 to-teal-50/40">
-                                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Disbursed Amount</p>
-                                            <p className="text-3xl font-black text-emerald-600 font-display">₹{(analyticsData.appStats?.disbursedAmount || 0).toLocaleString('en-IN')}</p>
-                                            <p className="text-[10px] text-gray-500 mt-3 font-bold">{analyticsData.appStats?.total ? Math.round(((analyticsData.appStats?.disbursedAmount || 0) / (analyticsData.appStats?.totalAmount || 1)) * 100) : 0}% of total</p>
-                                            <div className="absolute -right-6 -bottom-6 opacity-[0.05] pointer-events-none"><span className="material-symbols-outlined text-8xl">electric_bolt</span></div>
+                                        <div className="bg-white border border-slate-200 p-4 rounded-lg shadow-sm relative overflow-hidden group">
+                                            <p className="text-[11px] font-medium text-slate-500 mb-0.5">Disbursed Amount</p>
+                                            <p className="text-[20px] font-semibold text-slate-900 tracking-tight">₹{(analyticsData.appStats?.disbursedAmount || 0).toLocaleString('en-IN')}</p>
+                                            <p className="text-[10px] text-slate-400 mt-1">{analyticsData.appStats?.total ? Math.round(((analyticsData.appStats?.disbursedAmount || 0) / (analyticsData.appStats?.totalAmount || 1)) * 100) : 0}% of total</p>
                                         </div>
-                                        <div className="glass-card stat-card-gradient p-8 rounded-[2rem] relative overflow-hidden group transition-all duration-500 hover:shadow-lg border border-blue-200/30 bg-gradient-to-br from-blue-50/40 to-cyan-50/40">
-                                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Approval Rate</p>
-                                            <p className="text-3xl font-black text-blue-600 font-display">{analyticsData.appStats?.total ? Math.round(((analyticsData.appStats?.approved || 0 + analyticsData.appStats?.disbursed || 0) / analyticsData.appStats?.total) * 100) : 0}%</p>
-                                            <p className="text-[10px] text-gray-500 mt-3 font-bold">{(analyticsData.appStats?.approved || 0) + (analyticsData.appStats?.disbursed || 0)} approved</p>
-                                            <div className="absolute -right-6 -bottom-6 opacity-[0.05] pointer-events-none"><span className="material-symbols-outlined text-8xl">trending_up</span></div>
+                                        <div className="bg-white border border-slate-200 p-4 rounded-lg shadow-sm relative overflow-hidden group">
+                                            <p className="text-[11px] font-medium text-slate-500 mb-0.5">Approval Rate</p>
+                                            <p className="text-[20px] font-semibold text-slate-900 tracking-tight">{analyticsData.appStats?.total ? Math.round(((analyticsData.appStats?.approved || 0 + analyticsData.appStats?.disbursed || 0) / analyticsData.appStats?.total) * 100) : 0}%</p>
+                                            <p className="text-[10px] text-slate-400 mt-1">{(analyticsData.appStats?.approved || 0) + (analyticsData.appStats?.disbursed || 0)} approved</p>
                                         </div>
-                                        <div className="glass-card stat-card-gradient p-8 rounded-[2rem] relative overflow-hidden group transition-all duration-500 hover:shadow-lg border border-amber-200/30 bg-gradient-to-br from-amber-50/40 to-orange-50/40">
-                                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">Pending Review</p>
-                                            <p className="text-3xl font-black text-amber-600 font-display">{analyticsData.appStats?.pending || 0}</p>
-                                            <p className="text-[10px] text-gray-500 mt-3 font-bold">{analyticsData.appStats?.total ? Math.round(((analyticsData.appStats?.pending || 0) / analyticsData.appStats?.total) * 100) : 0}% of pipeline</p>
-                                            <div className="absolute -right-6 -bottom-6 opacity-[0.05] pointer-events-none"><span className="material-symbols-outlined text-8xl">pending_actions</span></div>
+                                        <div className="bg-white border border-slate-200 p-4 rounded-lg shadow-sm relative overflow-hidden group">
+                                            <p className="text-[11px] font-medium text-slate-500 mb-0.5">Pending Review</p>
+                                            <p className="text-[20px] font-semibold text-slate-900 tracking-tight">{analyticsData.appStats?.pending || 0}</p>
+                                            <p className="text-[10px] text-slate-400 mt-1">{analyticsData.appStats?.total ? Math.round(((analyticsData.appStats?.pending || 0) / analyticsData.appStats?.total) * 100) : 0}% of pipeline</p>
                                         </div>
                                     </div>
 
                                     {/* Application status breakdown */}
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 text-[14px]">
-                                        <div className="glass-card p-10 rounded-[2.5rem] border-slate-200/30 bg-white/60 lg:col-span-2">
-                                            <h3 className="text-xl font-black font-display text-slate-900 mb-2 tracking-tight italic">Application Distribution</h3>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-8">Global processing statistics</p>
-                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm lg:col-span-2">
+                                            <h3 className="text-sm font-semibold text-slate-900 mb-1">Application Distribution</h3>
+                                            <p className="text-[11px] text-slate-500 mb-5">Global processing statistics</p>
+                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                                 {[
-                                                    { label: 'Pending', value: analyticsData.appStats?.pending || 0, color: 'bg-amber-400', style: 'bg-amber-50/50 border-amber-100 text-amber-900' },
-                                                    { label: 'Processing', value: analyticsData.appStats?.processing || 0, color: 'bg-blue-400', style: 'bg-blue-50/50 border-blue-100 text-blue-900' },
-                                                    { label: 'Approved', value: analyticsData.appStats?.approved || 0, color: 'bg-emerald-400', style: 'bg-emerald-50/50 border-emerald-100 text-emerald-900' },
-                                                    { label: 'Rejected', value: analyticsData.appStats?.rejected || 0, color: 'bg-rose-400', style: 'bg-rose-50/50 border-rose-100 text-rose-900' },
-                                                    { label: 'Disbursed', value: analyticsData.appStats?.disbursed || 0, color: 'bg-slate-900', style: 'bg-slate-50/50 border-slate-200 text-slate-900' },
-                                                    { label: 'Total', value: analyticsData.appStats?.total || 0, color: 'bg-indigo-400', style: 'bg-indigo-50/50 border-indigo-100 text-indigo-900' },
+                                                    { label: 'Pending', value: analyticsData.appStats?.pending || 0, color: 'bg-amber-400', style: 'bg-amber-50 border-amber-100 text-amber-700' },
+                                                    { label: 'Processing', value: analyticsData.appStats?.processing || 0, color: 'bg-blue-400', style: 'bg-blue-50 border-blue-100 text-blue-700' },
+                                                    { label: 'Approved', value: analyticsData.appStats?.approved || 0, color: 'bg-emerald-400', style: 'bg-emerald-50 border-emerald-100 text-emerald-700' },
+                                                    { label: 'Rejected', value: analyticsData.appStats?.rejected || 0, color: 'bg-rose-400', style: 'bg-rose-50 border-rose-100 text-rose-700' },
+                                                    { label: 'Disbursed', value: analyticsData.appStats?.disbursed || 0, color: 'bg-slate-600', style: 'bg-slate-50 border-slate-200 text-slate-700' },
+                                                    { label: 'Total', value: analyticsData.appStats?.total || 0, color: 'bg-indigo-400', style: 'bg-indigo-50 border-indigo-100 text-indigo-700' },
                                                 ].map((item, i) => {
                                                     const percentage = analyticsData.appStats?.total ? Math.round((item.value / analyticsData.appStats?.total) * 100) : 0;
                                                     return (
-                                                        <div key={i} className={`p-5 rounded-xl border ${item.style} flex flex-col gap-2`}>
-                                                            <div className={`w-8 h-1.5 rounded-full ${item.color}`} />
-                                                            <p className="text-[28px] font-bold leading-none mt-1">{item.value}</p>
-                                                            <p className="text-[11px] font-black uppercase tracking-widest opacity-60">{item.label}</p>
-                                                            {item.label !== 'Total' && <p className="text-[10px] font-bold opacity-50">{percentage}%</p>}
+                                                        <div key={i} className={`p-3 rounded border flex flex-col gap-1 ${item.style}`}>
+                                                            <div className={`w-4 h-1 rounded flex-shrink-0 ${item.color}`} />
+                                                            <p className="text-xl font-semibold leading-none mt-1">{item.value}</p>
+                                                            <p className="text-[10px] font-medium uppercase tracking-wider opacity-80">{item.label}</p>
+                                                            {item.label !== 'Total' && <p className="text-[9px] font-medium opacity-70">{percentage}%</p>}
                                                         </div>
                                                     );
                                                 })}
@@ -1022,9 +997,9 @@ export default function AdminDashboardPage() {
                                         </div>
 
                                         {/* User role donut */}
-                                        <div className="bg-white p-8 rounded-2xl border border-slate-200/60 shadow-sm">
-                                            <h3 className="text-[18px] font-bold text-slate-900 mb-2">User Segmentation</h3>
-                                            <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest mb-8">By assigned personnel role</p>
+                                        <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+                                            <h3 className="text-sm font-semibold text-slate-900 mb-1">User Segmentation</h3>
+                                            <p className="text-[11px] text-slate-500 mb-5">By assigned personnel role</p>
                                             <DonutChart segments={[
                                                 { label: 'Students', value: analyticsData.usersByRole?.student || 0, color: '#3b82f6' },
                                                 { label: 'Staff', value: analyticsData.usersByRole?.staff || 0, color: '#6366f1' },
@@ -1032,48 +1007,47 @@ export default function AdminDashboardPage() {
                                                 { label: 'Agent', value: analyticsData.usersByRole?.agent || 0, color: '#f59e0b' },
                                                 { label: 'Admin', value: analyticsData.usersByRole?.admin || 0, color: '#0f172a' },
                                             ]} />
-                                            <div className="mt-6 space-y-2 text-[11px]">
-                                                <div className="flex justify-between font-bold">
-                                                    <span className="text-blue-600">Students: {analyticsData.usersByRole?.student || 0}</span>
+                                            <div className="mt-4 space-y-1.5 text-[11px] font-medium text-slate-600">
+                                                <div className="flex justify-between">
+                                                    <span>Students:</span> <span>{analyticsData.usersByRole?.student || 0}</span>
                                                 </div>
-                                                <div className="flex justify-between font-bold">
-                                                    <span className="text-indigo-600">Staff: {analyticsData.usersByRole?.staff || 0}</span>
+                                                <div className="flex justify-between">
+                                                    <span>Staff:</span> <span>{analyticsData.usersByRole?.staff || 0}</span>
                                                 </div>
-                                                <div className="flex justify-between font-bold">
-                                                    <span className="text-emerald-600">Banks: {analyticsData.usersByRole?.bank || 0}</span>
+                                                <div className="flex justify-between">
+                                                    <span>Banks:</span> <span>{analyticsData.usersByRole?.bank || 0}</span>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* User growth mini chart */}
-                                    <div className="bg-white p-8 rounded-2xl border border-slate-200/60 shadow-sm">
-                                        <div className="flex justify-between items-start mb-6">
+                                    <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm">
+                                        <div className="flex justify-between items-start mb-4">
                                             <div>
-                                                <h3 className="text-[18px] font-bold text-slate-900">Platform Overview</h3>
-                                                <p className="text-[13px] text-slate-500 mt-1">Key metrics snapshot - Last updated {lastRefresh.toLocaleTimeString('en-IN')}</p>
+                                                <h3 className="text-sm font-semibold text-slate-900">Platform Overview</h3>
+                                                <p className="text-[11px] text-slate-500 mt-1">Key metrics snapshot - Last updated {lastRefresh.toLocaleTimeString('en-IN')}</p>
                                             </div>
                                         </div>
-                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                                            <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-                                                <p className="text-[11px] font-bold text-slate-600 uppercase mb-1">Total Users</p>
-                                                <p className="text-[20px] font-bold text-slate-900">{(analyticsData.usersByRole?.student || 0) + (analyticsData.usersByRole?.staff || 0) + (analyticsData.usersByRole?.bank || 0) + (analyticsData.usersByRole?.agent || 0) + (analyticsData.usersByRole?.admin || 0)}</p>
+                                        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                            <div className="p-3 bg-slate-50 rounded border border-slate-100">
+                                                <p className="text-[10px] font-medium text-slate-500 uppercase mb-0.5">Total Users</p>
+                                                <p className="text-lg font-semibold text-slate-900">{(analyticsData.usersByRole?.student || 0) + (analyticsData.usersByRole?.staff || 0) + (analyticsData.usersByRole?.bank || 0) + (analyticsData.usersByRole?.agent || 0) + (analyticsData.usersByRole?.admin || 0)}</p>
                                             </div>
-                                            <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
-                                                <p className="text-[11px] font-bold text-purple-600 uppercase mb-1">Active Apps</p>
-                                                <p className="text-[20px] font-bold text-purple-600">{analyticsData.appStats?.total || 0}</p>
+                                            <div className="p-3 bg-indigo-50 rounded border border-indigo-100">
+                                                <p className="text-[10px] font-medium text-indigo-600 uppercase mb-0.5">Active Apps</p>
+                                                <p className="text-lg font-semibold text-indigo-700">{analyticsData.appStats?.total || 0}</p>
                                             </div>
-                                            <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
-                                                <p className="text-[11px] font-bold text-emerald-600 uppercase mb-1">Successful</p>
-                                                <p className="text-[20px] font-bold text-emerald-600">{(analyticsData.appStats?.disbursed || 0)}</p>
+                                                        <p className="text-[10px] font-medium text-emerald-600 uppercase mb-0.5">Successful</p>
+                                                <p className="text-lg font-semibold text-emerald-700">{(analyticsData.appStats?.disbursed || 0)}</p>
                                             </div>
-                                            <div className="p-4 bg-amber-50 rounded-lg border border-amber-100">
-                                                <p className="text-[11px] font-bold text-amber-600 uppercase mb-1">In Review</p>
-                                                <p className="text-[20px] font-bold text-amber-600">{(analyticsData.appStats?.processing || 0) + (analyticsData.appStats?.pending || 0)}</p>
+                                            <div className="p-3 bg-amber-50 rounded border border-amber-100">
+                                                <p className="text-[10px] font-medium text-amber-600 uppercase mb-0.5">In Review</p>
+                                                <p className="text-lg font-semibold text-amber-700">{(analyticsData.appStats?.processing || 0) + (analyticsData.appStats?.pending || 0)}</p>
                                             </div>
-                                            <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
-                                                <p className="text-[11px] font-bold text-blue-600 uppercase mb-1">Avg Loan</p>
-                                                <p className="text-[16px] font-bold text-blue-600">₹{analyticsData.appStats?.total ? Math.round((analyticsData.appStats?.totalAmount || 0) / analyticsData.appStats?.total / 100000) * 100000 : 0}</p>
+                                            <div className="p-3 bg-blue-50 rounded border border-blue-100">
+                                                <p className="text-[10px] font-medium text-blue-600 uppercase mb-0.5">Avg Loan</p>
+                                                <p className="text-lg font-semibold text-blue-700">₹{analyticsData.appStats?.total ? Math.round((analyticsData.appStats?.totalAmount || 0) / analyticsData.appStats?.total / 100000) * 100000 : 0}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -1083,191 +1057,33 @@ export default function AdminDashboardPage() {
                     )}
 
                     {/* ─── PORTAL CONTROL CENTER ────────────────────────────────── */}
-                    {/* {activeSection === "portal_control" && (
-                        <div className="space-y-8 animate-fade-in">
-                            <div className="flex items-center justify-between gap-4">
-                                <div><h2 className="text-[24px] font-bold text-slate-900 tracking-tight">Portal Control Center</h2><p className="text-slate-500 text-[14px]">Monitor and manage ecosystem access nodes</p></div>
-                            </div>
-
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                <PortalCard
-                                    name="Student Portal"
-                                    description="Main applicant dashboard and document center"
-                                    icon="school"
-                                    href="/dashboard"
-                                    color="border-slate-200/60"
-                                    users={stats.userCount || 0}
-                                    status="online"
-                                />
-                                <PortalCard
-                                    name="Staff Dashboard"
-                                    description="Ops review, tracking and communications"
-                                    icon="badge"
-                                    href="/staff/dashboard"
-                                    color="border-slate-200/60"
-                                    users={stats.staffCount || 0}
-                                    status="online"
-                                />
-                                <PortalCard
-                                    name="Bank Panel"
-                                    description="Funding, KYC and risk assessment gateway"
-                                    icon="account_balance"
-                                    href="/bank/dashboard"
-                                    color="border-slate-200/60"
-                                    users={stats.bankCount || 0}
-                                    status="online"
-                                />
-                                <PortalCard
-                                    name="Admin Console"
-                                    description="Super admin nodes and security protocols"
-                                    icon="admin_panel_settings"
-                                    href="/admin"
-                                    color="border-slate-900/10"
-                                    users={stats.activeAdmins || 0}
-                                    status="online"
-                                />
-                            </div>
-
-                            
-                            <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
-                                <div className="p-8 border-b border-slate-100 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                                    <div>
-                                        <h3 className="text-[18px] font-bold text-slate-900 tracking-tight">User Directory</h3>
-                                        <p className="text-[13px] text-slate-500 mt-1">{filteredData.length} records found in catalog</p>
-                                    </div>
-                                    <div className="flex flex-wrap gap-3 items-center">
-                                        <div className="relative">
-                                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
-                                            <input
-                                                type="text"
-                                                value={searchQuery}
-                                                onChange={e => setSearchQuery(e.target.value)}
-                                                placeholder="Search users..."
-                                                className="pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#6605c7]/10 w-52"
-                                            />
-                                        </div>
-                                        <div className="flex gap-2 flex-wrap">
-                                            {['all', 'user', 'staff', 'bank', 'agent', 'admin'].map(r => (
-                                                <button
-                                                    key={r}
-                                                    onClick={() => setRoleFilter(r)}
-                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${roleFilter === r ? 'bg-[#6605c7] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-                                                >
-                                                    {r}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        {selectedUsers.length > 0 && (
-                                            <button
-                                                onClick={() => {
-                                                    if (confirm(`Send email to ${selectedUsers.length} selected users?`)) {
-                                                        setActiveSection('communications');
-                                                        setEmailData({ ...emailData, isBulk: false });
-                                                    }
-                                                    setSelectedUsers([]);
-                                                }}
-                                                className="px-4 py-2 bg-[#6605c7] text-white rounded-xl text-[10px] font-black uppercase tracking-widest"
-                                            >
-                                                Email {selectedUsers.length} Selected
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left">
-                                        <thead>
-                                            <tr className="admin-table">
-                                                <th className="px-6 py-4 w-10">
-                                                    <input type="checkbox" onChange={e => setSelectedUsers(e.target.checked ? filteredData.map((u: any) => u.id) : [])} className="rounded" />
-                                                </th>
-                                                <th className="px-6 py-4">User</th>
-                                                <th className="px-6 py-4">Role</th>
-                                                <th className="px-6 py-4">Joined</th>
-                                                <th className="px-6 py-4">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-50 bg-white/50">
-                                            {loading ? (
-                                                <tr><td colSpan={5} className="px-6 py-16 text-center">
-                                                    <div className="w-10 h-10 border-4 border-[#6605c7]/10 border-t-[#6605c7] rounded-full animate-spin mx-auto" />
-                                                </td></tr>
-                                            ) : filteredData.map((item: any, idx: number) => (
-                                                <tr key={idx} className={`group hover:bg-[#6605c7]/5 transition-all ${selectedUsers.includes(item.id) ? 'bg-purple-50/50' : ''}`}>
-                                                    <td className="px-6 py-4">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={selectedUsers.includes(item.id)}
-                                                            onChange={() => toggleUserSelect(item.id)}
-                                                            className="rounded"
-                                                        />
-                                                    </td>
-                                                    <td className="px-6 py-5">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 rounded-full overflow-hidden flex-shrink-0 border-2 border-gray-100">
-                                                                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${item.email}`} alt="" className="w-full h-full object-cover" />
-                                                            </div>
-                                                            <div>
-                                                                <p className="text-sm font-black text-gray-900">{item.firstName} {item.lastName}</p>
-                                                                <p className="text-xs text-gray-400 font-medium">{item.email}</p>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-5">
-                                                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-widest ${roleColors[item.role] || 'bg-slate-100 text-slate-600'}`}>
-                                                            {item.role || 'user'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-5 text-[13px] font-medium text-slate-500">
-                                                        {item.createdAt ? format(new Date(item.createdAt), 'MMM d, yyyy') : '—'}
-                                                    </td>
-                                                    <td className="px-6 py-5">
-                                                        <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <button
-                                                                onClick={() => { setActiveSection('communications'); setEmailData({ ...emailData, to: item.email, isBulk: false }); }}
-                                                                className="p-2 text-slate-400 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-all"
-                                                                title="Email User"
-                                                            >
-                                                                <span className="material-symbols-outlined text-[18px]">mail</span>
-                                                            </button>
-                                                            <button
-                                                                onClick={() => setEditingUser({ ...item })}
-                                                                className="p-2 text-slate-400 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-all"
-                                                                title="Edit User"
-                                                            >
-                                                                <span className="material-symbols-outlined text-[18px]">edit</span>
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    )} */}
 
                     {/* ─── SYSTEM CONTROL ───────────────────────────────────────── */}
                     {activeSection === "system" && (
-                        <div className="space-y-8 animate-fade-in">
+                        <div className="space-y-6 animate-fade-in max-w-[1400px] mx-auto">
                             <div className="flex items-center justify-between gap-4">
-                                <div><h2 className="text-[24px] font-bold text-slate-900 tracking-tight">System Control Center</h2><p className="text-slate-500 text-[14px]">Platform-wide node controls and broadcasts</p></div>
-                                <div className={`px-3 py-1.5 rounded-lg border flex items-center gap-2 ${maintenanceMode ? 'bg-rose-50 border-rose-100 text-rose-700' : 'bg-emerald-50 border-emerald-100 text-emerald-700'}`}>
+                                <div>
+                                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight">System Control Domain</h2>
+                                    <p className="text-slate-500 text-[11px] mt-1 font-medium flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[14px]">settings</span>
+                                        Platform-wide node controls and broadcasts
+                                    </p>
+                                </div>
+                                <div className={`px-2.5 py-1 rounded border flex items-center gap-1.5 ${maintenanceMode ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
                                     <span className={`w-1.5 h-1.5 rounded-full ${maintenanceMode ? 'bg-rose-500' : 'bg-emerald-500'} animate-pulse`}></span>
-                                    <span className="text-[11px] font-black uppercase tracking-widest">{maintenanceMode ? 'Maintenance Hook Active' : 'All Portals Live'}</span>
+                                    <span className="text-[10px] font-semibold uppercase tracking-wider">{maintenanceMode ? 'Maintenance Mode' : 'System Live'}</span>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 {/* Maintenance & Feature Flags */}
-                                <div className="bg-white p-8 rounded-2xl border border-slate-200/60 shadow-sm space-y-6">
-                                    <h3 className="text-[18px] font-bold text-slate-900 flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-slate-400">tune</span>
+                                <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm space-y-5">
+                                    <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[16px] text-slate-400">tune</span>
                                         Platform Logic
                                     </h3>
 
+                                    <div className="space-y-3">
                                     {[
                                         {
                                             label: 'Maintenance Mode',
@@ -1298,53 +1114,54 @@ export default function AdminDashboardPage() {
                                             toggle: () => alert('Forum toggle requires backend configuration')
                                         },
                                     ].map((feature, i) => (
-                                        <div key={i} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-xl border border-slate-100 hover:border-slate-200 transition-all">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-white border border-slate-200 text-slate-600 shadow-sm`}>
-                                                    <span className="material-symbols-outlined text-[20px]">{feature.icon}</span>
+                                        <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded border border-slate-100 hover:border-slate-200 transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-8 h-8 rounded bg-white border border-slate-200 flex items-center justify-center text-slate-500 shadow-sm`}>
+                                                    <span className="material-symbols-outlined text-[16px]">{feature.icon}</span>
                                                 </div>
                                                 <div>
-                                                    <p className="text-[14px] font-bold text-slate-900 tracking-tight">{feature.label}</p>
-                                                    <p className="text-[11px] text-slate-500 font-medium">{feature.description}</p>
+                                                    <p className="text-xs font-semibold text-slate-900 leading-tight">{feature.label}</p>
+                                                    <p className="text-[10px] text-slate-500 mt-0.5">{feature.description}</p>
                                                 </div>
                                             </div>
                                             <button
                                                 onClick={feature.toggle}
-                                                className={`relative inline-flex w-11 h-6 rounded-full transition-all duration-300 ${feature.active ? 'bg-slate-900' : 'bg-slate-200'}`}
+                                                className={`relative inline-flex w-8 h-4 rounded-full transition-colors ${feature.active ? 'bg-emerald-500' : 'bg-slate-300'}`}
                                             >
-                                                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${feature.active ? 'left-6' : 'left-1'}`} />
+                                                <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-transform ${feature.active ? 'translate-x-4.5' : 'translate-x-0.5'}`} style={{ transform: feature.active ? 'translateX(16px)' : 'translateX(2px)' }} />
                                             </button>
                                         </div>
                                     ))}
+                                    </div>
                                 </div>
 
                                 {/* Announcements */}
-                                <div className="bg-white p-8 rounded-2xl border border-slate-200/60 shadow-sm">
-                                    <h3 className="text-[18px] font-bold text-slate-900 mb-6 flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-slate-400">campaign</span>
+                                <div className="bg-white p-5 rounded-lg border border-slate-200 shadow-sm flex flex-col">
+                                    <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[16px] text-slate-400">campaign</span>
                                         System Broadcasts
                                     </h3>
 
-                                    <div className="space-y-4 mb-8">
+                                    <div className="space-y-3 mb-6">
                                         <input
                                             type="text"
                                             value={newAnnouncement.title}
                                             onChange={e => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
-                                            placeholder="Update title..."
-                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-300 transition-all font-medium"
+                                            placeholder="Announcement title..."
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                                         />
                                         <textarea
                                             value={newAnnouncement.message}
                                             onChange={e => setNewAnnouncement({ ...newAnnouncement, message: e.target.value })}
                                             placeholder="Detailed messaging..."
-                                            rows={3}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[13px] focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-300 transition-all resize-none font-medium"
+                                            rows={2}
+                                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all resize-none"
                                         />
-                                        <div className="grid grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-2 gap-2">
                                             <select
                                                 value={newAnnouncement.type}
                                                 onChange={e => setNewAnnouncement({ ...newAnnouncement, type: e.target.value })}
-                                                className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[13px] appearance-none focus:outline-none focus:ring-2 focus:ring-slate-900/5 transition-all font-bold text-slate-600"
+                                                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
                                             >
                                                 <option value="info">ℹ Standard</option>
                                                 <option value="warning">⚠ Caution</option>
@@ -1353,7 +1170,7 @@ export default function AdminDashboardPage() {
                                             <select
                                                 value={newAnnouncement.target}
                                                 onChange={e => setNewAnnouncement({ ...newAnnouncement, target: e.target.value })}
-                                                className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-[13px] appearance-none focus:outline-none focus:ring-2 focus:ring-slate-900/5 transition-all font-bold text-slate-600"
+                                                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all"
                                             >
                                                 <option value="all">Every Portal</option>
                                                 <option value="staff">Internal (Staff)</option>
@@ -1364,18 +1181,18 @@ export default function AdminDashboardPage() {
                                         <button
                                             onClick={addAnnouncement}
                                             disabled={annLoading}
-                                            className="w-full bg-slate-900 text-white py-3 rounded-lg font-bold text-[13px] hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+                                            className="w-full bg-slate-900 text-white py-2.5 rounded text-xs font-semibold hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
                                         >
-                                            <span className="material-symbols-outlined text-[18px]">campaign</span>
+                                            <span className="material-symbols-outlined text-[14px]">send</span>
                                             Publish Broadcast
                                         </button>
                                     </div>
 
-                                    <div className="space-y-3 max-h-80 overflow-y-auto no-scrollbar">
+                                    <div className="space-y-2 flex-1 overflow-y-auto min-h-[160px] custom-scrollbar">
                                         {announcements.length === 0 ? (
-                                            <div className="text-center py-12 text-slate-300 border-2 border-dashed border-slate-100 rounded-xl">
-                                                <span className="material-symbols-outlined text-4xl block mb-2 opacity-50">notifications_none</span>
-                                                <p className="text-[11px] font-bold uppercase tracking-widest">Awaiting status updates</p>
+                                            <div className="text-center py-8 text-slate-400 border border-dashed border-slate-200 rounded bg-slate-50">
+                                                <span className="material-symbols-outlined text-2xl block mb-1 opacity-50">notifications_none</span>
+                                                <p className="text-[10px] font-medium uppercase tracking-wider">No active broadcasts</p>
                                             </div>
                                         ) : announcements.map(ann => (
                                             <AnnouncementItem key={ann.id} ann={ann} onDelete={deleteAnnouncement} />
@@ -1388,86 +1205,73 @@ export default function AdminDashboardPage() {
 
                     {/* ─── FULL AUDIT LOGS ──────────────────────────────────────── */}
                     {activeSection === "audit_logs" && (
-                        <div className="space-y-8 animate-fade-in">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+                        <div className="space-y-6 animate-fade-in max-w-6xl mx-auto">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                                 <div>
-                                    <h2 className="text-[24px] font-bold text-slate-900 tracking-tight">Ecosystem Audit Trail</h2>
-                                    <p className="text-slate-500 text-[14px] mt-1">{allAuditLogs.length} events logged · Page {auditPage} of {Math.max(1, Math.ceil(filteredAuditLogs.length / 20))}</p>
+                                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight">Ecosystem Audit Trail</h2>
+                                    <p className="text-slate-500 text-xs mt-1">{allAuditLogs.length} events logged · Page {auditPage} of {Math.max(1, Math.ceil(filteredAuditLogs.length / 20))}</p>
                                 </div>
-                                <div className="flex gap-2 flex-wrap text-[13px]">
+                                <div className="flex gap-2 flex-wrap text-sm">
                                     {['all', 'create', 'update', 'delete'].map(f => (
                                         <button
                                             key={f}
                                             onClick={() => { setAuditFilter(f); setAuditPage(1); }}
-                                            className={`px-4 py-1.5 rounded-lg font-bold transition-all border ${auditFilter === f ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'}`}
+                                            className={`px-3 py-1.5 rounded transition-colors text-xs font-medium border ${auditFilter === f ? 'bg-slate-900 text-white border-slate-900' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
                                         >
                                             {f.charAt(0).toUpperCase() + f.slice(1)}
                                         </button>
                                     ))}
-                                    <button onClick={loadData} className="ml-2 w-9 h-9 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all bg-white border border-slate-200 rounded-lg">
-                                        <span className="material-symbols-outlined text-[20px]">refresh</span>
+                                    <button onClick={loadData} className="ml-1 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors bg-white border border-slate-200 rounded shadow-sm">
+                                        <span className="material-symbols-outlined text-[16px]">refresh</span>
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="bg-white rounded-2xl border border-slate-200/60 shadow-sm overflow-hidden">
-                                <div className="overflow-x-auto text-[13px]">
-                                    <table className="w-full text-left">
-                                        <thead>
-                                            <tr className="bg-slate-50/80 border-b border-slate-100">
-                                                <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-widest text-[10px]">Timestamp</th>
-                                                <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-widest text-[10px]">Operation</th>
-                                                <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-widest text-[10px]">Context</th>
-                                                <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-widest text-[10px]">Entity Reference</th>
-                                                <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-widest text-[10px]">Initiator</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-50">
+                            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left border-collapse">
+                                        <TableHeader>
+                                            <th className="px-4 py-3">Timestamp</th>
+                                            <th className="px-4 py-3">Operation</th>
+                                            <th className="px-4 py-3">Context</th>
+                                            <th className="px-4 py-3">Entity Ref</th>
+                                            <th className="px-4 py-3">Initiator</th>
+                                        </TableHeader>
+                                        <tbody className="divide-y divide-slate-100">
                                             {loading ? (
                                                 <tr>
-                                                    <td colSpan={5} className="px-6 py-24 text-center">
-                                                        <div className="w-8 h-8 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin mx-auto" />
-                                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-4">Syncing Audit Trail...</p>
+                                                    <td colSpan={5} className="px-4 py-12 text-center text-slate-400">
+                                                        <div className="w-6 h-6 border-2 border-slate-200 border-t-slate-900 rounded-full animate-spin mx-auto mb-2" />
+                                                        <span className="text-[11px] font-medium">Loading...</span>
                                                     </td>
                                                 </tr>
                                             ) : pagedAuditLogs.length > 0 ? pagedAuditLogs.map((log: any, i: number) => (
-                                                <tr key={i} className="group hover:bg-slate-50 transition-all">
-                                                    <td className="px-6 py-5 text-[13px] font-medium text-slate-500 whitespace-nowrap tabular-nums">
+                                                <tr key={i} className="hover:bg-slate-50 transition-colors text-xs">
+                                                    <td className="px-4 py-3 text-slate-500 tabular-nums">
                                                         {format(new Date(log.createdAt), 'MMM d, yyyy · HH:mm')}
                                                     </td>
-                                                    <td className="px-6 py-5">
-                                                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest ${log.action === 'create' ? 'bg-emerald-50 text-emerald-700' :
-                                                                log.action === 'delete' ? 'bg-rose-50 text-rose-700' :
-                                                                    'bg-slate-100 text-slate-700'
-                                                            }`}>
+                                                    <td className="px-4 py-3">
+                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-medium capitalize ${log.action === 'create' ? 'bg-emerald-50 text-emerald-700' : log.action === 'delete' ? 'bg-rose-50 text-rose-700' : 'bg-slate-100 text-slate-700'}`}>
                                                             {log.action}
                                                         </span>
                                                     </td>
-                                                    <td className="px-6 py-5">
-                                                        <span className="text-slate-900 font-bold uppercase tracking-tight text-[11px] bg-slate-50 border border-slate-100 px-2 py-0.5 rounded">
+                                                    <td className="px-4 py-3">
+                                                        <span className="text-slate-700 font-medium capitalize text-[11px] bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded">
                                                             {log.entityType}
                                                         </span>
                                                     </td>
-                                                    <td className="px-6 py-5">
-                                                        <code className="text-[11px] font-mono text-slate-400 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
+                                                    <td className="px-4 py-3">
+                                                        <code className="text-[10px] font-mono text-slate-500 bg-slate-50 px-1.5 py-0.5 rounded border border-slate-100">
                                                             {log.entityId?.substring(0, 12)}
                                                         </code>
                                                     </td>
-                                                    <td className="px-6 py-5">
-                                                        <div className="flex items-center gap-2.5">
-                                                            <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-black text-slate-600 shadow-sm">
-                                                                {(log.initiator?.firstName || 'S')[0]}
-                                                            </div>
-                                                            <span className="text-[13px] font-bold text-slate-900">{log.initiator?.firstName || 'System'}</span>
-                                                        </div>
+                                                    <td className="px-4 py-3">
+                                                        <span className="text-xs font-medium text-slate-900">{log.initiator?.firstName || 'System'}</span>
                                                     </td>
                                                 </tr>
                                             )) : (
                                                 <tr>
-                                                    <td colSpan={5} className="px-6 py-24 text-center text-slate-300">
-                                                        <span className="material-symbols-outlined text-4xl block mb-2 opacity-20">inventory_2</span>
-                                                        <p className="text-[11px] font-bold uppercase tracking-widest">No matching security events</p>
-                                                    </td>
+                                                    <td colSpan={5} className="px-4 py-12 text-center text-slate-400 text-xs">No matching events</td>
                                                 </tr>
                                             )}
                                         </tbody>
@@ -1475,22 +1279,22 @@ export default function AdminDashboardPage() {
                                 </div>
 
                                 {filteredAuditLogs.length > 20 && (
-                                    <div className="px-8 py-5 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between">
-                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">
-                                            Sequence {(auditPage - 1) * 20 + 1}—{Math.min(auditPage * 20, filteredAuditLogs.length)} of {filteredAuditLogs.length}
+                                    <div className="px-4 py-3 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+                                        <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">
+                                            {Math.min((auditPage - 1) * 20 + 1, filteredAuditLogs.length)}—{Math.min(auditPage * 20, filteredAuditLogs.length)} of {filteredAuditLogs.length}
                                         </p>
                                         <div className="flex gap-2">
                                             <button
                                                 onClick={() => setAuditPage(p => Math.max(1, p - 1))}
                                                 disabled={auditPage === 1}
-                                                className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-[12px] font-bold disabled:opacity-30 hover:bg-slate-50 transition-all shadow-sm"
+                                                className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded text-[11px] font-medium disabled:opacity-50 hover:bg-slate-50 transition-colors shadow-sm"
                                             >
                                                 Previous
                                             </button>
                                             <button
                                                 onClick={() => setAuditPage(p => Math.min(Math.ceil(filteredAuditLogs.length / 20), p + 1))}
                                                 disabled={auditPage >= Math.ceil(filteredAuditLogs.length / 20)}
-                                                className="px-4 py-2 bg-slate-900 text-white rounded-lg text-[12px] font-bold disabled:opacity-30 hover:bg-slate-800 transition-all shadow-sm"
+                                                className="px-3 py-1.5 bg-slate-900 text-white rounded text-[11px] font-medium disabled:opacity-50 hover:bg-slate-800 transition-colors shadow-sm"
                                             >
                                                 Next
                                             </button>
@@ -1506,43 +1310,48 @@ export default function AdminDashboardPage() {
 
                     {/* ─── COMMUNICATIONS ──────────────────────────────────────── */}
                     {activeSection === "communications" && (
-                        <div className="space-y-8 animate-fade-in">
-                            <div>
-                                <h2 className="text-[24px] font-bold text-slate-900 tracking-tight">Communication Hub</h2>
-                                <p className="text-slate-500 text-[14px]">Direct and bulk outreach management</p>
+                        <div className="space-y-6 animate-fade-in max-w-[1400px] mx-auto">
+                            <div className="flex items-center justify-between gap-4">
+                                <div>
+                                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight">Communication Dispatch</h2>
+                                    <p className="text-slate-500 text-[11px] mt-1 font-medium flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[14px]">send</span>
+                                        System-wide broadcast and direct relay node
+                                    </p>
+                                </div>
                             </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                <div className="bg-white p-8 rounded-2xl border border-slate-200/60 shadow-sm">
-                                    <h3 className="text-[18px] font-bold text-slate-900 mb-6 flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-slate-400">send</span>
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+                                    <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[16px] text-slate-400">send</span>
                                         Compose Broadcast
                                     </h3>
                                     <div className="space-y-4">
-                                        <div className="flex gap-2 p-1 bg-slate-100 rounded-xl w-fit mb-6">
+                                        <div className="flex gap-1 p-1 bg-slate-100 rounded w-fit mb-2">
                                             <button
                                                 onClick={() => setEmailData({ ...emailData, isBulk: false })}
-                                                className={`px-4 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all ${!emailData.isBulk ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                                className={`px-3 py-1.5 rounded text-[11px] font-medium transition-colors ${!emailData.isBulk ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                                             >
-                                                Direct
+                                                Direct Message
                                             </button>
                                             <button
                                                 onClick={() => setEmailData({ ...emailData, isBulk: true })}
-                                                className={`px-4 py-2 rounded-lg text-[11px] font-bold uppercase tracking-widest transition-all ${emailData.isBulk ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                                className={`px-3 py-1.5 rounded text-[11px] font-medium transition-colors ${emailData.isBulk ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                                             >
-                                                Bulk
+                                                Bulk Email
                                             </button>
                                         </div>
 
                                         {!emailData.isBulk ? (
                                             <div>
-                                                <label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2 block">Recipient</label>
-                                                <input type="email" value={emailData.to} onChange={e => setEmailData({ ...emailData, to: e.target.value })} placeholder="Enter email address..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-[13px] font-medium focus:outline-none focus:ring-2 focus:ring-slate-900/5 focus:border-slate-300 transition-all" />
+                                                <label className="text-[11px] font-medium text-slate-600 mb-1.5 block">Recipient Address</label>
+                                                <input type="email" value={emailData.to} onChange={e => setEmailData({ ...emailData, to: e.target.value })} placeholder="Enter email address..." className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors" />
                                             </div>
                                         ) : (
                                             <div>
-                                                <label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2 block">Target Audience</label>
-                                                <select value={emailData.role} onChange={e => setEmailData({ ...emailData, role: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-[13px] font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-900/5 transition-all appearance-none">
+                                                <label className="text-[11px] font-medium text-slate-600 mb-1.5 block">Target Audience</label>
+                                                <select value={emailData.role} onChange={e => setEmailData({ ...emailData, role: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors">
                                                     <option value="user">Students (Verified)</option>
                                                     <option value="staff">Internal Team</option>
                                                     <option value="agent">Processing Agents</option>
@@ -1551,63 +1360,63 @@ export default function AdminDashboardPage() {
                                             </div>
                                         )}
 
-                                        <div className="mb-6 p-4 rounded-xl border border-indigo-100 bg-indigo-50/50 flex flex-col gap-3">
-                                            <label className="text-[11px] font-black uppercase tracking-widest text-[#6605c7]">Corporate Master Templates</label>
+                                        <div className="p-3 rounded border border-indigo-100 bg-indigo-50/50 flex flex-col gap-1.5 mb-2">
+                                            <label className="text-[10px] font-semibold text-indigo-700 uppercase tracking-wider">Master Templates</label>
                                             <select 
                                                 value={selectedTemplate}
                                                 onChange={(e) => handleApplyTemplate(e.target.value)}
-                                                className="w-full px-4 py-3 bg-white border border-indigo-100/60 rounded-xl text-[13px] text-slate-700 font-bold focus:outline-none focus:ring-4 focus:ring-indigo-100/30 transition-all appearance-none cursor-pointer"
+                                                className="w-full px-3 py-2 bg-white border border-indigo-200 rounded text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-400 transition-colors cursor-pointer"
                                             >
-                                                <option value="empty">-- SELECT TEMPLATE --</option>
-                                                <option value="status_update">Formal: Status Progression Sync</option>
-                                                <option value="action_required">Action Required: Document Verification</option>
-                                                <option value="welcome_board">Welcome: Node Integration Successful</option>
+                                                <option value="empty">-- Blank Message --</option>
+                                                <option value="status_update">Status Progression Update</option>
+                                                <option value="action_required">Action Required: Verify Documents</option>
+                                                <option value="welcome_board">Welcome to VidhyaLoan</option>
                                             </select>
                                         </div>
 
                                         <div>
-                                            <label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2 block">Subject Line</label>
-                                            <input type="text" value={emailData.subject} onChange={e => setEmailData({ ...emailData, subject: e.target.value })} placeholder="Re: Formal Application Sync..." className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-bold focus:outline-none focus:ring-2 focus:ring-[#6605c7]/10 focus:border-[#6605c7]/30 transition-all text-slate-900" />
+                                            <label className="text-[11px] font-medium text-slate-600 mb-1.5 block">Subject Line</label>
+                                            <input type="text" value={emailData.subject} onChange={e => setEmailData({ ...emailData, subject: e.target.value })} placeholder="Subject..." className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors text-slate-900" />
                                         </div>
                                         <div>
-                                            <label className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-2 block">Message Narrative</label>
-                                            <textarea value={emailData.content} onChange={e => setEmailData({ ...emailData, content: e.target.value })} placeholder="Type your formal communication protocol here..." rows={6} className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-medium focus:outline-none focus:ring-2 focus:ring-[#6605c7]/10 focus:border-[#6605c7]/30 transition-all resize-none leading-relaxed text-slate-700" />
+                                            <label className="text-[11px] font-medium text-slate-600 mb-1.5 block">Message Body</label>
+                                            <textarea value={emailData.content} onChange={e => setEmailData({ ...emailData, content: e.target.value })} placeholder="Type message..." rows={5} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors resize-none text-slate-700" />
                                         </div>
                                         <button
                                             onClick={handleSendEmail}
                                             disabled={emailLoading}
-                                            className="w-full bg-slate-900 text-white py-4 rounded-lg font-bold uppercase tracking-widest text-[12px] flex items-center justify-center gap-2 mt-4 hover:bg-slate-800 transition-all shadow-md active:scale-[0.98]"
+                                            className="w-full bg-slate-900 text-white py-2.5 rounded text-xs font-semibold flex items-center justify-center gap-2 mt-2 hover:bg-slate-800 transition-colors shadow-sm"
                                         >
-                                            {emailLoading ? <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : (<><span className="material-symbols-outlined text-[18px]">send</span> Transmit Message</>)}
+                                            {emailLoading ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : (<><span className="material-symbols-outlined text-[14px]">send</span> Transmit Message</>)}
                                         </button>
                                     </div>
                                 </div>
 
-                                <div className="bg-white p-8 rounded-2xl border border-slate-200/60 shadow-sm">
-                                    <h3 className="text-[18px] font-bold text-slate-900 mb-6 flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-slate-400">query_stats</span>
+                                <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+                                    <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[16px] text-slate-400">query_stats</span>
                                         Node Distribution
                                     </h3>
-                                    <div className="space-y-4">
+                                    <div className="space-y-3">
                                         {[
-                                            { label: 'Verified Students', count: stats.userCount || 0, icon: 'person', color: 'text-slate-600' },
-                                            { label: 'Banking Partners', count: stats.bankCount || 0, icon: 'account_balance', color: 'text-slate-600' },
-                                            { label: 'Channel Agents', count: stats.agentCount || 0, icon: 'support_agent', color: 'text-slate-600' },
-                                            { label: 'Internal Staff', count: stats.staffCount || 0, icon: 'badge', color: 'text-slate-600' }
+                                            { label: 'Students', count: stats.userCount || 0, icon: 'person', color: 'text-slate-500' },
+                                            { label: 'Banks', count: stats.bankCount || 0, icon: 'account_balance', color: 'text-slate-500' },
+                                            { label: 'Agents', count: stats.agentCount || 0, icon: 'support_agent', color: 'text-slate-500' },
+                                            { label: 'Staff', count: stats.staffCount || 0, icon: 'badge', color: 'text-slate-500' }
                                         ].map((group, i) => (
-                                            <div key={i} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-xl border border-slate-100 hover:border-slate-200 transition-all">
-                                                <div className="flex items-center gap-4">
-                                                    <div className={`w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center ${group.color} shadow-sm`}>
-                                                        <span className="material-symbols-outlined text-[20px]">{group.icon}</span>
+                                            <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded border border-slate-100 hover:border-slate-200 transition-colors">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-8 h-8 rounded bg-white border border-slate-200 flex items-center justify-center ${group.color} shadow-sm`}>
+                                                        <span className="material-symbols-outlined text-[16px]">{group.icon}</span>
                                                     </div>
-                                                    <span className="text-[11px] font-black uppercase tracking-widest text-slate-500">{group.label}</span>
+                                                    <span className="text-xs font-medium text-slate-700">{group.label}</span>
                                                 </div>
-                                                <span className="text-[18px] font-black text-slate-900 tabular-nums">{group.count}</span>
+                                                <span className="text-sm font-semibold text-slate-900 tabular-nums">{group.count}</span>
                                             </div>
                                         ))}
-                                        <div className="p-6 bg-slate-900 rounded-xl border border-slate-800 mt-8">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Network Security Protocol</p>
-                                            <p className="text-[13px] text-slate-300 font-medium leading-relaxed">All outbound communications are signed via industrial SMTP relays to ensure 99.9% inbox placement.</p>
+                                        <div className="p-4 bg-slate-900 rounded border border-slate-800 mt-6">
+                                            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Network Security</p>
+                                            <p className="text-[11px] text-slate-300">All outbound communications are signed via industrial SMTP relays to ensure high inbox placement.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -1617,11 +1426,14 @@ export default function AdminDashboardPage() {
 
                     {/* ─── COMMUNITY FORUM MANAGEMENT ────────────────────────── */}
                     {activeSection === "community" && (
-                        <div className="space-y-8 animate-fade-in">
+                        <div className="space-y-6 animate-fade-in max-w-[1400px] mx-auto">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                                 <div>
-                                    <h2 className="text-[24px] font-bold text-slate-900 tracking-tight">Community Governance</h2>
-                                    <p className="text-slate-500 text-[14px]">Mentorship oversight and resource distribution</p>
+                                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight">Community Governance</h2>
+                                    <p className="text-slate-500 text-[11px] mt-1 font-medium flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[14px]">forum</span>
+                                        Mentorship oversight and resource distribution
+                                    </p>
                                 </div>
                                 <div className="flex gap-2">
                                     <button onClick={loadCommunityData} className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all bg-white border border-slate-200 rounded-lg">
@@ -1639,17 +1451,17 @@ export default function AdminDashboardPage() {
                             </div>
 
                             {/* Mentors Management Section */}
-                            <div className="bg-white p-8 rounded-2xl border border-slate-200/60 shadow-sm space-y-6">
-                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                            <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm space-y-6">
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                                     <div>
-                                        <h3 className="text-[18px] font-bold text-slate-900 flex items-center gap-3">
-                                            <span className="material-symbols-outlined text-slate-400">workspace_premium</span>
+                                        <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-[16px] text-slate-400">workspace_premium</span>
                                             Mentorship Council
                                         </h3>
-                                        <p className="text-[13px] text-slate-500 font-semibold mt-1">{mentors.length} specialists actively broadcasting guidance</p>
+                                        <p className="text-[11px] text-slate-500 mt-1">{mentors.length} specialists actively broadcasting guidance</p>
                                     </div>
-                                    <button className="px-6 py-2.5 bg-slate-900 text-white rounded-lg font-bold text-[12px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-all shadow-sm">
-                                        <span className="material-symbols-outlined text-[18px]">person_add</span>
+                                    <button className="px-4 py-2 bg-slate-900 text-white rounded text-xs font-semibold flex items-center gap-1.5 hover:bg-slate-800 transition-colors shadow-sm">
+                                        <span className="material-symbols-outlined text-[14px]">person_add</span>
                                         Onboard Specialist
                                     </button>
                                 </div>
@@ -1657,32 +1469,32 @@ export default function AdminDashboardPage() {
                                 {mentors.length > 0 ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         {mentors.map((mentor: any, i: number) => (
-                                            <div key={i} className="p-6 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50 transition-all group relative overflow-hidden">
-                                                <div className="flex items-start justify-between mb-4">
-                                                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                                                        <div className="w-12 h-12 rounded-lg overflow-hidden border border-slate-200 bg-white flex-shrink-0 shadow-sm">
+                                            <div key={i} className="p-4 rounded border border-slate-100 hover:border-slate-200 hover:bg-slate-50 transition-colors group relative overflow-hidden">
+                                                <div className="flex items-start justify-between mb-3">
+                                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                        <div className="w-10 h-10 rounded overflow-hidden border border-slate-200 bg-white flex-shrink-0 shadow-sm">
                                                             <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${mentor.email || mentor.id}`} alt="" className="w-full h-full object-cover" />
                                                         </div>
                                                         <div className="min-w-0">
-                                                            <p className="text-[14px] font-bold text-slate-900 truncate tracking-tight">{mentor.name || `${mentor.firstName} ${mentor.lastName}`}</p>
-                                                            <p className="text-[11px] text-slate-500 font-black uppercase tracking-widest truncate">{mentor.expertise || 'General Specialist'}</p>
+                                                            <p className="text-xs font-semibold text-slate-900 truncate tracking-tight">{mentor.name || `${mentor.firstName} ${mentor.lastName}`}</p>
+                                                            <p className="text-[10px] text-slate-500 truncate">{mentor.expertise || 'General Specialist'}</p>
                                                         </div>
                                                     </div>
-                                                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[9px] font-bold uppercase tracking-widest rounded border border-emerald-100">Live</span>
+                                                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[9px] font-semibold uppercase tracking-wider rounded border border-emerald-100">Live</span>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-4 mb-6">
-                                                    <div className="p-3 bg-white border border-slate-100 rounded-lg">
-                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Mentees</p>
-                                                        <p className="text-[14px] font-black text-slate-900">{mentor.menteeCount || '15+'}</p>
+                                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                                    <div className="p-2 bg-white border border-slate-100 rounded">
+                                                        <p className="text-[9px] font-medium text-slate-500 uppercase tracking-wider mb-0.5">Mentees</p>
+                                                        <p className="text-[12px] font-semibold text-slate-900">{mentor.menteeCount || '15+'}</p>
                                                     </div>
-                                                    <div className="p-3 bg-white border border-slate-100 rounded-lg">
-                                                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-1">Rating</p>
-                                                        <p className="text-[14px] font-black text-slate-900">{mentor.rating || '4.9'}</p>
+                                                    <div className="p-2 bg-white border border-slate-100 rounded">
+                                                        <p className="text-[9px] font-medium text-slate-500 uppercase tracking-wider mb-0.5">Rating</p>
+                                                        <p className="text-[12px] font-semibold text-slate-900">{mentor.rating || '4.9'}</p>
                                                     </div>
                                                 </div>
                                                 <div className="flex gap-2">
-                                                    <button className="flex-1 px-3 py-2 rounded-lg bg-slate-50 hover:bg-slate-100 text-[10px] font-bold text-slate-600 transition-all border border-slate-200 shadow-sm uppercase tracking-widest">Profile</button>
-                                                    <button className="flex-1 px-3 py-2 rounded-lg text-rose-500 hover:bg-rose-50 text-[10px] font-bold transition-all border border-transparent uppercase tracking-widest">Revoke</button>
+                                                    <button className="flex-1 px-2 py-1.5 rounded bg-white hover:bg-slate-50 text-[10px] font-medium text-slate-600 transition-colors border border-slate-200 shadow-sm">Profile</button>
+                                                    <button className="flex-1 px-2 py-1.5 rounded text-rose-600 hover:bg-rose-50 hover:text-rose-700 text-[10px] font-medium transition-colors border border-transparent">Revoke</button>
                                                 </div>
                                             </div>
                                         ))}
@@ -1696,67 +1508,67 @@ export default function AdminDashboardPage() {
                             </div>
 
                             {/* Forum Posts Section */}
-                            <div className="bg-white p-8 rounded-2xl border border-slate-200/60 shadow-sm">
-                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8">
+                            <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                                     <div>
-                                        <h3 className="text-[18px] font-bold text-slate-900 flex items-center gap-3">
-                                            <span className="material-symbols-outlined text-slate-400">forum</span>
+                                        <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-[16px] text-slate-400">forum</span>
                                             Recent Social Broadcasts
                                         </h3>
-                                        <p className="text-[13px] text-slate-500 font-semibold mt-1">Live monitoring of community interaction layers</p>
+                                        <p className="text-[11px] text-slate-500 mt-1">Live monitoring of community interaction layers</p>
                                     </div>
-                                    <div className="flex items-center gap-3 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-100">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest tabular-nums">Sync: {lastRefresh.toLocaleTimeString()}</span>
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse outline outline-offset-2 outline-emerald-100" />
+                                    <div className="flex items-center gap-2 px-2 py-1 bg-slate-50 rounded border border-slate-100">
+                                        <span className="text-[9px] font-medium text-slate-500 uppercase tracking-wider tabular-nums">Sync: {lastRefresh.toLocaleTimeString()}</span>
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                     </div>
                                 </div>
 
                                 {filteredData.length > 0 ? (
-                                    <div className="space-y-4 max-h-[500px] overflow-y-auto no-scrollbar">
+                                    <div className="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
                                         {filteredData.slice(0, 10).map((post: any, i: number) => (
-                                            <div key={i} className="p-6 rounded-xl border border-slate-100 hover:bg-slate-50/50 hover:border-slate-200 transition-all group">
-                                                <div className="flex items-start justify-between gap-6 mb-4">
+                                            <div key={i} className="p-4 rounded border border-slate-100 hover:bg-slate-50 hover:border-slate-200 transition-colors group">
+                                                <div className="flex items-start justify-between gap-4 mb-3">
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-[14px] font-bold text-slate-900 line-clamp-2 group-hover:text-slate-800 transition-colors tracking-tight leading-snug">{post.title}</p>
-                                                        <p className="text-[11px] text-slate-500 font-medium mt-1.5 flex items-center gap-2">
-                                                            <span className="w-4 h-4 rounded-full bg-slate-100 flex items-center justify-center text-[8px] font-black text-slate-400">
+                                                        <p className="text-xs font-semibold text-slate-900 line-clamp-2 leading-snug">{post.title}</p>
+                                                        <p className="text-[10px] text-slate-500 mt-1 flex items-center gap-1.5">
+                                                            <span className="w-4 h-4 rounded bg-slate-100 flex items-center justify-center text-[9px] font-semibold text-slate-600">
                                                                 {(post.author?.firstName || post.authorName || 'U')[0]}
                                                             </span>
-                                                            Broadcast by <span className="text-slate-900 font-bold">{post.author?.firstName || post.authorName}</span>
+                                                            Broadcast by <span className="font-semibold">{post.author?.firstName || post.authorName}</span>
                                                         </p>
                                                     </div>
-                                                    <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded border flex-shrink-0 ${post.isPinned ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
+                                                    <span className={`text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border flex-shrink-0 ${post.isPinned ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-500 border-slate-100'}`}>
                                                         {post.isPinned ? 'Anchor' : 'Relay'}
                                                     </span>
                                                 </div>
-                                                <div className="flex items-center gap-6 text-[11px] font-bold text-slate-400 mb-4 tabular-nums">
-                                                    <span className="flex items-center gap-1.5 group-hover:text-rose-500 transition-colors"><span className="material-symbols-outlined text-[16px]">favorite</span> {post.likesCount || 0}</span>
-                                                    <span className="flex items-center gap-1.5 group-hover:text-indigo-500 transition-colors"><span className="material-symbols-outlined text-[16px]">chat_bubble</span> {post.comments?.length || 0}</span>
-                                                    <span className="flex items-center gap-1.5 group-hover:text-slate-900 transition-colors"><span className="material-symbols-outlined text-[16px]">visibility</span> {post.views || 0}</span>
+                                                <div className="flex items-center gap-4 text-[10px] font-medium text-slate-400 mb-3 tabular-nums">
+                                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">favorite</span> {post.likesCount || 0}</span>
+                                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">chat_bubble</span> {post.comments?.length || 0}</span>
+                                                    <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">visibility</span> {post.views || 0}</span>
                                                 </div>
                                                 <div className="flex gap-2">
-                                                    <button className="flex-1 px-4 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-[10px] font-black text-slate-600 uppercase tracking-widest transition-all shadow-sm">Pin to Top</button>
-                                                    <button className="flex-1 px-4 py-2 rounded-lg text-rose-500 hover:bg-rose-50 text-[10px] font-black uppercase tracking-widest transition-all">Moderate</button>
+                                                    <button className="px-3 py-1.5 rounded bg-white border border-slate-200 hover:bg-slate-50 text-[10px] font-medium text-slate-600 transition-colors shadow-sm">Pin to Top</button>
+                                                    <button className="px-3 py-1.5 rounded bg-white border border-rose-100 text-rose-600 hover:bg-rose-50 text-[10px] font-medium transition-colors shadow-sm">Moderate</button>
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="text-center py-20 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-100">
-                                        <span className="material-symbols-outlined text-5xl text-slate-200 block mb-3">forum</span>
-                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">No active forum discussions detected</p>
+                                    <div className="text-center py-12 bg-slate-50 border border-dashed border-slate-200 rounded">
+                                        <span className="material-symbols-outlined text-3xl text-slate-300 block mb-2">forum</span>
+                                        <p className="text-[11px] font-medium text-slate-500">No active forum discussions detected</p>
                                     </div>
                                 )}
                             </div>
 
                             {/* Community Resources Section */}
-                            <div className="bg-white p-8 rounded-2xl border border-slate-200/60 shadow-sm">
-                                <div className="mb-8">
-                                    <h3 className="text-[18px] font-bold text-slate-900 flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-slate-400">library_books</span>
+                            <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+                                <div className="mb-6">
+                                    <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-[16px] text-slate-400">library_books</span>
                                         Asset Repository
                                     </h3>
-                                    <p className="text-[13px] text-slate-500 font-semibold mt-1">Managed literature and instructional documentation</p>
+                                    <p className="text-[11px] text-slate-500 mt-1">Managed literature and instructional documentation</p>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1768,21 +1580,21 @@ export default function AdminDashboardPage() {
                                         { type: 'Protocol', title: 'Global Document Checklist 2024', downloads: 834, rating: 4.9, icon: 'fact_check' },
                                         { type: 'Seminar', title: 'Institutional Selection Strategy', downloads: 92, rating: 4.6, icon: 'podcasts' }
                                     ].map((resource, i) => (
-                                        <div key={i} className="p-5 rounded-xl border border-slate-100 hover:bg-slate-50 hover:border-slate-200 transition-all group">
-                                            <div className="flex items-start gap-4 mb-4">
-                                                <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 flex-shrink-0 group-hover:text-slate-900 transition-colors">
-                                                    <span className="material-symbols-outlined text-[20px]">{resource.icon}</span>
+                                        <div key={i} className="p-4 rounded border border-slate-100 hover:bg-slate-50 hover:border-slate-200 transition-colors group">
+                                            <div className="flex items-start gap-3 mb-3">
+                                                <div className="w-8 h-8 rounded bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500 flex-shrink-0 group-hover:text-slate-900 transition-colors">
+                                                    <span className="material-symbols-outlined text-[16px]">{resource.icon}</span>
                                                 </div>
                                                 <div className="min-w-0 flex-1">
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">{resource.type}</p>
-                                                    <p className="text-[13px] font-bold text-slate-900 group-hover:text-slate-800 transition-colors leading-snug">{resource.title}</p>
+                                                    <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider leading-none mb-1">{resource.type}</p>
+                                                    <p className="text-xs font-semibold text-slate-900 leading-snug">{resource.title}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center justify-between text-[11px] font-bold mb-5 tabular-nums">
-                                                <span className="text-slate-400 flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">download</span> {resource.downloads} Units</span>
-                                                <span className="text-amber-500 flex items-center gap-1">★ {resource.rating}</span>
+                                            <div className="flex items-center justify-between text-[10px] font-medium text-slate-500 mb-4 tabular-nums">
+                                                <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[12px]">download</span> {resource.downloads} Units</span>
+                                                <span className="text-amber-600 flex items-center gap-1">★ {resource.rating}</span>
                                             </div>
-                                            <button className="w-full px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm">Access File</button>
+                                            <button className="w-full px-3 py-1.5 rounded bg-white border border-slate-200 text-slate-700 text-[10px] font-semibold hover:bg-slate-50 transition-colors shadow-sm">Access File</button>
                                         </div>
                                     ))}
                                 </div>
@@ -1790,221 +1602,297 @@ export default function AdminDashboardPage() {
                         </div>
                     )}
 
-                    {/* ─── TABLE SECTIONS (users, blogs, applications) ── */}
-                    {["users", "blogs", "applications"].includes(activeSection) && (
-                        <div className="animate-fade-in space-y-8">
-                            <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                    {/* ─── USERS MANAGEMENT DASHBOARD ──────────────────────────────────────── */}
+                    {activeSection === "users" && (
+                        <div className="space-y-6 animate-fade-in max-w-[1400px] mx-auto">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                                 <div>
-                                    <h2 className="text-[24px] font-bold text-slate-900 tracking-tight capitalize">{activeSection} Management</h2>
-                                    <p className="text-slate-500 text-[14px]">System-wide records for {activeSection} nodes</p>
+                                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight">User Identity Domain</h2>
+                                    <p className="text-slate-500 text-[11px] mt-1 font-medium flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[14px]">groups</span>
+                                        Managing {stats.userCount || 0} authenticated platform nodes
+                                    </p>
                                 </div>
-                                <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
-                                    {activeSection === 'users' && (
-                                        <button onClick={() => setShowCreateUserModal(true)} className="bg-slate-900 text-white px-5 py-2.5 rounded-lg font-bold text-[12px] uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-all shadow-sm">
-                                            <span className="material-symbols-outlined text-[18px]">person_add</span>
-                                            Create Node
-                                        </button>
-                                    )}
-                                    <div className="relative flex-1 md:w-80">
-                                        <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
-                                        <input
-                                            type="text"
-                                            value={searchQuery}
-                                            onChange={e => setSearchQuery(e.target.value)}
-                                            placeholder="Query unique identifier or name..."
-                                            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-100 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm"
-                                        />
-                                    </div>
-                                    {activeSection === 'applications' && (
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <button
-                                                onClick={() => setIsFiltersOpen(!isFiltersOpen)}
-                                                className={`p-3 rounded-2xl transition-all shadow-sm flex items-center gap-2 text-xs font-bold uppercase tracking-wider ${isFiltersOpen ? 'bg-[#6605c7] text-white' : 'bg-white border border-gray-100 text-gray-500'}`}
-                                            >
-                                                <span className="material-symbols-outlined text-lg">filter_list</span>
-                                                Filters
-                                            </button>
-
-                                            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-4 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm">
-                                                <option value="all">ANY STATUS</option>
-                                                <option value="pending">Pending</option>
-                                                <option value="processing">Processing</option>
-                                                <option value="approved">Approved</option>
-                                                <option value="rejected">Rejected</option>
-                                                <option value="disbursed">Disbursed</option>
-                                            </select>
-
-                                            {isFiltersOpen && (
-                                                <div className="flex flex-wrap items-center gap-2 animate-fade-in">
-                                                    <select value={filterBank} onChange={e => setFilterBank(e.target.value)} className="px-4 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm">
-                                                        <option value="all">EVERY BANK</option>
-                                                        <option value="SBI">SBI</option>
-                                                        <option value="HDFC">HDFC</option>
-                                                        <option value="ICICI">ICICI</option>
-                                                        <option value="AXIS">AXIS</option>
-                                                        <option value="Canara Bank">Canara</option>
-                                                        <option value="Bank of Baroda">BoB</option>
-                                                        <option value="IDFC First">IDFC</option>
-                                                    </select>
-
-                                                    {/* <select value={filterLoanType} onChange={e => setFilterLoanType(e.target.value)} className="px-4 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm">
-                                                        <option value="all">LOAN TYPE</option>
-                                                        <option value="Education Loan">Edu</option>
-                                                        <option value="Personal Loan">Personal</option>
-                                                        <option value="Gold Loan">Gold</option>
-                                                        <option value="Home Loan">Home</option>
-                                                    </select> */}
-
-                                                    <div className="flex items-center gap-2 bg-white border border-gray-100 rounded-2xl px-3 shadow-sm">
-                                                        <span className="text-[9px] font-black text-gray-400 uppercase">From</span>
-                                                        <input type="date" value={filterFromDate} onChange={e => setFilterFromDate(e.target.value)} className="py-2 text-[10px] focus:outline-none" />
-                                                        <span className="text-[9px] font-black text-gray-400 uppercase border-l pl-2">To</span>
-                                                        <input type="date" value={filterToDate} onChange={e => setFilterToDate(e.target.value)} className="py-2 text-[10px] focus:outline-none" />
-                                                    </div>
-
-                                                    <button
-                                                        onClick={() => {
-                                                            setFilterStatus("all");
-                                                            setFilterBank("all");
-                                                            setFilterLoanType("all");
-                                                            setSearchQuery("");
-                                                            setFilterFromDate("");
-                                                            setFilterToDate("");
-                                                        }}
-                                                        className="p-3 bg-white border border-red-100 text-red-400 hover:text-red-600 rounded-xl transition-all shadow-sm"
-                                                        title="Clear all"
-                                                    >
-                                                        <span className="material-symbols-outlined text-lg">close</span>
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
+                                <div className="flex gap-2">
+                                    <button onClick={() => setShowCreateUserModal(true)} className="px-3 py-1.5 bg-indigo-600 text-white rounded text-[11px] font-medium hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[16px]">person_add</span>
+                                        Add User Node
+                                    </button>
                                 </div>
                             </div>
 
-                            {/* ─── APPLICATIONS DASHBOARD ──────────────────────────────────────── */}
-                            {activeSection === "applications" && (
-                                <div className="space-y-6">
-                                    {/* Header with Title and Actions */}
-                                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                                        <div>
-                                            <h2 className="text-[28px] font-bold text-slate-900 tracking-tight">Applications</h2>
-                                            <p className="text-slate-500 text-[13px] font-medium mt-1">Manage and review loan applications across all channels</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                                <StatCard label="Total Nodes" value={stats.userCount || 0} icon="group" color="text-slate-900" loading={loading} />
+                                <StatCard label="Students" value={stats.studentCount || 0} icon="school" color="text-indigo-600" loading={loading} />
+                                <StatCard label="Operations" value={stats.staffCount || 0} icon="badge" color="text-blue-600" loading={loading} />
+                                <StatCard label="Bank Nodes" value={stats.bankCount || 0} icon="account_balance" color="text-emerald-600" loading={loading} />
+                                <StatCard label="Agents" value={stats.agentCount || 0} icon="support_agent" color="text-amber-600" loading={loading} />
+                            </div>
+                            
+                            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+                                <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-slate-900">Entity Registry</h3>
+                                        <p className="text-[11px] text-slate-500 mt-1">{filteredData.length} records active in current buffer</p>
+                                    </div>
+                                    <div className="flex flex-wrap gap-3 items-center">
+                                        <div className="relative">
+                                            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[14px]">search</span>
+                                            <input
+                                                type="text"
+                                                value={searchQuery}
+                                                onChange={e => setSearchQuery(e.target.value)}
+                                                placeholder="Query identity..."
+                                                className="pl-8 pr-4 py-1.5 bg-white border border-slate-200 rounded text-[11px] focus:outline-none focus:ring-1 focus:ring-indigo-500 w-48 transition-all"
+                                            />
                                         </div>
-                                        <div className="flex gap-2 flex-wrap">
-                                            <button className="px-4 py-2.5 bg-slate-100 text-slate-700 rounded-lg font-bold text-[12px] hover:bg-slate-200 transition-all flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-[16px]">download</span>Export
+                                        <div className="flex bg-white rounded border border-slate-200 overflow-hidden shadow-sm">
+                                            {['all', 'user', 'staff', 'bank', 'agent', 'admin'].map(r => (
+                                                <button
+                                                    key={r}
+                                                    onClick={() => setRoleFilter(r)}
+                                                    className={`px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wider transition-colors border-r last:border-r-0 border-slate-100 ${roleFilter === r ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
+                                                >
+                                                    {r}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {selectedUsers.length > 0 && (
+                                            <button
+                                                onClick={() => {
+                                                    if (confirm(`Send email to ${selectedUsers.length} selected users?`)) {
+                                                        setActiveSection('communications');
+                                                        setEmailData({ ...emailData, isBulk: false });
+                                                    }
+                                                    setSelectedUsers([]);
+                                                }}
+                                                className="px-3 py-1.5 bg-indigo-600 text-white rounded text-[10px] font-semibold uppercase tracking-wider"
+                                            >
+                                                Email {selectedUsers.length}
                                             </button>
-                                            <button className="px-4 py-2.5 bg-[#6605c7] text-white rounded-lg font-bold text-[12px] hover:bg-[#5a04b0] transition-all flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-[16px]">add</span>New Application
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-50 border-b border-slate-200 text-[9px] font-semibold uppercase tracking-wider text-slate-500">
+                                            <tr>
+                                                <th className="px-5 py-3 w-10">
+                                                    <input type="checkbox" onChange={e => setSelectedUsers(e.target.checked ? filteredData.map((u: any) => u.id) : [])} className="rounded border-slate-300" />
+                                                </th>
+                                                <th className="px-5 py-3">User Identity</th>
+                                                <th className="px-5 py-3">Access Tier</th>
+                                                <th className="px-5 py-3">Registration</th>
+                                                <th className="px-5 py-3 text-right">Commands</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                            {loading ? (
+                                                <tr><td colSpan={5} className="px-6 py-16 text-center">
+                                                    <div className="w-8 h-8 border-2 border-slate-200 border-t-indigo-600 rounded-full animate-spin mx-auto" />
+                                                </td></tr>
+                                            ) : (filteredData.length > 0 ? (
+                                                filteredData.map((item: any, idx: number) => (
+                                                    <tr key={idx} className={`group hover:bg-slate-50/50 transition-all ${selectedUsers.includes(item.id) ? 'bg-indigo-50/30' : ''}`}>
+                                                        <td className="px-5 py-3">
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={selectedUsers.includes(item.id)}
+                                                                onChange={() => toggleUserSelect(item.id)}
+                                                                className="rounded border-slate-300"
+                                                            />
+                                                        </td>
+                                                        <td className="px-5 py-3">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-slate-200">
+                                                                    <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${item.email}`} alt="" className="w-full h-full object-cover" />
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-[12px] font-semibold text-slate-900">{item.firstName} {item.lastName}</p>
+                                                                    <p className="text-[10px] text-slate-500 font-medium">{item.email}</p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-5 py-3">
+                                                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest border ${
+                                                                item.role === 'admin' ? 'bg-slate-900 text-white border-slate-900' :
+                                                                item.role === 'staff' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                                                item.role === 'bank' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                                                item.role === 'agent' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                                                'bg-slate-50 text-slate-600 border-slate-200'
+                                                            }`}>
+                                                                {item.role || 'user'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-3 text-[11px] font-medium text-slate-500 tabular-nums">
+                                                            {item.createdAt ? format(new Date(item.createdAt), 'MMM d, yyyy') : '—'}
+                                                        </td>
+                                                        <td className="px-5 py-3 text-right">
+                                                            <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <button
+                                                                    onClick={() => { setActiveSection('communications'); setEmailData({ ...emailData, to: item.email, isBulk: false }); }}
+                                                                    className="p-1.5 text-slate-400 hover:text-indigo-600 rounded hover:bg-indigo-50 transition-all border border-transparent hover:border-indigo-100"
+                                                                    title="Email User"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-[16px]">mail</span>
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setEditingUser({ ...item })}
+                                                                    className="p-1.5 text-slate-400 hover:text-slate-900 rounded hover:bg-slate-100 transition-all border border-transparent hover:border-slate-200"
+                                                                    title="Edit User"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-[16px]">edit</span>
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan={5} className="px-6 py-12 text-center">
+                                                        <span className="material-symbols-outlined text-2xl text-slate-300 block mb-2">database_off</span>
+                                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No matching identity nodes</p>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ─── APPLICATIONS DASHBOARD ──────────────────────────────────────── */}
+                    {activeSection === "applications" && (
+                        <div className="space-y-6 animate-fade-in max-w-[1400px] mx-auto">
+                            {/* Header with Title and Actions */}
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                                <div>
+                                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight">Application Pipeline</h2>
+                                    <p className="text-slate-500 text-[11px] mt-1 font-medium flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[14px]">receipt_long</span>
+                                        Real-time processing of loan transmission packets
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[9px] font-bold ${autoRefreshEnabled ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'}`}>
+                                            <span className={`w-1.5 h-1.5 rounded-full ${autoRefreshEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                                            {autoRefreshEnabled ? 'LIVE SYNC' : 'PAUSED'}
+                                        </span>
+                                    </p>
+                                </div>
+                                        <div className="flex gap-2 flex-wrap">
+                                            <button 
+                                                onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+                                                className={`px-3 py-1.5 rounded font-semibold text-[10px] transition-colors flex items-center gap-1.5 shadow-sm border ${autoRefreshEnabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'}`}
+                                            >
+                                                <span className="material-symbols-outlined text-[14px]">{autoRefreshEnabled ? 'sync' : 'sync_disabled'}</span>
+                                                {autoRefreshEnabled ? 'Live' : 'Paused'}
+                                            </button>
+                                            <button onClick={loadData} className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded font-semibold text-[10px] hover:bg-slate-200 transition-colors flex items-center gap-1.5 shadow-sm">
+                                                <span className="material-symbols-outlined text-[14px]">refresh</span>Now
+                                            </button>
+                                            <button className="px-3 py-1.5 bg-slate-100 text-slate-700 rounded font-semibold text-[10px] hover:bg-slate-200 transition-colors flex items-center gap-1.5 shadow-sm">
+                                                <span className="material-symbols-outlined text-[14px]">download</span>Export
+                                            </button>
+                                            <button className="px-3 py-1.5 bg-slate-900 text-white rounded font-semibold text-[10px] hover:bg-slate-800 transition-colors flex items-center gap-1.5 shadow-sm">
+                                                <span className="material-symbols-outlined text-[14px]">add</span>New Application
                                             </button>
                                         </div>
                                     </div>
 
                                     {/* Status Overview Cards */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        <div className="bg-white p-5 rounded-xl border border-gray-200 hover:border-amber-300 hover:shadow-md transition-all group">
-                                            <div className="flex items-start justify-between mb-4">
-                                                <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center group-hover:bg-amber-200 transition-all">
-                                                    <span className="material-symbols-outlined text-amber-600">pending_actions</span>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                        <div className="bg-white p-4 rounded border border-slate-200 hover:border-amber-300 transition-colors group shadow-sm">
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="w-8 h-8 bg-amber-50 rounded flex items-center justify-center group-hover:bg-amber-100 transition-colors">
+                                                    <span className="material-symbols-outlined text-[16px] text-amber-600">pending_actions</span>
                                                 </div>
-                                                <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full">Pending</span>
+                                                <span className="text-[9px] font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-100">Pending</span>
                                             </div>
-                                            <p className="text-[26px] font-bold text-slate-900">{data.filter((a: any) => a.status === 'pending').length}</p>
-                                            <p className="text-[12px] text-slate-600 font-medium mt-2">Awaiting review</p>
+                                            <p className="text-xl font-bold text-slate-900">{data.filter((a: any) => a.status === 'pending').length}</p>
+                                            <p className="text-[10px] text-slate-500 mt-1">Awaiting review</p>
                                         </div>
 
-                                        <div className="bg-white p-5 rounded-xl border border-gray-200 hover:border-blue-300 hover:shadow-md transition-all group">
-                                            <div className="flex items-start justify-between mb-4">
-                                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-all">
-                                                    <span className="material-symbols-outlined text-blue-600">hourglass_bottom</span>
+                                        <div className="bg-white p-4 rounded border border-slate-200 hover:border-blue-300 transition-colors group shadow-sm">
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="w-8 h-8 bg-blue-50 rounded flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                                                    <span className="material-symbols-outlined text-[16px] text-blue-600">hourglass_bottom</span>
                                                 </div>
-                                                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">Processing</span>
+                                                <span className="text-[9px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">Processing</span>
                                             </div>
-                                            <p className="text-[26px] font-bold text-slate-900">{data.filter((a: any) => a.status === 'processing').length}</p>
-                                            <p className="text-[12px] text-slate-600 font-medium mt-2">Under review</p>
+                                            <p className="text-xl font-bold text-slate-900">{data.filter((a: any) => a.status === 'processing').length}</p>
+                                            <p className="text-[10px] text-slate-500 mt-1">Under review</p>
                                         </div>
 
-                                        <div className="bg-white p-5 rounded-xl border border-gray-200 hover:border-emerald-300 hover:shadow-md transition-all group">
-                                            <div className="flex items-start justify-between mb-4">
-                                                <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center group-hover:bg-emerald-200 transition-all">
-                                                    <span className="material-symbols-outlined text-emerald-600">check_circle</span>
+                                        <div className="bg-white p-4 rounded border border-slate-200 hover:border-emerald-300 transition-colors group shadow-sm">
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="w-8 h-8 bg-emerald-50 rounded flex items-center justify-center group-hover:bg-emerald-100 transition-colors">
+                                                    <span className="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>
                                                 </div>
-                                                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">Approved</span>
+                                                <span className="text-[9px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">Approved</span>
                                             </div>
-                                            <p className="text-[26px] font-bold text-slate-900">{data.filter((a: any) => a.status === 'approved').length}</p>
-                                            <p className="text-[12px] text-slate-600 font-medium mt-2">Ready to disburse</p>
+                                            <p className="text-xl font-bold text-slate-900">{data.filter((a: any) => a.status === 'approved').length}</p>
+                                            <p className="text-[10px] text-slate-500 mt-1">Ready to disburse</p>
                                         </div>
 
-                                        <div className="bg-white p-5 rounded-xl border border-gray-200 hover:border-purple-300 hover:shadow-md transition-all group">
-                                            <div className="flex items-start justify-between mb-4">
-                                                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-all">
-                                                    <span className="material-symbols-outlined text-purple-600">account_balance_wallet</span>
+                                        <div className="bg-white p-4 rounded border border-slate-200 hover:border-indigo-300 transition-colors group shadow-sm">
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="w-8 h-8 bg-indigo-50 rounded flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                                                    <span className="material-symbols-outlined text-[16px] text-indigo-600">account_balance_wallet</span>
                                                 </div>
-                                                <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2.5 py-1 rounded-full">Disbursed</span>
+                                                <span className="text-[9px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">Disbursed</span>
                                             </div>
-                                            <p className="text-[26px] font-bold text-slate-900">{data.filter((a: any) => a.status === 'disbursed').length}</p>
-                                            <p className="text-[12px] text-slate-600 font-medium mt-2">Completed</p>
+                                            <p className="text-xl font-bold text-slate-900">{data.filter((a: any) => a.status === 'disbursed').length}</p>
+                                            <p className="text-[10px] text-slate-500 mt-1">Completed</p>
                                         </div>
                                     </div>
 
                                     {/* Key Metrics */}
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
-                                                    <span className="material-symbols-outlined text-indigo-600">payments</span>
-                                                </div>
-                                                <div>
-                                                    <p className="text-[11px] text-slate-600 font-semibold uppercase tracking-wide">Total Requested</p>
-                                                    <p className="text-[20px] font-bold text-slate-900">₹{(data.reduce((sum: number, app: any) => sum + (app.amount || 0), 0) / 10000000).toFixed(1)}Cr</p>
-                                                </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <div className="bg-white p-4 rounded border border-slate-200 shadow-sm flex items-center gap-4">
+                                            <div className="w-10 h-10 bg-indigo-50 rounded flex items-center justify-center flex-shrink-0">
+                                                <span className="material-symbols-outlined text-[20px] text-indigo-600">payments</span>
                                             </div>
-                                            <p className="text-[12px] text-slate-500">Across {data.length} applications</p>
+                                            <div>
+                                                <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Total Requested</p>
+                                                <p className="text-lg font-bold text-slate-900 leading-none">₹{(data.reduce((sum: number, app: any) => sum + (app.amount || 0), 0) / 10000000).toFixed(1)}Cr</p>
+                                            </div>
                                         </div>
 
-                                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center">
-                                                    <span className="material-symbols-outlined text-emerald-600">trending_up</span>
-                                                </div>
-                                                <div>
-                                                    <p className="text-[11px] text-slate-600 font-semibold uppercase tracking-wide">Approval Rate</p>
-                                                    <p className="text-[20px] font-bold text-slate-900">{data.length ? Math.round(((data.filter((a: any) => a.status === 'approved' || a.status === 'disbursed').length) / data.length) * 100) : 0}%</p>
-                                                </div>
+                                        <div className="bg-white p-4 rounded border border-slate-200 shadow-sm flex items-center gap-4">
+                                            <div className="w-10 h-10 bg-emerald-50 rounded flex items-center justify-center flex-shrink-0">
+                                                <span className="material-symbols-outlined text-[20px] text-emerald-600">trending_up</span>
                                             </div>
-                                            <p className="text-[12px] text-slate-500">Success ratio</p>
+                                            <div>
+                                                <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Approval Rate</p>
+                                                <p className="text-lg font-bold text-slate-900 leading-none">{data.length ? Math.round(((data.filter((a: any) => a.status === 'approved' || a.status === 'disbursed').length) / data.length) * 100) : 0}%</p>
+                                            </div>
                                         </div>
 
-                                        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                                                    <span className="material-symbols-outlined text-blue-600">average</span>
-                                                </div>
-                                                <div>
-                                                    <p className="text-[11px] text-slate-600 font-semibold uppercase tracking-wide">Avg. Loan</p>
-                                                    <p className="text-[20px] font-bold text-slate-900">₹{data.length ? (data.reduce((sum: number, app: any) => sum + (app.amount || 0), 0) / data.length / 100000).toFixed(1) : 0}L</p>
-                                                </div>
+                                        <div className="bg-white p-4 rounded border border-slate-200 shadow-sm flex items-center gap-4">
+                                            <div className="w-10 h-10 bg-blue-50 rounded flex items-center justify-center flex-shrink-0">
+                                                <span className="material-symbols-outlined text-[20px] text-blue-600">average</span>
                                             </div>
-                                            <p className="text-[12px] text-slate-500">Per application</p>
+                                            <div>
+                                                <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-0.5">Avg. Loan</p>
+                                                <p className="text-lg font-bold text-slate-900 leading-none">₹{data.length ? (data.reduce((sum: number, app: any) => sum + (app.amount || 0), 0) / data.length / 100000).toFixed(1) : 0}L</p>
+                                            </div>
                                         </div>
                                     </div>
 
                                     {/* Search and Filters Bar */}
-                                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                                        <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
+                                    <div className="bg-white p-4 rounded border border-slate-200 shadow-sm">
+                                        <div className="flex flex-col md:flex-row gap-4 items-end">
                                             {/* Search */}
-                                            <div className="flex-1">
-                                                <label className="block text-[11px] font-bold text-gray-600 uppercase tracking-wide mb-2">Quick Search</label>
+                                            <div className="flex-1 w-full">
+                                                <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5">Quick Search</label>
                                                 <div className="relative">
-                                                    <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">search</span>
+                                                    <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">search</span>
                                                     <input
                                                         type="text"
                                                         value={searchQuery}
                                                         onChange={e => setSearchQuery(e.target.value)}
                                                         placeholder="Search by name, email, app ID..."
-                                                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-[12px] font-medium focus:outline-none focus:ring-2 focus:ring-[#6605c7]/10 focus:border-[#6605c7]/20 transition-all"
+                                                        className="w-full pl-8 pr-3 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:border-slate-400 transition-colors"
                                                     />
                                                 </div>
                                             </div>
@@ -2012,8 +1900,8 @@ export default function AdminDashboardPage() {
                                             {/* Filters */}
                                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 w-full md:w-auto">
                                                 <div>
-                                                    <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-wide mb-1.5">Status</label>
-                                                    <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-[11px] font-medium focus:outline-none focus:ring-2 focus:ring-[#6605c7]/10 bg-gray-50">
+                                                    <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5">Status</label>
+                                                    <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs bg-slate-50 focus:outline-none focus:border-slate-400 transition-colors">
                                                         <option value="all">All</option>
                                                         <option value="pending">Pending</option>
                                                         <option value="processing">Processing</option>
@@ -2023,8 +1911,8 @@ export default function AdminDashboardPage() {
                                                 </div>
 
                                                 <div>
-                                                    <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-wide mb-1.5">Bank</label>
-                                                    <select value={filterBank} onChange={e => setFilterBank(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-[11px] font-medium focus:outline-none focus:ring-2 focus:ring-[#6605c7]/10 bg-gray-50">
+                                                    <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5">Bank</label>
+                                                    <select value={filterBank} onChange={e => setFilterBank(e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs bg-slate-50 focus:outline-none focus:border-slate-400 transition-colors">
                                                         <option value="all">All Banks</option>
                                                         <option value="hdfc">HDFC Bank</option>
                                                         <option value="icici">ICICI Bank</option>
@@ -2033,8 +1921,8 @@ export default function AdminDashboardPage() {
                                                 </div>
 
                                                 <div>
-                                                    <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-wide mb-1.5">Loan Type</label>
-                                                    <select value={filterLoanType} onChange={e => setFilterLoanType(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-[11px] font-medium focus:outline-none focus:ring-2 focus:ring-[#6605c7]/10 bg-gray-50">
+                                                    <label className="block text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1.5">Loan Type</label>
+                                                    <select value={filterLoanType} onChange={e => setFilterLoanType(e.target.value)} className="w-full px-2 py-1.5 border border-slate-200 rounded text-xs bg-slate-50 focus:outline-none focus:border-slate-400 transition-colors">
                                                         <option value="all">All Types</option>
                                                         <option value="unsecured">Unsecured</option>
                                                         <option value="secured">Secured</option>
@@ -2042,7 +1930,7 @@ export default function AdminDashboardPage() {
                                                 </div>
 
                                                 <div>
-                                                    <label className="block text-[10px] font-bold text-gray-600 uppercase tracking-wide mb-1.5">Action</label>
+                                                    <label className="block opacity-0 text-[10px] mb-1.5">Action</label>
                                                     <button
                                                         onClick={() => {
                                                             setFilterStatus("all");
@@ -2050,7 +1938,7 @@ export default function AdminDashboardPage() {
                                                             setFilterLoanType("all");
                                                             setSearchQuery("");
                                                         }}
-                                                        className="w-full px-3 py-2 bg-gray-100 border border-gray-200 rounded-lg text-[11px] font-bold text-gray-700 hover:bg-gray-200 transition-all uppercase tracking-wide"
+                                                        className="w-full px-3 py-1.5 bg-slate-100 border border-slate-200 rounded text-[10px] font-semibold text-slate-600 hover:bg-slate-200 transition-colors uppercase tracking-wider"
                                                     >
                                                         Clear
                                                     </button>
@@ -2060,23 +1948,23 @@ export default function AdminDashboardPage() {
                                     </div>
 
                                     {/* Applications Table */}
-                                    <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm bg-white">
+                                    <div className="rounded border border-slate-200 shadow-sm bg-white overflow-hidden">
                                         <div className="overflow-x-auto">
-                                            <table className="w-full text-left text-[13px]">
-                                                <thead className="bg-slate-50 border-b border-gray-200 sticky top-0">
+                                            <table className="w-full text-left text-xs">
+                                                <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
                                                     <tr>
-                                                        <th className="px-5 py-3.5 font-bold text-slate-700 text-[10px] uppercase tracking-widest"><input type="checkbox" className="rounded" /></th>
-                                                        <th className="px-5 py-3.5 font-bold text-slate-700 text-[10px] uppercase tracking-widest">Application</th>
-                                                        <th className="px-5 py-3.5 font-bold text-slate-700 text-[10px] uppercase tracking-widest">Applicant</th>
-                                                        <th className="px-5 py-3.5 font-bold text-slate-700 text-[10px] uppercase tracking-widest">Bank & Source</th>
-                                                        <th className="px-5 py-3.5 font-bold text-slate-700 text-[10px] uppercase tracking-widest">Amount</th>
-                                                        <th className="px-5 py-3.5 font-bold text-slate-700 text-[10px] uppercase tracking-widest">Status</th>
-                                                        <th className="px-5 py-3.5 font-bold text-slate-700 text-[10px] uppercase tracking-widest">Priority</th>
-                                                        <th className="px-5 py-3.5 font-bold text-slate-700 text-[10px] uppercase tracking-widest">Applied</th>
-                                                        <th className="px-5 py-3.5 font-bold text-slate-700 text-[10px] uppercase tracking-widest">Actions</th>
+                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider"><input type="checkbox" className="rounded" /></th>
+                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider">Application</th>
+                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider">Applicant</th>
+                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider">Bank</th>
+                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider">Amount</th>
+                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider">Status</th>
+                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider">Priority</th>
+                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider">Applied</th>
+                                                        <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider">Actions</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody className="divide-y divide-gray-100">
+                                                <tbody className="divide-y divide-slate-100">
                                                     {loading ? (
                                                         <tr><td colSpan={9} className="px-6 py-12 text-center">
                                                             <div className="flex flex-col items-center">
@@ -2090,65 +1978,68 @@ export default function AdminDashboardPage() {
                                                         const priorityLevel = item.priority || 'normal';
                                                         
                                                         return (
-                                                        <tr key={idx} className={`hover:bg-slate-50/60 transition-all group ${hasMultipleApps ? 'bg-purple-50/20' : ''}`}>
-                                                            <td className="px-5 py-3.5"><input type="checkbox" className="rounded" /></td>
+                                                        <tr key={idx} className={`hover:bg-slate-50/50 transition-colors group ${hasMultipleApps ? 'bg-indigo-50/30' : ''}`}>
+                                                            <td className="px-4 py-2.5"><input type="checkbox" className="rounded" /></td>
                                                             
                                                             {/* App ID */}
-                                                            <td className="px-5 py-3.5">
-                                                                <div className="flex flex-col gap-1">
-                                                                    <code className="text-[10px] font-bold text-[#6605c7] font-mono">{item.applicationNumber || item.id?.substring(0, 8)}</code>
-                                                                    {item.referenceId && <span className="text-[9px] text-slate-500">Ref: {item.referenceId}</span>}
+                                                            <td className="px-4 py-2.5">
+                                                                <div className="flex flex-col">
+                                                                    <code className="text-[10px] font-semibold text-slate-800 font-mono">{item.applicationNumber || item.id?.substring(0, 8)}</code>
+                                                                    {item.referenceId && <span className="text-[9px] text-slate-500 truncate max-w-[100px]" title={item.referenceId}>Ref: {item.referenceId}</span>}
                                                                 </div>
                                                             </td>
                                                             
-                                                            {/* Applicant */}
-                                                            <td className="px-5 py-3.5">
-                                                                <div className="flex flex-col gap-0.5">
-                                                                    <p className="font-bold text-slate-900 text-[11px]">{item.firstName} {item.lastName}</p>
-                                                                    <p className="text-[9px] text-slate-500">{item.email}</p>
-                                                                </div>
+{/* Applicant - Clickable for User Profile */}
+                                            <td className="px-4 py-2.5 max-w-[140px]">
+                                                <button
+                                                    onClick={() => handleViewUserProfile(item)}
+                                                    className="flex flex-col cursor-pointer hover:bg-indigo-50 hover:text-indigo-600 p-2 rounded -m-2 transition-all group w-full text-left"
+                                                    title="Click to view user credentials and all applications"
+                                                >
+                                                    <p className="font-semibold text-slate-900 text-xs truncate group-hover:text-indigo-700 transition-colors flex items-center gap-1" title={`${item.firstName} ${item.lastName}`}>
+                                                        {item.firstName} {item.lastName}
+                                                        <span className="material-symbols-outlined text-[10px] inline-block opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">open_in_new</span>
+                                                    </p>
+                                                    <p className="text-[10px] text-slate-500 truncate group-hover:text-indigo-500 transition-colors" title={item.email}>{item.email}</p>
+                                                </button>
                                                             </td>
                                                             
                                                             {/* Bank & Source */}
-                                                            <td className="px-5 py-3.5">
-                                                                <div className="flex flex-col gap-1.5 text-[10px]">
-                                                                    <div className="font-bold text-slate-900">{item.bank || 'N/A'}</div>
-                                                                    <div className="flex items-center gap-1 text-slate-600">
-                                                                        <span className="material-symbols-outlined text-[12px]">person</span>
-                                                                        <span>{item.staffName || item.processingStaff || 'Unassigned'}</span>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-1 text-slate-600">
-                                                                        <span className="material-symbols-outlined text-[12px]">location_on</span>
-                                                                        <span>{item.region || item.state || 'N/A'}</span>
+                                                            <td className="px-4 py-2.5">
+                                                                <div className="flex flex-col text-[10px]">
+                                                                    <div className="font-semibold text-slate-900">{item.bank || 'N/A'}</div>
+                                                                    <div className="flex items-center gap-1 text-slate-500 whitespace-nowrap">
+                                                                        <span className="material-symbols-outlined text-[10px]">person</span>
+                                                                        <span className="truncate max-w-[80px]" title={item.staffName || item.processingStaff || 'Unassigned'}>{item.staffName || item.processingStaff || 'Unassigned'}</span>
                                                                     </div>
                                                                 </div>
                                                             </td>
                                                             
                                                             {/* Amount */}
-                                                            <td className="px-5 py-3.5">
-                                                                <p className="font-bold text-slate-900 text-[11px]">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(item.amount || 0)}</p>
+                                                            <td className="px-4 py-2.5 whitespace-nowrap">
+                                                                <p className="font-semibold text-slate-900 text-xs">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(item.amount || 0)}</p>
                                                             </td>
                                                             
                                                             {/* Status */}
-                                                            <td className="px-5 py-3.5">
-                                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wide border ${
+                                                            <td className="px-4 py-2.5">
+                                                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider border ${
                                                                     item.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                                                                     item.status === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-200' :
                                                                     item.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                                                                    item.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
-                                                                    item.status === 'disbursed' ? 'bg-purple-50 text-purple-700 border-purple-200' :
-                                                                    'bg-gray-50 text-gray-700 border-gray-200'
+                                                                    item.status === 'rejected' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                                                                    item.status === 'disbursed' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
+                                                                    'bg-slate-50 text-slate-700 border-slate-200'
                                                                 }`}>
                                                                     {item.status}
                                                                 </span>
                                                             </td>
                                                             
                                                             {/* Priority */}
-                                                            <td className="px-5 py-3.5">
-                                                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wide border ${
-                                                                    priorityLevel === 'high' ? 'bg-red-50 text-red-700 border-red-200' :
+                                                            <td className="px-4 py-2.5">
+                                                                <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider border ${
+                                                                    priorityLevel === 'high' ? 'bg-rose-50 text-rose-700 border-rose-200' :
                                                                     priorityLevel === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                                                    'bg-gray-50 text-gray-700 border-gray-200'
+                                                                    'bg-slate-50 text-slate-600 border-slate-200'
                                                                 }`}>
                                                                     <span className="material-symbols-outlined text-[10px]">
                                                                         {priorityLevel === 'high' ? 'arrow_upward' : priorityLevel === 'medium' ? 'remove' : 'arrow_downward'}
@@ -2158,23 +2049,23 @@ export default function AdminDashboardPage() {
                                                             </td>
                                                             
                                                             {/* Applied Date */}
-                                                            <td className="px-5 py-3.5 text-[10px] text-slate-600 font-medium">
+                                                            <td className="px-4 py-2.5 text-[10px] text-slate-500 whitespace-nowrap">
                                                                 {item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-IN') : '—'}
                                                             </td>
                                                             
                                                             {/* Actions */}
-                                                            <td className="px-5 py-3.5">
-                                                                <div className="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <td className="px-4 py-2.5">
+                                                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                     <button
                                                                         onClick={() => { setSelectedApp(item); setActionRemarks(""); }}
-                                                                        className="p-2 bg-[#6605c7] text-white rounded-lg hover:bg-[#5a04b0] transition-all text-[12px] font-bold"
+                                                                        className="p-1.5 bg-slate-900 text-white rounded hover:bg-slate-800 transition-colors"
                                                                         title="View Details"
                                                                     >
-                                                                        <span className="material-symbols-outlined text-[16px]">visibility</span>
+                                                                        <span className="material-symbols-outlined text-[14px]">visibility</span>
                                                                     </button>
                                                                     {item.status === 'pending' && (
-                                                                        <button className="p-2 bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-all" title="Approve">
-                                                                            <span className="material-symbols-outlined text-[16px]">check</span>
+                                                                        <button className="p-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded hover:bg-emerald-100 transition-colors" title="Approve">
+                                                                            <span className="material-symbols-outlined text-[14px]">check</span>
                                                                         </button>
                                                                     )}
                                                                 </div>
@@ -2195,39 +2086,40 @@ export default function AdminDashboardPage() {
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    )}
 
                     {/* ─── BLOGS DASHBOARD ──────────────────────────────────────── */}
                     {activeSection === "blogs" && (
-                        <div className="space-y-6">
-                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                        <div className="space-y-6 animate-fade-in max-w-[1400px] mx-auto">
+                            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
                                 <div>
-                                    <h2 className="text-[28px] font-bold text-slate-900 tracking-tight">Editorial Content</h2>
-                                    <p className="text-slate-500 text-[13px] font-medium mt-1">Manage platform publications and editorial timeline</p>
+                                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight">Editorial Domain</h2>
+                                    <p className="text-slate-500 text-[11px] mt-1 font-medium flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[14px]">history_edu</span>
+                                        Manage platform publications and editorial timeline
+                                    </p>
                                 </div>
                                 <div className="flex gap-2 flex-wrap">
-                                    <div className="flex bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-                                        <button onClick={() => setFilterBlogTime('all')} className={`px-4 py-2 text-[11px] font-black uppercase tracking-widest transition-all ${filterBlogTime === 'all' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>All Time</button>
-                                        <button onClick={() => setFilterBlogTime('weekly')} className={`px-4 py-2 border-l border-gray-200 text-[11px] font-black uppercase tracking-widest transition-all ${filterBlogTime === 'weekly' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>Weekly</button>
-                                        <button onClick={() => setFilterBlogTime('monthly')} className={`px-4 py-2 border-l border-gray-200 text-[11px] font-black uppercase tracking-widest transition-all ${filterBlogTime === 'monthly' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>Monthly</button>
-                                        <button onClick={() => setFilterBlogTime('yearly')} className={`px-4 py-2 border-l border-gray-200 text-[11px] font-black uppercase tracking-widest transition-all ${filterBlogTime === 'yearly' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'}`}>Yearly</button>
+                                    <div className="flex bg-white rounded border border-slate-200 overflow-hidden shadow-sm">
+                                        <button onClick={() => setFilterBlogTime('all')} className={`px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wider transition-colors ${filterBlogTime === 'all' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>All Time</button>
+                                        <button onClick={() => setFilterBlogTime('weekly')} className={`px-3 py-1.5 border-l border-slate-200 text-[9px] font-semibold uppercase tracking-wider transition-colors ${filterBlogTime === 'weekly' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>Weekly</button>
+                                        <button onClick={() => setFilterBlogTime('monthly')} className={`px-3 py-1.5 border-l border-slate-200 text-[9px] font-semibold uppercase tracking-wider transition-colors ${filterBlogTime === 'monthly' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>Monthly</button>
+                                        <button onClick={() => setFilterBlogTime('yearly')} className={`px-3 py-1.5 border-l border-slate-200 text-[9px] font-semibold uppercase tracking-wider transition-colors ${filterBlogTime === 'yearly' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>Yearly</button>
                                     </div>
-                                    <button className="px-4 py-2.5 bg-[#6605c7] text-white rounded-lg font-bold text-[12px] hover:bg-[#5a04b0] transition-all flex items-center gap-2 shadow-sm">
-                                        <span className="material-symbols-outlined text-[16px]">add</span>New Post
+                                    <button className="px-3 py-1.5 bg-slate-900 text-white rounded font-semibold text-[10px] hover:bg-slate-800 transition-colors flex items-center gap-1.5 shadow-sm">
+                                        <span className="material-symbols-outlined text-[14px]">add</span>New Post
                                     </button>
                                 </div>
                             </div>
 
-                            <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm bg-white">
+                            <div className="rounded border border-slate-200 shadow-sm bg-white overflow-hidden">
                                 <div className="overflow-x-auto">
-                                    <table className="w-full text-left text-[13px]">
-                                        <thead className="bg-slate-50 border-b border-gray-200 sticky top-0">
+                                    <table className="w-full text-left text-xs">
+                                        <thead className="bg-slate-50 border-b border-slate-200 sticky top-0">
                                             <tr>
-                                                <th className="px-5 py-3.5 font-bold text-slate-700 text-[10px] uppercase tracking-widest">Post Metadata</th>
-                                                <th className="px-5 py-3.5 font-bold text-slate-700 text-[10px] uppercase tracking-widest w-32">Status</th>
-                                                <th className="px-5 py-3.5 font-bold text-slate-700 text-[10px] uppercase tracking-widest w-40">Created</th>
-                                                <th className="px-5 py-3.5 font-bold text-slate-700 text-[10px] uppercase tracking-widest w-32 text-right">Engagement</th>
+                                                <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider">Post Metadata</th>
+                                                <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider w-32">Status</th>
+                                                <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider w-40">Created</th>
+                                                <th className="px-4 py-2 font-semibold text-slate-600 text-[9px] uppercase tracking-wider w-32 text-right">Engagement</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
@@ -2239,20 +2131,20 @@ export default function AdminDashboardPage() {
                                                     </div>
                                                 </td></tr>
                                             ) : filteredData.length > 0 ? filteredData.map((item: any, idx: number) => (
-                                                <tr key={idx} className="hover:bg-slate-50/60 transition-all group">
-                                                    <td className="px-5 py-4">
-                                                        <p className="text-[14px] font-bold text-slate-900 tracking-tight leading-tight mb-1">{item.title}</p>
-                                                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Writer: {item.authorName}</p>
+                                                <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
+                                                    <td className="px-4 py-2.5">
+                                                        <p className="text-xs font-semibold text-slate-900 leading-tight mb-0.5">{item.title}</p>
+                                                        <p className="text-[10px] text-slate-500">Writer: {item.authorName}</p>
                                                     </td>
-                                                    <td className="px-5 py-4">
-                                                        <span className={`px-3 py-1 rounded text-[10px] font-black uppercase tracking-[0.1em] border ${item.isPublished ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}>
+                                                    <td className="px-4 py-2.5">
+                                                        <span className={`px-2 py-0.5 rounded text-[9px] font-semibold uppercase tracking-wider border ${item.isPublished ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
                                                             {item.isPublished ? 'Live' : 'Draft'}
                                                         </span>
                                                     </td>
-                                                    <td className="px-5 py-4 text-[11px] text-slate-500 font-medium">
+                                                    <td className="px-4 py-2.5 text-[10px] text-slate-500">
                                                         {item.createdAt ? new Date(item.createdAt).toLocaleDateString('en-IN') : '—'}
                                                     </td>
-                                                    <td className="px-5 py-4 text-right font-black text-slate-900 tabular-nums">
+                                                    <td className="px-4 py-2.5 text-right font-semibold text-slate-900 text-xs tabular-nums">
                                                         {item.views || 0} UITS
                                                     </td>
                                                 </tr>
@@ -2790,6 +2682,168 @@ export default function AdminDashboardPage() {
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ─── User Profile & Credentials Modal ─────────────────────────────────────────── */}
+            {selectedUserProfile && (
+                <div className="fixed inset-0 z-[110] flex justify-end">
+                    <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] animate-fade-in" onClick={() => { setSelectedUserProfile(null); setUserCredentials(null); setUserLoans([]); }} />
+                    <div className="relative w-full max-w-2xl bg-white shadow-2xl flex flex-col animate-slide-in-right border-l border-slate-200 overflow-hidden">
+                        <div className="sticky top-0 z-20 bg-white border-b border-slate-100 px-8 py-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg">
+                                            <span className="material-symbols-outlined text-[24px]">person</span>
+                                        </div>
+                                        <div>
+                                            <h2 className="text-[20px] font-bold text-slate-900 tracking-tight">{selectedUserProfile.firstName} {selectedUserProfile.lastName}</h2>
+                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-0.5">{selectedUserProfile.email}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button onClick={() => { setSelectedUserProfile(null); setUserCredentials(null); setUserLoans([]); }} className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-all border border-transparent hover:border-slate-100">
+                                    <span className="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+                            <div className="flex gap-8 overflow-x-auto pb-2">
+                                <div className="whitespace-nowrap pb-3 text-[11px] font-black uppercase tracking-widest border-b-2 border-purple-600 text-purple-600 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-[14px]">badge</span>
+                                    Credentials
+                                </div>
+                                <div className="whitespace-nowrap pb-3 text-[11px] font-black uppercase tracking-widest border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-2 cursor-default">
+                                    <span className="material-symbols-outlined text-[14px]">description</span>
+                                    Applications ({userLoans.length})
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                            {userProfileLoading ? (
+                                <div className="flex flex-col items-center justify-center py-20">
+                                    <div className="w-12 h-12 border-3 border-slate-200 border-t-indigo-600 rounded-full animate-spin mb-4" />
+                                    <p className="text-[12px] font-bold text-slate-500">Loading user profile...</p>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* User Credentials Section */}
+                                    <div className="space-y-6">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <span className="material-symbols-outlined text-indigo-600 text-[20px]">security</span>
+                                            <h3 className="text-[13px] font-bold text-slate-900 uppercase tracking-wide">Personal Information</h3>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4 bg-indigo-50 p-6 rounded-lg border border-indigo-100">
+                                            <DetailRow label="Full Name" value={`${userCredentials?.firstName || selectedUserProfile.firstName} ${userCredentials?.lastName || selectedUserProfile.lastName}`} highlight />
+                                            <DetailRow label="Email" value={userCredentials?.email || selectedUserProfile.email} />
+                                            <DetailRow label="Phone" value={userCredentials?.mobile || userCredentials?.phoneNumber || '—'} />
+                                            <DetailRow label="Role" value={userCredentials?.role?.toUpperCase() || '—'} />
+                                            <DetailRow label="Date of Birth" value={userCredentials?.dob ? format(new Date(userCredentials.dob), 'dd MMM yyyy') : '—'} />
+                                            <DetailRow label="Gender" value={userCredentials?.gender || '—'} />
+                                            {userCredentials?.createdAt && (
+                                                <DetailRow label="Member Since" value={format(new Date(userCredentials.createdAt), 'dd MMM yyyy')} />
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Applied Loans Section */}
+                                    <div className="space-y-6 pt-6 border-t border-slate-200">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <span className="material-symbols-outlined text-emerald-600 text-[20px]">account_balance</span>
+                                            <h3 className="text-[13px] font-bold text-slate-900 uppercase tracking-wide">Loan Applications ({userLoans.length})</h3>
+                                        </div>
+                                        
+                                        {userLoans.length > 0 ? (
+                                            <div className="space-y-3">
+                                                {userLoans.map((loan: any, idx: number) => (
+                                                    <div key={idx} className="p-4 border border-slate-100 rounded-lg hover:border-slate-200 hover:bg-slate-50/50 transition-all group">
+                                                        <div className="flex items-start justify-between mb-3">
+                                                            <div className="flex-1">
+                                                                <p className="text-[12px] font-bold text-slate-900">
+                                                                    {loan.bank} - {loan.loanType?.toUpperCase()}
+                                                                </p>
+                                                                <p className="text-[10px] text-slate-500 mt-1">
+                                                                    App ID: <code className="bg-slate-100 px-1.5 py-0.5 rounded text-[9px] font-mono">{loan.applicationNumber || loan.id?.substring(0, 8)}</code>
+                                                                </p>
+                                                            </div>
+                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
+                                                                loan.status === 'pending' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                                                loan.status === 'processing' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                                                                loan.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                                                                loan.status === 'disbursed' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
+                                                                loan.status === 'rejected' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                                                                'bg-slate-50 text-slate-600 border-slate-100'
+                                                            }`}>
+                                                                {loan.status}
+                                                            </span>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div className="text-[10px]">
+                                                                <span className="text-slate-500 font-medium">Amount</span>
+                                                                <p className="text-[12px] font-bold text-slate-900 mt-0.5">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(loan.amount || 0)}</p>
+                                                            </div>
+                                                            <div className="text-[10px]">
+                                                                <span className="text-slate-500 font-medium">Applied On</span>
+                                                                <p className="text-[12px] font-bold text-slate-900 mt-0.5">{loan.createdAt ? new Date(loan.createdAt).toLocaleDateString('en-IN') : '—'}</p>
+                                                            </div>
+                                                        </div>
+                                                        {loan.universityName && (
+                                                            <p className="text-[10px] text-slate-500 mt-3">
+                                                                <span className="font-medium">University:</span> {loan.universityName} {loan.country && `(${loan.country})`}
+                                                            </p>
+                                                        )}
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedApp(loan);
+                                                                setSelectedUserProfile(null);
+                                                            }}
+                                                            className="mt-3 w-full px-3 py-2 bg-slate-900 text-white rounded text-[10px] font-bold uppercase tracking-wider hover:bg-slate-800 transition-colors flex items-center justify-center gap-1.5"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[12px]">open_in_full</span>
+                                                            View Full Details
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-12 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                                                <span className="material-symbols-outlined text-3xl text-slate-300 block mb-2">folder_off</span>
+                                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">No loan applications</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Summary Statistics */}
+                                    <div className="space-y-6 pt-6 border-t border-slate-200">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <span className="material-symbols-outlined text-blue-600 text-[20px]">analytics</span>
+                                            <h3 className="text-[13px] font-bold text-slate-900 uppercase tracking-wide">Application Summary</h3>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 text-center">
+                                                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Total Loans</p>
+                                                <p className="text-[18px] font-black text-blue-700 mt-1">{userLoans.length}</p>
+                                            </div>
+                                            <div className="p-3 bg-emerald-50 rounded-lg border border-emerald-100 text-center">
+                                                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Approved</p>
+                                                <p className="text-[18px] font-black text-emerald-700 mt-1">{userLoans.filter((l: any) => l.status === 'approved' || l.status === 'disbursed').length}</p>
+                                            </div>
+                                            <div className="p-3 bg-amber-50 rounded-lg border border-amber-100 text-center">
+                                                <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Pending</p>
+                                                <p className="text-[18px] font-black text-amber-700 mt-1">{userLoans.filter((l: any) => l.status === 'pending' || l.status === 'processing').length}</p>
+                                            </div>
+                                        </div>
+                                        {userLoans.length > 0 && (
+                                            <div className="p-4 bg-slate-900 text-white rounded-lg">
+                                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-300 mb-1">Total Loan Value Requested</p>
+                                                <p className="text-[24px] font-black text-white">{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(userLoans.reduce((sum: number, l: any) => sum + (l.amount || 0), 0))}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
