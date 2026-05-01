@@ -543,6 +543,19 @@ export default function AdminDashboardPage() {
         } finally { setUpdateLoading(false); }
     };
 
+    const handleDeleteUser = async (userId: string, userName: string) => {
+        const confirmDelete = window.confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`);
+        if (!confirmDelete) return;
+
+        try {
+            await adminApi.deleteUser(userId);
+            alert("User deleted successfully.");
+            loadData();
+        } catch (e: any) {
+            alert("Failed to delete user: " + e.message);
+        }
+    };
+
     const handleSendEmail = async () => {
         if (!emailData.subject || !emailData.content) { alert("Subject and content are required"); return; }
         setEmailLoading(true);
@@ -1038,7 +1051,8 @@ export default function AdminDashboardPage() {
                                                 <p className="text-[10px] font-medium text-indigo-600 uppercase mb-0.5">Active Apps</p>
                                                 <p className="text-lg font-semibold text-indigo-700">{analyticsData.appStats?.total || 0}</p>
                                             </div>
-                                                        <p className="text-[10px] font-medium text-emerald-600 uppercase mb-0.5">Successful</p>
+                                            <div className="p-3 bg-emerald-50 rounded border border-emerald-100">
+                                                <p className="text-[10px] font-medium text-emerald-600 uppercase mb-0.5">Successful</p>
                                                 <p className="text-lg font-semibold text-emerald-700">{(analyticsData.appStats?.disbursed || 0)}</p>
                                             </div>
                                             <div className="p-3 bg-amber-50 rounded border border-amber-100">
@@ -1205,11 +1219,14 @@ export default function AdminDashboardPage() {
 
                     {/* ─── FULL AUDIT LOGS ──────────────────────────────────────── */}
                     {activeSection === "audit_logs" && (
-                        <div className="space-y-6 animate-fade-in max-w-6xl mx-auto">
+                        <div className="space-y-6 animate-fade-in max-w-[1400px] mx-auto">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
                                 <div>
-                                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight">Ecosystem Audit Trail</h2>
-                                    <p className="text-slate-500 text-xs mt-1">{allAuditLogs.length} events logged · Page {auditPage} of {Math.max(1, Math.ceil(filteredAuditLogs.length / 20))}</p>
+                                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight">System Audit Catalog</h2>
+                                    <p className="text-slate-500 text-[11px] mt-1 font-medium flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[14px]">history</span>
+                                        Complete ledger of authenticated node operations
+                                    </p>
                                 </div>
                                 <div className="flex gap-2 flex-wrap text-sm">
                                     {['all', 'create', 'update', 'delete'].map(f => (
@@ -1704,15 +1721,18 @@ export default function AdminDashboardPage() {
                                                             />
                                                         </td>
                                                         <td className="px-5 py-3">
-                                                            <div className="flex items-center gap-3">
+                                                            <button 
+                                                                onClick={() => window.open(`/admin/user-details/${item.id}`, '_blank')}
+                                                                className="flex items-center gap-3 cursor-pointer hover:bg-indigo-50 p-2 rounded -m-2 transition-all group w-full text-left"
+                                                            >
                                                                 <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 border border-slate-200">
                                                                     <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${item.email}`} alt="" className="w-full h-full object-cover" />
                                                                 </div>
                                                                 <div>
-                                                                    <p className="text-[12px] font-semibold text-slate-900">{item.firstName} {item.lastName}</p>
+                                                                    <p className="text-[12px] font-semibold text-slate-900 group-hover:text-indigo-600 underline transition-colors">{item.firstName} {item.lastName}</p>
                                                                     <p className="text-[10px] text-slate-500 font-medium">{item.email}</p>
                                                                 </div>
-                                                            </div>
+                                                            </button>
                                                         </td>
                                                         <td className="px-5 py-3">
                                                             <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest border ${
@@ -1743,6 +1763,13 @@ export default function AdminDashboardPage() {
                                                                     title="Edit User"
                                                                 >
                                                                     <span className="material-symbols-outlined text-[16px]">edit</span>
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteUser(item.id, `${item.firstName} ${item.lastName}`)}
+                                                                    className="p-1.5 text-slate-400 hover:text-rose-600 rounded hover:bg-rose-50 transition-all border border-transparent hover:border-rose-100"
+                                                                    title="Delete User"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-[16px]">delete</span>
                                                                 </button>
                                                             </div>
                                                         </td>
@@ -2057,17 +2084,12 @@ export default function AdminDashboardPage() {
                                                             <td className="px-4 py-2.5">
                                                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                     <button
-                                                                        onClick={() => { setSelectedApp(item); setActionRemarks(""); }}
+                                                                        onClick={() => { setSelectedApp(item); }}
                                                                         className="p-1.5 bg-slate-900 text-white rounded hover:bg-slate-800 transition-colors"
                                                                         title="View Details"
                                                                     >
                                                                         <span className="material-symbols-outlined text-[14px]">visibility</span>
                                                                     </button>
-                                                                    {item.status === 'pending' && (
-                                                                        <button className="p-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded hover:bg-emerald-100 transition-colors" title="Approve">
-                                                                            <span className="material-symbols-outlined text-[14px]">check</span>
-                                                                        </button>
-                                                                    )}
                                                                 </div>
                                                             </td>
                                                         </tr>
@@ -2516,28 +2538,17 @@ export default function AdminDashboardPage() {
 
                         <div className="sticky bottom-0 bg-gray-50 p-6 pt-4 border-t border-gray-200">
                             <div className="flex items-center gap-2 mb-4">
-                                <span className="material-symbols-outlined text-purple-600 text-[18px]">gavel</span>
-                                <h3 className="text-[12px] font-bold text-gray-900 uppercase tracking-wide">Admin Actions</h3>
+                                <span className="material-symbols-outlined text-slate-600 text-[18px]">info</span>
+                                <h3 className="text-[12px] font-bold text-gray-900 uppercase tracking-wide">Application Information</h3>
                             </div>
-                            <textarea value={actionRemarks} onChange={e => setActionRemarks(e.target.value)} placeholder="Add remarks or reason for this action..." rows={3} className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg text-[12px] font-medium focus:outline-none focus:ring-2 focus:ring-purple-600/10 focus:border-purple-600/30 transition-all mb-4 resize-none" />
-                            <div className="grid grid-cols-2 gap-3 mb-4">
-                                <button onClick={() => handleAppStatus(selectedApp.id, 'approved')} disabled={actionLoading} className="px-4 py-2.5 bg-emerald-600 text-white text-[11px] font-bold uppercase tracking-wide rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2">
-                                    <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                                    {actionLoading ? "Approving..." : "Approve"}
-                                </button>
-                                <button onClick={() => handleAppStatus(selectedApp.id, 'rejected')} disabled={actionLoading} className="px-4 py-2.5 bg-red-600 text-white text-[11px] font-bold uppercase tracking-wide rounded-lg hover:bg-red-700 transition-all flex items-center justify-center gap-2">
-                                    <span className="material-symbols-outlined text-[16px]">cancel</span>
-                                    {actionLoading ? "Rejecting..." : "Reject"}
-                                </button>
+                            <div className="px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <p className="text-[11px] font-medium text-blue-900">
+                                    To take action on this application (Approve, Reject, Send Back, Add Remarks, or Assign Mentor), use the 
+                                    <span className="font-bold text-blue-700"> Application Management Panel</span> from the admin dashboard.
+                                </p>
                             </div>
-                            {selectedApp.status === 'approved' && (
-                                <button className="w-full px-4 py-2.5 bg-purple-600 text-white text-[11px] font-bold uppercase tracking-wide rounded-lg hover:bg-purple-700 transition-all flex items-center justify-center gap-2 mb-4">
-                                    <span className="material-symbols-outlined text-[16px]">account_balance_wallet</span>
-                                    Disburse Funds
-                                </button>
-                            )}
-                            <p className="text-[9px] text-gray-500 text-center font-bold uppercase tracking-tighter">
-                                All decisions logged for audit compliance
+                            <p className="text-[9px] text-gray-500 text-center font-bold uppercase tracking-tighter mt-4">
+                                This is a read-only preview
                             </p>
                         </div>
                     </div>

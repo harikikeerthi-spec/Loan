@@ -106,14 +106,29 @@ function authHeaders(): HeadersInit {
 }
 
 async function handleResponse<T>(res: Response): Promise<T> {
+    const contentType = res.headers.get("content-type");
+    let body: any;
+    
+    if (contentType && contentType.includes("application/json")) {
+        body = await res.json();
+    } else {
+        body = await res.text();
+    }
+    
+    console.log(`[API Response] ${res.status} ${res.url}`, { 
+        ok: res.ok, 
+        contentType, 
+        body,
+        bodyKeys: typeof body === 'object' ? Object.keys(body) : 'not-an-object'
+    });
+
     if (!res.ok) {
-        const text = await res.text().catch(() => "No body");
-        console.error(`API Error: ${res.status} ${res.url}`, text);
+        console.error(`API Error: ${res.status} ${res.url}`, body);
         let err;
         try {
-            err = JSON.parse(text);
+            err = typeof body === 'string' ? JSON.parse(body) : body;
         } catch (e) {
-            err = { message: text || res.statusText };
+            err = { message: body || res.statusText };
         }
 
         // Handle Token Expiration globally
@@ -131,11 +146,8 @@ async function handleResponse<T>(res: Response): Promise<T> {
 
         throw new Error(err.message || "API request failed");
     }
-    const contentType = res.headers.get("content-type");
-    if (contentType && contentType.includes("application/json")) {
-        return res.json();
-    }
-    return res.text() as unknown as T;
+
+    return body as T;
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────
@@ -585,6 +597,11 @@ export const adminApi = {
             headers: authHeaders(),
             body: JSON.stringify({ email, role }),
         }).then(handleResponse),
+    deleteUser: (id: string) =>
+        fetch(`${API_URL}/users/admin/${id}`, {
+            method: "DELETE",
+            headers: authHeaders(),
+        }).then(handleResponse),
 
     // Applications
     getApplications: (params?: Record<string, string>) => {
@@ -600,6 +617,11 @@ export const adminApi = {
     aiReviewApplication: (id: string) =>
         fetch(`${API_URL}/applications/admin/${id}/ai-review`, {
             method: "POST",
+            headers: authHeaders(),
+        }).then(handleResponse),
+    deleteApplication: (id: string) =>
+        fetch(`${API_URL}/applications/admin/${id}`, {
+            method: "DELETE",
             headers: authHeaders(),
         }).then(handleResponse),
 
@@ -723,5 +745,94 @@ export const chatApi = {
         fetch(`${API_URL}/chat/messages/${conversationId}`, {
             headers: authHeaders(),
         }).then(handleResponse),
-};
+};// ─── Staff Profile (Intermediary Flow) ───────────────────────────────
+export const staffProfileApi = {
+    // List all profiles (with optional search / bankStatus filter)
+    list: (params?: { search?: string; bankStatus?: string }) => {
+        const q = new URLSearchParams();
+        if (params?.search) q.set('search', params.search);
+        if (params?.bankStatus) q.set('bankStatus', params.bankStatus);
+        return fetch(`${API_URL}/staff-profiles?${q.toString()}`, {
+            headers: authHeaders(),
+        }).then(handleResponse);
+    },
 
+    // Create a staff profile linked to a website user
+    create: (data: { linked_user_id: string; target_bank?: string; loan_type?: string; internal_notes?: string }) =>
+        fetch(`${API_URL}/staff-profiles`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    // Get a single profile with its documents
+    get: (profileId: string) =>
+        fetch(`${API_URL}/staff-profiles/${profileId}`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    // Pull and attach all documents uploaded by the linked user
+    fetchUserDocuments: (profileId: string) =>
+        fetch(`${API_URL}/staff-profiles/${profileId}/fetch-documents`, {
+            method: 'POST',
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    // Get documents currently attached to a profile
+    getDocuments: (profileId: string) =>
+        fetch(`${API_URL}/staff-profiles/${profileId}/documents`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    // Staff manually uploads a document and attaches it
+    uploadDocument: (profileId: string, file: File, docType: string, description?: string) => {
+        const token = (() => {
+            if (typeof window === 'undefined') return null;
+            return localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken');
+        })();
+        const form = new FormData();
+        form.append('file', file);
+        form.append('doc_type', docType);
+        if (description) form.append('description', description);
+        return fetch(`${API_URL}/staff-profiles/${profileId}/documents`, {
+            method: 'POST',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            body: form,
+        }).then(handleResponse);
+    },
+
+    // Update a document's status (also back-syncs to user's profile)
+    updateDocumentStatus: (profileId: string, docId: string, status: string, rejectionReason?: string) =>
+        fetch(`${API_URL}/staff-profiles/${profileId}/documents/${docId}/status`, {
+            method: 'PATCH',
+            headers: authHeaders(),
+            body: JSON.stringify({ status, rejection_reason: rejectionReason }),
+        }).then(handleResponse),
+
+    // Remove (detach) a document from the profile
+    removeDocument: (profileId: string, docId: string) =>
+        fetch(`${API_URL}/staff-profiles/${profileId}/documents/${docId}`, {
+            method: 'DELETE',
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    // Share a document bundle with a bank
+    shareWithBank: (profileId: string, data: {
+        doc_ids: string[];
+        bank_name: string;
+        bank_email: string;
+        expires_in_days?: number;
+        access_note?: string;
+    }) =>
+        fetch(`${API_URL}/staff-profiles/${profileId}/share`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    // Get share history for a profile
+    getShares: (profileId: string) =>
+        fetch(`${API_URL}/staff-profiles/${profileId}/shares`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+};

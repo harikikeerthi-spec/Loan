@@ -23,4 +23,8 @@ export class SupabaseService {
   getClient(): SupabaseClient {
     return this.client;
   }
+
+  from(table: string) {
+    return this.client.from(table);
+  }
 }

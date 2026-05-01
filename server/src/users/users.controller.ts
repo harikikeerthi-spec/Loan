@@ -182,7 +182,11 @@ export class UsersController {
             role: string 
         }
     ) {
+        console.log('=== ADMIN CREATE USER START ===');
+        console.log('Request body:', body);
+        
         if (!body || !body.email || !body.role) {
+            console.log('Validation failed: missing email or role');
             return { success: false, message: 'Email and role are required' };
         }
 
@@ -201,33 +205,56 @@ export class UsersController {
                 password: Math.random().toString(36).slice(-12), // Generate a dummy password
             });
 
-            // Send invitation/welcome email
-            await this.emailService.sendMail(
-                newUser.email,
-                `Welcome to VidhyaLoan - Your ${body.role} Account`,
-                `<div style="font-family: sans-serif; padding: 20px;">
-                    <h2>Welcome to the Matrix, ${body.firstName}!</h2>
-                    <p>Your account as an <strong>${body.role}</strong> has been created by the administrator.</p>
-                    <p>You can now log in using your email: <strong>${body.email}</strong></p>
-                    <p>Proceed to the dashboard to complete your profile.</p>
-                </div>`,
-                `Welcome to VidhyaLoan! Your ${body.role} account has been created.`
-            );
+            console.log('New user created:', { 
+                fullUser: JSON.stringify(newUser), 
+                hasId: !!newUser?.id,
+                id: newUser?.id,
+                keys: Object.keys(newUser || {})
+            });
 
-            return { 
+            // Send invitation/welcome email (non-blocking)
+            try {
+                await this.emailService.sendMail(
+                    newUser.email,
+                    `Welcome to VidhyaLoan - Your ${body.role} Account`,
+                    `<div style="font-family: sans-serif; padding: 20px;">
+                        <h2>Welcome to the Matrix, ${body.firstName}!</h2>
+                        <p>Your account as an <strong>${body.role}</strong> has been created by the administrator.</p>
+                        <p>You can now log in using your email: <strong>${body.email}</strong></p>
+                        <p>Proceed to the dashboard to complete your profile.</p>
+                    </div>`,
+                    `Welcome to VidhyaLoan! Your ${body.role} account has been created.`
+                );
+            } catch (emailErr) {
+                console.warn('Email sending failed (non-blocking):', emailErr?.message);
+                // Continue anyway - don't fail user creation for email issues
+            }
+
+            const responseUser = {
+                id: newUser?.id,
+                email: newUser?.email,
+                firstName: newUser?.firstName,
+                lastName: newUser?.lastName,
+                role: newUser?.role
+            };
+
+            console.log('Sending response:', { success: true, user: responseUser });
+
+            const finalResponse = { 
                 success: true, 
                 message: 'User created successfully', 
-                user: {
-                    id: newUser.id,
-                    email: newUser.email,
-                    firstName: newUser.firstName,
-                    lastName: newUser.lastName,
-                    role: newUser.role
-                } 
+                user: responseUser 
             };
+            
+            console.log('=== ADMIN CREATE USER END ===');
+            console.log('Final Response:', JSON.stringify(finalResponse, null, 2));
+            return finalResponse;
         } catch (error) {
+            console.error('=== ERROR IN ADMIN CREATE USER ===');
             console.error('Error creating user by admin:', error);
-            return { success: false, message: 'Failed to create user' };
+            const errorResponse = { success: false, message: 'Failed to create user', error: error?.message };
+            console.error('Error Response:', JSON.stringify(errorResponse, null, 2));
+            return errorResponse;
         }
     }
 

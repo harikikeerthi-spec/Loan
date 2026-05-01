@@ -20,6 +20,7 @@ import { ReferralModule } from './referral/referral.module';
 import { ConnectedModule } from './connected/connected.module';
 import { UniversityModule } from './university/university.module';
 import { ChatModule } from './chat/chat.module';
+import { StaffProfileModule } from './staff-profile/staff-profile.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
@@ -48,6 +49,7 @@ import { join } from 'path';
     ConnectedModule,
     UniversityModule,
     ChatModule,
+    StaffProfileModule,
   ],
   controllers: [AppController],
   providers: [AppService],

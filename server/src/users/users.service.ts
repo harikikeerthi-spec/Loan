@@ -88,7 +88,6 @@ export class UsersService {
   }) {
     const dobDate = this.parseDate(data.dateOfBirth);
 
-
     const { data: user, error } = await this.db
       .from('User')
       .insert({
@@ -104,7 +103,12 @@ export class UsersService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase insert error:', error);
+      throw error;
+    }
+    
+    console.log('User created in DB:', { user, keys: Object.keys(user || {}), hasId: !!user?.id });
     return user;
   }
 

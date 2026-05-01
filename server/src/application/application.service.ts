@@ -213,7 +213,7 @@ export class ApplicationService {
       .from('LoanApplication')
       .select('*, documents:ApplicationDocument(id, docType, status)', { count: 'exact' })
       .eq('userId', userId)
-      .order('date', { ascending: false });
+      .order('submittedAt', { ascending: false });
 
     if (filters?.status) query = query.eq('status', filters.status);
     if (filters?.loanType) query = query.eq('loanType', filters.loanType);
@@ -390,24 +390,65 @@ export class ApplicationService {
   }
 
   async getAllApplications(filters?: { status?: string; stage?: string; loanType?: string; bank?: string; search?: string; fromDate?: string; toDate?: string; limit?: number; offset?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }) {
-    let query = this.db
-      .from('LoanApplication')
-      .select('*, user:User!userId(id, email, firstName, lastName), documents:ApplicationDocument(id, status)', { count: 'exact' })
-      .order(filters?.sortBy || 'date', { ascending: filters?.sortOrder === 'asc' });
+    try {
+      console.log('[ApplicationService.getAllApplications] Filters:', JSON.stringify(filters));
+      
+      let query = this.db
+        .from('LoanApplication')
+        .select('*, user:User!userId(id, email, firstName, lastName), documents:ApplicationDocument(id, status)', { count: 'exact' });
 
-    if (filters?.status) query = query.eq('status', filters.status);
-    if (filters?.stage) query = query.eq('stage', filters.stage);
-    if (filters?.loanType) query = query.eq('loanType', filters.loanType);
-    if (filters?.bank) query = query.eq('bank', filters.bank);
-    if (filters?.search) {
-      query = query.or(`applicationNumber.ilike.%${filters.search}%,firstName.ilike.%${filters.search}%,lastName.ilike.%${filters.search}%,email.ilike.%${filters.search}%`);
+      // Apply sorting
+      const sortCol = filters?.sortBy || 'submittedAt';
+      const isAsc = filters?.sortOrder === 'asc';
+      query = query.order(sortCol, { ascending: isAsc });
+
+      if (filters?.status) query = query.eq('status', filters.status);
+      if (filters?.stage) query = query.eq('stage', filters.stage);
+      if (filters?.loanType) query = query.eq('loanType', filters.loanType);
+      if (filters?.bank) query = query.eq('bank', filters.bank);
+      
+      if (filters?.search) {
+        const search = filters.search;
+        query = query.or(`applicationNumber.ilike.%${search}%,firstName.ilike.%${search}%,lastName.ilike.%${search}%,email.ilike.%${search}%`);
+      }
+      
+      if (filters?.fromDate) query = query.gte('submittedAt', filters.fromDate);
+      if (filters?.toDate) query = query.lte('submittedAt', filters.toDate);
+      
+      const limit = filters?.limit || 20;
+      const offset = filters?.offset || 0;
+      query = query.range(offset, offset + limit - 1);
+
+      console.log(`[ApplicationService.getAllApplications] Executing query: sort=${sortCol}, limit=${limit}, offset=${offset}`);
+      
+      const { data: applications, count, error } = await query;
+
+      if (error) {
+        console.error('[ApplicationService.getAllApplications] Supabase Error:', error);
+        throw error;
+      }
+
+      console.log(`[ApplicationService.getAllApplications] Success. Count: ${count}, Data size: ${applications?.length}`);
+      
+      return { 
+        success: true, 
+        data: applications || [], 
+        pagination: { 
+          total: count || 0, 
+          limit, 
+          offset 
+        } 
+      };
+    } catch (error) {
+      console.error('[ApplicationService.getAllApplications] Fatal Exception:', error);
+      // Return empty instead of crashing to avoid 500
+      return { 
+        success: false, 
+        data: [], 
+        pagination: { total: 0, limit: 20, offset: 0 },
+        message: 'Internal server error during application retrieval'
+      };
     }
-    if (filters?.fromDate) query = query.gte('submittedAt', filters.fromDate);
-    if (filters?.toDate) query = query.lte('submittedAt', filters.toDate);
-    if (filters?.limit) query = query.limit(filters.limit);
-
-    const { data: applications, count } = await query;
-    return { success: true, data: applications || [], pagination: { total: count || 0, limit: filters?.limit || 20, offset: filters?.offset || 0 } };
   }
 
   async updateApplicationStatus(applicationId: string, adminId: string, adminName: string, data: { status?: string; stage?: string; progress?: number; remarks?: string; rejectionReason?: string }, role?: string) {
@@ -501,7 +542,7 @@ export class ApplicationService {
 
       let totalQuery = this.db.from('LoanApplication').select('*', { count: 'exact', head: true });
       let allAppsQuery = this.db.from('LoanApplication').select('status, loanType, amount');
-      let recentAppsQuery = this.db.from('LoanApplication').select('id, applicationNumber, loanType, amount, status, date, firstName, lastName');
+      let recentAppsQuery = this.db.from('LoanApplication').select('id, applicationNumber, loanType, amount, status, submittedAt, firstName, lastName');
       let thisMonthQuery = this.db.from('LoanApplication').select('*', { count: 'exact', head: true });
       let lastMonthQuery = this.db.from('LoanApplication').select('*', { count: 'exact', head: true });
 
@@ -523,9 +564,9 @@ export class ApplicationService {
       ] = await Promise.all([
         Promise.resolve(totalQuery).catch(e => { console.error('Total query failed:', e); return { count: 0 } as any; }),
         Promise.resolve(allAppsQuery).catch(e => { console.error('All apps query failed:', e); return { data: [] } as any; }),
-        Promise.resolve(recentAppsQuery.order('date', { ascending: false }).limit(5)).catch(e => { console.error('Recent apps query failed:', e); return { data: [] } as any; }),
-        Promise.resolve(thisMonthQuery.gte('date', thisMonthStart)).catch(e => { console.error('This month query failed:', e); return { count: 0 } as any; }),
-        Promise.resolve(lastMonthQuery.gte('date', lastMonthStart).lt('date', thisMonthStart)).catch(e => { console.error('Last month query failed:', e); return { count: 0 } as any; }),
+        Promise.resolve(recentAppsQuery.order('submittedAt', { ascending: false }).limit(5)).catch(e => { console.error('Recent apps query failed:', e); return { data: [] } as any; }),
+        Promise.resolve(thisMonthQuery.gte('submittedAt', thisMonthStart)).catch(e => { console.error('This month query failed:', e); return { count: 0 } as any; }),
+        Promise.resolve(lastMonthQuery.gte('submittedAt', lastMonthStart).lt('submittedAt', thisMonthStart)).catch(e => { console.error('Last month query failed:', e); return { count: 0 } as any; }),
       ]);
 
       console.log(`[Stats] Queries completed. Success: ${!!allAppsRes.data}, Count: ${allAppsRes.data?.length}`);
