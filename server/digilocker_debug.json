@@ -1,0 +1,74 @@
+{
+  "debugData": {
+    "https://api.digitallocker.gov.in/public/oauth2/2/files/issued": {
+      "items": [
+        {
+          "name": "PAN Verification Record",
+          "type": "file",
+          "size": "",
+          "date": "06-05-2026",
+          "parent": "",
+          "mime": [
+            "application/json",
+            "application/xml",
+            "application/pdf"
+          ],
+          "uri": "in.gov.pan-PANCR-SHMPS7567H",
+          "doctype": "PANCR",
+          "description": "PAN Verification Record",
+          "issuerid": "in.gov.pan",
+          "issuer": "Income Tax Department"
+        }
+      ]
+    },
+    "https://api.digitallocker.gov.in/public/oauth2/1/files/issued": {
+      "items": [
+        {
+          "name": "PAN Verification Record",
+          "type": "file",
+          "size": "",
+          "date": "06-05-2026",
+          "parent": "",
+          "mime": "application/pdf",
+          "uri": "in.gov.pan-PANCR-SHMPS7567H",
+          "doctype": "PANCR",
+          "description": "PAN Verification Record",
+          "issuerid": "in.gov.pan",
+          "issuer": "Income Tax Department"
+        }
+      ]
+    }
+  },
+  "allDocs": [
+    {
+      "name": "PAN Verification Record",
+      "type": "file",
+      "size": "",
+      "date": "06-05-2026",
+      "parent": "",
+      "mime": [
+        "application/json",
+        "application/xml",
+        "application/pdf"
+      ],
+      "uri": "in.gov.pan-PANCR-SHMPS7567H",
+      "doctype": "PANCR",
+      "description": "PAN Verification Record",
+      "issuerid": "in.gov.pan",
+      "issuer": "Income Tax Department"
+    },
+    {
+      "name": "PAN Verification Record",
+      "type": "file",
+      "size": "",
+      "date": "06-05-2026",
+      "parent": "",
+      "mime": "application/pdf",
+      "uri": "in.gov.pan-PANCR-SHMPS7567H",
+      "doctype": "PANCR",
+      "description": "PAN Verification Record",
+      "issuerid": "in.gov.pan",
+      "issuer": "Income Tax Department"
+    }
+  ]
+}

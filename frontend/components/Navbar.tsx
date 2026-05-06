@@ -1,0 +1,346 @@
+"use client";
+
+import Link from "next/link";
+import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRouter } from "next/navigation";
+
+export default function Navbar() {
+    const { user, isAuthenticated, logout } = useAuth();
+    const router = useRouter();
+    const [scrolled, setScrolled] = useState(false);
+    const [profileOpen, setProfileOpen] = useState(false);
+    const [mobileOpen, setMobileOpen] = useState(false);
+    const profileRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const onScroll = () => setScrolled(window.scrollY > 50);
+        window.addEventListener("scroll", onScroll);
+        return () => window.removeEventListener("scroll", onScroll);
+    }, []);
+
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+                setProfileOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, []);
+
+    const handleLogout = () => {
+        logout();
+        router.push("/login");
+    };
+
+    const displayName = user
+        ? user.firstName && user.lastName
+            ? `${user.firstName} ${user.lastName}`
+            : user.email
+        : "";
+
+    return (
+        <nav
+            id="mainNav"
+            className={`fixed top-0 w-full px-6 py-6 flex justify-center items-center z-50 transition-all duration-500 ${scrolled
+                ? "bg-white/90 backdrop-blur-xl border-b border-black/5 shadow-[0_4px_20px_rgba(0,0,0,0.05)] !py-4"
+                : "bg-transparent"
+                }`}
+        >
+            <div className="w-full max-w-7xl flex justify-between items-center">
+                {/* Logo */}
+                <div className="flex items-center gap-8 lg:gap-12">
+                    <Link href="/" className="flex items-center gap-2 group cursor-pointer relative z-10">
+                        <Image
+                            src="/images/vidhyaloans-logo-transparent.png"
+                            alt="VidhyaLoans Logo"
+                            width={40}
+                            height={40}
+                            className="w-10 h-10 object-contain drop-shadow-sm"
+                            priority
+                        />
+                        <span className="font-bold text-2xl tracking-tight font-display transition-colors duration-500 text-[#1a1626]">
+                            VidhyaLoans
+                        </span>
+                    </Link>
+
+                    {/* Desktop Nav Links */}
+                    <div className="hidden lg:flex items-center gap-1">
+                        {/* Loans Mega Menu */}
+                        <div className="group/nav relative px-3 py-4">
+                            <button className={`nav-link flex items-center gap-1 text-[13px] font-semibold uppercase tracking-wider transition-colors duration-500 text-[#190f23]/90`}>
+                                Loans
+                            </button>
+                            <div className="absolute top-full -left-4 w-[850px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
+                                <div className="bg-white/95 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-xl p-6">
+                                    <div className="grid grid-cols-3 gap-6">
+                                        {/* Column 1: Calculators */}
+                                        <div>
+                                            <h3 className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-4 pl-3">Calculators</h3>
+                                            <NavItem href="/emi" icon="calculate" title="EMI Calculator" desc="Plan your monthly repayments" />
+                                            <NavItem href="/loan-eligibility" icon="smart_toy" title="Eligibility Checker" desc="Check your approval chances" color="text-blue-500" />
+                                        </div>
+
+                                        {/* Column 2: Compare & Apply */}
+                                        <div className="flex flex-col justify-between">
+                                            <div>
+                                                <h3 className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-4 pl-3">Compare & Apply</h3>
+                                                <NavItem href="/compare-loans" icon="compare" title="Compare Loans" desc="Find the best interest rates" color="text-orange-500" />
+                                                <NavItem href="/bank-reviews" icon="rate_review" title="Bank Reviews" desc="Real feedback from students" color="text-green-500" />
+                                            </div>
+                                            <Link href="/apply-loan" className="mt-4 flex items-center justify-center w-full py-2.5 bg-gradient-to-r from-primary to-purple-600 text-white text-[9px] font-bold uppercase tracking-widest rounded-lg hover:opacity-95 transition-all">
+                                                Apply Now <span className="material-symbols-outlined text-xs ml-1">arrow_forward</span>
+                                            </Link>
+                                        </div>
+
+                                        {/* Column 3: Our Lending Partners */}
+                                        <div className="bg-gray-50/80 -mr-6 -my-6 p-6 border-l border-gray-100 rounded-r-3xl">
+                                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4 pl-3">Our Lending Partners</h3>
+                                            <div className="space-y-1">
+                                                <PartnerItem href="/bank/idfc" initials="IF" name="IDFC First Bank" rate="From 10.5% p.a." color="text-red-600" bgColor="bg-red-500/10" />
+                                                <PartnerItem href="/bank/auxilo" initials="AX" name="Auxilo Finserve" rate="From 11.25% p.a." color="text-blue-600" bgColor="bg-blue-500/10" />
+                                                <PartnerItem href="/bank/avanse" initials="AV" name="Avanse Financial" rate="From 10.99% p.a." color="text-green-600" bgColor="bg-green-500/10" />
+                                                <PartnerItem href="/bank/credila" initials="CR" name="Credila (HDFC)" rate="From 10.75% p.a." color="text-indigo-600" bgColor="bg-indigo-500/10" />
+                                                <PartnerItem href="/bank/poonawalla" initials="PF" name="Poonawalla Fincorp" rate="From 11.50% p.a." color="text-orange-600" bgColor="bg-orange-500/10" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Services Mega Menu */}
+                        <div className="group/nav relative px-3 py-4">
+                            <button className={`nav-link flex items-center gap-1 text-[13px] font-semibold uppercase tracking-wider transition-colors duration-500 text-[#190f23]/90`}>
+                                Services
+                            </button>
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 w-[850px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
+                                <div className="bg-white/95 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-xl p-8">
+                                    <div className="grid grid-cols-3 gap-8">
+                                        <div>
+                                            <h3 className="text-[9px] font-bold uppercase tracking-widest text-[#6605c7] mb-4 border-b border-primary/10 pb-2">Planning</h3>
+                                            <NavItem href="/onboarding" icon="rocket_launch" title="Get Started" desc="Personalized loan journey" />
+                                            <NavItem href="/repayment-stress" icon="monitoring" title="Stress Simulator" desc="Test repayment scenarios" />
+                                            <NavItem href="/grade-converter" icon="grade" title="Grade Converter" desc="Convert GPA to percentage" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-[9px] font-bold uppercase tracking-widest text-pink-500 mb-4 border-b border-pink-500/10 pb-2">Application</h3>
+                                            <NavItem href="/sop-writer" icon="auto_fix_high" title="AI SOP Writer" desc="Generate statements instantly" color="text-pink-500" />
+                                            <NavItem href="/sop-analyzer" icon="analytics" title="Quality Scorer" desc="Analyze your existing SOP" color="text-pink-500" />
+                                            <NavItem href="/admit-predictor" icon="insights" title="Admit Predictor" desc="Chance of acceptance" color="text-pink-500" />
+                                            <NavItem href="/visa-mock" icon="record_voice_over" title="Visa Interview Prep" desc="AI mock visa interview" color="text-pink-500" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-[9px] font-bold uppercase tracking-widest text-purple-500 mb-4 border-b border-purple-500/10 pb-2">Research</h3>
+                                            <NavItem href="/compare-universities" icon="school" title="Compare Universities" desc="Find your best fit" color="text-purple-500" />
+                                            <NavItem href="/search-universities" icon="verified" title="Insights" desc="ROI & Data intelligence" color="text-purple-600 font-black" />
+                                            <div className="px-3 opacity-50">
+                                                <div className="flex items-center gap-2 mt-4">
+                                                    <span className="material-symbols-outlined text-sm text-gray-400">paid</span>
+                                                    <span className="text-[9px] font-bold uppercase text-gray-400">Scholarships</span>
+                                                    <span className="text-[7px] bg-gray-100 text-gray-500 px-1 py-0.5 rounded">SOON</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Community */}
+                        <div className="group/nav relative px-3 py-4">
+                            <button className={`nav-link flex items-center gap-1 text-[13px] font-semibold uppercase tracking-wider transition-colors duration-500 text-[#190f23]/90`}>
+                                Community
+                            </button>
+                            <div className="absolute top-full -left-20 w-[500px] pt-4 opacity-0 invisible translate-y-2 group-hover/nav:opacity-100 group-hover/nav:visible group-hover/nav:translate-y-0 transition-all duration-300 ease-out z-50">
+                                <div className="bg-white/95 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-xl overflow-hidden">
+                                    <div className="grid grid-cols-5 h-full">
+                                        <div className="col-span-2 bg-gradient-to-br from-primary to-purple-800 p-6 flex flex-col justify-between">
+                                            <div>
+                                                <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center text-white mb-4">
+                                                    <span className="material-symbols-outlined text-xl">groups</span>
+                                                </div>
+                                                <h3 className="text-white font-display text-lg font-bold mb-2">Join the Club</h3>
+                                                <p className="text-blue-100 text-[11px] leading-relaxed">Connect with 10k+ students worldwide.</p>
+                                            </div>
+                                            <Link href="/community" className="mt-6 px-4 py-2.5 bg-white text-[#6605c7] rounded-xl text-[10px] font-bold text-center hover:bg-gray-50 uppercase tracking-wider">
+                                                Join Community
+                                            </Link>
+                                        </div>
+                                        <div className="col-span-3 p-6 flex flex-col gap-2">
+                                            <NavItem href="/community/discussions" icon="forum" title="Discussions" desc="Ask questions, get answers" color="text-yellow-500" />
+                                            <Link href="/connected" target="_blank" rel="noopener noreferrer" className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-all group/item">
+                                                <div className="w-9 h-9 rounded-lg bg-current/5 flex items-center justify-center text-orange-600 transition-all">
+                                                    <span className="material-symbols-outlined text-lg">handshake</span>
+                                                </div>
+                                                <div>
+                                                    <div className="font-semibold text-gray-900 text-[13px] group-hover/item:text-[#6605c7] transition-colors flex items-center gap-1">
+                                                        connectED <span className="material-symbols-outlined text-[10px]">open_in_new</span>
+                                                    </div>
+                                                    <div className="text-[10px] text-gray-500 leading-tight mt-0.5">Exclusive offline community</div>
+                                                </div>
+                                            </Link>
+                                            <NavItem href="/community" icon="groups" title="Community Hub" desc="Mentors, events & stories" color="text-purple-500" />
+                                            <NavItem href="/blog" icon="article" title="Blogs" desc="Latest news and guides" color="text-blue-500" />
+                                            {/* <NavItem href="/referral" icon="redeem" title="Refer & Earn" desc="Invite friends, get rewards" color="text-[#6605c7]" /> */}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <Link href="/about-us" className={`nav-link px-3 py-4 text-[13px] font-semibold uppercase tracking-wider transition-colors duration-500 text-[#190f23]/90`}>Company</Link>
+                    </div>
+                </div>
+
+                {/* Right side */}
+                <div className="flex items-center gap-4">
+                    {!isAuthenticated ? (
+                        <Link
+                            href="/login"
+                            className="px-6 py-2.5 text-[11px] font-bold bg-white text-[#6605c7] border border-black/5 uppercase tracking-wider rounded-lg hover:bg-gray-50 transition-all shadow-sm cursor-pointer"
+                        >
+                            Login
+                        </Link>
+                    ) : (
+                        <div className="relative" ref={profileRef}>
+                            <button
+                                onClick={() => setProfileOpen((p) => !p)}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border border-[#E5E7EB] bg-white/80 shadow-sm hover:shadow-md`}
+                            >
+                                <div className="w-8 h-8 rounded-full bg-[#6605c7]/10 flex items-center justify-center overflow-hidden border border-[#6605c7]/20">
+                                    <Image
+                                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName || user?.email || 'U')}&background=6605c7&color=fff&size=80`}
+                                        alt="Avatar"
+                                        width={32}
+                                        height={32}
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
+                                <span className={`text-xs font-bold px-1 hidden md:block max-w-[150px] truncate transition-colors duration-500 text-[#1a1626]`}>
+                                    {displayName}
+                                </span>
+                            </button>
+
+                            {profileOpen && (
+                                <div className="absolute top-14 right-0 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 w-64 overflow-hidden">
+                                    <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-primary/5 to-purple-500/5">
+                                        <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Logged in as</p>
+                                        <p className="text-sm font-bold text-gray-900 truncate">{user?.email}</p>
+                                    </div>
+                                    <div className="py-2">
+                                        <ProfileDropItem href="/dashboard" icon="dashboard" label="Dashboard" iconClass="text-[#6605c7]" />
+                                        <ProfileDropItem href="/referral" icon="redeem" label="Refer & Earn" iconClass="text-pink-500" />
+                                        <ProfileDropItem href="/profile" icon="person" label="My Profile" iconClass="text-[#6605c7]" />
+                                        {!(user?.firstName && user?.lastName && user?.phoneNumber && user?.dateOfBirth) && (
+                                            <ProfileDropItem href="/user-details" icon="info" label="Complete Profile" iconClass="text-yellow-500" />
+                                        )}
+                                    </div>
+                                    <div className="border-t border-gray-200 p-2">
+                                        <button
+                                            onClick={handleLogout}
+                                            className="flex items-center justify-center gap-2 w-full px-4 py-2 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors uppercase tracking-wider"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">logout</span>
+                                            Sign Out
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Apply Now Button */}
+                    <Link
+                        href="/apply-loan"
+                        className="hidden lg:flex items-center justify-center px-5 py-2.5 bg-gradient-to-r from-primary to-purple-600 text-white text-[11px] font-bold uppercase tracking-wider rounded-lg hover:opacity-95 transition-all shadow-md hover:shadow-lg"
+                    >
+                        Apply Now
+                    </Link>
+
+                    {/* Mobile hamburger */}
+                    <button
+                        className={`lg:hidden w-9 h-9 rounded-full flex items-center justify-center transition-colors bg-[#190f23]/5 text-[#190f23]`}
+                        onClick={() => setMobileOpen((o) => !o)}
+                    >
+                        <span className="material-symbols-outlined">{mobileOpen ? "close" : "menu"}</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* Mobile Menu */}
+            {mobileOpen && (
+                <div className="absolute top-full left-0 w-full bg-white/98 backdrop-blur-xl border-t border-gray-100 p-6 flex flex-col gap-4 lg:hidden shadow-xl">
+                    <MobileLink href="/" label="Home" onClick={() => setMobileOpen(false)} />
+                    <MobileLink href="/emi" label="EMI Calculator" onClick={() => setMobileOpen(false)} />
+                    <MobileLink href="/compare-loans" label="Compare Loans" onClick={() => setMobileOpen(false)} />
+                    <MobileLink href="/community" label="Community" onClick={() => setMobileOpen(false)} />
+                    <MobileLink href="/blog" label="Blog" onClick={() => setMobileOpen(false)} />
+                    <MobileLink href="/sop-writer" label="AI Tools" onClick={() => setMobileOpen(false)} />
+                    <MobileLink href="/visa-mock" label="Visa Interview Prep" onClick={() => setMobileOpen(false)} />
+                    {isAuthenticated ? (
+                        <>
+                            <MobileLink href="/dashboard" label="Dashboard" onClick={() => setMobileOpen(false)} />
+                            <button onClick={handleLogout} className="text-left text-red-500 font-bold text-sm">Sign Out</button>
+                        </>
+                    ) : (
+                        <MobileLink href="/login" label="Login" onClick={() => setMobileOpen(false)} />
+                    )}
+                </div>
+            )}
+        </nav>
+    );
+}
+
+function NavItem({ href, icon, title, desc, color = "text-[#6605c7]" }: {
+    href: string; icon: string; title: string; desc: string; color?: string;
+}) {
+    return (
+        <Link href={href} className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 transition-all group/item">
+            <div className={`w-9 h-9 rounded-lg bg-current/5 flex items-center justify-center ${color} transition-all`}>
+                <span className="material-symbols-outlined text-lg">{icon}</span>
+            </div>
+            <div>
+                <div className={`font-semibold text-gray-900 text-[13px] group-hover/item:text-[#6605c7] transition-colors`}>{title}</div>
+                <div className="text-[10px] text-gray-500 leading-tight mt-0.5">{desc}</div>
+            </div>
+        </Link>
+    );
+}
+
+function ProfileDropItem({ href, icon, label, iconClass }: {
+    href: string; icon: string; label: string; iconClass?: string;
+}) {
+    return (
+        <Link href={href} className="flex items-center gap-3 px-4 py-2.5 text-[13px] text-gray-700 hover:bg-gray-50 transition-colors">
+            <span className={`material-symbols-outlined text-lg ${iconClass}`}>{icon}</span>
+            <span className="font-medium">{label}</span>
+        </Link>
+    );
+}
+
+function MobileLink({ href, label, onClick }: { href: string; label: string; onClick: () => void }) {
+    return (
+        <Link href={href} onClick={onClick} className="text-gray-900 font-semibold text-[13px] py-2.5 border-b border-gray-50">
+            {label}
+        </Link>
+    );
+}
+
+function PartnerItem({ href, initials, name, rate, color, bgColor }: {
+    href: string; initials: string; name: string; rate: string; color: string; bgColor: string;
+}) {
+    return (
+        <Link href={href} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white transition-all group/partner">
+            <div className={`w-7 h-7 rounded bg-current/5 flex items-center justify-center flex-shrink-0 ${color} ${bgColor}`}>
+                <span className={`text-[9px] font-bold`}>{initials}</span>
+            </div>
+            <div className="flex-1">
+                <div className="text-[11px] font-semibold text-gray-900 group-hover/partner:text-[#6605c7] transition-colors">{name}</div>
+                <div className="text-[9px] text-gray-400 font-medium">{rate}</div>
+            </div>
+        </Link>
+    );
+}

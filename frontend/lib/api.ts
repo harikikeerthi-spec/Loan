@@ -1,0 +1,838 @@
+/**
+ * Centralized API client for all backend requests
+ */
+
+// Relative path: works on localhost, Cloudflare tunnels, and production alike.
+// Next.js rewrites /api/* → http://localhost:5000/* on the server side.
+const API_URL = "/api";
+
+type Portal = "student" | "staff" | "admin" | "bank";
+
+function getPortalFromPathname(pathname?: string): Portal {
+    if (!pathname) return "student";
+    if (pathname.startsWith("/admin")) return "admin";
+    if (pathname.startsWith("/staff")) return "staff";
+    if (pathname.startsWith("/bank")) return "bank";
+    return "student";
+}
+
+function getStorageKeys(portal: Portal) {
+    if (portal === "admin") {
+        return {
+            token: "adminAccessToken",
+            refreshToken: "adminRefreshToken",
+            email: "adminUserEmail",
+            userId: "adminUserId",
+            user: "adminAuthUser",
+            loginPath: "/admin/login",
+        };
+    }
+    if (portal === "staff") {
+        return {
+            token: "staffAccessToken",
+            refreshToken: "staffRefreshToken",
+            email: "staffUserEmail",
+            userId: "staffUserId",
+            user: "staffAuthUser",
+            loginPath: "/staff/login",
+        };
+    }
+    if (portal === "bank") {
+        return {
+            token: "bankAccessToken",
+            refreshToken: "bankRefreshToken",
+            email: "bankUserEmail",
+            userId: "bankUserId",
+            user: "bankAuthUser",
+            loginPath: "/login",
+        };
+    }
+    return {
+        token: "accessToken",
+        refreshToken: "refreshToken",
+        email: "userEmail",
+        userId: "userId",
+        user: "authUser",
+        loginPath: "/login",
+    };
+}
+
+function clearAllPortalAuthStorage() {
+    const portals: Portal[] = ["student", "staff", "admin", "bank"];
+    for (const portal of portals) {
+        const keys = getStorageKeys(portal);
+        localStorage.removeItem(keys.token);
+        localStorage.removeItem(keys.refreshToken);
+        localStorage.removeItem(keys.email);
+        localStorage.removeItem(keys.userId);
+        localStorage.removeItem(keys.user);
+    }
+}
+
+// ─── Agent ────────────────────────────────────────────────────────────
+export const agentApi = {
+    getStats: () =>
+        fetch(`${API_URL}/applications/agent/stats`, { headers: authHeaders() }).then(handleResponse),
+    getApplications: () =>
+        fetch(`${API_URL}/applications/agent/list`, { headers: authHeaders() }).then(handleResponse),
+};
+
+function getToken(): string | null {
+    if (typeof window === "undefined") return null;
+    const portal = getPortalFromPathname(window.location.pathname);
+    const keys = getStorageKeys(portal);
+    
+    // 1. Try portal-specific token
+    const portalToken = localStorage.getItem(keys.token);
+    if (portalToken) return portalToken;
+
+    // 2. Try Admin token (highest privilege) - useful for super_admins accessing staff/bank portals
+    const adminToken = localStorage.getItem("adminAccessToken");
+    if (adminToken) return adminToken;
+
+    // 3. Try Staff token - useful if staff navigates to other common areas
+    const staffToken = localStorage.getItem("staffAccessToken");
+    if (staffToken) return staffToken;
+
+    // 4. Fallback to generic student token
+    return localStorage.getItem("accessToken");
+}
+
+function authHeaders(): HeadersInit {
+    const token = getToken();
+    return token
+        ? { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
+        : { "Content-Type": "application/json" };
+}
+
+async function handleResponse<T>(res: Response): Promise<T> {
+    const contentType = res.headers.get("content-type");
+    let body: any;
+    
+    if (contentType && contentType.includes("application/json")) {
+        body = await res.json();
+    } else {
+        body = await res.text();
+    }
+    
+    console.log(`[API Response] ${res.status} ${res.url}`, { 
+        ok: res.ok, 
+        contentType, 
+        body,
+        bodyKeys: typeof body === 'object' ? Object.keys(body) : 'not-an-object'
+    });
+
+    if (!res.ok) {
+        console.error(`API Error: ${res.status} ${res.url}`, body);
+        let err;
+        try {
+            err = typeof body === 'string' ? JSON.parse(body) : body;
+        } catch (e) {
+            err = { message: body || res.statusText };
+        }
+
+        // Handle Token Expiration globally
+        if (res.status === 401 && err?.message === 'Token has expired') {
+            if (typeof window !== "undefined") {
+                clearAllPortalAuthStorage();
+                const portal = getPortalFromPathname(window.location.pathname);
+                const { loginPath } = getStorageKeys(portal);
+                // Avoid infinite redirect loops if already on login
+                if (!window.location.pathname.startsWith(loginPath)) {
+                    window.location.href = `${loginPath}?expired=true`;
+                }
+            }
+        }
+
+        throw new Error(err.message || "API request failed");
+    }
+
+    return body as T;
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────
+export const authApi = {
+    sendOtp: (email: string) =>
+        fetch(`${API_URL}/auth/send-otp`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+        }).then(handleResponse),
+
+    verifyOtp: (email: string, otp: string, referralCode?: string) =>
+        fetch(`${API_URL}/auth/verify-otp`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, otp, referralCode }),
+        }).then(handleResponse),
+
+    refresh: (refreshToken: string) =>
+        fetch(`${API_URL}/auth/refresh`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refresh_token: refreshToken }),
+        }).then(handleResponse),
+
+    logout: (email: string) =>
+        fetch(`${API_URL}/auth/logout`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+        }).then(handleResponse),
+
+    getDashboard: (email: string) =>
+        fetch(`${API_URL}/auth/dashboard`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ email }),
+        }).then(handleResponse),
+
+    getDashboardData: (userId: string) =>
+        fetch(`${API_URL}/auth/dashboard-data`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ userId }),
+        }).then(handleResponse),
+
+    updateDetails: (email: string, details: {
+        firstName: string;
+        lastName: string;
+        phoneNumber: string;
+        dateOfBirth: string;
+        passportNumber?: string;
+    }) =>
+        fetch(`${API_URL}/auth/update-details`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ email, ...details }),
+        }).then(handleResponse),
+
+    uploadDocument: (data: {
+        userId: string;
+        docType: string;
+        uploaded: boolean;
+        filePath?: string;
+    }) =>
+        fetch(`${API_URL}/auth/upload-document`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+};
+
+// ─── Blogs ────────────────────────────────────────────────────────────
+export const blogApi = {
+    getAll: (page = 1, limit = 10) => {
+        const offset = (page - 1) * limit;
+        return fetch(`${API_URL}/blogs?offset=${offset}&limit=${limit}`).then(handleResponse);
+    },
+
+    getBySlug: (slug: string) =>
+        fetch(`${API_URL}/blogs/${slug}`).then(handleResponse),
+
+    create: (data: Record<string, unknown>) =>
+        fetch(`${API_URL}/blogs`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    update: (id: string, data: Record<string, unknown>) =>
+        fetch(`${API_URL}/blogs/${id}`, {
+            method: "PUT",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    delete: (id: string) =>
+        fetch(`${API_URL}/blogs/${id}`, {
+            method: "DELETE",
+            headers: authHeaders(),
+        }).then(handleResponse),
+};
+
+// ─── Community / Forum ───────────────────────────────────────────────
+export const communityApi = {
+    // Basic posts (legacy/alias)
+    getPosts: (topic?: string, page = 1) =>
+        fetch(`${API_URL}/community/posts?${topic ? `topic=${topic}&` : ""}page=${page}`).then(handleResponse),
+
+    getPostBySlug: (slug: string) =>
+        fetch(`${API_URL}/community/posts/${slug}`).then(handleResponse),
+
+    createPost: (data: { title: string; content: string; category: string; force?: boolean }) =>
+        fetch(`${API_URL}/community/posts`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    // Engagement
+    addComment: (postId: string, content: string) =>
+        fetch(`${API_URL}/community/posts/${postId}/comments`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ content }),
+        }).then(handleResponse),
+
+    likePost: (postId: string) =>
+        fetch(`${API_URL}/community/posts/${postId}/like`, {
+            method: "POST",
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    // New Forum structure
+    getForumPosts: (params?: { category?: string; tag?: string; sort?: string; limit?: number; offset?: number }) => {
+        const q = new URLSearchParams();
+        if (params?.category) q.set('category', params.category);
+        if (params?.tag) q.set('tag', params.tag);
+        if (params?.sort) q.set('sort', params.sort);
+        if (params?.limit) q.set('limit', String(params.limit));
+        if (params?.offset) q.set('offset', String(params.offset));
+        return fetch(`${API_URL}/community/forum?${q.toString()}`).then(handleResponse);
+    },
+
+    getForumPost: (id: string) =>
+        fetch(`${API_URL}/community/forum/${id}`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    likeForumPost: (postId: string) =>
+        fetch(`${API_URL}/community/forum/${postId}/like`, {
+            method: "POST",
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    addForumComment: (postId: string, content: string, parentId?: string) =>
+        fetch(`${API_URL}/community/forum/${postId}/comment`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ content, parentId }),
+        }).then(handleResponse),
+
+    likeForumComment: (commentId: string) =>
+        fetch(`${API_URL}/community/forum/comments/${commentId}/like`, {
+            method: "POST",
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    // Hubs, Stats, etc.
+    getHubs: () => fetch(`${API_URL}/community/hubs`).then(handleResponse),
+
+    getStats: () => fetch(`${API_URL}/community/stats`).then(handleResponse),
+
+    checkDuplicate: (data: { title: string; content: string; category: string }) =>
+        fetch(`${API_URL}/community/forum/check-duplicate`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    checkRelevance: (title: string, content: string) =>
+        fetch(`${API_URL}/ai/check-relevance`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ title, content }),
+        }).then(handleResponse),
+
+    searchSimilarPosts: (q: string) =>
+        fetch(`${API_URL}/community/forum/search?q=${encodeURIComponent(q)}`).then(handleResponse),
+
+    // Specialized data
+    getMentors: (params?: { limit?: number; offset?: number }) => {
+        const q = new URLSearchParams();
+        if (params?.limit) q.set('limit', String(params.limit));
+        if (params?.offset) q.set('offset', String(params.offset));
+        return fetch(`${API_URL}/community/mentors?${q.toString()}`).then(handleResponse);
+    },
+
+    getEvents: (params?: { limit?: number }) => {
+        const q = new URLSearchParams();
+        if (params?.limit) q.set('limit', String(params.limit));
+        return fetch(`${API_URL}/community/events?${q.toString()}`).then(handleResponse);
+    },
+
+    getStories: (params?: { limit?: number }) => {
+        const q = new URLSearchParams();
+        if (params?.limit) q.set('limit', String(params.limit));
+        return fetch(`${API_URL}/community/stories?${q.toString()}`).then(handleResponse);
+    },
+};
+
+// ─── Explore ─────────────────────────────────────────────────────────
+export const exploreApi = {
+    getAll: (params?: Record<string, string>) => {
+        const query = params ? "?" + new URLSearchParams(params).toString() : "";
+        return fetch(`${API_URL}/explore${query}`).then(handleResponse);
+    },
+
+    getUniversities: () =>
+        fetch(`${API_URL}/explore/universities`).then(handleResponse),
+
+    getCourses: () => fetch(`${API_URL}/explore/courses`).then(handleResponse),
+
+    getScholarships: () =>
+        fetch(`${API_URL}/explore/scholarships`).then(handleResponse),
+};
+
+// ─── Applications ─────────────────────────────────────────────────────
+export const applicationApi = {
+    create: (data: Record<string, unknown>) =>
+        fetch(`${API_URL}/auth/create-application`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    delete: (id: string) =>
+        fetch(`${API_URL}/auth/application/${id}`, {
+            method: "DELETE",
+            headers: authHeaders(),
+        }).then(handleResponse),
+};
+
+// ─── AI Tools ─────────────────────────────────────────────────────────
+export const aiApi = {
+    sopReview: (data: Record<string, unknown>) =>
+        fetch(`${API_URL}/ai/sop-analysis`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    sopHumanize: (text: string) =>
+        fetch(`${API_URL}/ai/humanize-sop`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ text }),
+        }).then(handleResponse),
+
+    admitPredictor: (data: Record<string, unknown>) =>
+        fetch(`${API_URL}/ai/predict-admission`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    gradeConverter: (data: Record<string, unknown>) =>
+        fetch(`${API_URL}/ai/convert-grades`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    gradeAnalyzer: (data: Record<string, unknown>) =>
+        fetch(`${API_URL}/ai/analyze-grades`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    loanEligibility: (data: Record<string, unknown>) =>
+        fetch(`${API_URL}/ai/eligibility-check`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    compareUniversities: (uni1: string, uni2: string) =>
+        fetch(`${API_URL}/ai/compare-universities`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ uni1, uni2 }),
+        }).then(handleResponse),
+
+    compareShortlist: (shortlist: Array<{ name: string; course: string }>, profile: { bachelors?: string; workExp?: string; gpa?: string }) =>
+        fetch(`${API_URL}/ai/compare-shortlist`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ shortlist, profile }),
+        }).then(handleResponse),
+
+    searchAdvice: (query: string, type: 'university' | 'course', context?: any) =>
+        fetch(`${API_URL}/ai/search-advice`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ query, type, context }),
+        }).then(handleResponse),
+
+    suggestTags: (title: string) =>
+        fetch(`${API_URL}/ai/suggest-tags`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ title }),
+        }).then(handleResponse),
+
+    // Always use relative path; the Next.js rewrite proxy routes to the backend.
+    aiSearch: (data: Record<string, unknown>) =>
+        fetch(`${API_URL}/ai/search`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    saveVisaReport: (data: Record<string, unknown>) =>
+        fetch(`${API_URL}/ai/visa-interview/save-report`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+};
+
+// ─── Reference Data ───────────────────────────────────────────────────
+export const referenceApi = {
+    getBanks: () => fetch(`${API_URL}/reference/banks`).then(handleResponse),
+    getCountries: () =>
+        fetch(`${API_URL}/reference/countries`).then(handleResponse),
+    getUniversities: () =>
+        fetch(`${API_URL}/reference/universities`).then(handleResponse),
+};
+
+// ─── Onboarding ───────────────────────────────────────────────────────
+export const onboardingApi = {
+    submit: (data: Record<string, unknown>) =>
+        fetch(`${API_URL}/onboarding`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    getStatus: (userId: string) =>
+        fetch(`${API_URL}/onboarding/status/${userId}`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+};
+
+// ─── Referral ─────────────────────────────────────────────────────────
+export const referralApi = {
+    // Get user's referral code (or create one if doesn't exist)
+    getMyCode: () =>
+        fetch(`${API_URL}/referral/my-code`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    // Get referral statistics
+    getStats: () =>
+        fetch(`${API_URL}/referral/stats`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    // Get list of referrals
+    getList: (status?: string) => {
+        const query = status ? `?status=${status}` : '';
+        return fetch(`${API_URL}/referral/list${query}`, {
+            headers: authHeaders(),
+        }).then(handleResponse);
+    },
+
+    // Validate a referral code
+    validateCode: (code: string) =>
+        fetch(`${API_URL}/referral/validate/${code}`).then(handleResponse),
+
+    // Record a new referral (when someone signs up with code)
+    recordReferral: (data: { referralCode: string; referredUserId: string }) =>
+        fetch(`${API_URL}/referral/record`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    // Send referral invite email
+    sendInvite: (email: string) =>
+        fetch(`${API_URL}/referral/invite`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify({ email }),
+        }).then(handleResponse),
+
+    // Get referral leaderboard
+    getLeaderboard: (limit = 10) =>
+        fetch(`${API_URL}/referral/leaderboard?limit=${limit}`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    // Record a visit to a referral link
+    recordVisit: (code: string) =>
+        fetch(`${API_URL}/referral/visit/${code}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+        }).then(handleResponse),
+};
+
+// ─── Admin ────────────────────────────────────────────────────────────
+export const adminApi = {
+    // Stats
+    getBlogStats: () =>
+        fetch(`${API_URL}/blogs/admin/stats`, { headers: authHeaders() }).then(handleResponse),
+    getApplicationStats: () =>
+        fetch(`${API_URL}/applications/admin/stats`, { headers: authHeaders() }).then(handleResponse),
+
+    // Blogs
+    getBlogs: (limit = 50, offset = 0) =>
+        fetch(`${API_URL}/blogs/admin/all?limit=${limit}&offset=${offset}`, { headers: authHeaders() }).then(handleResponse),
+    bulkUpdateBlogStatus: (blogIds: string[], isPublished: boolean) =>
+        fetch(`${API_URL}/blogs/admin/bulk-status`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ blogIds, isPublished }),
+        }).then(handleResponse),
+    deleteBlog: (id: string) =>
+        fetch(`${API_URL}/blogs/${id}`, {
+            method: "DELETE",
+            headers: authHeaders(),
+        }).then(handleResponse),
+    createBlog: (data: any) =>
+        fetch(`${API_URL}/blogs`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    // Users
+    getUsers: () =>
+        fetch(`${API_URL}/users/admin/list`, { headers: authHeaders() }).then(handleResponse),
+    updateUserRole: (email: string, role: string) =>
+        fetch(`${API_URL}/users/make-admin`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ email, role }),
+        }).then(handleResponse),
+    deleteUser: (id: string) =>
+        fetch(`${API_URL}/users/admin/${id}`, {
+            method: "DELETE",
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    // Applications
+    getApplications: (params?: Record<string, string>) => {
+        const query = params ? "?" + new URLSearchParams(params).toString() : "";
+        return fetch(`${API_URL}/applications/admin/all${query}`, { headers: authHeaders() }).then(handleResponse);
+    },
+    updateApplicationStatus: (id: string, data: Record<string, unknown>) =>
+        fetch(`${API_URL}/applications/admin/${id}/status`, {
+            method: "PUT",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+    aiReviewApplication: (id: string) =>
+        fetch(`${API_URL}/applications/admin/${id}/ai-review`, {
+            method: "POST",
+            headers: authHeaders(),
+        }).then(handleResponse),
+    deleteApplication: (id: string) =>
+        fetch(`${API_URL}/applications/admin/${id}`, {
+            method: "DELETE",
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    // Community
+    getCommunityStats: () =>
+        fetch(`${API_URL}/community/admin/stats`, { headers: authHeaders() }).then(handleResponse),
+    getForumPosts: (limit = 20, offset = 0) =>
+        fetch(`${API_URL}/community/admin/forum/posts?limit=${limit}&offset=${offset}`, { headers: authHeaders() }).then(handleResponse),
+    getMentors: () =>
+        fetch(`${API_URL}/community/mentors`, { headers: authHeaders() }).then(handleResponse),
+    deleteForumPost: (id: string) =>
+        fetch(`${API_URL}/community/forum/${id}`, {
+            method: "DELETE",
+            headers: authHeaders(),
+        }).then(handleResponse),
+    getAuditLogs: (limit = 20) =>
+        fetch(`${API_URL}/blogs/admin/matrix-logs?limit=${limit}`, { headers: authHeaders() }).then(handleResponse),
+    sendEmail: (data: { to?: string; subject: string; content: string; role?: string; isBulk?: boolean }) =>
+        fetch(`${API_URL}/users/admin/send-email`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+    createUser: (data: any) =>
+        fetch(`${API_URL}/users/admin/create`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+    updateUserDetails: (data: { email: string; firstName: string; lastName: string; phoneNumber: string; dateOfBirth: string }) =>
+        fetch(`${API_URL}/users/admin/update-details`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+};
+
+// ─── Documents ────────────────────────────────────────────────────────
+export const documentApi = {
+    getUsersDocuments: (userId: string) =>
+        fetch(`${API_URL}/documents/${userId}`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    delete: (userId: string, docType: string) =>
+        fetch(`${API_URL}/documents/${userId}/${docType}`, {
+            method: "DELETE",
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+
+    initiateDigilocker: (userId: string, docType: string) => {
+        // Redirect directly — backend handles the OAuth flow
+        window.location.href = `/api/digilocker/authorize?userId=${encodeURIComponent(userId)}&docType=${encodeURIComponent(docType)}`;
+    },
+
+    syncFromDigilocker: (userId: string, docType: string) =>
+        fetch(`${API_URL}/digilocker/sync`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ userId, docType }),
+        }).then(handleResponse),
+};
+
+// ─── Connected / Cohort ───────────────────────────────────────────────
+export const connectedApi = {
+    apply: (data: {
+        fullName: string;
+        email: string;
+        phone: string;
+        targetIntake: string;
+        destination?: string;
+        university?: string;
+        course?: string;
+        gapYear?: boolean;
+        message?: string;
+    }) =>
+        fetch(`${API_URL}/connected/apply`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...data, source: "connectED" }),
+        }).then(handleResponse),
+};
+
+// ─── University ───────────────────────────────────────────────────────
+export const universityApi = {
+    submitInquiry: (data: {
+        userId?: string;
+        name: string;
+        email: string;
+        mobile: string;
+        universityName: string;
+        type: 'callback' | 'fasttrack';
+    }) =>
+        fetch(`${API_URL}/university-inquiry`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    checkInquiry: (email: string, universityName: string, type: string): Promise<{ exists: boolean }> =>
+        fetch(`${API_URL}/university-inquiry/check?email=${encodeURIComponent(email)}&universityName=${encodeURIComponent(universityName)}&type=${type}`, {
+            headers: authHeaders(),
+        }).then(res => handleResponse<{ exists: boolean }>(res)),
+};
+
+// ─── Chat ─────────────────────────────────────────────────────────────
+export const chatApi = {
+    connect: () =>
+        fetch(`${API_URL}/chat/connect`, {
+            method: "POST",
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    getConversations: () =>
+        fetch(`${API_URL}/chat/conversations`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    getMessages: (conversationId: string) =>
+        fetch(`${API_URL}/chat/messages/${conversationId}`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+};// ─── Staff Profile (Intermediary Flow) ───────────────────────────────
+export const staffProfileApi = {
+    // List all profiles (with optional search / bankStatus filter)
+    list: (params?: { search?: string; bankStatus?: string }) => {
+        const q = new URLSearchParams();
+        if (params?.search) q.set('search', params.search);
+        if (params?.bankStatus) q.set('bankStatus', params.bankStatus);
+        return fetch(`${API_URL}/staff-profiles?${q.toString()}`, {
+            headers: authHeaders(),
+        }).then(handleResponse);
+    },
+
+    // Create a staff profile linked to a website user
+    create: (data: { linked_user_id: string; target_bank?: string; loan_type?: string; internal_notes?: string }) =>
+        fetch(`${API_URL}/staff-profiles`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    // Get a single profile with its documents
+    get: (profileId: string) =>
+        fetch(`${API_URL}/staff-profiles/${profileId}`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    // Pull and attach all documents uploaded by the linked user
+    fetchUserDocuments: (profileId: string) =>
+        fetch(`${API_URL}/staff-profiles/${profileId}/fetch-documents`, {
+            method: 'POST',
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    // Get documents currently attached to a profile
+    getDocuments: (profileId: string) =>
+        fetch(`${API_URL}/staff-profiles/${profileId}/documents`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    // Staff manually uploads a document and attaches it
+    uploadDocument: (profileId: string, file: File, docType: string, description?: string) => {
+        const token = (() => {
+            if (typeof window === 'undefined') return null;
+            return localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken');
+        })();
+        const form = new FormData();
+        form.append('file', file);
+        form.append('doc_type', docType);
+        if (description) form.append('description', description);
+        return fetch(`${API_URL}/staff-profiles/${profileId}/documents`, {
+            method: 'POST',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            body: form,
+        }).then(handleResponse);
+    },
+
+    // Update a document's status (also back-syncs to user's profile)
+    updateDocumentStatus: (profileId: string, docId: string, status: string, rejectionReason?: string) =>
+        fetch(`${API_URL}/staff-profiles/${profileId}/documents/${docId}/status`, {
+            method: 'PATCH',
+            headers: authHeaders(),
+            body: JSON.stringify({ status, rejection_reason: rejectionReason }),
+        }).then(handleResponse),
+
+    // Remove (detach) a document from the profile
+    removeDocument: (profileId: string, docId: string) =>
+        fetch(`${API_URL}/staff-profiles/${profileId}/documents/${docId}`, {
+            method: 'DELETE',
+            headers: authHeaders(),
+        }).then(handleResponse),
+
+    // Share a document bundle with a bank
+    shareWithBank: (profileId: string, data: {
+        doc_ids: string[];
+        bank_name: string;
+        bank_email: string;
+        expires_in_days?: number;
+        access_note?: string;
+    }) =>
+        fetch(`${API_URL}/staff-profiles/${profileId}/share`, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(data),
+        }).then(handleResponse),
+
+    // Get share history for a profile
+    getShares: (profileId: string) =>
+        fetch(`${API_URL}/staff-profiles/${profileId}/shares`, {
+            headers: authHeaders(),
+        }).then(handleResponse),
+};

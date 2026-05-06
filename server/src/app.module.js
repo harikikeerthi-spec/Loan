@@ -1,0 +1,116 @@
+"use strict";
+var __esDecorate = (this && this.__esDecorate) || function (ctor, descriptorIn, decorators, contextIn, initializers, extraInitializers) {
+    function accept(f) { if (f !== void 0 && typeof f !== "function") throw new TypeError("Function expected"); return f; }
+    var kind = contextIn.kind, key = kind === "getter" ? "get" : kind === "setter" ? "set" : "value";
+    var target = !descriptorIn && ctor ? contextIn["static"] ? ctor : ctor.prototype : null;
+    var descriptor = descriptorIn || (target ? Object.getOwnPropertyDescriptor(target, contextIn.name) : {});
+    var _, done = false;
+    for (var i = decorators.length - 1; i >= 0; i--) {
+        var context = {};
+        for (var p in contextIn) context[p] = p === "access" ? {} : contextIn[p];
+        for (var p in contextIn.access) context.access[p] = contextIn.access[p];
+        context.addInitializer = function (f) { if (done) throw new TypeError("Cannot add initializers after decoration has completed"); extraInitializers.push(accept(f || null)); };
+        var result = (0, decorators[i])(kind === "accessor" ? { get: descriptor.get, set: descriptor.set } : descriptor[key], context);
+        if (kind === "accessor") {
+            if (result === void 0) continue;
+            if (result === null || typeof result !== "object") throw new TypeError("Object expected");
+            if (_ = accept(result.get)) descriptor.get = _;
+            if (_ = accept(result.set)) descriptor.set = _;
+            if (_ = accept(result.init)) initializers.unshift(_);
+        }
+        else if (_ = accept(result)) {
+            if (kind === "field") initializers.unshift(_);
+            else descriptor[key] = _;
+        }
+    }
+    if (target) Object.defineProperty(target, contextIn.name, descriptor);
+    done = true;
+};
+var __runInitializers = (this && this.__runInitializers) || function (thisArg, initializers, value) {
+    var useValue = arguments.length > 2;
+    for (var i = 0; i < initializers.length; i++) {
+        value = useValue ? initializers[i].call(thisArg, value) : initializers[i].call(thisArg);
+    }
+    return useValue ? value : void 0;
+};
+var __setFunctionName = (this && this.__setFunctionName) || function (f, name, prefix) {
+    if (typeof name === "symbol") name = name.description ? "[".concat(name.description, "]") : "";
+    return Object.defineProperty(f, "name", { configurable: true, value: prefix ? "".concat(prefix, " ", name) : name });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.AppModule = void 0;
+var common_1 = require("@nestjs/common");
+var config_1 = require("@nestjs/config");
+var event_emitter_1 = require("@nestjs/event-emitter");
+var app_controller_1 = require("./app.controller");
+var app_service_1 = require("./app.service");
+var auth_module_1 = require("./auth/auth.module");
+var users_module_1 = require("./users/users.module");
+var supabase_module_1 = require("./supabase/supabase.module");
+var blog_module_1 = require("./blog/blog.module");
+var document_module_1 = require("./document/document.module");
+var ai_module_1 = require("./ai/ai.module");
+var community_module_1 = require("./community/community.module");
+var reference_module_1 = require("./reference/reference.module");
+var application_module_1 = require("./application/application.module");
+var explore_module_1 = require("./explore/explore.module");
+var onboarding_module_1 = require("./onboarding/onboarding.module");
+var integration_module_1 = require("./integration/integration.module");
+var audit_module_1 = require("./audit/audit.module");
+var referral_module_1 = require("./referral/referral.module");
+var connected_module_1 = require("./connected/connected.module");
+var university_module_1 = require("./university/university.module");
+var chat_module_1 = require("./chat/chat.module");
+var staff_profile_module_1 = require("./staff-profile/staff-profile.module");
+var serve_static_1 = require("@nestjs/serve-static");
+var path_1 = require("path");
+var AppModule = function () {
+    var _classDecorators = [(0, common_1.Module)({
+            imports: [
+                config_1.ConfigModule.forRoot({ isGlobal: true }),
+                event_emitter_1.EventEmitterModule.forRoot(),
+                serve_static_1.ServeStaticModule.forRoot({
+                    rootPath: (0, path_1.join)(__dirname, '..', 'uploads'),
+                    serveRoot: '/uploads',
+                }),
+                supabase_module_1.SupabaseModule,
+                auth_module_1.AuthModule,
+                users_module_1.UsersModule,
+                blog_module_1.BlogModule,
+                document_module_1.DocumentModule,
+                ai_module_1.AiModule,
+                community_module_1.CommunityModule,
+                reference_module_1.ReferenceModule,
+                application_module_1.ApplicationModule,
+                explore_module_1.ExploreModule,
+                onboarding_module_1.OnboardingModule,
+                integration_module_1.IntegrationModule,
+                audit_module_1.AuditModule,
+                referral_module_1.ReferralModule,
+                connected_module_1.ConnectedModule,
+                university_module_1.UniversityModule,
+                chat_module_1.ChatModule,
+                staff_profile_module_1.StaffProfileModule,
+            ],
+            controllers: [app_controller_1.AppController],
+            providers: [app_service_1.AppService],
+        })];
+    var _classDescriptor;
+    var _classExtraInitializers = [];
+    var _classThis;
+    var AppModule = _classThis = /** @class */ (function () {
+        function AppModule_1() {
+        }
+        return AppModule_1;
+    }());
+    __setFunctionName(_classThis, "AppModule");
+    (function () {
+        var _metadata = typeof Symbol === "function" && Symbol.metadata ? Object.create(null) : void 0;
+        __esDecorate(null, _classDescriptor = { value: _classThis }, _classDecorators, { kind: "class", name: _classThis.name, metadata: _metadata }, null, _classExtraInitializers);
+        AppModule = _classThis = _classDescriptor.value;
+        if (_metadata) Object.defineProperty(_classThis, Symbol.metadata, { enumerable: true, configurable: true, writable: true, value: _metadata });
+        __runInitializers(_classThis, _classExtraInitializers);
+    })();
+    return AppModule = _classThis;
+}();
+exports.AppModule = AppModule;
