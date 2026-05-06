@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Param, Put, Query, Res } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param, Put, Query, Res, Delete } from '@nestjs/common';
 import type { Response } from 'express';
 import { UsersService } from './users.service';
 import { AdminGuard } from '../auth/admin.guard';

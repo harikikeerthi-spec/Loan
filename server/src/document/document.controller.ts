@@ -1,34 +1,22 @@
-
-import { Controller, Post, UseInterceptors, UploadedFile, Body, Get, Param, Delete, Res, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Controller, Post, UseInterceptors, UploadedFile, Body, Get, Param, Delete, Res, BadRequestException, NotFoundException, Logger } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from '../users/users.service';
-import { diskStorage } from 'multer';
+import { S3Service } from '../s3/s3.service';
+import { memoryStorage } from 'multer';
 import { extname } from 'path';
-import { existsSync, mkdirSync, unlinkSync } from 'fs';
-
-// Multer configuration
-const storage = diskStorage({
-    destination: (req, file, cb) => {
-        const uploadPath = './uploads/documents';
-        if (!existsSync(uploadPath)) {
-            mkdirSync(uploadPath, { recursive: true });
-        }
-        cb(null, uploadPath);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-        const ext = extname(file.originalname);
-        cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
-    },
-});
 
 @Controller('documents')
 export class DocumentController {
-    constructor(private usersService: UsersService) { }
+    private readonly logger = new Logger(DocumentController.name);
+
+    constructor(
+        private usersService: UsersService,
+        private s3Service: S3Service
+    ) { }
 
     @Post('upload')
     @UseInterceptors(FileInterceptor('file', {
-        storage: storage,
+        storage: memoryStorage(),
         limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
         fileFilter: (req, file, cb) => {
             if (file.mimetype.match(/\/(jpg|jpeg|png|pdf)$/)) {
@@ -48,38 +36,89 @@ export class DocumentController {
         }
 
         if (!userId || !docType) {
-            // If validation fails, we might want to delete the file
-            unlinkSync(file.path);
             throw new BadRequestException('userId and docType are required');
         }
 
-        // Update database
-        const document = await this.usersService.upsertUserDocument(userId, docType, {
-            uploaded: true,
-            filePath: file.path,
-            status: 'uploaded'
-        });
+        try {
+            const fileExt = extname(file.originalname);
+            const key = `documents/${userId}/${docType}-${Date.now()}${fileExt}`;
+            
+            // Upload to S3
+            await this.s3Service.uploadFile(file, key);
 
-        return {
-            success: true,
-            data: document,
-            file: {
-                originalName: file.originalname,
-                filename: file.filename,
-                // In a real app, this should be a public URL. 
-                // For now, we return the path so the frontend knows it's saved.
-                path: file.path
-            }
-        };
+            // Update database with S3 key
+            const document = await this.usersService.upsertUserDocument(userId, docType, {
+                uploaded: true,
+                filePath: key,
+                status: 'uploaded'
+            });
+
+            return {
+                success: true,
+                data: document,
+                file: {
+                    originalName: file.originalname,
+                    key: key
+                }
+            };
+        } catch (error) {
+            this.logger.error(`Failed to upload document: ${error.message}`);
+            throw new BadRequestException('Failed to upload document to storage');
+        }
     }
 
     @Get(':userId')
     async getUserDocuments(@Param('userId') userId: string) {
         const documents = await this.usersService.getUserDocuments(userId);
+        
+        // Add presigned URLs for each document that has a file path
+        const documentsWithUrls = await Promise.all(documents.map(async (doc) => {
+            if (doc.filePath && (doc.status === 'uploaded' || doc.status === 'verified' || doc.status === 'available_in_digilocker')) {
+                try {
+                    // Check if it's an S3 key (doesn't start with http/uploads)
+                    if (!doc.filePath.startsWith('http') && !doc.filePath.startsWith('uploads/')) {
+                        const viewUrl = await this.s3Service.getPresignedUrl(doc.filePath);
+                        return { ...doc, viewUrl };
+                    }
+                } catch (e) {
+                    this.logger.error(`Error generating URL for ${doc.filePath}: ${e.message}`);
+                }
+            }
+            return doc;
+        }));
+
         return {
             success: true,
-            data: documents
+            data: documentsWithUrls
         };
+    }
+
+    @Get('view/:userId/:docType')
+    async getDocumentUrl(
+        @Param('userId') userId: string,
+        @Param('docType') docType: string
+    ) {
+        const docs = await this.usersService.getUserDocuments(userId);
+        const doc = docs.find(d => d.docType === docType);
+
+        if (!doc || !doc.filePath) {
+            throw new NotFoundException('Document not found');
+        }
+
+        try {
+            // If it's already a full URL (e.g. from DigiLocker or legacy), return it
+            if (doc.filePath.startsWith('http')) {
+                return { success: true, url: doc.filePath };
+            }
+
+            const url = await this.s3Service.getPresignedUrl(doc.filePath);
+            return {
+                success: true,
+                url: url
+            };
+        } catch (error) {
+            throw new BadRequestException('Could not generate document URL');
+        }
     }
 
     @Delete(':userId/:docType')
@@ -87,15 +126,17 @@ export class DocumentController {
         @Param('userId') userId: string,
         @Param('docType') docType: string
     ) {
-        // First get the document to find the file path
         const docs = await this.usersService.getUserDocuments(userId);
         const doc = docs.find(d => d.docType === docType);
 
-        if (doc && doc.filePath && existsSync(doc.filePath)) {
+        if (doc && doc.filePath) {
             try {
-                unlinkSync(doc.filePath);
+                // Only delete from S3 if it's an S3 key
+                if (!doc.filePath.startsWith('http') && !doc.filePath.startsWith('uploads/')) {
+                    await this.s3Service.deleteFile(doc.filePath);
+                }
             } catch (e) {
-                console.error('Error deleting file:', e);
+                this.logger.error('Error deleting file from S3:', e);
             }
         }
 

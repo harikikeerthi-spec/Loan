@@ -38,14 +38,15 @@ export class OpenRouterService {
             'HTTP-Referer': 'http://localhost:3000', // Required by OpenRouter
             'X-Title': 'EduLoan AI Service', // Optional, helps with tracking
           },
-          body: JSON.stringify({
-            model: 'google/gemini-2.0-flash-001',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt },
-            ],
-            temperature: temperature,
-          }),
+            body: JSON.stringify({
+              model: 'google/gemini-2.0-flash-001',
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt },
+              ],
+              temperature: temperature,
+              max_tokens: 1000,
+            }),
         });
 
         if (!response.ok) {

@@ -62,27 +62,26 @@ export class GradeConversionService {
          - If Input Type is 'cgpa', the value is out of 10.
          - If Input Type is 'gpa', the value is out of 4.0.
          
-         Return the response in strict JSON format matching the following structure:
-         {
-             "inputGrade": "string",
-             "outputGrade": "string",
-             "percentage": number,
-             "gpa": number (4.0 scale),
-             "cgpa": number (10.0 scale),
-             "letterGrade": "string",
-             "classification": "string",
-             "internationalEquivalent": {
-                 "US": "string",
-                 "UK": "string",
-                 "India": "string"
-             },
-             "analysis": {
-                 "strength": "string",
-                 "competitiveness": "string",
-                 "recommendations": ["string", "string"]
-             }
-         }
-         Ensure strict valid JSON output only. No markdown formatting.`;
+          Return the response in strict JSON format matching the following structure:
+          {
+              "score": number (The numeric value of the result, e.g. the percentage),
+              "scale": "string (e.g. 100, 4.0, 10.0)",
+              "quality": "string (The letter grade or classification, e.g. A, First Class)",
+              "internationalEquivalent": {
+                  "US": "string",
+                  "UK": "string",
+                  "India": "string"
+              },
+              "analysis": {
+                  "percentage": number,
+                  "gpa": number,
+                  "cgpa": number,
+                  "strength": "string (A brief summary of what the grade indicates)",
+                  "competitiveness": "string",
+                  "recommendations": ["string", "string"]
+              }
+          }
+          Ensure strict valid JSON output only. No markdown formatting.`;
 
     const userPrompt = `Convert Grade:
          Input: ${input.inputValue} (Type: ${input.inputType})
@@ -95,8 +94,10 @@ export class GradeConversionService {
       userPrompt,
       0.0,
     );
+    this.logger.log(`Raw AI Response: ${jsonResponse}`);
     const jsonMatch = jsonResponse.match(/\{[\s\S]*\}/);
     const cleanJson = jsonMatch ? jsonMatch[0] : jsonResponse;
+    this.logger.log(`Cleaned JSON: ${cleanJson}`);
 
     return JSON.parse(cleanJson);
   }
