@@ -81,6 +81,23 @@ export class AuthController {
   }
 
   /**
+   * Firebase Authentication
+   * POST /auth/firebase
+   * @body idToken: string (required)
+   * @returns Internal JWT tokens and user profile
+   */
+  @Post('firebase')
+  async firebaseLogin(@Body() body: { idToken: string }) {
+    if (!body || !body.idToken) {
+      return {
+        success: false,
+        message: 'Firebase ID Token is required',
+      };
+    }
+    return this.authService.authenticateFirebaseUser(body.idToken);
+  }
+
+  /**
    * Refresh access token using refresh token
    * POST /auth/refresh
    * @body refresh_token: string (required)

@@ -61,6 +61,13 @@ export class StaffProfileController {
     return { success: true, data: profile };
   }
 
+  // ─── Check if a profile exists for a linked user ──────────────────────────
+  @Get('check/:userId')
+  async checkExists(@Param('userId') userId: string) {
+    const exists = await this.svc.getProfileByLinkedUserId(userId);
+    return { success: true, exists: !!exists, data: exists || null };
+  }
+
   // ─── Get a single profile (with documents) ────────────────────────────────
   @Get(':id')
   async getOne(@Param('id') id: string) {

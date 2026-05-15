@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { adminApi, documentApi } from "@/lib/api";
 import { format } from "date-fns";
+import { formatDate } from "@/lib/utils";
 
 export default function StaffApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
@@ -30,11 +31,18 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                 if (foundApp) {
                     setApplication(foundApp);
 
-                    // Fetch all applications for this user
+                    // Fetch ALL applications for this user (including the current one)
                     const userApps = appsRes.data?.filter((a: any) => 
-                        (a.userId === foundApp.userId || a.applicantId === foundApp.applicantId || a.email === foundApp.email) &&
-                        (a.id !== applicationId && a._id !== applicationId)
+                        a.userId === foundApp.userId || a.applicantId === foundApp.applicantId || a.email === foundApp.email
                     ) || [];
+                    
+                    // Sort by createdAt in descending order (newest first)
+                    userApps.sort((a: any, b: any) => {
+                        const dateA = new Date(a.createdAt).getTime();
+                        const dateB = new Date(b.createdAt).getTime();
+                        return dateB - dateA;
+                    });
+                    
                     setUserApplications(userApps);
 
                     // Load staff notes (from localStorage for demo, would be from API in production)
@@ -78,7 +86,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex items-center justify-center">
+            <div className="min-h-screen bg-slate-50 text-slate-800 flex items-center justify-center" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-10 h-10 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin" />
                     <p className="text-[11px] font-black tracking-widest text-slate-400 uppercase">Loading Application...</p>
@@ -89,7 +97,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
 
     if (!application) {
         return (
-            <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
+            <div className="min-h-screen bg-slate-50 text-slate-800" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
                 <div className="max-w-6xl mx-auto px-6 py-12 text-center">
                     <p className="text-slate-500">Application not found</p>
                     <button
@@ -104,7 +112,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
+        <div className="min-h-screen bg-slate-50 text-slate-800" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
             {/* Header */}
             <div className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
                 <div className="max-w-7xl mx-auto px-6 py-4">
@@ -121,7 +129,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                             {(application.firstName?.[0] || "U").toUpperCase()}{(application.lastName?.[0] || "").toUpperCase()}
                         </div>
                         <div className="flex-1">
-                            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+                            <h1 className="text-3xl font-black text-slate-900 tracking-tight" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
                                 {application.firstName || "—"} {application.lastName || ""}
                             </h1>
                             <div className="flex items-center gap-3 mt-2">
@@ -150,19 +158,19 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                     <div className="grid grid-cols-4 gap-4 mb-6">
                         <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg p-4 border border-indigo-200">
                             <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Loan Amount</p>
-                            <p className="text-2xl font-black text-indigo-900 mt-1">₹{Number(application.amount || 0).toLocaleString('en-IN')}</p>
+                            <p className="text-2xl font-black text-indigo-900 mt-1" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>₹{Number(application.amount || 0).toLocaleString('en-IN')}</p>
                         </div>
                         <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-4 border border-emerald-200">
                             <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Tenure</p>
-                            <p className="text-2xl font-black text-emerald-900 mt-1">{application.tenure || 0} Months</p>
+                            <p className="text-2xl font-black text-emerald-900 mt-1" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{application.tenure || 0} Months</p>
                         </div>
                         <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-4 border border-amber-200">
                             <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Interest Rate</p>
-                            <p className="text-2xl font-black text-amber-900 mt-1">{application.interestRate || 0}%</p>
+                            <p className="text-2xl font-black text-amber-900 mt-1" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{application.interestRate || 0}%</p>
                         </div>
                         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
                             <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Loan Type</p>
-                            <p className="text-lg font-black text-blue-900 mt-1">{application.loanType || "—"}</p>
+                            <p className="text-lg font-black text-blue-900 mt-1" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{application.loanType || "—"}</p>
                         </div>
                     </div>
                 </div>
@@ -171,7 +179,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                 <div className="max-w-7xl mx-auto px-6 flex gap-8 border-t border-slate-200">
                     {[
                         { id: "details", label: "Application Details", icon: "description" },
-                        { id: "history", label: "Previous Applications", icon: "history", count: userApplications.length },
+                        { id: "history", label: "All Applications", icon: "list_alt", count: userApplications.length },
                         { id: "documents", label: "Documents", icon: "folder", count: 0 },
                         { id: "verification", label: "Verification", icon: "verified_user" },
                         { id: "notes", label: "Internal Notes", icon: "note", count: staffNotes.length },
@@ -206,9 +214,9 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                             {/* Left Column - Applicant Info */}
                             <div className="lg:col-span-2 space-y-6">
                                 <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm">
-                                    <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+                                    <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
                                         <span className="material-symbols-outlined">person</span>
-                                        Applicant Information
+                                        Student Profile - Personal & Academic Details
                                     </h2>
                                     <div className="grid grid-cols-2 gap-6">
                                         <div>
@@ -227,37 +235,71 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Phone</p>
                                             <p className="text-[14px] font-semibold text-slate-900">{application.phone || "—"}</p>
                                         </div>
+                                        <div>
+                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Date of Birth</p>
+                                            <p className="text-[14px] font-semibold text-slate-900">
+                                                {formatDate(application.dateOfBirth, "MMMM d, yyyy")}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Nationality</p>
+                                            <p className="text-[14px] font-semibold text-slate-900">{application.nationality || "Indian"}</p>
+                                        </div>
+                                        <div className="col-span-2">
+                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Current Address</p>
+                                            <p className="text-[14px] font-semibold text-slate-900">{application.address || "—"}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">College/University Name</p>
+                                            <p className="text-[14px] font-semibold text-slate-900">{application.collegeName || application.universityName || application.university || "—"}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Course Name</p>
+                                            <p className="text-[14px] font-semibold text-slate-900">{application.courseName || "—"}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Student ID</p>
+                                            <p className="text-[14px] font-semibold text-slate-900">{application.userId?.slice(0, 10) || "—"}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Year of Study</p>
+                                            <p className="text-[14px] font-semibold text-slate-900">{application.yearOfStudy || "—"}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Stream/Major</p>
+                                            <p className="text-[14px] font-semibold text-slate-900">{application.major || application.stream || "—"}</p>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm">
-                                    <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+                                    <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
                                         <span className="material-symbols-outlined">school</span>
                                         Loan Details
                                     </h2>
                                     <div className="grid grid-cols-2 gap-6">
                                         <div>
                                             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Loan Amount</p>
-                                            <p className="text-[16px] font-black text-slate-900">₹{Number(application.amount || 0).toLocaleString('en-IN')}</p>
+                                            <p className="text-[16px] font-black text-slate-900" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>₹{Number(application.amount || 0).toLocaleString('en-IN')}</p>
                                         </div>
                                         <div>
                                             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Tenure</p>
-                                            <p className="text-[16px] font-black text-slate-900">{application.tenure || 0} Months</p>
+                                            <p className="text-[16px] font-black text-slate-900" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{application.tenure || 0} Months</p>
                                         </div>
                                         <div>
                                             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Interest Rate</p>
-                                            <p className="text-[16px] font-black text-slate-900">{application.interestRate || 0}%</p>
+                                            <p className="text-[16px] font-black text-slate-900" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{application.interestRate || 0}%</p>
                                         </div>
                                         <div>
                                             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Loan Type</p>
-                                            <p className="text-[14px] font-semibold text-slate-900">{application.loanType || "—"}</p>
+                                            <p className="text-[14px] font-semibold text-slate-900" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{application.loanType || "—"}</p>
                                         </div>
                                     </div>
                                 </div>
 
                                 {application.purpose && (
                                     <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm">
-                                        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                                        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
                                             <span className="material-symbols-outlined">note</span>
                                             Loan Purpose
                                         </h2>
@@ -267,18 +309,209 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
 
                                 {application.createdAt && (
                                     <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm">
-                                        <h2 className="text-lg font-bold text-slate-900 mb-4">Timeline</h2>
-                                        <div className="space-y-3">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-[11px] font-bold text-slate-400 uppercase">Applied</span>
-                                                <p className="text-[13px] font-semibold text-slate-700">{format(new Date(application.createdAt), "MMMM d, yyyy 'at' hh:mm a")}</p>
-                                            </div>
-                                            {application.updatedAt && (
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-[11px] font-bold text-slate-400 uppercase">Last Updated</span>
-                                                    <p className="text-[13px] font-semibold text-slate-700">{format(new Date(application.updatedAt), "MMMM d, yyyy 'at' hh:mm a")}</p>
+                                        <h2 className="text-lg font-bold text-slate-900 mb-8 flex items-center gap-2" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
+                                            <span className="material-symbols-outlined text-emerald-600">timeline</span>
+                                            Application Progress Timeline
+                                        </h2>
+                                        
+                                        {/* Enhanced Visual Timeline */}
+                                        <div className="space-y-8 relative pb-6">
+                                            {/* Vertical connecting line */}
+                                            <div className="absolute left-4 top-12 bottom-0 w-0.5 bg-gradient-to-b from-emerald-400 to-slate-200"></div>
+                                            
+                                            {[
+                                                { 
+                                                    label: '✨ Application Created', 
+                                                    stage: 'application_created', 
+                                                    progress: 12,
+                                                    icon: 'sparkle',
+                                                    color: 'from-blue-50 to-blue-100 border-blue-200',
+                                                    iconColor: 'text-blue-600 bg-blue-50'
+                                                },
+                                                { 
+                                                    label: '📤 Application Submitted', 
+                                                    stage: 'submitted', 
+                                                    progress: 25,
+                                                    icon: 'upload',
+                                                    color: 'from-indigo-50 to-indigo-100 border-indigo-200',
+                                                    iconColor: 'text-indigo-600 bg-indigo-50'
+                                                },
+                                                { 
+                                                    label: '✓ Documents Verification', 
+                                                    stage: 'documents_verification', 
+                                                    progress: 37,
+                                                    icon: 'task_alt',
+                                                    color: 'from-purple-50 to-purple-100 border-purple-200',
+                                                    iconColor: 'text-purple-600 bg-purple-50'
+                                                },
+                                                { 
+                                                    label: '🏦 Submit to Bank', 
+                                                    stage: 'bank_submission', 
+                                                    progress: 50,
+                                                    icon: 'account_balance',
+                                                    color: 'from-amber-50 to-amber-100 border-amber-200',
+                                                    iconColor: 'text-amber-600 bg-amber-50'
+                                                },
+                                                { 
+                                                    label: '💳 Credit Check', 
+                                                    stage: 'credit_check', 
+                                                    progress: 62,
+                                                    icon: 'credit_score',
+                                                    color: 'from-orange-50 to-orange-100 border-orange-200',
+                                                    iconColor: 'text-orange-600 bg-orange-50'
+                                                },
+                                                { 
+                                                    label: '📋 Bank Review', 
+                                                    stage: 'bank_review', 
+                                                    progress: 75,
+                                                    icon: 'rate_review',
+                                                    color: 'from-red-50 to-red-100 border-red-200',
+                                                    iconColor: 'text-red-600 bg-red-50',
+                                                    substages: [
+                                                        { name: 'Under Review', value: 'under_review' },
+                                                        { name: 'Approved', value: 'approved' },
+                                                        { name: 'Rejected', value: 'rejected' }
+                                                    ]
+                                                },
+                                                { 
+                                                    label: '✅ Sanction', 
+                                                    stage: 'sanctioned', 
+                                                    progress: 87,
+                                                    icon: 'verified',
+                                                    color: 'from-green-50 to-green-100 border-green-200',
+                                                    iconColor: 'text-green-600 bg-green-50'
+                                                },
+                                                { 
+                                                    label: '💰 Disbursement', 
+                                                    stage: 'disbursed', 
+                                                    progress: 100,
+                                                    icon: 'payments',
+                                                    color: 'from-emerald-50 to-emerald-100 border-emerald-200',
+                                                    iconColor: 'text-emerald-600 bg-emerald-50'
+                                                }
+                                            ].map((item, idx) => {
+                                                const getActiveProgress = () => {
+                                                    const s = application.stage?.toLowerCase();
+                                                    const st = application.status?.toLowerCase();
+                                                    if (st === 'disbursed') return 100;
+                                                    if (st === 'approved' || s === 'sanctioned' || s === 'sanction') return 87;
+                                                    if (s === 'bank_review') return 75;
+                                                    if (s === 'credit_check') return 62;
+                                                    if (s === 'bank_submission' || s === 'submit_to_bank') return 50;
+                                                    if (s === 'documents_verification' || s === 'document_verification') return 37;
+                                                    if (s === 'submitted' || s === 'application_submitted') return 25;
+                                                    return 12;
+                                                };
+
+                                                const currentProgress = getActiveProgress();
+                                                const isCompleted = currentProgress > item.progress;
+                                                const isActive = currentProgress === item.progress;
+                                                const isUpcoming = currentProgress < item.progress;
+
+                                                return (
+                                                    <div key={idx} className="flex gap-6 items-start relative z-10">
+                                                        {/* Timeline dot */}
+                                                        <div className={`flex-shrink-0 w-10 h-10 rounded-full border-3 flex items-center justify-center font-bold transition-all shadow-md ${
+                                                            isCompleted || isActive
+                                                                ? 'bg-white border-emerald-500 text-emerald-600'
+                                                                : 'bg-white border-slate-200 text-slate-400'
+                                                        }`}>
+                                                            {isCompleted ? (
+                                                                <span className="material-symbols-outlined text-lg">check</span>
+                                                            ) : isActive ? (
+                                                                <span className="text-lg">•</span>
+                                                            ) : (
+                                                                idx + 1
+                                                            )}
+                                                        </div>
+                                                        
+                                                        {/* Content */}
+                                                        <div className={`flex-1 p-4 rounded-lg border-2 transition-all ${
+                                                            isActive 
+                                                                ? `bg-gradient-to-r ${item.color} border-current` 
+                                                                : isCompleted 
+                                                                ? 'bg-slate-50 border-slate-200'
+                                                                : 'bg-white border-slate-100'
+                                                        }`}>
+                                                            <div className="flex items-start justify-between">
+                                                                <div className="flex items-start gap-3 flex-1">
+                                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${item.iconColor}`}>
+                                                                        <span className="material-symbols-outlined text-lg">{item.icon}</span>
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className={`font-bold text-sm mb-1 ${
+                                                                            isActive ? 'text-slate-900' : isCompleted ? 'text-slate-700' : 'text-slate-500'
+                                                                        }`}>
+                                                                            {item.label}
+                                                                        </p>
+                                                                        {isActive && (
+                                                                            <span className="text-xs font-semibold text-emerald-600 bg-emerald-200/30 px-2 py-1 rounded inline-block">
+                                                                                In Progress
+                                                                            </span>
+                                                                        )}
+                                                                        {isCompleted && (
+                                                                            <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded inline-block">
+                                                                                Completed
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div className={`text-right font-bold text-sm ${
+                                                                    isActive ? 'text-emerald-600' : isCompleted ? 'text-slate-600' : 'text-slate-300'
+                                                                }`}>
+                                                                    {item.progress}%
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            {/* Substages for Bank Review */}
+                                                            {item.substages && (
+                                                                <div className="mt-3 pt-3 border-t border-slate-200 grid grid-cols-3 gap-2">
+                                                                    {item.substages.map((sub) => (
+                                                                        <div 
+                                                                            key={sub.value}
+                                                                            className={`text-center px-3 py-2 rounded text-xs font-bold transition-all ${
+                                                                                application.bankReviewStatus === sub.value || application.status === sub.value.replace('_', '')
+                                                                                    ? 'bg-white text-slate-900 border border-slate-300'
+                                                                                    : 'text-slate-400 bg-slate-50'
+                                                                            }`}
+                                                                        >
+                                                                            {sub.name}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        
+                                        {/* Progress Summary */}
+                                        <div className="mt-8 pt-6 border-t border-slate-200 grid grid-cols-4 gap-4">
+                                            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
+                                                <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Current Progress</p>
+                                                <div className="flex items-baseline gap-1">
+                                                    <p className="text-2xl font-black text-blue-900" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{application.progress || 12}%</p>
                                                 </div>
-                                            )}
+                                            </div>
+                                            <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 rounded-lg border border-emerald-200">
+                                                <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-1">Current Stage</p>
+                                                <p className="text-sm font-bold text-emerald-900 capitalize line-clamp-2">
+                                                    {application.stage?.replace(/_/g, ' ') || 'Application Created'}
+                                                </p>
+                                            </div>
+                                            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-4 rounded-lg border border-purple-200">
+                                                <p className="text-[10px] font-bold text-purple-600 uppercase tracking-wider mb-1">Applied On</p>
+                                                <p className="text-sm font-bold text-purple-900">
+                                                    {formatDate(application.createdAt)}
+                                                </p>
+                                            </div>
+                                            <div className="bg-gradient-to-br from-slate-50 to-slate-100 p-4 rounded-lg border border-slate-200">
+                                                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mb-1">Last Updated</p>
+                                                <p className="text-sm font-bold text-slate-900">
+                                                    {formatDate(application.updatedAt)}
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 )}
@@ -318,7 +551,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                     </div>
                 )}
 
-                {/* Previous Applications Tab */}
+                {/* All Applications Tab */}
                 {activeTab === "history" && (
                     <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
                         {userApplications.length > 0 ? (
@@ -327,47 +560,64 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                     <thead className="bg-slate-50 border-b border-slate-200">
                                         <tr className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
                                             <th className="px-6 py-3">Application ID</th>
+                                            <th className="px-6 py-3">Program</th>
                                             <th className="px-6 py-3">Bank</th>
                                             <th className="px-6 py-3">Loan Amount</th>
                                             <th className="px-6 py-3">Status</th>
                                             <th className="px-6 py-3">Applied Date</th>
+                                            <th className="px-6 py-3">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {userApplications.map((app, idx) => (
-                                            <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                                <td className="px-6 py-4 text-[12px] font-bold text-slate-900">
-                                                    #{app.applicationNumber?.toString().slice(0, 8) || app.id?.slice(0, 8).toUpperCase()}
-                                                </td>
-                                                <td className="px-6 py-4 text-[12px] font-semibold text-slate-700">{app.bank || "—"}</td>
-                                                <td className="px-6 py-4 text-[12px] font-bold text-slate-900">
-                                                    ₹{Number(app.amount || 0).toLocaleString('en-IN')}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${
-                                                        app.status === "approved"
-                                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                                            : app.status === "rejected"
-                                                            ? "bg-rose-50 text-rose-700 border-rose-200"
-                                                            : app.status === "processing"
-                                                            ? "bg-indigo-50 text-indigo-700 border-indigo-200"
-                                                            : "bg-amber-50 text-amber-700 border-amber-200"
-                                                    }`}>
-                                                        {app.status || "Pending"}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-[12px] font-semibold text-slate-500">
-                                                    {app.createdAt ? format(new Date(app.createdAt), "MMM d, yyyy") : "—"}
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {userApplications.map((app, idx) => {
+                                            const isCurrent = app.id === applicationId || app._id === applicationId;
+                                            return (
+                                                <tr key={idx} className={`${isCurrent ? 'bg-emerald-50 hover:bg-emerald-50' : 'hover:bg-slate-50'} transition-colors`}>
+                                                    <td className="px-6 py-4 text-[12px] font-bold text-slate-900">
+                                                        {isCurrent && <span className="material-symbols-outlined text-emerald-600 text-[14px] mr-2 inline">check_circle</span>}
+                                                        #{app.applicationNumber?.toString().slice(0, 8) || app.id?.slice(0, 8).toUpperCase()}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-[12px] font-semibold text-slate-700">{app.courseName || app.program || '—'}</td>
+                                                    <td className="px-6 py-4 text-[12px] font-semibold text-slate-700">{app.bank || "—"}</td>
+                                                    <td className="px-6 py-4 text-[12px] font-bold text-slate-900">
+                                                        ₹{Number(app.amount || 0).toLocaleString('en-IN')}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${
+                                                            app.status === "approved"
+                                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                                                : app.status === "rejected"
+                                                                ? "bg-rose-50 text-rose-700 border-rose-200"
+                                                                : app.status === "processing"
+                                                                ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+                                                                : "bg-amber-50 text-amber-700 border-amber-200"
+                                                        }`}>
+                                                            {app.status || "Pending"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-[12px] font-semibold text-slate-500">
+                                                        {formatDate(app.createdAt, "MMM d, yyyy 'at' hh:mm a")}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        {!isCurrent && (
+                                                            <button
+                                                                onClick={() => window.location.href = `/staff/applications/${app.id || app._id}`}
+                                                                className="px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-bold rounded hover:bg-indigo-700 transition-all"
+                                                            >
+                                                                View
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
                             </div>
                         ) : (
                             <div className="py-16 text-center">
                                 <span className="material-symbols-outlined text-[48px] text-slate-300 mx-auto block mb-4">inbox</span>
-                                <p className="text-slate-500 font-semibold">No previous applications for this user</p>
+                                <p className="text-slate-500 font-semibold">No applications for this user</p>
                             </div>
                         )}
                     </div>
@@ -439,7 +689,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                             <div className="flex items-start justify-between mb-3">
                                                 <div>
                                                     <p className="text-[12px] font-bold text-slate-900">{note.author}</p>
-                                                    <p className="text-[10px] text-slate-500">{format(new Date(note.timestamp), "MMM d, yyyy 'at' hh:mm a")}</p>
+                                                    <p className="text-[10px] text-slate-500">{formatDate(note.timestamp, "MMM d, yyyy 'at' hh:mm a")}</p>
                                                 </div>
                                                 {note.type === 'status_change' && (
                                                     <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase ${

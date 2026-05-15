@@ -365,14 +365,32 @@ export class BlogService {
 
   // ==================== ADMIN METHODS ====================
 
-  async getAllBlogsAdmin(options?: { limit?: number; offset?: number }) {
-    const { limit = 50, offset = 0 } = options || {};
+  async getAllBlogsAdmin(options?: { limit?: number; offset?: number; status?: string; timeRange?: string }) {
+    const { limit = 50, offset = 0, status, timeRange } = options || {};
 
-    const { data: blogs, count } = await this.db
+    let query = this.db
       .from('Blog')
       .select('id, title, slug, excerpt, content, category, authorName, authorImage, authorRole, featuredImage, readTime, views, isFeatured, isPublished, publishedAt, createdAt, updatedAt, tags:BlogTag(tag:Tag(name))', { count: 'exact' })
       .order('createdAt', { ascending: false })
       .range(offset, offset + limit - 1);
+
+    if (status === 'published') query = query.eq('isPublished', true);
+    if (status === 'draft') query = query.eq('isPublished', false);
+
+    if (timeRange && timeRange !== 'all') {
+      const now = new Date();
+      let fromDate: Date;
+      if (timeRange === 'today') fromDate = new Date(now.setHours(0, 0, 0, 0));
+      else if (timeRange === 'week') fromDate = new Date(now.setDate(now.getDate() - 7));
+      else if (timeRange === 'month') fromDate = new Date(now.setMonth(now.getMonth() - 1));
+      else if (timeRange === 'year') fromDate = new Date(now.setFullYear(now.getFullYear() - 1));
+      
+      if (fromDate) {
+        query = query.gte('createdAt', fromDate.toISOString());
+      }
+    }
+
+    const { data: blogs, count } = await query;
 
     return {
       success: true,

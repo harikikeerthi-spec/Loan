@@ -32,25 +32,30 @@ export class AdminGuard implements CanActivate {
         try {
             // Verify JWT token
             const payload = await this.jwtService.verifyAsync(token);
+            console.log('[AdminGuard] Token verified. Payload:', { email: payload.email, role: payload.role });
 
             // Get user from database
             const user = await this.usersService.findOne(payload.email);
 
             if (!user) {
+                console.error('[AdminGuard] User not found in DB for email:', payload.email);
                 throw new UnauthorizedException('User not found');
             }
 
             // Check if user is admin, super_admin, staff, or bank
             const allowedRoles = ['admin', 'super_admin', 'staff', 'bank', 'partner_bank'];
             if (!allowedRoles.includes(user.role)) {
+                console.warn(`[AdminGuard] Access denied for role: ${user.role}. User: ${user.email}`);
                 throw new ForbiddenException('Access denied. Elevated privileges required.');
             }
 
             // Attach user to request for use in controllers
             request.user = user;
+            console.log(`[AdminGuard] Access granted to ${user.email} (${user.role})`);
 
             return true;
         } catch (error) {
+            console.error('[AdminGuard] Error:', error.message || error);
             if (error instanceof ForbiddenException || error instanceof UnauthorizedException) {
                 throw error;
             }

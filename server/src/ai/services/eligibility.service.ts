@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { GroqService } from './groq.service';
+import { OpenRouterService } from './openrouter.service';
 import { SupabaseService } from '../../supabase/supabase.service';
 
 export interface EligibilityCheckDto {
@@ -26,7 +26,7 @@ export interface EligibilityResult {
 @Injectable()
 export class EligibilityService {
   constructor(
-    private readonly groq: GroqService,
+    private readonly openRouter: OpenRouterService,
     private readonly supabase: SupabaseService,
   ) {}
 
@@ -65,7 +65,7 @@ export class EligibilityService {
     `;
 
     try {
-      return await this.groq.getJson<EligibilityResult>(prompt);
+      return await this.openRouter.getJson<EligibilityResult>(prompt);
     } catch (error) {
       console.error('Eligibility check failed', error);
       return {

@@ -3,6 +3,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { DigilockerService } from '../integration/digilocker.service';
 import { DocumentVerificationService } from '../ai/services/document-verification.service';
 import { ApplicationReviewService } from '../ai/services/application-review.service';
+import { EmailService } from '../auth/email.service';
 
 const APPLICATION_STAGES = {
   application_submitted: { order: 1, label: 'Application Submitted', progress: 10 },
@@ -66,6 +67,7 @@ export class ApplicationService {
     private digilockerService: DigilockerService,
     private verificationService: DocumentVerificationService,
     private applicationReviewService: ApplicationReviewService,
+    private emailService: EmailService,
   ) { }
 
   private parseDate(dateStr: string | null | undefined): string | null {
@@ -158,7 +160,7 @@ export class ApplicationService {
     if (error) throw error;
 
     await this.createStatusHistory(application.id, { toStatus: application.status, toStage: application.stage, notes: 'Application created', isAutomatic: true });
-    await this.initializeRequiredDocuments(application.id, data.loanType);
+    await this.initializeRequiredDocuments(application.id, application.userId, data.loanType);
 
     return { success: true, data: application, message: 'Application created successfully' };
   }
@@ -308,10 +310,39 @@ export class ApplicationService {
     return { success: true, data: { ...application, stages } };
   }
 
-  private async initializeRequiredDocuments(applicationId: string, loanType: string) {
-    const requiredDocs = REQUIRED_DOCUMENTS[loanType as keyof typeof REQUIRED_DOCUMENTS] || REQUIRED_DOCUMENTS.personal;
+
+  private normalizeLoanType(type: string): string {
+    const t = (type || '').toLowerCase();
+    if (t.includes('education') || t.includes('study') || t.includes('undergraduate') || t.includes('postgraduate') || t.includes('doctoral')) return 'education';
+    if (t.includes('home') || t.includes('property')) return 'home';
+    if (t.includes('personal')) return 'personal';
+    if (t.includes('business')) return 'business';
+    if (t.includes('vehicle') || t.includes('car')) return 'vehicle';
+    return 'personal';
+  }
+
+  private async initializeRequiredDocuments(applicationId: string, userId: string, loanType: string) {
+    const normalizedType = this.normalizeLoanType(loanType);
+    const requiredDocs = REQUIRED_DOCUMENTS[normalizedType as keyof typeof REQUIRED_DOCUMENTS] || REQUIRED_DOCUMENTS.personal;
+    
+    console.log(`[DOCS] Initializing documents for application ${applicationId}, userId ${userId}, type ${loanType} (normalized: ${normalizedType})`);
+    
+    // Fetch user's existing vault documents to auto-populate if possible
+    const { data: vaultDocs } = await this.db.from('UserDocument').select('*').eq('userId', userId);
+    
     for (const doc of requiredDocs) {
-      await this.db.from('ApplicationDocument').insert({ applicationId, docType: doc.docType, docName: doc.docName, fileName: '', filePath: '', status: 'pending', isRequired: doc.isRequired });
+      // Find if user already has this document in their vault
+      const matchingVaultDoc = vaultDocs?.find(vd => vd.docType === doc.docType && vd.uploaded);
+      
+      await this.db.from('ApplicationDocument').insert({ 
+        applicationId, 
+        docType: doc.docType, 
+        docName: doc.docName, 
+        fileName: matchingVaultDoc?.fileName || '', 
+        filePath: matchingVaultDoc?.filePath || '', 
+        status: matchingVaultDoc ? 'pending' : 'not_uploaded', 
+        isRequired: doc.isRequired 
+      });
     }
   }
 
@@ -351,22 +382,113 @@ export class ApplicationService {
   }
 
   async getApplicationDocuments(applicationId: string, userId?: string) {
-    if (userId) {
-      const application = await this.getApplicationById(applicationId);
-      if (application.userId !== userId) throw new BadRequestException('Unauthorized to view documents');
+    const application = await this.getApplicationById(applicationId);
+    if (userId && application.userId !== userId) {
+      throw new BadRequestException('Unauthorized to view documents');
     }
 
-    const { data: documents } = await this.db.from('ApplicationDocument').select('*').eq('applicationId', applicationId).order('uploadedAt', { ascending: false });
+    let { data: documents } = await this.db.from('ApplicationDocument').select('*').eq('applicationId', applicationId).order('isRequired', { ascending: false });
+
+    // Lazy initialization for older applications
+    if (!documents || documents.length === 0) {
+      await this.initializeRequiredDocuments(application.id, application.userId, application.loanType);
+      const { data: newDocs } = await this.db.from('ApplicationDocument').select('*').eq('applicationId', applicationId).order('isRequired', { ascending: false });
+      documents = newDocs;
+    }
 
     const docs = documents || [];
+    
+    // Also fetch the User's general Vault documents to show in a "Vault" section
+    const { data: vaultDocs } = await this.db.from('UserDocument').select('*').eq('userId', application.userId);
+    
+    // Merge or tag vault documents that aren't already in the application
+    const applicationDocTypes = new Set(docs.map(d => d.docType));
+    const extraVaultDocs = (vaultDocs || [])
+      .filter(vd => !applicationDocTypes.has(vd.docType) && vd.uploaded)
+      .map(vd => ({
+        ...vd,
+        id: `vault_${vd.id}`,
+        isVaultDoc: true,
+        docName: (vd.docType || '').replace(/_/g, ' ').toUpperCase(),
+        status: vd.status || 'uploaded'
+      }));
+
+    const allDocs = [...docs, ...extraVaultDocs];
+
     const grouped = {
-      pending: docs.filter((d: any) => d.status === 'pending' && d.filePath),
-      verified: docs.filter((d: any) => d.status === 'verified'),
-      rejected: docs.filter((d: any) => d.status === 'rejected'),
-      notUploaded: docs.filter((d: any) => !d.filePath),
+      pending: allDocs.filter((d: any) => d.status === 'pending' && d.filePath),
+      verified: allDocs.filter((d: any) => d.status === 'verified' || d.status === 'approved'),
+      rejected: allDocs.filter((d: any) => d.status === 'rejected'),
+      notUploaded: allDocs.filter((d: any) => !d.filePath && !d.isVaultDoc),
+      vault: extraVaultDocs
     };
 
-    return { success: true, data: docs, grouped, summary: { total: docs.length, uploaded: docs.filter((d: any) => d.filePath).length, pending: grouped.pending.length, verified: grouped.verified.length, rejected: grouped.rejected.length, notUploaded: grouped.notUploaded.length } };
+    return { 
+      success: true, 
+      data: allDocs, 
+      grouped, 
+      summary: { 
+        total: docs.length, 
+        vaultTotal: extraVaultDocs.length,
+        uploaded: docs.filter((d: any) => d.filePath).length, 
+        pending: grouped.pending.length, 
+        verified: grouped.verified.length, 
+        rejected: grouped.rejected.length, 
+        notUploaded: grouped.notUploaded.length 
+      } 
+    };
+  }
+
+  async syncApplicationDocuments(applicationId: string, adminId?: string) {
+    const application = await this.getApplicationById(applicationId);
+    
+    // Fetch user's existing vault documents
+    const { data: vaultDocs } = await this.db.from('UserDocument').select('*').eq('userId', application.userId);
+    const { data: appDocs } = await this.db.from('ApplicationDocument').select('*').eq('applicationId', applicationId);
+    
+    const appDocsMap = new Map(appDocs?.map(d => [d.docType, d]) || []);
+    const normalizedType = this.normalizeLoanType(application.loanType);
+    const requiredDocs = REQUIRED_DOCUMENTS[normalizedType as keyof typeof REQUIRED_DOCUMENTS] || REQUIRED_DOCUMENTS.personal;
+    
+    let syncedCount = 0;
+    
+    for (const req of requiredDocs) {
+      const existing = appDocsMap.get(req.docType);
+      const vaultMatch = vaultDocs?.find(vd => vd.docType === req.docType && vd.uploaded);
+      
+      if (vaultMatch) {
+        if (!existing || !existing.filePath) {
+          // Update or insert
+          const updateData = {
+            applicationId,
+            docType: req.docType,
+            docName: req.docName,
+            fileName: vaultMatch.fileName || '',
+            filePath: vaultMatch.filePath || '',
+            status: 'pending',
+            isRequired: req.isRequired
+          };
+          
+          if (existing) {
+            await this.db.from('ApplicationDocument').update(updateData).eq('id', existing.id);
+          } else {
+            await this.db.from('ApplicationDocument').insert(updateData);
+          }
+          syncedCount++;
+        }
+      } else if (!existing) {
+        // Just create the requirement placeholder
+        await this.db.from('ApplicationDocument').insert({
+          applicationId,
+          docType: req.docType,
+          docName: req.docName,
+          status: 'not_uploaded',
+          isRequired: req.isRequired
+        });
+      }
+    }
+    
+    return { success: true, message: `Synchronized ${syncedCount} documents from vault`, syncedCount };
   }
 
   async deleteDocument(documentId: string, userId: string) {
@@ -398,7 +520,7 @@ export class ApplicationService {
         .select('*, user:User!userId(id, email, firstName, lastName), documents:ApplicationDocument(id, status)', { count: 'exact' });
 
       // Apply sorting
-      const sortCol = filters?.sortBy || 'submittedAt';
+      const sortCol = filters?.sortBy || 'updatedAt';
       const isAsc = filters?.sortOrder === 'asc';
       query = query.order(sortCol, { ascending: isAsc });
 
@@ -499,6 +621,16 @@ export class ApplicationService {
   }
 
   async verifyDocument(documentId: string, adminId: string, data: { status: 'verified' | 'rejected'; rejectionReason?: string }) {
+    if (documentId.startsWith('vault_')) {
+      const realId = documentId.replace('vault_', '');
+      const update: any = { status: data.status === 'verified' ? 'approved' : 'rejected' };
+      if (data.status === 'verified') update.updatedAt = new Date().toISOString();
+      
+      const { error } = await this.db.from('UserDocument').update(update).eq('id', realId);
+      if (error) throw error;
+      return { success: true, message: `Vault document ${data.status} successfully` };
+    }
+
     const { data: document } = await this.db.from('ApplicationDocument').select('id').eq('id', documentId).single();
     if (!document) throw new NotFoundException('Document not found');
 
@@ -730,6 +862,95 @@ export class ApplicationService {
         success: true,
         data: { total: 0, totalAmount: 0, revenue: 0, disbursedAmount: 0, recentApplications: [] }
       };
+    }
+  }
+
+  async shareApplication(applicationId: string, adminId: string, adminName: string) {
+    try {
+      const application = await this.getApplicationById(applicationId);
+      if (!application) throw new Error('Application not found');
+
+      const userEmail = application.email || (application.user as any)?.email;
+      if (!userEmail) throw new Error('Recipient email not found');
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const statusColor = application.status === 'approved' ? '#10b981' : application.status === 'rejected' ? '#ef4444' : '#6366f1';
+
+      const emailHtml = `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #334155; background-color: #f8fafc;">
+          <div style="background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%); padding: 40px; border-radius: 24px 24px 0 0; text-align: center; color: white;">
+            <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">Vidhyaloan</h1>
+            <p style="margin: 10px 0 0; font-size: 14px; opacity: 0.8; text-transform: uppercase; letter-spacing: 2px;">Application Details Shared</p>
+          </div>
+          
+          <div style="background: white; padding: 40px; border-radius: 0 0 24px 24px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+            <h2 style="color: #1e1b4b; font-size: 20px; margin-bottom: 24px;">Hi ${application.firstName || 'Student'},</h2>
+            <p style="font-size: 16px; line-height: 1.6; color: #475569; margin-bottom: 30px;">
+              Details for your education loan application <strong>${application.applicationNumber}</strong> are summarized below. You can track your progress anytime on our dashboard.
+            </p>
+
+            <div style="background-color: #f1f5f9; padding: 24px; border-radius: 16px; margin-bottom: 30px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding-bottom: 12px; font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 700;">Status</td>
+                  <td style="padding-bottom: 12px; text-align: right;">
+                    <span style="background-color: ${statusColor}; color: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase;">
+                      ${application.status?.toUpperCase() || 'IN REVIEW'}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom: 12px; font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 700;">Current Stage</td>
+                  <td style="padding-bottom: 12px; text-align: right; font-weight: 700; color: #1e1b4b;">${application.stage?.replace(/_/g, ' ').toUpperCase() || 'N/A'}</td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom: 12px; font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 700;">Loan Amount</td>
+                  <td style="padding-bottom: 12px; text-align: right; font-weight: 700; color: #1e1b4b;">₹${Number(application.amount || 0).toLocaleString('en-IN')}</td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom: 12px; font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 700;">Bank Partner</td>
+                  <td style="padding-bottom: 12px; text-align: right; font-weight: 700; color: #1e1b4b;">${application.bank || 'Pending Assignment'}</td>
+                </tr>
+                <tr>
+                  <td style="font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 700;">Progress</td>
+                  <td style="text-align: right; font-weight: 700; color: #1e1b4b;">${application.progress}%</td>
+                </tr>
+              </table>
+            </div>
+
+            <div style="text-align: center; margin-bottom: 30px;">
+              <a href="${frontendUrl}/dashboard" style="display: inline-block; background-color: #4338ca; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 4px 6px -1px rgba(67, 56, 202, 0.4);">
+                Track My Application
+              </a>
+            </div>
+
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 24px; margin-top: 24px;">
+              <p style="font-size: 12px; color: #94a3b8; text-align: center; line-height: 1.6;">
+                This information was shared by ${adminName} from the Vidhyaloan Staff Dashboard.<br>
+                If you have any questions, please contact our support team.
+              </p>
+            </div>
+          </div>
+          
+          <div style="padding: 24px; text-align: center; font-size: 11px; color: #94a3b8;">
+            © ${new Date().getFullYear()} Vidhyaloan. All rights reserved.
+          </div>
+        </div>
+      `;
+
+      await this.emailService.sendMail(
+        userEmail,
+        `Application Details: ${application.applicationNumber} - Vidhyaloan`,
+        emailHtml
+      );
+
+      // Log the share action as a note
+      await this.db.from('ApplicationNote').insert({ applicationId, authorId: adminId, authorName: adminName, content: `Application details shared to registered email: ${userEmail}`, type: 'share', isInternal: true });
+
+      return { success: true, message: 'Application details shared successfully' };
+    } catch (error) {
+      console.error('[ApplicationService] shareApplication Error:', error);
+      throw new Error(`Failed to share application: ${error.message}`);
     }
   }
 

@@ -122,9 +122,9 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
                                 }`}>
                                     {userData.role?.replace("_", " ") || "USER"}
                                 </span>
-                                {userData.createdAt && (
+                                { (userData.createdAt || userData.created_at) && (
                                     <span className="text-[11px] font-medium text-slate-500">
-                                        Joined: {format(new Date(userData.createdAt), "MMM d, yyyy")}
+                                        Joined: {new Date(userData.createdAt || userData.created_at).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })} IST (GMT+5:30)
                                     </span>
                                 )}
                             </div>
@@ -201,6 +201,46 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
                             </div>
                         </div>
 
+                        {/* Security & Session Section */}
+                        <div className="lg:col-span-2 bg-white rounded-lg border border-slate-200 p-8 shadow-sm">
+                            <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
+                                <span className="material-symbols-outlined">security</span>
+                                Security & Session
+                            </h2>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Last Login Location</p>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[14px] text-emerald-500">pin_drop</span>
+                                        <p className="text-[14px] font-semibold text-slate-900">{userData.last_login_location || "Unknown"}</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Last Login IP</p>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[14px] text-slate-500">router</span>
+                                        <p className="text-[14px] font-semibold text-slate-900 font-mono tracking-tight">{userData.last_login_ip || "0.0.0.0"}</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Last Login Device</p>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[14px] text-slate-500">devices</span>
+                                        <p className="text-[14px] font-semibold text-slate-900">{userData.last_login_device || "Unknown"}</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Last Login Timestamp</p>
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="material-symbols-outlined text-[14px] text-slate-500">schedule</span>
+                                        <p className="text-[14px] font-semibold text-slate-900">
+                                            {userData.last_login_at ? format(new Date(userData.last_login_at), "MMM d, yyyy 'at' hh:mm a") : "Never"}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Quick Stats */}
                         <div className="space-y-4">
                             <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
@@ -214,7 +254,7 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
                             <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
                                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Member Since</p>
                                 <p className="text-sm font-semibold text-slate-900">
-                                    {userData.createdAt ? format(new Date(userData.createdAt), "MMM dd, yyyy") : "—"}
+                                    {(userData.createdAt || userData.created_at) ? `${new Date(userData.createdAt || userData.created_at).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} IST (GMT+5:30)` : "—"}
                                 </p>
                             </div>
                         </div>

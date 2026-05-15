@@ -105,6 +105,63 @@ function authHeaders(): HeadersInit {
         : { "Content-Type": "application/json" };
 }
 
+/**
+ * Enhanced fetch wrapper that handles automatic token refresh on 401 "Token has expired"
+ */
+async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
+    const res = await fetch(url, {
+        ...options,
+        headers: {
+            ...authHeaders(),
+            ...options.headers,
+        },
+    });
+
+    if (res.status === 401) {
+        const clone = res.clone();
+        try {
+            const body = await clone.json();
+            if (body.message === 'Token has expired') {
+                const portal = getPortalFromPathname(typeof window !== "undefined" ? window.location.pathname : "");
+                const keys = getStorageKeys(portal);
+                const refreshToken = localStorage.getItem(keys.refreshToken);
+
+                if (refreshToken) {
+                    console.log("[API] Token expired, attempting silent refresh...");
+                    const refreshRes = await fetch(`${API_URL}/auth/refresh`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ refresh_token: refreshToken }),
+                    });
+
+                    if (refreshRes.ok) {
+                        const data = await refreshRes.json();
+                        const newToken = data.access_token || data.accessToken;
+                        if (newToken) {
+                            console.log("[API] Refresh successful, retrying original request.");
+                            localStorage.setItem(keys.token, newToken);
+                            // Retry with new token
+                            return fetch(url, {
+                                ...options,
+                                headers: {
+                                    ...options.headers,
+                                    'Authorization': `Bearer ${newToken}`,
+                                    'Content-Type': 'application/json'
+                                },
+                            }).then((r) => handleResponse<T>(r));
+                        }
+                    }
+                    console.warn("[API] Silent refresh failed or returned no token.");
+                }
+            }
+        } catch (e) {
+            // Not JSON or other error, fall through to handleResponse
+        }
+    }
+
+    return handleResponse(res);
+}
+
 async function handleResponse<T>(res: Response): Promise<T> {
     const contentType = res.headers.get("content-type");
     let body: any;
@@ -150,6 +207,42 @@ async function handleResponse<T>(res: Response): Promise<T> {
     return body as T;
 }
 
+/**
+ * Fetch wrapper for binary responses (blobs) with proper error handling
+ */
+async function fetchBlob(url: string, options: RequestInit = {}): Promise<Blob> {
+    const token = getToken();
+    const headers = token
+        ? { Authorization: `Bearer ${token}`, ...options.headers }
+        : options.headers;
+
+    const res = await fetch(url, {
+        ...options,
+        headers,
+    });
+
+    if (!res.ok) {
+        const contentType = res.headers.get("content-type");
+        let errorMessage = `HTTP ${res.status}`;
+        
+        try {
+            if (contentType?.includes("application/json")) {
+                const errorBody = await res.json();
+                errorMessage = errorBody.message || errorMessage;
+            } else {
+                const errorText = await res.text();
+                if (errorText) errorMessage = errorText;
+            }
+        } catch (e) {
+            // Unable to parse error response
+        }
+
+        throw new Error(`Failed to fetch document: ${errorMessage}`);
+    }
+
+    return res.blob();
+}
+
 // ─── Auth ─────────────────────────────────────────────────────────────
 export const authApi = {
     sendOtp: (email: string) =>
@@ -164,6 +257,13 @@ export const authApi = {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, otp, referralCode }),
+        }).then(handleResponse),
+
+    firebaseLogin: (idToken: string) =>
+        fetch(`${API_URL}/auth/firebase`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken }),
         }).then(handleResponse),
 
     refresh: (refreshToken: string) =>
@@ -491,16 +591,13 @@ export const referenceApi = {
 // ─── Onboarding ───────────────────────────────────────────────────────
 export const onboardingApi = {
     submit: (data: Record<string, unknown>) =>
-        fetch(`${API_URL}/onboarding`, {
+        apiFetch(`${API_URL}/onboarding`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 
     getStatus: (userId: string) =>
-        fetch(`${API_URL}/onboarding/status/${userId}`, {
-            headers: authHeaders(),
-        }).then(handleResponse),
+        apiFetch(`${API_URL}/onboarding/status/${userId}`),
 };
 
 // ─── Referral ─────────────────────────────────────────────────────────
@@ -563,13 +660,15 @@ export const referralApi = {
 export const adminApi = {
     // Stats
     getBlogStats: () =>
-        fetch(`${API_URL}/blogs/admin/stats`, { headers: authHeaders() }).then(handleResponse),
+        apiFetch(`${API_URL}/blogs/admin/stats`),
     getApplicationStats: () =>
-        fetch(`${API_URL}/applications/admin/stats`, { headers: authHeaders() }).then(handleResponse),
+        apiFetch(`${API_URL}/applications/admin/stats`),
 
     // Blogs
-    getBlogs: (limit = 50, offset = 0) =>
-        fetch(`${API_URL}/blogs/admin/all?limit=${limit}&offset=${offset}`, { headers: authHeaders() }).then(handleResponse),
+    getBlogs: (params?: Record<string, string>) => {
+        const query = params ? "?" + new URLSearchParams(params).toString() : "";
+        return apiFetch(`${API_URL}/blogs/admin/all${query}`);
+    },
     bulkUpdateBlogStatus: (blogIds: string[], isPublished: boolean) =>
         fetch(`${API_URL}/blogs/admin/bulk-status`, {
             method: "POST",
@@ -582,101 +681,177 @@ export const adminApi = {
             headers: authHeaders(),
         }).then(handleResponse),
     createBlog: (data: any) =>
-        fetch(`${API_URL}/blogs`, {
+        apiFetch(`${API_URL}/blogs`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
+
+    getUserStats: () =>
+        apiFetch(`${API_URL}/users/admin/stats`),
 
     // Users
-    getUsers: () =>
-        fetch(`${API_URL}/users/admin/list`, { headers: authHeaders() }).then(handleResponse),
+    getUsers: (limit = 30, offset = 0, search = "", role = "") => {
+        let url = `${API_URL}/users/admin/list?limit=${limit}&offset=${offset}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+        if (role) url += `&role=${encodeURIComponent(role)}`;
+        return apiFetch(url);
+    },
     updateUserRole: (email: string, role: string) =>
-        fetch(`${API_URL}/users/make-admin`, {
+        apiFetch(`${API_URL}/users/make-admin`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify({ email, role }),
-        }).then(handleResponse),
+        }),
     deleteUser: (id: string) =>
-        fetch(`${API_URL}/users/admin/${id}`, {
+        apiFetch(`${API_URL}/users/admin/${id}`, {
             method: "DELETE",
-            headers: authHeaders(),
-        }).then(handleResponse),
+        }),
 
     // Applications
     getApplications: (params?: Record<string, string>) => {
         const query = params ? "?" + new URLSearchParams(params).toString() : "";
-        return fetch(`${API_URL}/applications/admin/all${query}`, { headers: authHeaders() }).then(handleResponse);
+        return apiFetch(`${API_URL}/applications/admin/all${query}`);
     },
+    getApplication: (id: string) =>
+        apiFetch(`${API_URL}/applications/${id}`),
+    getApplicationTracking: (id: string) =>
+        apiFetch(`${API_URL}/applications/admin/${id}/tracking`),
+    getApplicationDocuments: (id: string) =>
+        apiFetch(`${API_URL}/applications/admin/${id}/documents`),
     updateApplicationStatus: (id: string, data: Record<string, unknown>) =>
-        fetch(`${API_URL}/applications/admin/${id}/status`, {
+        apiFetch(`${API_URL}/applications/admin/${id}/status`, {
             method: "PUT",
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
+    updateApplication: (id: string, data: Record<string, unknown>) =>
+        apiFetch(`${API_URL}/applications/admin/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        }),
     aiReviewApplication: (id: string) =>
-        fetch(`${API_URL}/applications/admin/${id}/ai-review`, {
+        apiFetch(`${API_URL}/applications/admin/${id}/ai-review`, {
             method: "POST",
-            headers: authHeaders(),
-        }).then(handleResponse),
+        }),
     deleteApplication: (id: string) =>
-        fetch(`${API_URL}/applications/admin/${id}`, {
+        apiFetch(`${API_URL}/applications/admin/${id}`, {
             method: "DELETE",
-            headers: authHeaders(),
-        }).then(handleResponse),
+        }),
+    shareApplication: (id: string) =>
+        apiFetch(`${API_URL}/applications/admin/${id}/share`, {
+            method: "POST",
+        }),
+    syncVaultDocuments: (id: string) =>
+        apiFetch(`${API_URL}/applications/admin/${id}/sync-vault`, {
+            method: "POST",
+        }),
 
     // Community
     getCommunityStats: () =>
-        fetch(`${API_URL}/community/admin/stats`, { headers: authHeaders() }).then(handleResponse),
+        apiFetch(`${API_URL}/community/admin/stats`),
     getForumPosts: (limit = 20, offset = 0) =>
-        fetch(`${API_URL}/community/admin/forum/posts?limit=${limit}&offset=${offset}`, { headers: authHeaders() }).then(handleResponse),
+        apiFetch(`${API_URL}/community/admin/forum/posts?limit=${limit}&offset=${offset}`),
     getMentors: () =>
-        fetch(`${API_URL}/community/mentors`, { headers: authHeaders() }).then(handleResponse),
-    deleteForumPost: (id: string) =>
-        fetch(`${API_URL}/community/forum/${id}`, {
+        apiFetch(`${API_URL}/community/mentors`),
+    createMentor: (data: any) =>
+        apiFetch(`${API_URL}/community/admin/mentors`, {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+    deleteMentor: (id: string) =>
+        apiFetch(`${API_URL}/community/admin/mentors/${id}`, {
             method: "DELETE",
-            headers: authHeaders(),
-        }).then(handleResponse),
+        }),
+    getCommunityResources: (params?: Record<string, string>) => {
+        const query = params ? "?" + new URLSearchParams(params).toString() : "";
+        return apiFetch(`${API_URL}/community/resources${query}`);
+    },
+    createCommunityResource: (data: any) =>
+        apiFetch(`${API_URL}/community/admin/resources`, {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+    deleteCommunityResource: (id: string) =>
+        apiFetch(`${API_URL}/community/admin/resources/${id}`, {
+            method: "DELETE",
+        }),
+    togglePinForumPost: (id: string, isPinned: boolean) =>
+        apiFetch(`${API_URL}/community/admin/forum/posts/${id}/pin`, {
+            method: "PUT",
+            body: JSON.stringify({ isPinned }),
+        }),
+    deleteForumPost: (id: string) =>
+        apiFetch(`${API_URL}/community/forum/${id}`, {
+            method: "DELETE",
+        }),
     getAuditLogs: (limit = 20) =>
-        fetch(`${API_URL}/blogs/admin/matrix-logs?limit=${limit}`, { headers: authHeaders() }).then(handleResponse),
+        apiFetch(`${API_URL}/blogs/admin/matrix-logs?limit=${limit}`),
     sendEmail: (data: { to?: string; subject: string; content: string; role?: string; isBulk?: boolean }) =>
-        fetch(`${API_URL}/users/admin/send-email`, {
+        apiFetch(`${API_URL}/users/admin/send-email`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
     createUser: (data: any) =>
-        fetch(`${API_URL}/users/admin/create`, {
+        apiFetch(`${API_URL}/users/admin/create`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
     updateUserDetails: (data: { email: string; firstName: string; lastName: string; phoneNumber: string; dateOfBirth: string }) =>
-        fetch(`${API_URL}/users/admin/update-details`, {
+        apiFetch(`${API_URL}/users/admin/update-details`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
+    getUserProfile: (email: string) =>
+        apiFetch(`${API_URL}/users/profile`, {
+            method: "POST",
+            body: JSON.stringify({ email }),
+            headers: authHeaders(),
+        }),
+
+    addRemark: (id: string, data: { type: string; content: string }) =>
+        apiFetch(`${API_URL}/applications/admin/${id}/notes`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+            headers: authHeaders(),
+        }),
+
+    getRemarks: (id: string) =>
+        apiFetch(`${API_URL}/applications/admin/${id}/notes`, {
+            headers: authHeaders(),
+        }),
+
+    verifyDocument: (applicationId: string, documentId: string, status: string, rejectionReason?: string) =>
+        apiFetch(`${API_URL}/applications/admin/documents/${documentId}/verify`, {
+            method: 'PUT',
+            body: JSON.stringify({ status, rejectionReason }),
+            headers: authHeaders(),
+        }),
+
+    viewDocument: (applicationId: string, documentId: string): Promise<Blob> =>
+        fetchBlob(`${API_URL}/applications/admin/${applicationId}/documents/${documentId}/view`),
 };
 
 // ─── Documents ────────────────────────────────────────────────────────
 export const documentApi = {
     getUsersDocuments: (userId: string) =>
-        fetch(`${API_URL}/documents/${userId}`, {
-            headers: authHeaders(),
-        }).then(handleResponse),
+        apiFetch(`${API_URL}/documents/${userId}`),
+
+    getUserDocuments: (userId: string) =>
+        apiFetch(`${API_URL}/documents/${userId}`),
 
     delete: (userId: string, docType: string) =>
-        fetch(`${API_URL}/documents/${userId}/${docType}`, {
+        apiFetch(`${API_URL}/documents/${userId}/${docType}`, {
             method: "DELETE",
-            headers: authHeaders(),
-        }).then(handleResponse),
-
+        }),
 
     initiateDigilocker: (userId: string, docType: string) => {
         // Redirect directly — backend handles the OAuth flow
         window.location.href = `/api/digilocker/authorize?userId=${encodeURIComponent(userId)}&docType=${encodeURIComponent(docType)}`;
     },
+
+    initiateDigiLockerPull: (userId: string, docType: string) =>
+        apiFetch(`${API_URL}/documents/digilocker/initiate`, {
+            method: 'POST',
+            body: JSON.stringify({ userId, docType }),
+        }),
 
     syncFromDigilocker: (userId: string, docType: string) =>
         fetch(`${API_URL}/digilocker/sync`, {
@@ -684,7 +859,31 @@ export const documentApi = {
             headers: authHeaders(),
             body: JSON.stringify({ userId, docType }),
         }).then(handleResponse),
+
+    upload: (userId: string, docType: string, file: File) => {
+        const token = (() => {
+            if (typeof window === 'undefined') return null;
+            return localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken');
+        })();
+        const form = new FormData();
+        form.append('file', file);
+        form.append('userId', userId);
+        form.append('docType', docType);
+        return fetch(`${API_URL}/documents/upload`, {
+            method: 'POST',
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            body: form,
+        }).then(handleResponse);
+    },
+
+    ocrReverify: (userId: string, docType: string) => {
+        return apiFetch(`${API_URL}/documents/ocr-reverify`, {
+            method: 'POST',
+            body: JSON.stringify({ userId, docType }),
+        });
+    },
 };
+
 
 // ─── Connected / Cohort ───────────────────────────────────────────────
 export const connectedApi = {
@@ -752,37 +951,33 @@ export const staffProfileApi = {
         const q = new URLSearchParams();
         if (params?.search) q.set('search', params.search);
         if (params?.bankStatus) q.set('bankStatus', params.bankStatus);
-        return fetch(`${API_URL}/staff-profiles?${q.toString()}`, {
-            headers: authHeaders(),
-        }).then(handleResponse);
+        return apiFetch(`${API_URL}/staff-profiles?${q.toString()}`);
     },
+
+    // Check if a profile already exists for a linked user
+    checkExists: (userId: string) =>
+        apiFetch(`${API_URL}/staff-profiles/check/${userId}`),
 
     // Create a staff profile linked to a website user
     create: (data: { linked_user_id: string; target_bank?: string; loan_type?: string; internal_notes?: string }) =>
-        fetch(`${API_URL}/staff-profiles`, {
+        apiFetch(`${API_URL}/staff-profiles`, {
             method: 'POST',
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 
     // Get a single profile with its documents
     get: (profileId: string) =>
-        fetch(`${API_URL}/staff-profiles/${profileId}`, {
-            headers: authHeaders(),
-        }).then(handleResponse),
+        apiFetch(`${API_URL}/staff-profiles/${profileId}`),
 
     // Pull and attach all documents uploaded by the linked user
     fetchUserDocuments: (profileId: string) =>
-        fetch(`${API_URL}/staff-profiles/${profileId}/fetch-documents`, {
+        apiFetch(`${API_URL}/staff-profiles/${profileId}/fetch-documents`, {
             method: 'POST',
-            headers: authHeaders(),
-        }).then(handleResponse),
+        }),
 
     // Get documents currently attached to a profile
     getDocuments: (profileId: string) =>
-        fetch(`${API_URL}/staff-profiles/${profileId}/documents`, {
-            headers: authHeaders(),
-        }).then(handleResponse),
+        apiFetch(`${API_URL}/staff-profiles/${profileId}/documents`),
 
     // Staff manually uploads a document and attaches it
     uploadDocument: (profileId: string, file: File, docType: string, description?: string) => {
@@ -803,18 +998,16 @@ export const staffProfileApi = {
 
     // Update a document's status (also back-syncs to user's profile)
     updateDocumentStatus: (profileId: string, docId: string, status: string, rejectionReason?: string) =>
-        fetch(`${API_URL}/staff-profiles/${profileId}/documents/${docId}/status`, {
+        apiFetch(`${API_URL}/staff-profiles/${profileId}/documents/${docId}/status`, {
             method: 'PATCH',
-            headers: authHeaders(),
             body: JSON.stringify({ status, rejection_reason: rejectionReason }),
-        }).then(handleResponse),
+        }),
 
     // Remove (detach) a document from the profile
     removeDocument: (profileId: string, docId: string) =>
-        fetch(`${API_URL}/staff-profiles/${profileId}/documents/${docId}`, {
+        apiFetch(`${API_URL}/staff-profiles/${profileId}/documents/${docId}`, {
             method: 'DELETE',
-            headers: authHeaders(),
-        }).then(handleResponse),
+        }),
 
     // Share a document bundle with a bank
     shareWithBank: (profileId: string, data: {
@@ -824,15 +1017,52 @@ export const staffProfileApi = {
         expires_in_days?: number;
         access_note?: string;
     }) =>
-        fetch(`${API_URL}/staff-profiles/${profileId}/share`, {
+        apiFetch(`${API_URL}/staff-profiles/${profileId}/share`, {
             method: 'POST',
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 
     // Get share history for a profile
     getShares: (profileId: string) =>
-        fetch(`${API_URL}/staff-profiles/${profileId}/shares`, {
-            headers: authHeaders(),
-        }).then(handleResponse),
+        apiFetch(`${API_URL}/staff-profiles/${profileId}/shares`),
+
+    // S3 Document Management
+    // Get presigned URL for S3 upload
+    getS3PresignedUrl: (userId: string, docType: string, fileName: string, fileType: string) =>
+        apiFetch(`${API_URL}/documents/presigned-url`, {
+            method: 'POST',
+            body: JSON.stringify({ userId, docType, fileName, fileType }),
+        }),
+
+    // Complete S3 document upload (register in database)
+    completeS3Upload: (userId: string, docId: string, docType: string, s3Key: string, s3Url: string, personType: string, employmentType?: string) =>
+        apiFetch(`${API_URL}/documents/complete-upload`, {
+            method: 'POST',
+            body: JSON.stringify({ userId, docId, docType, s3Key, s3Url, personType, employmentType }),
+        }),
+
+    // Fetch user documents from S3
+    fetchUserS3Documents: (userId: string) =>
+        apiFetch(`${API_URL}/documents/user/${userId}`),
+
+    // Delete S3 document
+    deleteS3Document: (docId: string) =>
+        apiFetch(`${API_URL}/documents/${docId}`, {
+            method: 'DELETE',
+        }),
+
+    // Download document from S3
+    downloadS3Document: (s3Key: string) =>
+        apiFetch(`${API_URL}/documents/download`, {
+            method: 'POST',
+            body: JSON.stringify({ s3Key }),
+        }),
+
+    // Verify S3 document
+    verifyS3Document: (docId: string, status: string, rejectionReason?: string) =>
+        apiFetch(`${API_URL}/documents/${docId}/verify`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status, rejection_reason: rejectionReason }),
+        }),
 };
+

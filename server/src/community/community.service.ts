@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { GroqService } from '../ai/services/groq.service';
+import { OpenRouterService } from '../ai/services/openrouter.service';
 
 @Injectable()
 export class CommunityService {
@@ -12,7 +12,7 @@ export class CommunityService {
 
   constructor(
     private supabase: SupabaseService,
-    private groqService: GroqService,
+    private openRouterService: OpenRouterService,
   ) {}
 
   // ==================== MENTORSHIP METHODS ====================
@@ -718,7 +718,7 @@ export class CommunityService {
 
       const prompt = `You are an expert at detecting duplicate or highly similar questions in a community forum.\n\nNew Question:\nTitle: "${questionData.title}"\nContent: ${questionData.content}\n\nExisting Questions in the ${questionData.category} category:\n${existingQuestionsText}\n\nTask: Identify if the new question is substantially similar to any existing questions. Questions are considered similar if they ask for the same information, even if worded differently.\nHigh similarity (>= 0.8) means they should be merged or the user should be directed to the existing one.\n\nProvide your analysis in JSON format with the following structure:\n{\n  "matches": [\n    {\n      "id": "question_id",\n      "title": "question title",\n      "similarity": 0.0-1.0,\n      "reason": "brief explanation of why they're similar"\n    }\n  ]\n}\n\nIMPORTANT RULES:\n1. Only include questions with similarity >= 0.7\n2. Similarity of 0.9-1.0 means essentially the same question or intent\n3. Similarity of 0.7-0.8 means related topics but maybe slightly different focus\n4. Maximum 5 matches\n5. Respond ONLY with valid JSON, no markdown formatting`;
 
-      const aiResponse = await this.groqService.getJson<{ matches: Array<{ id: string; title: string; similarity: number; reason: string }> }>(prompt);
+      const aiResponse = await this.openRouterService.getJson<{ matches: Array<{ id: string; title: string; similarity: number; reason: string }> }>(prompt);
 
       const validMatches = (aiResponse.matches || [])
         .filter((m) => m.similarity >= 0.7)

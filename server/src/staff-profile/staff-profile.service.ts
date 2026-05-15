@@ -35,35 +35,56 @@ export class StaffProfileService {
     if (!linkedUser) throw new NotFoundException('User account not found');
 
     // 2. Prevent duplicate profiles
-    const { data: existing } = await this.db
+    const { data: existing, error: checkError } = await this.db
       .from('StaffProfile')
       .select('id')
       .eq('linkedUserId', body.linked_user_id)
-      .single();
+      .maybeSingle();
 
-    if (existing) throw new ConflictException('A profile already exists for this user');
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('[StaffProfileService.createProfile] Check Existing Error:', checkError);
+    }
 
-    // 3. Insert profile
+    if (existing) {
+      throw new ConflictException('A profile already exists for this user');
+    }
+
+    const insertData: any = {
+      linkedUserId: body.linked_user_id,
+      assignedStaffId: staffUser?.id || staffUser?.uid || 'system', // Ensure not null
+      internalNotes: body.internal_notes || null,
+      bankStatus: 'NOT_SENT',
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (body.target_bank) insertData.targetBank = body.target_bank;
+    if (body.loan_type) insertData.loanType = body.loan_type;
+
     const { data: profile, error } = await this.db
       .from('StaffProfile')
-      .insert({
-        linkedUserId: body.linked_user_id,
-        assignedStaffId: staffUser.id,
-        targetBank: body.target_bank || null,
-        loanType: body.loan_type || null,
-        internalNotes: body.internal_notes || null,
-        bankStatus: 'NOT_SENT',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      })
+      .insert(insertData)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[StaffProfileService.createProfile] Insert Error:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        insertData
+      });
+      // Handle Postgres unique constraint violation
+      if (error.code === '23505') {
+        throw new ConflictException('Staff profile already exists for this user');
+      }
+      throw new BadRequestException(`Failed to create staff profile: ${error.message || 'Database error'}`);
+    }
 
-    await this.auditLog.logAction('PROFILE_CREATED', 'staff_profile', profile.id, staffUser, {
+    // Log the action (async)
+    this.auditLog.logAction('PROFILE_CREATED', 'staff_profile', profile.id, staffUser || { id: 'system' }, {
       linked_user_id: body.linked_user_id,
-    });
+    }).catch(e => console.error('[StaffProfileService] Audit log failed:', e));
 
     return profile;
   }
@@ -113,6 +134,24 @@ export class StaffProfileService {
 
     if (error || !data) throw new NotFoundException('Profile not found');
     return data;
+  }
+
+  // ─── Get profile by linked user ID ──────────────────────────────────────────
+  async getProfileByLinkedUserId(linkedUserId: string) {
+    const { data, error } = await this.db
+      .from('StaffProfile')
+      .select(
+        `*, linkedUser:User!linkedUserId(id, firstName, lastName, email, mobile)`,
+      )
+      .eq('linkedUserId', linkedUserId)
+      .maybeSingle();
+
+    if (error && error.code !== 'PGRST116') {
+      console.error('[StaffProfileService.getProfileByLinkedUserId] Error:', error);
+      return null;
+    }
+
+    return data || null;
   }
 
   // ─── Fetch & attach documents from the linked user account ─────────────────

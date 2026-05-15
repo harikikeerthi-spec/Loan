@@ -42,6 +42,11 @@ export default function BankApplications() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedApp, setSelectedApp] = useState<any>(null);
     const [assignee, setAssignee] = useState<string>("");
+    const [interestRate, setInterestRate] = useState("10.25");
+    const [tenure, setTenure] = useState("10");
+    const [actionLoading, setActionLoading] = useState(false);
+    const [rejectReason, setRejectReason] = useState("");
+    const [showRejectForm, setShowRejectForm] = useState(false);
 
     const [applications, setApplications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -68,6 +73,75 @@ export default function BankApplications() {
         fetchApplications();
     }, [filterStatus, searchQuery]);
 
+    const handleApproveApplication = async () => {
+        if (!selectedApp) return;
+        
+        setActionLoading(true);
+        try {
+            const payload = {
+                status: "approved",
+                interestRate: parseFloat(interestRate),
+                tenure: parseInt(tenure),
+                assignedTo: assignee || undefined,
+                approvedBy: "bank",
+                approvalDate: new Date()
+            };
+
+            // Call API to update application
+            const res = await adminApi.updateApplication(selectedApp.id, payload) as any;
+            
+            if (res.success) {
+                // Update local state
+                setApplications(applications.map(app => 
+                    app.id === selectedApp.id ? { ...app, ...payload } : app
+                ));
+                setSelectedApp(null);
+                alert("Application approved successfully!");
+            }
+        } catch (error) {
+            console.error("Failed to approve application:", error);
+            alert("Failed to approve application");
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleRejectApplication = async () => {
+        if (!selectedApp || !rejectReason.trim()) {
+            alert("Please provide a reason for rejection");
+            return;
+        }
+        
+        setActionLoading(true);
+        try {
+            const payload = {
+                status: "rejected",
+                rejectionReason: rejectReason,
+                rejectedBy: "bank",
+                rejectionDate: new Date()
+            };
+
+            // Call API to update application
+            const res = await adminApi.updateApplication(selectedApp.id, payload) as any;
+            
+            if (res.success) {
+                // Update local state
+                setApplications(applications.map(app => 
+                    app.id === selectedApp.id ? { ...app, ...payload } : app
+                ));
+                setSelectedApp(null);
+                alert("Application rejected successfully!");
+            }
+        } catch (error) {
+            console.error("Failed to reject application:", error);
+            alert("Failed to reject application");
+        } finally {
+            setActionLoading(false);
+            setShowRejectForm(false);
+            setRejectReason("");
+        }
+    };
+
     const statusColors: Record<string, string> = {
         pending: "bg-amber-100 text-amber-700 border-amber-200",
         processing: "bg-blue-100 text-blue-700 border-blue-200",
@@ -80,7 +154,7 @@ export default function BankApplications() {
         <div className="p-8 space-y-8 animate-fade-in relative z-10">
             <div className="flex flex-col md:flex-row justify-between items-end gap-6 mb-4">
                 <div>
-                    <h2 className="text-4xl font-black font-display mb-2 text-gray-900 tracking-tight italic">Applications Matrix</h2>
+                    <h2 className="text-4xl font-black mb-2 text-gray-900 tracking-tight">Applications Matrix</h2>
                     <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2">
                         <span className="material-symbols-outlined text-xs">database</span>
                         Total Nodes Analyzed: {applications.length}
@@ -275,16 +349,28 @@ export default function BankApplications() {
                                             <div>
                                                 <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 block mb-4">Set Interest Pulse (%)</label>
                                                 <div className="flex items-center gap-4">
-                                                    <input type="range" min="8" max="15" step="0.25" className="flex-1 accent-[#6605c7]" />
-                                                    <span className="text-sm font-black text-[#6605c7] font-mono">10.25%</span>
+                                                    <input 
+                                                        type="range" 
+                                                        min="8" 
+                                                        max="15" 
+                                                        step="0.25" 
+                                                        value={interestRate}
+                                                        onChange={(e) => setInterestRate(e.target.value)}
+                                                        className="flex-1 accent-[#6605c7]" 
+                                                    />
+                                                    <span className="text-sm font-black text-[#6605c7] font-mono min-w-[60px]">{interestRate}%</span>
                                                 </div>
                                             </div>
                                             <div>
                                                 <label className="text-[9px] font-black uppercase tracking-widest text-gray-400 block mb-4">Repayment Cycle (Years)</label>
-                                                <select className="w-full bg-gray-50 border border-gray-100 p-3 rounded-xl text-[10px] font-black uppercase tracking-widest focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5">
-                                                    <option>5 Years</option>
-                                                    <option>10 Years</option>
-                                                    <option>15 Years</option>
+                                                <select 
+                                                    value={tenure}
+                                                    onChange={(e) => setTenure(e.target.value)}
+                                                    className="w-full bg-gray-50 border border-gray-100 p-3 rounded-xl text-[10px] font-black uppercase tracking-widest focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5"
+                                                >
+                                                    <option value="5">5 Years</option>
+                                                    <option value="10">10 Years</option>
+                                                    <option value="15">15 Years</option>
                                                 </select>
                                             </div>
                                         </div>
@@ -315,16 +401,54 @@ export default function BankApplications() {
                                 </div>
 
                                 {/* Action Matrix */}
-                                <div className="grid grid-cols-2 gap-4 pb-12">
-                                    <button className="group relative overflow-hidden px-8 py-5 rounded-[2rem] bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100 transition-all flex items-center justify-center gap-3">
-                                        <span className="material-symbols-outlined font-black">cancel</span>
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Decline Protocol</span>
-                                    </button>
-                                    <button className="group relative overflow-hidden px-8 py-5 rounded-[2rem] bg-[#6605c7] text-white shadow-xl shadow-purple-500/30 hover:scale-[1.02] transition-all flex items-center justify-center gap-3">
-                                        <span className="material-symbols-outlined font-black">verified</span>
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Validate Node</span>
-                                    </button>
-                                </div>
+                                {showRejectForm ? (
+                                    <div className="glass-card p-8 rounded-[2rem] bg-rose-50 border border-rose-100 space-y-4 pb-12">
+                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-rose-600 mb-4">Rejection Details</h4>
+                                        <textarea
+                                            value={rejectReason}
+                                            onChange={(e) => setRejectReason(e.target.value)}
+                                            placeholder="Provide reason for rejection..."
+                                            className="w-full p-4 rounded-xl border border-rose-200 bg-white text-[10px] font-bold uppercase tracking-widest focus:outline-none focus:ring-4 focus:ring-rose-100 resize-none"
+                                            rows={4}
+                                        />
+                                        <div className="flex gap-4">
+                                            <button
+                                                onClick={() => setShowRejectForm(false)}
+                                                className="flex-1 px-8 py-3 rounded-[1.5rem] bg-white text-rose-600 border border-rose-200 text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-all"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                onClick={handleRejectApplication}
+                                                disabled={actionLoading || !rejectReason.trim()}
+                                                className="flex-1 px-8 py-3 rounded-[1.5rem] bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                            >
+                                                {actionLoading && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                                                Confirm Rejection
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-4 pb-12">
+                                        <button
+                                            onClick={() => setShowRejectForm(true)}
+                                            disabled={actionLoading || selectedApp?.status !== 'processing'}
+                                            className="group relative overflow-hidden px-8 py-5 rounded-[2rem] bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <span className="material-symbols-outlined font-black">cancel</span>
+                                            <span className="text-[10px] font-black uppercase tracking-widest">Decline Protocol</span>
+                                        </button>
+                                        <button
+                                            onClick={handleApproveApplication}
+                                            disabled={actionLoading || selectedApp?.status !== 'processing'}
+                                            className="group relative overflow-hidden px-8 py-5 rounded-[2rem] bg-[#6605c7] text-white shadow-xl shadow-purple-500/30 hover:scale-[1.02] transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {actionLoading && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                                            <span className="material-symbols-outlined font-black">verified</span>
+                                            <span className="text-[10px] font-black uppercase tracking-widest">Validate Node</span>
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
                     </>

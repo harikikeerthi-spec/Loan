@@ -2,14 +2,14 @@
 import { Injectable } from '@nestjs/common';
 
 @Injectable()
-export class GroqService {
-    private readonly apiUrl = 'https://api.groq.com/openai/v1/chat/completions';
-    private readonly apiKey = process.env.GROQ_API_KEY;
+export class OpenRouterService {
+    private readonly apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
+    private readonly apiKey = process.env.OPENROUTER_API_KEY;
 
-    async chat(prompt: string, model: string = 'llama-3.1-8b-instant'): Promise<string> {
-        if (!this.apiKey) {
-            console.warn('GROQ_API_KEY is not set. Using mock response or failing.');
-            throw new Error('GROQ_API_KEY is not configured in environment variables.');
+    async chat(prompt: string, model: string = 'meta-llama/llama-3.1-8b-instruct'): Promise<string> {
+        if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') {
+            console.warn('OPENROUTER_API_KEY is not set. Using mock response or failing.');
+            throw new Error('OPENROUTER_API_KEY is not configured in environment variables.');
         }
 
         const requestBody: any = {
@@ -17,15 +17,15 @@ export class GroqService {
             messages: [
                 { role: 'user', content: prompt }
             ],
-            max_tokens: 2048, // Ensure we don't truncate large JSONs
+            max_tokens: 2048,
         };
 
         const maskedKey = this.apiKey ? `${this.apiKey.slice(0, 4)}...${this.apiKey.slice(-4)} (len ${this.apiKey.length})` : '[NOT SET]';
-        console.log('Groq request:', {
+        console.log('OpenRouter request:', {
             url: this.apiUrl,
             model: requestBody.model,
             promptLength: prompt.length,
-            groqKey: maskedKey
+            openRouterKey: maskedKey
         });
 
         try {
@@ -34,27 +34,28 @@ export class GroqService {
                 headers: {
                     'Authorization': `Bearer ${this.apiKey}`,
                     'Content-Type': 'application/json',
+                    'HTTP-Referer': 'https://vidhyaloan.com', // Optional, for OpenRouter rankings
+                    'X-Title': 'VidhyaLoan', // Optional, for OpenRouter rankings
                 },
                 body: JSON.stringify(requestBody),
             });
 
             if (!response.ok) {
                 const errorBody = await response.text();
-                console.error('Groq API error details:', {
+                console.error('OpenRouter API error details:', {
                     status: response.status,
                     statusText: response.statusText,
                     body: errorBody
                 });
-                throw new Error(`Groq API error: ${response.statusText} - ${errorBody}`);
+                throw new Error(`OpenRouter API error: ${response.statusText} - ${errorBody}`);
             }
 
             const data = await response.json();
             return data.choices?.[0]?.message?.content || '';
         } catch (error) {
-            console.error('Groq request failed:', error);
+            console.error('OpenRouter request failed:', error);
             if (error.message.includes('429') || error.message.includes('rate_limit')) {
                 console.warn('Rate limit hit. Returning mock response for stability.');
-                // Return a basic mock structure if prompt looks like it wants university list
                 if (prompt.includes('universities')) {
                     return JSON.stringify([{
                         name: "Stanford University (Mock)", loc: "California, USA", slug: "stanford",
@@ -67,18 +68,19 @@ export class GroqService {
         }
     }
 
-    async getJson<T>(prompt: string, model: string = 'llama-3.1-8b-instant'): Promise<T> {
+    async getJson<T>(prompt: string, model: string = 'meta-llama/llama-3.1-8b-instruct'): Promise<T> {
         const jsonPrompt = `${prompt}\n\nIMPORTANT: Respond ONLY with valid JSON. Do not include markdown formatting.`;
-        if (!this.apiKey) throw new Error('GROQ_API_KEY is not configured');
+        if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') throw new Error('OPENROUTER_API_KEY is not configured');
 
         let content = '';
         try {
-            // Attempt 1: Native JSON Mode
             const response = await fetch(this.apiUrl, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${this.apiKey}`,
                     'Content-Type': 'application/json',
+                    'HTTP-Referer': 'https://vidhyaloan.com',
+                    'X-Title': 'VidhyaLoan',
                 },
                 body: JSON.stringify({
                     model: model,
@@ -97,31 +99,25 @@ export class GroqService {
                     console.warn('Native JSON mode failed. Retrying with standard mode...');
                     content = await this.chat(jsonPrompt, model);
                 } else if (response.status === 429 || errorBody.includes('rate_limit')) {
-                    // Fail gracefully with a fallback if searching for universities
                     if (prompt.includes('universities')) {
                         return { universities: [{ name: "University of Munich (Mock)", loc: "Munich, Germany", country: "Germany", rank: 54, tuition: 0, accept: 15, website: "https://lmu.de", slug: "lmu" }] } as any;
                     }
                     throw new Error(`Rate limit hit: ${errorBody}`);
                 } else {
-                    throw new Error(`Groq JSON API error: ${response.statusText} - ${errorBody}`);
+                    throw new Error(`OpenRouter JSON API error: ${response.statusText} - ${errorBody}`);
                 }
             }
         } catch (error) {
-            console.error('Groq getJson first attempt failed:', error);
-            // Absolute fallback: try standard mode one last time
+            console.error('OpenRouter getJson first attempt failed:', error);
             try {
                 content = await this.chat(jsonPrompt, model);
             } catch (e) {
-                throw error; // throw original
+                throw error;
             }
         }
 
-        // Processing Logic (Cleaner)
         try {
             let cleaned = content.replace(/```json/g, '').replace(/```/g, '').trim();
-
-            // Native JSON mode sometimes gives a raw string, sometimes a quoted string. 
-            // We need to find the start of the object/array
             const firstBrace = cleaned.indexOf('{');
             const firstBracket = cleaned.indexOf('[');
             let start = -1;
@@ -136,21 +132,15 @@ export class GroqService {
             }
 
             if (start === -1 || end === -1 || end < start) {
-                // Return empty object if we can't find JSON and it's university list
                 if (prompt.includes('universities')) return { universities: [] } as any;
                 throw new Error('No valid JSON structure found in response');
             }
 
             let jsonString = cleaned.slice(start, end + 1);
-
-            // EMERGENCY REPAIR: If AI returned ranges like 351-400 unquoted, fix them
-            // Match : 351-400 followed by comma or brace
             jsonString = jsonString.replace(/:\s*(\d+)-(\d+)\s*(,|})/g, ': "$1-$2"$3');
-
             return JSON.parse(jsonString) as T;
         } catch (e) {
             console.error('Failed to parse JSON response:', content);
-            // Last ditch effort for university lists
             if (prompt.includes('universities')) return { universities: [] } as any;
             throw new Error(`AI response was not valid JSON: ${e.message}`);
         }

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { adminApi, documentApi, staffProfileApi } from "@/lib/api";
-import { format } from "date-fns";
+import { formatDate } from "@/lib/utils";
+import ApplicationDetailView from "@/components/staff/ApplicationDetailView";
 
 export default function StaffUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
@@ -115,7 +116,7 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                             {(userData.firstName?.[0] || "U").toUpperCase()}{(userData.lastName?.[0] || "").toUpperCase()}
                         </div>
                         <div className="flex-1">
-                            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+                            <h1 className="text-3xl font-black text-slate-900 tracking-tight" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
                                 {userData.firstName || "—"} {userData.lastName || ""}
                             </h1>
                             <div className="flex items-center gap-3 mt-2">
@@ -129,9 +130,9 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                 }`}>
                                     {userData.role?.replace("_", " ") || "USER"}
                                 </span>
-                                {userData.createdAt && (
-                                    <span className="text-[11px] font-medium text-slate-500">
-                                        Joined: {format(new Date(userData.createdAt), "MMM d, yyyy")}
+                                { (userData.createdAt || userData.created_at) && (
+                                    <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
+                                        Joined: {new Date(userData.createdAt || userData.created_at).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })} IST (GMT+5:30)
                                     </span>
                                 )}
                             </div>
@@ -173,55 +174,59 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                 {activeTab === "profile" && (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Personal Information */}
-                        <div className="lg:col-span-2 bg-white rounded-lg border border-slate-200 p-8 shadow-sm">
-                            <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
-                                <span className="material-symbols-outlined">person</span>
-                                Personal Information
-                            </h2>
-                            <div className="grid grid-cols-2 gap-6">
-                                <div>
-                                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">First Name</p>
-                                    <p className="text-[14px] font-semibold text-slate-900">{userData.firstName || "—"}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Last Name</p>
-                                    <p className="text-[14px] font-semibold text-slate-900">{userData.lastName || "—"}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Email</p>
-                                    <p className="text-[14px] font-semibold text-slate-900 lowercase">{userData.email || "—"}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Phone</p>
-                                    <p className="text-[14px] font-semibold text-slate-900">{userData.mobile || userData.phone || "—"}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Role</p>
-                                    <p className="text-[14px] font-semibold text-slate-900 capitalize">{userData.role || "—"}</p>
-                                </div>
-                                <div>
-                                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Account Status</p>
-                                    <span className="px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                        Active
-                                    </span>
+                        <div className="lg:col-span-2 space-y-6">
+                            <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm">
+                                <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
+                                    <span className="material-symbols-outlined">person</span>
+                                    Personal Information
+                                </h2>
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div>
+                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">First Name</p>
+                                        <p className="text-[14px] font-semibold text-slate-900">{userData.firstName || "—"}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Last Name</p>
+                                        <p className="text-[14px] font-semibold text-slate-900">{userData.lastName || "—"}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Email</p>
+                                        <p className="text-[14px] font-semibold text-slate-900 lowercase">{userData.email || "—"}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Phone</p>
+                                        <p className="text-[14px] font-semibold text-slate-900">{userData.mobile || userData.phone || "—"}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Role</p>
+                                        <p className="text-[14px] font-semibold text-slate-900 capitalize">{userData.role || "—"}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Account Status</p>
+                                        <span className="px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                            Active
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
+
+
                         </div>
 
                         {/* Quick Stats */}
                         <div className="space-y-4">
                             <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
                                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Applications</p>
-                                <p className="text-3xl font-black text-slate-900">{userApplications.length}</p>
+                                <p className="text-3xl font-black text-slate-900" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{userApplications.length}</p>
                             </div>
                             <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
                                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Documents</p>
-                                <p className="text-3xl font-black text-slate-900">{userDocuments.length}</p>
+                                <p className="text-3xl font-black text-slate-900" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{userDocuments.length}</p>
                             </div>
                             <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
                                 <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Member Since</p>
                                 <p className="text-sm font-semibold text-slate-900">
-                                    {userData.createdAt ? format(new Date(userData.createdAt), "MMM dd, yyyy") : "—"}
+                                    {(userData.createdAt || userData.created_at) ? `${new Date(userData.createdAt || userData.created_at).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} IST (GMT+5:30)` : "—"}
                                 </p>
                             </div>
                         </div>
@@ -266,8 +271,8 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                             {app.status || "Pending"}
                                                         </span>
                                                     </td>
-                                                    <td className="px-6 py-4 text-[12px] font-semibold text-slate-500">
-                                                        {app.createdAt ? format(new Date(app.createdAt), "MMM d, yyyy") : "—"}
+                                                    <td className="px-6 py-4 text-[12px] font-semibold text-slate-700">
+                                                        {formatDate(app.createdAt, "MMM d, yyyy")}
                                                     </td>
                                                     <td className="px-6 py-4 text-right">
                                                         <button onClick={() => setSelectedApplication(app)} className="w-8 h-8 rounded bg-slate-100 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 flex items-center justify-center transition-all" title="View">
@@ -289,129 +294,10 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
 
                         {/* Application Details Panel */}
                         {selectedApplication && (
-                            <div className="mt-8 bg-white rounded-lg border border-slate-200 shadow-sm p-8">
-                                <div className="flex items-center justify-between mb-6">
-                                    <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                                        <span className="material-symbols-outlined">description</span>
-                                        Application Details
-                                    </h3>
-                                    <button
-                                        onClick={() => setSelectedApplication(null)}
-                                        className="w-8 h-8 rounded bg-slate-100 hover:bg-slate-200 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-all"
-                                        title="Close"
-                                    >
-                                        <span className="material-symbols-outlined text-[18px]">close</span>
-                                    </button>
-                                </div>
-
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    {/* Left Column - Basic Info */}
-                                    <div className="space-y-6">
-                                        <div className="border-b border-slate-200 pb-6">
-                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Application ID</p>
-                                            <p className="text-[16px] font-black text-slate-900">
-                                                #{selectedApplication.applicationNumber?.toString().slice(0, 8) || selectedApplication.id?.slice(0, 8).toUpperCase()}
-                                            </p>
-                                        </div>
-
-                                        <div>
-                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Bank/Lender</p>
-                                            <p className="text-[14px] font-semibold text-slate-900">{selectedApplication.bank || "—"}</p>
-                                        </div>
-
-                                        <div>
-                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Loan Type</p>
-                                            <p className="text-[14px] font-semibold text-slate-900">{selectedApplication.loanType || "—"}</p>
-                                        </div>
-
-                                        <div>
-                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Status</p>
-                                            <span className={`inline-block px-3 py-1 rounded text-[11px] font-bold uppercase tracking-wide border ${
-                                                selectedApplication.status === "approved"
-                                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                                    : selectedApplication.status === "rejected"
-                                                    ? "bg-rose-50 text-rose-700 border-rose-200"
-                                                    : selectedApplication.status === "processing"
-                                                    ? "bg-indigo-50 text-indigo-700 border-indigo-200"
-                                                    : "bg-amber-50 text-amber-700 border-amber-200"
-                                            }`}>
-                                                {selectedApplication.status || "Pending"}
-                                            </span>
-                                        </div>
-
-                                        <div>
-                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Created Date</p>
-                                            <p className="text-[14px] font-semibold text-slate-900">
-                                                {selectedApplication.createdAt ? format(new Date(selectedApplication.createdAt), "MMMM d, yyyy 'at' hh:mm a") : "—"}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Right Column - Additional Details */}
-                                    <div className="space-y-6">
-                                        {selectedApplication.loanAmount && (
-                                            <div>
-                                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Loan Amount</p>
-                                                <p className="text-[16px] font-black text-slate-900">${selectedApplication.loanAmount.toLocaleString()}</p>
-                                            </div>
-                                        )}
-
-                                        {selectedApplication.loanTenure && (
-                                            <div>
-                                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Loan Tenure</p>
-                                                <p className="text-[14px] font-semibold text-slate-900">{selectedApplication.loanTenure} months</p>
-                                            </div>
-                                        )}
-
-                                        {selectedApplication.interestRate && (
-                                            <div>
-                                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Interest Rate</p>
-                                                <p className="text-[14px] font-semibold text-slate-900">{selectedApplication.interestRate}%</p>
-                                            </div>
-                                        )}
-
-                                        {selectedApplication.updatedAt && (
-                                            <div>
-                                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Last Updated</p>
-                                                <p className="text-[14px] font-semibold text-slate-900">
-                                                    {format(new Date(selectedApplication.updatedAt), "MMMM d, yyyy 'at' hh:mm a")}
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        {selectedApplication.remarks && (
-                                            <div>
-                                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Remarks</p>
-                                                <p className="text-[13px] text-slate-700 bg-slate-50 border border-slate-200 rounded p-3">{selectedApplication.remarks}</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Full Width Details */}
-                                <div className="mt-8 pt-6 border-t border-slate-200 space-y-6">
-                                    {selectedApplication.purpose && (
-                                        <div>
-                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Purpose</p>
-                                            <p className="text-[13px] text-slate-700">{selectedApplication.purpose}</p>
-                                        </div>
-                                    )}
-
-                                    {selectedApplication.documents && selectedApplication.documents.length > 0 && (
-                                        <div>
-                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-3">Attached Documents</p>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                                {selectedApplication.documents.map((doc: any, idx: number) => (
-                                                    <div key={idx} className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded">
-                                                        <span className="material-symbols-outlined text-[18px] text-slate-400">description</span>
-                                                        <span className="text-[12px] font-semibold text-slate-700">{doc.docType || doc}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
+                            <ApplicationDetailView 
+                                application={selectedApplication}
+                                onBack={() => setSelectedApplication(null)}
+                            />
                         )}
                     </>
                 )}
@@ -431,8 +317,8 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                             </div>
                                         </div>
                                         {doc.uploadedAt && (
-                                            <p className="text-[10px] font-medium text-slate-400">
-                                                {format(new Date(doc.uploadedAt), "MMM d, yyyy")}
+                                            <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-tight">
+                                                Uploaded: {formatDate(doc.uploadedAt, "MMM d, yyyy")}
                                             </p>
                                         )}
                                     </div>

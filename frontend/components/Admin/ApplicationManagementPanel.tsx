@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { format } from "date-fns";
+import { formatDate } from "@/lib/utils";
 
 interface ApplicationData {
     id: string;
@@ -255,7 +255,7 @@ const ApplicationManagementPanel = ({ app, onUpdate, onClose }: {
                                     <div>
                                         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">DOB</p>
                                         <p className="text-sm font-medium text-slate-700">
-                                            {app.dateOfBirth ? format(new Date(app.dateOfBirth), "dd MMM yyyy") : "—"}
+                                            {formatDate(app.dateOfBirth, "dd MMM yyyy")}
                                         </p>
                                     </div>
                                 </div>
@@ -322,11 +322,11 @@ const ApplicationManagementPanel = ({ app, onUpdate, onClose }: {
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div className="bg-white p-3 rounded-lg border border-slate-200">
                                         <p className="text-[10px] font-semibold text-slate-500 uppercase mb-1">Submitted</p>
-                                        <p className="text-sm font-medium text-slate-900">{app.submittedAt ? format(new Date(app.submittedAt), "dd MMM yyyy") : "—"}</p>
+                                        <p className="text-sm font-medium text-slate-900">{formatDate(app.submittedAt, "dd MMM yyyy")}</p>
                                     </div>
                                     <div className="bg-white p-3 rounded-lg border border-slate-200">
                                         <p className="text-[10px] font-semibold text-slate-500 uppercase mb-1">Created</p>
-                                        <p className="text-sm font-medium text-slate-900">{format(new Date(app.createdAt), "dd MMM yyyy")}</p>
+                                        <p className="text-sm font-medium text-slate-900">{formatDate(app.createdAt, "dd MMM yyyy")}</p>
                                     </div>
                                     <div className="bg-white p-3 rounded-lg border border-slate-200">
                                         <p className="text-[10px] font-semibold text-slate-500 uppercase mb-1">Stage</p>
@@ -482,7 +482,7 @@ const ApplicationManagementPanel = ({ app, onUpdate, onClose }: {
                                                 }`}>
                                                     {remark.type.replace(/_/g, " ")}
                                                 </span>
-                                                <p className="text-xs text-slate-500">{format(new Date(remark.createdAt), "dd MMM yyyy HH:mm")}</p>
+                                                <p className="text-xs text-slate-500">{formatDate(remark.createdAt, "dd MMM yyyy HH:mm")}</p>
                                             </div>
                                             <p className="text-sm text-slate-700 font-medium mb-2">{remark.content}</p>
                                             <p className="text-xs text-slate-500">By {remark.author}</p>

@@ -106,7 +106,22 @@ export default function DocumentVaultPage() {
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, docType: string) => {
         const file = e.target.files?.[0];
-        if (!file || !user?.id) return;
+        if (!file || !user?.id) {
+            alert("File or user information missing");
+            return;
+        }
+
+        // Validate file
+        if (file.size > 5 * 1024 * 1024) {
+            alert("File size exceeds 5MB limit");
+            return;
+        }
+
+        const validFileTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+        if (!validFileTypes.includes(file.type)) {
+            alert("File must be JPG, PNG, or PDF");
+            return;
+        }
 
         setUploading(docType);
         try {
@@ -122,24 +137,56 @@ export default function DocumentVaultPage() {
 
             const token = localStorage.getItem("accessToken");
 
+            console.log("Starting file upload for docType:", docType, "file:", file.name, "size:", file.size);
+
             const response = await fetch(`/api/documents/upload`, {
                 method: 'POST',
                 headers: token ? { Authorization: `Bearer ${token}` } : {},
                 body: formData
             });
 
+            console.log("Upload response status:", response.status, response.statusText);
+
             if (!response.ok) {
-                throw new Error('Upload failed');
+                let errorMessage = `Server error: ${response.status} ${response.statusText}`;
+                try {
+                    const errorData = await response.json();
+                    console.error("Detailed server error response:", errorData);
+                    
+                    if (errorData.message) {
+                        errorMessage = errorData.message;
+                    } else if (errorData.error) {
+                        errorMessage = errorData.error;
+                    } else if (Object.keys(errorData).length > 0) {
+                        errorMessage = JSON.stringify(errorData);
+                    }
+                } catch (parseError) {
+                    try {
+                        const text = await response.text();
+                        if (text) {
+                            console.error("Server error response (text):", text);
+                            errorMessage = text;
+                        }
+                    } catch (textError) {
+                        console.error("Failed to parse error response body");
+                    }
+                }
+                throw new Error(errorMessage);
             }
+
+            const result = await response.json();
+            console.log("Upload successful:", result);
 
             await loadDocs();
 
             const key = `dashboardDataUpdated_${user.id}`;
             localStorage.setItem(key, String(Date.now()));
             window.dispatchEvent(new Event('dashboard-data-changed'));
+            alert("Document uploaded successfully!");
 
-        } catch (e) {
-            console.error(e);
+        } catch (e: any) {
+            console.error("Upload error:", e.message || e);
+            alert(`Upload failed: ${e.message || 'Unknown error occurred'}`);
         } finally {
             setUploading(null);
         }

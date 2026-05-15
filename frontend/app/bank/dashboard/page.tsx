@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
@@ -84,6 +85,7 @@ interface AdminStatsResponse {
 // --- Page ---
 
 export default function BankDashboard() {
+    const router = useRouter();
     const { user } = useAuth();
     const [stats, setStats] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -177,10 +179,25 @@ export default function BankDashboard() {
                     </p>
                 </div>
                 <div className="flex gap-3">
-                    <button className="px-5 py-3 rounded-2xl bg-white/70 border border-[#6605c7]/10 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#6605c7] hover:bg-white transition-all shadow-sm">
+                    <button 
+                        onClick={() => {
+                            const content = document.querySelector('.admin-table')?.parentElement?.innerText || 'Dashboard Data';
+                            const element = document.createElement("a");
+                            const file = new Blob([content], {type: 'text/plain'});
+                            element.href = URL.createObjectURL(file);
+                            element.download = `bank-dashboard-${format(new Date(), 'yyyy-MM-dd')}.txt`;
+                            document.body.appendChild(element);
+                            element.click();
+                            document.body.removeChild(element);
+                        }}
+                        className="px-5 py-3 rounded-2xl bg-white/70 border border-[#6605c7]/10 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#6605c7] hover:bg-white transition-all shadow-sm"
+                    >
                         <span className="material-symbols-outlined text-lg">download</span> Export Matrix
                     </button>
-                    <button className="admin-btn-primary text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-2 shadow-xl shadow-purple-500/20">
+                    <button 
+                        onClick={() => router.push('/bank/applications')}
+                        className="admin-btn-primary text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center gap-2 shadow-xl shadow-purple-500/20"
+                    >
                         <span className="material-symbols-outlined text-lg">add_circle</span> Process Pulse
                     </button>
                 </div>
@@ -281,7 +298,12 @@ export default function BankDashboard() {
                             <h3 className="text-xl font-black font-display text-gray-900 tracking-tight italic">Recent Signal Sync</h3>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Protocol: Bank-Application-Interface</p>
                         </div>
-                        <button className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] hover:underline underline-offset-4">View All Nodes</button>
+                        <button 
+                            onClick={() => router.push('/bank/applications')}
+                            className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] hover:underline underline-offset-4"
+                        >
+                            View All Nodes
+                        </button>
                     </div>
                     <div className="p-6">
                         <div className="overflow-x-auto no-scrollbar">
@@ -333,9 +355,28 @@ export default function BankDashboard() {
                         <h3 className="text-xl font-black font-display text-gray-900 mb-8 tracking-tight italic">Direct Commands</h3>
                         <div className="grid grid-cols-1 gap-4">
                             <QuickAction icon="chat_bubble" label="Initialize Chat" sublabel="Student WhatsApp" onClick={() => setShowChat(true)} />
-                            <QuickAction icon="assignment_add" label="Allocate Nodes" sublabel="Task Delegation" onClick={() => { }} />
-                            <QuickAction icon="rate_review" label="Set Multipliers" sublabel="Interest Rate Config" iconColor="text-amber-500" bgColor="bg-amber-500/10" onClick={() => { }} />
-                            <QuickAction icon="verified" label="Finalize Audit" sublabel="Protocol Validation" iconColor="text-emerald-500" bgColor="bg-emerald-500/10" onClick={() => { }} />
+                            <QuickAction 
+                                icon="assignment_add" 
+                                label="Allocate Nodes" 
+                                sublabel="Task Delegation" 
+                                onClick={() => router.push('/bank/applications')}
+                            />
+                            <QuickAction 
+                                icon="rate_review" 
+                                label="Set Multipliers" 
+                                sublabel="Interest Rate Config" 
+                                iconColor="text-amber-500" 
+                                bgColor="bg-amber-500/10" 
+                                onClick={() => router.push('/bank/applications')}
+                            />
+                            <QuickAction 
+                                icon="verified" 
+                                label="Finalize Audit" 
+                                sublabel="Protocol Validation" 
+                                iconColor="text-emerald-500" 
+                                bgColor="bg-emerald-500/10" 
+                                onClick={() => router.push('/bank/applications')}
+                            />
                         </div>
                     </div>
 

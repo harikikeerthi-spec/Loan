@@ -1,5 +1,6 @@
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
+import { FirebaseAuthService } from './firebase-auth.service';
 import { EmailService } from './email.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
@@ -20,7 +21,8 @@ export class AuthService {
     private emailService: EmailService,
     private jwtService: JwtService,
     private configService: ConfigService,
-    private eventEmitter: EventEmitter2
+    private eventEmitter: EventEmitter2,
+    private firebaseAuthService: FirebaseAuthService
   ) { }
 
   /**
@@ -335,6 +337,9 @@ export class AuthService {
         // Create new user with only email; optional fields omitted
         user = await this.usersService.create({ email });
         console.log(`[AuthService] New user created: ${email}`);
+
+        // Fire-and-forget: send welcome email to new user (non-blocking)
+        void this.emailService.sendWelcomeEmail(email, user.firstName ?? undefined);
       }
 
       // Check if user has complete details
@@ -370,6 +375,69 @@ export class AuthService {
         success: false,
         message: 'An error occurred during verification. Please try again.'
       };
+    }
+  }
+  
+  /**
+   * Handle Firebase Authentication
+   * Verifies Firebase token, syncs user with DB, and returns internal JWT
+   */
+  async authenticateFirebaseUser(idToken: string) {
+    try {
+      const decodedToken = await this.firebaseAuthService.verifyToken(idToken);
+      const { email, name, picture } = decodedToken;
+
+      if (!email) {
+        throw new UnauthorizedException('Firebase token does not contain an email');
+      }
+
+      // Find or create user
+      let user = await this.usersService.findOne(email);
+      const isNewUser = !user;
+
+      if (!user) {
+        // Extract names from Firebase 'name' field if possible
+        const nameParts = name ? name.split(' ') : [];
+        const firstName = nameParts[0] || 'User';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        user = await this.usersService.create({
+          email,
+          firstName,
+          lastName,
+        });
+        console.log(`[AuthService] New Firebase user created: ${email}`);
+        
+        void this.emailService.sendWelcomeEmail(email, user.firstName ?? undefined);
+      }
+
+      const hasUserDetails = !!(user.firstName && user.lastName && user.phoneNumber && user.dateOfBirth);
+      const tokens = await this.generateTokens(user);
+
+      this.eventEmitter.emit('user.login', {
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          phoneNumber: user.phoneNumber,
+          isNewUser
+      });
+
+      return {
+        success: true,
+        message: isNewUser ? 'Signup successful.' : 'Login successful.',
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        userId: user.id,
+        userExists: !isNewUser,
+        hasUserDetails,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+        picture: picture // Return Firebase profile picture if available
+      };
+    } catch (error) {
+      console.error('[AuthService] Firebase authentication error:', error);
+      throw new UnauthorizedException(error.message || 'Firebase authentication failed');
     }
   }
 

@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { GroqService } from './groq.service';
+import { OpenRouterService } from './openrouter.service';
 
 export interface UniversityData {
     name: string;
@@ -12,7 +12,7 @@ export interface UniversityData {
 
 @Injectable()
 export class UniversityComparisonService {
-    constructor(private readonly groq: GroqService) { }
+    constructor(private readonly openRouter: OpenRouterService) { }
 
     async compare(
         uni1: string,
@@ -70,7 +70,7 @@ export class UniversityComparisonService {
         `;
 
         try {
-            return await this.groq.getJson(prompt);
+            return await this.openRouter.getJson(prompt);
         } catch (error) {
             console.error('University comparison failed', error);
             throw new NotFoundException('Could not compare universities at this time.');
@@ -119,7 +119,7 @@ export class UniversityComparisonService {
         `;
 
         try {
-            return await this.groq.getJson(prompt);
+            return await this.openRouter.getJson(prompt);
         } catch (error) {
             console.error('Shortlist comparison failed', error);
             throw new Error('Could not compare shortlist at this time.');

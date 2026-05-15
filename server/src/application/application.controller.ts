@@ -113,6 +113,294 @@ export class ApplicationController {
         });
     }
 
+    // ==================== ADMIN ENDPOINTS ====================
+
+    /**
+     * Get all applications (Admin)
+     * GET /applications/admin/all
+     * @query status - Filter by status
+     * @query stage - Filter by stage
+     * @query loanType - Filter by loan type
+     * @query bank - Filter by bank
+     * @query search - Search term
+     * @query fromDate - From date
+     * @query toDate - To date
+     * @query limit - Number of results
+     * @query offset - Skip results
+     * @query sortBy - Sort field
+     * @query sortOrder - Sort order (asc/desc)
+     */
+    @Get('admin/all')
+    @UseGuards(StaffGuard)
+    async getAllApplications(
+        @Query('status') status?: string,
+        @Query('stage') stage?: string,
+        @Query('loanType') loanType?: string,
+        @Query('bank') bank?: string,
+        @Query('search') search?: string,
+        @Query('fromDate') fromDate?: string,
+        @Query('toDate') toDate?: string,
+        @Query('limit') limit?: string,
+        @Query('offset') offset?: string,
+        @Query('sortBy') sortBy?: string,
+        @Query('sortOrder') sortOrder?: string,
+    ) {
+        return this.applicationService.getAllApplications({
+            status,
+            stage,
+            loanType,
+            bank,
+            search,
+            fromDate,
+            toDate,
+            limit: limit ? parseInt(limit, 10) : 20,
+            offset: offset ? parseInt(offset, 10) : 0,
+            sortBy,
+            sortOrder: sortOrder as 'asc' | 'desc',
+        });
+    }
+
+    /**
+     * Get application statistics (Admin)
+     * GET /applications/admin/stats
+     */
+    @Get('admin/stats')
+    @UseGuards(StaffGuard)
+    async getApplicationStats(@Request() req) {
+        return this.applicationService.getApplicationStats(req.user);
+    }
+
+    /**
+     * Get application documents (Admin)
+     * GET /applications/admin/:id/documents
+     */
+    @Get('admin/:id/documents')
+    @UseGuards(StaffGuard)
+    async getDocumentsAdmin(@Param('id') id: string) {
+        return this.applicationService.getApplicationDocuments(id);
+    }
+
+    /**
+     * Sync application documents with vault (Admin)
+     * POST /applications/admin/:id/sync-vault
+     */
+    @Post('admin/:id/sync-vault')
+    @UseGuards(StaffGuard)
+    async syncVaultDocuments(@Param('id') id: string) {
+        return this.applicationService.syncApplicationDocuments(id);
+    }
+
+    /**
+     * Update application status (Admin)
+     * PUT /applications/admin/:id/status
+     */
+    @Put('admin/:id/status')
+    @UseGuards(StaffGuard)
+    async updateApplicationStatus(
+        @Request() req,
+        @Param('id') id: string,
+        @Body() body: {
+            status?: string;
+            stage?: string;
+            progress?: number;
+            remarks?: string;
+            rejectionReason?: string;
+        }
+    ) {
+        const adminName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
+        return this.applicationService.updateApplicationStatus(id, req.user.id, adminName, body, req.user.role);
+    }
+
+    /**
+     * AI-powered application review (Admin)
+     * POST /applications/admin/:id/ai-review
+     */
+    @Post('admin/:id/ai-review')
+    @UseGuards(StaffGuard)
+    async aiReviewApplication(
+        @Request() req,
+        @Param('id') id: string,
+    ) {
+        try {
+            const adminName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
+            console.log(`[AI Review] Starting review for application ${id} by admin ${adminName}`);
+            return await this.applicationService.aiReviewApplication(id, req.user.id, adminName);
+        } catch (error) {
+            console.error(`[AI Review] Controller Error for application ${id}:`, error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Share application details via email (Admin)
+     * POST /applications/admin/:id/share
+     */
+    @Post('admin/:id/share')
+    @UseGuards(StaffGuard)
+    async shareApplication(
+        @Request() req,
+        @Param('id') id: string,
+    ) {
+        const adminName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
+        return this.applicationService.shareApplication(id, req.user.id, adminName);
+    }
+
+    /**
+     * View/Download application document file (Admin)
+     * GET /applications/admin/:id/documents/:documentId/view
+     */
+    @Get('admin/:id/documents/:documentId/view')
+    @UseGuards(StaffGuard)
+    async viewDocumentAdmin(
+        @Param('id') applicationId: string,
+        @Param('documentId') documentId: string,
+        @Res() res: Response,
+    ) {
+        const docsResult = await this.applicationService.getApplicationDocuments(applicationId);
+        const doc = docsResult.data?.find((d: any) => String(d.id) === String(documentId));
+
+        if (!doc || !doc.filePath) {
+            throw new NotFoundException('Document not found');
+        }
+
+        
+        if (doc.filePath && doc.filePath.startsWith('in.gov.')) {
+            const html = `
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DigiLocker Record - ${doc.docName || doc.docType}</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 40px; }
+        .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 600px; width: 100%; border-top: 6px solid #82c91e; }
+        .header { display: flex; align-items: center; gap: 15px; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px; }
+        .title { margin: 0; color: #1a3a6b; }
+        .badge { background: #e6fced; color: #12b842; padding: 6px 12px; border-radius: 20px; font-weight: 600; font-size: 14px; white-space: nowrap; }
+        .field { margin-bottom: 20px; }
+        .label { font-size: 13px; color: #666; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+        .value { font-size: 18px; color: #333; margin-top: 4px; word-break: break-all; }
+        .footer { margin-top: 40px; font-size: 12px; color: #888; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="header">
+            <h2 class="title">Digital Verification Record</h2>
+            <span class="badge">✓ Verified by DigiLocker</span>
+        </div>
+        <div class="field">
+            <div class="label">Document Name</div>
+            <div class="value">${doc.docName || doc.docType || 'Document'}</div>
+        </div>
+        <div class="field">
+            <div class="label">DigiLocker Reference URI</div>
+            <div class="value">${doc.filePath}</div>
+        </div>
+        <div class="field">
+            <div class="label">Date Synced</div>
+            <div class="value">${doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleString() : 'N/A'}</div>
+        </div>
+        <div class="footer">
+            This is a digitally verified record synced directly from DigiLocker. The physical file is held securely by the issuing authority.
+        </div>
+    </div>
+</body>
+</html>`;
+            res.setHeader('Content-Type', 'text/html');
+            return res.send(html);
+        }
+        const absolutePath = resolve(doc.filePath);
+        if (!existsSync(absolutePath)) {
+            const fallbackPath = resolve(process.cwd(), 'public/mock/document_missing.pdf');
+            if (existsSync(fallbackPath)) {
+                return res.sendFile(fallbackPath);
+            }
+            throw new NotFoundException('Document file not found on disk');
+        }
+
+        res.sendFile(absolutePath);
+    }
+
+    /**
+     * Verify/Reject document (Admin)
+     * PUT /applications/admin/documents/:documentId/verify
+     */
+    @Put('admin/documents/:documentId/verify')
+    @UseGuards(StaffGuard)
+    async verifyDocument(
+        @Request() req,
+        @Param('documentId') documentId: string,
+        @Body() body: {
+            status: 'verified' | 'rejected';
+            rejectionReason?: string;
+        }
+    ) {
+        return this.applicationService.verifyDocument(documentId, req.user.id, body);
+    }
+
+    /**
+     * Get application tracking (Admin)
+     * GET /applications/admin/:id/tracking
+     */
+    @Get('admin/:id/tracking')
+    @UseGuards(StaffGuard)
+    async getTrackingAdmin(@Param('id') id: string) {
+        return this.applicationService.getApplicationTracking(id);
+    }
+
+    /**
+     * Get application notes (Admin)
+     * GET /applications/admin/:id/notes
+     */
+    @Get('admin/:id/notes')
+    @UseGuards(StaffGuard)
+    async getApplicationNotes(@Param('id') id: string) {
+        return this.applicationService.getApplicationNotes(id, true);
+    }
+
+    /**
+     * Add note to application (Admin)
+     * POST /applications/admin/:id/notes
+     */
+    @Post('admin/:id/notes')
+    @UseGuards(StaffGuard)
+    async addApplicationNote(
+        @Request() req,
+        @Param('id') id: string,
+        @Body() body: {
+            content: string;
+            type?: string;
+            isInternal?: boolean;
+        }
+    ) {
+        const authorName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
+        return this.applicationService.addApplicationNote(id, req.user.id, authorName, body);
+    }
+
+    // ==================== AGENT ENDPOINTS ====================
+
+    /**
+     * Get agent's referral stats
+     * GET /applications/agent/stats
+     */
+    @Get('agent/stats')
+    @UseGuards(AgentGuard)
+    async getAgentStats(@Request() req) {
+        return this.applicationService.getAgentStats(req.user.id);
+    }
+
+    /**
+     * Get applications referred by this agent
+     * GET /applications/agent/list
+     */
+    @Get('agent/list')
+    @UseGuards(AgentGuard)
+    async getAgentApplications(@Request() req) {
+        return this.applicationService.getAgentApplications(req.user.id);
+    }
+
+    // ==================== USER :id ENDPOINTS (must be AFTER all named routes) ====================
+
     /**
      * Get application by ID
      * GET /applications/:id
@@ -249,218 +537,6 @@ export class ApplicationController {
         @Param('documentId') documentId: string,
     ) {
         return this.applicationService.deleteDocument(documentId, req.user.id);
-    }
-
-    // ==================== ADMIN ENDPOINTS ====================
-
-    /**
-     * Get all applications (Admin)
-     * GET /applications/admin/all
-     * @query status - Filter by status
-     * @query stage - Filter by stage
-     * @query loanType - Filter by loan type
-     * @query bank - Filter by bank
-     * @query search - Search term
-     * @query fromDate - From date
-     * @query toDate - To date
-     * @query limit - Number of results
-     * @query offset - Skip results
-     * @query sortBy - Sort field
-     * @query sortOrder - Sort order (asc/desc)
-     */
-    @Get('admin/all')
-    @UseGuards(StaffGuard)
-    async getAllApplications(
-        @Query('status') status?: string,
-        @Query('stage') stage?: string,
-        @Query('loanType') loanType?: string,
-        @Query('bank') bank?: string,
-        @Query('search') search?: string,
-        @Query('fromDate') fromDate?: string,
-        @Query('toDate') toDate?: string,
-        @Query('limit') limit?: string,
-        @Query('offset') offset?: string,
-        @Query('sortBy') sortBy?: string,
-        @Query('sortOrder') sortOrder?: string,
-    ) {
-        return this.applicationService.getAllApplications({
-            status,
-            stage,
-            loanType,
-            bank,
-            search,
-            fromDate,
-            toDate,
-            limit: limit ? parseInt(limit, 10) : 20,
-            offset: offset ? parseInt(offset, 10) : 0,
-            sortBy,
-            sortOrder: sortOrder as 'asc' | 'desc',
-        });
-    }
-
-    /**
-     * Get application statistics (Admin)
-     * GET /applications/admin/stats
-     */
-    @Get('admin/stats')
-    @UseGuards(StaffGuard)
-    async getApplicationStats(@Request() req) {
-        return this.applicationService.getApplicationStats(req.user);
-    }
-
-    /**
-     * Update application status (Admin)
-     * PUT /applications/admin/:id/status
-     */
-    @Put('admin/:id/status')
-    @UseGuards(StaffGuard)
-    async updateApplicationStatus(
-        @Request() req,
-        @Param('id') id: string,
-        @Body() body: {
-            status?: string;
-            stage?: string;
-            progress?: number;
-            remarks?: string;
-            rejectionReason?: string;
-        }
-    ) {
-        const adminName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
-        return this.applicationService.updateApplicationStatus(id, req.user.id, adminName, body, req.user.role);
-    }
-
-    /**
-     * AI-powered application review (Admin)
-     * POST /applications/admin/:id/ai-review
-     */
-    @Post('admin/:id/ai-review')
-    @UseGuards(StaffGuard)
-    async aiReviewApplication(
-        @Request() req,
-        @Param('id') id: string,
-    ) {
-        try {
-            const adminName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
-            console.log(`[AI Review] Starting review for application ${id} by admin ${adminName}`);
-            return await this.applicationService.aiReviewApplication(id, req.user.id, adminName);
-        } catch (error) {
-            console.error(`[AI Review] Controller Error for application ${id}:`, error);
-            throw error;
-        }
-    }
-
-    /**
-     * Get application documents (Admin)
-     * GET /applications/admin/:id/documents
-     */
-    @Get('admin/:id/documents')
-    @UseGuards(StaffGuard)
-    async getDocumentsAdmin(@Param('id') id: string) {
-        return this.applicationService.getApplicationDocuments(id);
-    }
-
-    /**
-     * View/Download application document file (Admin)
-     * GET /applications/admin/:id/documents/:documentId/view
-     */
-    @Get('admin/:id/documents/:documentId/view')
-    @UseGuards(StaffGuard)
-    async viewDocumentAdmin(
-        @Param('id') applicationId: string,
-        @Param('documentId') documentId: string,
-        @Res() res: Response,
-    ) {
-        const docsResult = await this.applicationService.getApplicationDocuments(applicationId);
-        const doc = docsResult.data?.find((d: any) => d.id === documentId);
-
-        if (!doc || !doc.filePath) {
-            throw new NotFoundException('Document not found');
-        }
-
-        const absolutePath = resolve(doc.filePath);
-        if (!existsSync(absolutePath)) {
-            throw new NotFoundException('Document file not found on disk');
-        }
-
-        res.sendFile(absolutePath);
-    }
-
-    /**
-     * Verify/Reject document (Admin)
-     * PUT /applications/admin/documents/:documentId/verify
-     */
-    @Put('admin/documents/:documentId/verify')
-    @UseGuards(StaffGuard)
-    async verifyDocument(
-        @Request() req,
-        @Param('documentId') documentId: string,
-        @Body() body: {
-            status: 'verified' | 'rejected';
-            rejectionReason?: string;
-        }
-    ) {
-        return this.applicationService.verifyDocument(documentId, req.user.id, body);
-    }
-
-    /**
-     * Get application tracking (Admin)
-     * GET /applications/admin/:id/tracking
-     */
-    @Get('admin/:id/tracking')
-    @UseGuards(StaffGuard)
-    async getTrackingAdmin(@Param('id') id: string) {
-        return this.applicationService.getApplicationTracking(id);
-    }
-
-    /**
-     * Get application notes (Admin)
-     * GET /applications/admin/:id/notes
-     */
-    @Get('admin/:id/notes')
-    @UseGuards(StaffGuard)
-    async getApplicationNotes(@Param('id') id: string) {
-        return this.applicationService.getApplicationNotes(id, true);
-    }
-
-    /**
-     * Add note to application (Admin)
-     * POST /applications/admin/:id/notes
-     */
-    @Post('admin/:id/notes')
-    @UseGuards(StaffGuard)
-    async addApplicationNote(
-        @Request() req,
-        @Param('id') id: string,
-        @Body() body: {
-            content: string;
-            type?: string;
-            isInternal?: boolean;
-        }
-    ) {
-        const authorName = `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() || req.user.email;
-        return this.applicationService.addApplicationNote(id, req.user.id, authorName, body);
-    }
-
-    // ==================== AGENT ENDPOINTS ====================
-
-    /**
-     * Get agent's referral stats
-     * GET /applications/agent/stats
-     */
-    @Get('agent/stats')
-    @UseGuards(AgentGuard)
-    async getAgentStats(@Request() req) {
-        return this.applicationService.getAgentStats(req.user.id);
-    }
-
-    /**
-     * Get applications referred by this agent
-     * GET /applications/agent/list
-     */
-    @Get('agent/list')
-    @UseGuards(AgentGuard)
-    async getAgentApplications(@Request() req) {
-        return this.applicationService.getAgentApplications(req.user.id);
     }
 
 }

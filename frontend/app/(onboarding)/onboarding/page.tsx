@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import UniversityCard from "@/components/UniversityCard";
 import UniDetailModal from "@/components/UniDetailModal";
-import { aiApi, onboardingApi } from '@/lib/api';
+import { aiApi, onboardingApi, documentApi } from '@/lib/api';
 import { useAuth } from "@/contexts/AuthContext";
 
 const COUNTRY_FLAGS: Record<string, string> = {
@@ -603,6 +603,17 @@ const steps: any[] = [
     },
 
     // ════════════════════════════════════════════════════════════
+    //  DOCUMENT VERIFICATION – AI reads and verifies document
+    //  (optional but recommended for loan flow)
+    // ════════════════════════════════════════════════════════════
+    {
+        id: 'document_upload',
+        q: "Let's verify your documents using AI. Please upload a document (Passport, Aadhaar, Admission Letter, or Bank Statement)",
+        type: 'document_upload',
+        flows: ['loan', 'plan', 'compare']
+    },
+
+    // ════════════════════════════════════════════════════════════
     //  SHARED – AI analysis (runs for whichever flow the user chose)
     // ════════════════════════════════════════════════════════════
     { id: 'ai_search', type: 'ai_search', flows: ['plan', 'compare', 'loan'] },
@@ -652,6 +663,13 @@ export default function OnboardingPage() {
 
     // Loan slider state
     const [loanSliderValue, setLoanSliderValue] = useState(1400000);
+
+    // Document upload state
+    const [documentFile, setDocumentFile] = useState<File | null>(null);
+    const [documentUploading, setDocumentUploading] = useState(false);
+    const [documentVerified, setDocumentVerified] = useState(false);
+    const [documentVerificationResult, setDocumentVerificationResult] = useState<any>(null);
+    const [documentError, setDocumentError] = useState<string | null>(null);
 
     // University detail modal
     const [selectedUniForModal, setSelectedUniForModal] = useState<any>(null);
@@ -1134,6 +1152,86 @@ export default function OnboardingPage() {
         }
     };
 
+    // Document upload handler with OpenRouter AI verification
+    const handleDocumentUpload = async (file: File) => {
+        if (!user?.id) {
+            setDocumentError('User not logged in');
+            return;
+        }
+
+        setDocumentFile(file);
+        setDocumentUploading(true);
+        setDocumentError(null);
+        setDocumentVerified(false);
+
+        try {
+            // Determine document type from file or ask user
+            let docType = 'admission_letter'; // default
+            if (file.name.includes('passport')) docType = 'passport';
+            else if (file.name.includes('aadhaar')) docType = 'aadhaar';
+            else if (file.name.includes('bank')) docType = 'bank_statement';
+            else if (file.name.includes('admit')) docType = 'admission_letter';
+            else if (file.name.includes('marksheet') || file.name.includes('transcript')) docType = 'marksheet';
+
+            // Call backend upload endpoint which handles OpenRouter verification
+            const response: any = await documentApi.upload(user.id, docType, file);
+
+            if (response?.success && response?.data) {
+                const verificationResult = response.data.verification;
+                const ocrResult = response.data.ocrResult;
+
+                setDocumentVerificationResult({
+                    isValid: verificationResult?.isValid,
+                    confidence: verificationResult?.confidence || ocrResult?.confidence,
+                    extractedFields: verificationResult?.details?.extractedFields || ocrResult?.extractedFields,
+                    matchResults: verificationResult?.details?.matchResults || ocrResult?.matchResults,
+                    message: verificationResult?.details?.message,
+                    reason: ocrResult?.reason,
+                    code: verificationResult?.code
+                });
+
+                if (verificationResult?.isValid || verificationResult?.code === 'AI_VERIFIED') {
+                    setDocumentVerified(true);
+                    setDocumentError(null);
+                    // Auto-advance after 2 seconds
+                    setTimeout(() => {
+                        submitAnswer('document_upload', 'verified', 'Document Verified');
+                    }, 2000);
+                } else if (verificationResult?.code === 'AI_REJECTED') {
+                    setDocumentError(
+                        ocrResult?.reason ||
+                        verificationResult?.details?.message ||
+                        'Document could not be verified. Please try with a clearer image or different document.'
+                    );
+                    setDocumentVerified(false);
+                } else {
+                    // Pending manual review
+                    setDocumentError(null);
+                    setDocumentVerified(true);
+                    // Allow manual continuation
+                    setToastData({
+                        name: 'Document Received',
+                        msg: 'Your document is being reviewed. Proceeding to next step...',
+                        type: 'info'
+                    });
+                    setTimeout(() => {
+                        submitAnswer('document_upload', 'pending', 'Document Pending Review');
+                    }, 2000);
+                }
+            } else {
+                setDocumentError((response as any)?.message || 'Upload failed. Please try again.');
+            }
+        } catch (error: any) {
+            console.error('Document upload error:', error);
+            setDocumentError(
+                error?.message ||
+                'Failed to upload document. Please check your internet and try again.'
+            );
+        } finally {
+            setDocumentUploading(false);
+        }
+    };
+
     // Auto-fetch universities when entering university_search step
     useEffect(() => {
         const step = steps[currentIdx];
@@ -1404,6 +1502,228 @@ export default function OnboardingPage() {
                         </div>
                     </div>
                     <button className="chat-submit" style={{ marginTop: 12 }} onClick={() => submitAnswer(step.id, String(loanSliderValue), formatted)}>Confirm</button>
+                </div>
+            );
+        }
+
+        if (step.type === 'document_upload') {
+            return (
+                <div style={{ marginTop: 10 }}>
+                    {!documentVerified ? (
+                        <div style={{ padding: 20, background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb' }}>
+                            {/* Upload Area */}
+                            <div
+                                style={{
+                                    border: '2px dashed #d1d5db',
+                                    borderRadius: 14,
+                                    padding: 24,
+                                    textAlign: 'center',
+                                    cursor: documentUploading ? 'not-allowed' : 'pointer',
+                                    background: documentUploading ? '#f9f9fb' : '#fff',
+                                    transition: 'all 0.3s',
+                                    opacity: documentUploading ? 0.6 : 1,
+                                    pointerEvents: documentUploading ? 'none' : 'auto'
+                                }}
+                                onClick={() => {
+                                    if (!documentUploading) {
+                                        document.getElementById('doc-file-input')?.click();
+                                    }
+                                }}
+                                onDragOver={(e) => {
+                                    e.preventDefault();
+                                    e.currentTarget.style.borderColor = '#6605c7';
+                                    e.currentTarget.style.background = '#fdfaff';
+                                }}
+                                onDragLeave={(e) => {
+                                    e.currentTarget.style.borderColor = '#d1d5db';
+                                    e.currentTarget.style.background = '#fff';
+                                }}
+                                onDrop={(e) => {
+                                    e.preventDefault();
+                                    e.currentTarget.style.borderColor = '#d1d5db';
+                                    e.currentTarget.style.background = '#fff';
+                                    if (e.dataTransfer.files?.[0]) {
+                                        handleDocumentUpload(e.dataTransfer.files[0]);
+                                    }
+                                }}
+                            >
+                                {documentUploading ? (
+                                    <div>
+                                        <div style={{ fontSize: 20, marginBottom: 12 }}>📤</div>
+                                        <div style={{ fontWeight: 600, color: '#4b5563', marginBottom: 4 }}>Uploading & Verifying...</div>
+                                        <div style={{ fontSize: 13, color: '#9ca3af' }}>Using AI to read your document</div>
+                                    </div>
+                                ) : (
+                                    <div>
+                                        <div style={{ fontSize: 32, marginBottom: 12 }}>📄</div>
+                                        <div style={{ fontWeight: 700, color: '#1a1a2e', marginBottom: 4 }}>Upload your document</div>
+                                        <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 12 }}>
+                                            Drag and drop or click to upload
+                                        </div>
+                                        <div style={{ fontSize: 11, color: '#9ca3af', display: 'flex', gap: 4, justifyContent: 'center', flexWrap: 'wrap' }}>
+                                            <span>✓ Passport</span>
+                                            <span>•</span>
+                                            <span>✓ Aadhaar</span>
+                                            <span>•</span>
+                                            <span>✓ Admit Letter</span>
+                                            <span>•</span>
+                                            <span>✓ Bank Statement</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            <input
+                                id="doc-file-input"
+                                type="file"
+                                accept="image/*,.pdf"
+                                style={{ display: 'none' }}
+                                onChange={(e) => {
+                                    if (e.target.files?.[0]) {
+                                        handleDocumentUpload(e.target.files[0]);
+                                    }
+                                }}
+                            />
+
+                            {/* Document Selected */}
+                            {documentFile && (
+                                <div style={{ marginTop: 16, padding: 12, background: '#f9f9fb', borderRadius: 12, border: '1px solid #e5e7eb' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <div style={{ fontSize: 16 }}>📎</div>
+                                        <div>
+                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#1a1a2e' }}>{documentFile.name}</div>
+                                            <div style={{ fontSize: 11, color: '#9ca3af' }}>
+                                                {(documentFile.size / 1024 / 1024).toFixed(2)} MB
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Error Message */}
+                            {documentError && (
+                                <div style={{ marginTop: 16, padding: 12, background: '#fef2f2', borderRadius: 12, border: '1px solid #fecaca' }}>
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <div style={{ fontSize: 16 }}>⚠️</div>
+                                        <div>
+                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#991b1b' }}>Verification Failed</div>
+                                            <div style={{ fontSize: 12, color: '#7f1d1d', marginTop: 2 }}>{documentError}</div>
+                                            <button
+                                                onClick={() => {
+                                                    setDocumentFile(null);
+                                                    setDocumentError(null);
+                                                    document.getElementById('doc-file-input')?.click();
+                                                }}
+                                                style={{
+                                                    marginTop: 8,
+                                                    padding: '6px 12px',
+                                                    background: '#991b1b',
+                                                    color: '#fff',
+                                                    border: 'none',
+                                                    borderRadius: 6,
+                                                    fontSize: 11,
+                                                    fontWeight: 600,
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                Try Again
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Pro Tips */}
+                            <div style={{ marginTop: 16, padding: 12, background: '#eff6ff', borderRadius: 12, border: '1px solid #bfdbfe' }}>
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                                    <div style={{ fontSize: 14, marginTop: 2 }}>💡</div>
+                                    <div>
+                                        <div style={{ fontSize: 12, fontWeight: 600, color: '#1e40af' }}>Pro Tips for Better Results</div>
+                                        <div style={{ fontSize: 11, color: '#1e3a8a', marginTop: 6, lineHeight: 1.6 }}>
+                                            • Use clear, well-lit photos<br />
+                                            • Make sure all text is readable<br />
+                                            • Avoid glare and shadows
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div style={{ padding: 20, background: '#ecfdf5', borderRadius: 16, border: '1px solid #86efac' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                                <div style={{ fontSize: 24 }}>✅</div>
+                                <div>
+                                    <div style={{ fontSize: 14, fontWeight: 700, color: '#166534' }}>Document Verified!</div>
+                                    <div style={{ fontSize: 12, color: '#15803d', marginTop: 4, marginBottom: 12 }}>
+                                        {documentVerificationResult?.message || 'Your document has been successfully verified by AI.'}
+                                    </div>
+
+                                    {/* Extracted Information */}
+                                    {documentVerificationResult?.extractedFields && Object.keys(documentVerificationResult.extractedFields).length > 0 && (
+                                        <div style={{ fontSize: 11, color: '#166534', background: 'rgba(22, 101, 52, 0.05)', padding: 12, borderRadius: 8, marginBottom: 12 }}>
+                                            <div style={{ fontWeight: 600, marginBottom: 8 }}>Extracted Information:</div>
+                                            {Object.entries(documentVerificationResult.extractedFields).map(([key, value]: any) => (
+                                                value && (
+                                                    <div key={key} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                        <span style={{ textTransform: 'capitalize' }}>{key.replace(/_/g, ' ')}:</span>
+                                                        <span style={{ fontWeight: 500 }}>{value}</span>
+                                                    </div>
+                                                )
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Match Results */}
+                                    {documentVerificationResult?.matchResults && (
+                                        <div style={{ fontSize: 11, marginBottom: 12 }}>
+                                            <div style={{ fontWeight: 600, marginBottom: 4, color: '#166534' }}>Verification Details:</div>
+                                            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                                                <span>
+                                                    📋 Name Match: {documentVerificationResult.matchResults.nameMatch ? '✓' : '✗'}
+                                                </span>
+                                                <span>
+                                                    📅 DOB Match: {documentVerificationResult.matchResults.dobMatch ? '✓' : '✗'}
+                                                </span>
+                                                <span style={{ fontWeight: 600 }}>
+                                                    Confidence: {documentVerificationResult?.confidence}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div style={{ display: 'flex', gap: 10 }}>
+                                        <button
+                                            className="chat-submit"
+                                            onClick={() => submitAnswer(step.id, 'confirmed', 'Document Confirmed')}
+                                            style={{ flex: 1 }}
+                                        >
+                                            Proceed
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setDocumentFile(null);
+                                                setDocumentVerified(false);
+                                                setDocumentVerificationResult(null);
+                                                document.getElementById('doc-file-input')?.click();
+                                            }}
+                                            style={{
+                                                padding: '12px 24px',
+                                                background: '#fff',
+                                                border: '1px solid #86efac',
+                                                borderRadius: 12,
+                                                fontSize: 13,
+                                                fontWeight: 700,
+                                                color: '#15803d',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            Upload Different
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
         }

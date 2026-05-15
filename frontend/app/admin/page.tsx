@@ -207,11 +207,6 @@ export default function AdminDashboardPage() {
     const [editingUser, setEditingUser] = useState<any>(null);
     const [updateLoading, setUpdateLoading] = useState(false);
 
-    // Communications
-    const [emailData, setEmailData] = useState({ to: "", subject: "", content: "", role: "user", isBulk: false });
-    const [emailLoading, setEmailLoading] = useState(false);
-    const [selectedTemplate, setSelectedTemplate] = useState('empty');
-
     // AI Review
     const [aiReview, setAiReview] = useState<any>(null);
     const [aiReviewLoading, setAiReviewLoading] = useState(false);
@@ -241,6 +236,7 @@ export default function AdminDashboardPage() {
     const [communityStats, setCommunityStats] = useState<any>({});
     const [activeUsersCount, setActiveUsersCount] = useState(0);
     const [recentActivity, setRecentActivity] = useState<any[]>([]);
+    const [communityResources, setCommunityResources] = useState<any[]>([]);
 
     // Real-time updates
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
@@ -257,12 +253,14 @@ export default function AdminDashboardPage() {
 
     const loadCommunityData = useCallback(async () => {
         try {
-            const [mentorData, statsData]: [any, any] = await Promise.all([
+            const [mentorData, statsData, resourcesData]: [any, any, any] = await Promise.all([
                 adminApi.getMentors().catch(() => ({ data: [] })),
-                adminApi.getCommunityStats().catch(() => ({ data: {} }))
+                adminApi.getCommunityStats().catch(() => ({ data: {} })),
+                adminApi.getCommunityResources().catch(() => ({ data: [] }))
             ]);
             setMentors(mentorData.data || []);
             setCommunityStats(statsData.data || {});
+            setCommunityResources(resourcesData.data || []);
         } catch (e) {
             console.error("Error loading community data:", e);
         }
@@ -312,7 +310,9 @@ export default function AdminDashboardPage() {
                 res = await adminApi.getUsers();
                 setData(res.data || []);
             } else if (activeSection === "blogs") {
-                res = await adminApi.getBlogs(100);
+                const params: any = { limit: '100' };
+                if (filterBlogTime !== 'all') params.timeRange = filterBlogTime;
+                res = await adminApi.getBlogs(params);
                 setData(res.data || []);
             } else if (activeSection === "applications") {
                 const params: any = {};
@@ -328,9 +328,6 @@ export default function AdminDashboardPage() {
                 setData(res.data || []);
             } else if (activeSection === "community") {
                 res = await adminApi.getForumPosts(50);
-                setData(res.data || []);
-            } else if (activeSection === "communications") {
-                res = await adminApi.getUsers();
                 setData(res.data || []);
             } else if (activeSection === "analytics") {
                 setAnalyticsLoading(true);
@@ -360,7 +357,7 @@ export default function AdminDashboardPage() {
         } finally {
             setLoading(false);
         }
-    }, [activeSection, filterStatus, filterBank, filterLoanType, filterStage, filterFromDate, filterToDate, lastSearchQuery]);
+    }, [activeSection, filterStatus, filterBank, filterLoanType, filterStage, filterFromDate, filterToDate, lastSearchQuery, filterBlogTime]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -431,8 +428,8 @@ export default function AdminDashboardPage() {
     const handleViewUserProfile = useCallback(async (applicant: any) => {
         setUserProfileLoading(true);
         try {
-            // Fetch user details
-            const userRes: any = await adminApi.getUsers().catch(() => ({ data: [] }));
+            // Fetch user details specifically for this applicant
+            const userRes: any = await adminApi.getUsers(1, 0, applicant.email).catch(() => ({ data: [] }));
             const selectedUser = (userRes.data || []).find((u: any) => u.email === applicant.email);
             
             // Fetch all applications for this user
@@ -462,6 +459,45 @@ export default function AdminDashboardPage() {
             await adminApi.deleteBlog(blogId);
             loadData(); loadOverview();
         } catch { alert("Failed to delete blog"); }
+    };
+
+    const handleTogglePin = async (id: string, isPinned: boolean) => {
+        try {
+            await adminApi.togglePinForumPost(id, !isPinned);
+            loadData();
+        } catch (e: any) {
+            alert("Failed to pin post: " + e.message);
+        }
+    };
+
+    const handleModeratePost = async (id: string) => {
+        if (!window.confirm("Are you sure you want to delete this post?")) return;
+        try {
+            await adminApi.deleteForumPost(id);
+            loadData();
+        } catch (e: any) {
+            alert("Failed to moderate post: " + e.message);
+        }
+    };
+
+    const handleRevokeMentor = async (id: string) => {
+        if (!window.confirm("Are you sure you want to revoke this mentor's access?")) return;
+        try {
+            await adminApi.deleteMentor(id);
+            loadCommunityData();
+        } catch (e: any) {
+            alert("Failed to revoke mentor: " + e.message);
+        }
+    };
+
+    const handleDeleteResource = async (id: string) => {
+        if (!window.confirm("Are you sure you want to delete this resource?")) return;
+        try {
+            await adminApi.deleteCommunityResource(id);
+            loadCommunityData();
+        } catch (e: any) {
+            alert("Failed to delete resource: " + e.message);
+        }
     };
 
     const handleAppStatus = async (appId: string, status: string) => {
@@ -556,31 +592,6 @@ export default function AdminDashboardPage() {
         }
     };
 
-    const handleSendEmail = async () => {
-        if (!emailData.subject || !emailData.content) { alert("Subject and content are required"); return; }
-        setEmailLoading(true);
-        try {
-            await adminApi.sendEmail(emailData);
-            alert("Email sent successfully");
-            setEmailData({ to: "", subject: "", content: "", role: "user", isBulk: false });
-        } catch (e: any) {
-            alert("Failed to send email: " + e.message);
-        } finally { setEmailLoading(false); }
-    };
-
-    const handleApplyTemplate = (val: string) => {
-        setSelectedTemplate(val);
-        if (val === 'status_update') {
-            setEmailData(prev => ({ ...prev, subject: "Formal Communication: Application Status Progression", content: "Dear Applicant,\n\nPlease refer to your recent application docket. Your processing status has been formally updated in our registry. Kindly log in to your secure portal to view the newly authorized details.\n\nRegards,\nVidhyaLoan Operations Control" }));
-        } else if (val === 'action_required') {
-            setEmailData(prev => ({ ...prev, subject: "Action Required: Requisite Document Verification", content: "Dear Applicant,\n\nWe noted an irregularity or missing item in the documentation submitted for your application node. Please log in immediately and provide the required verification materials via your secure dashboard to avoid compliance processing delays.\n\nRegards,\nVidhyaLoan Operations Control" }));
-        } else if (val === 'welcome_board') {
-            setEmailData(prev => ({ ...prev, subject: "Welcome: Complete Node Integration Successful", content: "Dear User,\n\nYour formal profile has been successfully integrated into our central node architecture. You now have full access to submit and securely track your applications under standardized service level agreements.\n\nRegards,\nVidhyaLoan Operations Control" }));
-        } else {
-            setEmailData(prev => ({ ...prev, subject: "", content: "" }));
-        }
-    };
-
     // Announcements (client-side for demo — integrate with backend if needed)
     const addAnnouncement = () => {
         if (!newAnnouncement.title || !newAnnouncement.message) { alert("Title and message required"); return; }
@@ -608,26 +619,7 @@ export default function AdminDashboardPage() {
             return passesRole && (item.email?.toLowerCase().includes(query) || item.firstName?.toLowerCase().includes(query) || item.lastName?.toLowerCase().includes(query));
         }
         if (activeSection === 'blogs') {
-            const matchesSearch = item.title?.toLowerCase().includes(query) || item.authorName?.toLowerCase().includes(query);
-            if (!matchesSearch) return false;
-            
-            if (filterBlogTime === 'weekly') {
-                const oneWeekAgo = new Date();
-                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-                const itemDate = new Date(item.createdAt || new Date());
-                return itemDate >= oneWeekAgo;
-            } else if (filterBlogTime === 'monthly') {
-                const oneMonthAgo = new Date();
-                oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-                const itemDate = new Date(item.createdAt || new Date());
-                return itemDate >= oneMonthAgo;
-            } else if (filterBlogTime === 'yearly') {
-                const oneYearAgo = new Date();
-                oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-                const itemDate = new Date(item.createdAt || new Date());
-                return itemDate >= oneYearAgo;
-            }
-            return true;
+            return item.title?.toLowerCase().includes(query) || item.authorName?.toLowerCase().includes(query);
         }
         if (activeSection === 'applications') {
             return (item.applicationNumber?.toLowerCase().includes(query) || item.firstName?.toLowerCase().includes(query) || item.lastName?.toLowerCase().includes(query) || item.bank?.toLowerCase().includes(query) || item.email?.toLowerCase().includes(query));
@@ -668,7 +660,6 @@ export default function AdminDashboardPage() {
         { section: "system", icon: "admin_panel_settings", label: "System Control", badge: announcements.length },
         { section: "users", icon: "people", label: "Users", badge: 0 },
         { section: "blogs", icon: "article", label: "Blogs", badge: 0 },
-        { section: "communications", icon: "mail", label: "Mails & Comms", badge: 0 },
         { section: "chat", icon: "forum", label: "Student Chat", badge: 0 },
         { section: "community", icon: "groups", label: "Community", badge: 0 },
         { section: "audit_logs", icon: "policy", label: "Audit Logs", badge: 0 },
@@ -682,7 +673,6 @@ export default function AdminDashboardPage() {
         system: 'System Control',
         users: 'User Management',
         blogs: 'Blog Management',
-        communications: 'Comms Center',
         chat: 'Student Chat',
         community: 'Community Forum',
         audit_logs: 'Audit Logs',
@@ -1325,122 +1315,6 @@ export default function AdminDashboardPage() {
                     {/* ─── CHAT ─────────────────────────────────────────────────── */}
                     {activeSection === "chat" && <ChatInterface role="staff" />}
 
-                    {/* ─── COMMUNICATIONS ──────────────────────────────────────── */}
-                    {activeSection === "communications" && (
-                        <div className="space-y-6 animate-fade-in max-w-[1400px] mx-auto">
-                            <div className="flex items-center justify-between gap-4">
-                                <div>
-                                    <h2 className="text-xl font-semibold text-slate-900 tracking-tight">Communication Dispatch</h2>
-                                    <p className="text-slate-500 text-[11px] mt-1 font-medium flex items-center gap-1.5">
-                                        <span className="material-symbols-outlined text-[14px]">send</span>
-                                        System-wide broadcast and direct relay node
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
-                                    <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-[16px] text-slate-400">send</span>
-                                        Compose Broadcast
-                                    </h3>
-                                    <div className="space-y-4">
-                                        <div className="flex gap-1 p-1 bg-slate-100 rounded w-fit mb-2">
-                                            <button
-                                                onClick={() => setEmailData({ ...emailData, isBulk: false })}
-                                                className={`px-3 py-1.5 rounded text-[11px] font-medium transition-colors ${!emailData.isBulk ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                            >
-                                                Direct Message
-                                            </button>
-                                            <button
-                                                onClick={() => setEmailData({ ...emailData, isBulk: true })}
-                                                className={`px-3 py-1.5 rounded text-[11px] font-medium transition-colors ${emailData.isBulk ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                            >
-                                                Bulk Email
-                                            </button>
-                                        </div>
-
-                                        {!emailData.isBulk ? (
-                                            <div>
-                                                <label className="text-[11px] font-medium text-slate-600 mb-1.5 block">Recipient Address</label>
-                                                <input type="email" value={emailData.to} onChange={e => setEmailData({ ...emailData, to: e.target.value })} placeholder="Enter email address..." className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors" />
-                                            </div>
-                                        ) : (
-                                            <div>
-                                                <label className="text-[11px] font-medium text-slate-600 mb-1.5 block">Target Audience</label>
-                                                <select value={emailData.role} onChange={e => setEmailData({ ...emailData, role: e.target.value })} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors">
-                                                    <option value="user">Students (Verified)</option>
-                                                    <option value="staff">Internal Team</option>
-                                                    <option value="agent">Processing Agents</option>
-                                                    <option value="bank">Banking Entities</option>
-                                                </select>
-                                            </div>
-                                        )}
-
-                                        <div className="p-3 rounded border border-indigo-100 bg-indigo-50/50 flex flex-col gap-1.5 mb-2">
-                                            <label className="text-[10px] font-semibold text-indigo-700 uppercase tracking-wider">Master Templates</label>
-                                            <select 
-                                                value={selectedTemplate}
-                                                onChange={(e) => handleApplyTemplate(e.target.value)}
-                                                className="w-full px-3 py-2 bg-white border border-indigo-200 rounded text-xs text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-400 transition-colors cursor-pointer"
-                                            >
-                                                <option value="empty">-- Blank Message --</option>
-                                                <option value="status_update">Status Progression Update</option>
-                                                <option value="action_required">Action Required: Verify Documents</option>
-                                                <option value="welcome_board">Welcome to VidhyaLoan</option>
-                                            </select>
-                                        </div>
-
-                                        <div>
-                                            <label className="text-[11px] font-medium text-slate-600 mb-1.5 block">Subject Line</label>
-                                            <input type="text" value={emailData.subject} onChange={e => setEmailData({ ...emailData, subject: e.target.value })} placeholder="Subject..." className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors text-slate-900" />
-                                        </div>
-                                        <div>
-                                            <label className="text-[11px] font-medium text-slate-600 mb-1.5 block">Message Body</label>
-                                            <textarea value={emailData.content} onChange={e => setEmailData({ ...emailData, content: e.target.value })} placeholder="Type message..." rows={5} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors resize-none text-slate-700" />
-                                        </div>
-                                        <button
-                                            onClick={handleSendEmail}
-                                            disabled={emailLoading}
-                                            className="w-full bg-slate-900 text-white py-2.5 rounded text-xs font-semibold flex items-center justify-center gap-2 mt-2 hover:bg-slate-800 transition-colors shadow-sm"
-                                        >
-                                            {emailLoading ? <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : (<><span className="material-symbols-outlined text-[14px]">send</span> Transmit Message</>)}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
-                                    <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-[16px] text-slate-400">query_stats</span>
-                                        Node Distribution
-                                    </h3>
-                                    <div className="space-y-3">
-                                        {[
-                                            { label: 'Students', count: stats.userCount || 0, icon: 'person', color: 'text-slate-500' },
-                                            { label: 'Banks', count: stats.bankCount || 0, icon: 'account_balance', color: 'text-slate-500' },
-                                            { label: 'Agents', count: stats.agentCount || 0, icon: 'support_agent', color: 'text-slate-500' },
-                                            { label: 'Staff', count: stats.staffCount || 0, icon: 'badge', color: 'text-slate-500' }
-                                        ].map((group, i) => (
-                                            <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded border border-slate-100 hover:border-slate-200 transition-colors">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`w-8 h-8 rounded bg-white border border-slate-200 flex items-center justify-center ${group.color} shadow-sm`}>
-                                                        <span className="material-symbols-outlined text-[16px]">{group.icon}</span>
-                                                    </div>
-                                                    <span className="text-xs font-medium text-slate-700">{group.label}</span>
-                                                </div>
-                                                <span className="text-sm font-semibold text-slate-900 tabular-nums">{group.count}</span>
-                                            </div>
-                                        ))}
-                                        <div className="p-4 bg-slate-900 rounded border border-slate-800 mt-6">
-                                            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1">Network Security</p>
-                                            <p className="text-[11px] text-slate-300">All outbound communications are signed via industrial SMTP relays to ensure high inbox placement.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
                     {/* ─── COMMUNITY FORUM MANAGEMENT ────────────────────────── */}
                     {activeSection === "community" && (
                         <div className="space-y-6 animate-fade-in max-w-[1400px] mx-auto">
@@ -1511,7 +1385,7 @@ export default function AdminDashboardPage() {
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <button className="flex-1 px-2 py-1.5 rounded bg-white hover:bg-slate-50 text-[10px] font-medium text-slate-600 transition-colors border border-slate-200 shadow-sm">Profile</button>
-                                                    <button className="flex-1 px-2 py-1.5 rounded text-rose-600 hover:bg-rose-50 hover:text-rose-700 text-[10px] font-medium transition-colors border border-transparent">Revoke</button>
+                                                    <button onClick={() => handleRevokeMentor(mentor.id)} className="flex-1 px-2 py-1.5 rounded text-rose-600 hover:bg-rose-50 hover:text-rose-700 text-[10px] font-medium transition-colors border border-transparent">Revoke</button>
                                                 </div>
                                             </div>
                                         ))}
@@ -1564,8 +1438,10 @@ export default function AdminDashboardPage() {
                                                     <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[14px]">visibility</span> {post.views || 0}</span>
                                                 </div>
                                                 <div className="flex gap-2">
-                                                    <button className="px-3 py-1.5 rounded bg-white border border-slate-200 hover:bg-slate-50 text-[10px] font-medium text-slate-600 transition-colors shadow-sm">Pin to Top</button>
-                                                    <button className="px-3 py-1.5 rounded bg-white border border-rose-100 text-rose-600 hover:bg-rose-50 text-[10px] font-medium transition-colors shadow-sm">Moderate</button>
+                                                    <button onClick={() => handleTogglePin(post.id, post.isPinned)} className={`px-3 py-1.5 rounded border text-[10px] font-medium transition-colors shadow-sm ${post.isPinned ? 'bg-amber-100 border-amber-200 text-amber-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                                                        {post.isPinned ? 'Unpin' : 'Pin to Top'}
+                                                    </button>
+                                                    <button onClick={() => handleModeratePost(post.id)} className="px-3 py-1.5 rounded bg-white border border-rose-100 text-rose-600 hover:bg-rose-50 text-[10px] font-medium transition-colors shadow-sm">Moderate</button>
                                                 </div>
                                             </div>
                                         ))}
@@ -1589,31 +1465,35 @@ export default function AdminDashboardPage() {
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {[
-                                        { type: 'Technical Guide', title: 'Complete Visa Interview Protocol', downloads: 245, rating: 4.9, icon: 'article' },
-                                        { type: 'Media Archive', title: 'SOP Strategic Architecture Masterclass', downloads: 189, rating: 4.8, icon: 'movie_edit' },
-                                        { type: 'Data Template', title: 'Fiscal Application Structures', downloads: 567, rating: 4.7, icon: 'description' },
-                                        { type: 'Analysis', title: 'HEC Pakistan Success Narrative', downloads: 123, rating: 5.0, icon: 'summarize' },
-                                        { type: 'Protocol', title: 'Global Document Checklist 2024', downloads: 834, rating: 4.9, icon: 'fact_check' },
-                                        { type: 'Seminar', title: 'Institutional Selection Strategy', downloads: 92, rating: 4.6, icon: 'podcasts' }
-                                    ].map((resource, i) => (
-                                        <div key={i} className="p-4 rounded border border-slate-100 hover:bg-slate-50 hover:border-slate-200 transition-colors group">
+                                    {communityResources.length > 0 ? communityResources.map((resource: any, i: number) => (
+                                        <div key={i} className="p-4 rounded border border-slate-100 hover:bg-slate-50 hover:border-slate-200 transition-colors group relative">
                                             <div className="flex items-start gap-3 mb-3">
                                                 <div className="w-8 h-8 rounded bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500 flex-shrink-0 group-hover:text-slate-900 transition-colors">
-                                                    <span className="material-symbols-outlined text-[16px]">{resource.icon}</span>
+                                                    <span className="material-symbols-outlined text-[16px]">
+                                                        {resource.type === 'guide' ? 'article' : resource.type === 'video' ? 'movie_edit' : 'description'}
+                                                    </span>
                                                 </div>
                                                 <div className="min-w-0 flex-1">
-                                                    <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider leading-none mb-1">{resource.type}</p>
-                                                    <p className="text-xs font-semibold text-slate-900 leading-snug">{resource.title}</p>
+                                                    <p className="text-[9px] font-semibold text-slate-500 uppercase tracking-wider leading-none mb-1">{resource.type || 'Resource'}</p>
+                                                    <p className="text-xs font-semibold text-slate-900 leading-snug truncate">{resource.title}</p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center justify-between text-[10px] font-medium text-slate-500 mb-4 tabular-nums">
-                                                <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[12px]">download</span> {resource.downloads} Units</span>
-                                                <span className="text-amber-600 flex items-center gap-1">★ {resource.rating}</span>
+                                                <span className="flex items-center gap-1"><span className="material-symbols-outlined text-[12px]">download</span> {resource.downloads || 0} Units</span>
+                                                {resource.isFeatured && <span className="text-amber-600 flex items-center gap-1">★ Featured</span>}
                                             </div>
-                                            <button className="w-full px-3 py-1.5 rounded bg-white border border-slate-200 text-slate-700 text-[10px] font-semibold hover:bg-slate-50 transition-colors shadow-sm">Access File</button>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => window.open(resource.fileUrl || resource.downloadUrl, '_blank')} className="flex-1 px-3 py-1.5 rounded bg-white border border-slate-200 text-slate-700 text-[10px] font-semibold hover:bg-slate-50 transition-colors shadow-sm">Access</button>
+                                                <button onClick={() => handleDeleteResource(resource.id)} className="w-8 h-8 flex items-center justify-center rounded border border-rose-100 text-rose-600 hover:bg-rose-50 transition-colors">
+                                                    <span className="material-symbols-outlined text-[16px]">delete</span>
+                                                </button>
+                                            </div>
                                         </div>
-                                    ))}
+                                    )) : (
+                                        <div className="col-span-full py-12 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                                            <p className="text-[11px] text-slate-500">No managed resources found</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -1676,14 +1556,9 @@ export default function AdminDashboardPage() {
                                         </div>
                                         {selectedUsers.length > 0 && (
                                             <button
-                                                onClick={() => {
-                                                    if (confirm(`Send email to ${selectedUsers.length} selected users?`)) {
-                                                        setActiveSection('communications');
-                                                        setEmailData({ ...emailData, isBulk: false });
-                                                    }
-                                                    setSelectedUsers([]);
-                                                }}
-                                                className="px-3 py-1.5 bg-indigo-600 text-white rounded text-[10px] font-semibold uppercase tracking-wider"
+                                                disabled
+                                                className="px-3 py-1.5 bg-slate-300 text-slate-500 rounded text-[10px] font-semibold uppercase tracking-wider cursor-not-allowed"
+                                                title="Email feature disabled"
                                             >
                                                 Email {selectedUsers.length}
                                             </button>
@@ -1701,6 +1576,7 @@ export default function AdminDashboardPage() {
                                                 <th className="px-5 py-3">User Identity</th>
                                                 <th className="px-5 py-3">Access Tier</th>
                                                 <th className="px-5 py-3">Registration</th>
+                                                <th className="px-5 py-3">Security / Activity</th>
                                                 <th className="px-5 py-3 text-right">Commands</th>
                                             </tr>
                                         </thead>
@@ -1748,10 +1624,30 @@ export default function AdminDashboardPage() {
                                                         <td className="px-5 py-3 text-[11px] font-medium text-slate-500 tabular-nums">
                                                             {item.createdAt ? format(new Date(item.createdAt), 'MMM d, yyyy') : '—'}
                                                         </td>
+                                                        <td className="px-5 py-3">
+                                                            {item.last_login_at ? (
+                                                                <div className="flex flex-col gap-1.5">
+                                                                    <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
+                                                                        <span className="material-symbols-outlined text-[13px] text-indigo-500">location_on</span>
+                                                                        {item.last_login_location || 'Unknown'}
+                                                                    </div>
+                                                                    <div className="flex flex-wrap gap-1.5 text-[8px] font-black tracking-widest uppercase text-slate-500">
+                                                                        <span className="px-1.5 py-0.5 bg-slate-50 rounded border border-slate-200 flex items-center gap-1">
+                                                                            {item.last_login_device?.split(' - ')[0] || 'Device'}
+                                                                        </span>
+                                                                        <span className="px-1.5 py-0.5 bg-slate-50 rounded border border-slate-200 flex items-center gap-1">
+                                                                            {item.last_login_ip || '0.0.0.0'}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-[9px] font-black uppercase tracking-widest text-slate-400 bg-slate-50 px-2 py-1 rounded border border-slate-100">Never Logged In</span>
+                                                            )}
+                                                        </td>
                                                         <td className="px-5 py-3 text-right">
                                                             <div className="flex gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                                                                 <button
-                                                                    onClick={() => { setActiveSection('communications'); setEmailData({ ...emailData, to: item.email, isBulk: false }); }}
+                                                                    disabled
                                                                     className="p-1.5 text-slate-400 hover:text-indigo-600 rounded hover:bg-indigo-50 transition-all border border-transparent hover:border-indigo-100"
                                                                     title="Email User"
                                                                 >
@@ -2028,6 +1924,7 @@ export default function AdminDashboardPage() {
                                                         <span className="material-symbols-outlined text-[10px] inline-block opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">open_in_new</span>
                                                     </p>
                                                     <p className="text-[10px] text-slate-500 truncate group-hover:text-indigo-500 transition-colors" title={item.email}>{item.email}</p>
+                                                    {item.phone && <p className="text-[9px] text-slate-400 font-medium tabular-nums">{item.phone}</p>}
                                                 </button>
                                                             </td>
                                                             
@@ -2123,12 +2020,15 @@ export default function AdminDashboardPage() {
                                 <div className="flex gap-2 flex-wrap">
                                     <div className="flex bg-white rounded border border-slate-200 overflow-hidden shadow-sm">
                                         <button onClick={() => setFilterBlogTime('all')} className={`px-3 py-1.5 text-[9px] font-semibold uppercase tracking-wider transition-colors ${filterBlogTime === 'all' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>All Time</button>
-                                        <button onClick={() => setFilterBlogTime('weekly')} className={`px-3 py-1.5 border-l border-slate-200 text-[9px] font-semibold uppercase tracking-wider transition-colors ${filterBlogTime === 'weekly' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>Weekly</button>
-                                        <button onClick={() => setFilterBlogTime('monthly')} className={`px-3 py-1.5 border-l border-slate-200 text-[9px] font-semibold uppercase tracking-wider transition-colors ${filterBlogTime === 'monthly' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>Monthly</button>
-                                        <button onClick={() => setFilterBlogTime('yearly')} className={`px-3 py-1.5 border-l border-slate-200 text-[9px] font-semibold uppercase tracking-wider transition-colors ${filterBlogTime === 'yearly' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>Yearly</button>
+                                        <button onClick={() => setFilterBlogTime('week')} className={`px-3 py-1.5 border-l border-slate-200 text-[9px] font-semibold uppercase tracking-wider transition-colors ${filterBlogTime === 'week' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>Weekly</button>
+                                        <button onClick={() => setFilterBlogTime('month')} className={`px-3 py-1.5 border-l border-slate-200 text-[9px] font-semibold uppercase tracking-wider transition-colors ${filterBlogTime === 'month' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>Monthly</button>
+                                        <button onClick={() => setFilterBlogTime('year')} className={`px-3 py-1.5 border-l border-slate-200 text-[9px] font-semibold uppercase tracking-wider transition-colors ${filterBlogTime === 'year' ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-50'}`}>Yearly</button>
                                     </div>
-                                    <button className="px-3 py-1.5 bg-slate-900 text-white rounded font-semibold text-[10px] hover:bg-slate-800 transition-colors flex items-center gap-1.5 shadow-sm">
+                                    <button onClick={() => window.location.href = '/admin/blogs/create'} className="px-3 py-1.5 bg-slate-900 text-white rounded font-semibold text-[10px] hover:bg-slate-800 transition-colors flex items-center gap-1.5 shadow-sm">
                                         <span className="material-symbols-outlined text-[14px]">add</span>New Post
+                                    </button>
+                                    <button onClick={loadData} className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all bg-white border border-slate-200 rounded-lg shadow-sm">
+                                        <span className="material-symbols-outlined text-[20px]">refresh</span>
                                     </button>
                                 </div>
                             </div>

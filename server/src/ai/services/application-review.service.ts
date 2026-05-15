@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { GroqService } from './groq.service';
+import { OpenRouterService } from './openrouter.service';
 
 export interface ApplicationReviewResult {
     overallScore: number;           // 0-100
@@ -35,7 +35,7 @@ export interface ApplicationReviewResult {
 
 @Injectable()
 export class ApplicationReviewService {
-    constructor(private readonly groq: GroqService) { }
+    constructor(private readonly openRouter: OpenRouterService) { }
 
     /**
      * Perform a comprehensive AI-powered review of a loan application
@@ -184,7 +184,7 @@ export class ApplicationReviewService {
     }
 
     /**
-     * AI-powered deep analysis using Groq
+     * AI-powered deep analysis using OpenRouter
      */
     private async performAIAnalysis(
         app: any,
@@ -253,8 +253,8 @@ Rules:
 `;
 
         try {
-            console.log(`[ApplicationReviewService] Sending prompt to Groq for application review...`);
-            const result = await this.groq.getJson<any>(prompt);
+            console.log(`[ApplicationReviewService] Sending prompt to OpenRouter for application review...`);
+            const result = await this.openRouter.getJson<any>(prompt);
             console.log(`[ApplicationReviewService] Received AI response:`, JSON.stringify(result).substring(0, 200) + '...');
 
             if (!result || typeof result !== 'object') {

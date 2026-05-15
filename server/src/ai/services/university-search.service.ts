@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { GroqService } from './groq.service';
+import { OpenRouterService } from './openrouter.service';
 
 export interface University {
   name: string;
@@ -43,7 +43,7 @@ export interface UniversityDetails extends University {
 
 @Injectable()
 export class UniversitySearchService {
-  constructor(private readonly groqService: GroqService) { }
+  constructor(private readonly openRouterService: OpenRouterService) { }
 
   /**
    * Search universities by country using AI
@@ -98,7 +98,7 @@ CRITICAL RULES:
 6. Return ONLY valid JSON.`;
 
     try {
-      const response = await this.groqService.getJson<any>(prompt);
+      const response = await this.openRouterService.getJson<any>(prompt);
       let universities = response.universities || (Array.isArray(response) ? response : []);
 
       // Robust Normalization Pass
@@ -188,7 +188,7 @@ CRITICAL: "website" MUST be the actual original official university domain (e.g.
 Return ONLY valid JSON.`;
 
     try {
-      const details = await this.groqService.getJson<UniversityDetails>(prompt);
+      const details = await this.openRouterService.getJson<UniversityDetails>(prompt);
       return details;
     } catch (error) {
       console.error('Failed to fetch university details:', error);
@@ -228,7 +228,7 @@ For each university, respond with ONLY a JSON array of objects with this structu
 Return ONLY the JSON array with validation results. No other text.`;
 
     try {
-      const validationResults = await this.groqService.getJson<
+      const validationResults = await this.openRouterService.getJson<
         Array<{ name: string; country: string; isReal: boolean; confidence: number }>
       >(prompt);
 
@@ -262,7 +262,7 @@ Return ONLY the JSON array with validation results. No other text.`;
     MUST respond ONLY with JSON.`;
 
     try {
-      const response = await this.groqService.getJson<any>(prompt);
+      const response = await this.openRouterService.getJson<any>(prompt);
       const countries = response.countries || (Array.isArray(response) ? response : []);
       return Array.isArray(countries) ? countries : [];
     } catch (error) {

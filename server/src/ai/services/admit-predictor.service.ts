@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { GroqService } from './groq.service';
+import { OpenRouterService } from './openrouter.service';
 
 export interface StudentProfile {
     targetUniversity: string;
@@ -28,7 +28,7 @@ interface UniversityParams {
 
 @Injectable()
 export class AdmitPredictorService {
-    constructor(private readonly groq: GroqService) { }
+    constructor(private readonly openRouter: OpenRouterService) { }
 
     private universities: UniversityParams[] = [
         { name: 'Stanford University', tier: 1, minGpa: 3.8, avgGre: 328, avgSat: 1520, minIelts: 7.5, minToefl: 100, acceptanceRate: 4 },
@@ -70,7 +70,7 @@ export class AdmitPredictorService {
         `;
 
         try {
-            return await this.groq.getJson(prompt);
+            return await this.openRouter.getJson(prompt);
         } catch (error) {
             console.error('Admit Predictor failed', error);
             // Fallback to simple logic if AI fails

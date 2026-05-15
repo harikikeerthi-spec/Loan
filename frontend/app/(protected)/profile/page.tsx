@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import { authApi } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import DatePicker from "@/components/DatePicker";
+import { formatPhone, isPhoneValid } from "@/lib/validation";
 
 export default function ProfilePage() {
     const { user, refreshUser } = useAuth();
@@ -168,10 +169,10 @@ export default function ProfilePage() {
                                     {[
                                         { key: "firstName", label: "First Name", type: "text" },
                                         { key: "lastName", label: "Last Name", type: "text" },
-                                        { key: "phoneNumber", label: "Phone Number", type: "text" },
-                                        { key: "dateOfBirth", label: "Date of Birth", type: "datepicker" },
+                                        { key: "phoneNumber", label: "Phone Number", type: "text", isLocked: !!user?.phoneNumber },
+                                        { key: "dateOfBirth", label: "Date of Birth", type: "datepicker", isLocked: !!user?.dateOfBirth },
                                     ].map((item: any) => {
-                                        const { key, label, type, placeholder, pattern } = item;
+                                        const { key, label, type, placeholder, pattern, isLocked } = item;
                                         return (
                                         <div key={key}>
                                             {type === "datepicker" ? (
@@ -180,6 +181,7 @@ export default function ProfilePage() {
                                                     value={form.dateOfBirth}
                                                     onChange={(val) => setForm(p => ({ ...p, dateOfBirth: val }))}
                                                     placeholder="DD-MM-YYYY"
+                                                    disabled={isLocked}
                                                 />
                                             ) : (
                                                 <>
@@ -189,8 +191,13 @@ export default function ProfilePage() {
                                                         placeholder={placeholder}
                                                         pattern={pattern}
                                                         value={form[key as keyof typeof form]}
-                                                        onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
-                                                        className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-50/50 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 focus:border-[#6605c7] transition-all"
+                                                        onChange={(e) => {
+                                                            const val = key === 'phoneNumber' ? formatPhone(e.target.value) : e.target.value;
+                                                            setForm((p) => ({ ...p, [key]: val }));
+                                                        }}
+                                                        readOnly={isLocked}
+                                                        maxLength={key === 'phoneNumber' ? 10 : undefined}
+                                                        className={`w-full px-4 py-2.5 border ${key === 'phoneNumber' && form.phoneNumber && !isPhoneValid(form.phoneNumber) ? 'border-rose-300 focus:border-rose-500' : 'border-gray-200 focus:border-[#6605c7]'} rounded-lg bg-gray-50/50 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all ${isLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
                                                     />
                                                 </>
                                             )}

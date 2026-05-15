@@ -14,6 +14,7 @@ import { AuditLogService } from './audit-log.service';
 import { UserGuard } from './user.guard';
 import { ReferralModule } from '../referral/referral.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { FirebaseAuthService } from './firebase-auth.service';
 
 @Module({
   imports: [
@@ -26,7 +27,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
       useFactory: async (configService: ConfigService) => ({
         secret: (configService.get<string>('JWT_SECRET') || 'secretKey') as any,
         signOptions: {
-          expiresIn: (configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION') || '30m') as any,
+          expiresIn: (configService.get<string>('JWT_ACCESS_TOKEN_EXPIRATION') || configService.get<string>('JWT_EXPIRATION') || '30m') as any,
         },
       }),
       inject: [ConfigService],
@@ -43,6 +44,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     AuditLogService,
 
     UserGuard,
+    FirebaseAuthService,
   ],
   exports: [
     AuthService,
@@ -55,6 +57,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
     AuditLogService,
     UserGuard,
     EmailService,
+    FirebaseAuthService,
   ],
 })
 export class AuthModule { }

@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { GroqService } from './groq.service';
+import { OpenRouterService } from './openrouter.service';
 
 export interface SopAnalysisCategory {
   name: string;
@@ -26,7 +26,7 @@ export interface SopAnalysisResult {
 
 @Injectable()
 export class SopAnalysisService {
-  constructor(private readonly groq: GroqService) { }
+  constructor(private readonly openRouter: OpenRouterService) { }
 
   async analyzeSop(text: string): Promise<SopAnalysisResult> {
     const safeText = text || '';
@@ -44,7 +44,7 @@ export class SopAnalysisService {
       };
     }
 
-    // Truncate SOP text to ~2000 chars to stay within Groq free-tier 6000 TPM limit
+    // Truncate SOP text to ~2000 chars to stay within OpenRouter limits
     const truncatedText = safeText.length > 2000 ? safeText.slice(0, 2000) + '...[truncated]' : safeText;
 
     const prompt = `You are an expert SOP analyzer. Analyze this SOP for quality, AI-detection, and originality. Be strict with humanize scoring (most AI text scores 40-70).
@@ -72,7 +72,7 @@ Respond ONLY with this JSON:
 }`;
 
     try {
-      return await this.groq.getJson<SopAnalysisResult>(prompt);
+      return await this.openRouter.getJson<SopAnalysisResult>(prompt);
     } catch (error) {
       console.error('SOP Analysis failed', error);
       // Return a graceful fallback instead of crashing
@@ -120,7 +120,7 @@ Respond ONLY with this JSON:
     `;
 
     try {
-      return await this.groq.getJson<{ humanizedText: string; improvements: string[] }>(prompt);
+      return await this.openRouter.getJson<{ humanizedText: string; improvements: string[] }>(prompt);
     } catch (error) {
       console.error('SOP Humanization failed', error);
       throw error;

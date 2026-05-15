@@ -298,30 +298,6 @@ export class BlogController {
     }
 
     /**
-     * Increment blog view count (for manual tracking)
-     * POST /blogs/:id/view
-     * @param id - Blog ID
-     * @returns { success: boolean, views: number }
-     */
-    @Post(':id/view')
-    async incrementBlogView(@Param('id') id: string) {
-        return this.blogService.incrementBlogView(id);
-    }
-
-    /**
-     * Get single blog by ID    
-     * GET /blogs/:id
-     * @param id - Blog ID
-     * @returns { success: boolean, data: Blog }
-     */
-    @Get(':id')
-    async getBlogById(@Param('id') id: string) {
-        return this.blogService.getBlogById(id);
-    }
-
-    // ==================== ADMIN ENDPOINTS ====================
-
-    /**
      * Get all blogs (including unpublished) - ADMIN ONLY
      * GET /blogs/admin/all
      * @query limit - Number of blogs (default: 50)
@@ -333,14 +309,16 @@ export class BlogController {
     async getAllBlogsAdmin(
         @Query('limit') limit?: string,
         @Query('offset') offset?: string,
+        @Query('status') status?: string,
+        @Query('timeRange') timeRange?: string,
     ) {
         return this.blogService.getAllBlogsAdmin({
             limit: limit ? parseInt(limit, 10) : 50,
             offset: offset ? parseInt(offset, 10) : 0,
+            status,
+            timeRange,
         });
     }
-
-
 
     /**
      * Create a new blog post - ADMIN ONLY
@@ -371,21 +349,45 @@ export class BlogController {
         },
         @Request() req: any,
     ) {
-        // Only add authorId if we have a valid authenticated user
-        // If no auth (testing mode), leave it undefined to store as NULL
-        const blogData: any = {
-            ...body,
-        };
-
-        // Only add authorId if we have an authenticated user or explicit authorId in body
+        const blogData: any = { ...body };
         if (body.authorId) {
             blogData.authorId = body.authorId;
         } else if (req.user?.id) {
             blogData.authorId = req.user.id;
         }
-        // Otherwise, authorId will be undefined and stored as NULL (which is allowed)
-
         return this.blogService.createBlog(blogData);
+    }
+
+    /**
+     * Increment blog view count (for manual tracking)
+     * POST /blogs/:id/view
+     * @param id - Blog ID
+     * @returns { success: boolean, views: number }
+     */
+    @Post(':id/view')
+    async incrementBlogView(@Param('id') id: string) {
+        return this.blogService.incrementBlogView(id);
+    }
+
+    /**
+     * Get blog by ID (Wildcard - must be at the bottom of GET routes)
+     * GET /blogs/:id
+     */
+    @Get(':id')
+    async getBlogById(@Param('id') id: string) {
+        return this.blogService.getBlogById(id);
+    }
+
+    /**
+     * Delete a blog post - ADMIN ONLY
+     * DELETE /blogs/:id
+     * @param id - Blog ID
+     * @returns { success: boolean, message: string }
+     */
+    @Delete(':id')
+    @UseGuards(AdminGuard)
+    async deleteBlog(@Param('id') id: string) {
+        return this.blogService.deleteBlog(id);
     }
 
     /**
@@ -417,18 +419,6 @@ export class BlogController {
         },
     ) {
         return this.blogService.updateBlog(id, body);
-    }
-
-    /**
-     * Delete a blog post - ADMIN ONLY
-     * DELETE /blogs/:id
-     * @param id - Blog ID
-     * @returns { success: boolean, message: string }
-     */
-    @Delete(':id')
-    @UseGuards(AdminGuard)
-    async deleteBlog(@Param('id') id: string) {
-        return this.blogService.deleteBlog(id);
     }
 
     /**

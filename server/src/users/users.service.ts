@@ -39,6 +39,34 @@ export class UsersService {
     return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
   }
 
+  /**
+   * Converts a UTC date/time to India Standard Time (IST) format
+   * IST is UTC+5:30
+   * Returns format: YYYY-MM-DD HH:MM:SS IST
+   */
+  private convertToIndiaTime(utcDate: string | Date | null | undefined): string | null {
+    if (!utcDate) return null;
+    
+    try {
+      const date = utcDate instanceof Date ? utcDate : new Date(utcDate);
+      if (isNaN(date.getTime())) return null;
+
+      // Convert to IST (UTC+5:30)
+      const istDate = new Date(date.getTime() + (5.5 * 60 * 60 * 1000));
+      
+      const year = istDate.getUTCFullYear();
+      const month = String(istDate.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(istDate.getUTCDate()).padStart(2, '0');
+      const hours = String(istDate.getUTCHours()).padStart(2, '0');
+      const minutes = String(istDate.getUTCMinutes()).padStart(2, '0');
+      const seconds = String(istDate.getUTCSeconds()).padStart(2, '0');
+
+      return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} IST`;
+    } catch (e) {
+      console.error('[UsersService.convertToIndiaTime] Error:', e);
+      return null;
+    }
+  }
 
   async findOne(email: string) {
     try {
@@ -87,6 +115,8 @@ export class UsersService {
     role?: string;
   }) {
     const dobDate = this.parseDate(data.dateOfBirth);
+    const now = new Date();
+    const registeredAtIndia = this.convertToIndiaTime(now);
 
     const { data: user, error } = await this.db
       .from('User')
@@ -99,6 +129,7 @@ export class UsersService {
         mobile: data.mobile || '',
         password: data.password || '',
         role: data.role || 'user',
+        registeredAtIndia: registeredAtIndia,
       })
       .select()
       .single();
@@ -112,9 +143,49 @@ export class UsersService {
     return user;
   }
 
-  async findAll() {
-    const { data } = await this.db.from('User').select('*');
-    return data || [];
+  async findAll(limit?: number, offset?: number, search?: string, role?: string) {
+    let query = this.db.from('User').select('*', { count: 'exact' });
+    
+    if (search) {
+      query = query.or(`firstName.ilike.%${search}%,lastName.ilike.%${search}%,email.ilike.%${search}%`);
+    }
+
+    if (role && role !== 'all') {
+      if (role === 'staff') {
+        query = query.or('role.eq.admin,role.eq.staff');
+      } else {
+        query = query.eq('role', role);
+      }
+    }
+
+    if (limit !== undefined) {
+      const from = offset || 0;
+      const to = from + limit - 1;
+      query = query.range(from, to);
+    }
+    
+    const { data, count, error } = await query;
+    if (error) throw error;
+    
+    return {
+      data: data || [],
+      total: count || 0
+    };
+  }
+
+  async getUserStats() {
+    const { count: total } = await this.db.from('User').select('*', { count: 'exact', head: true });
+    const { count: student } = await this.db.from('User').select('*', { count: 'exact', head: true }).eq('role', 'student');
+    const { count: bank } = await this.db.from('User').select('*', { count: 'exact', head: true }).eq('role', 'bank');
+    const { count: staff } = await this.db.from('User').select('*', { count: 'exact', head: true }).or('role.eq.admin,role.eq.staff');
+    
+    return {
+      total: total || 0,
+      student: student || 0,
+      bank: bank || 0,
+      staff: staff || 0,
+      other: (total || 0) - (student || 0) - (bank || 0) - (staff || 0)
+    };
   }
 
   async updateUserDetails(
@@ -136,6 +207,18 @@ export class UsersService {
 
     if (error) throw error;
     return data;
+  }
+
+  async updateExtractedDetails(userId: string, details: any) {
+    if (!details || Object.keys(details).length === 0) return null;
+    
+    console.log(`[UsersService] updateExtractedDetails for user ${userId}:`, details);
+    
+    // Optional: map extracted details to User fields and update DB
+    // const { data, error } = await this.db.from('User').update(details).eq('id', userId).select().single();
+    // if (error) throw error;
+    
+    return { success: true };
   }
 
   async updateRefreshToken(email: string, refreshToken: string | null) {
@@ -297,11 +380,17 @@ export class UsersService {
       .eq('docType', docType)
       .single();
 
+    if (existing.error && existing.error.code !== 'PGRST116') {
+      console.error(`[UsersService.upsertUserDocument] Lookup error for ${userId}/${docType}:`, existing.error);
+      throw existing.error;
+    }
+
     const payload: any = {
       uploaded: data.uploaded,
       status: data.status || 'pending',
       filePath: data.filePath || null,
       uploadedAt: data.uploaded ? new Date().toISOString() : null,
+      updatedAt: new Date().toISOString(),
     };
     if (data.digilockerTxId !== undefined) payload.digilockerTxId = data.digilockerTxId;
     if (data.verifiedAt !== undefined) payload.verifiedAt = data.verifiedAt?.toISOString();
@@ -314,15 +403,23 @@ export class UsersService {
         .eq('id', existing.data.id)
         .select()
         .single();
-      if (error) throw error;
+      if (error) {
+        console.error(`[UsersService.upsertUserDocument] Update error for ${userId}/${docType}:`, error);
+        throw error;
+      }
       return updated;
     } else {
+      // For new records, we need an ID since it doesn't have a default in DB
+      const id = `${userId}_${docType}_${Date.now()}`;
       const { data: created, error } = await this.db
         .from('UserDocument')
-        .insert({ userId, docType, ...payload })
+        .insert({ id, userId, docType, ...payload })
         .select()
         .single();
-      if (error) throw error;
+      if (error) {
+        console.error(`[UsersService.upsertUserDocument] Insert error for ${userId}/${docType}:`, error);
+        throw error;
+      }
       return created;
     }
   }
@@ -472,5 +569,19 @@ export class UsersService {
       console.error('Error in getUserDashboardData:', error);
       throw error;
     }
+  }
+
+  async deleteUser(userId: string) {
+    const { error } = await this.db
+      .from('User')
+      .delete()
+      .eq('id', userId);
+    
+    if (error) {
+      console.error(`[UsersService.deleteUser] Error deleting user ${userId}:`, error);
+      throw error;
+    }
+    
+    return { success: true };
   }
 }

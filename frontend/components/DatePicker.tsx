@@ -11,9 +11,10 @@ interface DatePickerProps {
     placeholder?: string;
     error?: string;
     required?: boolean;
+    disabled?: boolean;
 }
 
-export default function DatePicker({ value, onChange, label, placeholder = "Select Date", error, required }: DatePickerProps) {
+export default function DatePicker({ value, onChange, label, placeholder = "Select Date", error, required, disabled }: DatePickerProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [viewDate, setViewDate] = useState(new Date());
     const containerRef = useRef<HTMLDivElement>(null);
@@ -79,8 +80,8 @@ export default function DatePicker({ value, onChange, label, placeholder = "Sele
             )}
             
             <div 
-                onClick={() => setIsOpen(!isOpen)}
-                className={`w-full px-4 py-3 bg-gray-50/50 border rounded-xl text-sm transition-all cursor-pointer flex items-center justify-between ${
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                className={`w-full px-4 py-3 bg-gray-50/50 border rounded-xl text-sm transition-all ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'} flex items-center justify-between ${
                     isOpen ? "border-[#6605c7] ring-4 ring-[#6605c7]/5 bg-white" : "border-gray-100 hover:border-gray-300"
                 } ${error ? "border-red-300" : ""}`}
             >

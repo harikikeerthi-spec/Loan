@@ -8,7 +8,7 @@ import { UniversityComparisonService } from './services/university-comparison.se
 import { AdmitPredictorService } from './services/admit-predictor.service';
 import { DocumentVerificationService } from './services/document-verification.service';
 import { ApplicationReviewService } from './services/application-review.service';
-import { GroqService } from './services/groq.service';
+import { OpenRouterService } from './services/openrouter.service';
 import { UniversitySearchService } from './services/university-search.service';
 import { VisaInterviewService } from './services/visa-interview.service';
 
@@ -16,7 +16,7 @@ import { VisaInterviewService } from './services/visa-interview.service';
   imports: [],
   controllers: [AiController],
   providers: [
-    GroqService,
+    OpenRouterService,
     EligibilityService,
     LoanRecommendationService,
     SopAnalysisService,
@@ -29,7 +29,7 @@ import { VisaInterviewService } from './services/visa-interview.service';
     VisaInterviewService,
   ],
   exports: [
-    GroqService,
+    OpenRouterService,
     EligibilityService,
     LoanRecommendationService,
     SopAnalysisService,

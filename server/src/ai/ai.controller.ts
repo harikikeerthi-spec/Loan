@@ -5,7 +5,7 @@ import { SopAnalysisService } from './services/sop-analysis.service';
 import { GradeConversionService } from './services/grade-conversion.service';
 import { UniversityComparisonService } from './services/university-comparison.service';
 import { AdmitPredictorService } from './services/admit-predictor.service';
-import { GroqService } from './services/groq.service';
+import { OpenRouterService } from './services/openrouter.service';
 import { UniversitySearchService, University, UniversityDetails } from './services/university-search.service';
 import { VisaInterviewService, InterviewMessage, EvaluationResult } from './services/visa-interview.service';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -19,7 +19,7 @@ export class AiController {
     private readonly gradeConversionService: GradeConversionService,
     private readonly universityComparisonService: UniversityComparisonService,
     private readonly admitPredictorService: AdmitPredictorService,
-    private readonly groqService: GroqService,
+    private readonly openRouterService: OpenRouterService,
     private readonly universitySearchService: UniversitySearchService,
     private readonly visaInterviewService: VisaInterviewService,
     private readonly supabase: SupabaseService,
@@ -271,7 +271,7 @@ export class AiController {
     }`;
 
     try {
-      const result = await this.groqService.getJson<{ relevant: boolean; reason?: string }>(prompt);
+      const result = await this.openRouterService.getJson<{ relevant: boolean; reason?: string }>(prompt);
       return {
         success: true,
         relevant: result.relevant,
@@ -302,7 +302,7 @@ export class AiController {
       }
 
       // Case 2: General advice/search for universities or courses
-      const results = await this.groqService.searchAdvice(query, type, data.context || data);
+      const results = await this.openRouterService.searchAdvice(query, type, data.context || data);
 
       if (type === 'university') {
         return { success: true, universities: results };
@@ -318,7 +318,7 @@ export class AiController {
   @Post('search-advice')
   async searchAdvice(@Body() data: { query: string; type: 'university' | 'course' | 'ug_university'; context?: any }) {
     try {
-      const results = await this.groqService.searchAdvice(data.query, data.type, data.context);
+      const results = await this.openRouterService.searchAdvice(data.query, data.type, data.context);
       return { success: true, results };
     } catch (error) {
       console.error("AI Search Failed", error);
@@ -338,7 +338,7 @@ export class AiController {
     }`;
 
     try {
-      const result = await this.groqService.getJson<{ tags: string[] }>(prompt);
+      const result = await this.openRouterService.getJson<{ tags: string[] }>(prompt);
       return { success: true, tags: result.tags || [] };
     } catch (error) {
       console.error("AI Tag Suggestion Failed", error);

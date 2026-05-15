@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { GroqService } from './groq.service';
+import { OpenRouterService } from './openrouter.service';
 
 export interface LoanOffer {
   id: string;
@@ -23,7 +23,7 @@ export interface LoanRecommendationResult {
 
 @Injectable()
 export class LoanRecommendationService {
-  constructor(private readonly groq: GroqService) { }
+  constructor(private readonly openRouter: OpenRouterService) { }
 
   async recommendLoans(
     score: number,
@@ -84,7 +84,7 @@ export class LoanRecommendationService {
     `;
 
     try {
-      return await this.groq.getJson<LoanRecommendationResult>(prompt);
+      return await this.openRouter.getJson<LoanRecommendationResult>(prompt);
     } catch (error) {
       console.error('Loan recommendation failed', error);
       // Fallback

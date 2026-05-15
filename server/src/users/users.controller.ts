@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Param, Put } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Param, Put, Delete, Query } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { AdminGuard } from '../auth/admin.guard';
 import { SuperAdminGuard } from '../auth/super-admin.guard';
@@ -49,17 +49,37 @@ export class UsersController {
                 dateOfBirth: formattedDOB,
                 mobile: user.mobile,
                 role: user.role,
+                registeredAtIndia: user.registeredAtIndia || '',
             },
         };
+    }
+
+    @Get('admin/stats')
+    @UseGuards(AdminGuard)
+    async getUserStats() {
+        return this.usersService.getUserStats();
     }
 
     // Admin: list all users (limited fields)
     @Get('admin/list')
     @UseGuards(AdminGuard)
-    async listUsers() {
+    async listUsers(
+        @Query('limit') limit?: string,
+        @Query('offset') offset?: string,
+        @Query('search') search?: string,
+        @Query('role') role?: string,
+    ) {
+        console.log('[UsersController.listUsers] Request received', { limit, offset, search, role });
         try {
-            const users = await this.usersService.findAll();
-            if (!users) return { success: true, data: [] };
+            const l = limit ? parseInt(limit, 10) : 30;
+            const o = offset ? parseInt(offset, 10) : 0;
+            
+            console.log('[UsersController.listUsers] Calling usersService.findAll()...');
+            const result = await this.usersService.findAll(l, o, search, role);
+            const users = result.data;
+            console.log(`[UsersController.listUsers] Found ${users?.length || 0} users (Total: ${result.total})`);
+            
+            if (!users) return { success: true, data: [], total: 0 };
             
             return {
                 success: true,
@@ -68,16 +88,23 @@ export class UsersController {
                     email: u?.email || '', 
                     firstName: u?.firstName || '', 
                     lastName: u?.lastName || '', 
+                    phoneNumber: u?.phoneNumber || '',
+                    mobile: u?.mobile || '',
                     role: u?.role || 'user', 
-                    createdAt: u?.createdAt || new Date().toISOString()
-                }))
+                    createdAt: u?.createdAt || u?.created_at || new Date().toISOString(),
+                    registeredAtIndia: u?.registeredAtIndia || ''
+                })),
+                total: result.total,
+                limit: l,
+                offset: o
             };
         } catch (error) {
-            console.error('Error in listUsers:', error);
+            console.error('[UsersController.listUsers] Fatal Error:', error);
             return {
                 success: false,
                 message: error.message || 'Failed to list users',
-                data: []
+                data: [],
+                total: 0
             };
         }
     }
@@ -139,7 +166,7 @@ export class UsersController {
         try {
             if (body.isBulk && body.role) {
                 const users = await this.usersService.findAll();
-                const filteredUsers = users.filter(u => u.role === body.role);
+                const filteredUsers = users.data.filter(u => u.role === body.role);
                 
                 for (const u of filteredUsers) {
                     await this.emailService.sendMail(
@@ -280,5 +307,20 @@ export class UsersController {
             body.dateOfBirth
         );
         return { success: true, message: 'User updated successfully', user: updated };
+    }
+
+    @UseGuards(AdminGuard)
+    @Delete('admin/:id')
+    async deleteUser(@Param('id') id: string) {
+        if (!id) {
+            return { success: false, message: 'User ID is required' };
+        }
+        try {
+            await this.usersService.deleteUser(id);
+            return { success: true, message: 'User deleted successfully' };
+        } catch (error) {
+            console.error('Error deleting user by admin:', error);
+            return { success: false, message: 'Failed to delete user', error: error?.message };
+        }
     }
 }

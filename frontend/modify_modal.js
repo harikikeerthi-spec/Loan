@@ -60,11 +60,6 @@ const newModal = `            {/* Add Student Modal / Onboarding Flow */}
                                             <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5"><span className="material-symbols-outlined text-[12px]">call</span> {newStudent.mobile}</div>
                                         </div>
                                     </div>
-                                    
-                                    <button className="flex flex-col items-center justify-center border border-slate-200 bg-white rounded-xl p-3 shadow-sm hover:bg-slate-50 transition-all text-indigo-600 min-w-[100px]">
-                                        <span className="material-symbols-outlined mb-1">share</span>
-                                        <span className="text-[10px] font-bold uppercase tracking-widest">Platform Link</span>
-                                    </button>
 
                                     {/* Progress Stepper */}
                                     <div className="flex-1 flex items-center justify-center gap-8 pl-8 border-l border-slate-200">

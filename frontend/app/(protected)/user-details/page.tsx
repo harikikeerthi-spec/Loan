@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import Navbar from "@/components/Navbar";
 import { authApi } from "@/lib/api";
+import { formatPhone, isPhoneValid } from "@/lib/validation";
 
 
 import DatePicker from "@/components/DatePicker";
@@ -136,12 +137,13 @@ export default function UserDetailsPage() {
                                     placeholder="+91 9876543210"
                                     value={form.phoneNumber}
                                     onChange={(e) =>
-                                        setForm((p) => ({ ...p, phoneNumber: e.target.value }))
+                                        setForm((p) => ({ ...p, phoneNumber: formatPhone(e.target.value) }))
                                     }
                                     required
-                                    pattern={"[0-9+\\s\\-()]*"}
+                                    readOnly={!!user?.phoneNumber}
+                                    maxLength={10}
                                     inputMode="numeric"
-                                    className="w-full px-4 py-3 bg-gray-50/50 border border-gray-100 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 transition-all"
+                                    className={`w-full px-4 py-3 bg-gray-50/50 border ${form.phoneNumber && !isPhoneValid(form.phoneNumber) ? 'border-rose-300 focus:border-rose-500' : 'border-gray-100 focus:border-[#6605c7]'} rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 transition-all ${!!user?.phoneNumber ? 'opacity-60 cursor-not-allowed' : ''}`}
                                 />
                             </div>
 
@@ -150,6 +152,7 @@ export default function UserDetailsPage() {
                                 value={form.dateOfBirth}
                                 onChange={(val) => setForm(p => ({ ...p, dateOfBirth: val }))}
                                 required
+                                disabled={!!user?.dateOfBirth}
                                 placeholder="Select DOB"
                             />
 

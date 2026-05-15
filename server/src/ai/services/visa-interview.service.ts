@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { GroqService } from './groq.service';
+import { OpenRouterService } from './openrouter.service';
 
 export interface InterviewMessage {
     role: 'officer' | 'applicant';
@@ -45,7 +45,7 @@ const INTERVIEW_SECTIONS: InterviewSection[] = [
 
 @Injectable()
 export class VisaInterviewService {
-    constructor(private readonly groqService: GroqService) { }
+    constructor(private readonly openRouterService: OpenRouterService) { }
 
     getSections(): InterviewSection[] {
         return INTERVIEW_SECTIONS.map(s => ({ ...s }));
@@ -157,7 +157,7 @@ CONSTRAINTS:
 
     async startInterview(userProfile: Record<string, any>, visaType: string, agentType: string): Promise<any> {
         const prompt = this.buildPrompt(userProfile, visaType, 'personal_background', '', agentType);
-        return this.groqService.getJson(prompt);
+        return this.openRouterService.getJson(prompt);
     }
 
     async continueInterview(
@@ -177,7 +177,7 @@ CONSTRAINTS:
         }
 
         const prompt = this.buildPrompt(userProfile, visaType, currentSection, historyContext, agentType);
-        return this.groqService.getJson(prompt);
+        return this.openRouterService.getJson(prompt);
     }
 
     async evaluateAnswer(
@@ -212,7 +212,7 @@ Answer: ${transcript}
 
 Return ONLY valid JSON. No markdown, no explanation.`;
 
-        return this.groqService.getJson<EvaluationResult>(prompt);
+        return this.openRouterService.getJson<EvaluationResult>(prompt);
     }
 
     async generateFinalReport(
@@ -274,6 +274,6 @@ Format:
   "verdict": string
 }`;
 
-        return this.groqService.getJson(prompt);
+        return this.openRouterService.getJson(prompt);
     }
 }

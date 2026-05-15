@@ -139,14 +139,14 @@ function AdminLoginContent() {
                         <div>
                             <label className="block text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3 ml-1">Admin Email</label>
                             <div className="relative">
-                                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl">mark_as_unread</span>
+                                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-xl pointer-events-none">mark_as_unread</span>
                                 <input
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    disabled={step === "otp"}
+                                    disabled={step === "otp" || loading}
                                     placeholder="admin@vidhyaloan.com"
-                                    className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 focus:bg-white transition-all disabled:opacity-60 font-medium"
+                                    className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed font-medium"
                                     required
                                 />
                                 {step === "otp" && (
