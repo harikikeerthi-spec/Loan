@@ -411,4 +411,41 @@ export class StaffProfileService {
 
     return { success: true };
   }
+
+  // ─── Dashboard Activity Logging ───────────────────────────────────────────
+  async logDashboardActivity(user: any, data: { type: string; msg: string; icon: string; color: string }) {
+    await this.auditLog.logAction(
+      data.type.toUpperCase(),
+      'DASHBOARD',
+      'STAFF_PORTAL',
+      user,
+      { 
+        msg: data.msg, 
+        icon: data.icon, 
+        color: data.color,
+        isDashboardActivity: true 
+      }
+    );
+  }
+
+  async getDashboardActivities(limit: number = 10) {
+    const { data, error } = await this.db
+      .from('AuditLog')
+      .select('id, action, initiatedBy, changes, createdAt, initiator:User!initiatedBy(firstName, lastName, email)')
+      .order('createdAt', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+
+    // Map audit logs back to the activity format expected by the frontend
+    return (data || []).map(log => ({
+      id: log.id,
+      type: log.action.toLowerCase(),
+      msg: log.changes?.msg || `${log.action} action performed`,
+      time: log.createdAt, // Frontend can format this
+      icon: log.changes?.icon || 'event_note',
+      color: log.changes?.color || 'text-slate-600 bg-slate-50',
+      initiator: log.initiator
+    }));
+  }
 }

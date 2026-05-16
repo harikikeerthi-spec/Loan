@@ -158,6 +158,8 @@ export class UsersService {
       }
     }
 
+    query = query.order('createdAt', { ascending: false });
+
     if (limit !== undefined) {
       const from = offset || 0;
       const to = from + limit - 1;
@@ -210,15 +212,74 @@ export class UsersService {
   }
 
   async updateExtractedDetails(userId: string, details: any) {
-    if (!details || Object.keys(details).length === 0) return null;
-    
-    console.log(`[UsersService] updateExtractedDetails for user ${userId}:`, details);
-    
-    // Optional: map extracted details to User fields and update DB
-    // const { data, error } = await this.db.from('User').update(details).eq('id', userId).select().single();
-    // if (error) throw error;
-    
-    return { success: true };
+    try {
+      console.log(`[UsersService.updateExtractedDetails] Updating details for user: ${userId}`);
+      
+      const payload: any = {};
+      
+      // Map OCR fields to known database columns
+      if (details.documentVerified !== undefined) payload.documentVerified = details.documentVerified;
+      
+      if (details.full_name) {
+        const parts = details.full_name.trim().split(/\s+/);
+        if (parts.length > 0) {
+          payload.firstName = parts[0];
+          if (parts.length > 1) {
+            payload.lastName = parts.slice(1).join(' ');
+          }
+        }
+      }
+      
+      if (details.date_of_birth) {
+        const parsedDob = this.parseDate(details.date_of_birth);
+        if (parsedDob) payload.dateOfBirth = parsedDob;
+      }
+
+      // Add fields that might exist but we should be careful
+      // These will only work if columns are added to the User table
+      if (details.panNumber) payload.panNumber = details.panNumber;
+      if (details.aadhaarNumber) payload.aadhaarNumber = details.aadhaarNumber;
+      if (details.father_name) payload.fatherName = details.father_name;
+      if (details.address) payload.permanentAddress = details.address;
+
+      if (Object.keys(payload).length === 0) {
+        console.log('[UsersService.updateExtractedDetails] No fields to update.');
+        return { success: true };
+      }
+
+      const { data, error } = await this.db
+        .from('User')
+        .update(payload)
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        // If it's a "column does not exist" error (PGRST204), log it but don't fail
+        if (error.code === 'PGRST204' || error.message.includes('column')) {
+          console.warn(`[UsersService.updateExtractedDetails] Could not update some fields because columns are missing in DB: ${error.message}`);
+          
+          // Try updating ONLY the verified columns we know exist
+          const safePayload: any = {};
+          if (payload.firstName) safePayload.firstName = payload.firstName;
+          if (payload.lastName) safePayload.lastName = payload.lastName;
+          if (payload.dateOfBirth) safePayload.dateOfBirth = payload.dateOfBirth;
+          
+          if (Object.keys(safePayload).length > 0) {
+            await this.db.from('User').update(safePayload).eq('id', userId);
+          }
+          
+          return { success: true, warning: 'Some fields skipped due to missing columns' };
+        }
+        throw error;
+      }
+
+      return { success: true, data };
+    } catch (e: any) {
+      console.error(`[UsersService.updateExtractedDetails] Failed to update user details: ${e.message}`);
+      // Return success anyway so the document upload isn't considered a failure
+      return { success: false, error: e.message };
+    }
   }
 
   async updateRefreshToken(email: string, refreshToken: string | null) {

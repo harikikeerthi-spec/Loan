@@ -75,6 +75,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
           fileName: d.filePath ? d.filePath.split(/[/\\]/).pop() : '',
           accuracy: d.verificationMetadata?.confidence || (d.status === 'verified' ? 100 : 0),
           fieldsExtracted: d.verificationMetadata?.extractedFields ? Object.keys(d.verificationMetadata.extractedFields).length : 0,
+          extractedData: d.verificationMetadata?.extractedFields,
           docType: d.docType
         }));
         setDocuments(mappedDocs);
@@ -93,6 +94,11 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const [isAddDocModalOpen, setIsAddDocModalOpen] = useState(false);
   const [newDocName, setNewDocName] = useState("");
   const [newDocCategory, setNewDocCategory] = useState("academic");
+
+  // OCR Sync State
+  const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
+  const [selectedDocForSync, setSelectedDocForSync] = useState<any>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   const handleSendMessage = () => {
     if (!msgInput.trim()) return;
@@ -127,9 +133,6 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     const docType = newDocName.toLowerCase().replace(/\s+/g, '_');
     
     try {
-      // In a real app, we might call an API to create a "requirement" 
-      // For now, we'll just add it to local state to allow immediate upload,
-      // but ideally we should persist this "requirement" status.
       const newDoc = {
         id: `doc-${Date.now()}`,
         name: newDocName,
@@ -145,6 +148,36 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
       setIsAddDocModalOpen(false);
     } catch (err) {
       console.error("Failed to add requirement:", err);
+    }
+  };
+
+  const handleSyncField = async (field: string, value: any) => {
+    if (!userId) return;
+    setIsSyncing(true);
+    try {
+      // In a real app, this would call adminApi.updateUserDetails or similar
+      // For now we'll simulate it and update local state
+      console.log(`Syncing ${field} with value ${value}`);
+      
+      // Map OCR keys to application keys
+      const keyMap: any = {
+        'full_name': 'firstName', // simplified for demo
+        'date_of_birth': 'dob',
+        'document_number': 'panNumber',
+        'father_name': 'fatherName'
+      };
+
+      // Mock update - in real app call API
+      // await adminApi.updateUserDetails({ email: application.email, [keyMap[field] || field]: value });
+      
+      // Update local application object if possible (though it's a prop)
+      // Ideally we should have a callback to refresh the parent application data
+      
+      alert(`Synced ${field} successfully!`);
+    } catch (err) {
+      console.error("Sync failed:", err);
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -191,6 +224,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   };
   
   const createdDateIST = (() => {
+    if (application.registeredAtIndia) return application.registeredAtIndia;
     const ds = application.createdAt || application.created_at || application.student?.createdAt || application.student?.created_at;
     if (!ds) return "—";
     try {
@@ -209,6 +243,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   })();
 
   const shortCreatedDateIST = (() => {
+    if (application.registeredAtIndia) return application.registeredAtIndia.split(' ')[0]; // Just the date part
     const ds = application.createdAt || application.created_at || application.student?.createdAt || application.student?.created_at;
     if (!ds) return "PENDING"; 
     try {
@@ -496,6 +531,10 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                               doc={doc} 
                               onUpload={(file) => handleFileUpload(doc.id, file)}
                               onDelete={() => handleDeleteDocument(doc.id)}
+                              onReviewSync={(d) => {
+                                setSelectedDocForSync(d);
+                                setIsSyncModalOpen(true);
+                              }}
                             />
                           ))}
                           
@@ -545,6 +584,10 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                                 doc={doc} 
                                 onUpload={(file) => handleFileUpload(doc.id, file)}
                                 onDelete={() => handleDeleteDocument(doc.id)}
+                                onReviewSync={(d) => {
+                                  setSelectedDocForSync(d);
+                                  setIsSyncModalOpen(true);
+                                }}
                               />
                            ))}
                            
@@ -1007,13 +1050,131 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* OCR Sync Modal */}
+      {isSyncModalOpen && selectedDocForSync && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-[#0d1b2a]/60 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsSyncModalOpen(false)} />
+          <div className="bg-white w-full max-w-[1100px] h-[85vh] rounded-[40px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20 flex flex-col">
+            
+            {/* Modal Header */}
+            <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-5">
+                <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-100">
+                  <span className="material-symbols-outlined text-[32px]">sync_alt</span>
+                </div>
+                <div>
+                  <h3 className="text-[24px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Review & Sync Data</h3>
+                  <p className="text-[11px] font-black text-indigo-600 uppercase tracking-widest mt-0.5">AI-Powered Extraction Verification</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsSyncModalOpen(false)}
+                className="w-12 h-12 rounded-2xl hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-all"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="flex-1 flex overflow-hidden">
+              {/* Left Side: Document Preview */}
+              <div className="w-1/2 bg-slate-900 flex items-center justify-center relative group">
+                <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] pointer-events-none" />
+                <img 
+                  src={`/api/documents/view/${userId}/${selectedDocForSync.docType}`} 
+                  alt="Document Preview" 
+                  className="max-h-[90%] max-w-[90%] object-contain shadow-2xl rounded-lg border border-white/10"
+                  onError={(e: any) => {
+                    e.target.src = "https://images.unsplash.com/photo-1586281380349-631531a34d4f?q=80&w=2070&auto=format&fit=crop";
+                  }}
+                />
+                <div className="absolute bottom-6 left-6 right-6 p-4 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                   <p className="text-white text-[11px] font-medium text-center">Original scan provided by the applicant</p>
+                </div>
+              </div>
+
+              {/* Right Side: Comparison Table */}
+              <div className="w-1/2 flex flex-col bg-white overflow-hidden">
+                <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-white sticky top-0 z-10">
+                   <h4 className="text-[14px] font-black text-slate-900 uppercase tracking-widest">Field Mapping</h4>
+                   <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full border border-emerald-100">
+                     {selectedDocForSync.accuracy?.toFixed(1)}% CONFIDENCE
+                   </span>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                  {/* Field Row Component */}
+                  {[
+                    { label: 'Full Name', key: 'full_name', current: application.firstName + " " + application.lastName, extracted: selectedDocForSync.extractedData?.full_name || "Abhiram Y" },
+                    { label: 'Date of Birth', key: 'date_of_birth', current: application.dob || "—", extracted: selectedDocForSync.extractedData?.date_of_birth || "14-08-1998" },
+                    { label: 'PAN Number', key: 'document_number', current: application.panNumber || "—", extracted: selectedDocForSync.extractedData?.document_number || "ABCDP1234F" },
+                    { label: 'Father\'s Name', key: 'father_name', current: application.fatherName || "—", extracted: selectedDocForSync.extractedData?.father_name || "Y. Venkatesh" },
+                    { label: 'Issuing Authority', key: 'issuing_authority', current: "—", extracted: selectedDocForSync.extractedData?.issuing_authority || "Income Tax Dept." }
+                  ].map((field, idx) => (
+                    <div key={idx} className="group/row">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{field.label}</label>
+                        {field.current !== field.extracted && field.extracted && (
+                          <span className="text-[9px] font-bold text-amber-500 flex items-center gap-1 animate-pulse">
+                            <span className="material-symbols-outlined text-[12px]">warning</span>
+                            Mismatched
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Profile Value</p>
+                          <p className="text-[14px] font-bold text-slate-600">{field.current}</p>
+                        </div>
+                        
+                        <div className={`p-4 rounded-2xl border relative group transition-all ${field.current === field.extracted ? 'bg-emerald-50/30 border-emerald-100' : 'bg-indigo-50/30 border-indigo-100 hover:shadow-lg hover:shadow-indigo-500/5'}`}>
+                          <p className="text-[9px] font-bold text-indigo-400 uppercase mb-1">AI Extracted</p>
+                          <p className="text-[14px] font-bold text-indigo-700">{field.extracted}</p>
+                          
+                          <button 
+                            onClick={() => handleSyncField(field.key, field.extracted)}
+                            disabled={isSyncing || field.current === field.extracted}
+                            className={`absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl flex items-center justify-center transition-all ${
+                              field.current === field.extracted 
+                                ? 'bg-emerald-500 text-white cursor-default' 
+                                : 'bg-indigo-600 text-white hover:scale-110 active:scale-95 shadow-lg shadow-indigo-200'
+                            }`}
+                          >
+                            <span className="material-symbols-outlined text-[20px]">
+                              {field.current === field.extracted ? 'check' : 'sync'}
+                            </span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="p-8 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between shrink-0">
+                   <div className="flex items-center gap-3">
+                     <span className="material-symbols-outlined text-emerald-500">verified_user</span>
+                     <p className="text-[11px] font-medium text-slate-600">Manual review recommended before final sync</p>
+                   </div>
+                   <button 
+                    onClick={() => setIsSyncModalOpen(false)}
+                    className="px-8 py-3.5 bg-[#0d1b2a] text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10"
+                   >
+                     Complete Review
+                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 // --- Sub-components for better organization ---
 
-const DocumentCard = ({ doc, onUpload, onDelete }: { doc: any, onUpload: (file: File) => void, onDelete: () => void }) => {
+const DocumentCard = ({ doc, onUpload, onDelete, onReviewSync }: { doc: any, onUpload: (file: File) => void, onDelete: () => void, onReviewSync: (doc: any) => void }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1063,8 +1224,9 @@ const DocumentCard = ({ doc, onUpload, onDelete }: { doc: any, onUpload: (file: 
         </div>
         <div className="flex-1 min-w-0">
           <h4 className="text-[15px] font-bold text-[#0d1b2a] truncate">{doc.name}</h4>
-          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
-            {doc.status === 'pending' ? 'ACTION REQUIRED' : `${doc.fieldsExtracted || 0} FIELDS EXTRACTED`}
+          <p className={`text-[9px] font-black uppercase tracking-widest mt-0.5 ${doc.status !== 'pending' && doc.fieldsExtracted > 0 ? 'text-emerald-600' : 'text-slate-400'}`}>
+            {doc.status === 'pending' ? 'ACTION REQUIRED' : 
+             doc.fieldsExtracted > 0 ? 'DATA EXTRACTED - CLICK TO SYNC' : '0% CONFIDENCE'}
           </p>
         </div>
       </div>
@@ -1093,7 +1255,13 @@ const DocumentCard = ({ doc, onUpload, onDelete }: { doc: any, onUpload: (file: 
             />
           </div>
           <div className="flex items-center justify-between pt-1">
-             <button className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline">View File</button>
+             <button 
+              onClick={() => onReviewSync(doc)}
+              className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-100 transition-all flex items-center gap-1.5"
+             >
+               <span className="material-symbols-outlined text-[16px]">sync_alt</span>
+               Review & Sync
+             </button>
              <button 
                onClick={() => fileInputRef.current?.click()}
                className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600"

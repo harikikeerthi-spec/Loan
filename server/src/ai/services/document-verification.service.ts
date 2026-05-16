@@ -7,13 +7,13 @@ export interface OcrVerificationResult {
     confidence: number; // 0-100
     docType: string;
     extractedFields: {
-        name?: string;
-        dateOfBirth?: string;
-        documentNumber?: string;
+        full_name?: string;
+        date_of_birth?: string;
+        document_number?: string;
         address?: string;
-        fatherName?: string;
-        issueDate?: string;
-        expiryDate?: string;
+        father_name?: string;
+        expiry_date?: string;
+        issuing_authority?: string;
         gender?: string;
         panNumber?: string;
         aadhaarNumber?: string;
@@ -23,6 +23,10 @@ export interface OcrVerificationResult {
         studentId?: string;
         admissionYear?: string;
         [key: string]: string | undefined;
+    };
+    verification_flags?: {
+        is_expired: boolean;
+        name_match_score: number;
     };
     matchResults?: {
         nameMatch?: boolean;
@@ -100,56 +104,46 @@ STUDENT PROFILE TO VERIFY AGAINST:
 - Email: ${studentProfile.email || 'Not provided'}
 ` : '';
 
-    return `You are an expert OCR and document verification AI for a student loan system in India.
-Analyze the provided document image and perform the following tasks:
+    return `You are a specialized Document OCR Extraction agent for an Education Loan platform.
+
+Task: Extract specific data from the provided image. If the data is not clearly visible or the document type is incorrect, return null for those fields. Do not guess information.
+
+${profileContext}
 
 TASK 1 - DOCUMENT IDENTIFICATION:
-First, confirm whether this image actually shows ${docType} (or a similar document). If it's clearly a different document type, flag it.
+First, confirm whether this image actually shows ${docType}.
 
 TASK 2 - OCR EXTRACTION:
 ${docSpecificInstructions}
 
-TASK 3 - VALIDATION:
-- Is the document clearly legible and authentic-looking?
-- Are there any signs of tampering or forgery?
-- Is the document expired (if applicable)?
-${profileContext}
-${studentProfile ? `TASK 4 - PROFILE CROSS-CHECK:
-Compare extracted name and DOB with the student profile above. Note any discrepancies.` : ''}
+Output Format:
+Return ONLY a valid JSON object with the following structure:
 
-Respond ONLY with a JSON object in this exact format:
 {
-  "isCorrectDocumentType": true,
-  "confidence": 85,
-  "isValid": true,
-  "extractedFields": {
-    "name": "extracted name here",
-    "dateOfBirth": "DD/MM/YYYY",
-    "documentNumber": "document ID/number",
-    "gender": "Male/Female",
-    "address": "full address if visible",
-    "fatherName": "if visible",
-    "panNumber": "if PAN card",
-    "aadhaarNumber": "last 4 digits only",
-    "universityName": "if admission letter",
-    "programName": "if applicable"
+  "document_type": "${docType}",
+  "confidence_score": 0-100,
+  "isValid": boolean,
+  "extracted_data": {
+    "full_name": "string",
+    "date_of_birth": "DD-MM-YYYY",
+    "document_number": "string (e.g., PAN Number)",
+    "father_name": "string",
+    "expiry_date": "DD-MM-YYYY or null",
+    "issuing_authority": "string",
+    "address": "string or null"
   },
-  "matchResults": {
-    "nameMatch": true,
-    "dobMatch": true,
-    "overallMatch": true,
-    "mismatches": []
+  "verification_flags": {
+    "is_expired": "boolean",
+    "name_match_score": "number (0-100, compare to: '${studentProfile?.firstName || ''} ${studentProfile?.lastName || ''}')"
   },
-  "issues": [],
-  "reason": "Brief explanation of verification result",
-  "rawOcrText": "Key text extracted verbatim from document"
+  "reason": "explanation of results",
+  "rawOcrText": "verbatim text snippet"
 }
 
 IMPORTANT: 
-- If document is illegible, blurry, or clearly wrong type, set isValid=false
-- For aadhaarNumber, ONLY include last 4 digits for security
-- Be strict but fair - minor name variations (e.g., initials vs full name) should not fail verification
-- If no student profile is provided, skip matchResults`;
+- Respond with ONLY the JSON object.
+- For aadhaarNumber, ONLY include last 4 digits for security.
+- Be precise with dates (DD-MM-YYYY).`;
 }
 
 function normalizeDocType(docType: string): string {
@@ -350,10 +344,11 @@ export class DocumentVerificationService {
             }
 
             const result: OcrVerificationResult = {
-                isValid: parsed.isValid ?? parsed.isCorrectDocumentType ?? true,
-                confidence: parsed.confidence ?? 70,
+                isValid: parsed.isValid ?? (parsed.confidence_score > 70),
+                confidence: parsed.confidence_score ?? parsed.confidence ?? 70,
                 docType,
-                extractedFields: parsed.extractedFields || {},
+                extractedFields: parsed.extracted_data || parsed.extractedFields || {},
+                verification_flags: parsed.verification_flags,
                 reason: parsed.reason || (parsed.isValid ? 'Document verified successfully' : 'Document verification failed'),
                 rawOcrText: parsed.rawOcrText,
             };
@@ -361,10 +356,10 @@ export class DocumentVerificationService {
             // Add match results if available
             if (parsed.matchResults) {
                 result.matchResults = parsed.matchResults;
-            } else if (studentProfile && result.extractedFields.name) {
+            } else if (studentProfile && result.extractedFields.full_name) {
                 // Compute basic match ourselves
                 const studentFullName = `${studentProfile.firstName || ''} ${studentProfile.lastName || ''}`.toLowerCase().trim();
-                const extractedName = (result.extractedFields.name || '').toLowerCase().trim();
+                const extractedName = (result.extractedFields.full_name || '').toLowerCase().trim();
                 const nameMatch = studentFullName && extractedName
                     ? this.namesMatch(studentFullName, extractedName)
                     : true;

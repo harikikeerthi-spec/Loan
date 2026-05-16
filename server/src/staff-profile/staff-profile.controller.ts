@@ -159,4 +159,22 @@ export class StaffProfileController {
     const shares = await this.svc.getShareHistory(id);
     return { success: true, data: shares };
   }
+
+  // ─── Dashboard Activity Logging ───────────────────────────────────────────
+  @Post('activities')
+  async logActivity(@Req() req: any, @Body() body: {
+    type: string;
+    msg: string;
+    icon: string;
+    color: string;
+  }) {
+    await this.svc.logDashboardActivity(req.user, body);
+    return { success: true };
+  }
+
+  @Get('dashboard/activities')
+  async getActivities(@Query('limit') limit?: string) {
+    const logs = await this.svc.getDashboardActivities(limit ? parseInt(limit, 10) : 15);
+    return { success: true, data: logs };
+  }
 }

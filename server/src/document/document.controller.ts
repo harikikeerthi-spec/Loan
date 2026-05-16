@@ -152,42 +152,54 @@ export class DocumentController {
                 console.log(`[UPLOAD] Setting status to 'pending' due to AI verification error`);
             }
 
-            const document = await this.usersService.upsertUserDocument(userId, docType, {
-                uploaded: true,
-                filePath: file.path,
-                status: status
-            });
-
-            console.log(`[UPLOAD] Successfully saved document record - docId: ${document?.id}`);
-
-            return {
-                success: true,
-                data: {
-                    ...document,
-                    verification: verificationResult,
-                    aiExplanation: aiExplanation,
-                    ocrResult: ocrResult ? {
-                        isValid: ocrResult.isValid,
-                        confidence: ocrResult.confidence,
-                        extractedFields: ocrResult.extractedFields,
-                        matchResults: ocrResult.matchResults,
-                        reason: ocrResult.reason,
-                    } : null,
-                },
-                file: {
-                    originalName: file.originalname,
-                    filename: file.filename
-                }
-            };
-        } catch (error: any) {
-            console.error(`[UPLOAD] Error processing file upload:`, error);
+            console.log(`[UPLOAD] Finalizing document record in database - userId: ${userId}, docType: ${docType}`);
             try {
-                unlinkSync(file.path);
-                console.log(`[UPLOAD] Cleaned up orphaned file: ${file.path}`);
-            } catch (cleanupError) {
-                console.error(`[UPLOAD] Failed to cleanup file: ${file.path}`, cleanupError);
+                const document = await this.usersService.upsertUserDocument(userId, docType, {
+                    uploaded: true,
+                    filePath: file.path,
+                    status: status,
+                    verificationMetadata: verificationResult
+                });
+
+                console.log(`[UPLOAD] Document record finalized successfully. Document ID: ${document?.id}`);
+
+                return {
+                    success: true,
+                    message: 'Document uploaded and processed successfully',
+                    data: {
+                        ...document,
+                        status: status,
+                        verification: verificationResult,
+                        aiExplanation: aiExplanation,
+                        ocrResult: ocrResult ? {
+                            isValid: ocrResult.isValid,
+                            confidence: ocrResult.confidence,
+                            extractedFields: ocrResult.extractedFields,
+                            matchResults: ocrResult.matchResults,
+                            reason: ocrResult.reason,
+                        } : null,
+                    },
+                    file: {
+                        originalName: file.originalname,
+                        filename: file.filename
+                    }
+                };
+            } catch (dbError: any) {
+                console.error(`[UPLOAD] Database upsert failed:`, dbError?.message || dbError);
+                throw new Error(`Failed to save document record: ${dbError.message || 'Unknown database error'}`);
             }
-            throw new BadRequestException(`Upload failed: ${error.message || 'Database error'}`);
+        } catch (error: any) {
+            console.error(`[UPLOAD] Global upload error:`, error?.message || error);
+            // Ensure we clean up the file if anything fails
+            if (file && file.path && existsSync(file.path)) {
+                try { 
+                    unlinkSync(file.path); 
+                    console.log(`[UPLOAD] Cleaned up file after error: ${file.path}`);
+                } catch (cleanupError) {
+                    console.error(`[UPLOAD] Failed to cleanup file: ${file.path}`, cleanupError);
+                }
+            }
+            throw new BadRequestException(`Upload failed: ${error.message || 'Processing error'}`);
         }
     }
 

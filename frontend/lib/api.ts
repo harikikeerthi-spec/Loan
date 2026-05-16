@@ -860,20 +860,43 @@ export const documentApi = {
             body: JSON.stringify({ userId, docType }),
         }).then(handleResponse),
 
-    upload: (userId: string, docType: string, file: File) => {
-        const token = (() => {
-            if (typeof window === 'undefined') return null;
-            return localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken');
-        })();
-        const form = new FormData();
-        form.append('file', file);
-        form.append('userId', userId);
-        form.append('docType', docType);
-        return fetch(`${API_URL}/documents/upload`, {
-            method: 'POST',
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-            body: form,
-        }).then(handleResponse);
+    upload: (userId: string, docType: string, file: File, onProgress?: (progress: number) => void) => {
+        return new Promise((resolve, reject) => {
+            const token = (() => {
+                if (typeof window === 'undefined') return null;
+                return localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken');
+            })();
+            
+            const xhr = new XMLHttpRequest();
+            const form = new FormData();
+            form.append('file', file);
+            form.append('userId', userId);
+            form.append('docType', docType);
+
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable && onProgress) {
+                    onProgress((e.loaded / e.total) * 100);
+                }
+            });
+
+            xhr.addEventListener('load', () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        resolve(JSON.parse(xhr.responseText));
+                    } catch (e) {
+                        resolve(xhr.responseText);
+                    }
+                } else {
+                    reject(new Error(`Upload failed with status ${xhr.status}`));
+                }
+            });
+
+            xhr.addEventListener('error', () => reject(new Error('Network error')));
+            
+            xhr.open('POST', `${API_URL}/documents/upload`);
+            if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            xhr.send(form);
+        });
     },
 
     ocrReverify: (userId: string, docType: string) => {
@@ -980,20 +1003,43 @@ export const staffProfileApi = {
         apiFetch(`${API_URL}/staff-profiles/${profileId}/documents`),
 
     // Staff manually uploads a document and attaches it
-    uploadDocument: (profileId: string, file: File, docType: string, description?: string) => {
-        const token = (() => {
-            if (typeof window === 'undefined') return null;
-            return localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken');
-        })();
-        const form = new FormData();
-        form.append('file', file);
-        form.append('doc_type', docType);
-        if (description) form.append('description', description);
-        return fetch(`${API_URL}/staff-profiles/${profileId}/documents`, {
-            method: 'POST',
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-            body: form,
-        }).then(handleResponse);
+    uploadDocument: (profileId: string, file: File, docType: string, onProgress?: (progress: number) => void, description?: string) => {
+        return new Promise((resolve, reject) => {
+            const token = (() => {
+                if (typeof window === 'undefined') return null;
+                return localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken');
+            })();
+            
+            const xhr = new XMLHttpRequest();
+            const form = new FormData();
+            form.append('file', file);
+            form.append('doc_type', docType);
+            if (description) form.append('description', description);
+
+            xhr.upload.addEventListener('progress', (e) => {
+                if (e.lengthComputable && onProgress) {
+                    onProgress((e.loaded / e.total) * 100);
+                }
+            });
+
+            xhr.addEventListener('load', () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        resolve(JSON.parse(xhr.responseText));
+                    } catch (e) {
+                        resolve(xhr.responseText);
+                    }
+                } else {
+                    reject(new Error(`Upload failed with status ${xhr.status}`));
+                }
+            });
+
+            xhr.addEventListener('error', () => reject(new Error('Network error')));
+            
+            xhr.open('POST', `${API_URL}/staff-profiles/${profileId}/documents`);
+            if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+            xhr.send(form);
+        });
     },
 
     // Update a document's status (also back-syncs to user's profile)
@@ -1064,5 +1110,15 @@ export const staffProfileApi = {
             method: 'PATCH',
             body: JSON.stringify({ status, rejection_reason: rejectionReason }),
         }),
+
+    // Dashboard Activities
+    logActivity: (data: { type: string; msg: string; icon: string; color: string }) =>
+        apiFetch(`${API_URL}/staff-profiles/activities`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+        }),
+
+    getDashboardActivities: (limit = 15) =>
+        apiFetch(`${API_URL}/staff-profiles/dashboard/activities?limit=${limit}`),
 };
 
