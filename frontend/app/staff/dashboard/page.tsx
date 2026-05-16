@@ -11,6 +11,12 @@ import PullDocumentsModal from "@/components/staff/PullDocumentsModal";
 import ApplicationDetailView from "@/components/staff/ApplicationDetailView";
 import { getAllCountries, getStatesByCountry } from "@/lib/countriesData";
 import { formatPhone, formatAadhar, formatPan, isPhoneValid, isAadharValid, isPanValid } from "@/lib/validation";
+import {
+    getPersonDocumentRequirements,
+    getProfileDocumentRequirements,
+    getStudentDocumentRequirements,
+    type DocumentRequirement,
+} from "@/lib/documentRequirements";
 
 // --- Components ---
 
@@ -91,11 +97,7 @@ export default function StaffDashboardPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [autoStartUser, setAutoStartUser] = useState<any>(null);
     const [showPullModal, setShowPullModal] = useState(false);
-    const [recentActivity, setRecentActivity] = useState([
-        { id: 1, type: "approved", msg: "Application #APP-1021 approved", time: "2m ago", icon: "check_circle", color: "text-emerald-600 bg-emerald-50" },
-        { id: 2, type: "new", msg: "New applicant Rahul Sharma onboarded", time: "18m ago", icon: "person_add", color: "text-indigo-600 bg-indigo-50" },
-        { id: 3, type: "pending", msg: "3 documents awaiting review for #APP-1018", time: "1h ago", icon: "hourglass_empty", color: "text-amber-600 bg-amber-50" },
-    ]);
+    const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
     const formatRelativeTime = (dateStr: string) => {
         if (!dateStr) return "Just now";
@@ -107,6 +109,23 @@ export default function StaffDashboardPage() {
         if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
         if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
         return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    };
+
+    const formatAbsoluteDateTime = (dateStr: string) => {
+        if (!dateStr) return "";
+        try {
+            const date = new Date(dateStr);
+            return date.toLocaleString("en-IN", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+            });
+        } catch {
+            return "";
+        }
     };
 
     const addActivity = (type: string, msg: string, icon: string, color: string) => {
@@ -122,10 +141,12 @@ export default function StaffDashboardPage() {
         const loadActivities = async () => {
             try {
                 const res: any = await staffProfileApi.getDashboardActivities(15);
-                if (res?.data) {
-                    setRecentActivity(res.data.map((a: any) => ({
+                // Backend returns a plain array directly
+                const items: any[] = Array.isArray(res) ? res : (res?.data ?? []);
+                if (items.length > 0) {
+                    setRecentActivity(items.map((a: any) => ({
                         ...a,
-                        time: formatRelativeTime(a.time)
+                        time: formatRelativeTime(a.createdAt || a.time)
                     })));
                 }
             } catch (err) {
@@ -142,12 +163,12 @@ export default function StaffDashboardPage() {
         setActivitiesLoading(true);
         try {
             const res: any = await staffProfileApi.getDashboardActivities(100);
-            if (res?.data) {
-                setFullActivities(res.data.map((a: any) => ({
-                    ...a,
-                    time: formatRelativeTime(a.time)
-                })));
-            }
+            // Backend returns a plain array directly
+            const items: any[] = Array.isArray(res) ? res : (res?.data ?? []);
+            setFullActivities(items.map((a: any) => ({
+                ...a,
+                time: formatRelativeTime(a.createdAt || a.time)
+            })));
         } catch (err) {
             console.error("Failed to load full activities", err);
         } finally {
@@ -195,7 +216,7 @@ export default function StaffDashboardPage() {
         const fetchCountries = async () => {
             try {
                 const res = await referenceApi.getCountries();
-                setCountries(res);
+                setCountries(res as any[]);
             } catch (e) {
                 console.error("Failed to fetch countries", e);
             }
@@ -205,9 +226,17 @@ export default function StaffDashboardPage() {
 
     const [onboardMode, setOnboardMode] = useState<"new" | "link">("new");
     const [userSearchQuery, setUserSearchQuery] = useState("");
-    const [isSearchingUsers, setIsSearchingUsers] = useState(false);
     const [userSuggestions, setUserSuggestions] = useState<any[]>([]);
+    const [isSearchingUsers, setIsSearchingUsers] = useState(false);
     const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
+
+    // Step 4 Share State
+    const [shareTarget, setShareTarget] = useState<'bank' | 'student'>('bank');
+    const [shareEmail, setShareEmail] = useState("");
+    const [shareName, setShareName] = useState("");
+    const [shareMessage, setShareMessage] = useState("");
+    const [isSharing, setIsSharing] = useState(false);
+    const [shareResult, setShareResult] = useState<{ url: string; expires: string } | null>(null);
 
     // Fetch suggestions as user types for "Link Existing"
     useEffect(() => {
@@ -236,36 +265,12 @@ export default function StaffDashboardPage() {
 
     // Helper function to generate required documents based on employment type
     const getRequiredDocuments = (employmentType: string, personName: string, personType: 'father' | 'mother' | 'coapplicant') => {
-        const docs: any[] = [];
-
-        const typePrefix = personType === 'father' ? 'father' : personType === 'mother' ? 'mother' : 'coapplicant';
-
-        // Aadhar and PAN - separately required
-        docs.push({ name: `${personName}'s Aadhar Card`, type: `${typePrefix}_aadhar`, required: true });
-        docs.push({ name: `${personName}'s PAN Card`, type: `${typePrefix}_pan`, required: true });
-
-        // Employment-specific documents
-        if (employmentType === 'employed') {
-            docs.push({ name: `${personName} - Last 3 months Salary Slips`, type: `${typePrefix}_salary_slips`, required: true });
-            docs.push({ name: `${personName} - Last 6 months Bank Statements`, type: `${typePrefix}_bank_statements`, required: true });
-        } else if (employmentType === 'self_employed_business' || employmentType === 'self_employed_professional') {
-            docs.push({ name: `${personName} - Business Registration/License`, type: `${typePrefix}_business_license`, required: true });
-            docs.push({ name: `${personName} - Labour License (if applicable)`, type: `${typePrefix}_labour_license`, required: false });
-            docs.push({ name: `${personName} - Udyam Certificate`, type: `${typePrefix}_udyam_cert`, required: false });
-            docs.push({ name: `${personName} - Last 6 months Bank Statements`, type: `${typePrefix}_bank_statements`, required: true });
-            docs.push({ name: `${personName} - Last 2 years ITR (Income Tax Returns)`, type: `${typePrefix}_itr`, required: true });
-            docs.push({ name: `${personName} - Balance Sheet & P&L Statement`, type: `${typePrefix}_balance_sheet`, required: false });
-        } else if (employmentType === 'retired') {
-            docs.push({ name: `${personName} - Retirement Certificate/Pension Document`, type: `${typePrefix}_retirement_cert`, required: true });
-            docs.push({ name: `${personName} - Last 6 months Bank Statements`, type: `${typePrefix}_bank_statements`, required: true });
-        }
-
-        return docs;
+        return getPersonDocumentRequirements(employmentType, personName, personType);
     };
 
     // Onboard applicant — two-step state
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [onboardStep, setOnboardStep] = useState<1 | 2 | 3>(1);
+    const [onboardStep, setOnboardStep] = useState<1 | 2 | 3 | 4>(1);
     const [createdUser, setCreatedUser] = useState<any>(null);
     const [quickForm, setQuickForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
     const [profileTab, setProfileTab] = useState<"personal" | "academic" | "work" | "tests" | "family">("personal");
@@ -318,7 +323,6 @@ export default function StaffDashboardPage() {
                 adminApi.getApplicationStats().catch(() => ({ data: {} })),
                 adminApi.getUsers().catch(() => ({ data: [], total: 0 }))
             ]);
-
             setStats({
                 blogs: blogStats.data || {},
                 apps: appStats.data || {},
@@ -350,11 +354,10 @@ export default function StaffDashboardPage() {
                 setData(Array.isArray(res) ? res : (res.data || []));
             } else if (activeSection === "users") {
                 const offset = (currentPage - 1) * itemsPerPage;
-                const [usersRes, statsRes] = await Promise.all([
+                const [usersRes, statsRes]: [any, any] = await Promise.all([
                     adminApi.getUsers(itemsPerPage, offset, searchQuery, userRoleFilter),
                     adminApi.getUserStats().catch(() => null)
                 ]);
-
                 if (usersRes && usersRes.data) {
                     setData(usersRes.data);
                     setTotalItems(usersRes.total || usersRes.data.length);
@@ -362,7 +365,6 @@ export default function StaffDashboardPage() {
                     setData(Array.isArray(usersRes) ? usersRes : []);
                     setTotalItems(Array.isArray(usersRes) ? usersRes.length : 0);
                 }
-
                 if (statsRes && statsRes.success) {
                     setUserSectionStats(statsRes.data || statsRes);
                 } else if (statsRes) {
@@ -391,8 +393,7 @@ export default function StaffDashboardPage() {
         const students = userSectionStats?.student ?? 0;
         const bankPartners = userSectionStats?.bank ?? 0;
         const staffMembers = userSectionStats?.staff ?? 0;
-        const admins = userSectionStats?.admin ?? 0; // The backend doesn't explicitly return admin, but it's often included in staff or other
-
+        const admins = userSectionStats?.admin ?? 0;
         return [
             { id: 'all', label: 'Total Users', value: total, icon: 'group', color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', tag: 'ACTIVE' },
             { id: 'student', label: 'Student Accounts', value: students, icon: 'school', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', tag: 'ROLE' },
@@ -516,6 +517,11 @@ export default function StaffDashboardPage() {
         setProfileTab("personal");
         setOnboardMode('new');
         setUserSearchQuery("");
+        setShareTarget('bank');
+        setShareEmail("");
+        setShareName("");
+        setShareMessage("");
+        setShareResult(null);
     };
 
     const handleCheckEmailAndLink = async (e: React.FormEvent) => {
@@ -634,7 +640,12 @@ export default function StaffDashboardPage() {
     useEffect(() => {
         if (onboardStep === 3 && createdUser) {
             const userId = createdUser.id || createdUser.uid || createdUser._id;
-            if (userId) fetchUserDocuments(userId);
+            if (userId) {
+                (async () => {
+                    await syncRequiredDocumentRecords(userId);
+                    await fetchUserDocuments(userId);
+                })();
+            }
         }
     }, [onboardStep, createdUser]);
 
@@ -675,19 +686,12 @@ export default function StaffDashboardPage() {
             addActivity("update", `Synced dossier for ${newStudent.firstName}`, "sync", "text-emerald-600 bg-emerald-50");
 
             if (!silent) {
-                toast({
-                    title: "Profile Synced",
-                    description: "Student details have been successfully updated in the database.",
-                });
+                alert("Profile Synced: Student details have been successfully updated in the database.");
             }
         } catch (error) {
             console.error("Save profile error:", error);
             if (!silent) {
-                toast({
-                    title: "Sync Failed",
-                    description: "Could not update profile details. Please try again.",
-                    variant: "destructive"
-                });
+                alert("Sync Failed: Could not update profile details. Please try again.");
             }
         } finally {
             setCreateLoading(false);
@@ -745,14 +749,56 @@ export default function StaffDashboardPage() {
         setCreateLoading(true);
         try {
             await onboardingApi.submit(newStudent);
-            alert("🎉 Onboarding complete! Applicant profile has been fully updated.");
-            resetOnboardModal();
+
+            // Fetch the profile ID to use for sharing in Step 4
+            const userId = createdUser?.id || createdUser?.uid || createdUser?._id;
+            const profileRes: any = await staffProfileApi.checkExists(userId);
+            if (profileRes?.data?.id) {
+                // Ensure we have the profile ID for Step 4
+                // You might want to store this in state if not already there
+            }
+
+            alert("🎉 Onboarding complete! Profile has been finalized.");
+            setOnboardStep(4); // Move to Distribution step
             loadData();
             addActivity("approved", `Completed onboarding for ${newStudent.firstName}`, "task_alt", "text-emerald-600 bg-emerald-50");
         } catch (e: any) {
             alert("Failed to finalize onboarding: " + e.message);
         } finally {
             setCreateLoading(false);
+        }
+    };
+
+    const handleDistributionShare = async () => {
+        const studentId = createdUser?.id || createdUser?.uid || createdUser?._id;
+        if (!studentId) {
+            alert("No student profile found to share.");
+            return;
+        }
+
+        setIsSharing(true);
+        try {
+            const res: any = await staffProfileApi.shareProfile(studentId, {
+                recipientType: shareTarget,
+                recipientName: shareName || (shareTarget === 'student' ? `${newStudent.firstName} ${newStudent.lastName}` : "Bank Representative"),
+                recipientEmail: shareEmail,
+                message: shareMessage,
+                sharedBy: "staff"
+            });
+
+            if (res.success || res.url) {
+                setShareResult({
+                    url: res.url || `${window.location.origin}/share/${res.shareId || 'test'}`,
+                    expires: res.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+                });
+                addActivity("share", `Shared profile with ${shareName || shareEmail}`, "send", "text-indigo-600 bg-indigo-50");
+            } else {
+                throw new Error(res.message || "Failed to generate share link");
+            }
+        } catch (error: any) {
+            alert("Sharing Failed: " + (error.message || "Could not generate secure link."));
+        } finally {
+            setIsSharing(false);
         }
     };
 
@@ -766,6 +812,33 @@ export default function StaffDashboardPage() {
         } finally {
             setDocsLoading(false);
         }
+    };
+
+    const getCreatedUserId = () => createdUser?.id || createdUser?.uid || createdUser?._id;
+
+    const syncRequiredDocumentRecords = async (userId: string) => {
+        const requirements = getProfileDocumentRequirements(newStudent).filter((doc: DocumentRequirement) => doc.required !== false);
+        const existingByType = new Map(userDocuments.map((doc: any) => [doc.docType || doc.type, doc]));
+
+        await Promise.all(
+            requirements.map((doc) => {
+                const existing = existingByType.get(doc.type) as any;
+                if (existing?.uploaded || ["uploaded", "verified"].includes(String(existing?.status || "").toLowerCase())) {
+                    return Promise.resolve(existing);
+                }
+                return documentApi.addRequirement(userId, doc.type, doc.name);
+            })
+        );
+    };
+
+    const proceedToDocuments = async () => {
+        await handleSaveProfile(true);
+        const userId = getCreatedUserId();
+        if (userId) {
+            await syncRequiredDocumentRecords(userId);
+            await fetchUserDocuments(userId);
+        }
+        setOnboardStep(3);
     };
 
     // Handle S3 document upload
@@ -795,7 +868,7 @@ export default function StaffDashboardPage() {
 
             if (res.success) {
                 addActivity("upload", `Uploaded ${docType.replace(/_/g, ' ')} for ${personName}`, "upload_file", "text-purple-600 bg-purple-50");
-                
+
                 // If AI verification was performed, show status
                 if (res.data?.verification?.code === 'AI_VERIFIED') {
                     alert(`✅ ${personName} - ${docType.replace(/_/g, ' ')} uploaded and AI-verified successfully!`);
@@ -957,6 +1030,100 @@ export default function StaffDashboardPage() {
         { section: "activities", icon: "history", label: "Activity Log", badge: 0 },
         { section: "my_profile", icon: "badge", label: "My Profile", badge: 0 },
     ];
+
+    const renderRequirementRow = (
+        doc: DocumentRequirement,
+        personType: 'applicant' | 'father' | 'mother' | 'coapplicant',
+        personName: string,
+        employmentType?: string,
+    ) => {
+        const existingDoc = userDocuments.find((ud) => ud.docType === doc.type || ud.type === doc.type);
+        const existingStatus = String(existingDoc?.status || "").toLowerCase();
+        const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+        const uploadKey = `${doc.type}-${personType}`;
+        const inputKey = `${personType}-${doc.type}`;
+        const isUploading = uploadingDocs[uploadKey] !== undefined;
+        const tone = personType === "coapplicant" ? "violet" : personType === "applicant" ? "indigo" : "rose";
+        const pendingClasses = tone === "violet"
+            ? "bg-violet-50/50 border-violet-100"
+            : tone === "indigo"
+                ? "bg-slate-50 border-slate-200 hover:border-slate-300"
+                : doc.required
+                    ? "bg-red-50/50 border-red-100"
+                    : "bg-amber-50/50 border-amber-100";
+        const iconClasses = isUploaded
+            ? "bg-white text-emerald-500 border border-emerald-100"
+            : tone === "violet"
+                ? "bg-white border-violet-200 text-violet-500"
+                : tone === "indigo"
+                    ? "bg-white border border-slate-200 text-slate-400"
+                    : doc.required
+                        ? "bg-white border-red-200 text-red-500"
+                        : "bg-white border-amber-200 text-amber-500";
+
+        return (
+            <div key={`${personType}-${doc.type}`} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${isUploaded ? 'bg-emerald-50/30 border-emerald-100 shadow-sm' : pendingClasses}`}>
+                <div className="flex items-center gap-4">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${iconClasses}`}>
+                        <span className="material-symbols-outlined text-[20px]">{isUploaded ? 'task_alt' : doc.required ? 'exclamation' : 'info'}</span>
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h4 className="text-sm font-bold text-slate-900">{doc.name}</h4>
+                            {isUploaded ? (
+                                <span className="px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest rounded leading-none">In Profile</span>
+                            ) : doc.required ? (
+                                <span className={`px-1.5 py-0.5 ${tone === "violet" ? "bg-violet-500" : "bg-red-500"} text-white text-[8px] font-black uppercase tracking-widest rounded leading-none`}>Required</span>
+                            ) : (
+                                <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[8px] font-black uppercase tracking-widest rounded leading-none">Optional</span>
+                            )}
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">{doc.type.toUpperCase().replace(/_/g, ' ')} - PDF/JPG/PNG</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-2">
+                    <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        ref={el => {
+                            if (el) fileInputRefs.current[inputKey] = el;
+                        }}
+                        onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                                await handleDocumentUpload(file, doc.type, personType, personName, employmentType);
+                                e.target.value = '';
+                            }
+                        }}
+                        hidden
+                    />
+                    {isUploaded && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const userId = getCreatedUserId();
+                                if (userId) window.open(`/api/documents/view/${userId}/${doc.type}`, '_blank', 'noopener,noreferrer');
+                            }}
+                            className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all flex items-center gap-2"
+                        >
+                            <span className="material-symbols-outlined text-[16px]">visibility</span>
+                            Review
+                        </button>
+                    )}
+                    <button
+                        onClick={() => fileInputRefs.current[inputKey]?.click()}
+                        disabled={isUploading}
+                        className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[11px] font-bold hover:bg-slate-50 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <span className="material-symbols-outlined text-[16px]">
+                            {isUploading ? 'hourglass_top' : 'upload'}
+                        </span>
+                        {isUploading ? `${Math.round(uploadingDocs[uploadKey])}%` : isUploaded ? 'Re-upload' : 'Upload'}
+                    </button>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <div className="h-screen overflow-hidden flex bg-white text-slate-900 font-sans text-sm">
@@ -1153,10 +1320,10 @@ export default function StaffDashboardPage() {
                                             { id: 1, label: 'Registration', icon: 'how_to_reg' },
                                             { id: 2, label: 'Profile Details', icon: 'person' },
                                             { id: 3, label: 'Document Vault', icon: 'folder_managed' },
-                                            { id: 4, label: 'Finalize', icon: 'verified' },
+                                            { id: 4, label: 'Distribution', icon: 'share' },
                                         ].map(step => (
-                                            <button 
-                                                key={step.id} 
+                                            <button
+                                                key={step.id}
                                                 type="button"
                                                 disabled={!createdUser || step.id === 1 || step.id === 4}
                                                 onClick={() => setOnboardStep(step.id)}
@@ -1270,7 +1437,12 @@ export default function StaffDashboardPage() {
                                                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Student Email Address</label>
                                                             <div className="relative">
                                                                 <span className="material-symbols-outlined absolute left-5 top-1/2 -translate-y-1/2 text-slate-400">mail</span>
-                                                                <input required type="email" value={userSearchQuery} onChange={e => setUserSearchQuery(e.target.value)} placeholder="Enter student email..." className="w-full pl-14 pr-6 py-5 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-bold" />
+                                                                <input required type="email" value={userSearchQuery} onChange={e => setUserSearchQuery(e.target.value)} placeholder="Enter student email..." className="w-full pl-14 pr-12 py-5 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-bold" />
+                                                                {isSearchingSuggestions && (
+                                                                    <div className="absolute right-5 top-1/2 -translate-y-1/2">
+                                                                        <div className="w-5 h-5 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                                                                    </div>
+                                                                )}
 
                                                                 {/* Suggestions Dropdown */}
                                                                 {userSuggestions.length > 0 && (
@@ -2370,7 +2542,7 @@ export default function StaffDashboardPage() {
                                                         )}
                                                     </section>
                                                     <div className="mt-8 flex justify-end">
-                                                        <button type="button" onClick={async () => { await handleSaveProfile(true); addActivity("person", `Completed profile for ${newStudent.firstName}`, "person", "text-emerald-600 bg-emerald-50"); setOnboardStep(3); }} className="px-10 py-3 bg-emerald-500 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-all shadow-md shadow-emerald-500/20">Finalize & Proceed to Documents</button>
+                                                        <button type="button" onClick={async () => { await proceedToDocuments(); addActivity("person", `Completed profile for ${newStudent.firstName}`, "person", "text-emerald-600 bg-emerald-50"); }} className="px-10 py-3 bg-emerald-500 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-all shadow-md shadow-emerald-500/20">Finalize & Proceed to Documents</button>
                                                     </div>
                                                 </div>
                                             )}
@@ -2389,7 +2561,7 @@ export default function StaffDashboardPage() {
                                                         </button>
                                                     )}
                                                     {onboardStep === 2 && profileTab === 'family' && (
-                                                        <button type="button" onClick={() => setOnboardStep(3)} className="px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2">
+                                                        <button type="button" onClick={proceedToDocuments} className="px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2">
                                                             Proceed to Documents
                                                             <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                                                         </button>
@@ -2429,33 +2601,20 @@ export default function StaffDashboardPage() {
                                                     <div>
                                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-5 bg-emerald-50 px-3 py-1 rounded-full w-fit">Primary Applicant Documents</h4>
                                                         <div className="space-y-3">
-                                                            {[
-                                                                { name: "Passport (Front & Back)", type: "passport", required: true },
-                                                                { name: "National ID / Aadhar Card", type: "national_id", required: true },
-                                                                { name: "10th Marksheet", type: "marksheet_10", required: true },
-                                                                { name: "12th Marksheet", type: "marksheet_12", required: newStudent.academic.highestLevel !== 'Grade 10' },
-                                                                { name: "Undergraduate Transcript", type: "ug_transcript", required: ['Undergraduate', 'Postgraduate'].includes(newStudent.academic.highestLevel) },
-                                                                { name: "Undergraduate Degree", type: "ug_degree", required: ['Undergraduate', 'Postgraduate'].includes(newStudent.academic.highestLevel) },
-                                                                { name: "Postgraduate Transcript", type: "pg_transcript", required: newStudent.academic.highestLevel === 'Postgraduate' },
-                                                                { name: "Postgraduate Degree", type: "pg_degree", required: newStudent.academic.highestLevel === 'Postgraduate' },
-                                                                { name: "IELTS / TOEFL / PTE Score Card", type: "english_test", required: (newStudent.tests.ielts || newStudent.tests.toefl || newStudent.tests.pte) ? true : false },
-                                                                { name: "GRE / GMAT / SAT Score Card", type: "aptitude_test", required: (newStudent.tests.gre || newStudent.tests.gmat || newStudent.tests.sat) ? true : false },
-                                                                { name: "Work Experience Letters", type: "work_letters", required: newStudent.workExperience.some(exp => exp.employer !== "") },
-                                                                { name: "Resume / CV", type: "resume", required: true },
-                                                                // { name: "Statement of Purpose (SOP)", type: "sop", required: true },
-                                                                // { name: "Letters of Recommendation (LOR)", type: "lor", required: true },
-                                                            ].filter(doc => doc.required).map((doc, i) => {
+                                                            {getStudentDocumentRequirements(newStudent).map((doc, i) => {
                                                                 const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
+                                                                const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                                                const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
                                                                 return (
-                                                                    <div key={i} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${existingDoc ? 'bg-emerald-50/30 border-emerald-100 shadow-sm' : 'bg-slate-50 border-slate-200 hover:border-slate-300'}`}>
+                                                                    <div key={i} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${isUploaded ? 'bg-emerald-50/30 border-emerald-100 shadow-sm' : 'bg-slate-50 border-slate-200 hover:border-slate-300'}`}>
                                                                         <div className="flex items-center gap-4">
-                                                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${existingDoc ? 'bg-white text-emerald-500 border border-emerald-100' : 'bg-white border border-slate-200 text-slate-400'}`}>
-                                                                                <span className="material-symbols-outlined text-[20px]">{existingDoc ? 'task_alt' : 'description'}</span>
+                                                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isUploaded ? 'bg-white text-emerald-500 border border-emerald-100' : 'bg-white border border-slate-200 text-slate-400'}`}>
+                                                                                <span className="material-symbols-outlined text-[20px]">{isUploaded ? 'task_alt' : 'description'}</span>
                                                                             </div>
                                                                             <div>
                                                                                 <div className="flex items-center gap-2">
                                                                                     <h4 className="text-sm font-bold text-slate-900">{doc.name}</h4>
-                                                                                    {existingDoc && (
+                                                                                    {isUploaded && (
                                                                                         <span className="px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest rounded leading-none">In Profile</span>
                                                                                     )}
                                                                                 </div>
@@ -2465,7 +2624,7 @@ export default function StaffDashboardPage() {
                                                                             </div>
                                                                         </div>
                                                                         <div className="flex items-center gap-3">
-                                                                            {existingDoc ? (
+                                                                            {isUploaded ? (
                                                                                 <>
                                                                                     <button onClick={() => window.open(existingDoc.filePath || existingDoc.url, '_blank')} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all flex items-center gap-2">
                                                                                         <span className="material-symbols-outlined text-[16px]">visibility</span>
@@ -2551,59 +2710,65 @@ export default function StaffDashboardPage() {
                                                         </div>
                                                         <div className="space-y-3">
                                                             {newStudent.family.fatherEmploymentType ? (
-                                                                getRequiredDocuments(newStudent.family.fatherEmploymentType, newStudent.family.fatherName || "Father", 'father').map((doc, i) => (
-                                                                    <div key={i} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${doc.required ? 'bg-red-50/50 border-red-100' : 'bg-amber-50/50 border-amber-100'}`}>
-                                                                        <div className="flex items-center gap-4">
-                                                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${doc.required ? 'bg-white border-red-200 text-red-500' : 'bg-white border-amber-200 text-amber-500'}`}>
-                                                                                <span className="material-symbols-outlined text-[20px]">{doc.required ? 'exclamation' : 'info'}</span>
-                                                                            </div>
-                                                                            <div>
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <h4 className="text-sm font-bold text-slate-900">{doc.name}</h4>
-                                                                                    {doc.required && <span className="px-1.5 py-0.5 bg-red-500 text-white text-[8px] font-black uppercase tracking-widest rounded leading-none">REQUIRED</span>}
-                                                                                    {!doc.required && <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[8px] font-black uppercase tracking-widest rounded leading-none">OPTIONAL</span>}
+                                                                getRequiredDocuments(newStudent.family.fatherEmploymentType, newStudent.family.fatherName || "Father", 'father').map((doc, i) => {
+                                                                    const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
+                                                                    const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                                                    const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+                                                                    return (
+                                                                        <div key={i} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${isUploaded ? 'bg-emerald-50/30 border-emerald-100 shadow-sm' : doc.required ? 'bg-red-50/50 border-red-100' : 'bg-amber-50/50 border-amber-100'}`}>
+                                                                            <div className="flex items-center gap-4">
+                                                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${isUploaded ? 'bg-white text-emerald-500 border-emerald-100' : doc.required ? 'bg-white border-red-200 text-red-500' : 'bg-white border-amber-200 text-amber-500'}`}>
+                                                                                    <span className="material-symbols-outlined text-[20px]">{isUploaded ? 'task_alt' : doc.required ? 'exclamation' : 'info'}</span>
                                                                                 </div>
-                                                                                <p className="text-[10px] text-slate-500 font-medium mt-0.5">{doc.type.toUpperCase().replace(/_/g, ' ')} • PDF/JPG/PNG</p>
+                                                                                <div>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <h4 className="text-sm font-bold text-slate-900">{doc.name}</h4>
+                                                                                        {isUploaded && <span className="px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest rounded leading-none">In Profile</span>}
+                                                                                        {!isUploaded && doc.required && <span className="px-1.5 py-0.5 bg-red-500 text-white text-[8px] font-black uppercase tracking-widest rounded leading-none">REQUIRED</span>}
+                                                                                        {!isUploaded && !doc.required && <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[8px] font-black uppercase tracking-widest rounded leading-none">OPTIONAL</span>}
+                                                                                    </div>
+                                                                                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">{doc.type.toUpperCase().replace(/_/g, ' ')} • PDF/JPG/PNG</p>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <input
+                                                                                    type="file"
+                                                                                    accept=".pdf,.jpg,.jpeg,.png"
+                                                                                    ref={el => {
+                                                                                        if (el) fileInputRefs.current[`father-${doc.type}`] = el;
+                                                                                    }}
+                                                                                    onChange={async (e) => {
+                                                                                        const file = e.target.files?.[0];
+                                                                                        if (file) {
+                                                                                            await handleDocumentUpload(
+                                                                                                file,
+                                                                                                doc.type,
+                                                                                                'father',
+                                                                                                newStudent.family.fatherName || 'Father',
+                                                                                                newStudent.family.fatherEmploymentType
+                                                                                            );
+                                                                                            e.target.value = '';
+                                                                                        }
+                                                                                    }}
+                                                                                    hidden
+                                                                                />
+                                                                                <button
+                                                                                    onClick={() => fileInputRefs.current[`father-${doc.type}`]?.click()}
+                                                                                    disabled={uploadingDocs[`${doc.type}-father`] !== undefined}
+                                                                                    className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[11px] font-bold hover:bg-slate-50 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                                >
+                                                                                    <span className="material-symbols-outlined text-[16px]">
+                                                                                        {uploadingDocs[`${doc.type}-father`] !== undefined ? 'hourglass_top' : 'upload'}
+                                                                                    </span>
+                                                                                    {uploadingDocs[`${doc.type}-father`] !== undefined ?
+                                                                                        `${Math.round(uploadingDocs[`${doc.type}-father`])}%` :
+                                                                                        isUploaded ? 'Re-upload' : 'Upload'
+                                                                                    }
+                                                                                </button>
                                                                             </div>
                                                                         </div>
-                                                                        <div className="flex items-center gap-2">
-                                                                            <input
-                                                                                type="file"
-                                                                                accept=".pdf,.jpg,.jpeg,.png"
-                                                                                ref={el => {
-                                                                                    if (el) fileInputRefs.current[`father-${doc.type}`] = el;
-                                                                                }}
-                                                                                onChange={async (e) => {
-                                                                                    const file = e.target.files?.[0];
-                                                                                    if (file) {
-                                                                                        await handleDocumentUpload(
-                                                                                            file,
-                                                                                            doc.type,
-                                                                                            'father',
-                                                                                            newStudent.family.fatherName || 'Father',
-                                                                                            newStudent.family.fatherEmploymentType
-                                                                                        );
-                                                                                        e.target.value = '';
-                                                                                    }
-                                                                                }}
-                                                                                hidden
-                                                                            />
-                                                                            <button
-                                                                                onClick={() => fileInputRefs.current[`father-${doc.type}`]?.click()}
-                                                                                disabled={uploadingDocs[`${doc.type}-father`] !== undefined}
-                                                                                className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[11px] font-bold hover:bg-slate-50 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                                            >
-                                                                                <span className="material-symbols-outlined text-[16px]">
-                                                                                    {uploadingDocs[`${doc.type}-father`] !== undefined ? 'hourglass_top' : 'upload'}
-                                                                                </span>
-                                                                                {uploadingDocs[`${doc.type}-father`] !== undefined ?
-                                                                                    `${Math.round(uploadingDocs[`${doc.type}-father`])}%` :
-                                                                                    'Upload'
-                                                                                }
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                ))
+                                                                    );
+                                                                })
                                                             ) : (
                                                                 <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 text-center text-sm text-slate-600">
                                                                     No documents required until employment type is selected in Profile
@@ -2624,59 +2789,65 @@ export default function StaffDashboardPage() {
                                                         </div>
                                                         <div className="space-y-3">
                                                             {newStudent.family.motherEmploymentType ? (
-                                                                getRequiredDocuments(newStudent.family.motherEmploymentType, newStudent.family.motherName || "Mother", 'mother').map((doc, i) => (
-                                                                    <div key={i} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${doc.required ? 'bg-red-50/50 border-red-100' : 'bg-amber-50/50 border-amber-100'}`}>
-                                                                        <div className="flex items-center gap-4">
-                                                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${doc.required ? 'bg-white border-red-200 text-red-500' : 'bg-white border-amber-200 text-amber-500'}`}>
-                                                                                <span className="material-symbols-outlined text-[20px]">{doc.required ? 'exclamation' : 'info'}</span>
-                                                                            </div>
-                                                                            <div>
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <h4 className="text-sm font-bold text-slate-900">{doc.name}</h4>
-                                                                                    {doc.required && <span className="px-1.5 py-0.5 bg-red-500 text-white text-[8px] font-black uppercase tracking-widest rounded leading-none">REQUIRED</span>}
-                                                                                    {!doc.required && <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[8px] font-black uppercase tracking-widest rounded leading-none">OPTIONAL</span>}
+                                                                getRequiredDocuments(newStudent.family.motherEmploymentType, newStudent.family.motherName || "Mother", 'mother').map((doc, i) => {
+                                                                    const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
+                                                                    const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                                                    const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+                                                                    return (
+                                                                        <div key={i} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${isUploaded ? 'bg-emerald-50/30 border-emerald-100 shadow-sm' : doc.required ? 'bg-red-50/50 border-red-100' : 'bg-amber-50/50 border-amber-100'}`}>
+                                                                            <div className="flex items-center gap-4">
+                                                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${isUploaded ? 'bg-white text-emerald-500 border-emerald-100' : doc.required ? 'bg-white border-red-200 text-red-500' : 'bg-white border-amber-200 text-amber-500'}`}>
+                                                                                    <span className="material-symbols-outlined text-[20px]">{isUploaded ? 'task_alt' : doc.required ? 'exclamation' : 'info'}</span>
                                                                                 </div>
-                                                                                <p className="text-[10px] text-slate-500 font-medium mt-0.5">{doc.type.toUpperCase().replace(/_/g, ' ')} • PDF/JPG/PNG</p>
+                                                                                <div>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <h4 className="text-sm font-bold text-slate-900">{doc.name}</h4>
+                                                                                        {isUploaded && <span className="px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest rounded leading-none">In Profile</span>}
+                                                                                        {!isUploaded && doc.required && <span className="px-1.5 py-0.5 bg-red-500 text-white text-[8px] font-black uppercase tracking-widest rounded leading-none">REQUIRED</span>}
+                                                                                        {!isUploaded && !doc.required && <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[8px] font-black uppercase tracking-widest rounded leading-none">OPTIONAL</span>}
+                                                                                    </div>
+                                                                                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">{doc.type.toUpperCase().replace(/_/g, ' ')} • PDF/JPG/PNG</p>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <input
+                                                                                    type="file"
+                                                                                    accept=".pdf,.jpg,.jpeg,.png"
+                                                                                    ref={el => {
+                                                                                        if (el) fileInputRefs.current[`mother-${doc.type}`] = el;
+                                                                                    }}
+                                                                                    onChange={async (e) => {
+                                                                                        const file = e.target.files?.[0];
+                                                                                        if (file) {
+                                                                                            await handleDocumentUpload(
+                                                                                                file,
+                                                                                                doc.type,
+                                                                                                'mother',
+                                                                                                newStudent.family.motherName || 'Mother',
+                                                                                                newStudent.family.motherEmploymentType
+                                                                                            );
+                                                                                            e.target.value = '';
+                                                                                        }
+                                                                                    }}
+                                                                                    hidden
+                                                                                />
+                                                                                <button
+                                                                                    onClick={() => fileInputRefs.current[`mother-${doc.type}`]?.click()}
+                                                                                    disabled={uploadingDocs[`${doc.type}-mother`] !== undefined}
+                                                                                    className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[11px] font-bold hover:bg-slate-50 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                                >
+                                                                                    <span className="material-symbols-outlined text-[16px]">
+                                                                                        {uploadingDocs[`${doc.type}-mother`] !== undefined ? 'hourglass_top' : 'upload'}
+                                                                                    </span>
+                                                                                    {uploadingDocs[`${doc.type}-mother`] !== undefined ?
+                                                                                        `${Math.round(uploadingDocs[`${doc.type}-mother`])}%` :
+                                                                                        isUploaded ? 'Re-upload' : 'Upload'
+                                                                                    }
+                                                                                </button>
                                                                             </div>
                                                                         </div>
-                                                                        <div className="flex items-center gap-2">
-                                                                            <input
-                                                                                type="file"
-                                                                                accept=".pdf,.jpg,.jpeg,.png"
-                                                                                ref={el => {
-                                                                                    if (el) fileInputRefs.current[`mother-${doc.type}`] = el;
-                                                                                }}
-                                                                                onChange={async (e) => {
-                                                                                    const file = e.target.files?.[0];
-                                                                                    if (file) {
-                                                                                        await handleDocumentUpload(
-                                                                                            file,
-                                                                                            doc.type,
-                                                                                            'mother',
-                                                                                            newStudent.family.motherName || 'Mother',
-                                                                                            newStudent.family.motherEmploymentType
-                                                                                        );
-                                                                                        e.target.value = '';
-                                                                                    }
-                                                                                }}
-                                                                                hidden
-                                                                            />
-                                                                            <button
-                                                                                onClick={() => fileInputRefs.current[`mother-${doc.type}`]?.click()}
-                                                                                disabled={uploadingDocs[`${doc.type}-mother`] !== undefined}
-                                                                                className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[11px] font-bold hover:bg-slate-50 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                                            >
-                                                                                <span className="material-symbols-outlined text-[16px]">
-                                                                                    {uploadingDocs[`${doc.type}-mother`] !== undefined ? 'hourglass_top' : 'upload'}
-                                                                                </span>
-                                                                                {uploadingDocs[`${doc.type}-mother`] !== undefined ?
-                                                                                    `${Math.round(uploadingDocs[`${doc.type}-mother`])}%` :
-                                                                                    'Upload'
-                                                                                }
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                ))
+                                                                    );
+                                                                })
                                                             ) : (
                                                                 <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 text-center text-sm text-slate-600">
                                                                     No documents required until employment type is selected in Profile
@@ -2698,59 +2869,65 @@ export default function StaffDashboardPage() {
                                                                 [
                                                                     ...getRequiredDocuments(newStudent.coApplicant.employmentType, newStudent.coApplicant.name || "Co-applicant", 'coapplicant'),
                                                                     { name: "Relation Proof with Applicant", type: "coapplicant_relation", required: true }
-                                                                ].map((doc, i) => (
-                                                                    <div key={i} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${doc.required ? 'bg-violet-50/50 border-violet-100' : 'bg-amber-50/50 border-amber-100'}`}>
-                                                                        <div className="flex items-center gap-4">
-                                                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${doc.required ? 'bg-white border-violet-200 text-violet-500' : 'bg-white border-amber-200 text-amber-500'}`}>
-                                                                                <span className="material-symbols-outlined text-[20px]">{doc.required ? 'exclamation' : 'info'}</span>
-                                                                            </div>
-                                                                            <div>
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <h4 className="text-sm font-bold text-slate-900">{doc.name}</h4>
-                                                                                    {doc.required && <span className="px-1.5 py-0.5 bg-violet-500 text-white text-[8px] font-black uppercase tracking-widest rounded leading-none">REQUIRED</span>}
-                                                                                    {!doc.required && <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[8px] font-black uppercase tracking-widest rounded leading-none">OPTIONAL</span>}
+                                                                ].map((doc, i) => {
+                                                                    const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
+                                                                    const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                                                    const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+                                                                    return (
+                                                                        <div key={i} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${isUploaded ? 'bg-emerald-50/30 border-emerald-100 shadow-sm' : doc.required ? 'bg-violet-50/50 border-violet-100' : 'bg-amber-50/50 border-amber-100'}`}>
+                                                                            <div className="flex items-center gap-4">
+                                                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${isUploaded ? 'bg-white text-emerald-500 border-emerald-100' : doc.required ? 'bg-white border-violet-200 text-violet-500' : 'bg-white border-amber-200 text-amber-500'}`}>
+                                                                                    <span className="material-symbols-outlined text-[20px]">{isUploaded ? 'task_alt' : doc.required ? 'exclamation' : 'info'}</span>
                                                                                 </div>
-                                                                                <p className="text-[10px] text-slate-500 font-medium mt-0.5">{doc.type.toUpperCase().replace(/_/g, ' ')} • PDF/JPG/PNG</p>
+                                                                                <div>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <h4 className="text-sm font-bold text-slate-900">{doc.name}</h4>
+                                                                                        {isUploaded && <span className="px-1.5 py-0.5 bg-emerald-500 text-white text-[9px] font-black uppercase tracking-widest rounded leading-none">In Profile</span>}
+                                                                                        {!isUploaded && doc.required && <span className="px-1.5 py-0.5 bg-violet-500 text-white text-[8px] font-black uppercase tracking-widest rounded leading-none">REQUIRED</span>}
+                                                                                        {!isUploaded && !doc.required && <span className="px-1.5 py-0.5 bg-amber-500 text-white text-[8px] font-black uppercase tracking-widest rounded leading-none">OPTIONAL</span>}
+                                                                                    </div>
+                                                                                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">{doc.type.toUpperCase().replace(/_/g, ' ')} • PDF/JPG/PNG</p>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <input
+                                                                                    type="file"
+                                                                                    accept=".pdf,.jpg,.jpeg,.png"
+                                                                                    ref={el => {
+                                                                                        if (el) fileInputRefs.current[`coapplicant-${doc.type}`] = el;
+                                                                                    }}
+                                                                                    onChange={async (e) => {
+                                                                                        const file = e.target.files?.[0];
+                                                                                        if (file) {
+                                                                                            await handleDocumentUpload(
+                                                                                                file,
+                                                                                                doc.type,
+                                                                                                'coapplicant',
+                                                                                                newStudent.coApplicant.name || 'Co-applicant',
+                                                                                                newStudent.coApplicant.employmentType
+                                                                                            );
+                                                                                            e.target.value = '';
+                                                                                        }
+                                                                                    }}
+                                                                                    hidden
+                                                                                />
+                                                                                <button
+                                                                                    onClick={() => fileInputRefs.current[`coapplicant-${doc.type}`]?.click()}
+                                                                                    disabled={uploadingDocs[`${doc.type}-coapplicant`] !== undefined}
+                                                                                    className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[11px] font-bold hover:bg-slate-50 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                                >
+                                                                                    <span className="material-symbols-outlined text-[16px]">
+                                                                                        {uploadingDocs[`${doc.type}-coapplicant`] !== undefined ? 'hourglass_top' : 'upload'}
+                                                                                    </span>
+                                                                                    {uploadingDocs[`${doc.type}-coapplicant`] !== undefined ?
+                                                                                        `${Math.round(uploadingDocs[`${doc.type}-coapplicant`])}%` :
+                                                                                        isUploaded ? 'Re-upload' : 'Upload'
+                                                                                    }
+                                                                                </button>
                                                                             </div>
                                                                         </div>
-                                                                        <div className="flex items-center gap-2">
-                                                                            <input
-                                                                                type="file"
-                                                                                accept=".pdf,.jpg,.jpeg,.png"
-                                                                                ref={el => {
-                                                                                    if (el) fileInputRefs.current[`coapplicant-${doc.type}`] = el;
-                                                                                }}
-                                                                                onChange={async (e) => {
-                                                                                    const file = e.target.files?.[0];
-                                                                                    if (file) {
-                                                                                        await handleDocumentUpload(
-                                                                                            file,
-                                                                                            doc.type,
-                                                                                            'coapplicant',
-                                                                                            newStudent.coApplicant.name || 'Co-applicant',
-                                                                                            newStudent.coApplicant.employmentType
-                                                                                        );
-                                                                                        e.target.value = '';
-                                                                                    }
-                                                                                }}
-                                                                                hidden
-                                                                            />
-                                                                            <button
-                                                                                onClick={() => fileInputRefs.current[`coapplicant-${doc.type}`]?.click()}
-                                                                                disabled={uploadingDocs[`${doc.type}-coapplicant`] !== undefined}
-                                                                                className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[11px] font-bold hover:bg-slate-50 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                                            >
-                                                                                <span className="material-symbols-outlined text-[16px]">
-                                                                                    {uploadingDocs[`${doc.type}-coapplicant`] !== undefined ? 'hourglass_top' : 'upload'}
-                                                                                </span>
-                                                                                {uploadingDocs[`${doc.type}-coapplicant`] !== undefined ?
-                                                                                    `${Math.round(uploadingDocs[`${doc.type}-coapplicant`])}%` :
-                                                                                    'Upload'
-                                                                                }
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-                                                                ))
+                                                                    );
+                                                                })
                                                             ) : (
                                                                 <div className="p-4 rounded-xl border border-slate-200 bg-slate-50 text-center text-sm text-slate-600">
                                                                     No documents required until employment type is selected in Profile
@@ -2776,6 +2953,140 @@ export default function StaffDashboardPage() {
                                                     {!createLoading && <span className="material-symbols-outlined text-[20px] group-hover:scale-110 transition-transform">verified</span>}
                                                 </button>
                                             </div>
+                                        </div>
+                                    ) : onboardStep === 4 ? (
+                                        /* STEP 4: Distribution / Sharing */
+                                        <div className="max-w-4xl mx-auto py-12 animate-in fade-in slide-in-from-bottom-8 duration-500">
+                                            <div className="text-center mb-12">
+                                                <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-[32px] flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-500/10">
+                                                    <span className="material-symbols-outlined text-[40px]">check_circle</span>
+                                                </div>
+                                                <h3 className="text-3xl font-black text-slate-900 tracking-tight">Onboarding Distribution</h3>
+                                                <p className="text-slate-500 text-sm font-medium mt-2 max-w-md mx-auto">
+                                                    Profile is finalized! You can now share the complete data bundle with the bank or the student.
+                                                </p>
+                                            </div>
+
+                                            {!shareResult ? (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                                    <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-xl shadow-slate-200/50 space-y-6">
+                                                        <div className="flex items-center gap-4 mb-2">
+                                                            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+                                                                <span className="material-symbols-outlined text-[24px]">share</span>
+                                                            </div>
+                                                            <div>
+                                                                <h4 className="text-[12px] font-black uppercase tracking-[0.2em] text-slate-900">Share Parameters</h4>
+                                                                <p className="text-[10px] font-bold text-slate-400">Secure data distribution</p>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="space-y-4">
+                                                            <div>
+                                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Recipient Type</label>
+                                                                <div className="flex gap-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => { setShareTarget('bank'); setShareName(""); }}
+                                                                        className={`flex-1 py-3 px-4 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${shareTarget === 'bank' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
+                                                                    >
+                                                                        🏦 Bank
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => { setShareTarget('student'); setShareName(`${newStudent.firstName} ${newStudent.lastName}`); setShareEmail(newStudent.email); }}
+                                                                        className={`flex-1 py-3 px-4 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${shareTarget === 'student' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
+                                                                    >
+                                                                        🎓 Student
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+
+                                                            {shareTarget === 'bank' && (
+                                                                <div>
+                                                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Bank Name</label>
+                                                                    <input type="text" value={shareName} onChange={e => setShareName(e.target.value)} placeholder="e.g. HDFC Bank, SBI..." className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all" />
+                                                                </div>
+                                                            )}
+
+                                                            <div>
+                                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Email Address</label>
+                                                                <input type="email" value={shareEmail} onChange={e => setShareEmail(e.target.value)} placeholder="recipient@example.com" className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all" />
+                                                            </div>
+
+                                                            <div>
+                                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Internal Note (Optional)</label>
+                                                                <textarea value={shareMessage} onChange={e => setShareMessage(e.target.value)} rows={3} placeholder="Add a message for the recipient..." className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all resize-none" />
+                                                            </div>
+                                                        </div>
+
+                                                        <button
+                                                            onClick={handleDistributionShare}
+                                                            disabled={isSharing || !shareEmail}
+                                                            className="w-full py-5 bg-indigo-600 text-white rounded-[24px] font-black text-[12px] uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 shadow-xl shadow-indigo-600/20 disabled:opacity-50"
+                                                        >
+                                                            {isSharing ? 'Generating Link...' : 'Share Complete Profile'}
+                                                            {!isSharing && <span className="material-symbols-outlined text-[20px]">send</span>}
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="space-y-6">
+                                                        <div className="bg-emerald-50/50 border border-emerald-100 p-8 rounded-[32px]">
+                                                            <h4 className="text-[12px] font-black uppercase tracking-[0.2em] text-emerald-700 mb-4 flex items-center gap-2">
+                                                                <span className="material-symbols-outlined text-[18px]">verified_user</span>
+                                                                Security Protocol
+                                                            </h4>
+                                                            <ul className="space-y-4">
+                                                                {[
+                                                                    { icon: 'lock', text: 'Secure unique access token generated per recipient' },
+                                                                    { icon: 'visibility', text: 'All documents shared in read-only format' },
+                                                                    { icon: 'history', text: 'Access is automatically logged for audit trail' },
+                                                                    { icon: 'timer', text: 'Link automatically expires after 30 days' },
+                                                                ].map((item, i) => (
+                                                                    <li key={i} className="flex items-start gap-3">
+                                                                        <span className="material-symbols-outlined text-[16px] text-emerald-600 mt-0.5">{item.icon}</span>
+                                                                        <span className="text-[11px] font-bold text-slate-600 leading-relaxed">{item.text}</span>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </div>
+
+                                                        <button onClick={resetOnboardModal} className="w-full py-5 border-2 border-slate-200 text-slate-500 rounded-[24px] font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center justify-center gap-3">
+                                                            Finish Without Sharing
+                                                            <span className="material-symbols-outlined text-[18px]">close</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="bg-white p-12 rounded-[40px] border border-slate-100 shadow-2xl text-center space-y-8 animate-in zoom-in-95 duration-500">
+                                                    <div className="w-24 h-24 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30">
+                                                        <span className="material-symbols-outlined text-[48px]">check</span>
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-2xl font-black text-slate-900 mb-2">Access Link Generated</h4>
+                                                        <p className="text-slate-500 text-sm font-medium">The secure portal link is ready for distribution.</p>
+                                                    </div>
+
+                                                    <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex items-center gap-4 relative group">
+                                                        <input readOnly value={shareResult.url} className="flex-1 bg-transparent border-none text-[13px] font-bold text-indigo-600 focus:ring-0 truncate" />
+                                                        <button onClick={() => { navigator.clipboard.writeText(shareResult.url); alert("Link copied to clipboard!"); }} className="p-3 bg-white text-slate-600 rounded-xl hover:text-indigo-600 hover:shadow-md transition-all shadow-sm">
+                                                            <span className="material-symbols-outlined text-[20px]">content_copy</span>
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="flex flex-col items-center gap-6 pt-4">
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Expires on: {new Date(shareResult.expires).toLocaleDateString()}</p>
+
+                                                        <div className="flex gap-4 w-full max-w-sm">
+                                                            <button onClick={() => setShareResult(null)} className="flex-1 py-4 border border-slate-200 text-slate-600 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all">
+                                                                Share Again
+                                                            </button>
+                                                            <button onClick={resetOnboardModal} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-slate-900/20">
+                                                                Close Workflow
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     ) : null}
                                 </div>
@@ -2961,7 +3272,13 @@ export default function StaffDashboardPage() {
                                             <button onClick={() => setActiveSection('activities')} className="text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:underline">View All</button>
                                         </div>
                                         <div className="space-y-2.5">
-                                            {recentActivity.map(a => (
+                                            {recentActivity.length === 0 ? (
+                                                <div className="py-6 text-center">
+                                                    <span className="material-symbols-outlined text-3xl text-slate-200 mb-2 block">history</span>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No activity yet</p>
+                                                    <p className="text-[10px] text-slate-300 mt-0.5">Actions will appear here as you work</p>
+                                                </div>
+                                            ) : recentActivity.map(a => (
                                                 <div key={a.id} className="flex items-start gap-2.5">
                                                     <div className={`w-7 h-7 rounded flex items-center justify-center shrink-0 ${a.color}`}>
                                                         <span className="material-symbols-outlined text-[14px]">{a.icon}</span>
@@ -2969,6 +3286,12 @@ export default function StaffDashboardPage() {
                                                     <div className="min-w-0">
                                                         <p className="text-[11px] font-medium text-slate-800 leading-snug">{a.msg}</p>
                                                         <p className="text-[10px] text-slate-400 mt-0.5">{a.time}</p>
+                                                        {(a.createdAt || a.rawTime) && (
+                                                            <p className="text-[9px] text-slate-300 mt-0.5 flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-[10px]">schedule</span>
+                                                                {formatAbsoluteDateTime(a.createdAt || a.rawTime)}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
                                             ))}
@@ -3032,7 +3355,15 @@ export default function StaffDashboardPage() {
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center justify-between mb-1">
                                                     <p className="text-[13px] font-bold text-slate-900 leading-none">{a.msg}</p>
-                                                    <span className="text-[11px] font-semibold text-slate-400 tabular-nums">{a.time}</span>
+                                                    <div className="text-right shrink-0 ml-4">
+                                                        <span className="text-[11px] font-semibold text-slate-400 tabular-nums block">{a.time}</span>
+                                                        {(a.createdAt || a.rawTime) && (
+                                                            <span className="text-[10px] text-slate-300 tabular-nums flex items-center gap-1 justify-end mt-0.5">
+                                                                <span className="material-symbols-outlined text-[10px]">calendar_today</span>
+                                                                {formatAbsoluteDateTime(a.createdAt || a.rawTime)}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 <div className="flex items-center gap-3">
                                                     <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Action: {a.type}</span>
@@ -3286,10 +3617,10 @@ export default function StaffDashboardPage() {
                                                 <div className={`w-9 h-9 rounded-lg ${c.bg} ${c.border} border flex items-center justify-center`}>
                                                     <span className={`material-symbols-outlined text-[18px] ${c.color}`}>{c.icon}</span>
                                                 </div>
-                                                <span className={`text-[9px] font-['Playfair_Display',serif] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${c.bg} ${c.color}`}>{c.tag}</span>
+                                                <span className={`text-[11px] font-['Playfair_Display',serif] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${c.bg} ${c.color}`}>{c.tag}</span>
                                             </div>
-                                            <p className="text-[24px] font-bold text-slate-900 leading-none mb-1">{loading ? <span className="block w-8 h-6 bg-slate-100 animate-pulse rounded" /> : c.value}</p>
-                                            <p className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-500 uppercase tracking-widest">{c.label}</p>
+                                            <p className="text-[28px] font-bold text-slate-900 leading-none mb-1">{loading ? <span className="block w-8 h-6 bg-slate-100 animate-pulse rounded" /> : c.value}</p>
+                                            <p className="text-[12px] font-['Playfair_Display',serif] font-bold text-slate-500 uppercase tracking-widest">{c.label}</p>
                                         </button>
                                     ))}
                                 </div>
@@ -3351,7 +3682,7 @@ export default function StaffDashboardPage() {
                                                     <th className="sticky left-[420px] z-20 bg-slate-50 px-5 py-5"><span className="flex items-center gap-1.5 text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest"><span className="material-symbols-outlined text-[14px]">mail</span> CONTACT</span></th>
                                                     <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">COLLEGE NAME</span></th>
                                                     <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">PROGRAM FOCUS</span></th>
-                                                    <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">TARGET BANK</span></th>
+                                                    <th className="px-6 py-5 min-w-[240px] w-[260px]"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">TARGET BANK</span></th>
                                                     <th className="px-5 py-5 w-48"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">PROGRESS</span></th>
                                                     <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">CURRENT STATUS</span></th>
                                                     <th className="px-5 py-5 text-center"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">ACTIONS</span></th>
@@ -3359,12 +3690,12 @@ export default function StaffDashboardPage() {
                                             )}
                                             {activeSection === "users" && (
                                                 <>
-                                                    <th className="px-5 py-3.5"><span className="flex items-center gap-1.5 text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest"><span className="material-symbols-outlined text-[14px]">person</span> PROFILE</span></th>
-                                                    <th className="px-5 py-3.5"><span className="flex items-center gap-1.5 text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest"><span className="material-symbols-outlined text-[14px]">mail</span> CONTACT</span></th>
-                                                    <th className="px-5 py-3.5"><span className="flex items-center gap-1.5 text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest"><span className="material-symbols-outlined text-[14px]">verified_user</span> ACCESS ROLE</span></th>
-                                                    <th className="px-5 py-3.5"><span className="flex items-center gap-1.5 text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest"><span className="material-symbols-outlined text-[14px]">schedule</span> LAST SESSION</span></th>
-                                                    <th className="px-5 py-3.5"><span className="flex items-center gap-1.5 text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest"><span className="material-symbols-outlined text-[14px]">calendar_today</span> REGISTERED</span></th>
-                                                    <th className="px-5 py-3.5 text-center"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">ACTIONS</span></th>
+                                                    <th className="px-5 py-3.5"><span className="flex items-center gap-1.5 text-[12px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest"><span className="material-symbols-outlined text-[14px]">person</span> PROFILE</span></th>
+                                                    <th className="px-5 py-3.5"><span className="flex items-center gap-1.5 text-[12px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest"><span className="material-symbols-outlined text-[14px]">mail</span> CONTACT</span></th>
+                                                    <th className="px-5 py-3.5"><span className="flex items-center gap-1.5 text-[12px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest"><span className="material-symbols-outlined text-[14px]">verified_user</span> ACCESS ROLE</span></th>
+                                                    <th className="px-5 py-3.5"><span className="flex items-center gap-1.5 text-[12px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest"><span className="material-symbols-outlined text-[14px]">schedule</span> LAST SESSION</span></th>
+                                                    <th className="px-5 py-3.5"><span className="flex items-center gap-1.5 text-[12px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest"><span className="material-symbols-outlined text-[14px]">calendar_today</span> REGISTERED</span></th>
+                                                    <th className="px-5 py-3.5 text-center"><span className="text-[12px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">ACTIONS</span></th>
                                                 </>
                                             )}
                                             {activeSection === "community" && (
@@ -3476,16 +3807,16 @@ export default function StaffDashboardPage() {
                                                                 <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
                                                                     <p className="text-[15px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] truncate max-w-[120px]">{item.courseName || item.program || item.courseLevel || '—'}</p>
                                                                 </td>
-                                                                <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
-                                                                    <div className="flex items-center">
+                                                                <td className="px-6 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors min-w-[240px] w-[260px]">
+                                                                    <div className="flex items-center min-h-[60px]">
                                                                         {(() => {
                                                                             const bName = (item.bank || item.targetBank || '').toLowerCase();
-                                                                            if (bName.includes('idfc')) return <img src="/images/lenders/idfc-first-bank.jpg" alt="IDFC FIRST Bank" className="h-8 w-auto object-contain" />;
-                                                                            if (bName.includes('avanse')) return <img src="/images/lenders/avanse.jpg" alt="Avanse" className="h-10 w-auto object-contain" />;
-                                                                            if (bName.includes('auxilo')) return <img src="/images/lenders/auxilo.png" alt="Auxilo" className="h-14 w-auto object-contain" />;
-                                                                            if (bName.includes('credila') || bName.includes('hdfc')) return <img src="/images/lenders/hdfc-credila.png" alt="Credila" className="h-6 w-auto object-contain" />;
-                                                                            if (bName.includes('poonawalla')) return <img src="/images/lenders/poonawalla.png" alt="Poonawalla" className="h-9 w-auto object-contain" />;
-                                                                            return <div className="text-[#0d1b2a] font-black text-[13px] uppercase truncate max-w-[120px]">{item.bank || item.targetBank || '—'}</div>;
+                                                                            if (bName.includes('idfc')) return <img src="/images/lenders/idfc-first-bank.jpg" alt="IDFC FIRST Bank" className="h-12 max-w-[190px] w-auto object-contain" />;
+                                                                            if (bName.includes('avanse')) return <img src="/images/lenders/avanse.jpg" alt="Avanse" className="h-14 max-w-[190px] w-auto object-contain" />;
+                                                                            if (bName.includes('auxilo')) return <img src="/images/lenders/auxilo.png" alt="Auxilo" className="h-16 max-w-[190px] w-auto object-contain" />;
+                                                                            if (bName.includes('credila') || bName.includes('hdfc')) return <img src="/images/lenders/hdfc-credila.png" alt="Credila" className="h-11 max-w-[190px] w-auto object-contain" />;
+                                                                            if (bName.includes('poonawalla')) return <img src="/images/lenders/poonawalla.png" alt="Poonawalla" className="h-[52px] max-w-[190px] w-auto object-contain" />;
+                                                                            return <div className="text-[#0d1b2a] font-black text-[14px] uppercase truncate max-w-[200px]">{item.bank || item.targetBank || '—'}</div>;
                                                                         })()}
                                                                     </div>
                                                                 </td>
@@ -3499,6 +3830,20 @@ export default function StaffDashboardPage() {
                                                                         <span className="text-[10px] font-bold text-[#4f46e5] ml-auto">{progress}%</span>
                                                                     </div>
                                                                 </td>
+                                                                {/* <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                       
+                                                                        {[
+                                                                            { id: 'id', icon: 'person', label: 'ID', status: progress > 15 ? 'success' : 'pending' },
+                                                                            { id: 'ac', icon: 'school', label: 'EDU', status: progress > 40 ? 'success' : 'pending' },
+                                                                            { id: 'fi', icon: 'payments', label: 'FIN', status: progress > 70 ? 'success' : 'pending' }
+                                                                        ].map(doc => (
+                                                                            <div key={doc.id} title={doc.label} className={`w-7 h-7 rounded-lg flex items-center justify-center border ${doc.status === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-300'}`}>
+                                                                                <span className="material-symbols-outlined text-[16px]">{doc.icon}</span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </td> */}
                                                                 <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
                                                                     <div className="flex flex-col items-start gap-1.5">
                                                                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${statusColors[statusKey] || 'bg-amber-50/50 text-amber-600 border-amber-200'}`}>
@@ -3577,24 +3922,24 @@ export default function StaffDashboardPage() {
                                                                             <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${item.last_login_at ? 'bg-emerald-400' : 'bg-slate-300'}`} />
                                                                         </div>
                                                                         <div className="min-w-0">
-                                                                            <p className="text-[13px] font-semibold text-slate-900 leading-tight">
+                                                                            <p className="text-[15px] font-semibold text-slate-900 leading-tight">
                                                                                 {item.firstName || '—'} {item.lastName || ''}
                                                                             </p>
-                                                                            <p className="text-[10px] text-slate-900 font-bold font-mono mt-1">
+                                                                            <p className="text-[12px] text-slate-900 font-bold font-mono mt-1">
                                                                                 ID: {(item.id || item._id || '').slice(0, 12)}
                                                                             </p>
                                                                         </div>
                                                                     </div>
                                                                 </td>
                                                                 <td className="px-5 py-4">
-                                                                    <p className="text-[13px] text-slate-700 font-medium">{item.email}</p>
-                                                                    <p className="text-[11px] text-slate-500 font-bold flex items-center gap-1 mt-1">
+                                                                    <p className="text-[15px] text-slate-700 font-medium">{item.email}</p>
+                                                                    <p className="text-[13px] text-slate-500 font-bold flex items-center gap-1 mt-1">
                                                                         <span className="material-symbols-outlined text-[12px]">phone_enabled</span>
                                                                         {item.phone || item.mobile || item.phoneNumber || '—'}
                                                                     </p>
                                                                 </td>
                                                                 <td className="px-5 py-4">
-                                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${roleInfo.color}`}>
+                                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-bold uppercase tracking-wider border ${roleInfo.color}`}>
                                                                         <span className={`w-1.5 h-1.5 rounded-full ${roleInfo.dot}`} />
                                                                         {roleInfo.label}
                                                                     </span>
@@ -3602,11 +3947,11 @@ export default function StaffDashboardPage() {
                                                                 <td className="px-5 py-4">
                                                                     {item.last_login_at ? (
                                                                         <div className="space-y-1">
-                                                                            <div className="flex items-center gap-1.5 text-[12px] font-medium text-slate-700">
+                                                                            <div className="flex items-center gap-1.5 text-[14px] font-medium text-slate-700">
                                                                                 <span className="material-symbols-outlined text-[13px] text-emerald-500">pin_drop</span>
                                                                                 {item.last_login_location || 'Unknown location'}
                                                                             </div>
-                                                                            <div className="flex items-center gap-3 text-[10px] text-slate-400">
+                                                                            <div className="flex items-center gap-3 text-[12px] text-slate-400">
                                                                                 <span className="flex items-center gap-1">
                                                                                     <span className="material-symbols-outlined text-[11px]">devices</span>
                                                                                     {item.last_login_device?.split(' - ')[0] || 'Unknown'}
@@ -3620,18 +3965,18 @@ export default function StaffDashboardPage() {
                                                                     ) : (
                                                                         <div className="flex items-center gap-1.5">
                                                                             <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-                                                                            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Never Logged In</span>
+                                                                            <span className="text-[13px] font-semibold text-slate-400 uppercase tracking-widest">Never Logged In</span>
                                                                         </div>
                                                                     )}
                                                                 </td>
                                                                 <td className="px-5 py-4">
                                                                     {item.createdAt ? (
                                                                         <>
-                                                                            <p className="text-[12px] font-semibold text-slate-800">{format(new Date(item.createdAt), 'MMM d, yyyy').toUpperCase()}</p>
-                                                                            <p className="text-[10px] text-slate-400 mt-0.5">{format(new Date(item.createdAt), 'hh:mm aa')}</p>
+                                                                            <p className="text-[14px] font-semibold text-slate-800">{format(new Date(item.createdAt), 'MMM d, yyyy').toUpperCase()}</p>
+                                                                            <p className="text-[12px] text-slate-400 mt-0.5">{format(new Date(item.createdAt), 'hh:mm aa')}</p>
                                                                         </>
                                                                     ) : (
-                                                                        <span className="text-[10px] font-mono text-slate-400">NO_RECORD</span>
+                                                                        <span className="text-[12px] font-mono text-slate-400">NO_RECORD</span>
                                                                     )}
                                                                 </td>
                                                                 <td className="px-5 py-4">
@@ -3834,7 +4179,15 @@ export default function StaffDashboardPage() {
                                                 <span className="material-symbols-outlined text-[18px]">{a.icon}</span>
                                             </div>
                                             <p className="flex-1 text-[13px] font-bold text-slate-700">{a.msg}</p>
-                                            <span className="text-[11px] text-slate-400 font-medium shrink-0">{a.time}</span>
+                                            <div className="text-right shrink-0">
+                                                <span className="text-[11px] text-slate-400 font-medium block">{a.time}</span>
+                                                {(a.createdAt || a.rawTime) && (
+                                                    <span className="text-[10px] text-slate-300 flex items-center gap-1 justify-end mt-0.5">
+                                                        <span className="material-symbols-outlined text-[10px]">schedule</span>
+                                                        {formatAbsoluteDateTime(a.createdAt || a.rawTime)}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     ))}
                                 </div>

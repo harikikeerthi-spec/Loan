@@ -1,9 +1,9 @@
-
 import { Controller, Post, UseInterceptors, UploadedFile, Body, Get, Param, Delete, Res, BadRequestException, NotFoundException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from '../users/users.service';
 import { DigilockerService } from '../integration/digilocker.service';
 import { DocumentVerificationService } from '../ai/services/document-verification.service';
+import { KycService } from '../ai/services/kyc.service';
 import { diskStorage } from 'multer';
 import { extname, resolve } from 'path';
 import { existsSync, mkdirSync, unlinkSync, readFileSync } from 'fs';
@@ -36,7 +36,8 @@ export class DocumentController {
     constructor(
         private usersService: UsersService,
         private digilockerService: DigilockerService,
-        private docVerificationService: DocumentVerificationService
+        private docVerificationService: DocumentVerificationService,
+        private kycService: KycService
     ) { }
 
     @Post('upload')
@@ -92,57 +93,49 @@ export class DocumentController {
                 const fileBuffer = readFileSync(file.path);
                 console.log(`[UPLOAD] File read successfully. Size: ${fileBuffer.length} bytes`);
                 
-                console.log(`[UPLOAD] Initiating OCR verification service for ${docType}...`);
-                const aiResult = await this.docVerificationService.verifyAndExtractDocument(
-                    docType,
-                    fileBuffer,
-                    file.mimetype,
-                    studentProfile ? {
-                        firstName: studentProfile.firstName,
-                        lastName: studentProfile.lastName,
-                        dateOfBirth: studentProfile.dateOfBirth,
-                        email: studentProfile.email,
-                    } : undefined
-                );
+                // NEW: Use KycService for production-ready extraction
+                console.log(`[UPLOAD] Running advanced KYC extraction for ${docType}...`);
+                const kycResult = await this.kycService.processDocument(fileBuffer, file.mimetype, docType);
+                
+                console.log(`[UPLOAD] KYC result: valid=${kycResult.is_valid}, confidence=${kycResult.confidence_score}%`);
+                ocrResult = {
+                    isValid: kycResult.is_valid,
+                    confidence: kycResult.confidence_score,
+                    extractedFields: kycResult.data,
+                    reason: kycResult.error || (kycResult.is_valid ? 'Verified' : 'Validation failed')
+                };
 
-                console.log(`[UPLOAD] OCR verification completed. Result: valid=${aiResult.isValid}, confidence=${aiResult.confidence}%`);
-                ocrResult = aiResult;
-
-                if (aiResult.isValid) {
+                if (kycResult.is_valid) {
                     status = 'uploaded';
                     verificationResult = {
                         isValid: true,
                         code: 'AI_VERIFIED',
-                        confidence: aiResult.confidence,
+                        confidence: kycResult.confidence_score,
                         details: {
                             message: 'Document verified by AI OCR successfully.',
-                            extractedFields: aiResult.extractedFields,
-                            matchResults: aiResult.matchResults,
+                            extractedFields: kycResult.data,
                         }
                     };
 
-                    if (aiResult.extractedFields && Object.keys(aiResult.extractedFields).length > 0) {
-                        console.log(`[UPLOAD] Updating user details with extracted OCR data. Fields: ${Object.keys(aiResult.extractedFields).join(', ')}`);
+                    if (kycResult.data && Object.keys(kycResult.data).length > 0) {
+                        console.log(`[UPLOAD] Updating user details with extracted OCR data.`);
                         await this.usersService.updateExtractedDetails(userId, {
                             documentVerified: true,
-                            ...aiResult.extractedFields,
+                            ...kycResult.data,
                         });
-                        console.log(`[UPLOAD] Updated user details with extracted OCR data for ${userId}`);
                     }
                 } else {
                     status = 'rejected';
                     verificationResult = {
                         isValid: false,
                         code: 'AI_REJECTED',
-                        confidence: aiResult.confidence,
+                        confidence: kycResult.confidence_score,
                         details: {
-                            message: aiResult.reason || 'Document does not match expected type.',
-                            extractedFields: aiResult.extractedFields,
-                            matchResults: aiResult.matchResults,
+                            message: kycResult.error || 'Document does not match expected type.',
+                            extractedFields: kycResult.data,
                         }
                     };
-                    aiExplanation = aiResult.reason || 'Invalid document type uploaded.';
-                    console.log(`[UPLOAD] Document rejected by AI: ${aiExplanation}`);
+                    aiExplanation = kycResult.error || 'Invalid document type uploaded.';
                 }
             } catch (aiError: any) {
                 console.error(`[UPLOAD] AI Verification error:`, aiError?.message || aiError);
@@ -376,5 +369,40 @@ export class DocumentController {
         await this.usersService.deleteUserDocument(userId, docType);
 
         return { success: true, message: 'Document deleted successfully' };
+    }
+
+    @Post('requirement')
+    async addRequirement(
+        @Body('userId') userId: string,
+        @Body('docType') docType: string,
+        @Body('docName') docName?: string,
+    ) {
+        if (!userId || !docType) {
+            throw new BadRequestException('userId and docType are required');
+        }
+
+        const existing = (await this.usersService.getUserDocuments(userId)).find(d => d.docType === docType);
+        if (existing?.uploaded || ['uploaded', 'verified'].includes(String(existing?.status || '').toLowerCase())) {
+            return {
+                success: true,
+                message: 'Requirement already has an uploaded document',
+                data: existing
+            };
+        }
+
+        const document = await this.usersService.upsertUserDocument(userId, docType, {
+            uploaded: false,
+            status: 'pending',
+            verificationMetadata: {
+                message: 'Requirement added by staff',
+                docName: docName || docType
+            }
+        });
+
+        return {
+            success: true,
+            message: 'Requirement added successfully',
+            data: document
+        };
     }
 }

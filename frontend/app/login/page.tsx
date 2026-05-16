@@ -128,13 +128,28 @@ function LoginContent() {
                 router.push("/admin");
                 return;
             }
+            
+            if (data.role === "bank" || data.role === "partner_bank") {
+                router.push("/bank/dashboard");
+                return;
+            }
+
+            if (data.role === "agent" || data.role === "partner_agent") {
+                router.push("/agent/dashboard");
+                return;
+            }
+
+            if (data.role === "staff") {
+                router.push("/staff/dashboard");
+                return;
+            }
 
             // if user is new or doesn't yet have profile details, send them to the details page
             if (!data.userExists || data.hasUserDetails === false) {
                 router.push("/user-details");
             } else {
                 const redirectTo = searchParams.get("redirect");
-                router.push(redirectTo ? decodeURIComponent(redirectTo) : "/");
+                router.push(redirectTo ? decodeURIComponent(redirectTo) : "/dashboard");
             }
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : "Invalid OTP");
@@ -174,11 +189,26 @@ function LoginContent() {
                 return;
             }
 
+            if (data.role === "bank" || data.role === "partner_bank") {
+                router.push("/bank/dashboard");
+                return;
+            }
+
+            if (data.role === "agent" || data.role === "partner_agent") {
+                router.push("/agent/dashboard");
+                return;
+            }
+
+            if (data.role === "staff") {
+                router.push("/staff/dashboard");
+                return;
+            }
+
             if (!data.userExists || data.hasUserDetails === false) {
                 router.push("/user-details");
             } else {
                 const redirectTo = searchParams.get("redirect");
-                router.push(redirectTo ? decodeURIComponent(redirectTo) : "/");
+                router.push(redirectTo ? decodeURIComponent(redirectTo) : "/dashboard");
             }
         } catch (e: any) {
             console.error("Google Login Error:", e);

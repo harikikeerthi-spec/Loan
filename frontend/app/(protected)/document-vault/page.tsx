@@ -6,6 +6,7 @@ import { authApi, documentApi } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import DigilockerConsentModal from "@/components/DigilockerConsentModal";
+import { getDocumentRequirementName } from "@/lib/documentRequirements";
 
 const STUDENT_DOCS = [
     { type: "pan_student", label: "Student PAN Card", icon: "badge" },
@@ -257,6 +258,13 @@ export default function DocumentVaultPage() {
 
     const coappDocs = profileType === "salaried" ? COAPP_SALARIED_DOCS : COAPP_SELF_EMPLOYED_DOCS;
     const allRequiredDocs = [...STUDENT_DOCS, ...coappDocs, ...PARENT_DOCS];
+    const staffRequestedDocs = docs
+        .filter((doc) => doc?.docType && !allRequiredDocs.some((req) => req.type === doc.docType))
+        .map((doc) => ({
+            type: doc.docType,
+            label: getDocumentRequirementName(doc.docType, doc.docName || doc.verificationMetadata?.docName || doc.docType),
+            icon: "description",
+        }));
     const uploadedCount = docs.filter(d => d.uploaded).length;
 
     const renderDocGroup = (title: string, icon: string, docList: any[]) => (
@@ -434,7 +442,7 @@ export default function DocumentVaultPage() {
                                 <span className="material-symbols-outlined text-[16px] font-black">verified</span>
                             </div>
                             <div className="text-[13px] font-black text-emerald-700 tracking-tight">
-                                {uploadedCount} / {allRequiredDocs.length} Verified
+                                {uploadedCount} / {allRequiredDocs.length + staffRequestedDocs.length} Verified
                             </div>
                         </div>
                     </div>
@@ -545,6 +553,7 @@ export default function DocumentVaultPage() {
                         {renderDocGroup("Student Documents", "person", STUDENT_DOCS)}
                         {renderDocGroup(`Financial Co-Applicant (${profileType === "salaried" ? "Salaried" : "Self-Employed"})`, "account_balance", coappDocs)}
                         {renderDocGroup("Father & Mother Documents", "family_restroom", PARENT_DOCS)}
+                        {staffRequestedDocs.length > 0 && renderDocGroup("Staff Requested Documents", "assignment", staffRequestedDocs)}
                     </>
                 )}
 

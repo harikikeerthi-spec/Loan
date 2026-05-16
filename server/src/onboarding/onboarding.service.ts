@@ -20,32 +20,36 @@ export class OnboardingService {
         user = u;
       }
 
-      const goalValue = data.goal?.value || data.goal || data.courseLevel;
-      const countryValue = data.country?.value || data.studyDestination || data.study_destination;
+      const personal = data.personal || {};
+      const academic = data.academic || {};
+      const testScores = data.testScores || data.tests || {};
+
+      const goalValue = data.goal?.value || data.goal || data.courseLevel || academic.highestLevel;
+      const countryValue = data.country?.value || data.studyDestination || data.study_destination || academic.countryOfEducation || academic.undergrad?.country;
       const courseValue = data.course?.value || data.courseName || data.course_name;
       const targetUniValue = data.target_university?.label || data.targetUniversity || data.target_university;
       const intakeValue = data.start_when?.value || data.intakeSeason || data.intake_season;
-      const bachelorsValue = data.bachelors_degree?.label || data.bachelorsDegree || data.currentEducation;
+      const bachelorsValue = data.bachelors_degree?.label || data.bachelorsDegree || data.currentEducation || academic.highestLevel;
       const gpaValue = data.gpa?.value ? parseFloat(data.gpa.value) : data.gpa ? parseFloat(data.gpa) : undefined;
       const workExpValue = data.work_exp?.value
         ? parseInt(data.work_exp.value)
         : data.workExperience
         ? parseInt(data.workExperience)
         : undefined;
-      const entranceTestValue = data.entrance_test?.value || data.entranceTest;
-      const entranceScoreValue = data.entrance_score?.value || data.entranceScore;
-      const englishTestValue = data.english_test?.value || data.englishTest;
-      const englishScoreValue = data.english_score?.value || data.englishScore;
+      const entranceTestValue = data.entrance_test?.value || data.entranceTest || (testScores.gre ? 'GRE' : testScores.gmat ? 'GMAT' : testScores.sat ? 'SAT' : undefined);
+      const entranceScoreValue = data.entrance_score?.value || data.entranceScore || testScores.gre || testScores.gmat || testScores.sat;
+      const englishTestValue = data.english_test?.value || data.englishTest || (testScores.ielts ? 'IELTS' : testScores.toefl ? 'TOEFL' : testScores.pte ? 'PTE' : undefined);
+      const englishScoreValue = data.english_score?.value || data.englishScore || testScores.ielts || testScores.toefl || testScores.pte;
       const budgetValue = data.study_budget?.label || data.budget || data.estimatedCost;
       const pincodeValue = data.loan_pincode?.value || data.pincode;
       const loanAmountValue = data.loan_amount?.label || data.loanAmount;
       const admitStatusValue = data.admit_status?.value || data.admitStatus;
 
       const updateData: any = {
-        firstName: data.firstName || user?.firstName,
-        lastName: data.lastName || user?.lastName,
-        phoneNumber: data.phone || data.phoneNumber || user?.phoneNumber,
-        mobile: data.phone || data.phoneNumber || user?.mobile,
+        firstName: personal.firstName || data.firstName || user?.firstName,
+        lastName: personal.lastName || data.lastName || user?.lastName,
+        phoneNumber: personal.mobile || data.phone || data.phoneNumber || user?.phoneNumber,
+        mobile: personal.mobile || data.phone || data.phoneNumber || user?.mobile,
         goal: goalValue,
         studyDestination: countryValue,
         courseName: courseValue,

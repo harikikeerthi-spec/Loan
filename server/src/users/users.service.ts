@@ -436,7 +436,7 @@ export class UsersService {
   ) {
     const existing = await this.db
       .from('UserDocument')
-      .select('id')
+      .select('id, filePath, uploadedAt, verificationMetadata')
       .eq('userId', userId)
       .eq('docType', docType)
       .single();
@@ -446,16 +446,27 @@ export class UsersService {
       throw existing.error;
     }
 
+    const existingMetadata = existing.data?.verificationMetadata || {};
+    const incomingMetadata = data.verificationMetadata;
+    const mergedMetadata = incomingMetadata !== undefined
+      ? {
+          ...(typeof incomingMetadata === 'object' && incomingMetadata !== null ? incomingMetadata : {}),
+          ...((existingMetadata as any)?.docName && !(incomingMetadata as any)?.docName
+            ? { docName: (existingMetadata as any).docName }
+            : {}),
+        }
+      : undefined;
+
     const payload: any = {
       uploaded: data.uploaded,
       status: data.status || 'pending',
-      filePath: data.filePath || null,
+      filePath: data.filePath !== undefined ? data.filePath : (existing.data?.filePath || null),
       uploadedAt: data.uploaded ? new Date().toISOString() : null,
       updatedAt: new Date().toISOString(),
     };
     if (data.digilockerTxId !== undefined) payload.digilockerTxId = data.digilockerTxId;
     if (data.verifiedAt !== undefined) payload.verifiedAt = data.verifiedAt?.toISOString();
-    if (data.verificationMetadata !== undefined) payload.verificationMetadata = data.verificationMetadata;
+    if (mergedMetadata !== undefined) payload.verificationMetadata = mergedMetadata;
 
     if (existing.data) {
       const { data: updated, error } = await this.db

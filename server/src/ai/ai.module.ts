@@ -11,6 +11,7 @@ import { ApplicationReviewService } from './services/application-review.service'
 import { OpenRouterService } from './services/openrouter.service';
 import { UniversitySearchService } from './services/university-search.service';
 import { VisaInterviewService } from './services/visa-interview.service';
+import { KycService } from './services/kyc.service';
 
 @Module({
   imports: [],
@@ -27,6 +28,7 @@ import { VisaInterviewService } from './services/visa-interview.service';
     ApplicationReviewService,
     UniversitySearchService,
     VisaInterviewService,
+    KycService,
   ],
   exports: [
     OpenRouterService,
@@ -40,6 +42,7 @@ import { VisaInterviewService } from './services/visa-interview.service';
     ApplicationReviewService,
     UniversitySearchService,
     VisaInterviewService,
+    KycService,
   ],
 })
 export class AiModule { }

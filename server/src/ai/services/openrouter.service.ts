@@ -182,4 +182,51 @@ export class OpenRouterService {
         const res = await this.getJson<any>(prompt);
         return (res.universities || res.courses || []) as any[];
     }
+
+    async chatWithVision(prompt: string, imageUrl: string, model: string = 'google/gemini-2.0-flash-001'): Promise<string> {
+        if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') {
+            throw new Error('OPENROUTER_API_KEY is not configured');
+        }
+
+        const requestBody = {
+            model: model,
+            messages: [
+                {
+                    role: 'user',
+                    content: [
+                        { type: 'text', text: prompt },
+                        {
+                            type: 'image_url',
+                            image_url: { url: imageUrl }
+                        }
+                    ]
+                }
+            ],
+            max_tokens: 1024,
+        };
+
+        try {
+            const response = await fetch(this.apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${this.apiKey}`,
+                    'Content-Type': 'application/json',
+                    'HTTP-Referer': 'https://vidhyaloan.com',
+                    'X-Title': 'VidhyaLoan',
+                },
+                body: JSON.stringify(requestBody),
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                throw new Error(`OpenRouter Vision API error: ${response.status} - ${error}`);
+            }
+
+            const data = await response.json();
+            return data.choices?.[0]?.message?.content || '';
+        } catch (error) {
+            console.error('OpenRouter vision request failed:', error);
+            throw error;
+        }
+    }
 }

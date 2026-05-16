@@ -10,7 +10,7 @@ import { format } from "date-fns";
 
 interface OCRExtractedData {
   document_type: string;
-  confidence_score: number;
+  confidence_score: number; 
   extracted_data: {
     full_name?: string;
     date_of_birth?: string;

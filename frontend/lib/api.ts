@@ -905,6 +905,12 @@ export const documentApi = {
             body: JSON.stringify({ userId, docType }),
         });
     },
+
+    addRequirement: (userId: string, docType: string, docName?: string) =>
+        apiFetch(`${API_URL}/documents/requirement`, {
+            method: 'POST',
+            body: JSON.stringify({ userId, docType, docName }),
+        }),
 };
 
 
@@ -1120,5 +1126,18 @@ export const staffProfileApi = {
 
     getDashboardActivities: (limit = 15) =>
         apiFetch(`${API_URL}/staff-profiles/dashboard/activities?limit=${limit}`),
+
+    // Share a student profile with a bank or the student (Step 4 of onboarding)
+    shareProfile: (studentId: string, data: {
+        recipientType: string;
+        recipientName: string;
+        recipientEmail: string;
+        message?: string;
+        sharedBy?: string;
+    }) =>
+        apiFetch(`${API_URL}/staff-profiles/share-profile/${studentId}`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+        }),
 };
 

@@ -46,7 +46,8 @@ export class StaffProfileService {
     }
 
     if (existing) {
-      throw new ConflictException('A profile already exists for this user');
+      console.log(`[StaffProfileService.createProfile] Profile already exists for user ${body.linked_user_id}, returning existing.`);
+      return existing;
     }
 
     const insertData: any = {
@@ -76,7 +77,8 @@ export class StaffProfileService {
       });
       // Handle Postgres unique constraint violation
       if (error.code === '23505') {
-        throw new ConflictException('Staff profile already exists for this user');
+        const existingProfile = await this.getProfileByLinkedUserId(body.linked_user_id);
+        if (existingProfile) return existingProfile;
       }
       throw new BadRequestException(`Failed to create staff profile: ${error.message || 'Database error'}`);
     }

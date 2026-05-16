@@ -231,7 +231,12 @@ export default function Navbar() {
                                         <p className="text-sm font-bold text-gray-900 truncate">{user?.email}</p>
                                     </div>
                                     <div className="py-2">
-                                        <ProfileDropItem href="/dashboard" icon="dashboard" label="Dashboard" iconClass="text-[#6605c7]" />
+                                        <ProfileDropItem 
+                                            href={user?.role === 'bank' || user?.role === 'partner_bank' ? "/bank/dashboard" : "/dashboard"} 
+                                            icon="dashboard" 
+                                            label="Dashboard" 
+                                            iconClass="text-[#6605c7]" 
+                                        />
                                         <ProfileDropItem href="/referral" icon="redeem" label="Refer & Earn" iconClass="text-pink-500" />
                                         <ProfileDropItem href="/profile" icon="person" label="My Profile" iconClass="text-[#6605c7]" />
                                         {!(user?.firstName && user?.lastName && user?.phoneNumber && user?.dateOfBirth) && (
@@ -282,7 +287,11 @@ export default function Navbar() {
                     <MobileLink href="/visa-mock" label="Visa Interview Prep" onClick={() => setMobileOpen(false)} />
                     {isAuthenticated ? (
                         <>
-                            <MobileLink href="/dashboard" label="Dashboard" onClick={() => setMobileOpen(false)} />
+                            <MobileLink 
+                                href={user?.role === 'bank' || user?.role === 'partner_bank' ? "/bank/dashboard" : "/dashboard"} 
+                                label="Dashboard" 
+                                onClick={() => setMobileOpen(false)} 
+                            />
                             <button onClick={handleLogout} className="text-left text-red-500 font-bold text-sm">Sign Out</button>
                         </>
                     ) : (

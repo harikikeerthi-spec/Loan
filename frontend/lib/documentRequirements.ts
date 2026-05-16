@@ -1,0 +1,123 @@
+export type DocumentCategory = "academic" | "financial" | "identity" | "other";
+
+export type DocumentRequirement = {
+  name: string;
+  label: string;
+  type: string;
+  category: DocumentCategory;
+  required: boolean;
+};
+
+const hasValue = (value: unknown) => String(value || "").trim().length > 0;
+
+export function getDocumentCategory(docType: string): DocumentCategory {
+  const type = String(docType || "").toLowerCase();
+  if (type.includes("aadhar") || type.includes("aadhaar") || type.includes("pan") || type.includes("passport") || type.includes("identity") || type.includes("national_id")) {
+    return "identity";
+  }
+  if (type.includes("salary") || type.includes("bank") || type.includes("itr") || type.includes("business") || type.includes("balance") || type.includes("retirement") || type.includes("income")) {
+    return "financial";
+  }
+  if (type.includes("marksheet") || type.includes("degree") || type.includes("transcript") || type.includes("test") || type.includes("resume") || type.includes("work")) {
+    return "academic";
+  }
+  return "other";
+}
+
+function requirement(name: string, type: string, required = true, category?: DocumentCategory): DocumentRequirement {
+  return {
+    name,
+    label: name,
+    type,
+    category: category || getDocumentCategory(type),
+    required,
+  };
+}
+
+export function getStudentDocumentRequirements(student: any = {}): DocumentRequirement[] {
+  const academic = student.academic || student.student?.academic || {};
+  const tests = student.tests || student.testScores || student.student?.tests || {};
+  const workExperience = student.workExperience || student.student?.workExperience || [];
+  const highestLevel = academic.highestLevel || student.highestLevel || student.courseLevel || student.bachelorsDegree;
+
+  return [
+    requirement("Passport (Front & Back)", "passport", true, "identity"),
+    requirement("National ID / Aadhar Card", "national_id", true, "identity"),
+    requirement("10th Marksheet", "marksheet_10", true, "academic"),
+    requirement("12th Marksheet", "marksheet_12", highestLevel !== "Grade 10", "academic"),
+    requirement("Undergraduate Transcript", "ug_transcript", ["Undergraduate", "Postgraduate"].includes(highestLevel), "academic"),
+    requirement("Undergraduate Degree", "ug_degree", ["Undergraduate", "Postgraduate"].includes(highestLevel), "academic"),
+    requirement("Postgraduate Transcript", "pg_transcript", highestLevel === "Postgraduate", "academic"),
+    requirement("Postgraduate Degree", "pg_degree", highestLevel === "Postgraduate", "academic"),
+    requirement("IELTS / TOEFL / PTE Score Card", "english_test", hasValue(tests.ielts) || hasValue(tests.toefl) || hasValue(tests.pte), "academic"),
+    requirement("GRE / GMAT / SAT Score Card", "aptitude_test", hasValue(tests.gre) || hasValue(tests.gmat) || hasValue(tests.sat), "academic"),
+    requirement("Work Experience Letters", "work_letters", Array.isArray(workExperience) && workExperience.some((exp) => hasValue(exp?.employer)), "academic"),
+    requirement("Resume / CV", "resume", true, "academic"),
+  ].filter((doc) => doc.required);
+}
+
+export function getPersonDocumentRequirements(
+  employmentType: string,
+  personName: string,
+  personType: "father" | "mother" | "coapplicant",
+): DocumentRequirement[] {
+  const docs: DocumentRequirement[] = [];
+  const name = personName || (personType === "coapplicant" ? "Co-applicant" : personType[0].toUpperCase() + personType.slice(1));
+
+  docs.push(requirement(`${name}'s Aadhar Card`, `${personType}_aadhar`, true, "identity"));
+  docs.push(requirement(`${name}'s PAN Card`, `${personType}_pan`, true, "identity"));
+
+  if (employmentType === "employed") {
+    docs.push(requirement(`${name} - Last 3 months Salary Slips`, `${personType}_salary_slips`, true, "financial"));
+    docs.push(requirement(`${name} - Last 6 months Bank Statements`, `${personType}_bank_statements`, true, "financial"));
+  } else if (employmentType === "self_employed_business" || employmentType === "self_employed_professional") {
+    docs.push(requirement(`${name} - Business Registration/License`, `${personType}_business_license`, true, "financial"));
+    docs.push(requirement(`${name} - Labour License (if applicable)`, `${personType}_labour_license`, false, "financial"));
+    docs.push(requirement(`${name} - Udyam Certificate`, `${personType}_udyam_cert`, false, "financial"));
+    docs.push(requirement(`${name} - Last 6 months Bank Statements`, `${personType}_bank_statements`, true, "financial"));
+    docs.push(requirement(`${name} - Last 2 years ITR (Income Tax Returns)`, `${personType}_itr`, true, "financial"));
+    docs.push(requirement(`${name} - Balance Sheet & P&L Statement`, `${personType}_balance_sheet`, false, "financial"));
+  } else if (employmentType === "retired") {
+    docs.push(requirement(`${name} - Retirement Certificate/Pension Document`, `${personType}_retirement_cert`, true, "financial"));
+    docs.push(requirement(`${name} - Last 6 months Bank Statements`, `${personType}_bank_statements`, true, "financial"));
+  }
+
+  return docs;
+}
+
+export function getProfileDocumentRequirements(profile: any = {}): DocumentRequirement[] {
+  const student = profile.student || profile.user || profile;
+  const family = student.family || student.familyDetails || profile.family || profile.familyDetails || {};
+  const coApplicant = student.coApplicant || profile.coApplicant || {};
+
+  const fatherName = family.fatherName || profile.fatherName;
+  const motherName = family.motherName || profile.motherName;
+  const coApplicantName = coApplicant.name || profile.coApplicantName;
+
+  const docs: DocumentRequirement[] = [...getStudentDocumentRequirements(student)];
+
+  if (hasValue(fatherName) || hasValue(family.fatherEmploymentType)) {
+    docs.push(...getPersonDocumentRequirements(family.fatherEmploymentType || profile.fatherEmploymentType || "", fatherName || "Father", "father"));
+  }
+
+  if (hasValue(motherName) || hasValue(family.motherEmploymentType)) {
+    docs.push(...getPersonDocumentRequirements(family.motherEmploymentType || profile.motherEmploymentType || "", motherName || "Mother", "mother"));
+  }
+
+  if (hasValue(coApplicantName) || hasValue(coApplicant.employmentType) || hasValue(profile.coApplicantEmploymentType)) {
+    docs.push(...getPersonDocumentRequirements(coApplicant.employmentType || profile.coApplicantEmploymentType || "", coApplicantName || "Co-applicant", "coapplicant"));
+    docs.push(requirement("Relation Proof with Applicant", "coapplicant_relation", true, "identity"));
+  }
+
+  const seen = new Set<string>();
+  return docs.filter((doc) => {
+    if (seen.has(doc.type)) return false;
+    seen.add(doc.type);
+    return true;
+  });
+}
+
+export function getDocumentRequirementName(docType: string, fallback?: string, profile?: any): string {
+  const match = getProfileDocumentRequirements(profile).find((doc) => doc.type === docType);
+  return match?.name || fallback || docType.replace(/_/g, " ");
+}

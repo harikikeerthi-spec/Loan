@@ -22,7 +22,9 @@ export class OnboardingController {
         
         // If admin provides an email or explicitly asks to update another user, skip passing their own ID
         // so the service will look up by the provided email instead.
-        if (isAdminOrStaff && body.email) {
+        if (isAdminOrStaff && body.userId) {
+            targetUserId = body.userId;
+        } else if (isAdminOrStaff && body.email) {
             targetUserId = undefined; 
         }
 
