@@ -315,11 +315,50 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                 <p className="text-[12px] font-bold text-slate-900 truncate">{doc.docType || doc.type || "Document"}</p>
                                                 <p className="text-[10px] font-medium text-slate-500 truncate">{doc.fileName || "No filename"}</p>
                                             </div>
+                                            {/* Status badge */}
+                                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide border ${
+                                                doc.status === 'uploaded' || doc.status === 'verified'
+                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                    : doc.status === 'rejected'
+                                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                                            }`}>
+                                                {doc.status || 'pending'}
+                                            </span>
                                         </div>
                                         {doc.uploadedAt && (
                                             <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-tight">
                                                 Uploaded: {formatDate(doc.uploadedAt, "MMM d, yyyy")}
                                             </p>
+                                        )}
+                                        {/* View button — uses presigned S3 URL */}
+                                        {doc.filePath && (
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+                                                        const token = typeof window !== 'undefined'
+                                                            ? (localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken'))
+                                                            : null;
+                                                        const res = await fetch(`${API_URL}/documents/presigned-view/${userId}/${encodeURIComponent(doc.docType)}`, {
+                                                            headers: token ? { Authorization: `Bearer ${token}` } : {},
+                                                        });
+                                                        if (res.ok) {
+                                                            const data = await res.json();
+                                                            window.open(data.url, '_blank');
+                                                        } else {
+                                                            // Fallback: use view endpoint (redirect)
+                                                            window.open(`${API_URL}/documents/view/${userId}/${encodeURIComponent(doc.docType)}`, '_blank');
+                                                        }
+                                                    } catch (e) {
+                                                        console.error('Failed to open document:', e);
+                                                    }
+                                                }}
+                                                className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded hover:bg-indigo-100 transition-colors"
+                                            >
+                                                <span className="material-symbols-outlined text-[14px]">visibility</span>
+                                                View Document
+                                            </button>
                                         )}
                                     </div>
                                 ))}

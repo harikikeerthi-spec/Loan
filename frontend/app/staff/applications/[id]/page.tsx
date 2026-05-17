@@ -404,9 +404,23 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                                 };
 
                                                 const currentProgress = getActiveProgress();
+                                                const appCreatedAt = application.createdAt || application.created_at || application.submittedAt || application.submitted_at;
+                                                const appUpdatedAt = application.updatedAt || application.updated_at || appCreatedAt;
+
+                                                const completedThresholds = [12, 25, 37, 50, 62, 75, 87, 100];
+                                                const lastCompletedIdx = completedThresholds.reduce((acc, val, i) => currentProgress >= val ? i : acc, -1);
+
+                                                const getStageTimestamp = (stageIdx: number, completed: boolean, active?: boolean): string | undefined => {
+                                                    if (!completed && !active) return undefined;
+                                                    if (stageIdx === 0) return appCreatedAt;
+                                                    if (active || stageIdx === lastCompletedIdx) return appUpdatedAt || appCreatedAt;
+                                                    return appCreatedAt;
+                                                };
+
                                                 const isCompleted = currentProgress > item.progress;
                                                 const isActive = currentProgress === item.progress;
                                                 const isUpcoming = currentProgress < item.progress;
+                                                const stageTimestamp = getStageTimestamp(idx, isCompleted, isActive);
 
                                                 return (
                                                     <div key={idx} className="flex gap-6 items-start relative z-10">
@@ -453,6 +467,14 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                                                             <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded inline-block">
                                                                                 Completed
                                                                             </span>
+                                                                        )}
+                                                                        {stageTimestamp && (
+                                                                            <div className="mt-2 flex items-center gap-1 text-slate-400">
+                                                                                <span className="material-symbols-outlined text-[13px]">schedule</span>
+                                                                                <span className="text-[10px] font-bold tracking-wide tabular-nums">
+                                                                                    {formatDate(stageTimestamp, "MMM d, yyyy 'at' hh:mm a")}
+                                                                                </span>
+                                                                            </div>
                                                                         )}
                                                                     </div>
                                                                 </div>

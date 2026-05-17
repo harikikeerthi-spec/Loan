@@ -50,6 +50,11 @@ export class UsersController {
                 mobile: user.mobile,
                 role: user.role,
                 registeredAtIndia: user.registeredAtIndia || '',
+                panNumber: user.panNumber || '',
+                aadhaarNumber: user.aadhaarNumber || '',
+                fatherName: user.fatherName || '',
+                permanentAddress: user.permanentAddress || '',
+                documentVerified: user.documentVerified || false,
             },
         };
     }

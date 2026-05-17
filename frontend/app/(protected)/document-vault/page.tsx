@@ -2,52 +2,16 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { authApi, documentApi } from "@/lib/api";
+import { authApi, documentApi, onboardingApi } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import DigilockerConsentModal from "@/components/DigilockerConsentModal";
-import { getDocumentRequirementName } from "@/lib/documentRequirements";
-
-const STUDENT_DOCS = [
-    { type: "pan_student", label: "Student PAN Card", icon: "badge" },
-    { type: "aadhar_student", label: "Student Aadhar Card", icon: "fingerprint" },
-    { type: "passport", label: "Passport Copy", icon: "travel_explore" },
-    { type: "marksheet_10th", label: "10th Marksheet", icon: "school" },
-    { type: "marksheet_12th", label: "12th Marksheet", icon: "school" },
-    { type: "marksheet_degree", label: "Degree Marksheet", icon: "history_edu" },
-    { type: "test_score", label: "Test Score Card (GRE/IELTS)", icon: "analytics" },
-    { type: "offer_letter", label: "University Offer Letter", icon: "mail" },
-];
-
-const COAPP_SALARIED_DOCS = [
-    { type: "pan_coapp", label: "Co-app PAN Card", icon: "credit_card" },
-    { type: "aadhar_coapp", label: "Co-app Aadhar Card", icon: "badge" },
-    { type: "electricity_bill", label: "Latest Electricity Bill", icon: "receipt_long" },
-    { type: "salary_slip", label: "Last 3 Months Salary Slips", icon: "payments" },
-    { type: "bank_statement_salary", label: "6 Months Bank Statement", icon: "account_balance" },
-    { type: "itr_salaried", label: "1 Year Form 16 / ITR", icon: "description" },
-];
-
-const COAPP_SELF_EMPLOYED_DOCS = [
-    { type: "pan_coapp", label: "Co-app PAN Card", icon: "credit_card" },
-    { type: "aadhar_coapp", label: "Co-app Aadhar Card", icon: "badge" },
-    { type: "electricity_bill", label: "Latest Electricity Bill", icon: "receipt_long" },
-    { type: "itr_self_employed", label: "2 Years ITR with Computation", icon: "description" },
-    { type: "balance_sheet", label: "Balance Sheet & P&L", icon: "monitoring" },
-    { type: "business_proof", label: "Business Proof (GST/Reg)", icon: "store" },
-    { type: "bank_statement_business", label: "1 Year Bank Statement", icon: "account_balance" },
-];
-
-const PARENT_DOCS = [
-    { type: "pan_father", label: "Father PAN Card", icon: "badge" },
-    { type: "aadhar_father", label: "Father Aadhar Card", icon: "badge" },
-    { type: "pan_mother", label: "Mother PAN Card", icon: "badge" },
-    { type: "aadhar_mother", label: "Mother Aadhar Card", icon: "badge" },
-];
+import { getDocumentRequirementName, getProfileDocumentRequirements } from "@/lib/documentRequirements";
 
 export default function DocumentVaultPage() {
     const { user, refreshUser } = useAuth();
     const [docs, setDocs] = useState<any[]>([]);
+    const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState<string | null>(null);
     const [profileType, setProfileType] = useState<"salaried" | "self-employed">("salaried");
@@ -62,8 +26,6 @@ export default function DocumentVaultPage() {
 
     const loadDocs = useCallback(async () => {
         if (!user?.id) {
-            // If user ID is missing but we've stopped loading in AuthContext,
-            // we should stop loading here too to show the empty/entry state.
             setLoading(false);
             return;
         }
@@ -72,9 +34,20 @@ export default function DocumentVaultPage() {
             const res = await authApi.getDashboardData(user.id) as any;
             if (res.success) {
                 setDocs(res.data.documents || []);
+                setProfile(res.data.user || null);
+                
+                // Keep the salaried vs self-employed toggle in sync with the database
+                const baseProfile = res.data.user || {};
+                const coapp = baseProfile.coApplicant || {};
+                const empType = coapp.employmentType || baseProfile.coApplicantEmploymentType || "";
+                if (empType === "employed") {
+                    setProfileType("salaried");
+                } else if (empType.startsWith("self_employed")) {
+                    setProfileType("self-employed");
+                }
             }
         } catch (e) {
-            console.error(e);
+            console.error("Error loading vault data:", e);
         } finally {
             setLoading(false);
         }
@@ -91,7 +64,6 @@ export default function DocumentVaultPage() {
 
         if (status === 'success') {
             alert(message || "DigiLocker verification successful!");
-            // Remove query params from URL
             window.history.replaceState({}, document.title, window.location.pathname);
             loadDocs();
         } else if (status === 'error') {
@@ -99,6 +71,89 @@ export default function DocumentVaultPage() {
             window.history.replaceState({}, document.title, window.location.pathname);
         }
     }, [loadDocs]);
+
+    const handleProfileTypeChange = async (type: "salaried" | "self-employed") => {
+        setProfileType(type);
+        if (!user?.id) return;
+        
+        // Merge this selection into the current user profile
+        const baseProfile = profile || user || {};
+        const coapp = baseProfile.coApplicant || {};
+        const updatedCoApplicant = {
+            ...coapp,
+            employmentType: type === "salaried" ? "employed" : "self_employed_business",
+            // Fallback name if co-applicant name isn't filled in yet
+            name: coapp.name || baseProfile.coApplicantName || "Co-applicant"
+        };
+        
+        const updatedProfile = {
+            ...baseProfile,
+            coApplicant: updatedCoApplicant
+        };
+        
+        setProfile(updatedProfile);
+        
+        try {
+            console.log("[VAULT] Syncing coapplicant employment type toggle to DB:", type);
+            await onboardingApi.submit(updatedProfile);
+            
+            // Dispatch dynamic update event
+            const key = `dashboardDataUpdated_${user.id}`;
+            localStorage.setItem(key, String(Date.now()));
+            window.dispatchEvent(new Event('dashboard-data-changed'));
+        } catch (err) {
+            console.error("Failed to persist coapplicant type toggle to database:", err);
+        }
+    };
+
+    const getActiveProfile = () => {
+        const baseProfile = profile || user || {};
+        
+        // Ensure family details have defaults if not present so parent documents are shown
+        const family = baseProfile.family || baseProfile.familyDetails || {};
+        const fatherName = family.fatherName || baseProfile.fatherName || "Father";
+        const motherName = family.motherName || baseProfile.motherName || "Mother";
+        const fatherEmploymentType = family.fatherEmploymentType || baseProfile.fatherEmploymentType || "employed";
+        const motherEmploymentType = family.motherEmploymentType || baseProfile.motherEmploymentType || "employed";
+
+        // Ensure coApplicant has a default name and matches profileType
+        const coapp = baseProfile.coApplicant || {};
+        const coappEmploymentType = profileType === "salaried" ? "employed" : "self_employed_business";
+        const coappName = coapp.name || baseProfile.coApplicantName || "Co-applicant";
+
+        return {
+            ...baseProfile,
+            family: {
+                ...family,
+                fatherName,
+                motherName,
+                fatherEmploymentType,
+                motherEmploymentType
+            },
+            coApplicant: {
+                ...coapp,
+                name: coappName,
+                employmentType: coappEmploymentType
+            }
+        };
+    };
+
+    const getDocIcon = (type: string) => {
+        const t = type.toLowerCase();
+        if (t.includes("passport")) return "travel_explore";
+        if (t.includes("aadhar") || t.includes("national_id")) return "fingerprint";
+        if (t.includes("pan")) return "credit_card";
+        if (t.includes("marksheet") || t.includes("transcript") || t.includes("degree")) return "school";
+        if (t.includes("test") || t.includes("score")) return "analytics";
+        if (t.includes("offer") || t.includes("letter") || t.includes("cv") || t.includes("resume")) return "description";
+        if (t.includes("salary") || t.includes("slip")) return "payments";
+        if (t.includes("bank") || t.includes("statement")) return "account_balance";
+        if (t.includes("itr") || t.includes("tax")) return "receipt_long";
+        if (t.includes("business") || t.includes("license") || t.includes("udyam")) return "store";
+        if (t.includes("balance") || t.includes("sheet") || t.includes("monitoring")) return "monitoring";
+        if (t.includes("bill") || t.includes("electricity")) return "receipt_long";
+        return "description";
+    };
 
     const triggerFileInput = (docType: string) => {
         const input = document.getElementById(`file-input-${docType}`) as HTMLInputElement;
@@ -112,7 +167,6 @@ export default function DocumentVaultPage() {
             return;
         }
 
-        // Validate file
         if (file.size > 5 * 1024 * 1024) {
             alert("File size exceeds 5MB limit");
             return;
@@ -126,11 +180,9 @@ export default function DocumentVaultPage() {
 
         setUploading(docType);
         try {
-            // Create a preview URL for the local file
             const objectUrl = URL.createObjectURL(file);
             setPreviewUrls(prev => ({ ...prev, [docType]: objectUrl }));
 
-            // Upload the actual file to server using FormData
             const formData = new FormData();
             formData.append('file', file);
             formData.append('userId', user.id);
@@ -152,25 +204,16 @@ export default function DocumentVaultPage() {
                 let errorMessage = `Server error: ${response.status} ${response.statusText}`;
                 try {
                     const errorData = await response.json();
-                    console.error("Detailed server error response:", errorData);
-                    
                     if (errorData.message) {
                         errorMessage = errorData.message;
                     } else if (errorData.error) {
                         errorMessage = errorData.error;
-                    } else if (Object.keys(errorData).length > 0) {
-                        errorMessage = JSON.stringify(errorData);
                     }
                 } catch (parseError) {
                     try {
                         const text = await response.text();
-                        if (text) {
-                            console.error("Server error response (text):", text);
-                            errorMessage = text;
-                        }
-                    } catch (textError) {
-                        console.error("Failed to parse error response body");
-                    }
+                        if (text) errorMessage = text;
+                    } catch (textError) {}
                 }
                 throw new Error(errorMessage);
             }
@@ -194,22 +237,16 @@ export default function DocumentVaultPage() {
     };
 
     const handleDigilockerVerify = async (docType: string) => {
-        console.log("handleDigilockerVerify called for:", docType, "user:", user);
-        if (!user?.id) {
-            alert("User identity not found. Please refresh the page or wait a moment.");
-            refreshUser();
-            return;
-        }
-        // Redirect to backend authorize endpoint — DigiLocker handles mobile OTP login
-        window.location.href = `/api/digilocker/authorize?userId=${encodeURIComponent(user.id)}&docType=${encodeURIComponent(docType)}`;
-    };
-
-    const handleSyncFromDigilocker = async (docType: string) => {
         if (!user?.id) {
             alert("User identity not found. Please refresh.");
             refreshUser();
             return;
         }
+        window.location.href = `/api/digilocker/authorize?userId=${encodeURIComponent(user.id)}&docType=${encodeURIComponent(docType)}`;
+    };
+
+    const handleSyncFromDigilocker = async (docType: string) => {
+        if (!user?.id) return;
         setUploading(docType);
         try {
             const result: any = await documentApi.syncFromDigilocker(user.id, docType);
@@ -228,10 +265,8 @@ export default function DocumentVaultPage() {
     };
 
     const handleView = (docType: string) => {
-        // Check if document exists in database with a file path
         const existing = docs.find(d => d.docType === docType);
         if (existing?.uploaded && user?.id) {
-            // Use relative path through the Next.js proxy
             const viewUrl = `/api/documents/view/${user.id}/${docType}`;
             window.open(viewUrl, '_blank');
         } else {
@@ -256,15 +291,47 @@ export default function DocumentVaultPage() {
         }
     };
 
-    const coappDocs = profileType === "salaried" ? COAPP_SALARIED_DOCS : COAPP_SELF_EMPLOYED_DOCS;
-    const allRequiredDocs = [...STUDENT_DOCS, ...coappDocs, ...PARENT_DOCS];
+    // Dynamically calculate requirements
+    const activeProfile = getActiveProfile();
+    const allRequiredDocs = getProfileDocumentRequirements(activeProfile);
+    
+    const studentDocs = allRequiredDocs.filter(req => 
+        !req.type.startsWith('coapplicant_') && 
+        !req.type.startsWith('father_') && 
+        !req.type.startsWith('mother_') &&
+        !req.type.startsWith('parent_')
+    ).map(req => ({
+        type: req.type,
+        label: req.label,
+        icon: getDocIcon(req.type)
+    }));
+
+    const coappDocs = allRequiredDocs.filter(req => 
+        req.type.startsWith('coapplicant_')
+    ).map(req => ({
+        type: req.type,
+        label: req.label,
+        icon: getDocIcon(req.type)
+    }));
+
+    const parentDocs = allRequiredDocs.filter(req => 
+        req.type.startsWith('father_') || 
+        req.type.startsWith('mother_') ||
+        req.type.startsWith('parent_')
+    ).map(req => ({
+        type: req.type,
+        label: req.label,
+        icon: getDocIcon(req.type)
+    }));
+
     const staffRequestedDocs = docs
         .filter((doc) => doc?.docType && !allRequiredDocs.some((req) => req.type === doc.docType))
         .map((doc) => ({
             type: doc.docType,
-            label: getDocumentRequirementName(doc.docType, doc.docName || doc.verificationMetadata?.docName || doc.docType),
+            label: getDocumentRequirementName(doc.docType, doc.docName || doc.verificationMetadata?.docName || doc.docType, activeProfile),
             icon: "description",
         }));
+
     const uploadedCount = docs.filter(d => d.uploaded).length;
 
     const renderDocGroup = (title: string, icon: string, docList: any[]) => (
@@ -334,7 +401,6 @@ export default function DocumentVaultPage() {
                                 </div>
                             ) : (
                                 <div className="space-y-2">
-                                    {/* Found in DigiLocker - Highest Priority */}
                                     {existing?.status === 'available_in_digilocker' && !isUploaded ? (
                                         <div className="relative">
                                             <div className="absolute -top-2 -right-1 z-10">
@@ -353,29 +419,27 @@ export default function DocumentVaultPage() {
                                         </div>
                                     ) : (
                                         <>
-                                            {/* DigiLocker Flow - First Priority */}
                                             {([
-                                                'pan_student', 'pan_coapp', 'aadhar_student', 'aadhar_coapp',
-                                                'marksheet_10th', 'marksheet_12th', 'passport',
-                                                'pan_father', 'pan_mother', 'aadhar_father', 'aadhar_mother'
+                                                'pan', 'coapplicant_pan', 'national_id', 'coapplicant_aadhar',
+                                                'marksheet_10', 'marksheet_12', 'passport',
+                                                'father_pan', 'mother_pan', 'father_aadhar', 'mother_aadhar'
                                             ].includes(req.type)) && !isUploaded && (
-                                                         <Link
-                                                            href={`/document-vault/digilocker?docType=${req.type}`}
-                                                            className="w-full py-2.5 bg-emerald-600 text-white text-[11px] font-bold rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 border border-emerald-500/20"
-                                                        >
-                                                            <img src="https://upload.wikimedia.org/wikipedia/en/1/1d/DigiLocker_logo.png" alt="DigiLocker" className="h-4 w-auto brightness-0 invert" />
-                                                            Upload from DigiLocker
-                                                        </Link>
-                                                )}
+                                                 <Link
+                                                    href={`/document-vault/digilocker?docType=${req.type}`}
+                                                    className="w-full py-2.5 bg-emerald-600 text-white text-[11px] font-bold rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 border border-emerald-500/20"
+                                                >
+                                                    <img src="https://upload.wikimedia.org/wikipedia/en/1/1d/DigiLocker_logo.png" alt="DigiLocker" className="h-4 w-auto brightness-0 invert" />
+                                                    Upload from DigiLocker
+                                                </Link>
+                                            )}
 
-                                            {/* Manual Upload - Second Priority */}
                                             <button
                                                 onClick={() => triggerFileInput(req.type)}
                                                 disabled={!!uploading}
                                                 className={`w-full py-2.5 text-[11px] font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${([
-                                                    'pan_student', 'pan_coapp', 'aadhar_student', 'aadhar_coapp',
-                                                    'marksheet_10th', 'marksheet_12th', 'passport',
-                                                    'pan_father', 'pan_mother', 'aadhar_father', 'aadhar_mother'
+                                                    'pan', 'coapplicant_pan', 'national_id', 'coapplicant_aadhar',
+                                                    'marksheet_10', 'marksheet_12', 'passport',
+                                                    'father_pan', 'mother_pan', 'father_aadhar', 'mother_aadhar'
                                                 ].includes(req.type))
                                                     ? 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
                                                     : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
@@ -387,9 +451,9 @@ export default function DocumentVaultPage() {
                                                     <span className="material-symbols-outlined text-[16px]">upload</span>
                                                 )}
                                                 {uploading === req.type ? "Processing..." : ([
-                                                    'pan_student', 'pan_coapp', 'aadhar_student', 'aadhar_coapp',
-                                                    'marksheet_10th', 'marksheet_12th', 'passport',
-                                                    'pan_father', 'pan_mother', 'aadhar_father', 'aadhar_mother'
+                                                    'pan', 'coapplicant_pan', 'national_id', 'coapplicant_aadhar',
+                                                    'marksheet_10', 'marksheet_12', 'passport',
+                                                    'father_pan', 'mother_pan', 'father_aadhar', 'mother_aadhar'
                                                 ].includes(req.type)) ? "Upload Manually (Priority 2)" : "Upload to Vault"}
                                             </button>
                                         </>
@@ -421,16 +485,15 @@ export default function DocumentVaultPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-4">
-                        {/* Profile Toggle */}
                         <div className="flex bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
                             <button
-                                onClick={() => setProfileType("salaried")}
+                                onClick={() => handleProfileTypeChange("salaried")}
                                 className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${profileType === "salaried" ? "bg-white text-[#6605c7] shadow-sm border border-gray-100" : "text-gray-400 hover:text-gray-600"}`}
                             >
                                 Salaried
                             </button>
                             <button
-                                onClick={() => setProfileType("self-employed")}
+                                onClick={() => handleProfileTypeChange("self-employed")}
                                 className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${profileType === "self-employed" ? "bg-white text-[#6605c7] shadow-sm border border-gray-100" : "text-gray-400 hover:text-gray-600"}`}
                             >
                                 Self-Employed
@@ -448,10 +511,8 @@ export default function DocumentVaultPage() {
                     </div>
                 </div>
 
-                {/* DigiLocker Integrated Section */}
                 <div className="mb-12">
                     <div className="bg-gradient-to-br from-[#004791] to-[#0b84ff] rounded-[32px] p-8 text-white relative overflow-hidden shadow-2xl shadow-blue-500/20">
-                        {/* Semi-circles for design */}
                         <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
                         <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-blue-900/30 rounded-full blur-3xl" />
 
@@ -485,8 +546,9 @@ export default function DocumentVaultPage() {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
 
-                {/* Fetched from DigiLocker - Dedicated "Folder" Section */}
                 {docs.some(d => d.status === 'available_in_digilocker' && !d.uploaded) && (
                     <div className="mb-12 bg-gray-50/50 rounded-[32px] p-8 border border-dashed border-gray-200">
                         <div className="flex items-center justify-between mb-8">
@@ -514,7 +576,7 @@ export default function DocumentVaultPage() {
                                 return (
                                     <div key={d.id || d.docType} className="bg-white rounded-2xl p-5 border border-emerald-100 shadow-sm flex flex-col items-center text-center group hover:shadow-md transition-all">
                                         <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                                            <span className="material-symbols-outlined text-emerald-500">{req?.icon || 'description'}</span>
+                                            <span className="material-symbols-outlined text-emerald-500">{getDocIcon(d.docType)}</span>
                                         </div>
                                         <h3 className="text-[13px] font-bold text-gray-900 mb-1 line-clamp-1">{req?.label || d.docType}</h3>
                                         <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-md text-[8px] font-black uppercase tracking-tighter mb-4">
@@ -539,8 +601,6 @@ export default function DocumentVaultPage() {
                         </div>
                     </div>
                 )}
-                    </div>
-                </div>
 
                 {loading ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -550,9 +610,9 @@ export default function DocumentVaultPage() {
                     </div>
                 ) : (
                     <>
-                        {renderDocGroup("Student Documents", "person", STUDENT_DOCS)}
+                        {renderDocGroup("Student Documents", "person", studentDocs)}
                         {renderDocGroup(`Financial Co-Applicant (${profileType === "salaried" ? "Salaried" : "Self-Employed"})`, "account_balance", coappDocs)}
-                        {renderDocGroup("Father & Mother Documents", "family_restroom", PARENT_DOCS)}
+                        {renderDocGroup("Father & Mother Documents", "family_restroom", parentDocs)}
                         {staffRequestedDocs.length > 0 && renderDocGroup("Staff Requested Documents", "assignment", staffRequestedDocs)}
                     </>
                 )}

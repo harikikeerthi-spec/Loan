@@ -1,0 +1,106 @@
+import { Injectable, Logger } from '@nestjs/common';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+@Injectable()
+export class S3Service {
+  private readonly logger = new Logger(S3Service.name);
+  private readonly client: S3Client;
+  private readonly bucket: string;
+  private readonly region: string;
+
+  constructor() {
+    const rawRegion = (process.env.AWS_REGION || 'us-east-1').trim();
+    const regionMatch = rawRegion.match(/[a-z]{2}-[a-z]+-\d/i);
+    this.region = regionMatch ? regionMatch[0].toLowerCase() : 'us-east-1';
+    
+    this.bucket = (process.env.AWS_S3_BUCKET_NAME || '').trim();
+
+    const accessKeyId = (process.env.AWS_ACCESS_KEY_ID || '').trim();
+    const secretAccessKey = (process.env.AWS_SECRET_ACCESS_KEY || '').trim();
+
+    this.logger.log(`[S3Service] Initializing. Region: ${this.region} (parsed from "${rawRegion}"), Bucket: ${this.bucket}`);
+
+    this.client = new S3Client({
+      region: this.region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    });
+
+    if (!this.bucket) {
+      this.logger.warn(
+        '[S3Service] AWS_S3_BUCKET_NAME is not set. S3 operations will fail.',
+      );
+    }
+  }
+
+  /**
+   * Upload a file buffer to S3.
+   * @param key  The S3 object key (path in bucket), e.g. "documents/userId/aadhaar-1234567890.jpg"
+   * @param body The file content as a Buffer
+   * @param contentType The MIME type of the file
+   * @returns The public-style key (not a signed URL) stored in the DB
+   */
+  async upload(key: string, body: Buffer, contentType: string): Promise<string> {
+    this.logger.log(`[S3Service] Uploading: ${key} (${contentType})`);
+
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: body,
+        ContentType: contentType,
+        // Private by default — access via presigned URLs only
+      }),
+    );
+
+    this.logger.log(`[S3Service] Uploaded successfully: ${key}`);
+    return key;
+  }
+
+  /**
+   * Generate a pre-signed GET URL valid for `expiresIn` seconds (default 3600 = 1 hour).
+   */
+  async getPresignedUrl(key: string, expiresIn = 3600): Promise<string> {
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+    });
+    return getSignedUrl(this.client, command, { expiresIn });
+  }
+
+  /**
+   * Delete an object from S3 by its key.
+   */
+  async delete(key: string): Promise<void> {
+    this.logger.log(`[S3Service] Deleting: ${key}`);
+    try {
+      await this.client.send(
+        new DeleteObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+        }),
+      );
+      this.logger.log(`[S3Service] Deleted: ${key}`);
+    } catch (err) {
+      this.logger.error(`[S3Service] Delete failed for key ${key}:`, err);
+      // Don't throw — deletion failures should not block UI flows
+    }
+  }
+
+  /**
+   * Build a deterministic S3 key for a user document.
+   * Format: documents/{userId}/{docType}/{timestamp}-{originalName}
+   */
+  buildKey(userId: string, docType: string, originalname: string): string {
+    const sanitizedName = originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+    return `documents/${userId}/${docType}/${Date.now()}-${sanitizedName}`;
+  }
+}

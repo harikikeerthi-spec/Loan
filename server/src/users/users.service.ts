@@ -215,32 +215,57 @@ export class UsersService {
     try {
       console.log(`[UsersService.updateExtractedDetails] Updating details for user: ${userId}`);
       
+      const currentUser = await this.findById(userId);
+      if (!currentUser) {
+        console.warn(`[UsersService.updateExtractedDetails] User not found: ${userId}`);
+        return { success: false, error: 'User not found' };
+      }
+
       const payload: any = {};
       
-      // Map OCR fields to known database columns
-      if (details.documentVerified !== undefined) payload.documentVerified = details.documentVerified;
+      const compareAndSet = (currentVal: any, newVal: any, key: string) => {
+        if (newVal === undefined || newVal === null) return;
+        const cleanCurrent = String(currentVal || '').trim().toLowerCase();
+        const cleanNew = String(newVal).trim().toLowerCase();
+        if (!currentVal || cleanCurrent !== cleanNew) {
+          payload[key] = newVal;
+        }
+      };
+      
+      if (details.documentVerified !== undefined) {
+        if (currentUser.documentVerified !== details.documentVerified) {
+          payload.documentVerified = details.documentVerified;
+        }
+      }
       
       if (details.full_name) {
         const parts = details.full_name.trim().split(/\s+/);
         if (parts.length > 0) {
-          payload.firstName = parts[0];
-          if (parts.length > 1) {
-            payload.lastName = parts.slice(1).join(' ');
+          const newFirstName = parts[0];
+          const newLastName = parts.slice(1).join(' ');
+          
+          compareAndSet(currentUser.firstName, newFirstName, 'firstName');
+          if (newLastName) {
+            compareAndSet(currentUser.lastName, newLastName, 'lastName');
           }
         }
       }
       
       if (details.date_of_birth) {
         const parsedDob = this.parseDate(details.date_of_birth);
-        if (parsedDob) payload.dateOfBirth = parsedDob;
+        if (parsedDob) {
+          const currentDob = currentUser.dateOfBirth ? new Date(currentUser.dateOfBirth).toISOString().split('T')[0] : '';
+          const newDob = new Date(parsedDob).toISOString().split('T')[0];
+          if (currentDob !== newDob) {
+            payload.dateOfBirth = parsedDob;
+          }
+        }
       }
 
-      // Add fields that might exist but we should be careful
-      // These will only work if columns are added to the User table
-      if (details.panNumber) payload.panNumber = details.panNumber;
-      if (details.aadhaarNumber) payload.aadhaarNumber = details.aadhaarNumber;
-      if (details.father_name) payload.fatherName = details.father_name;
-      if (details.address) payload.permanentAddress = details.address;
+      if (details.panNumber) compareAndSet(currentUser.panNumber, details.panNumber, 'panNumber');
+      if (details.aadhaarNumber) compareAndSet(currentUser.aadhaarNumber, details.aadhaarNumber, 'aadhaarNumber');
+      if (details.father_name) compareAndSet(currentUser.fatherName, details.father_name, 'fatherName');
+      if (details.address) compareAndSet(currentUser.permanentAddress, details.address, 'permanentAddress');
 
       if (Object.keys(payload).length === 0) {
         console.log('[UsersService.updateExtractedDetails] No fields to update.');

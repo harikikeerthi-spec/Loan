@@ -183,10 +183,12 @@ export class OpenRouterService {
         return (res.universities || res.courses || []) as any[];
     }
 
-    async chatWithVision(prompt: string, imageUrl: string, model: string = 'google/gemini-2.0-flash-001'): Promise<string> {
+    async chatWithVision(prompt: string, imageUrl: string, model: string = 'anthropic/claude-3.5-sonnet'): Promise<string> {
         if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') {
             throw new Error('OPENROUTER_API_KEY is not configured');
         }
+
+        const isPdf = imageUrl.startsWith('data:application/pdf');
 
         const requestBody = {
             model: model,
@@ -195,7 +197,13 @@ export class OpenRouterService {
                     role: 'user',
                     content: [
                         { type: 'text', text: prompt },
-                        {
+                        isPdf ? {
+                            type: 'file',
+                            file: {
+                                filename: 'document.pdf',
+                                file_data: imageUrl
+                            }
+                        } : {
                             type: 'image_url',
                             image_url: { url: imageUrl }
                         }

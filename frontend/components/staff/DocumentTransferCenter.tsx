@@ -178,6 +178,7 @@ export default function DocumentTransferCenter() {
         selectedProfile.id,
         uploadForm.file,
         uploadForm.docType,
+        undefined,
         uploadForm.description
       );
       setShowUploadModal(false);

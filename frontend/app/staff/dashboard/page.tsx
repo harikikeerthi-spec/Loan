@@ -158,17 +158,28 @@ export default function StaffDashboardPage() {
 
     const [fullActivities, setFullActivities] = useState<any[]>([]);
     const [activitiesLoading, setActivitiesLoading] = useState(false);
+    const [activitiesTotal, setActivitiesTotal] = useState(0);
+    const [activitiesPage, setActivitiesPage] = useState(1);
+    const [activitiesFilter, setActivitiesFilter] = useState("all");
+    const [activitiesSearch, setActivitiesSearch] = useState("");
+    const activitiesLimit = 15;
 
     const loadFullActivities = async () => {
         setActivitiesLoading(true);
         try {
-            const res: any = await staffProfileApi.getDashboardActivities(100);
-            // Backend returns a plain array directly
-            const items: any[] = Array.isArray(res) ? res : (res?.data ?? []);
+            const offset = (activitiesPage - 1) * activitiesLimit;
+            const res: any = await staffProfileApi.getAllDashboardActivities({
+                limit: activitiesLimit,
+                offset,
+                type: activitiesFilter,
+                search: activitiesSearch,
+            });
+            const items: any[] = Array.isArray(res?.data) ? res.data : [];
             setFullActivities(items.map((a: any) => ({
                 ...a,
                 time: formatRelativeTime(a.createdAt || a.time)
             })));
+            setActivitiesTotal(res?.total ?? items.length);
         } catch (err) {
             console.error("Failed to load full activities", err);
         } finally {
@@ -180,7 +191,7 @@ export default function StaffDashboardPage() {
         if (activeSection === 'activities') {
             loadFullActivities();
         }
-    }, [activeSection]);
+    }, [activeSection, activitiesPage, activitiesFilter, activitiesSearch]);
 
     // Real-time updates
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
@@ -270,13 +281,14 @@ export default function StaffDashboardPage() {
 
     // Onboard applicant — two-step state
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [previewDoc, setPreviewDoc] = useState<{ url: string; name: string } | null>(null);
     const [onboardStep, setOnboardStep] = useState<1 | 2 | 3 | 4>(1);
     const [createdUser, setCreatedUser] = useState<any>(null);
     const [quickForm, setQuickForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
     const [profileTab, setProfileTab] = useState<"personal" | "academic" | "work" | "tests" | "family">("personal");
     const [newStudent, setNewStudent] = useState({
         email: "", firstName: "", lastName: "", middleName: "", mobile: "", role: "student",
-        dob: "", gender: "", maritalStatus: "",
+        dob: "", gender: "", maritalStatus: "", pan: "", aadhaarNumber: "",
         mailingAddress: { address1: "", address2: "", city: "", state: "", country: "", pincode: "" },
         permanentAddress: { address1: "", address2: "", city: "", state: "", country: "", pincode: "" },
         passport: { number: "", issueDate: "", expiryDate: "", issueCountry: "", birthCity: "", birthCountry: "" },
@@ -548,13 +560,34 @@ export default function StaffDashboardPage() {
 
     const handleLinkExistingUser = async (user: any) => {
         setCreatedUser(user);
+        
+        let fullUser = user;
+        try {
+            const profileRes: any = await adminApi.getUserProfile(user.email);
+            if (profileRes?.success && profileRes?.user) {
+                fullUser = profileRes.user;
+            }
+        } catch (e) {
+            console.warn("Failed to fetch full user profile, using basic list data", e);
+        }
+
         setNewStudent(s => ({
             ...s,
-            firstName: user.firstName || "",
-            lastName: user.lastName || "",
-            email: user.email || "",
-            mobile: user.mobile || user.phone || "",
-            dob: user.dateOfBirth || "",
+            firstName: fullUser.firstName || "",
+            lastName: fullUser.lastName || "",
+            email: fullUser.email || "",
+            mobile: fullUser.mobile || fullUser.phone || "",
+            dob: fullUser.dateOfBirth || "",
+            pan: fullUser.panNumber || "",
+            aadhaarNumber: fullUser.aadhaarNumber || "",
+            permanentAddress: fullUser.permanentAddress ? {
+                ...s.permanentAddress,
+                address1: fullUser.permanentAddress
+            } : s.permanentAddress,
+            mailingAddress: fullUser.permanentAddress ? {
+                ...s.mailingAddress,
+                address1: fullUser.permanentAddress
+            } : s.mailingAddress,
         }));
 
         // Check if StaffProfile exists first to prevent 409 Conflict error
@@ -668,7 +701,9 @@ export default function StaffDashboardPage() {
                     mobile: newStudent.mobile,
                     dob: newStudent.dob,
                     gender: newStudent.gender,
-                    maritalStatus: newStudent.maritalStatus
+                    maritalStatus: newStudent.maritalStatus,
+                    pan: newStudent.pan,
+                    aadhaarNumber: newStudent.aadhaarNumber
                 },
                 address: {
                     mailing: newStudent.mailingAddress,
@@ -721,6 +756,10 @@ export default function StaffDashboardPage() {
 
     const handleFinalOnboardSubmit = async () => {
         // Global validation check before final submission
+        if (newStudent.pan && !isPanValid(newStudent.pan)) {
+            alert("Invalid Applicant's PAN Number.");
+            return;
+        }
         if (newStudent.family.fatherMobile && !isPhoneValid(newStudent.family.fatherMobile)) {
             alert("Invalid Father's Mobile Number.");
             return;
@@ -841,6 +880,304 @@ export default function StaffDashboardPage() {
         setOnboardStep(3);
     };
 
+    const viewFile = async (docType: string) => {
+        const userId = getCreatedUserId();
+        if (!userId) return;
+        try {
+            const res = await fetch(`/api/documents/presigned-view/${userId}/${docType}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken')}`
+                }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success && data.url) {
+                    setPreviewDoc({ url: data.url, name: docType.toUpperCase().replace(/_/g, ' ') });
+                    return;
+                }
+            }
+        } catch (e) {
+            console.error("Presigned view retrieval failed:", e);
+        }
+        // Fallback: direct streaming URL route
+        setPreviewDoc({
+            url: `/api/documents/view/${userId}/${docType}`,
+            name: docType.toUpperCase().replace(/_/g, ' ')
+        });
+    };
+
+    const parseOcrDate = (dateStr: string): string => {
+        if (!dateStr) return "";
+        try {
+            const clean = dateStr.replace(/[^\d\/\-]/g, '').trim();
+            if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+            const parts = clean.split(/[\/\-]/);
+            if (parts.length === 3) {
+                if (parts[0].length === 4) {
+                    return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+                } else if (parts[2].length === 4) {
+                    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                }
+            }
+            const d = new Date(dateStr);
+            if (!isNaN(d.getTime())) {
+                return d.toISOString().split('T')[0];
+            }
+        } catch (e) {
+            console.warn("Date parsing failed for:", dateStr);
+        }
+        return dateStr;
+    };
+
+    const autoFillFromOcr = async (docType: string, extractedFields: any) => {
+        if (!extractedFields || Object.keys(extractedFields).length === 0) return;
+        console.log(`[OCR AUTOFILL] Processing extracted fields for ${docType}:`, extractedFields);
+
+        setNewStudent(prev => {
+            const updated = { ...prev };
+            
+            const compareAndSet = (currentVal: string | undefined | null, newVal: string, setter: (val: string) => void) => {
+                if (!newVal) return;
+                const cleanCurrent = String(currentVal || '').trim().toLowerCase();
+                const cleanNew = String(newVal).trim().toLowerCase();
+                if (!currentVal || cleanCurrent !== cleanNew) {
+                    setter(newVal);
+                }
+            };
+
+            const mapFullName = (fullName: string) => {
+                if (!fullName) return;
+                const parts = fullName.trim().split(/\s+/);
+                if (parts.length > 0) {
+                    const newFirstName = parts[0];
+                    const newLastName = parts.slice(1).join(' ');
+                    
+                    compareAndSet(updated.firstName, newFirstName, (val) => {
+                        updated.firstName = val;
+                    });
+                    if (newLastName) {
+                        compareAndSet(updated.lastName, newLastName, (val) => {
+                            updated.lastName = val;
+                        });
+                    }
+                }
+            };
+
+            if (docType === 'passport') {
+                if (extractedFields.passport_number) {
+                    compareAndSet(updated.passport?.number, extractedFields.passport_number, (val) => {
+                        updated.passport = { ...updated.passport, number: val };
+                    });
+                }
+                if (extractedFields.date_of_issue) {
+                    const parsed = parseOcrDate(extractedFields.date_of_issue);
+                    compareAndSet(updated.passport?.issueDate, parsed, (val) => {
+                        updated.passport = { ...updated.passport, issueDate: val };
+                    });
+                }
+                if (extractedFields.date_of_expiry) {
+                    const parsed = parseOcrDate(extractedFields.date_of_expiry);
+                    compareAndSet(updated.passport?.expiryDate, parsed, (val) => {
+                        updated.passport = { ...updated.passport, expiryDate: val };
+                    });
+                }
+                if (extractedFields.place_of_issue) {
+                    compareAndSet(updated.passport?.issueCountry, extractedFields.place_of_issue, (val) => {
+                        updated.passport = { ...updated.passport, issueCountry: val };
+                    });
+                }
+                if (extractedFields.place_of_birth) {
+                    compareAndSet(updated.passport?.birthCity, extractedFields.place_of_birth, (val) => {
+                        updated.passport = { ...updated.passport, birthCity: val };
+                    });
+                }
+                if (extractedFields.nationality) {
+                    compareAndSet(updated.passport?.birthCountry, extractedFields.nationality, (val) => {
+                        updated.passport = { ...updated.passport, birthCountry: val };
+                    });
+                    compareAndSet(updated.nationality?.citizenship, extractedFields.nationality, (val) => {
+                        updated.nationality = {
+                            ...updated.nationality,
+                            citizenship: val,
+                            name: val
+                        };
+                    });
+                }
+                if (extractedFields.full_name) {
+                    mapFullName(extractedFields.full_name);
+                }
+                if (extractedFields.dob) {
+                    const parsed = parseOcrDate(extractedFields.dob);
+                    compareAndSet(updated.dob, parsed, (val) => {
+                        updated.dob = val;
+                    });
+                }
+                if (extractedFields.gender) {
+                    const g = String(extractedFields.gender).toLowerCase();
+                    const newGender = g.startsWith('m') ? 'Male' : g.startsWith('f') ? 'Female' : 'Other';
+                    compareAndSet(updated.gender, newGender, (val) => {
+                        updated.gender = val;
+                    });
+                }
+                if (extractedFields.address) {
+                    compareAndSet(updated.permanentAddress?.address1, extractedFields.address, (val) => {
+                        updated.permanentAddress = { ...updated.permanentAddress, address1: val };
+                    });
+                    compareAndSet(updated.mailingAddress?.address1, extractedFields.address, (val) => {
+                        updated.mailingAddress = { ...updated.mailingAddress, address1: val };
+                    });
+                }
+            } else if (docType === 'pan') {
+                if (extractedFields.pan_number) {
+                    compareAndSet(updated.pan, extractedFields.pan_number, (val) => {
+                        updated.pan = val;
+                    });
+                }
+                if (extractedFields.full_name) {
+                    mapFullName(extractedFields.full_name);
+                }
+                if (extractedFields.dob) {
+                    const parsed = parseOcrDate(extractedFields.dob);
+                    compareAndSet(updated.dob, parsed, (val) => {
+                        updated.dob = val;
+                    });
+                }
+            } else if (docType === 'national_id') {
+                if (extractedFields.full_name) {
+                    mapFullName(extractedFields.full_name);
+                }
+                if (extractedFields.dob) {
+                    const parsed = parseOcrDate(extractedFields.dob);
+                    compareAndSet(updated.dob, parsed, (val) => {
+                        updated.dob = val;
+                    });
+                }
+                if (extractedFields.gender) {
+                    const g = String(extractedFields.gender).toLowerCase();
+                    const newGender = g.startsWith('m') ? 'Male' : g.startsWith('f') ? 'Female' : 'Other';
+                    compareAndSet(updated.gender, newGender, (val) => {
+                        updated.gender = val;
+                    });
+                }
+                if (extractedFields.address) {
+                    compareAndSet(updated.permanentAddress?.address1, extractedFields.address, (val) => {
+                        updated.permanentAddress = { ...updated.permanentAddress, address1: val };
+                    });
+                    compareAndSet(updated.mailingAddress?.address1, extractedFields.address, (val) => {
+                        updated.mailingAddress = { ...updated.mailingAddress, address1: val };
+                    });
+                }
+                if (extractedFields.pin_code) {
+                    compareAndSet(updated.permanentAddress?.pincode, extractedFields.pin_code, (val) => {
+                        updated.permanentAddress = { ...updated.permanentAddress, pincode: val };
+                    });
+                    compareAndSet(updated.mailingAddress?.pincode, extractedFields.pin_code, (val) => {
+                        updated.mailingAddress = { ...updated.mailingAddress, pincode: val };
+                    });
+                }
+                const aadharNum = extractedFields.aadhaar_number || extractedFields.aadhaar || extractedFields.national_id_number || extractedFields.document_number;
+                if (aadharNum) {
+                    compareAndSet(updated.aadhaarNumber, aadharNum, (val) => {
+                        updated.aadhaarNumber = val;
+                    });
+                }
+            } else if (docType === 'father_pan') {
+                if (extractedFields.pan_number) {
+                    compareAndSet(updated.family?.fatherPan, extractedFields.pan_number, (val) => {
+                        updated.family = { ...updated.family, fatherPan: val };
+                    });
+                }
+                if (extractedFields.full_name) {
+                    compareAndSet(updated.family?.fatherName, extractedFields.full_name, (val) => {
+                        updated.family = { ...updated.family, fatherName: val };
+                    });
+                }
+            } else if (docType === 'mother_pan') {
+                if (extractedFields.pan_number) {
+                    compareAndSet(updated.family?.motherPan, extractedFields.pan_number, (val) => {
+                        updated.family = { ...updated.family, motherPan: val };
+                    });
+                }
+                if (extractedFields.full_name) {
+                    compareAndSet(updated.family?.motherName, extractedFields.full_name, (val) => {
+                        updated.family = { ...updated.family, motherName: val };
+                    });
+                }
+            } else if (docType === 'coapplicant_pan') {
+                if (extractedFields.pan_number) {
+                    compareAndSet(updated.coApplicant?.pan, extractedFields.pan_number, (val) => {
+                        updated.coApplicant = { ...updated.coApplicant, pan: val };
+                    });
+                }
+                if (extractedFields.full_name) {
+                    compareAndSet(updated.coApplicant?.name, extractedFields.full_name, (val) => {
+                        updated.coApplicant = { ...updated.coApplicant, name: val };
+                    });
+                }
+            }
+
+            // Sync the updated profile to backend immediately
+            const userId = createdUser?.id || createdUser?.uid || createdUser?._id;
+            if (userId) {
+                const payload = {
+                    userId,
+                    personal: {
+                        firstName: updated.firstName,
+                        lastName: updated.lastName,
+                        middleName: updated.middleName,
+                        email: updated.email,
+                        mobile: updated.mobile,
+                        dob: updated.dob,
+                        gender: updated.gender,
+                        maritalStatus: updated.maritalStatus,
+                        pan: updated.pan,
+                        aadhaarNumber: updated.aadhaarNumber
+                    },
+                    address: {
+                        mailing: updated.mailingAddress,
+                        permanent: updated.permanentAddress
+                    },
+                    academic: updated.academic,
+                    studyDestination: updated.academic.countryOfEducation || updated.academic.undergrad?.country,
+                    testScores: updated.tests,
+                    workExperience: updated.workExperience,
+                    familyDetails: updated.family,
+                    coApplicant: updated.coApplicant
+                };
+                onboardingApi.submit(payload).then(async () => {
+                    console.log("[OCR AUTOFILL] Persisted synced fields to database successfully.");
+                    try {
+                        const profileRes: any = await adminApi.getUserProfile(updated.email);
+                        if (profileRes?.success && profileRes?.user) {
+                            const fullUser = profileRes.user;
+                            setNewStudent(s => ({
+                                ...s,
+                                pan: fullUser.panNumber || s.pan,
+                                aadhaarNumber: fullUser.aadhaarNumber || s.aadhaarNumber,
+                                permanentAddress: fullUser.permanentAddress ? {
+                                    ...s.permanentAddress,
+                                    address1: fullUser.permanentAddress
+                                } : s.permanentAddress,
+                                mailingAddress: fullUser.permanentAddress ? {
+                                    ...s.mailingAddress,
+                                    address1: fullUser.permanentAddress
+                                } : s.mailingAddress,
+                            }));
+                        }
+                    } catch (fetchErr) {
+                        console.warn("[OCR AUTOFILL] Failed to re-fetch unmasked details:", fetchErr);
+                    }
+                }).catch(err => {
+                    console.error("[OCR AUTOFILL] Failed to persist fields to database:", err);
+                });
+            }
+
+            return updated;
+        });
+
+        alert(`✨ AI OCR Auto-fill Success:\nProfile details (names, document numbers, dates, address) have been successfully extracted from your ${docType.replace(/_/g, ' ').toUpperCase()} and updated in the user profile!`);
+    };
+
     // Handle S3 document upload
     const handleDocumentUpload = async (
         file: File,
@@ -876,6 +1213,12 @@ export default function StaffDashboardPage() {
                     alert(`⚠️ ${personName} - ${docType.replace(/_/g, ' ')} uploaded but AI rejected: ${res.data?.aiExplanation || 'Invalid document type'}`);
                 } else {
                     alert(`✅ ${personName} - ${docType.replace(/_/g, ' ')} uploaded successfully!`);
+                }
+
+                // Auto-fill student profile from OCR result if valid
+                const extractedFields = res.data?.ocrResult?.extractedFields || res.data?.verification?.details?.extractedFields;
+                if (extractedFields && Object.keys(extractedFields).length > 0) {
+                    await autoFillFromOcr(docType, extractedFields);
                 }
 
                 fetchUserDocuments(userId);
@@ -1100,10 +1443,7 @@ export default function StaffDashboardPage() {
                     {isUploaded && (
                         <button
                             type="button"
-                            onClick={() => {
-                                const userId = getCreatedUserId();
-                                if (userId) window.open(`/api/documents/view/${userId}/${doc.type}`, '_blank', 'noopener,noreferrer');
-                            }}
+                            onClick={() => viewFile(doc.type)}
                             className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all flex items-center gap-2"
                         >
                             <span className="material-symbols-outlined text-[16px]">visibility</span>
@@ -1248,7 +1588,7 @@ export default function StaffDashboardPage() {
 
                     {/* Onboarding Flow View */}
                     {activeSection === "onboarding" && (
-                        <div className="flex flex-col md:flex-row h-screen bg-slate-50 animate-in fade-in duration-500 overflow-hidden">
+                        <div className="flex flex-col md:flex-row h-screen bg-slate-50 animate-in fade-in duration-500 overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
                             {/* Header / Breadcrumbs & Stepper */}
                             {/* LEFT SIDEBAR: Profile & Progress */}
                             <div className="w-full md:w-[320px] bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col p-6 md:p-8 overflow-y-auto no-scrollbar shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
@@ -1264,7 +1604,7 @@ export default function StaffDashboardPage() {
                                                 <div className="w-24 h-24 bg-gradient-to-br from-emerald-400 to-teal-600 text-white rounded-[32px] flex items-center justify-center mx-auto mb-4 text-3xl font-black shadow-xl shadow-emerald-500/20 rotate-3">
                                                     {newStudent.firstName?.[0] || 'S'}
                                                 </div>
-                                                <h3 className="text-xl font-black text-slate-900 leading-tight">{newStudent.firstName} {newStudent.lastName}</h3>
+                                                <h3 className="text-xl font-bold text-[#0d1b2a] leading-tight">{newStudent.firstName} {newStudent.lastName}</h3>
                                                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Student Profile</p>
                                             </div>
 
@@ -1326,7 +1666,7 @@ export default function StaffDashboardPage() {
                                                 key={step.id}
                                                 type="button"
                                                 disabled={!createdUser || step.id === 1 || step.id === 4}
-                                                onClick={() => setOnboardStep(step.id)}
+                                                onClick={() => setOnboardStep(step.id as any)}
                                                 className={`relative w-full text-left group/step ${(!createdUser || step.id === 1 || step.id === 4) ? 'cursor-default' : 'cursor-pointer'}`}
                                             >
                                                 <div className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${onboardStep === step.id ? 'bg-indigo-50/50 text-indigo-700' : onboardStep > step.id ? 'text-emerald-600 hover:bg-emerald-50/30' : 'text-slate-400'} ${onboardStep !== step.id && createdUser && step.id !== 1 && step.id !== 4 ? 'hover:bg-indigo-50/30' : ''}`}>
@@ -1368,7 +1708,7 @@ export default function StaffDashboardPage() {
                                                 className={`py-5 flex items-center gap-2 border-b-2 transition-all shrink-0 group ${profileTab === tab.id ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                                             >
                                                 <span className={`material-symbols-outlined text-[18px] ${profileTab === tab.id ? 'text-indigo-600' : 'text-slate-300 group-hover:text-slate-400'}`}>{tab.icon}</span>
-                                                <span className="text-[11px] font-black uppercase tracking-widest">{tab.label}</span>
+                                                <span className="text-[11px] font-bold font-['Playfair_Display',serif] uppercase tracking-widest">{tab.label}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -1385,7 +1725,7 @@ export default function StaffDashboardPage() {
                                                     <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner transition-all duration-500 ${onboardMode === 'new' ? 'bg-emerald-50 text-emerald-600 rotate-0' : 'bg-indigo-50 text-indigo-600 rotate-12'}`}>
                                                         <span className="material-symbols-outlined text-[40px]">{onboardMode === 'new' ? 'person_add' : 'link'}</span>
                                                     </div>
-                                                    <h2 className="text-3xl font-black text-slate-900 tracking-tight">Onboarding Entry</h2>
+                                                    <h2 className="text-3xl font-bold font-['Playfair_Display',serif] text-slate-900 tracking-tight">Onboarding Entry</h2>
                                                     <div className="flex items-center justify-center gap-6 mt-6">
                                                         <button onClick={() => setOnboardMode('new')} className={`flex items-center gap-2 pb-2 border-b-2 transition-all ${onboardMode === 'new' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-400'}`}>
                                                             <span className="text-[11px] font-black uppercase tracking-widest">Register New</span>
@@ -1463,7 +1803,7 @@ export default function StaffDashboardPage() {
                                                                                     {u.firstName?.[0] || '?'}{u.lastName?.[0] || ''}
                                                                                 </div>
                                                                                 <div className="flex-1 min-w-0">
-                                                                                    <p className="text-[13px] font-bold text-slate-900 truncate">{u.firstName} {u.lastName}</p>
+                                                                                    <p className="text-[13px] font-bold text-[#0d1b2a] truncate">{u.firstName} {u.lastName}</p>
                                                                                     <p className="text-[11px] text-slate-500 truncate">{u.email}</p>
                                                                                 </div>
                                                                                 <span className="material-symbols-outlined text-slate-300 text-[18px]">chevron_right</span>
@@ -1488,7 +1828,7 @@ export default function StaffDashboardPage() {
                                                 <form id="profile-personal-form" onSubmit={handleSaveProfile} className="space-y-10">
                                                     <div className="flex items-center justify-between">
                                                         <div>
-                                                            <h3 className="text-2xl font-black text-slate-900 tracking-tight">Personal Details</h3>
+                                                            <h3 className="text-2xl font-bold font-['Playfair_Display',serif] text-slate-900 tracking-tight">Personal Details</h3>
                                                             <p className="text-slate-500 text-sm font-medium mt-1">Provide core identification and contact information.</p>
                                                         </div>
                                                         <div className="flex items-center gap-4">
@@ -1572,6 +1912,14 @@ export default function StaffDashboardPage() {
                                                                                 <option value="married">Married</option>
                                                                                 <option value="divorced">Divorced</option>
                                                                             </select>
+                                                                        </div>
+                                                                        <div>
+                                                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">PAN Card*</label>
+                                                                            <input type="text" value={newStudent.pan} onChange={e => setNewStudent({ ...newStudent, pan: formatPan(e.target.value) })} onBlur={() => handleSaveProfile(true)} className={`w-full px-5 py-3.5 bg-slate-50 border ${newStudent.pan && !isPanValid(newStudent.pan) ? 'border-rose-300 focus:border-rose-500' : 'border-slate-200 focus:border-indigo-500'} rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all`} placeholder="PAN Number" style={{ textTransform: 'uppercase' }} maxLength={10} />
+                                                                        </div>
+                                                                        <div>
+                                                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Aadhaar Card*</label>
+                                                                            <input type="text" value={newStudent.aadhaarNumber || ""} onChange={e => setNewStudent({ ...newStudent, aadhaarNumber: e.target.value.replace(/\D/g, '') })} onBlur={() => handleSaveProfile(true)} className={`w-full px-5 py-3.5 bg-slate-50 border ${newStudent.aadhaarNumber && !isAadharValid(newStudent.aadhaarNumber) ? 'border-rose-300 focus:border-rose-500' : 'border-slate-200 focus:border-indigo-500'} rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all`} placeholder="Aadhaar Number" maxLength={12} />
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -2579,7 +2927,7 @@ export default function StaffDashboardPage() {
                                                             <span className="material-symbols-outlined text-[24px]">folder_managed</span>
                                                         </div>
                                                         <div>
-                                                            <h3 className="text-lg font-bold text-slate-900">Applicant Documents</h3>
+                                                            <h3 className="text-lg font-bold font-['Playfair_Display',serif] text-slate-900">Applicant Documents</h3>
                                                             <p className="text-xs text-slate-500">Verify existing uploads or add missing documents.</p>
                                                         </div>
                                                     </div>
@@ -2599,7 +2947,7 @@ export default function StaffDashboardPage() {
                                                 <div className="space-y-10">
                                                     {/* Category: Primary Applicant */}
                                                     <div>
-                                                        <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-5 bg-emerald-50 px-3 py-1 rounded-full w-fit">Primary Applicant Documents</h4>
+                                                        <h4 className="text-[10px] font-bold font-['Playfair_Display',serif] uppercase tracking-widest text-emerald-600 mb-5 bg-emerald-50 px-3 py-1 rounded-full w-fit">Primary Applicant Documents</h4>
                                                         <div className="space-y-3">
                                                             {getStudentDocumentRequirements(newStudent).map((doc, i) => {
                                                                 const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
@@ -2626,7 +2974,7 @@ export default function StaffDashboardPage() {
                                                                         <div className="flex items-center gap-3">
                                                                             {isUploaded ? (
                                                                                 <>
-                                                                                    <button onClick={() => window.open(existingDoc.filePath || existingDoc.url, '_blank')} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all flex items-center gap-2">
+                                                                                    <button onClick={() => viewFile(doc.type)} className="px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-all flex items-center gap-2">
                                                                                         <span className="material-symbols-outlined text-[16px]">visibility</span>
                                                                                         Review
                                                                                     </button>
@@ -2641,9 +2989,17 @@ export default function StaffDashboardPage() {
                                                                                                     uploaded: true,
                                                                                                     filePath: existingDoc.filePath
                                                                                                 });
+                                                                                                const meta = existingDoc.verificationMetadata;
+                                                                                                if (meta) {
+                                                                                                    const extractedFields = meta.details?.extractedFields || meta.extractedFields || meta.ocrResult?.extractedFields || (typeof meta === 'object' ? meta : null);
+                                                                                                    if (extractedFields && Object.keys(extractedFields).length > 0) {
+                                                                                                        await autoFillFromOcr(doc.type, extractedFields);
+                                                                                                    }
+                                                                                                }
                                                                                                 alert(`✅ ${doc.name} verified and updated in user profile!`);
                                                                                                 fetchUserDocuments(userId);
                                                                                             } catch (e) {
+                                                                                                console.error("Verification error:", e);
                                                                                                 alert("Failed to update verification status");
                                                                                             }
                                                                                         }}
@@ -3316,72 +3672,187 @@ export default function StaffDashboardPage() {
 
                     {activeSection === "activities" && (
                         <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in pb-12">
+                            {/* Header Panel */}
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                 <div>
                                     <h2 className="text-[26px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] tracking-tight flex items-center gap-3">
                                         Audit Trail & Logs
-                                        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[11px] font-semibold text-slate-700">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                                        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-[11px] font-semibold text-indigo-700">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
                                             FULL HISTORY
                                         </span>
                                     </h2>
-                                    <p className="text-slate-500 text-[13px] mt-1">Reviewing comprehensive administrative activity and system logs.</p>
+                                    <p className="text-slate-500 text-[13px] mt-1 font-medium">Reviewing comprehensive administrative activity and system logs.</p>
                                 </div>
                                 <button
                                     onClick={loadFullActivities}
-                                    className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
+                                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/20"
                                 >
                                     <span className="material-symbols-outlined text-[16px]">refresh</span>
                                     Refresh Logs
                                 </button>
                             </div>
 
-                            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                                <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Chronological Events</span>
-                                    <span className="text-[10px] font-bold text-slate-400">{fullActivities.length} Events Logged</span>
+                            {/* Filters Bar */}
+                            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                {/* Search */}
+                                <div className="relative flex-1 max-w-md">
+                                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                                    <input
+                                        type="text"
+                                        placeholder="Search activities by message or initiator..."
+                                        value={activitiesSearch}
+                                        onChange={(e) => { setActivitiesSearch(e.target.value); setActivitiesPage(1); }}
+                                        className="w-full pl-11 pr-4 py-3 bg-slate-50/50 hover:bg-slate-50 border border-slate-200 rounded-xl text-[12px] focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-medium"
+                                    />
+                                </div>
+
+                                {/* Type Badges */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    {[
+                                        { key: "all", label: "ALL EVENTS", icon: "select_all", color: "bg-slate-100 text-slate-700" },
+                                        { key: "new", label: "REGISTRATIONS", icon: "person_add", color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+                                        { key: "update", label: "DOSSIER SYNCS", icon: "sync", color: "bg-blue-50 text-blue-700 border-blue-100" },
+                                        { key: "upload", label: "UPLOADS", icon: "upload_file", color: "bg-purple-50 text-purple-700 border-purple-100" },
+                                        { key: "share", label: "DISTRIBUTION", icon: "send", color: "bg-indigo-50 text-indigo-700 border-indigo-100" },
+                                        { key: "approved", label: "APPROVALS", icon: "task_alt", color: "bg-emerald-50 text-emerald-700 border-emerald-100" },
+                                        { key: "rejected", label: "DELETIONS", icon: "delete", color: "bg-rose-50 text-rose-700 border-rose-100" },
+                                    ].map((badge) => (
+                                        <button
+                                            key={badge.key}
+                                            onClick={() => { setActivitiesFilter(badge.key); setActivitiesPage(1); }}
+                                            className={`px-3.5 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 transition-all border ${activitiesFilter === badge.key
+                                                ? "bg-[#0f172a] text-white border-[#0f172a] shadow-md shadow-slate-900/10 scale-95"
+                                                : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
+                                                }`}
+                                        >
+                                            <span className="material-symbols-outlined text-[14px]">{badge.icon}</span>
+                                            {badge.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Timeline Table/List */}
+                            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                                <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Chronological Event Timeline</span>
+                                    <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-100">{activitiesTotal} System Records Found</span>
                                 </div>
                                 <div className="divide-y divide-slate-100">
                                     {activitiesLoading ? (
-                                        <div className="p-20 text-center">
-                                            <div className="w-10 h-10 border-4 border-slate-100 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
-                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Loading comprehensive logs...</p>
+                                        <div className="p-24 text-center">
+                                            <div className="w-12 h-12 border-4 border-slate-100 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
+                                            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Loading secure database logs...</p>
                                         </div>
-                                    ) : fullActivities.length > 0 ? fullActivities.map((a, i) => (
-                                        <div key={a.id || i} className="p-4 hover:bg-slate-50 transition-all group flex items-start gap-4">
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${a.color}`}>
-                                                <span className="material-symbols-outlined text-[20px]">{a.icon}</span>
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <p className="text-[13px] font-bold text-slate-900 leading-none">{a.msg}</p>
-                                                    <div className="text-right shrink-0 ml-4">
-                                                        <span className="text-[11px] font-semibold text-slate-400 tabular-nums block">{a.time}</span>
-                                                        {(a.createdAt || a.rawTime) && (
-                                                            <span className="text-[10px] text-slate-300 tabular-nums flex items-center gap-1 justify-end mt-0.5">
-                                                                <span className="material-symbols-outlined text-[10px]">calendar_today</span>
-                                                                {formatAbsoluteDateTime(a.createdAt || a.rawTime)}
-                                                            </span>
-                                                        )}
+                                    ) : fullActivities.length > 0 ? (
+                                        fullActivities.map((a, i) => (
+                                            <div key={a.id || i} className="p-5 hover:bg-slate-50/60 transition-all group flex items-start gap-4">
+                                                {/* Action Icon */}
+                                                <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border shadow-sm ${a.color || 'bg-slate-50 text-slate-600 border-slate-100'}`}>
+                                                    <span className="material-symbols-outlined text-[20px]">{a.icon || 'history'}</span>
+                                                </div>
+
+                                                {/* Details */}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-1.5">
+                                                        <p className="text-[14px] font-bold text-slate-900 leading-snug tracking-tight">{a.msg}</p>
+                                                        <div className="text-right shrink-0 mt-1 md:mt-0">
+                                                            <span className="text-[11px] font-semibold text-slate-400 tabular-nums block">{a.time}</span>
+                                                            {a.createdAt && (
+                                                                <span className="text-[10px] text-slate-300 tabular-nums flex items-center gap-1 justify-end mt-0.5">
+                                                                    <span className="material-symbols-outlined text-[10px]">schedule</span>
+                                                                    {formatAbsoluteDateTime(a.createdAt)}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Meta Metadata tags */}
+                                                    <div className="flex flex-wrap items-center gap-3">
+                                                        {/* Action Category Tag */}
+                                                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[9px] font-black uppercase tracking-wider text-slate-500">
+                                                            TYPE: {a.type}
+                                                        </span>
+                                                        <span className="w-1 h-1 rounded-full bg-slate-200" />
+
+                                                        {/* Actor Identification */}
+                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600">
+                                                            <div className="w-4 h-4 rounded-full overflow-hidden bg-slate-100 border border-slate-200 flex-shrink-0">
+                                                                <img
+                                                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${a.actorEmail || a.actorName}`}
+                                                                    alt=""
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            </div>
+                                                            <span>Actor: {a.actorName}</span>
+                                                            {a.actorEmail && <span className="text-slate-400 font-medium">({a.actorEmail})</span>}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest">Action: {a.type}</span>
-                                                    <span className="w-1 h-1 rounded-full bg-slate-200" />
-                                                    <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                                                        <span className="material-symbols-outlined text-[12px]">person</span>
-                                                        Initiated by: {a.initiator?.firstName || 'System'} {a.initiator?.lastName || ''}
-                                                    </span>
-                                                </div>
                                             </div>
-                                        </div>
-                                    )) : (
-                                        <div className="p-20 text-center opacity-40">
-                                            <span className="material-symbols-outlined text-5xl mb-4">history</span>
-                                            <p className="text-sm font-bold uppercase tracking-wider">No activity recorded yet</p>
+                                        ))
+                                    ) : (
+                                        <div className="p-24 text-center">
+                                            <span className="material-symbols-outlined text-6xl text-slate-200 mb-4 block">manage_search</span>
+                                            <p className="text-[12px] font-black uppercase tracking-[0.2em] text-slate-400">No Auditable Actions Found</p>
+                                            <p className="text-[11px] text-slate-400 mt-1">Try modifying search keywords or filters.</p>
                                         </div>
                                     )}
                                 </div>
+
+                                {/* Pagination Console */}
+                                {activitiesTotal > activitiesLimit && (
+                                    <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                        <div className="flex flex-col">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Navigation Console</p>
+                                            <p className="text-[11px] font-bold text-slate-700">
+                                                Page <span className="text-indigo-600">{activitiesPage}</span> of {Math.ceil(activitiesTotal / activitiesLimit)}
+                                                <span className="mx-2 text-slate-300">|</span>
+                                                Total Records: <span className="text-slate-900">{activitiesTotal}</span>
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                disabled={activitiesPage === 1 || activitiesLoading}
+                                                onClick={() => {
+                                                    setActivitiesPage(prev => Math.max(1, prev - 1));
+                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                }}
+                                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-sm"
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+                                                Previous
+                                            </button>
+                                            <div className="flex items-center gap-1 mx-2">
+                                                {[...Array(Math.min(5, Math.ceil(activitiesTotal / activitiesLimit)))].map((_, i) => {
+                                                    const pageNum = i + 1;
+                                                    return (
+                                                        <button
+                                                            key={pageNum}
+                                                            onClick={() => setActivitiesPage(pageNum)}
+                                                            className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${activitiesPage === pageNum ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white border border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600'}`}
+                                                        >
+                                                            {pageNum}
+                                                        </button>
+                                                    );
+                                                })}
+                                                {Math.ceil(activitiesTotal / activitiesLimit) > 5 && <span className="text-slate-400 text-[10px] font-black px-1">...</span>}
+                                            </div>
+                                            <button
+                                                disabled={activitiesPage >= Math.ceil(activitiesTotal / activitiesLimit) || activitiesLoading}
+                                                onClick={() => {
+                                                    setActivitiesPage(prev => prev + 1);
+                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                }}
+                                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-sm"
+                                            >
+                                                Next
+                                                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -3682,9 +4153,9 @@ export default function StaffDashboardPage() {
                                                     <th className="sticky left-[420px] z-20 bg-slate-50 px-5 py-5"><span className="flex items-center gap-1.5 text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest"><span className="material-symbols-outlined text-[14px]">mail</span> CONTACT</span></th>
                                                     <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">COLLEGE NAME</span></th>
                                                     <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">PROGRAM FOCUS</span></th>
-                                                    <th className="px-6 py-5 min-w-[240px] w-[260px]"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">TARGET BANK</span></th>
+                                                    <th className="px-6 py-5 min-w-[240px] w-[240px]"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">TARGET BANK</span></th>
                                                     <th className="px-5 py-5 w-48"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">PROGRESS</span></th>
-                                                    <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">CURRENT STATUS</span></th>
+                                                    <th className="px-5 py-5 min-w-[220px] w-[220px]"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">CURRENT STATUS</span></th>
                                                     <th className="px-5 py-5 text-center"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">ACTIONS</span></th>
                                                 </>
                                             )}
@@ -3846,11 +4317,11 @@ export default function StaffDashboardPage() {
                                                                 </td> */}
                                                                 <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
                                                                     <div className="flex flex-col items-start gap-1.5">
-                                                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${statusColors[statusKey] || 'bg-amber-50/50 text-amber-600 border-amber-200'}`}>
+                                                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-black uppercase tracking-wider border ${statusColors[statusKey] || 'bg-amber-50/50 text-amber-600 border-amber-200'}`}>
                                                                             <span className={`w-1.5 h-1.5 rounded-full ${statusKey === 'rejected' ? 'bg-rose-500' : statusKey === 'approved' || statusKey === 'verified' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                                                                             {item.status || 'DRAFT'}
                                                                         </span>
-                                                                        <div className="text-[8px] text-slate-500 font-medium">
+                                                                        <div className="text-[12px] text-slate-500 font-medium">
                                                                             <p>Submitted: {item.submittedAt ? format(new Date(item.submittedAt), "MMM d, yyyy") : '—'}</p>
                                                                             <p>Now: {format(new Date(), "MMM d, yyyy • HH:mm:ss")}</p>
                                                                         </div>
@@ -3922,7 +4393,7 @@ export default function StaffDashboardPage() {
                                                                             <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${item.last_login_at ? 'bg-emerald-400' : 'bg-slate-300'}`} />
                                                                         </div>
                                                                         <div className="min-w-0">
-                                                                            <p className="text-[15px] font-semibold text-slate-900 leading-tight">
+                                                                            <p className="text-[15px] font-bold text-[#0d1b2a] leading-tight">
                                                                                 {item.firstName || '—'} {item.lastName || ''}
                                                                             </p>
                                                                             <p className="text-[12px] text-slate-900 font-bold font-mono mt-1">
@@ -4209,6 +4680,63 @@ export default function StaffDashboardPage() {
                 isOpen={showPullModal}
                 onClose={() => setShowPullModal(false)}
             />
+
+            {/* Document Preview Modal / Right Side-Drawer */}
+            {previewDoc && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-end p-0 bg-slate-900/60 backdrop-blur-md transition-all animate-in fade-in duration-300" onClick={() => setPreviewDoc(null)}>
+                    <div
+                        className="w-full max-w-4xl h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header */}
+                        <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                            <div>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Document Vault Viewer</span>
+                                <h3 className="text-lg font-bold font-['Playfair_Display',serif] text-slate-900 mt-0.5">{previewDoc.name}</h3>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <a
+                                    href={previewDoc.url}
+                                    download
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-2.5 bg-white border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl transition-all shadow-sm hover:shadow flex items-center justify-center"
+                                    title="Open / Download Full File"
+                                >
+                                    <span className="material-symbols-outlined text-[20px]">download</span>
+                                </a>
+                                <button
+                                    onClick={() => setPreviewDoc(null)}
+                                    className="p-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl transition-all shadow-lg flex items-center justify-center"
+                                >
+                                    <span className="material-symbols-outlined text-[20px]">close</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 bg-slate-100/40 p-8 flex items-center justify-center overflow-auto">
+                            {previewDoc.url.toLowerCase().includes('.pdf') ||
+                                previewDoc.name.toLowerCase().includes('pdf') ||
+                                !/\.(jpg|jpeg|png|webp|gif)/i.test(previewDoc.url.split('?')[0]) ? (
+                                <iframe
+                                    src={previewDoc.url}
+                                    className="w-full h-full rounded-2xl border border-slate-200 bg-white shadow-xl"
+                                    title={previewDoc.name}
+                                />
+                            ) : (
+                                <div className="relative max-w-full max-h-full rounded-2xl overflow-hidden shadow-2xl bg-white p-4 border border-slate-200">
+                                    <img
+                                        src={previewDoc.url}
+                                        alt={previewDoc.name}
+                                        className="max-w-full max-h-[70vh] object-contain rounded-xl"
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

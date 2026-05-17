@@ -14,23 +14,11 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname, resolve } from 'path';
-import { existsSync, mkdirSync } from 'fs';
+import { memoryStorage } from 'multer';
 import { StaffProfileService } from './staff-profile.service';
 import { StaffGuard } from '../auth/staff.guard';
 
-const uploadStorage = diskStorage({
-  destination: (_req, _file, cb) => {
-    const dir = './uploads/staff-documents';
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    cb(null, dir);
-  },
-  filename: (_req, file, cb) => {
-    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `staff-${unique}${extname(file.originalname)}`);
-  },
-});
+const uploadStorage = memoryStorage();
 
 @UseGuards(StaffGuard)
 @Controller('staff-profiles')
@@ -161,6 +149,7 @@ export class StaffProfileController {
   }
 
   // ─── Dashboard Activity Logging ───────────────────────────────────────────
+
   @Post('activities')
   async logActivity(@Req() req: any, @Body() body: {
     type: string;
@@ -172,9 +161,27 @@ export class StaffProfileController {
     return { success: true };
   }
 
+  /** Recent N activities for the sidebar widget. */
   @Get('dashboard/activities')
   async getActivities(@Query('limit') limit?: string) {
     const logs = await this.svc.getDashboardActivities(limit ? parseInt(limit, 10) : 15);
     return { success: true, data: logs };
+  }
+
+  /** Full paginated + filtered Activity Log for the Activities section. */
+  @Get('activities/all')
+  async getAllActivities(
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('type') type?: string,
+    @Query('search') search?: string,
+  ) {
+    const result = await this.svc.getAllDashboardActivities({
+      limit: limit ? parseInt(limit, 10) : 50,
+      offset: offset ? parseInt(offset, 10) : 0,
+      type,
+      search,
+    });
+    return { success: true, data: result.items, total: result.total };
   }
 }

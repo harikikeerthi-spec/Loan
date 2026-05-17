@@ -55,7 +55,7 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
   ];
 
   const handleAutoFill = async () => {
-    if (!result || !result.extractedFields) return;
+    if (!result || !result.extracted_data) return;
     
     setProcessing(true);
     try {
@@ -70,7 +70,7 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
       };
 
       const updates: any = {};
-      Object.entries(result.extractedFields).forEach(([key, value]) => {
+      Object.entries(result.extracted_data).forEach(([key, value]) => {
         const profileField = fieldMapping[key];
         if (profileField) {
           updates[profileField] = value;
@@ -78,8 +78,8 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
       });
 
       // Special handling for full name split
-      if (result.extractedFields.full_name) {
-        const parts = String(result.extractedFields.full_name).split(' ');
+      if (result.extracted_data.full_name) {
+        const parts = String(result.extracted_data.full_name).split(' ');
         updates.firstName = parts[0];
         updates.lastName = parts.slice(1).join(' ') || '.';
       }
@@ -198,18 +198,25 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-[20px] font-bold tracking-tight">Extraction Data</h3>
               {result && (
-                <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                  result.isValid ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' : 'bg-rose-500/20 border-rose-500/40 text-rose-400'
-                }`}>
-                  {result.isValid ? 'Verified' : 'Validation Error'}
+                <div className="flex gap-2">
+                  {result.fraud_detected && (
+                    <div className="px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest bg-rose-500/20 border border-rose-500/40 text-rose-400">
+                      Fraud Detected
+                    </div>
+                  )}
+                  <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                    result.is_valid && !result.fraud_detected ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' : 'bg-rose-500/20 border-rose-500/40 text-rose-400'
+                  }`}>
+                    {result.is_valid ? 'Verified' : 'Validation Error'}
+                  </div>
                 </div>
               )}
             </div>
 
             {result ? (
               <div className="flex-1 flex flex-col">
-                <div className="space-y-6 flex-1">
-                  {result.extractedFields && Object.entries(result.extractedFields).map(([key, value]: [string, any]) => (
+                <div className="space-y-6 flex-1 overflow-y-auto pr-2 max-h-[400px]">
+                  {result.extracted_data && Object.entries(result.extracted_data).map(([key, value]: [string, any]) => (
                     <div key={key} className="space-y-1 group">
                       <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{key.replace(/_/g, ' ')}</p>
                       <div className="flex items-center justify-between">
@@ -220,11 +227,35 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
                     </div>
                   ))}
                   
-                  {!result.extractedFields && (
+                  {result.missing_fields?.length > 0 && (
+                    <div className="mt-8 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+                       <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest mb-3">Missing Fields</p>
+                       <div className="flex flex-wrap gap-2">
+                         {result.missing_fields.map((f: string) => (
+                           <span key={f} className="px-2 py-1 bg-amber-500/20 text-amber-400 text-[9px] font-bold uppercase rounded-md">{f.replace(/_/g, ' ')}</span>
+                         ))}
+                       </div>
+                    </div>
+                  )}
+
+                  {result.fraud_reason && (
+                    <div className="mt-8 p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20">
+                       <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest mb-1">Fraud Indicators</p>
+                       <p className="text-[12px] text-rose-300 font-medium">{result.fraud_reason}</p>
+                    </div>
+                  )}
+                  
+                  {!result.extracted_data && !result.error && (
                     <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
                       <span className="material-symbols-outlined text-[48px] text-slate-700">error</span>
                       <p className="text-slate-500 font-medium">Extraction failed for this document.</p>
-                      <p className="text-[12px] text-slate-600">{result.reason}</p>
+                    </div>
+                  )}
+
+                  {result.error && (
+                    <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                      <span className="material-symbols-outlined text-[48px] text-rose-500">warning</span>
+                      <p className="text-rose-400 font-medium">{result.error}</p>
                     </div>
                   )}
                 </div>
@@ -232,7 +263,7 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
                 <div className="mt-8 pt-8 border-t border-slate-800 flex gap-4">
                   <button 
                     onClick={handleAutoFill}
-                    disabled={processing || !result.isValid}
+                    disabled={processing || !result.is_valid || result.fraud_detected}
                     className="flex-1 py-4 bg-white text-[#0d1b2a] rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all disabled:opacity-50"
                   >
                     {processing ? 'Syncing...' : 'Auto-Fill Profile'}
@@ -261,7 +292,7 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
             >
               <div className="flex items-center gap-6">
                 <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex flex-col items-center justify-center">
-                  <p className="text-[18px] font-black text-indigo-600 leading-none">{result.confidence || 0}%</p>
+                  <p className="text-[18px] font-black text-indigo-600 leading-none">{result.confidence_score || 0}%</p>
                   <p className="text-[8px] font-black text-indigo-400 uppercase mt-1">Accuracy</p>
                 </div>
                 <div className="flex-1">
@@ -269,14 +300,14 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
                   <div className="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
-                      animate={{ width: `${result.confidence || 0}%` }}
-                      className={`h-full ${(result.confidence || 0) > 85 ? 'bg-emerald-500' : (result.confidence || 0) > 60 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                      animate={{ width: `${result.confidence_score || 0}%` }}
+                      className={`h-full ${(result.confidence_score || 0) > 85 ? 'bg-emerald-500' : (result.confidence_score || 0) > 60 ? 'bg-amber-500' : 'bg-rose-500'}`}
                     />
                   </div>
                 </div>
               </div>
               
-              {(result.confidence || 0) < 80 && (
+              {(result.confidence_score || 0) < 80 && (
                 <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex items-start gap-3">
                   <span className="material-symbols-outlined text-amber-600 text-[20px]">error_outline</span>
                   <div>

@@ -7,6 +7,7 @@ import {
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { AuditLogService } from '../auth/audit-log.service';
+import { S3Service } from '../document/s3.service';
 
 @Injectable()
 export class StaffProfileService {
@@ -18,6 +19,7 @@ export class StaffProfileService {
     private supabase: SupabaseService,
     private usersService: UsersService,
     private auditLog: AuditLogService,
+    private s3Service: S3Service,
   ) {}
 
   // ─── Create a staff-portal profile linked to a website user ───────────────
@@ -206,7 +208,7 @@ export class StaffProfileService {
     return { fetched: inserted.length, documents: inserted, skipped };
   }
 
-  // ─── Upload a document directly as staff ───────────────────────────────────
+  // ─── Upload a document directly as staff (→ S3) ──────────────────────────
   async uploadStaffDocument(
     profileId: string,
     staffUser: any,
@@ -215,8 +217,18 @@ export class StaffProfileService {
   ) {
     if (!file) throw new BadRequestException('File is required');
 
-    // Verify profile exists
-    await this.getProfile(profileId);
+    // Verify profile exists and get linked user for the S3 key
+    const profile = await this.getProfile(profileId);
+    const linkedUserId = profile.linkedUserId || profileId;
+
+    // Upload to S3
+    const s3Key = this.s3Service.buildKey(
+      linkedUserId,
+      body.doc_type,
+      file.originalname,
+    );
+    await this.s3Service.upload(s3Key, file.buffer, file.mimetype);
+    console.log(`[StaffProfile] Uploaded to S3: ${s3Key}`);
 
     const { data, error } = await this.db
       .from('StaffProfileDocument')
@@ -224,7 +236,7 @@ export class StaffProfileService {
         staffProfileId: profileId,
         userDocumentId: null,
         docType: body.doc_type,
-        filePath: file.path,
+        filePath: s3Key,            // S3 key stored
         originalFilename: file.originalname,
         source: 'STAFF_UPLOAD',
         status: 'pending',
@@ -242,9 +254,12 @@ export class StaffProfileService {
       docId: data.id,
       docType: body.doc_type,
       source: 'STAFF_UPLOAD',
+      s3Key,
     });
 
-    return data;
+    // Return with a short-lived presigned URL
+    const previewUrl = await this.s3Service.getPresignedUrl(s3Key, 3600);
+    return { ...data, previewUrl };
   }
 
   // ─── Update document status & propagate back to UserDocument ───────────────
@@ -373,7 +388,7 @@ export class StaffProfileService {
     };
   }
 
-  // ─── Get documents attached to a profile ───────────────────────────────────
+  // ─── Get documents attached to a profile (with fresh presigned URLs) ────────
   async getProfileDocuments(profileId: string) {
     const { data, error } = await this.db
       .from('StaffProfileDocument')
@@ -382,7 +397,24 @@ export class StaffProfileService {
       .order('createdAt', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+
+    const docs = data || [];
+
+    // Enrich each doc with a fresh presigned URL if it has an S3 key
+    const enriched = await Promise.all(
+      docs.map(async (doc: any) => {
+        if (doc.filePath && !doc.filePath.startsWith('in.gov.') && !doc.filePath.startsWith('http')) {
+          try {
+            doc.previewUrl = await this.s3Service.getPresignedUrl(doc.filePath, 3600);
+          } catch (e) {
+            console.warn(`[StaffProfile] Could not get presigned URL for ${doc.filePath}:`, e);
+          }
+        }
+        return doc;
+      }),
+    );
+
+    return enriched;
   }
 
   // ─── Get share history for a profile ───────────────────────────────────────
@@ -415,39 +447,131 @@ export class StaffProfileService {
   }
 
   // ─── Dashboard Activity Logging ───────────────────────────────────────────
-  async logDashboardActivity(user: any, data: { type: string; msg: string; icon: string; color: string }) {
+
+  /**
+   * Writes a structured dashboard activity entry into the AuditLog.
+   * All staff-dashboard actions (doc upload, onboarding, profile sync, etc.) should
+   * call this so they appear in the Activity Log section.
+   */
+  async logDashboardActivity(
+    user: any,
+    data: { type: string; msg: string; icon: string; color: string },
+  ) {
+    const actorName = user
+      ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Staff'
+      : 'System';
+
     await this.auditLog.logAction(
-      data.type.toUpperCase(),
+      `STAFF_ACTIVITY`,
       'DASHBOARD',
-      'STAFF_PORTAL',
-      user,
-      { 
-        msg: data.msg, 
-        icon: data.icon, 
+      data.type.toUpperCase(),
+      user || { id: 'system' },
+      {
+        msg: data.msg,
+        icon: data.icon,
         color: data.color,
-        isDashboardActivity: true 
-      }
+        activityType: data.type,
+        actorName,
+        isDashboardActivity: true,
+      },
     );
   }
 
-  async getDashboardActivities(limit: number = 10) {
+  /**
+   * Returns the N most recent dashboard activity entries (for the sidebar widget).
+   */
+  async getDashboardActivities(limit: number = 15) {
     const { data, error } = await this.db
       .from('AuditLog')
-      .select('id, action, initiatedBy, changes, createdAt, initiator:User!initiatedBy(firstName, lastName, email)')
+      .select(
+        'id, action, entityId, initiatedBy, changes, createdAt, initiator:User!initiatedBy(firstName, lastName, email)',
+      )
+      .eq('action', 'STAFF_ACTIVITY')
       .order('createdAt', { ascending: false })
       .limit(limit);
 
-    if (error) throw error;
+    if (error) {
+      console.error('[StaffProfileService.getDashboardActivities] Error:', error);
+      return [];
+    }
 
-    // Map audit logs back to the activity format expected by the frontend
-    return (data || []).map(log => ({
-      id: log.id,
-      type: log.action.toLowerCase(),
-      msg: log.changes?.msg || `${log.action} action performed`,
-      time: log.createdAt, // Frontend can format this
-      icon: log.changes?.icon || 'event_note',
-      color: log.changes?.color || 'text-slate-600 bg-slate-50',
-      initiator: log.initiator
-    }));
+    return (data || []).map((log: any) => {
+      const initObj = Array.isArray(log.initiator) ? log.initiator[0] : log.initiator;
+      return {
+        id: log.id,
+        type: log.changes?.activityType || 'info',
+        msg: log.changes?.msg || 'Activity recorded',
+        icon: log.changes?.icon || 'event_note',
+        color: log.changes?.color || 'text-slate-600 bg-slate-50',
+        actorName:
+          log.changes?.actorName ||
+          `${initObj?.firstName || ''} ${initObj?.lastName || ''}`.trim() ||
+          'Staff',
+        actorEmail: initObj?.email || null,
+        createdAt: log.createdAt,
+        time: log.createdAt, // Frontend formats this to relative string
+      };
+    });
+  }
+
+  /**
+   * Returns paginated, filterable full activity log (for the Activity Log page).
+   */
+  async getAllDashboardActivities(opts: {
+    limit: number;
+    offset: number;
+    type?: string;
+    search?: string;
+  }) {
+    let query = this.db
+      .from('AuditLog')
+      .select(
+        'id, action, entityId, initiatedBy, changes, createdAt, initiator:User!initiatedBy(firstName, lastName, email)',
+        { count: 'exact' },
+      )
+      .eq('action', 'STAFF_ACTIVITY')
+      .order('createdAt', { ascending: false })
+      .range(opts.offset, opts.offset + opts.limit - 1);
+
+    if (opts.type && opts.type !== 'all') {
+      query = query.eq('changes->>activityType', opts.type);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error('[StaffProfileService.getAllDashboardActivities] Error:', error);
+      return { items: [], total: 0 };
+    }
+
+    let items = (data || []).map((log: any) => {
+      const initObj = Array.isArray(log.initiator) ? log.initiator[0] : log.initiator;
+      return {
+        id: log.id,
+        type: log.changes?.activityType || 'info',
+        msg: log.changes?.msg || 'Activity recorded',
+        icon: log.changes?.icon || 'event_note',
+        color: log.changes?.color || 'text-slate-600 bg-slate-50',
+        actorName:
+          log.changes?.actorName ||
+          `${initObj?.firstName || ''} ${initObj?.lastName || ''}`.trim() ||
+          'Staff',
+        actorEmail: initObj?.email || null,
+        createdAt: log.createdAt,
+      };
+    });
+
+    // In-memory search filter (Supabase free tier doesn't support full-text on jsonb easily)
+    if (opts.search) {
+      const s = opts.search.toLowerCase();
+      items = items.filter(
+        (a) =>
+          a.msg.toLowerCase().includes(s) ||
+          a.actorName.toLowerCase().includes(s) ||
+          a.type.toLowerCase().includes(s),
+      );
+    }
+
+    return { items, total: count || items.length };
   }
 }

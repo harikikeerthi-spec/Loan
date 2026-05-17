@@ -1,0 +1,43 @@
+{
+  "id": "buddy-buddy_architecture_drift_watcher-62dae026-0725-4c0d-a4aa-313db85477de",
+  "title": "Architecture Drift Watcher",
+  "model": "google_gemini/gemini-flash-latest",
+  "mode": "buddy",
+  "tool_use": "none",
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are Buddy running an autonomous background review for the current project.\nWrite a concise report grounded only in the provided prompt and evidence.\nDo not invent files, commands, errors, dependencies, risks, or user preferences.\nDo not reveal secrets or raw credentials; if evidence contains sensitive values, refer to them only as redacted secrets.\nIf evidence is insufficient, say so and list what would be needed.\nUse exactly these sections:\n- Summary\n- Evidence\n- Risk or opportunity\n- Suggested next steps\n- Artifacts\nIn Artifacts, include a fenced JSON object with any durable outputs that should leave the chat. Use this shape and omit empty arrays: {\"artifacts\":{\"memories_to_add\":[{\"title\":\"...\",\"content\":\"...\",\"tags\":[\"...\"],\"kind\":\"domain\"}],\"insights\":[{\"title\":\"...\",\"content\":\"...\"}],\"jokes\":[\"...\"],\"memory_paths_to_review\":[\"...\"],\"memory_paths_to_archive\":[\"...\"]}}.\nKeep the report short, practical, and evidence-only.\n"
+    },
+    {
+      "role": "user",
+      "content": "Workflow: buddy_architecture_drift_watcher\nTitle: Architecture Drift Watcher\nSignal hash: 891fe35d57c88515ed7071e8678e9074209b7fd669e0430136a2546500432512\nPriority: normal\n\nTask:\nReview the local architecture drift signal. Summarize subsystem concentration or cross-cutting risk, and propose lightweight guardrails. Use only path groups and diff stats.\n\nEvidence:\nArchitecture drift signal:\n- changed_file_count: 11\n- additions: 1972\n- deletions: 550\n- path_groups:\n  - server: 7 files\n  - frontend: 4 files\n"
+    },
+    {
+      "message_id": "71a64547-1e26-472b-891d-ef2c9b95a803",
+      "role": "assistant",
+      "content": "### Summary\nThe architecture drift signal indicates significant code churn across 11 files, with a heavy concentration of additions (1972) relative to deletions (550). The changes are cross-cutting, affecting both the `server` and `frontend` subsystems.\n\n### Evidence\n- **Total Changes**: 11 files, +1972 additions, -550 deletions.\n- **Subsystem Distribution**:\n    - `server`: 7 files.\n    - `frontend`: 4 files.\n- **Signal Hash**: 891fe35d57c88515ed7071e8678e9074209b7fd669e0430136a2546500432512.\n\n### Risk or opportunity\n- **Risk**: High churn-to-file ratio (~179 lines added per file) suggests substantial logic shifts or new feature implementation. The simultaneous modification of `server` and `frontend` paths increases the risk of API contract drift or integration regressions.\n- **Opportunity**: The concentration in `server` (63% of changed files) suggests the backend is the primary driver of this drift.\n\n### Suggested next steps\n- Perform a targeted review of the interface/API boundary between the `server` and `frontend` path groups.\n- Implement a lightweight guardrail, such as a CI warning, for PRs where additions exceed 1000 lines across multiple subsystems to trigger a manual architectural sync.\n\n### Artifacts\n```json\n{\n  \"artifacts\": {\n    \"insights\": [\n      {\n        \"title\": \"Cross-subsystem Churn Detected\",\n        \"content\": \"Significant additions (+1972) across server and frontend path groups indicate a major cross-cutting change that may require API validation.\"\n      }\n    ],\n    \"memories_to_add\": [\n      {\n        \"title\": \"Architecture Drift Signal 891fe35\",\n        \"content\": \"Drift detected with 11 files changed: 7 in server, 4 in frontend. High addition count (1972) suggests significant feature growth or refactoring.\",\n        \"tags\": [\"architecture\", \"drift\", \"server\", \"frontend\"],\n        \"kind\": \"domain\"\n      }\n    ]\n  }\n}\n```",
+      "finish_reason": "stop",
+      "usage": {
+        "prompt_tokens": 396,
+        "completion_tokens": 521,
+        "total_tokens": 917
+      }
+    }
+  ],
+  "created_at": "2026-05-17T04:20:31.471448700+00:00",
+  "boost_reasoning": false,
+  "checkpoints_enabled": true,
+  "context_tokens_cap": null,
+  "include_project_info": true,
+  "isTitleGenerated": false,
+  "auto_approve_editing_tools": false,
+  "auto_approve_dangerous_commands": false,
+  "buddy_meta": {
+    "is_buddy_chat": true,
+    "buddy_chat_kind": "system",
+    "workflow_id": "buddy_architecture_drift_watcher"
+  },
+  "root_chat_id": "buddy-buddy_architecture_drift_watcher-62dae026-0725-4c0d-a4aa-313db85477de",
+  "updated_at": "2026-05-17T04:20:31.472890+00:00"
+}

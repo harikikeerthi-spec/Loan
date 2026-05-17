@@ -35,7 +35,8 @@ type OcrSummaryDoc = {
 type ValidationCheck = {
   label: string;
   detail: string;
-  status: "success" | "warning" | "pending";
+  status: "success" | "warning" | "pending" | "error";
+  onReview?: () => void;
 };
 
 type ApiResult<T> = {
@@ -147,6 +148,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const [selectedDocForSync, setSelectedDocForSync] = useState<any>(null);
   const [selectedDocPreview, setSelectedDocPreview] = useState<OcrSummaryDoc | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [activeDiscrepancy, setActiveDiscrepancy] = useState<{ doc1: OcrSummaryDoc; doc2: OcrSummaryDoc } | null>(null);
 
   const handleSendMessage = () => {
     if (!msgInput.trim()) return;
@@ -451,11 +453,46 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const hasCoapplicantPan = coApplicantOcrDocs.some((doc) => String(doc.docType || "").toLowerCase().includes("pan") && getDocFieldsCount(doc) > 0);
   const hasCoapplicantItr = coApplicantOcrDocs.some((doc) => String(doc.docType || "").toLowerCase().includes("itr") && getDocFieldsCount(doc) > 0);
 
+  // ─── Cross-Document Discrepancy Detection ──────────────────────────────
+  const panDoc = documents.find(d => String(d.docType || "").toLowerCase() === "pan");
+  const panName = panDoc?.uploaded ? (panDoc.extractedData?.full_name || panDoc.extractedData?.name) : null;
+
+  const passportDoc = documents.find(d => String(d.docType || "").toLowerCase() === "passport");
+  const passportName = passportDoc?.uploaded ? (passportDoc.extractedData?.full_name || passportDoc.extractedData?.name) : null;
+
+  const aadhaarDoc = documents.find(d => String(d.docType || "").toLowerCase() === "aadhaar");
+  const aadhaarName = aadhaarDoc?.uploaded ? (aadhaarDoc.extractedData?.full_name || aadhaarDoc.extractedData?.name) : null;
+
+  let crossDocNameMismatch = false;
+  let crossDocNameDetail = "";
+  let discrepantDocs: { doc1: OcrSummaryDoc, doc2: OcrSummaryDoc } | null = null;
+
+  if (panName && passportName && getComparableValue(panName) !== getComparableValue(passportName)) {
+    crossDocNameMismatch = true;
+    crossDocNameDetail = `PAN Name ("${panName}") mismatches Passport Name ("${passportName}").`;
+    if (panDoc && passportDoc) discrepantDocs = { doc1: panDoc, doc2: passportDoc };
+  } else if (panName && aadhaarName && getComparableValue(panName) !== getComparableValue(aadhaarName)) {
+    crossDocNameMismatch = true;
+    crossDocNameDetail = `PAN Name ("${panName}") mismatches Aadhaar Name ("${aadhaarName}").`;
+    if (panDoc && aadhaarDoc) discrepantDocs = { doc1: panDoc, doc2: aadhaarDoc };
+  } else if (passportName && aadhaarName && getComparableValue(passportName) !== getComparableValue(aadhaarName)) {
+    crossDocNameMismatch = true;
+    crossDocNameDetail = `Passport Name ("${passportName}") mismatches Aadhaar Name ("${aadhaarName}").`;
+    if (passportDoc && aadhaarDoc) discrepantDocs = { doc1: passportDoc, doc2: aadhaarDoc };
+  }
+
   const validationChecks: ValidationCheck[] = [
     {
       label: "Name match across uploaded documents",
-      detail: nameMatched ? `${fullName} verified from OCR data` : extractedName ? `${String(extractedName)} needs profile review` : "Waiting for extracted name data",
-      status: nameMatched ? "success" : extractedName ? "warning" : "pending",
+      detail: crossDocNameMismatch
+        ? crossDocNameDetail
+        : nameMatched
+          ? `${fullName} verified from OCR data`
+          : extractedName
+            ? `${String(extractedName)} needs profile review`
+            : "Waiting for extracted name data",
+      status: crossDocNameMismatch ? "error" : nameMatched ? "success" : extractedName ? "warning" : "pending",
+      onReview: crossDocNameMismatch && discrepantDocs ? () => setActiveDiscrepancy(discrepantDocs) : undefined,
     },
     {
       label: "DOB consistency",
@@ -582,11 +619,10 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                       <div>
                         <div className="flex items-center gap-3 mb-2">
                           <p className="text-[11px] font-['Playfair_Display',serif] font-black text-slate-400 uppercase tracking-[0.25em]">UNIVERSITY OF {(application.universityName || application.college || "TORONTO").toUpperCase()}</p>
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-black border tracking-widest uppercase shadow-sm ${
-                            ['PENDING', 'UNDER REVIEW', 'IN PROGRESS'].includes(status) 
-                              ? 'bg-amber-50 text-amber-600 border-amber-100/50' 
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-black border tracking-widest uppercase shadow-sm ${['PENDING', 'UNDER REVIEW', 'IN PROGRESS'].includes(status)
+                              ? 'bg-amber-50 text-amber-600 border-amber-100/50'
                               : 'bg-emerald-50 text-emerald-600 border-emerald-100/50'
-                          }`}>{status}</span>
+                            }`}>{status}</span>
                         </div>
                         <div className="flex items-center gap-4">
                           <h3 className="text-[36px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] tracking-tight">{application.firstName || application.student?.firstName || "Abhi"} {application.lastName || application.student?.lastName || "Y"}</h3>
@@ -620,521 +656,557 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                       <p className="text-[44px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] leading-none tracking-tighter">{Number(application.loanAmount || 3999999).toLocaleString()}</p>
                     </div>
 
-                    <div className="text-right">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">APPLICATION PROGRESS</p>
-                      <div className="flex items-center gap-4">
-                        <div className="w-[180px] bg-slate-100 rounded-full h-2 overflow-hidden shadow-inner">
-                          <div
-                            className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-1000 ease-out rounded-full shadow-[0_0_10px_rgba(79,70,229,0.3)]"
-                            style={{ width: `${progress}%` }}
+                    <div className="flex flex-col items-center">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">PROGRESS QUOTA</p>
+                      <div className="relative w-28 h-28 flex items-center justify-center">
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 112 112">
+                          {/* Track Circle */}
+                          <circle
+                            cx="56"
+                            cy="56"
+                            r="48"
+                            className="text-slate-100"
+                            strokeWidth="8"
+                            stroke="currentColor"
+                            fill="transparent"
                           />
+                          {/* Progress Circle */}
+                          <circle
+                            cx="56"
+                            cy="56"
+                            r="48"
+                            className="text-indigo-600 transition-all duration-1000 ease-out"
+                            strokeWidth="8"
+                            strokeDasharray={2 * Math.PI * 48}
+                            strokeDashoffset={2 * Math.PI * 48 - (2 * Math.PI * 48 * progress) / 100}
+                            strokeLinecap="round"
+                            stroke="currentColor"
+                            fill="transparent"
+                          />
+                        </svg>
+                        <div className="absolute flex flex-col items-center justify-center">
+                          <span className="text-3xl font-black text-slate-900 tracking-tight leading-none">{progress}</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">%</span>
                         </div>
-                        <span className="text-[18px] font-black text-indigo-600 w-10 text-right">{progress}%</span>
                       </div>
-                      <div className="mt-2 flex items-center justify-end gap-1.5 text-slate-400">
+                      <div className="mt-2.5 flex items-center gap-1.5 text-slate-400">
                         <span className="material-symbols-outlined text-[12px]">schedule</span>
                         <p className="text-[9px] font-black uppercase tracking-widest tabular-nums text-slate-900">
-                          Last Updated: {formatStepDateTime(appUpdatedAt || appCreatedAt)}
+                          Updated: {formatStepDateTime(appUpdatedAt || appCreatedAt)}
                         </p>
                       </div>
                     </div>
                   </div>
                 </div>
-
-                {/* Progress Timeline - Clean & Dynamic */}
-                <div className="mt-16 relative px-6">
-                  <div className="absolute top-[18px] left-12 right-12 h-[4px] bg-slate-100 rounded-full" />
-                  <div className="absolute top-[18px] left-12 h-[4px] bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-1000 ease-out shadow-sm" style={{ width: `calc(${(stages.filter(s => s.completed).length - 1) / (stages.length - 1) * 100}% - 48px)` }} />
-
-                  <div className="flex justify-between relative z-10">
-                    {stages.map((stage, idx) => (
-                      <div key={idx} className="flex flex-col items-center group/stage">
-                        <div className="flex flex-col items-center gap-2 mb-3">
-                          <span className={`material-symbols-outlined text-[16px] ${stage.active ? 'text-emerald-500 animate-pulse' : stage.completed ? 'text-indigo-600' : 'text-slate-300'}`}>{stage.icon}</span>
-                        </div>
-                        <div className={`w-10 h-10 rounded-full border-[5px] border-white shadow-lg flex items-center justify-center transition-all duration-500 group-hover/stage:scale-110 ${stage.completed ? (stage.active ? 'bg-emerald-500 shadow-emerald-200' : 'bg-indigo-600 shadow-indigo-100') : 'bg-slate-200 shadow-none'}`}>
-                          {stage.completed ? (
-                            <span className="material-symbols-outlined text-white text-[18px] font-black">check</span>
-                          ) : (
-                            <div className="w-2 h-2 rounded-full bg-white/50" />
-                          )}
-                        </div>
-                        <div className="mt-4 text-center">
-                          <p className={`text-[9px] font-black tracking-widest uppercase transition-colors ${stage.active ? 'text-emerald-600' : stage.completed ? 'text-slate-900' : 'text-slate-400'}`}>{stage.label}</p>
-                          {stage.timestamp && (
-                            <p className={`mt-1.5 text-[9px] font-black tabular-nums tracking-wide ${stage.active ? 'text-emerald-500' : 'text-slate-900'}`}>
-                              {formatStepDateTime(stage.timestamp)}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </div>
 
-              {/* Action Hub & Tabs Section */}
-              <div className="space-y-8 animate-in slide-in-from-bottom-10 duration-700 delay-200">
-                <div className="flex items-center justify-between border-b border-slate-200/60 px-4">
-                  <div className="flex items-center gap-16">
-                    {[
-                      { id: "requirements", label: "REQUIREMENTS", icon: "task_alt" },
-                      // { id: "kyc", label: "KYC VERIFICATION", icon: "verified_user" },
-                      { id: "records", label: "STUDENT RECORDS", icon: "folder_shared" },
-                      { id: "notes", label: "INTERNAL NOTES", icon: "sticky_note_2" },
-                    ].map(tab => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`pb-5 flex items-center gap-3 text-[13px] font-black tracking-[0.15em] uppercase relative transition-all group ${activeTab === tab.id ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-                      >
-                        <span className={`material-symbols-outlined text-[20px] transition-transform group-hover:scale-110 ${activeTab === tab.id ? 'text-indigo-600' : 'text-slate-300'}`}>{tab.icon}</span>
-                        {tab.label}
-                        {activeTab === tab.id && <div className="absolute bottom-[-1px] left-0 right-0 h-[4px] bg-indigo-600 rounded-full shadow-[0_4px_10px_rgba(79,70,229,0.3)]" />}
-                      </button>
-                    ))}
-                  </div>
+              {/* Progress Timeline - Clean & Dynamic */}
+              <div className="mt-16 relative px-6">
+                <div className="absolute top-[18px] left-12 right-12 h-[4px] bg-slate-100 rounded-full" />
+                <div className="absolute top-[18px] left-12 h-[4px] bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-1000 ease-out shadow-sm" style={{ width: `calc(${(stages.filter(s => s.completed).length - 1) / (stages.length - 1) * 100}% - 48px)` }} />
 
-                  <div className="flex items-center gap-4 mb-4">
-                    <button className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10">
-                      <span className="material-symbols-outlined text-[18px]">print</span>
-                      Export PDF
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-12 gap-10">
-                  <div className="col-span-12 space-y-10">
-                    {activeTab === "requirements" && (
-                      <OcrDocumentIntelligence
-                        academicDocs={academicOcrDocs}
-                        coApplicantDocs={coApplicantOcrDocs}
-                        validationChecks={validationChecks}
-                        loading={loadingDocs}
-                        onAddAcademic={() => {
-                          setNewDocCategory("academic");
-                          setIsAddDocModalOpen(true);
-                        }}
-                        onAddCoApplicant={() => {
-                          setNewDocCategory("financial");
-                          setIsAddDocModalOpen(true);
-                        }}
-                        normalizeConfidence={normalizeConfidence}
-                        formatDocTitle={formatDocTitle}
-                        getDocFieldsCount={getDocFieldsCount}
-                        formatUploadAge={formatUploadAge}
-                        onPreviewDocument={setSelectedDocPreview}
-                        onViewDocument={(doc) => window.open(`/api/documents/view/${userId}/${doc.docType}`, "_blank", "noopener,noreferrer")}
-                        onDeleteDocument={(doc) => handleDeleteDocument(doc.id)}
-                        onUploadDocument={(doc, file) => handleFileUpload(doc.docType, file)}
-                      />
-                    )}
-
-                    {activeTab === "kyc" && (
-                      <KycSystemDashboard
-                        userId={userId}
-                        application={application}
-                        onRefresh={fetchDocuments}
-                      />
-                    )}
-
-                    {activeTab === "records" && (
-                      <div className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm flex flex-col h-[620px]">
-                        <div className="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100">
-                              <span className="material-symbols-outlined text-[22px]">forum</span>
-                            </div>
-                            <div>
-                              <h3 className="text-[18px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Communication Hub</h3>
-                              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Direct two-way channel</p>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-8 space-y-5 bg-slate-50/40">
-                          {messages.map((msg) => (
-                            <React.Fragment key={msg.id}>
-                              {msg.type === "notification" ? (
-                                <div className="flex justify-center">
-                                  <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100 text-[11px] font-bold">
-                                    <span className="material-symbols-outlined text-[16px]">file_present</span>
-                                    {msg.text}
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className={`flex flex-col space-y-2 ${msg.sender === "staff" ? "items-end" : "items-start"}`}>
-                                  <div className={`max-w-[80%] px-6 py-4 rounded-t-3xl shadow-lg ${msg.sender === "staff" ? "bg-indigo-600 text-white rounded-bl-3xl shadow-indigo-100" : "bg-white border border-slate-100 text-slate-700 rounded-br-3xl shadow-sm"}`}>
-                                    <p className="text-[14px] leading-relaxed">{msg.text}</p>
-                                  </div>
-                                  <p className={`text-[10px] font-bold text-slate-400 ${msg.sender === "staff" ? "mr-2" : "ml-2"}`}>
-                                    {msg.sender === "staff" ? "STAFF" : "STUDENT"} • {msg.time}
-                                  </p>
-                                </div>
-                              )}
-                            </React.Fragment>
-                          ))}
-                        </div>
-                        <div className="p-6 bg-white border-t border-slate-100">
-                          <div className="flex items-center gap-4 bg-slate-50 border border-slate-200 rounded-3xl p-2 pl-6 focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/5 transition-all">
-                            <input
-                              type="text"
-                              value={msgInput}
-                              onChange={(e) => setMsgInput(e.target.value)}
-                              onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                              placeholder="Request documents or ask for information..."
-                              className="flex-1 bg-transparent border-none focus:ring-0 text-[14px] py-3 font-medium placeholder:text-slate-400"
-                            />
-                            <button onClick={handleSendMessage} className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-200 hover:scale-105 active:scale-95 transition-all">
-                              <span className="material-symbols-outlined text-[24px]">send</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {activeTab === "notes" && (
-                      <div className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm space-y-6">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4">
-                            <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-100">
-                              <span className="material-symbols-outlined text-[22px]">sticky_note_2</span>
-                            </div>
-                            <div>
-                              <h3 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Internal Staff Notes</h3>
-                              <p className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">Confidential • staff only</p>
-                            </div>
-                          </div>
-                          <button onClick={handleAddNote} className="flex items-center gap-2 px-5 py-2.5 bg-[#0d1b2a] text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10">
-                            <span className="material-symbols-outlined text-[18px]">add</span>
-                            New Note
-                          </button>
-                        </div>
-                        <div className="space-y-4">
-                          {notes.map((note) => (
-                            <div key={note.id} className="p-6 rounded-3xl bg-slate-50/80 border border-slate-100 hover:border-amber-200 transition-all">
-                              <div className="flex items-start justify-between mb-3">
-                                <p className="text-[12px] font-black text-slate-900">{note.author} <span className="font-medium text-slate-400 ml-2">{note.role}</span></p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase">{note.time}</p>
-                              </div>
-                              <p className="text-[14px] text-slate-600 leading-relaxed">{note.text}</p>
-                            </div>
-                          ))}
-                        </div>
-                        <textarea
-                          rows={3}
-                          value={noteInput}
-                          onChange={(e) => setNoteInput(e.target.value)}
-                          placeholder="Write an internal observation or note..."
-                          className="w-full bg-slate-50/50 border border-slate-200 rounded-3xl p-5 text-[14px] font-medium focus:outline-none focus:ring-4 focus:ring-amber-500/5 focus:border-amber-500/50 transition-all resize-none"
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          {activeSidebarMenu === 'student' && (
-            <div className="max-w-[1400px] mx-auto p-10 space-y-10 animate-in fade-in zoom-in-95 duration-300">
-              <div className="flex items-center gap-5">
-                <button
-                  onClick={onBack}
-                  className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-lg transition-all"
-                >
-                  <span className="material-symbols-outlined text-[22px]">arrow_back</span>
-                </button>
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-200">
-                    <span className="material-symbols-outlined text-[20px]">person</span>
-                  </div>
-                  <div>
-                    <h2 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Student Profile</h2>
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Registered: {createdDateIST}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white/70 backdrop-blur-sm rounded-[40px] p-10 border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.04)] relative">
-                <div className="flex gap-16">
-                  <div className="flex-1 space-y-8">
-                    <section>
-                      <h3 className="text-[14px] font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4"><span className="material-symbols-outlined text-emerald-500">person</span> Personal Information</h3>
-                      <div className="grid grid-cols-3 gap-6">
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Registration Time</p>
-                          <p className="text-[14px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded inline-block">{createdDateIST}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">First Name</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.firstName || application.student?.firstName || "—"}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Last Name</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.lastName || application.student?.lastName || "—"}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Date of Birth</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.dob || application.student?.dob || "—"}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Email Address</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.email || application.student?.email || "—"}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Phone Number</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.phone || application.student?.phone || application.mobile || "—"}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Gender</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.gender || application.student?.gender || "—"}</p>
-                        </div>
-                      </div>
-                    </section>
-
-                    <section>
-                      <h3 className="text-[14px] font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4"><span className="material-symbols-outlined text-emerald-500">location_on</span> Address Details</h3>
-                      <div className="grid grid-cols-2 gap-6">
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Address</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.address || application.student?.mailingAddress?.address1 || application.student?.address || "—"}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">City / Pincode</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.city || application.student?.mailingAddress?.city || "—"} - {application.pincode || application.student?.mailingAddress?.pincode || "—"}</p>
-                        </div>
-                      </div>
-                    </section>
-
-                    <section>
-                      <h3 className="text-[14px] font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4"><span className="material-symbols-outlined text-emerald-500">public</span> Nationality & Background</h3>
-                      <div className="grid grid-cols-3 gap-6">
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Nationality</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.nationality || application.student?.nationality?.name || "Indian"}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Visa Refusal</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.student?.background?.visaRefusal || "No"}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Medical Condition</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.student?.background?.medicalCondition || "No"}</p>
-                        </div>
-                      </div>
-                    </section>
-
-                    <section>
-                      <h3 className="text-[14px] font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4"><span className="material-symbols-outlined text-emerald-500">contact_emergency</span> Emergency Contact</h3>
-                      <div className="grid grid-cols-3 gap-6">
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Contact Name</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.name || application.emergencyContactName || "—"}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Relation</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.relation || application.emergencyContactRelation || "—"}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Phone</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.phone || application.emergencyContactPhone || "—"}</p>
-                        </div>
-                      </div>
-                    </section>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-        </div>
-      </div>
-      {/* Modals & Sub-components */}
-      {isAddDocModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-          <div className="absolute inset-0 bg-[#0d1b2a]/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsAddDocModalOpen(false)} />
-          <div className="bg-white w-full max-w-lg rounded-[32px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20">
-            <div className="p-8 border-b border-slate-100 bg-slate-50/50">
-              <h3 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Add Document Requirement</h3>
-              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Define what the student needs to upload</p>
-            </div>
-
-            <div className="p-8 space-y-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Document Name</label>
-                <input
-                  type="text"
-                  value={newDocName}
-                  onChange={(e) => setNewDocName(e.target.value)}
-                  placeholder="e.g. Master's Admission Letter"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-[14px] font-medium focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/50 transition-all"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Category</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {['academic', 'financial', 'identity'].map(cat => (
-                    <button
-                      key={cat}
-                      onClick={() => setNewDocCategory(cat)}
-                      className={`py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all ${newDocCategory === cat
-                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200'
-                        : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:bg-indigo-50/30'
-                        }`}
-                    >
-                      {cat}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="p-8 bg-slate-50/50 border-t border-slate-100 flex gap-4">
-              <button
-                onClick={() => setIsAddDocModalOpen(false)}
-                className="flex-1 py-3.5 rounded-2xl text-[12px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAddDocument}
-                disabled={!newDocName.trim()}
-                className="flex-1 py-3.5 bg-indigo-600 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none"
-              >
-                Create Requirement
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {selectedDocPreview && (
-        <DocumentPreviewDrawer
-          doc={selectedDocPreview}
-          userId={userId}
-          title={formatDocTitle(selectedDocPreview)}
-          uploadAge={formatUploadAge(selectedDocPreview.uploadedAt)}
-          onClose={() => setSelectedDocPreview(null)}
-        />
-      )}
-
-      {/* OCR Sync Modal */}
-      {isSyncModalOpen && selectedDocForSync && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
-          <div className="absolute inset-0 bg-[#0d1b2a]/60 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsSyncModalOpen(false)} />
-          <div className="bg-white w-full max-w-[1100px] h-[85vh] rounded-[40px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20 flex flex-col">
-
-            {/* Modal Header */}
-            <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-5">
-                <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-100">
-                  <span className="material-symbols-outlined text-[32px]">sync_alt</span>
-                </div>
-                <div>
-                  <h3 className="text-[24px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Review & Sync Data</h3>
-                  <p className="text-[11px] font-black text-indigo-600 uppercase tracking-widest mt-0.5">AI-Powered Extraction Verification</p>
-                </div>
-              </div>
-              <button
-                onClick={() => setIsSyncModalOpen(false)}
-                className="w-12 h-12 rounded-2xl hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-all"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
-            </div>
-
-            <div className="flex-1 flex overflow-hidden">
-              {/* Left Side: Document Preview */}
-              <div className="w-1/2 bg-slate-900 flex items-center justify-center relative group">
-                <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] pointer-events-none" />
-                <img
-                  src={`/api/documents/view/${userId}/${selectedDocForSync.docType}`}
-                  alt="Document Preview"
-                  className="max-h-[90%] max-w-[90%] object-contain shadow-2xl rounded-lg border border-white/10"
-                  onError={(e: any) => {
-                    e.target.src = "https://images.unsplash.com/photo-1586281380349-631531a34d4f?q=80&w=2070&auto=format&fit=crop";
-                  }}
-                />
-                <div className="absolute bottom-6 left-6 right-6 p-4 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <p className="text-white text-[11px] font-medium text-center">Original scan provided by the applicant</p>
-                </div>
-              </div>
-
-              {/* Right Side: Comparison Table */}
-              <div className="w-1/2 flex flex-col bg-white overflow-hidden">
-                <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-white sticky top-0 z-10">
-                  <h4 className="text-[14px] font-black text-slate-900 uppercase tracking-widest">Field Mapping</h4>
-                  <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full border border-emerald-100">
-                    {selectedDocForSync.accuracy?.toFixed(1)}% CONFIDENCE
-                  </span>
-                </div>
-
-                <div className="flex-1 overflow-y-auto p-8 space-y-6">
-                  {/* Field Row Component */}
-                  {[
-                    { label: 'Full Name', key: 'full_name', current: application.firstName + " " + application.lastName, extracted: selectedDocForSync.extractedData?.full_name || "Abhiram Y" },
-                    { label: 'Date of Birth', key: 'date_of_birth', current: application.dob || "—", extracted: selectedDocForSync.extractedData?.date_of_birth || "14-08-1998" },
-                    { label: 'PAN Number', key: 'document_number', current: application.panNumber || "—", extracted: selectedDocForSync.extractedData?.document_number || "ABCDP1234F" },
-                    { label: 'Father\'s Name', key: 'father_name', current: application.fatherName || "—", extracted: selectedDocForSync.extractedData?.father_name || "Y. Venkatesh" },
-                    { label: 'Issuing Authority', key: 'issuing_authority', current: "—", extracted: selectedDocForSync.extractedData?.issuing_authority || "Income Tax Dept." }
-                  ].map((field, idx) => (
-                    <div key={idx} className="group/row">
-                      <div className="flex items-center justify-between mb-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{field.label}</label>
-                        {field.current !== field.extracted && field.extracted && (
-                          <span className="text-[9px] font-bold text-amber-500 flex items-center gap-1 animate-pulse">
-                            <span className="material-symbols-outlined text-[12px]">warning</span>
-                            Mismatched
-                          </span>
+                <div className="flex justify-between relative z-10">
+                  {stages.map((stage, idx) => (
+                    <div key={idx} className="flex flex-col items-center group/stage">
+                      <div className={`w-10 h-10 rounded-full border-[5px] border-white shadow-lg flex items-center justify-center transition-all duration-500 group-hover/stage:scale-110 ${stage.completed ? (stage.active ? 'bg-emerald-500 shadow-emerald-200' : 'bg-indigo-600 shadow-indigo-100') : 'bg-slate-200 shadow-none'}`}>
+                        {stage.completed ? (
+                          <span className="material-symbols-outlined text-white text-[18px] font-black">check</span>
+                        ) : (
+                          <div className="w-2 h-2 rounded-full bg-white/50" />
                         )}
                       </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                          <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Profile Value</p>
-                          <p className="text-[14px] font-bold text-slate-600">{field.current}</p>
-                        </div>
-
-                        <div className={`p-4 rounded-2xl border relative group transition-all ${field.current === field.extracted ? 'bg-emerald-50/30 border-emerald-100' : 'bg-indigo-50/30 border-indigo-100 hover:shadow-lg hover:shadow-indigo-500/5'}`}>
-                          <p className="text-[9px] font-bold text-indigo-400 uppercase mb-1">AI Extracted</p>
-                          <p className="text-[14px] font-bold text-indigo-700">{field.extracted}</p>
-
-                          <button
-                            onClick={() => handleSyncField(field.key, field.extracted)}
-                            disabled={isSyncing || field.current === field.extracted}
-                            className={`absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl flex items-center justify-center transition-all ${field.current === field.extracted
-                              ? 'bg-emerald-500 text-white cursor-default'
-                              : 'bg-indigo-600 text-white hover:scale-110 active:scale-95 shadow-lg shadow-indigo-200'
-                              }`}
-                          >
-                            <span className="material-symbols-outlined text-[20px]">
-                              {field.current === field.extracted ? 'check' : 'sync'}
-                            </span>
-                          </button>
-                        </div>
+                      <div className="mt-4 text-center">
+                        <p className={`text-[9px] font-black tracking-widest uppercase transition-colors ${stage.active ? 'text-emerald-600' : stage.completed ? 'text-slate-900' : 'text-slate-400'}`}>{stage.label}</p>
+                        {stage.timestamp && (
+                          <p className={`mt-1.5 text-[9px] font-black tabular-nums tracking-wide ${stage.active ? 'text-emerald-500' : 'text-slate-900'}`}>
+                            {formatStepDateTime(stage.timestamp)}
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
+              </div>
 
-                <div className="p-8 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-emerald-500">verified_user</span>
-                    <p className="text-[11px] font-medium text-slate-600">Manual review recommended before final sync</p>
-                  </div>
+              {/* Action Hub & Tabs Section */}
+          <div className="space-y-8 animate-in slide-in-from-bottom-10 duration-700 delay-200">
+            <div className="flex items-center justify-between border-b border-slate-200/60 px-4">
+              <div className="flex items-center gap-16">
+                {[
+                  { id: "requirements", label: "REQUIREMENTS", icon: "task_alt" },
+                  // { id: "kyc", label: "KYC VERIFICATION", icon: "verified_user" },
+                  { id: "records", label: "STUDENT RECORDS", icon: "folder_shared" },
+                  { id: "notes", label: "INTERNAL NOTES", icon: "sticky_note_2" },
+                ].map(tab => (
                   <button
-                    onClick={() => setIsSyncModalOpen(false)}
-                    className="px-8 py-3.5 bg-[#0d1b2a] text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10"
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`pb-5 flex items-center gap-3 text-[13px] font-black tracking-[0.15em] uppercase relative transition-all group ${activeTab === tab.id ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
                   >
-                    Complete Review
+                    <span className={`material-symbols-outlined text-[20px] transition-transform group-hover:scale-110 ${activeTab === tab.id ? 'text-indigo-600' : 'text-slate-300'}`}>{tab.icon}</span>
+                    {tab.label}
+                    {activeTab === tab.id && <div className="absolute bottom-[-1px] left-0 right-0 h-[4px] bg-indigo-600 rounded-full shadow-[0_4px_10px_rgba(79,70,229,0.3)]" />}
                   </button>
-                </div>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-4 mb-4">
+                <button className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10">
+                  <span className="material-symbols-outlined text-[18px]">print</span>
+                  Export PDF
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-12 gap-10">
+              <div className="col-span-12 space-y-10">
+                {activeTab === "requirements" && (
+                  <OcrDocumentIntelligence
+                    academicDocs={academicOcrDocs}
+                    coApplicantDocs={coApplicantOcrDocs}
+                    validationChecks={validationChecks}
+                    loading={loadingDocs}
+                    onAddAcademic={() => {
+                      setNewDocCategory("academic");
+                      setIsAddDocModalOpen(true);
+                    }}
+                    onAddCoApplicant={() => {
+                      setNewDocCategory("financial");
+                      setIsAddDocModalOpen(true);
+                    }}
+                    normalizeConfidence={normalizeConfidence}
+                    formatDocTitle={formatDocTitle}
+                    getDocFieldsCount={getDocFieldsCount}
+                    formatUploadAge={formatUploadAge}
+                    onPreviewDocument={setSelectedDocPreview}
+                    onViewDocument={(doc) => window.open(`/api/documents/view/${userId}/${doc.docType}`, "_blank", "noopener,noreferrer")}
+                    onDeleteDocument={(doc) => handleDeleteDocument(doc.id)}
+                    onUploadDocument={(doc, file) => handleFileUpload(doc.docType, file)}
+                  />
+                )}
+
+                {activeTab === "kyc" && (
+                  <KycSystemDashboard
+                    userId={userId}
+                    application={application}
+                    onRefresh={fetchDocuments}
+                  />
+                )}
+
+                {activeTab === "records" && (
+                  <div className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm flex flex-col h-[620px]">
+                    <div className="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100">
+                          <span className="material-symbols-outlined text-[22px]">forum</span>
+                        </div>
+                        <div>
+                          <h3 className="text-[18px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Communication Hub</h3>
+                          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Direct two-way channel</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-8 space-y-5 bg-slate-50/40">
+                      {messages.map((msg) => (
+                        <React.Fragment key={msg.id}>
+                          {msg.type === "notification" ? (
+                            <div className="flex justify-center">
+                              <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100 text-[11px] font-bold">
+                                <span className="material-symbols-outlined text-[16px]">file_present</span>
+                                {msg.text}
+                              </div>
+                            </div>
+                          ) : (
+                            <div className={`flex flex-col space-y-2 ${msg.sender === "staff" ? "items-end" : "items-start"}`}>
+                              <div className={`max-w-[80%] px-6 py-4 rounded-t-3xl shadow-lg ${msg.sender === "staff" ? "bg-indigo-600 text-white rounded-bl-3xl shadow-indigo-100" : "bg-white border border-slate-100 text-slate-700 rounded-br-3xl shadow-sm"}`}>
+                                <p className="text-[14px] leading-relaxed">{msg.text}</p>
+                              </div>
+                              <p className={`text-[10px] font-bold text-slate-400 ${msg.sender === "staff" ? "mr-2" : "ml-2"}`}>
+                                {msg.sender === "staff" ? "STAFF" : "STUDENT"} • {msg.time}
+                              </p>
+                            </div>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                    <div className="p-6 bg-white border-t border-slate-100">
+                      <div className="flex items-center gap-4 bg-slate-50 border border-slate-200 rounded-3xl p-2 pl-6 focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/5 transition-all">
+                        <input
+                          type="text"
+                          value={msgInput}
+                          onChange={(e) => setMsgInput(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                          placeholder="Request documents or ask for information..."
+                          className="flex-1 bg-transparent border-none focus:ring-0 text-[14px] py-3 font-medium placeholder:text-slate-400"
+                        />
+                        <button onClick={handleSendMessage} className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-200 hover:scale-105 active:scale-95 transition-all">
+                          <span className="material-symbols-outlined text-[24px]">send</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "notes" && (
+                  <div className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-100">
+                          <span className="material-symbols-outlined text-[22px]">sticky_note_2</span>
+                        </div>
+                        <div>
+                          <h3 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Internal Staff Notes</h3>
+                          <p className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">Confidential • staff only</p>
+                        </div>
+                      </div>
+                      <button onClick={handleAddNote} className="flex items-center gap-2 px-5 py-2.5 bg-[#0d1b2a] text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10">
+                        <span className="material-symbols-outlined text-[18px]">add</span>
+                        New Note
+                      </button>
+                    </div>
+                    <div className="space-y-4">
+                      {notes.map((note) => (
+                        <div key={note.id} className="p-6 rounded-3xl bg-slate-50/80 border border-slate-100 hover:border-amber-200 transition-all">
+                          <div className="flex items-start justify-between mb-3">
+                            <p className="text-[12px] font-black text-slate-900">{note.author} <span className="font-medium text-slate-400 ml-2">{note.role}</span></p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">{note.time}</p>
+                          </div>
+                          <p className="text-[14px] text-slate-600 leading-relaxed">{note.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={noteInput}
+                      onChange={(e) => setNoteInput(e.target.value)}
+                      placeholder="Write an internal observation or note..."
+                      className="w-full bg-slate-50/50 border border-slate-200 rounded-3xl p-5 text-[14px] font-medium focus:outline-none focus:ring-4 focus:ring-amber-500/5 focus:border-amber-500/50 transition-all resize-none"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
-      )}
+          )}
+        {activeSidebarMenu === 'student' && (
+          <div className="max-w-[1400px] mx-auto p-10 space-y-10 animate-in fade-in zoom-in-95 duration-300">
+            <div className="flex items-center gap-5">
+              <button
+                onClick={onBack}
+                className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-lg transition-all"
+              >
+                <span className="material-symbols-outlined text-[22px]">arrow_back</span>
+              </button>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-200">
+                  <span className="material-symbols-outlined text-[20px]">person</span>
+                </div>
+                <div>
+                  <h2 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Student Profile</h2>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Registered: {createdDateIST}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/70 backdrop-blur-sm rounded-[40px] p-10 border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.04)] relative">
+              <div className="flex gap-16">
+                <div className="flex-1 space-y-8">
+                  <section>
+                    <h3 className="text-[14px] font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4"><span className="material-symbols-outlined text-emerald-500">person</span> Personal Information</h3>
+                    <div className="grid grid-cols-3 gap-6">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Registration Time</p>
+                        <p className="text-[14px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded inline-block">{createdDateIST}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">First Name</p>
+                        <p className="text-[14px] font-semibold text-slate-900">{application.firstName || application.student?.firstName || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Last Name</p>
+                        <p className="text-[14px] font-semibold text-slate-900">{application.lastName || application.student?.lastName || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Date of Birth</p>
+                        <p className="text-[14px] font-semibold text-slate-900">{application.dob || application.student?.dob || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Email Address</p>
+                        <p className="text-[14px] font-semibold text-slate-900">{application.email || application.student?.email || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Phone Number</p>
+                        <p className="text-[14px] font-semibold text-slate-900">{application.phone || application.student?.phone || application.mobile || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Gender</p>
+                        <p className="text-[14px] font-semibold text-slate-900">{application.gender || application.student?.gender || "—"}</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section>
+                    <h3 className="text-[14px] font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4"><span className="material-symbols-outlined text-emerald-500">location_on</span> Address Details</h3>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Address</p>
+                        <p className="text-[14px] font-semibold text-slate-900">{application.address || application.student?.mailingAddress?.address1 || application.student?.address || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">City / Pincode</p>
+                        <p className="text-[14px] font-semibold text-slate-900">{application.city || application.student?.mailingAddress?.city || "—"} - {application.pincode || application.student?.mailingAddress?.pincode || "—"}</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section>
+                    <h3 className="text-[14px] font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4"><span className="material-symbols-outlined text-emerald-500">public</span> Nationality & Background</h3>
+                    <div className="grid grid-cols-3 gap-6">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Nationality</p>
+                        <p className="text-[14px] font-semibold text-slate-900">{application.nationality || application.student?.nationality?.name || "Indian"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Visa Refusal</p>
+                        <p className="text-[14px] font-semibold text-slate-900">{application.student?.background?.visaRefusal || "No"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Medical Condition</p>
+                        <p className="text-[14px] font-semibold text-slate-900">{application.student?.background?.medicalCondition || "No"}</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section>
+                    <h3 className="text-[14px] font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4"><span className="material-symbols-outlined text-emerald-500">contact_emergency</span> Emergency Contact</h3>
+                    <div className="grid grid-cols-3 gap-6">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Contact Name</p>
+                        <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.name || application.emergencyContactName || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Relation</p>
+                        <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.relation || application.emergencyContactRelation || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Phone</p>
+                        <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.phone || application.emergencyContactPhone || "—"}</p>
+                      </div>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
     </div>
+      {/* Modals & Sub-components */ }
+  {
+    isAddDocModalOpen && (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+        <div className="absolute inset-0 bg-[#0d1b2a]/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsAddDocModalOpen(false)} />
+        <div className="bg-white w-full max-w-lg rounded-[32px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20">
+          <div className="p-8 border-b border-slate-100 bg-slate-50/50">
+            <h3 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Add Document Requirement</h3>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Define what the student needs to upload</p>
+          </div>
+
+          <div className="p-8 space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Document Name</label>
+              <input
+                type="text"
+                value={newDocName}
+                onChange={(e) => setNewDocName(e.target.value)}
+                placeholder="e.g. Master's Admission Letter"
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-[14px] font-medium focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/50 transition-all"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Category</label>
+              <div className="grid grid-cols-2 gap-3">
+                {['academic', 'financial', 'identity'].map(cat => (
+                  <button
+                    key={cat}
+                    onClick={() => setNewDocCategory(cat)}
+                    className={`py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all ${newDocCategory === cat
+                      ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200'
+                      : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:bg-indigo-50/30'
+                      }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="p-8 bg-slate-50/50 border-t border-slate-100 flex gap-4">
+            <button
+              onClick={() => setIsAddDocModalOpen(false)}
+              className="flex-1 py-3.5 rounded-2xl text-[12px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 transition-all"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleAddDocument}
+              disabled={!newDocName.trim()}
+              className="flex-1 py-3.5 bg-indigo-600 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none"
+            >
+              Create Requirement
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  {
+    selectedDocPreview && (
+      <DocumentPreviewDrawer
+        doc={selectedDocPreview}
+        userId={userId}
+        title={formatDocTitle(selectedDocPreview)}
+        uploadAge={formatUploadAge(selectedDocPreview.uploadedAt)}
+        onClose={() => setSelectedDocPreview(null)}
+      />
+    )
+  }
+
+  {
+    activeDiscrepancy && (
+      <SideBySideComparisonModal
+        doc1={activeDiscrepancy.doc1}
+        doc2={activeDiscrepancy.doc2}
+        userId={userId}
+        onClose={() => setActiveDiscrepancy(null)}
+      />
+    )
+  }
+
+  {/* OCR Sync Modal */ }
+  {
+    isSyncModalOpen && selectedDocForSync && (
+      <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+        <div className="absolute inset-0 bg-[#0d1b2a]/60 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsSyncModalOpen(false)} />
+        <div className="bg-white w-full max-w-[1100px] h-[85vh] rounded-[40px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20 flex flex-col">
+
+          {/* Modal Header */}
+          <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-100">
+                <span className="material-symbols-outlined text-[32px]">sync_alt</span>
+              </div>
+              <div>
+                <h3 className="text-[24px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Review & Sync Data</h3>
+                <p className="text-[11px] font-black text-indigo-600 uppercase tracking-widest mt-0.5">AI-Powered Extraction Verification</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setIsSyncModalOpen(false)}
+              className="w-12 h-12 rounded-2xl hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-all"
+            >
+              <span className="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <div className="flex-1 flex overflow-hidden">
+            {/* Left Side: Document Preview */}
+            <div className="w-1/2 bg-slate-900 flex items-center justify-center relative group">
+              <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] pointer-events-none" />
+              <img
+                src={`/api/documents/view/${userId}/${selectedDocForSync.docType}`}
+                alt="Document Preview"
+                className="max-h-[90%] max-w-[90%] object-contain shadow-2xl rounded-lg border border-white/10"
+                onError={(e: any) => {
+                  e.target.src = "https://images.unsplash.com/photo-1586281380349-631531a34d4f?q=80&w=2070&auto=format&fit=crop";
+                }}
+              />
+              <div className="absolute bottom-6 left-6 right-6 p-4 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <p className="text-white text-[11px] font-medium text-center">Original scan provided by the applicant</p>
+              </div>
+            </div>
+
+            {/* Right Side: Comparison Table */}
+            <div className="w-1/2 flex flex-col bg-white overflow-hidden">
+              <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-white sticky top-0 z-10">
+                <h4 className="text-[14px] font-black text-slate-900 uppercase tracking-widest">Field Mapping</h4>
+                <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full border border-emerald-100">
+                  {selectedDocForSync.accuracy?.toFixed(1)}% CONFIDENCE
+                </span>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                {/* Field Row Component */}
+                {[
+                  { label: 'Full Name', key: 'full_name', current: application.firstName + " " + application.lastName, extracted: selectedDocForSync.extractedData?.full_name || "Abhiram Y" },
+                  { label: 'Date of Birth', key: 'date_of_birth', current: application.dob || "—", extracted: selectedDocForSync.extractedData?.date_of_birth || "14-08-1998" },
+                  { label: 'PAN Number', key: 'document_number', current: application.panNumber || "—", extracted: selectedDocForSync.extractedData?.document_number || "ABCDP1234F" },
+                  { label: 'Father\'s Name', key: 'father_name', current: application.fatherName || "—", extracted: selectedDocForSync.extractedData?.father_name || "Y. Venkatesh" },
+                  { label: 'Issuing Authority', key: 'issuing_authority', current: "—", extracted: selectedDocForSync.extractedData?.issuing_authority || "Income Tax Dept." }
+                ].map((field, idx) => (
+                  <div key={idx} className="group/row">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{field.label}</label>
+                      {field.current !== field.extracted && field.extracted && (
+                        <span className="text-[9px] font-bold text-amber-500 flex items-center gap-1 animate-pulse">
+                          <span className="material-symbols-outlined text-[12px]">warning</span>
+                          Mismatched
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Profile Value</p>
+                        <p className="text-[14px] font-bold text-slate-600">{field.current}</p>
+                      </div>
+
+                      <div className={`p-4 rounded-2xl border relative group transition-all ${field.current === field.extracted ? 'bg-emerald-50/30 border-emerald-100' : 'bg-indigo-50/30 border-indigo-100 hover:shadow-lg hover:shadow-indigo-500/5'}`}>
+                        <p className="text-[9px] font-bold text-indigo-400 uppercase mb-1">AI Extracted</p>
+                        <p className="text-[14px] font-bold text-indigo-700">{field.extracted}</p>
+
+                        <button
+                          onClick={() => handleSyncField(field.key, field.extracted)}
+                          disabled={isSyncing || field.current === field.extracted}
+                          className={`absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl flex items-center justify-center transition-all ${field.current === field.extracted
+                            ? 'bg-emerald-500 text-white cursor-default'
+                            : 'bg-indigo-600 text-white hover:scale-110 active:scale-95 shadow-lg shadow-indigo-200'
+                            }`}
+                        >
+                          <span className="material-symbols-outlined text-[20px]">
+                            {field.current === field.extracted ? 'check' : 'sync'}
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-8 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-emerald-500">verified_user</span>
+                  <p className="text-[11px] font-medium text-slate-600">Manual review recommended before final sync</p>
+                </div>
+                <button
+                  onClick={() => setIsSyncModalOpen(false)}
+                  className="px-8 py-3.5 bg-[#0d1b2a] text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10"
+                >
+                  Complete Review
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+    </div >
   );
 };
 
@@ -1410,18 +1482,39 @@ const OcrValidationCard = ({ check }: { check: ValidationCheck }) => {
   const tone =
     check.status === "success"
       ? "border-emerald-200 bg-emerald-50/40 text-emerald-600"
-      : check.status === "warning"
-        ? "border-amber-200 bg-amber-50/40 text-amber-600"
-        : "border-slate-200 bg-slate-50/70 text-slate-500";
-  const icon = check.status === "success" ? "check_circle" : check.status === "warning" ? "warning" : "pending";
+      : check.status === "error"
+        ? "border-rose-200 bg-rose-50/40 text-rose-600 shadow-sm"
+        : check.status === "warning"
+          ? "border-amber-200 bg-amber-50/40 text-amber-600"
+          : "border-slate-200 bg-slate-50/70 text-slate-500";
+
+  const icon =
+    check.status === "success"
+      ? "check_circle"
+      : check.status === "error"
+        ? "dangerous"
+        : check.status === "warning"
+          ? "warning"
+          : "pending";
 
   return (
-    <div className={`rounded-lg border p-4 flex items-start gap-3 ${tone}`}>
-      <span className="material-symbols-outlined text-[20px] mt-0.5">{icon}</span>
-      <div>
-        <h4 className="text-[14px] font-bold text-[#0d1b2a]">{check.label}</h4>
-        <p className="text-[13px] font-medium text-slate-600 mt-1">{check.detail}</p>
+    <div className={`rounded-lg border p-4 flex items-start justify-between gap-3 ${tone}`}>
+      <div className="flex items-start gap-3">
+        <span className="material-symbols-outlined text-[20px] mt-0.5">{icon}</span>
+        <div>
+          <h4 className="text-[14px] font-bold text-[#0d1b2a]">{check.label}</h4>
+          <p className="text-[13px] font-medium text-slate-600 mt-1">{check.detail}</p>
+        </div>
       </div>
+      {check.onReview && (
+        <button
+          type="button"
+          onClick={check.onReview}
+          className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md shadow-rose-200 shrink-0 self-center"
+        >
+          Review Discrepancy
+        </button>
+      )}
     </div>
   );
 };
@@ -1596,6 +1689,93 @@ const DocumentCard = ({ doc, onUpload, onDelete, onReviewSync }: { doc: any, onU
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+const SideBySideComparisonModal = ({
+  doc1,
+  doc2,
+  userId,
+  onClose,
+}: {
+  doc1: OcrSummaryDoc;
+  doc2: OcrSummaryDoc;
+  userId: string;
+  onClose: () => void;
+}) => {
+  const url1 = `/api/documents/view/${userId}/${doc1.docType}`;
+  const url2 = `/api/documents/view/${userId}/${doc2.docType}`;
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
+      <div className="bg-white w-[95vw] h-[90vh] rounded-[40px] shadow-2xl overflow-hidden flex flex-col border border-white/20 animate-in zoom-in-95 duration-300">
+
+        {/* Header */}
+        <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-lg shadow-rose-200">
+              <span className="material-symbols-outlined text-[26px]">compare</span>
+            </div>
+            <div>
+              <h3 className="text-[22px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Review Discrepancy</h3>
+              <p className="text-[11px] font-black text-rose-600 uppercase tracking-widest mt-0.5">Cross-Document Verification Mode</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-10 h-10 rounded-xl hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-all"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        {/* Content splits into 2 panels */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left panel: Doc 1 */}
+          <div className="w-1/2 border-r border-slate-200 flex flex-col">
+            <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+              <span className="text-[12px] font-black uppercase text-slate-500 tracking-wider">Document 1: {doc1.name}</span>
+              <span className="text-[12px] font-bold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full">
+                {String((doc1.extractedData as any)?.full_name || (doc1.extractedData as any)?.name || 'Unknown')}
+              </span>
+            </div>
+            <div className="flex-1 bg-slate-100 p-4">
+              <iframe src={url1} className="w-full h-full rounded-xl border border-slate-200 bg-white" />
+            </div>
+          </div>
+
+          {/* Right panel: Doc 2 */}
+          <div className="w-1/2 flex flex-col">
+            <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+              <span className="text-[12px] font-black uppercase text-slate-500 tracking-wider">Document 2: {doc2.name}</span>
+              <span className="text-[12px] font-bold text-rose-600 bg-rose-50 px-2.5 py-0.5 rounded-full">
+                {String((doc2.extractedData as any)?.full_name || (doc2.extractedData as any)?.name || 'Unknown')}
+              </span>
+            </div>
+            <div className="flex-1 bg-slate-100 p-4">
+              <iframe src={url2} className="w-full h-full rounded-xl border border-slate-200 bg-white" />
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-8 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="material-symbols-outlined text-rose-500 animate-pulse">warning</span>
+            <p className="text-[12px] font-medium text-slate-600">
+              A name mismatch was identified by AI. Please review the scanned files and perform any profile modifications as needed.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="px-8 py-3.5 bg-slate-900 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10"
+          >
+            Acknowledge & Close
+          </button>
+        </div>
+
+      </div>
     </div>
   );
 };

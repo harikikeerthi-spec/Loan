@@ -911,6 +911,17 @@ export const documentApi = {
             method: 'POST',
             body: JSON.stringify({ userId, docType, docName }),
         }),
+
+    /** Get a short-lived S3 presigned URL to view/preview a document. */
+    getPresignedView: (userId: string, docType: string) =>
+        apiFetch(`${API_URL}/documents/presigned-view/${encodeURIComponent(userId)}/${encodeURIComponent(docType)}`),
+
+    /** Update student profile fields (e.g. from OCR extraction results). */
+    updateProfile: (userId: string, updates: any) =>
+        apiFetch(`${API_URL}/onboarding`, {
+            method: "POST",
+            body: JSON.stringify({ userId, ...updates }),
+        }),
 };
 
 
@@ -1126,6 +1137,15 @@ export const staffProfileApi = {
 
     getDashboardActivities: (limit = 15) =>
         apiFetch(`${API_URL}/staff-profiles/dashboard/activities?limit=${limit}`),
+
+    getAllDashboardActivities: (opts: { limit?: number; offset?: number; type?: string; search?: string }) => {
+        const params = new URLSearchParams();
+        if (opts.limit !== undefined) params.append('limit', opts.limit.toString());
+        if (opts.offset !== undefined) params.append('offset', opts.offset.toString());
+        if (opts.type) params.append('type', opts.type);
+        if (opts.search) params.append('search', opts.search);
+        return apiFetch(`${API_URL}/staff-profiles/activities/all?${params.toString()}`);
+    },
 
     // Share a student profile with a bank or the student (Step 4 of onboarding)
     shareProfile: (studentId: string, data: {

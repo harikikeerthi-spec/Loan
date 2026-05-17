@@ -368,18 +368,40 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
     setPreviewLoading(true);
     setPreviewUrl(null);
     try {
-      // For staff profile documents, we try to fetch directly from uploads
-      const fileName = doc.filePath.replace("./uploads/", "");
-      const url = `/uploads/${fileName}`;
-      
-      // We can just use the URL directly for the iframe/img
-      setPreviewUrl(url);
+      // If doc already carries a previewUrl (S3 presigned URL) from the API, use it.
+      if (doc.previewUrl) {
+        setPreviewUrl(doc.previewUrl);
+        return;
+      }
+      // Fallback: fetch a fresh presigned URL from the backend
+      if (doc.filePath && !doc.filePath.startsWith('in.gov.') && !doc.filePath.startsWith('http')) {
+        // For staff-profile docs, the filePath is an S3 key — ask backend for a signed URL
+        // We don't have userId here, so use the view endpoint with the doc's userId if available
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+        const token = typeof window !== 'undefined'
+          ? (localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken'))
+          : null;
+        const res = await fetch(`${API_URL}/documents/presigned-view/${profile.linkedUserId || ''}/${doc.docType}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPreviewUrl(data.url);
+          return;
+        }
+      }
+      // Last resort: try the direct /uploads/ path (legacy local files)
+      if (doc.filePath) {
+        const fileName = doc.filePath.replace('./uploads/', '').replace('uploads/', '');
+        setPreviewUrl(`/uploads/${fileName}`);
+      }
     } catch (e) {
-      console.error("Failed to load preview", e);
+      console.error('Failed to load preview', e);
     } finally {
       setPreviewLoading(false);
     }
   };
+
 
   return (
     <div className="space-y-6 font-sans text-slate-800">

@@ -45,6 +45,47 @@ export class OnboardingService {
       const loanAmountValue = data.loan_amount?.label || data.loanAmount;
       const admitStatusValue = data.admit_status?.value || data.admitStatus;
 
+      let permAddrStr = user?.permanentAddress || null;
+      const permanentAddrObj = data.address?.permanent || personal.permanentAddress || data.permanentAddress;
+      if (permanentAddrObj && typeof permanentAddrObj === 'object') {
+        const parts = [
+          permanentAddrObj.address1,
+          permanentAddrObj.address2,
+          permanentAddrObj.city,
+          permanentAddrObj.state,
+          permanentAddrObj.country,
+          permanentAddrObj.pincode
+        ].filter(Boolean);
+        if (parts.length > 0) {
+          permAddrStr = parts.join(', ');
+        }
+      } else if (typeof permanentAddrObj === 'string') {
+        permAddrStr = permanentAddrObj;
+      }
+
+      let parsedDob = user?.dateOfBirth || null;
+      const dobVal = personal.dob || personal.dateOfBirth || data.dob || data.dateOfBirth;
+      if (dobVal) {
+        const parseSimpleDate = (dateStr: string) => {
+          if (!dateStr) return null;
+          let d = new Date(dateStr);
+          if (!isNaN(d.getTime())) return d.toISOString();
+          const parts = dateStr.split(/[-/]/);
+          if (parts.length === 3) {
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const year = parseInt(parts[2], 10);
+            if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+              d = new Date(year, month, day);
+              if (!isNaN(d.getTime())) return d.toISOString();
+            }
+          }
+          return null;
+        };
+        const resDob = parseSimpleDate(dobVal);
+        if (resDob) parsedDob = resDob;
+      }
+
       const updateData: any = {
         firstName: personal.firstName || data.firstName || user?.firstName,
         lastName: personal.lastName || data.lastName || user?.lastName,
@@ -66,6 +107,11 @@ export class OnboardingService {
         pincode: pincodeValue,
         loanAmount: loanAmountValue,
         admitStatus: admitStatusValue,
+        aadhaarNumber: personal.aadhaarNumber || data.aadhaarNumber || user?.aadhaarNumber || null,
+        panNumber: personal.pan || personal.panNumber || data.pan || data.panNumber || user?.panNumber || null,
+        fatherName: personal.fatherName || data.fatherName || user?.fatherName || null,
+        dateOfBirth: parsedDob,
+        permanentAddress: permAddrStr,
       };
 
       if (!user) {
