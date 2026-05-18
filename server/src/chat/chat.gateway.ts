@@ -26,6 +26,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   server: Server;
 
   private readonly logger = new Logger(ChatGateway.name);
+  private onlineUsers = new Map<string, string>(); // client.id -> email
 
   constructor(
     private readonly chatService: ChatService,
@@ -67,6 +68,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.join('room_bank');
       }
 
+      // Track online presence if email is available
+      if (payload.email) {
+        this.onlineUsers.set(client.id, payload.email.toLowerCase());
+        this.server.to('room_staff').emit('presence_update', Array.from(new Set(this.onlineUsers.values())));
+      }
+
     } catch (error) {
       this.logger.warn(`Connection rejected: ${client.id} - ${error.message}`);
       client.disconnect();
@@ -75,6 +82,17 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
+    const email = this.onlineUsers.get(client.id);
+    if (email) {
+      this.onlineUsers.delete(client.id);
+      this.server.to('room_staff').emit('presence_update', Array.from(new Set(this.onlineUsers.values())));
+    }
+  }
+
+  @SubscribeMessage('request_presence')
+  handleRequestPresence(@ConnectedSocket() client: Socket) {
+    client.emit('presence_update', Array.from(new Set(this.onlineUsers.values())));
+    return { success: true };
   }
 
   @SubscribeMessage('join_conversation')
@@ -193,14 +211,31 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleUserLogin(payload: any) {
     this.logger.log(`Broadcasting login alert for ${payload.email} to staff`);
     this.server.to('room_staff').emit('user_activity', {
+      id: Date.now(),
       type: payload.isNewUser ? 'registration' : 'login',
-      user: {
-        email: payload.email,
-        firstName: payload.firstName,
-        lastName: payload.lastName,
-        phoneNumber: payload.phoneNumber
-      },
-      timestamp: new Date().toISOString()
+      msg: `${payload.firstName || 'Student'} ${payload.lastName || ''} logged in.`,
+      time: 'Just now',
+      color: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+      icon: 'login',
+      actorName: `${payload.firstName || 'Student'} ${payload.lastName || ''}`.trim() || payload.email,
+      actorEmail: payload.email,
+      createdAt: new Date().toISOString()
+    });
+  }
+
+  @OnEvent('dashboard.activity')
+  handleDashboardActivity(payload: any) {
+    this.logger.log(`Broadcasting dashboard activity: ${payload.msg}`);
+    this.server.to('room_staff').emit('user_activity', {
+      id: payload.id || Date.now(),
+      type: payload.type || 'info',
+      msg: payload.msg,
+      time: payload.time || 'Just now',
+      icon: payload.icon || 'history',
+      color: payload.color || 'bg-slate-50 text-slate-600 border-slate-100',
+      actorName: payload.actorName || 'System',
+      actorEmail: payload.actorEmail || null,
+      createdAt: payload.createdAt || new Date().toISOString()
     });
   }
 }

@@ -238,8 +238,9 @@ export class UsersService {
         }
       }
       
-      if (details.full_name) {
-        const parts = details.full_name.trim().split(/\s+/);
+      const fullNameVal = details.full_name || details.fullName || details.name;
+      if (fullNameVal) {
+        const parts = fullNameVal.trim().split(/\s+/);
         if (parts.length > 0) {
           const newFirstName = parts[0];
           const newLastName = parts.slice(1).join(' ');
@@ -251,8 +252,9 @@ export class UsersService {
         }
       }
       
-      if (details.date_of_birth) {
-        const parsedDob = this.parseDate(details.date_of_birth);
+      const dobVal = details.dob || details.date_of_birth || details.dateOfBirth;
+      if (dobVal) {
+        const parsedDob = this.parseDate(dobVal);
         if (parsedDob) {
           const currentDob = currentUser.dateOfBirth ? new Date(currentUser.dateOfBirth).toISOString().split('T')[0] : '';
           const newDob = new Date(parsedDob).toISOString().split('T')[0];
@@ -262,10 +264,30 @@ export class UsersService {
         }
       }
 
-      if (details.panNumber) compareAndSet(currentUser.panNumber, details.panNumber, 'panNumber');
-      if (details.aadhaarNumber) compareAndSet(currentUser.aadhaarNumber, details.aadhaarNumber, 'aadhaarNumber');
-      if (details.father_name) compareAndSet(currentUser.fatherName, details.father_name, 'fatherName');
-      if (details.address) compareAndSet(currentUser.permanentAddress, details.address, 'permanentAddress');
+      const panVal = details.pan_number || details.panNumber;
+      if (panVal) {
+        compareAndSet(currentUser.panNumber, panVal, 'panNumber');
+      }
+
+      const aadhaarVal = details.aadhaar_number || details.aadhaarNumber || details.aadhar_number || details.aadharNumber || details.national_id || details.nationalId;
+      if (aadhaarVal) {
+        compareAndSet(currentUser.aadhaarNumber, aadhaarVal, 'aadhaarNumber');
+      }
+
+      const fatherVal = details.father_name || details.fatherName;
+      if (fatherVal) {
+        compareAndSet(currentUser.fatherName, fatherVal, 'fatherName');
+      }
+
+      const addressVal = details.address || details.permanentAddress || details.permanent_address;
+      if (addressVal) {
+        compareAndSet(currentUser.permanentAddress, addressVal, 'permanentAddress');
+      }
+
+      const genderVal = details.gender;
+      if (genderVal) {
+        compareAndSet(currentUser.gender, genderVal, 'gender');
+      }
 
       if (Object.keys(payload).length === 0) {
         console.log('[UsersService.updateExtractedDetails] No fields to update.');
@@ -289,6 +311,7 @@ export class UsersService {
           if (payload.firstName) safePayload.firstName = payload.firstName;
           if (payload.lastName) safePayload.lastName = payload.lastName;
           if (payload.dateOfBirth) safePayload.dateOfBirth = payload.dateOfBirth;
+          if (payload.gender) safePayload.gender = payload.gender;
           
           if (Object.keys(safePayload).length > 0) {
             await this.db.from('User').update(safePayload).eq('id', userId);
@@ -319,7 +342,7 @@ export class UsersService {
     return data;
   }
 
-  async updateUserRole(email: string, role: 'admin' | 'user' | 'staff' | 'super_admin' | 'agent' | 'bank') {
+  async updateUserRole(email: string, role: 'admin' | 'user' | 'staff' | 'super_admin' | 'agent' | 'bank' | 'student') {
     const { data, error } = await this.db
       .from('User')
       .update({ role })

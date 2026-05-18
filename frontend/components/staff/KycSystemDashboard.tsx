@@ -63,10 +63,14 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
       const fieldMapping: Record<string, string> = {
         'full_name': 'firstName', // Simplification, usually needs splitting
         'dob': 'dob',
+        'date_of_birth': 'dob',
         'pan_number': 'panNumber',
         'aadhaar_number': 'aadhaarNumber',
         'passport_number': 'passportNumber',
         'father_name': 'fatherName',
+        'gender': 'gender',
+        'address': 'permanentAddress',
+        'permanent_address': 'permanentAddress',
       };
 
       const updates: any = {};

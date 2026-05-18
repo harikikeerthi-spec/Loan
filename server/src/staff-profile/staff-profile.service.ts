@@ -8,6 +8,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { AuditLogService } from '../auth/audit-log.service';
 import { S3Service } from '../document/s3.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class StaffProfileService {
@@ -20,6 +21,7 @@ export class StaffProfileService {
     private usersService: UsersService,
     private auditLog: AuditLogService,
     private s3Service: S3Service,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   // ─── Create a staff-portal profile linked to a website user ───────────────
@@ -475,6 +477,17 @@ export class StaffProfileService {
         isDashboardActivity: true,
       },
     );
+
+    // Broadcast the activity log dynamically via NestJS event emitter to socket.io
+    this.eventEmitter.emit('dashboard.activity', {
+      type: data.type,
+      msg: data.msg,
+      icon: data.icon,
+      color: data.color,
+      actorName,
+      actorEmail: user?.email || null,
+      createdAt: new Date().toISOString()
+    });
   }
 
   /**

@@ -94,7 +94,11 @@ export default function ChatInterface({ role, initialUser, portalTitle }: ChatIn
         fetchConversations();
         if (role === 'staff') fetchUsers();
 
-        const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+        const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (
+            typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')
+                ? window.location.origin
+                : 'http://localhost:5000'
+        );
         const socketUrl = baseApiUrl.endsWith('/api')
             ? baseApiUrl.replace('/api', '/chat')
             : `${baseApiUrl.replace(/\/$/, '')}/chat`;

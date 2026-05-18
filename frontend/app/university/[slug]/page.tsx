@@ -26,7 +26,7 @@ export default async function UniversityPage({ params }: Props) {
     let u = universities[slug];
 
     if (!u) {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.PORT ? `http://localhost:${process.env.PORT}` : 'http://localhost:3000');
         try {
             const universityName = slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
             const resp = await fetch(`${baseUrl}/api/ai-search`, {

@@ -50,8 +50,11 @@ const FIELD_MAPPING: { [key: string]: { label: string; ocrKey: string; profileKe
   full_name: { label: "Full Name", ocrKey: "full_name", profileKey: "firstName" },
   date_of_birth: { label: "Date of Birth", ocrKey: "date_of_birth", profileKey: "dob" },
   document_number: { label: "Document Number", ocrKey: "document_number", profileKey: "panNumber" },
+  aadhaar_number: { label: "Aadhaar Number", ocrKey: "aadhaar_number", profileKey: "aadhaarNumber" },
   father_name: { label: "Father's Name", ocrKey: "father_name", profileKey: "fatherName" },
   expiry_date: { label: "Expiry Date", ocrKey: "expiry_date", profileKey: "expiryDate" },
+  gender: { label: "Gender", ocrKey: "gender", profileKey: "gender" },
+  address: { label: "Address", ocrKey: "address", profileKey: "permanentAddress" },
 };
 
 export default function OCRDataComparisonModal({

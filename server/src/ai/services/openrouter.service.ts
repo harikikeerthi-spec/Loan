@@ -188,53 +188,69 @@ export class OpenRouterService {
             throw new Error('OPENROUTER_API_KEY is not configured');
         }
 
-        const isPdf = imageUrl.startsWith('data:application/pdf');
+        const modelsToTry = Array.from(new Set([
+            model,
+            'anthropic/claude-3.5-sonnet',
+            'nvidia/nemotron-nano-12b-v2-vl:free',
+            'meta-llama/llama-3.2-11b-vision-instruct:free',
+            'google/gemini-2.0-flash-exp:free'
+        ]));
 
-        const requestBody = {
-            model: model,
-            messages: [
-                {
-                    role: 'user',
-                    content: [
-                        { type: 'text', text: prompt },
-                        isPdf ? {
-                            type: 'file',
-                            file: {
-                                filename: 'document.pdf',
-                                file_data: imageUrl
+        let lastError: Error | null = null;
+        for (const currentModel of modelsToTry) {
+            console.log(`[OpenRouter Vision] Attempting extraction with model: ${currentModel}...`);
+            const isPdf = imageUrl.startsWith('data:application/pdf');
+            const requestBody = {
+                model: currentModel,
+                messages: [
+                    {
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: prompt },
+                            isPdf ? {
+                                type: 'file',
+                                file: {
+                                    filename: 'document.pdf',
+                                    file_data: imageUrl
+                                }
+                            } : {
+                                type: 'image_url',
+                                image_url: { url: imageUrl }
                             }
-                        } : {
-                            type: 'image_url',
-                            image_url: { url: imageUrl }
-                        }
-                    ]
+                        ]
+                    }
+                ],
+                max_tokens: 1024,
+            };
+
+            try {
+                const response = await fetch(this.apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${this.apiKey}`,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': 'https://vidhyaloan.com',
+                        'X-Title': 'VidhyaLoan',
+                    },
+                    body: JSON.stringify(requestBody),
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(`OpenRouter Vision API error: ${response.status} - ${error}`);
                 }
-            ],
-            max_tokens: 1024,
-        };
 
-        try {
-            const response = await fetch(this.apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.apiKey}`,
-                    'Content-Type': 'application/json',
-                    'HTTP-Referer': 'https://vidhyaloan.com',
-                    'X-Title': 'VidhyaLoan',
-                },
-                body: JSON.stringify(requestBody),
-            });
-
-            if (!response.ok) {
-                const error = await response.text();
-                throw new Error(`OpenRouter Vision API error: ${response.status} - ${error}`);
+                const data = await response.json();
+                const content = data.choices?.[0]?.message?.content;
+                if (content) {
+                    console.log(`[OpenRouter Vision] Successfully extracted details using model: ${currentModel}`);
+                    return content;
+                }
+            } catch (err: any) {
+                console.warn(`[OpenRouter Vision] Model ${currentModel} failed: ${err.message || err}`);
+                lastError = err;
             }
-
-            const data = await response.json();
-            return data.choices?.[0]?.message?.content || '';
-        } catch (error) {
-            console.error('OpenRouter vision request failed:', error);
-            throw error;
         }
+        throw lastError || new Error('All vision endpoints failed to respond.');
     }
 }

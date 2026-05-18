@@ -112,6 +112,16 @@ export class OnboardingService {
         fatherName: personal.fatherName || data.fatherName || user?.fatherName || null,
         dateOfBirth: parsedDob,
         permanentAddress: permAddrStr,
+        gender: personal.gender || data.gender || user?.gender || null,
+        passport: data.passport ? JSON.stringify(data.passport) : (user?.passport || null),
+        nationality: data.nationality ? JSON.stringify(data.nationality) : (user?.nationality || null),
+        mailingAddress: (data.address?.mailing || data.mailingAddress) ? JSON.stringify(data.address?.mailing || data.mailingAddress) : (user?.mailingAddress || null),
+        emergencyContact: data.emergencyContact ? JSON.stringify(data.emergencyContact) : (user?.emergencyContact || null),
+        academic: data.academic ? JSON.stringify(data.academic) : (user?.academic || null),
+        workExperience: data.workExperience ? JSON.stringify(data.workExperience) : (user?.workExperience || null),
+        tests: (data.testScores || data.tests) ? JSON.stringify(data.testScores || data.tests) : (user?.tests || null),
+        family: (data.familyDetails || data.family) ? JSON.stringify(data.familyDetails || data.family) : (user?.family || null),
+        coApplicant: data.coApplicant ? JSON.stringify(data.coApplicant) : (user?.coApplicant || null),
       };
 
       if (!user) {

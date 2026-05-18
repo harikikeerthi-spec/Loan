@@ -38,6 +38,15 @@ export class UsersController {
             formattedDOB = `${day}-${month}-${year}`;
         }
 
+        const safeJsonParse = (str: string) => {
+            if (!str) return null;
+            try {
+                return JSON.parse(str);
+            } catch (e) {
+                return null;
+            }
+        };
+
         return {
             success: true,
             user: {
@@ -54,7 +63,33 @@ export class UsersController {
                 aadhaarNumber: user.aadhaarNumber || '',
                 fatherName: user.fatherName || '',
                 permanentAddress: user.permanentAddress || '',
+                gender: user.gender || '',
                 documentVerified: user.documentVerified || false,
+                goal: user.goal || '',
+                studyDestination: user.studyDestination || '',
+                courseName: user.courseName || '',
+                targetUniversity: user.targetUniversity || '',
+                intakeSeason: user.intakeSeason || '',
+                bachelorsDegree: user.bachelorsDegree || '',
+                gpa: user.gpa || null,
+                workExp: user.workExp || null,
+                entranceTest: user.entranceTest || '',
+                entranceScore: user.entranceScore || '',
+                englishTest: user.englishTest || '',
+                englishScore: user.englishScore || '',
+                budget: user.budget || '',
+                pincode: user.pincode || '',
+                loanAmount: user.loanAmount || '',
+                admitStatus: user.admitStatus || '',
+                passport: safeJsonParse(user.passport),
+                nationality: safeJsonParse(user.nationality),
+                mailingAddress: safeJsonParse(user.mailingAddress),
+                emergencyContact: safeJsonParse(user.emergencyContact),
+                academic: safeJsonParse(user.academic),
+                workExperience: safeJsonParse(user.workExperience),
+                tests: safeJsonParse(user.tests),
+                family: safeJsonParse(user.family),
+                coApplicant: safeJsonParse(user.coApplicant),
             },
         };
     }
@@ -114,7 +149,7 @@ export class UsersController {
         }
     }
 
-    @UseGuards(SuperAdminGuard)
+    @UseGuards(AdminGuard)
     @Post('make-admin')
     async makeAdmin(@Body() body: { email: string; role: string }) {
         if (!body || !body.email || !body.role) {
@@ -123,7 +158,7 @@ export class UsersController {
                 message: 'Email and role are required',
             };
         }
-        const allowedRoles = ['admin', 'user', 'staff', 'super_admin', 'agent', 'bank'];
+        const allowedRoles = ['admin', 'user', 'staff', 'super_admin', 'agent', 'bank', 'student'];
         if (!allowedRoles.includes(body.role)) {
             return {
                 success: false,

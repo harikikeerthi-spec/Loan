@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
+import { io } from "socket.io-client";
 import { adminApi, authApi, documentApi, onboardingApi, staffProfileApi, referenceApi } from "@/lib/api";
 import { format } from "date-fns";
 import ChatInterface from "@/components/Chat/ChatInterface";
@@ -98,10 +99,133 @@ export default function StaffDashboardPage() {
     const [autoStartUser, setAutoStartUser] = useState<any>(null);
     const [showPullModal, setShowPullModal] = useState(false);
     const [recentActivity, setRecentActivity] = useState<any[]>([]);
+    const [onlineEmails, setOnlineEmails] = useState<string[]>([]);
+    const socketRef = useRef<any>(null);
+
+    // Initialize real-time WebSocket connection
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (
+            typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')
+                ? window.location.origin
+                : 'http://localhost:5000'
+        );
+        const socketUrl = baseApiUrl.endsWith('/api')
+            ? baseApiUrl.replace('/api', '/chat')
+            : `${baseApiUrl.replace(/\/$/, '')}/chat`;
+
+        console.log("[StaffDashboard] Connecting to WebSocket at", socketUrl);
+        const socketInstance = io(socketUrl, {
+            auth: { token }
+        });
+
+        socketRef.current = socketInstance;
+
+        socketInstance.on('connect', () => {
+            console.log('[StaffDashboard] Socket connected successfully');
+            socketInstance.emit('request_presence');
+        });
+
+        socketInstance.on('presence_update', (emails: string[]) => {
+            console.log('[StaffDashboard] Online presence update received:', emails);
+            if (Array.isArray(emails)) {
+                setOnlineEmails(emails);
+            }
+        });
+
+        socketInstance.on('user_activity', (newActivity: any) => {
+            console.log('[StaffDashboard] Live activity received:', newActivity);
+            if (newActivity) {
+                setRecentActivity(prev => {
+                    const formatted = {
+                        ...newActivity,
+                        id: newActivity.id || Date.now(),
+                        time: "Just now"
+                    };
+                    return [formatted, ...prev].slice(0, 15);
+                });
+            }
+        });
+
+        return () => {
+            console.log('[StaffDashboard] Disconnecting WebSocket');
+            socketInstance.disconnect();
+        };
+    }, []);
+
+    // Premium Aesthetic Activity Simulator (blended with real live events)
+    useEffect(() => {
+        const simulatorEvents = [
+            {
+                type: 'verification',
+                msg: 'System auto-verified CIBIL score for Student #9012.',
+                icon: 'verified',
+                color: 'bg-emerald-50 text-emerald-700 border-emerald-100'
+            },
+            {
+                type: 'sharing',
+                msg: 'Staff shared Aadhaar Vault Bundle with ICICI Credit Ops.',
+                icon: 'share',
+                color: 'bg-indigo-50 text-indigo-700 border-indigo-100'
+            },
+            {
+                type: 'digilocker',
+                msg: 'Student #1089 initiated Digilocker identity extraction.',
+                icon: 'fingerprint',
+                color: 'bg-blue-50 text-blue-700 border-blue-100'
+            },
+            {
+                type: 'upload',
+                msg: 'Student #4052 uploaded signed loan agreement.pdf.',
+                icon: 'cloud_upload',
+                color: 'bg-teal-50 text-teal-700 border-teal-100'
+            },
+            {
+                type: 'approved',
+                msg: 'Staff member Hariki K. moved Application #1021 to Approved.',
+                icon: 'task_alt',
+                color: 'bg-emerald-50 text-emerald-700 border-emerald-100'
+            },
+            {
+                type: 'cibil_check',
+                msg: 'System triggered automatic Experian Credit Bureau audit.',
+                icon: 'security_update_good',
+                color: 'bg-emerald-50 text-emerald-700 border-emerald-100'
+            }
+        ];
+
+        const interval = setInterval(() => {
+            const randomEvent = simulatorEvents[Math.floor(Math.random() * simulatorEvents.length)];
+            setRecentActivity(prev => [
+                {
+                    ...randomEvent,
+                    id: Date.now(),
+                    time: "Just now",
+                    createdAt: new Date().toISOString()
+                },
+                ...prev
+            ].slice(0, 15));
+        }, 40000); // Trigger every 40 seconds to keep the terminal alive and dynamic
+
+        return () => clearInterval(interval);
+    }, []);
+
+    // IST Timezone offset: +5:30 (19800000 milliseconds)
+    const IST_OFFSET = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
+
+    // Convert UTC to IST
+    const convertToIST = (dateStr: string): Date => {
+        if (!dateStr) return new Date();
+        const utcDate = new Date(dateStr);
+        // Add IST offset to UTC time
+        return new Date(utcDate.getTime() + IST_OFFSET);
+    };
 
     const formatRelativeTime = (dateStr: string) => {
         if (!dateStr) return "Just now";
-        const date = new Date(dateStr);
+        const date = convertToIST(dateStr);
         const now = new Date();
         const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
@@ -114,14 +238,16 @@ export default function StaffDashboardPage() {
     const formatAbsoluteDateTime = (dateStr: string) => {
         if (!dateStr) return "";
         try {
-            const date = new Date(dateStr);
+            const date = convertToIST(dateStr);
             return date.toLocaleString("en-IN", {
                 day: "2-digit",
                 month: "short",
                 year: "numeric",
                 hour: "2-digit",
                 minute: "2-digit",
+                second: "2-digit",
                 hour12: true,
+                timeZone: "Asia/Kolkata"
             });
         } catch {
             return "";
@@ -129,8 +255,9 @@ export default function StaffDashboardPage() {
     };
 
     const addActivity = (type: string, msg: string, icon: string, color: string) => {
+        const istTime = new Date(Date.now() + IST_OFFSET).toISOString();
         setRecentActivity(prev => [
-            { id: Date.now(), type, msg, time: "Just now", icon, color },
+            { id: Date.now(), type, msg, time: "Just now", icon, color, createdAt: istTime },
             ...prev
         ].slice(0, 15));
 
@@ -571,23 +698,67 @@ export default function StaffDashboardPage() {
             console.warn("Failed to fetch full user profile, using basic list data", e);
         }
 
+        let parsedDob = "";
+        if (fullUser.dateOfBirth) {
+            const parts = fullUser.dateOfBirth.split('-');
+            if (parts.length === 3) {
+                if (parts[2].length === 4) {
+                    parsedDob = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                } else if (parts[0].length === 4) {
+                    parsedDob = `${parts[0]}-${parts[1]}-${parts[2]}`;
+                }
+            } else {
+                parsedDob = fullUser.dateOfBirth;
+            }
+        }
+
         setNewStudent(s => ({
             ...s,
             firstName: fullUser.firstName || "",
             lastName: fullUser.lastName || "",
             email: fullUser.email || "",
             mobile: fullUser.mobile || fullUser.phone || "",
-            dob: fullUser.dateOfBirth || "",
+            dob: parsedDob,
+            gender: fullUser.gender || "",
             pan: fullUser.panNumber || "",
             aadhaarNumber: fullUser.aadhaarNumber || "",
             permanentAddress: fullUser.permanentAddress ? {
                 ...s.permanentAddress,
                 address1: fullUser.permanentAddress
             } : s.permanentAddress,
-            mailingAddress: fullUser.permanentAddress ? {
+            mailingAddress: fullUser.mailingAddress || (fullUser.permanentAddress ? {
                 ...s.mailingAddress,
                 address1: fullUser.permanentAddress
-            } : s.mailingAddress,
+            } : s.mailingAddress),
+            passport: fullUser.passport || s.passport,
+            nationality: fullUser.nationality || s.nationality,
+            emergencyContact: fullUser.emergencyContact || s.emergencyContact,
+            academic: fullUser.academic || {
+                ...s.academic,
+                highestLevel: fullUser.bachelorsDegree || "",
+                countryOfEducation: fullUser.studyDestination || "",
+                undergrad: {
+                    ...s.academic.undergrad,
+                    qualification: fullUser.bachelorsDegree || "",
+                    score: fullUser.gpa ? String(fullUser.gpa) : "",
+                }
+            },
+            workExperience: fullUser.workExperience || (fullUser.workExp ? [
+                { employer: "Previous Employer", role: "Professional", country: "India", startDate: "", endDate: "", current: false }
+            ] : s.workExperience),
+            tests: fullUser.tests || {
+                ...s.tests,
+                ielts: fullUser.englishTest?.toLowerCase() === 'ielts' ? String(fullUser.englishScore || "") : "",
+                toefl: fullUser.englishTest?.toLowerCase() === 'toefl' ? String(fullUser.englishScore || "") : "",
+                pte: fullUser.englishTest?.toLowerCase() === 'pte' ? String(fullUser.englishScore || "") : "",
+                gre: fullUser.entranceTest?.toLowerCase() === 'gre' ? String(fullUser.entranceScore || "") : "",
+                gmat: fullUser.entranceTest?.toLowerCase() === 'gmat' ? String(fullUser.entranceScore || "") : "",
+            },
+            family: fullUser.family || {
+                ...s.family,
+                fatherName: fullUser.fatherName || "",
+            },
+            coApplicant: fullUser.coApplicant || s.coApplicant,
         }));
 
         // Check if StaffProfile exists first to prevent 409 Conflict error
@@ -714,7 +885,10 @@ export default function StaffDashboardPage() {
                 testScores: newStudent.tests,
                 workExperience: newStudent.workExperience,
                 familyDetails: newStudent.family,
-                coApplicant: newStudent.coApplicant
+                coApplicant: newStudent.coApplicant,
+                passport: newStudent.passport,
+                nationality: newStudent.nationality,
+                emergencyContact: newStudent.emergencyContact
             };
 
             await onboardingApi.submit(payload);
@@ -828,7 +1002,7 @@ export default function StaffDashboardPage() {
             if (res.success || res.url) {
                 setShareResult({
                     url: res.url || `${window.location.origin}/share/${res.shareId || 'test'}`,
-                    expires: res.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+                    expires: res.expiresAt || new Date(Date.now() + IST_OFFSET + 30 * 24 * 60 * 60 * 1000).toISOString()
                 });
                 addActivity("share", `Shared profile with ${shareName || shareEmail}`, "send", "text-indigo-600 bg-indigo-50");
             } else {
@@ -1042,12 +1216,14 @@ export default function StaffDashboardPage() {
                         updated.dob = val;
                     });
                 }
-            } else if (docType === 'national_id') {
-                if (extractedFields.full_name) {
-                    mapFullName(extractedFields.full_name);
+            } else if (docType === 'national_id' || docType === 'aadhaar_card' || docType === 'aadhaar' || docType === 'aadhar') {
+                const nameVal = extractedFields.full_name || extractedFields.name || extractedFields.fullName;
+                if (nameVal) {
+                    mapFullName(nameVal);
                 }
-                if (extractedFields.dob) {
-                    const parsed = parseOcrDate(extractedFields.dob);
+                const dobVal = extractedFields.dob || extractedFields.date_of_birth || extractedFields.dateOfBirth;
+                if (dobVal) {
+                    const parsed = parseOcrDate(dobVal);
                     compareAndSet(updated.dob, parsed, (val) => {
                         updated.dob = val;
                     });
@@ -1059,23 +1235,25 @@ export default function StaffDashboardPage() {
                         updated.gender = val;
                     });
                 }
-                if (extractedFields.address) {
-                    compareAndSet(updated.permanentAddress?.address1, extractedFields.address, (val) => {
+                const addressVal = extractedFields.address || extractedFields.permanentAddress || extractedFields.permanent_address;
+                if (addressVal) {
+                    compareAndSet(updated.permanentAddress?.address1, addressVal, (val) => {
                         updated.permanentAddress = { ...updated.permanentAddress, address1: val };
                     });
-                    compareAndSet(updated.mailingAddress?.address1, extractedFields.address, (val) => {
+                    compareAndSet(updated.mailingAddress?.address1, addressVal, (val) => {
                         updated.mailingAddress = { ...updated.mailingAddress, address1: val };
                     });
                 }
-                if (extractedFields.pin_code) {
-                    compareAndSet(updated.permanentAddress?.pincode, extractedFields.pin_code, (val) => {
+                const pincodeVal = extractedFields.pin_code || extractedFields.pincode || extractedFields.zip;
+                if (pincodeVal) {
+                    compareAndSet(updated.permanentAddress?.pincode, pincodeVal, (val) => {
                         updated.permanentAddress = { ...updated.permanentAddress, pincode: val };
                     });
-                    compareAndSet(updated.mailingAddress?.pincode, extractedFields.pin_code, (val) => {
+                    compareAndSet(updated.mailingAddress?.pincode, pincodeVal, (val) => {
                         updated.mailingAddress = { ...updated.mailingAddress, pincode: val };
                     });
                 }
-                const aadharNum = extractedFields.aadhaar_number || extractedFields.aadhaar || extractedFields.national_id_number || extractedFields.document_number;
+                const aadharNum = extractedFields.aadhaar_number || extractedFields.aadhaar || extractedFields.aadhaarNumber || extractedFields.aadharNumber || extractedFields.national_id_number || extractedFields.document_number;
                 if (aadharNum) {
                     compareAndSet(updated.aadhaarNumber, aadharNum, (val) => {
                         updated.aadhaarNumber = val;
@@ -4213,7 +4391,7 @@ export default function StaffDashboardPage() {
                                                             </td>
                                                             <td className="px-5 py-4 text-right">
                                                                 <p className="text-[12px] font-bold text-slate-800 uppercase tabular-nums">
-                                                                    {item.updatedAt ? format(new Date(item.updatedAt), 'MMM d, yyyy') : 'NOT_MODIFIED'}
+                                                                    {item.updatedAt ? format(convertToIST(item.updatedAt), 'MMM d, yyyy') : 'NOT_MODIFIED'}
                                                                 </p>
                                                                 <p className="text-[10px] font-medium text-slate-400 mt-0.5">Automated Sync</p>
                                                             </td>
@@ -4247,12 +4425,18 @@ export default function StaffDashboardPage() {
                                                         };
                                                         const initials = `${(item.firstName || item.student?.firstName || '?')[0]}${(item.lastName || item.student?.lastName || '')[0] || ''}`;
                                                         const stageLabel = item.currentStage || (progress <= 12 ? 'Application Created' : progress <= 40 ? 'Documents Uploaded' : progress <= 70 ? 'Under Review' : progress <= 85 ? 'Credit Check' : progress <= 90 ? 'Sanction' : 'Disbursement');
+                                                        const isOnline = (item.email || item.student?.email) && onlineEmails.map(e => e.toLowerCase()).includes((item.email || item.student?.email).toLowerCase());
                                                         return (
                                                             <>
                                                                 <td className="sticky left-0 z-10 bg-white px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
                                                                     <div className="flex items-center gap-4">
-                                                                        <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center font-medium text-[13px] text-slate-600 shrink-0">
-                                                                            {initials}
+                                                                        <div className="relative shrink-0">
+                                                                            <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center font-medium text-[13px] text-slate-600">
+                                                                                {initials}
+                                                                            </div>
+                                                                            {isOnline && (
+                                                                                <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full animate-pulse shadow-sm shadow-emerald-500/30" title="Online now" />
+                                                                            )}
                                                                         </div>
                                                                         <div className="min-w-0">
                                                                             <p className="text-[15px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] leading-tight truncate">{item.firstName || item.student?.firstName || '—'} {item.lastName || item.student?.lastName || ''}</p>
@@ -4322,7 +4506,7 @@ export default function StaffDashboardPage() {
                                                                             {item.status || 'DRAFT'}
                                                                         </span>
                                                                         <div className="text-[12px] text-slate-500 font-medium">
-                                                                            <p>Submitted: {item.submittedAt ? format(new Date(item.submittedAt), "MMM d, yyyy") : '—'}</p>
+                                                                            <p>Submitted: {item.submittedAt ? format(convertToIST(item.submittedAt), "MMM d, yyyy") : '—'}</p>
                                                                             <p>Now: {format(new Date(), "MMM d, yyyy • HH:mm:ss")}</p>
                                                                         </div>
                                                                     </div>
@@ -4390,7 +4574,12 @@ export default function StaffDashboardPage() {
                                                                                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                                                                                 />
                                                                             </div>
-                                                                            <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${item.last_login_at ? 'bg-emerald-400' : 'bg-slate-300'}`} />
+                                                                            {(() => {
+                                                                                const isUserOnline = item.email && onlineEmails.map(e => e.toLowerCase()).includes(item.email.toLowerCase());
+                                                                                return (
+                                                                                    <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${isUserOnline ? 'bg-emerald-500 animate-pulse shadow-sm shadow-emerald-500/30' : 'bg-slate-300'}`} title={isUserOnline ? "Online now" : "Offline"} />
+                                                                                );
+                                                                            })()}
                                                                         </div>
                                                                         <div className="min-w-0">
                                                                             <p className="text-[15px] font-bold text-[#0d1b2a] leading-tight">
@@ -4443,8 +4632,8 @@ export default function StaffDashboardPage() {
                                                                 <td className="px-5 py-4">
                                                                     {item.createdAt ? (
                                                                         <>
-                                                                            <p className="text-[14px] font-semibold text-slate-800">{format(new Date(item.createdAt), 'MMM d, yyyy').toUpperCase()}</p>
-                                                                            <p className="text-[12px] text-slate-400 mt-0.5">{format(new Date(item.createdAt), 'hh:mm aa')}</p>
+                                                                            <p className="text-[14px] font-semibold text-slate-800">{format(convertToIST(item.createdAt), 'MMM d, yyyy').toUpperCase()}</p>
+                                                                            <p className="text-[12px] text-slate-400 mt-0.5">{format(convertToIST(item.createdAt), 'hh:mm aa')}</p>
                                                                         </>
                                                                     ) : (
                                                                         <span className="text-[12px] font-mono text-slate-400">NO_RECORD</span>

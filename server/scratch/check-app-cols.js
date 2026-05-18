@@ -7,18 +7,18 @@ const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function checkColumns() {
-    console.log('Checking LoanApplication columns...');
+    console.log('Checking UserAcademicProfile columns...');
     const { data, error } = await supabase
-        .from('LoanApplication')
+        .from('UserAcademicProfile')
         .select('*')
         .limit(1);
     
     if (error) {
-        console.error('Error fetching application:', error);
+        console.error('Error fetching academic profile:', error);
     } else if (data && data.length > 0) {
         console.log('Columns found:', Object.keys(data[0]));
     } else {
-        console.log('No data found in LoanApplication table.');
+        console.log('No data found in UserAcademicProfile table.');
     }
 }
 

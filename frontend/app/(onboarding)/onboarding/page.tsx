@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import UniversityCard from "@/components/UniversityCard";
 import UniDetailModal from "@/components/UniDetailModal";
-import { aiApi, onboardingApi, documentApi } from '@/lib/api';
+import { aiApi, onboardingApi, documentApi, authApi } from '@/lib/api';
 import { useAuth } from "@/contexts/AuthContext";
 
 const COUNTRY_FLAGS: Record<string, string> = {
@@ -606,6 +606,16 @@ const steps: any[] = [
     //  DOCUMENT VERIFICATION – AI reads and verifies document
     //  (optional but recommended for loan flow)
     // ════════════════════════════════════════════════════════════
+    // ════════════════════════════════════════════════════════════
+    //  CONTACT INFO – Fetch and lock phone/DOB
+    // ════════════════════════════════════════════════════════════
+    {
+        id: 'contact_info',
+        q: "Let's confirm your contact information",
+        type: 'contact_info',
+        flows: ['loan', 'plan', 'compare']
+    },
+
     {
         id: 'document_upload',
         q: "Let's verify your documents using AI. Please upload a document (Passport, Aadhaar, Admission Letter, or Bank Statement)",
@@ -671,6 +681,14 @@ export default function OnboardingPage() {
     const [documentVerificationResult, setDocumentVerificationResult] = useState<any>(null);
     const [documentError, setDocumentError] = useState<string | null>(null);
 
+    // Contact Info state – Phone and DOB
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [dateOfBirth, setDateOfBirth] = useState('');
+    const [phoneNumberLocked, setPhoneNumberLocked] = useState(false);
+    const [dateOfBirthLocked, setDateOfBirthLocked] = useState(false);
+    const [loadingContactInfo, setLoadingContactInfo] = useState(false);
+    const [contactInfoFetched, setContactInfoFetched] = useState(false);
+
     // University detail modal
     const [selectedUniForModal, setSelectedUniForModal] = useState<any>(null);
 
@@ -697,6 +715,43 @@ export default function OnboardingPage() {
             } catch (e) { /* ignore */ }
         }
     }, [user?.id]);
+
+    // Fetch existing user data (phone and DOB) when component mounts
+    useEffect(() => {
+        if (!user?.id || contactInfoFetched) return;
+        
+        const fetchContactInfo = async () => {
+            try {
+                setLoadingContactInfo(true);
+                // Get user dashboard data to fetch phone and DOB
+                const dashboardData: any = await authApi.getDashboardData(user.id);
+                
+                if (dashboardData?.user) {
+                    const userData = dashboardData.user;
+                    // Handle both camelCase and snake_case
+                    const phone = userData.phoneNumber || userData.phone_number || userData.phone;
+                    const dob = userData.dateOfBirth || userData.date_of_birth || userData.dob;
+                    
+                    if (phone) {
+                        setPhoneNumber(phone);
+                        setPhoneNumberLocked(true);
+                    }
+                    if (dob) {
+                        setDateOfBirth(dob);
+                        setDateOfBirthLocked(true);
+                    }
+                    setContactInfoFetched(true);
+                }
+            } catch (err) {
+                console.error('Failed to fetch contact info:', err);
+                // Don't show error, just silently fail
+            } finally {
+                setLoadingContactInfo(false);
+            }
+        };
+
+        fetchContactInfo();
+    }, [user?.id, contactInfoFetched]);
 
     const toggleSaveUniversity = (university: any) => {
         if (!user?.id) return;
@@ -1722,6 +1777,122 @@ export default function OnboardingPage() {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        if (step.type === 'contact_info') {
+            const allFilled = phoneNumber && dateOfBirth;
+            
+            return (
+                <div style={{ marginTop: 10 }}>
+                    {loadingContactInfo ? (
+                        <div style={{ padding: 20, textAlign: 'center', background: '#f9f9fb', borderRadius: 16 }}>
+                            <div style={{ fontSize: 13, color: '#7c3aed', fontWeight: 600 }}>Loading your contact information...</div>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                            {/* Phone Number Field */}
+                            <div style={{ padding: 16, background: '#fff', borderRadius: 12, border: '1px solid #f3f4f6' }}>
+                                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                                    📱 Phone Number
+                                </label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <input
+                                        type="tel"
+                                        placeholder="Enter your phone number"
+                                        value={phoneNumber}
+                                        onChange={(e) => setPhoneNumber(e.target.value)}
+                                        disabled={phoneNumberLocked}
+                                        style={{
+                                            flex: 1,
+                                            padding: '10px 12px',
+                                            border: phoneNumberLocked ? '1px solid #e5e7eb' : '1px solid #e9d5ff',
+                                            borderRadius: 8,
+                                            fontSize: 14,
+                                            background: phoneNumberLocked ? '#f9f9fb' : '#fff',
+                                            cursor: phoneNumberLocked ? 'not-allowed' : 'text',
+                                            color: phoneNumberLocked ? '#9ca3af' : '#1a1a2e',
+                                        }}
+                                    />
+                                    {phoneNumberLocked && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', background: '#ecfdf5', borderRadius: 8, color: '#16a34a', fontWeight: 600, fontSize: 12 }}>
+                                            <span style={{ fontSize: 16 }}>🔒</span>
+                                            Locked
+                                        </div>
+                                    )}
+                                </div>
+                                {phoneNumberLocked && (
+                                    <div style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>
+                                        ✓ This field has been auto-filled from your registration and is locked for security.
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Date of Birth Field */}
+                            <div style={{ padding: 16, background: '#fff', borderRadius: 12, border: '1px solid #f3f4f6' }}>
+                                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                                    📅 Date of Birth
+                                </label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <input
+                                        type="date"
+                                        value={dateOfBirth}
+                                        onChange={(e) => setDateOfBirth(e.target.value)}
+                                        disabled={dateOfBirthLocked}
+                                        style={{
+                                            flex: 1,
+                                            padding: '10px 12px',
+                                            border: dateOfBirthLocked ? '1px solid #e5e7eb' : '1px solid #e9d5ff',
+                                            borderRadius: 8,
+                                            fontSize: 14,
+                                            background: dateOfBirthLocked ? '#f9f9fb' : '#fff',
+                                            cursor: dateOfBirthLocked ? 'not-allowed' : 'text',
+                                            color: dateOfBirthLocked ? '#9ca3af' : '#1a1a2e',
+                                        }}
+                                    />
+                                    {dateOfBirthLocked && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', background: '#ecfdf5', borderRadius: 8, color: '#16a34a', fontWeight: 600, fontSize: 12 }}>
+                                            <span style={{ fontSize: 16 }}>🔒</span>
+                                            Locked
+                                        </div>
+                                    )}
+                                </div>
+                                {dateOfBirthLocked && (
+                                    <div style={{ fontSize: 11, color: '#6b7280', marginTop: 6 }}>
+                                        ✓ This field has been auto-filled from your registration and is locked for security.
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Info Box */}
+                            <div style={{ padding: 12, background: '#eff6ff', borderRadius: 12, border: '1px solid #bfdbfe', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                                <div style={{ fontSize: 16 }}>ℹ️</div>
+                                <div style={{ fontSize: 12, color: '#1e40af', lineHeight: 1.5 }}>
+                                    Your phone number and date of birth are fetched from your registration. Once confirmed, they are locked for security purposes and cannot be edited in this session.
+                                </div>
+                            </div>
+
+                            {/* Continue Button */}
+                            <button
+                                className="chat-submit"
+                                style={{ marginTop: 8 }}
+                                onClick={() => {
+                                    if (!phoneNumber || !dateOfBirth) {
+                                        alert('Please enter both phone number and date of birth');
+                                        return;
+                                    }
+                                    // Lock the fields after submission
+                                    setPhoneNumberLocked(true);
+                                    setDateOfBirthLocked(true);
+                                    submitAnswer(step.id, 'confirmed', `Phone: ${phoneNumber}, DOB: ${dateOfBirth}`);
+                                }}
+                                disabled={!allFilled}
+                            >
+                                Confirm & Continue →
+                            </button>
                         </div>
                     )}
                 </div>

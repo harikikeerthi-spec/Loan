@@ -16,7 +16,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 /* ── Profile List View ─────────────────────────────────── */
-function ProfileList({ onSelect }: { onSelect: (p: any) => void }) {
+function ProfileList({ onSelect, onlineEmails = [] }: { onSelect: (p: any) => void; onlineEmails?: string[] }) {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -190,13 +190,20 @@ function ProfileList({ onSelect }: { onSelect: (p: any) => void }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {profiles.map((p: any) => (
-                  <tr key={p.id} className="group hover:bg-slate-50/80 border-b border-slate-100 transition-all shadow-[4px_0_12px_rgba(0,0,0,0.02)]">
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-4 cursor-pointer group/profile">
-                        <div className="w-11 h-11 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-indigo-600 text-[13px] shadow-sm group-hover/profile:scale-110 transition-transform duration-300">
-                          {p.linkedUser?.firstName?.[0]}{p.linkedUser?.lastName?.[0]}
-                        </div>
+                {profiles.map((p: any) => {
+                  const isOnline = p.linkedUser?.email && onlineEmails.map(e => e.toLowerCase()).includes(p.linkedUser.email.toLowerCase());
+                  return (
+                    <tr key={p.id} className="group hover:bg-slate-50/80 border-b border-slate-100 transition-all shadow-[4px_0_12px_rgba(0,0,0,0.02)]">
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-4 cursor-pointer group/profile">
+                          <div className="relative">
+                            <div className="w-11 h-11 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-indigo-600 text-[13px] shadow-sm group-hover/profile:scale-110 transition-transform duration-300">
+                              {p.linkedUser?.firstName?.[0]}{p.linkedUser?.lastName?.[0]}
+                            </div>
+                            {isOnline && (
+                              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full animate-pulse shadow-sm shadow-emerald-500/30" title="Online now" />
+                            )}
+                          </div>
                         <div className="min-w-0">
                           <p className="text-[14px] font-bold text-slate-900 tracking-tight truncate group-hover/profile:text-indigo-600 transition-colors font-display">
                             {p.linkedUser?.firstName} {p.linkedUser?.lastName}
@@ -244,7 +251,7 @@ function ProfileList({ onSelect }: { onSelect: (p: any) => void }) {
                       </button>
                     </td>
                   </tr>
-                ))}
+                ); })}
               </tbody>
             </table>
           </div>
@@ -740,9 +747,9 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
 }
 
 /* ── Main Export ───────────────────────────────────────── */
-export default function ApplicantsSection() {
+export default function ApplicantsSection({ onlineEmails = [] }: { onlineEmails?: string[] }) {
   const [selected, setSelected] = useState<any>(null);
   return selected
     ? <ProfileDetail profile={selected} onBack={() => setSelected(null)} />
-    : <ProfileList onSelect={setSelected} />;
+    : <ProfileList onSelect={setSelected} onlineEmails={onlineEmails} />;
 }

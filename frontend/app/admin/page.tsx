@@ -225,6 +225,9 @@ export default function AdminDashboardPage() {
     // Portal control - filter + bulk
     const [roleFilter, setRoleFilter] = useState("all");
     const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(30);
+    const [totalItems, setTotalItems] = useState(0);
 
     // Full Audit Logs
     const [auditPage, setAuditPage] = useState(1);
@@ -307,8 +310,15 @@ export default function AdminDashboardPage() {
         try {
             let res: any;
             if (activeSection === "users") {
-                res = await adminApi.getUsers();
-                setData(res.data || []);
+                const offset = (currentPage - 1) * itemsPerPage;
+                res = await adminApi.getUsers(itemsPerPage, offset, lastSearchQuery, roleFilter === "all" ? "" : roleFilter);
+                if (res && res.data) {
+                    setData(res.data || []);
+                    setTotalItems(res.total || res.data.length);
+                } else {
+                    setData(Array.isArray(res) ? res : []);
+                    setTotalItems(Array.isArray(res) ? res.length : 0);
+                }
             } else if (activeSection === "blogs") {
                 const params: any = { limit: '100' };
                 if (filterBlogTime !== 'all') params.timeRange = filterBlogTime;
@@ -357,7 +367,7 @@ export default function AdminDashboardPage() {
         } finally {
             setLoading(false);
         }
-    }, [activeSection, filterStatus, filterBank, filterLoanType, filterStage, filterFromDate, filterToDate, lastSearchQuery, filterBlogTime]);
+    }, [activeSection, filterStatus, filterBank, filterLoanType, filterStage, filterFromDate, filterToDate, lastSearchQuery, filterBlogTime, currentPage, roleFilter]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -365,6 +375,12 @@ export default function AdminDashboardPage() {
         }, 500);
         return () => clearTimeout(timer);
     }, [searchQuery]);
+
+    useEffect(() => {
+        if (activeSection === "users") {
+            setCurrentPage(1);
+        }
+    }, [roleFilter, lastSearchQuery, activeSection]);
 
     useEffect(() => {
         if (activeSection === "overview") loadOverview();
@@ -527,11 +543,16 @@ export default function AdminDashboardPage() {
     };
 
     const handleUserRole = async (email: string, role: string) => {
+        if (!confirm(`Are you sure you want to change the access tier for ${email} to ${role.toUpperCase()}?`)) {
+            return;
+        }
         try {
             await adminApi.updateUserRole(email, role);
             alert(`User role updated to ${role}`);
             loadData();
-        } catch { alert("Failed to update user role"); }
+        } catch (e: any) {
+            alert(`Failed to update user role: ${e.message || e}`);
+        }
     };
 
     const handleCreateUser = async (e: React.FormEvent) => {
@@ -613,10 +634,7 @@ export default function AdminDashboardPage() {
         let passesRole = true;
 
         if (activeSection === 'users') {
-            if (roleFilter !== 'all') {
-                passesRole = item.role === roleFilter;
-            }
-            return passesRole && (item.email?.toLowerCase().includes(query) || item.firstName?.toLowerCase().includes(query) || item.lastName?.toLowerCase().includes(query));
+            return true;
         }
         if (activeSection === 'blogs') {
             return item.title?.toLowerCase().includes(query) || item.authorName?.toLowerCase().includes(query);
@@ -1530,7 +1548,7 @@ export default function AdminDashboardPage() {
                                 <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                                     <div>
                                         <h3 className="text-sm font-semibold text-slate-900">Entity Registry</h3>
-                                        <p className="text-[11px] text-slate-500 mt-1">{filteredData.length} records active in current buffer</p>
+                                        <p className="text-[11px] text-slate-500 mt-1">{totalItems} records active in current buffer</p>
                                     </div>
                                     <div className="flex flex-wrap gap-3 items-center">
                                         <div className="relative">
@@ -1544,7 +1562,7 @@ export default function AdminDashboardPage() {
                                             />
                                         </div>
                                         <div className="flex bg-white rounded border border-slate-200 overflow-hidden shadow-sm">
-                                            {['all', 'user', 'staff', 'bank', 'agent', 'admin'].map(r => (
+                                            {['all', 'user', 'student', 'staff', 'bank', 'agent', 'admin'].map(r => (
                                                 <button
                                                     key={r}
                                                     onClick={() => setRoleFilter(r)}
@@ -1582,7 +1600,7 @@ export default function AdminDashboardPage() {
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
                                             {loading ? (
-                                                <tr><td colSpan={5} className="px-6 py-16 text-center">
+                                                <tr><td colSpan={6} className="px-6 py-16 text-center">
                                                     <div className="w-8 h-8 border-2 border-slate-200 border-t-indigo-600 rounded-full animate-spin mx-auto" />
                                                 </td></tr>
                                             ) : (filteredData.length > 0 ? (
@@ -1611,15 +1629,32 @@ export default function AdminDashboardPage() {
                                                             </button>
                                                         </td>
                                                         <td className="px-5 py-3">
-                                                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest border ${
-                                                                item.role === 'admin' ? 'bg-slate-900 text-white border-slate-900' :
-                                                                item.role === 'staff' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                                                                item.role === 'bank' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                                                                item.role === 'agent' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                                                                'bg-slate-50 text-slate-600 border-slate-200'
-                                                            }`}>
-                                                                {item.role || 'user'}
-                                                            </span>
+                                                            <div className="relative inline-block min-w-[125px]">
+                                                                <select
+                                                                    value={item.role || 'user'}
+                                                                    onChange={(e) => handleUserRole(item.email, e.target.value)}
+                                                                    className={`w-full px-2 py-0.5 pr-6 rounded text-[9px] font-bold uppercase tracking-widest border appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-indigo-500/50 transition-all ${
+                                                                        item.role === 'admin' ? 'bg-slate-900 text-white border-slate-900' :
+                                                                        item.role === 'super_admin' ? 'bg-indigo-900 text-white border-indigo-900' :
+                                                                        item.role === 'staff' ? 'bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100/50' :
+                                                                        item.role === 'bank' ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100/50' :
+                                                                        item.role === 'agent' ? 'bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100/50' :
+                                                                        item.role === 'student' ? 'bg-indigo-50 text-indigo-700 border-indigo-100 hover:bg-indigo-100/50' :
+                                                                        'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                                                    }`}
+                                                                >
+                                                                    <option value="user" className="bg-white text-slate-900 font-medium">User</option>
+                                                                    <option value="student" className="bg-white text-slate-900 font-medium">Student</option>
+                                                                    <option value="staff" className="bg-white text-slate-900 font-medium">Staff</option>
+                                                                    <option value="bank" className="bg-white text-slate-900 font-medium">Bank</option>
+                                                                    <option value="agent" className="bg-white text-slate-900 font-medium">Agent</option>
+                                                                    <option value="admin" className="bg-white text-slate-900 font-medium">Admin</option>
+                                                                    <option value="super_admin" className="bg-white text-slate-900 font-medium">Super Admin</option>
+                                                                </select>
+                                                                <span className="material-symbols-outlined absolute right-1 top-1/2 -translate-y-1/2 text-[12px] pointer-events-none text-slate-400">
+                                                                    arrow_drop_down
+                                                                </span>
+                                                            </div>
                                                         </td>
                                                         <td className="px-5 py-3 text-[11px] font-medium text-slate-500 tabular-nums">
                                                             {item.createdAt ? format(new Date(item.createdAt), 'MMM d, yyyy') : '—'}
@@ -1673,7 +1708,7 @@ export default function AdminDashboardPage() {
                                                 ))
                                             ) : (
                                                 <tr>
-                                                    <td colSpan={5} className="px-6 py-12 text-center">
+                                                    <td colSpan={6} className="px-6 py-12 text-center">
                                                         <span className="material-symbols-outlined text-2xl text-slate-300 block mb-2">database_off</span>
                                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No matching identity nodes</p>
                                                     </td>
@@ -1682,6 +1717,58 @@ export default function AdminDashboardPage() {
                                         </tbody>
                                     </table>
                                 </div>
+
+                                {totalItems > itemsPerPage && (
+                                    <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
+                                        <div className="flex flex-col">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Navigation Console</p>
+                                            <p className="text-[11px] font-bold text-slate-700">
+                                                Page <span className="text-indigo-600">{currentPage}</span> of {Math.ceil(totalItems / itemsPerPage)}
+                                                <span className="mx-2 text-slate-300">|</span>
+                                                Total Records: <span className="text-slate-900">{totalItems}</span>
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                disabled={currentPage === 1 || loading}
+                                                onClick={() => {
+                                                    setCurrentPage(prev => Math.max(1, prev - 1));
+                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                }}
+                                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-sm"
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+                                                Previous
+                                            </button>
+                                            <div className="flex items-center gap-1 mx-2">
+                                                {[...Array(Math.min(5, Math.ceil(totalItems / itemsPerPage)))].map((_, i) => {
+                                                    const pageNum = i + 1;
+                                                    return (
+                                                        <button
+                                                            key={pageNum}
+                                                            onClick={() => setCurrentPage(pageNum)}
+                                                            className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${currentPage === pageNum ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white border border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600'}`}
+                                                        >
+                                                            {pageNum}
+                                                        </button>
+                                                    );
+                                                })}
+                                                {Math.ceil(totalItems / itemsPerPage) > 5 && <span className="text-slate-400 text-[10px] font-black px-1">...</span>}
+                                            </div>
+                                            <button
+                                                disabled={currentPage >= Math.ceil(totalItems / itemsPerPage) || loading}
+                                                onClick={() => {
+                                                    setCurrentPage(prev => prev + 1);
+                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                }}
+                                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-sm"
+                                            >
+                                                Next
+                                                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

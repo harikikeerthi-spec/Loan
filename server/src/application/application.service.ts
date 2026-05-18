@@ -4,6 +4,7 @@ import { DigilockerService } from '../integration/digilocker.service';
 import { DocumentVerificationService } from '../ai/services/document-verification.service';
 import { ApplicationReviewService } from '../ai/services/application-review.service';
 import { EmailService } from '../auth/email.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 const APPLICATION_STAGES = {
   application_submitted: { order: 1, label: 'Application Submitted', progress: 10 },
@@ -68,6 +69,7 @@ export class ApplicationService {
     private verificationService: DocumentVerificationService,
     private applicationReviewService: ApplicationReviewService,
     private emailService: EmailService,
+    private eventEmitter: EventEmitter2,
   ) { }
 
   private parseDate(dateStr: string | null | undefined): string | null {
@@ -615,6 +617,36 @@ export class ApplicationService {
 
     if (data.status || data.stage) {
       await this.createStatusHistory(applicationId, { ...historyData, notes: data.remarks });
+
+      // Emit real-time dashboard activity event
+      if (data.status && data.status !== application.status && isAuthorizedToChangeStatus) {
+        const actorName = adminName || 'Staff';
+        const capitalizedStatus = data.status.charAt(0).toUpperCase() + data.status.slice(1);
+        
+        let msg = `Staff member ${actorName} moved Application #${application.applicationNumber || application.id.slice(-4)} to ${capitalizedStatus}.`;
+        let color = 'bg-blue-50 text-blue-700 border-blue-100';
+        let icon = 'sync';
+
+        if (data.status === 'approved') {
+          msg = `Staff member ${actorName} moved Application #${application.applicationNumber || application.id.slice(-4)} to Approved.`;
+          color = 'bg-emerald-50 text-emerald-700 border-emerald-100';
+          icon = 'task_alt';
+        } else if (data.status === 'rejected') {
+          msg = `Staff member ${actorName} moved Application #${application.applicationNumber || application.id.slice(-4)} to Rejected.`;
+          color = 'bg-rose-50 text-rose-700 border-rose-100';
+          icon = 'cancel';
+        }
+
+        this.eventEmitter.emit('dashboard.activity', {
+          type: data.status,
+          msg,
+          icon,
+          color,
+          actorName,
+          actorEmail: adminId || null,
+          createdAt: new Date().toISOString()
+        });
+      }
     }
 
     return { success: true, data: updated, message: 'Application updated successfully' };
@@ -777,6 +809,17 @@ export class ApplicationService {
 
       await this.db.from('ApplicationNote').insert({ applicationId, authorId: adminId, authorName: 'AI Review System', content: JSON.stringify(reviewResult), type: 'ai_review', isInternal: true });
       await this.createStatusHistory(applicationId, { fromStatus: application.status, toStatus: application.status, changedBy: adminId, changedByName: adminName, notes: `AI Review completed. Score: ${reviewResult.overallScore}/100. Recommendation: ${reviewResult.recommendation}`, isAutomatic: true });
+
+      // Emit real-time CIBIL verification activity
+      this.eventEmitter.emit('dashboard.activity', {
+        type: 'verification',
+        msg: `System auto-verified CIBIL score for Student #${application.applicationNumber || application.id.slice(-4)}.`,
+        icon: 'verified',
+        color: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+        actorName: 'System',
+        actorEmail: 'system@vidhyaloan.in',
+        createdAt: new Date().toISOString()
+      });
 
       return { success: true, data: reviewResult, message: 'AI review completed successfully' };
     } catch (error) {
