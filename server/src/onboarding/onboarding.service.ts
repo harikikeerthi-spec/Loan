@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { EmailService } from '../auth/email.service';
 
 @Injectable()
 export class OnboardingService {
@@ -7,7 +8,10 @@ export class OnboardingService {
     return this.supabase.getClient();
   }
 
-  constructor(private supabase: SupabaseService) {}
+  constructor(
+    private supabase: SupabaseService,
+    private emailService: EmailService
+  ) {}
 
   async saveOnboardingData(data: any, userId?: string) {
     try {
@@ -63,8 +67,14 @@ export class OnboardingService {
         permAddrStr = permanentAddrObj;
       }
 
+      const nonEmpty = (v: unknown): string | undefined => {
+        if (v == null) return undefined;
+        const s = String(v).trim();
+        return s === '' ? undefined : s;
+      };
+
       let parsedDob = user?.dateOfBirth || null;
-      const dobVal = personal.dob || personal.dateOfBirth || data.dob || data.dateOfBirth;
+      const dobVal = nonEmpty(personal.dob) || nonEmpty(personal.dateOfBirth) || nonEmpty(data.dob) || nonEmpty(data.dateOfBirth);
       if (dobVal) {
         const parseSimpleDate = (dateStr: string) => {
           if (!dateStr) return null;
@@ -107,12 +117,12 @@ export class OnboardingService {
         pincode: pincodeValue,
         loanAmount: loanAmountValue,
         admitStatus: admitStatusValue,
-        aadhaarNumber: personal.aadhaarNumber || data.aadhaarNumber || user?.aadhaarNumber || null,
-        panNumber: personal.pan || personal.panNumber || data.pan || data.panNumber || user?.panNumber || null,
-        fatherName: personal.fatherName || data.fatherName || user?.fatherName || null,
+        aadhaarNumber: nonEmpty(personal.aadhaarNumber) || nonEmpty(data.aadhaarNumber) || user?.aadhaarNumber || null,
+        panNumber: nonEmpty(personal.pan) || nonEmpty(personal.panNumber) || nonEmpty(data.pan) || nonEmpty(data.panNumber) || user?.panNumber || null,
+        fatherName: nonEmpty(personal.fatherName) || nonEmpty(data.fatherName) || user?.fatherName || null,
         dateOfBirth: parsedDob,
         permanentAddress: permAddrStr,
-        gender: personal.gender || data.gender || user?.gender || null,
+        gender: nonEmpty(personal.gender) || nonEmpty(data.gender) || user?.gender || null,
         passport: data.passport ? JSON.stringify(data.passport) : (user?.passport || null),
         nationality: data.nationality ? JSON.stringify(data.nationality) : (user?.nationality || null),
         mailingAddress: (data.address?.mailing || data.mailingAddress) ? JSON.stringify(data.address?.mailing || data.mailingAddress) : (user?.mailingAddress || null),
@@ -205,6 +215,68 @@ export class OnboardingService {
     } catch (error) {
       console.error('Error saving onboarding data:', error);
       return { success: false, message: 'Failed to save onboarding data', error: error.message };
+    }
+  }
+
+  async shareOnboardingLink(studentId: string, studentEmail: string, studentName: string, shareUrl: string, staffUser: any) {
+    try {
+      const staffName = staffUser.firstName && staffUser.lastName ? `${staffUser.firstName} ${staffUser.lastName}` : (staffUser.firstName || staffUser.email || 'Your Coordinator');
+      const staffEmail = staffUser.email;
+      
+      const subject = `📋 Complete your VidhyaLoan Onboarding Profile – Shared by ${staffName}`;
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #ffffff;">
+          <div style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 24px;">
+            <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 800;">VidhyaLoan</h1>
+            <p style="color: #e0e7ff; margin: 5px 0 0; font-size: 14px; letter-spacing: 0.5px;">SECURE ONBOARDING PORTAL</p>
+          </div>
+          
+          <div style="padding: 0 10px;">
+            <h2 style="color: #111827; margin-bottom: 16px; font-size: 20px; font-weight: 700;">Hello ${studentName},</h2>
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
+              Your dedicated academic loan coordinator, <strong>${staffName}</strong> (<a href="mailto:${staffEmail}" style="color: #4f46e5; text-decoration: none;">${staffEmail}</a>), has initiated your VidhyaLoan profile onboarding!
+            </p>
+            
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 24px;">
+              To proceed with your education loan application, please click the secure link below to access your dynamic onboarding form, fill in your details, and sync your KYC documents directly.
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${shareUrl}" style="background: linear-gradient(135deg, #4f46e5, #6366f1); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);">
+                📋 Complete Onboarding Profile
+              </a>
+            </div>
+
+            <div style="background-color: #f9fafb; border-left: 4px solid #4f46e5; border-radius: 6px; padding: 16px 20px; margin: 24px 0;">
+              <h4 style="color: #1f2937; margin: 0 0 8px; font-size: 14px; font-weight: 700;">💡 What you need to prepare:</h4>
+              <ul style="color: #4b5563; font-size: 13px; line-height: 1.5; margin: 0; padding-left: 20px;">
+                <li style="margin-bottom: 4px;">Applicant's Aadhaar & PAN details</li>
+                <li style="margin-bottom: 4px;">Academic transcripts / Marksheets</li>
+                <li style="margin-bottom: 4px;">Co-Applicant/Parent income details & PAN</li>
+              </ul>
+            </div>
+            
+            <p style="color: #6b7280; font-size: 14px; line-height: 1.5; margin-top: 24px;">
+              If you have any questions or need guidance during the application, you can reach out directly to <strong>${staffName}</strong> by replying to this email.
+            </p>
+            
+            <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+              <p style="color: #9ca3af; font-size: 12px; text-align: center; line-height: 1.5;">
+                This is a secure communication from VidhyaLoan.<br>
+                For security reasons, please do not share your unique onboarding link with anyone else.
+              </p>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      const text = `Hello ${studentName},\n\nYour academic loan coordinator, ${staffName} (${staffEmail}), has initiated your VidhyaLoan onboarding!\n\nTo complete your profile and proceed with your education loan application, please click the secure link below:\n\n${shareUrl}\n\nIf you have any questions, you can contact ${staffName} directly at ${staffEmail}.\n\nWarm regards,\nThe Vidhyaloan Team`;
+      
+      await this.emailService.sendMail(studentEmail, subject, html, text, staffEmail);
+      return { success: true, message: 'Onboarding link shared successfully via email.' };
+    } catch (err) {
+      console.error('[OnboardingService] Failed to share onboarding link:', err);
+      return { success: false, message: 'Failed to send onboarding email.', error: err.message };
     }
   }
 }

@@ -65,8 +65,8 @@ export function getPersonDocumentRequirements(
   const docs: DocumentRequirement[] = [];
   const name = personName || (personType === "coapplicant" ? "Co-applicant" : personType[0].toUpperCase() + personType.slice(1));
 
-  docs.push(requirement(`${name}'s Aadhar Card`, `${personType}_aadhar`, true, "identity"));
-  docs.push(requirement(`${name}'s PAN Card`, `${personType}_pan`, true, "identity"));
+  docs.push(requirement(`${name}'s Aadhar Card`, `${personType}_aadhar`, employmentType !== "expired", "identity"));
+  docs.push(requirement(`${name}'s PAN Card`, `${personType}_pan`, employmentType !== "expired", "identity"));
 
   if (employmentType === "employed") {
     docs.push(requirement(`${name} - Last 3 months Salary Slips`, `${personType}_salary_slips`, true, "financial"));
@@ -81,6 +81,9 @@ export function getPersonDocumentRequirements(
   } else if (employmentType === "retired") {
     docs.push(requirement(`${name} - Retirement Certificate/Pension Document`, `${personType}_retirement_cert`, true, "financial"));
     docs.push(requirement(`${name} - Last 6 months Bank Statements`, `${personType}_bank_statements`, true, "financial"));
+  } else if (employmentType === "expired" || employmentType === "deceased") {
+    docs.push(requirement(`${name}'s Death Certificate`, `${personType}_death_certificate`, true, "identity"));
+    docs.push(requirement(`${name}'s Patta / Passbook Document`, `${personType}_patta_passbook`, true, "financial"));
   }
 
   return docs;

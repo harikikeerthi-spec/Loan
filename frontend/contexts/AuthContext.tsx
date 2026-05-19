@@ -48,7 +48,7 @@ interface AuthContextType {
     isBank: boolean;
     isStaff: boolean;
     isLoading: boolean;
-    login: (accessToken: string, userData?: Partial<AuthUser>) => void;
+    login: (accessToken: string, userData?: Partial<AuthUser> & { refresh_token?: string }) => void;
     logout: () => Promise<void>;
     refreshAuth: () => Promise<boolean>;
     refreshUser: () => Promise<void>;
@@ -243,7 +243,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = useCallback(
         (
             accessToken: string,
-            userData?: Partial<AuthUser>
+            userData?: Partial<AuthUser> & { refresh_token?: string }
         ) => {
             const keys = getStorageKeys(portal);
             const email = userData?.email ?? localStorage.getItem(keys.email) ?? "";
@@ -257,6 +257,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             };
 
             localStorage.setItem(keys.token, accessToken);
+            if (userData?.refresh_token) {
+                localStorage.setItem(keys.refreshToken, userData.refresh_token);
+            }
             localStorage.setItem(keys.email, email);
             if (newUser.id) localStorage.setItem(keys.userId, newUser.id);
             localStorage.setItem(keys.user, JSON.stringify(newUser));

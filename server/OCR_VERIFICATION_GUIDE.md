@@ -358,7 +358,7 @@ node test-ocr-documents.js /path/to/document.jpg
 | Type | Extract | Validate | Cross-Check |
 |------|---------|----------|-------------|
 | aadhaar | Name, DOB, Aadhaar# | Checksum, Format | Name & DOB |
-| pan | Name, Father's Name, DOB, PAN# | Format, Checksum | Name |
+| pan | Name, Father's Name, DOB, PAN#, country, authority, government, photo/signature/QR flags | Format (AAAAA9999A), Income Tax heading, Govt. branding, photo, signature, QR, DOB field | Name |
 | passport | Full Name, Passport#, DOB, Expiry | Format, Expiry | Name & DOB |
 | admission_letter | Student Name, University, Program | Dates, Format | Name |
 | bank_statement | Holder Name, Bank, Account, Period | Format, Amounts | Name |

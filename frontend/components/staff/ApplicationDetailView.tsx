@@ -44,6 +44,27 @@ type ApiResult<T> = {
   data?: T;
 };
 
+const formatAmountInINR = (num: number) => {
+  return new Intl.NumberFormat('en-IN', {
+    maximumFractionDigits: 0
+  }).format(num);
+};
+
+const formatStepLabel = (label: string) => {
+  if (label === "APPLICATION CREATED") return "Application\nCreated";
+  if (label === "APPLICATION SUBMITTED") return "Application\nSubmitted";
+  if (label === "DOCUMENTS VERIFICATION") return "Docs\nVerification";
+  if (label === "SUBMIT TO BANK") return "Submit\nTo Bank";
+  if (label === "CREDIT CHECK") return "Credit\nCheck";
+  if (label === "BANK REJECTED") return "Bank\nRejected";
+  if (label === "UNDER REVIEW") return "Under\nReview";
+  if (label === "BANK APPROVED") return "Bank\nApproved";
+  if (label === "BANK REVIEW") return "Bank\nReview";
+  if (label === "SANCTION") return "Sanction";
+  if (label === "DISBURSEMENT") return "Disbursement";
+  return label.replace(/\s+/g, '\n');
+};
+
 const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   application,
   onBack,
@@ -274,12 +295,14 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   };
 
   const createdDateIST = (() => {
-    if (application.registeredAtIndia) return application.registeredAtIndia;
-    const ds = application.createdAt || application.created_at || application.student?.createdAt || application.student?.created_at;
-    if (!ds) return "â€”";
+    const regAtInd = application.registeredAtIndia || application.student?.registeredAtIndia || application.user?.registeredAtIndia;
+    if (regAtInd && typeof regAtInd === 'string' && regAtInd.endsWith(' IST')) return regAtInd;
+    
+    const ds = regAtInd || application.createdAt || application.created_at || application.student?.createdAt || application.student?.created_at || application.user?.createdAt || application.user?.created_at;
+    if (!ds) return "—";
     try {
       const date = new Date(ds);
-      if (isNaN(date.getTime())) return "â€”";
+      if (isNaN(date.getTime())) return "—";
       return new Intl.DateTimeFormat('en-IN', {
         timeZone: 'Asia/Kolkata',
         day: '2-digit',
@@ -289,12 +312,34 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
         minute: '2-digit',
         hour12: true
       }).format(date) + " IST";
-    } catch (e) { return "â€”"; }
+    } catch (e) { return "—"; }
   })();
 
   const shortCreatedDateIST = (() => {
-    if (application.registeredAtIndia) return application.registeredAtIndia.split(' ')[0]; // Just the date part
-    const ds = application.createdAt || application.created_at || application.student?.createdAt || application.student?.created_at;
+    const regAtInd = application.registeredAtIndia || application.student?.registeredAtIndia || application.user?.registeredAtIndia;
+    if (regAtInd && typeof regAtInd === 'string' && regAtInd.endsWith(' IST')) {
+      try {
+        const parts = regAtInd.split(' ');
+        if (parts.length >= 2) {
+          const datePart = parts[0]; // "2026-05-18"
+          const ymd = datePart.split('-');
+          if (ymd.length === 3) {
+            const month = parseInt(ymd[1], 10) - 1;
+            const day = parseInt(ymd[2], 10);
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const monthStr = months[month] || "Jan";
+            const dayStr = String(day).padStart(2, '0');
+            const timePart = parts[1]; // "HH:MM:SS"
+            const hm = timePart.split(':');
+            if (hm.length >= 2) {
+              return `${dayStr} ${monthStr}, ${hm[0]}:${hm[1]}`;
+            }
+          }
+        }
+      } catch {}
+      return regAtInd.split(' ')[0];
+    }
+    const ds = regAtInd || application.createdAt || application.created_at || application.student?.createdAt || application.student?.created_at || application.user?.createdAt || application.user?.created_at;
     if (!ds) return "PENDING";
     try {
       const date = new Date(ds);
@@ -321,19 +366,30 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const formatStepDateTime = (ds?: string): string => {
     if (!ds) return "";
     try {
+      if (typeof ds === 'string' && ds.endsWith(' IST')) {
+        const parts = ds.split(' ');
+        if (parts.length >= 2) {
+          const datePart = parts[0]; // "YYYY-MM-DD"
+          const timePart = parts[1]; // "HH:MM:SS"
+          const ymd = datePart.split('-');
+          const hms = timePart.split(':');
+          if (ymd.length === 3 && hms.length >= 2) {
+            const year = parseInt(ymd[0], 10);
+            const month = parseInt(ymd[1], 10) - 1;
+            const day = parseInt(ymd[2], 10);
+            const hours = hms[0];
+            const minutes = hms[1];
+            
+            const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+            const monthStr = months[month] || "JAN";
+            const dayStr = String(day).padStart(2, '0');
+            
+            return `${monthStr} ${dayStr}, ${hours}:${minutes}`;
+          }
+        }
+      }
       const date = new Date(ds);
       if (isNaN(date.getTime())) return "";
-      const d = new Intl.DateTimeFormat('en-IN', {
-        timeZone: 'Asia/Kolkata',
-        month: 'short',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      }).format(date);
-      // Produce format: "APR 28, 15:24"
-      const parts = d.split(' ');
-      // en-IN gives: "28 Apr, 15:24" — reorder to month first
       const raw = date.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
       const monthMatch = raw.match(/([A-Za-z]{3})/)?.[1]?.toUpperCase() || '';
       const dayMatch = raw.match(/(\d{2}(?=\s[A-Za-z])|(?<=[A-Za-z]\s)\d{2})/)?.[0] || String(date.getDate()).padStart(2, '0');
@@ -360,8 +416,10 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   // All completed steps show a timestamp; the most recent one uses updatedAt, others use createdAt as baseline
   const getStageTimestamp = (stageIdx: number, completed: boolean, active?: boolean): string | undefined => {
     if (!completed && !active) return undefined;
-    // First step always uses baseline
-    if (stageIdx === 0) return appCreatedAt;
+    // First step (APPLICATION CREATED) should use the user's registration time (the time in the user directory registered column)
+    if (stageIdx === 0) {
+      return application.student?.registeredAtIndia || application.registeredAtIndia || application.student?.createdAt || application.student?.created_at || application.user?.createdAt || application.user?.created_at || appCreatedAt;
+    }
     // Active or last completed step uses updatedAt
     if (active || stageIdx === lastCompletedIdx) return appUpdatedAt || appCreatedAt;
     // intermediate completed steps use baseline
@@ -447,7 +505,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const extractedName = findExtractedValue(["full_name", "name", "student_name", "applicant_name"]);
   const extractedDob = findExtractedValue(["date_of_birth", "dob", "birth_date"]);
   const feeAmount = Number(application.totalCost || application.totalFees || application.feeStructureAmount || application.courseFee || application.tuitionFee || 0);
-  const loanAmount = Number(application.loanAmount || 0);
+  const loanAmount = Number(application.amount || application.loanAmount || application.student?.loanAmount || 0);
   const nameMatched = extractedName && fullName ? getComparableValue(extractedName).includes(getComparableValue(fullName)) || getComparableValue(fullName).includes(getComparableValue(extractedName)) : false;
   const dobMatched = extractedDob && application.dob ? getComparableValue(extractedDob) === getComparableValue(application.dob) : false;
   const hasCoapplicantPan = coApplicantOcrDocs.some((doc) => String(doc.docType || "").toLowerCase().includes("pan") && getDocFieldsCount(doc) > 0);
@@ -524,18 +582,37 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
           <h1 className="text-[24px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Application Detail</h1>
         </div>
 
-        <div className="flex items-center gap-8">
-          <div className="relative group">
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] group-focus-within:text-indigo-500 transition-colors">search</span>
+        <div className="flex items-center gap-6">
+          <div className="relative group mr-4">
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] group-focus-within:text-emerald-500 transition-colors">search</span>
             <input
               type="text"
               placeholder="Search applications, students, IDs..."
-              className="pl-12 pr-6 py-2.5 bg-slate-50/50 border border-slate-200 rounded-2xl text-[13px] w-[340px] focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/50 transition-all font-medium"
+              className="pl-12 pr-6 py-2.5 bg-slate-50/50 border border-slate-200 rounded-2xl text-[13px] w-[260px] focus:outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500/50 transition-all font-medium animate-all"
             />
           </div>
 
+          {/* Sticky Action Buttons */}
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-lg shadow-emerald-600/20"
+          >
+            <span className="material-symbols-outlined text-[17px]">print</span>
+            Export PDF
+          </button>
+          
+          <button
+            onClick={() => setActiveTab("notes")}
+            className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-md"
+          >
+            <span className="material-symbols-outlined text-[17px]">sticky_note_2</span>
+            Internal Notes
+          </button>
+
+          <div className="h-8 w-px bg-slate-200/60 mx-1"></div>
+
           <div className="flex items-center gap-4">
-            <button className="w-11 h-11 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-white hover:text-indigo-600 hover:shadow-md transition-all relative">
+            <button className="w-11 h-11 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-white hover:text-emerald-600 hover:shadow-md transition-all relative">
               <span className="material-symbols-outlined text-[24px]">notifications</span>
               <span className="absolute top-3 right-3 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
             </button>
@@ -545,7 +622,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                 <p className="text-[12px] font-black text-slate-900">Staff Member</p>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Level 4 Admin</p>
               </div>
-              <div className="w-11 h-11 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100/50 shadow-sm">
+              <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100/50 shadow-sm">
                 <span className="material-symbols-outlined text-[24px]">person</span>
               </div>
             </div>
@@ -566,7 +643,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                 key={menu.id}
                 onClick={() => setActiveSidebarMenu(menu.id)}
                 className={`w-full flex flex-col items-center justify-center py-4 px-2 rounded-2xl transition-all group ${activeSidebarMenu === menu.id
-                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30'
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
                   : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                   }`}
               >
@@ -588,24 +665,24 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
               <div className="flex items-center gap-5">
                 <button
                   onClick={onBack}
-                  className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-lg transition-all"
+                  className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-emerald-600 hover:border-emerald-200 hover:shadow-lg transition-all"
                 >
                   <span className="material-symbols-outlined text-[22px]">arrow_back</span>
                 </button>
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-200">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-200">
                     <span className="material-symbols-outlined text-[20px]">account_balance</span>
                   </div>
-                  <h2 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Education Loan Terminal TEST</h2>
+                  <h2 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Education Loan Terminal</h2>
                 </div>
               </div>
 
               {/* Main Info Card - Glassmorphism & Rich Styling */}
               <div className="bg-white/70 backdrop-blur-sm rounded-[40px] p-10 border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.04)] relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/30 rounded-full blur-3xl -z-10 group-hover:bg-indigo-100/40 transition-colors duration-1000" />
+                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50/30 rounded-full blur-3xl -z-10 group-hover:bg-emerald-100/40 transition-colors duration-1000" />
 
-                <div className="flex items-start justify-between relative z-10">
-                  <div className="flex gap-8">
+                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-8 relative z-10">
+                  <div className="flex flex-col md:flex-row gap-6 min-w-0 flex-1">
                     {/* Bank Logo Area */}
                     <div className="w-24 h-16 bg-white rounded-2xl flex items-center justify-center p-3 shrink-0 shadow-sm border border-slate-50 group-hover:shadow-md transition-all duration-500">
                       {getBankLogo() ? (
@@ -615,52 +692,59 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                       )}
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="space-y-6 flex-1 min-w-0">
                       <div>
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="flex flex-wrap items-center gap-3 mb-2">
                           <p className="text-[11px] font-['Playfair_Display',serif] font-black text-slate-400 uppercase tracking-[0.25em]">UNIVERSITY OF {(application.universityName || application.college || "TORONTO").toUpperCase()}</p>
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-black border tracking-widest uppercase shadow-sm ${['PENDING', 'UNDER REVIEW', 'IN PROGRESS'].includes(status)
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border tracking-widest uppercase shadow-sm ${['PENDING', 'UNDER REVIEW', 'IN PROGRESS'].includes(status)
                               ? 'bg-amber-50 text-amber-600 border-amber-100/50'
                               : 'bg-emerald-50 text-emerald-600 border-emerald-100/50'
                             }`}>{status}</span>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <h3 className="text-[36px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] tracking-tight">{application.firstName || application.student?.firstName || "Abhi"} {application.lastName || application.student?.lastName || "Y"}</h3>
-                          <div className="w-px h-8 bg-slate-200" />
-                          <p className="text-[20px] font-bold text-indigo-600/90">{application.courseName || application.program || "MS/M.Tech"}</p>
+                        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                          <h3 className="text-[30px] font-black text-slate-900 tracking-tight leading-tight">{application.firstName || application.student?.firstName || "Abhi"} {application.lastName || application.student?.lastName || "Y"}</h3>
+                          <p className="text-[18px] font-bold text-emerald-600/90">{application.courseName || application.program || "MS/M.Tech"}</p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-10">
-                        <div className="space-y-1">
+                      {/* Condensed 2x2 grid */}
+                      <div className="grid grid-cols-2 gap-4 max-w-xl bg-slate-50/60 p-5 rounded-3xl border border-slate-100/80">
+                        <div className="space-y-0.5">
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">STUDENT IDENTIFIER</p>
-                          <p className="text-[12px] font-bold text-slate-600">{studentId}</p>
+                          <p className="text-[12px] font-bold text-slate-700 font-mono truncate">{studentId}</p>
                         </div>
-                        <div className="w-px h-6 bg-slate-100" />
-                        <div className="space-y-1">
+                        <div className="space-y-0.5">
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">APPLICATION ID</p>
-                          <p className="text-[12px] font-bold text-slate-600">{appId}</p>
+                          <p className="text-[12px] font-bold text-slate-700 font-mono truncate">{appId}</p>
                         </div>
-                        <div className="w-px h-6 bg-slate-100" />
-                        <div className="space-y-1">
+                        <div className="space-y-0.5 col-span-2 sm:col-span-1">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">UNIVERSITY</p>
+                          <p className="text-[12px] font-bold text-slate-700 truncate">{(application.universityName || application.college || "TORONTO").toUpperCase()}</p>
+                        </div>
+                        <div className="space-y-0.5 col-span-2 sm:col-span-1">
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">COURSE CATEGORY</p>
-                          <p className="text-[12px] font-bold text-slate-600">{application.courseLevel || "POSTGRADUATE ABROAD"}</p>
+                          <p className="text-[12px] font-bold text-slate-700 truncate">{application.courseLevel || "POSTGRADUATE ABROAD"}</p>
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex gap-16 items-center pr-6">
-                    <div className="text-right space-y-1">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">LOAN AMOUNT APPLIED</p>
-                      <p className="text-[44px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] leading-none tracking-tighter">{Number(application.loanAmount || 3999999).toLocaleString()}</p>
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-8 shrink-0">
+                    {/* Amount Prominence - Subtle, high-contrast dedicated block */}
+                    <div className="bg-emerald-950 border border-emerald-900 rounded-3xl p-5 text-left shadow-lg shadow-emerald-950/10 min-w-[200px]">
+                      <p className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-2">LOAN AMOUNT APPLIED</p>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-[20px] font-bold text-emerald-400">₹</span>
+                        <span className="text-[32px] font-black text-white tracking-tight leading-none">
+                          {formatAmountInINR(Number(application.amount || application.loanAmount || application.student?.loanAmount || 3999999))}
+                        </span>
+                      </div>
                     </div>
 
                     <div className="flex flex-col items-center">
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">PROGRESS QUOTA</p>
                       <div className="relative w-28 h-28 flex items-center justify-center">
                         <svg className="w-full h-full transform -rotate-90" viewBox="0 0 112 112">
-                          {/* Track Circle */}
                           <circle
                             cx="56"
                             cy="56"
@@ -670,12 +754,11 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                             stroke="currentColor"
                             fill="transparent"
                           />
-                          {/* Progress Circle */}
                           <circle
                             cx="56"
                             cy="56"
                             r="48"
-                            className="text-indigo-600 transition-all duration-1000 ease-out"
+                            className="text-emerald-600 transition-all duration-1000 ease-out"
                             strokeWidth="8"
                             strokeDasharray={2 * Math.PI * 48}
                             strokeDashoffset={2 * Math.PI * 48 - (2 * Math.PI * 48 * progress) / 100}
@@ -689,10 +772,10 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">%</span>
                         </div>
                       </div>
-                      <div className="mt-2.5 flex items-center gap-1.5 text-slate-400">
-                        <span className="material-symbols-outlined text-[12px]">schedule</span>
-                        <p className="text-[9px] font-black uppercase tracking-widest tabular-nums text-slate-900">
-                          Updated: {formatStepDateTime(appUpdatedAt || appCreatedAt)}
+                      <div className="mt-3.5 flex items-center gap-1.5 text-slate-400">
+                        <span className="material-symbols-outlined text-[13px]">schedule</span>
+                        <p className="text-[9px] font-black uppercase tracking-widest tabular-nums text-slate-500">
+                          Updated: {formatStepDateTime(progress <= 10 ? (application.student?.registeredAtIndia || application.registeredAtIndia || application.student?.createdAt || application.student?.created_at || application.user?.createdAt || application.user?.created_at || appUpdatedAt || appCreatedAt) : (appUpdatedAt || appCreatedAt))}
                         </p>
                       </div>
                     </div>
@@ -701,89 +784,110 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
               </div>
 
               {/* Progress Timeline - Clean & Dynamic */}
-              <div className="mt-16 relative px-6">
-                <div className="absolute top-[18px] left-12 right-12 h-[4px] bg-slate-100 rounded-full" />
-                <div className="absolute top-[18px] left-12 h-[4px] bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-1000 ease-out shadow-sm" style={{ width: `calc(${(stages.filter(s => s.completed).length - 1) / (stages.length - 1) * 100}% - 48px)` }} />
+              <div className="mt-12 bg-white/40 backdrop-blur-sm border border-slate-100 rounded-3xl p-8 overflow-x-auto no-scrollbar">
+                <div className="relative px-6 min-w-[1100px]">
+                  <div className="absolute top-[18px] left-16 right-16 h-[4px] bg-slate-100 rounded-full" />
+                  <div className="absolute top-[18px] left-16 h-[4px] bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-full transition-all duration-1000 ease-out shadow-sm" style={{ width: `calc(${(stages.filter(s => s.completed).length - 1) / (stages.length - 1) * 100}% - 64px)` }} />
 
-                <div className="flex justify-between relative z-10">
-                  {stages.map((stage, idx) => (
-                    <div key={idx} className="flex flex-col items-center group/stage">
-                      <div className={`w-10 h-10 rounded-full border-[5px] border-white shadow-lg flex items-center justify-center transition-all duration-500 group-hover/stage:scale-110 ${stage.completed ? (stage.active ? 'bg-emerald-500 shadow-emerald-200' : 'bg-indigo-600 shadow-indigo-100') : 'bg-slate-200 shadow-none'}`}>
-                        {stage.completed ? (
-                          <span className="material-symbols-outlined text-white text-[18px] font-black">check</span>
-                        ) : (
-                          <div className="w-2 h-2 rounded-full bg-white/50" />
-                        )}
-                      </div>
-                      <div className="mt-4 text-center">
-                        <p className={`text-[9px] font-black tracking-widest uppercase transition-colors ${stage.active ? 'text-emerald-600' : stage.completed ? 'text-slate-900' : 'text-slate-400'}`}>{stage.label}</p>
-                        {stage.timestamp && (
-                          <p className={`mt-1.5 text-[9px] font-black tabular-nums tracking-wide ${stage.active ? 'text-emerald-500' : 'text-slate-900'}`}>
-                            {formatStepDateTime(stage.timestamp)}
+                  <div className="flex justify-between relative z-10">
+                    {stages.map((stage, idx) => (
+                      <div key={idx} className="w-36 px-2 flex flex-col items-center group/stage shrink-0">
+                        <div className={`w-10 h-10 rounded-full border-[5px] border-white shadow-lg flex items-center justify-center transition-all duration-500 group-hover/stage:scale-110 ${stage.completed ? (stage.active ? 'bg-emerald-500 shadow-emerald-200' : 'bg-emerald-600 shadow-emerald-100') : 'bg-slate-200 shadow-none'}`}>
+                          {stage.completed ? (
+                            <span className="material-symbols-outlined text-white text-[18px] font-black">check</span>
+                          ) : (
+                            <div className="w-2.5 h-2.5 rounded-full bg-white/50" />
+                          )}
+                        </div>
+                        <div className="mt-4 text-center">
+                          <p className={`text-[14px] font-extrabold tracking-wide uppercase transition-colors whitespace-pre-line leading-tight ${stage.active ? 'text-emerald-600' : stage.completed ? 'text-slate-800' : 'text-slate-400'}`}>
+                            {formatStepLabel(stage.label)}
                           </p>
-                        )}
+                          {stage.timestamp && (
+                            <p className={`mt-2 text-[12px] font-bold tabular-nums tracking-wide ${stage.active ? 'text-emerald-500' : 'text-slate-400'}`}>
+                              {formatStepDateTime(stage.timestamp)}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Action Hub & Tabs Section */}
-          <div className="space-y-8 animate-in slide-in-from-bottom-10 duration-700 delay-200">
-            <div className="flex items-center justify-between border-b border-slate-200/60 px-4">
-              <div className="flex items-center gap-16">
-                {[
-                  { id: "requirements", label: "REQUIREMENTS", icon: "task_alt" },
-                  // { id: "kyc", label: "KYC VERIFICATION", icon: "verified_user" },
-                  { id: "records", label: "STUDENT RECORDS", icon: "folder_shared" },
-                  { id: "notes", label: "INTERNAL NOTES", icon: "sticky_note_2" },
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`pb-5 flex items-center gap-3 text-[13px] font-black tracking-[0.15em] uppercase relative transition-all group ${activeTab === tab.id ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-                  >
-                    <span className={`material-symbols-outlined text-[20px] transition-transform group-hover:scale-110 ${activeTab === tab.id ? 'text-indigo-600' : 'text-slate-300'}`}>{tab.icon}</span>
-                    {tab.label}
-                    {activeTab === tab.id && <div className="absolute bottom-[-1px] left-0 right-0 h-[4px] bg-indigo-600 rounded-full shadow-[0_4px_10px_rgba(79,70,229,0.3)]" />}
-                  </button>
-                ))}
-              </div>
+              {/* Action Hub & Sticky Tabs Section */}
+              <div className="space-y-8 animate-in slide-in-from-bottom-10 duration-700 delay-200">
+                <div className="sticky top-0 bg-[#F8FAFC]/95 backdrop-blur-md z-[50] py-4 border-b border-slate-200 flex items-center justify-between px-6 -mx-6 shadow-sm">
+                  <div className="flex items-center gap-10">
+                    {[
+                      { id: "requirements", label: "REQUIREMENTS", icon: "task_alt" },
+                      { id: "records", label: "STUDENT RECORDS", icon: "folder_shared" },
+                      { id: "notes", label: "INTERNAL NOTES", icon: "sticky_note_2" },
+                    ].map(tab => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id)}
+                        className={`pb-1 flex items-center gap-2.5 text-[13px] font-black tracking-[0.1em] uppercase relative transition-all group ${activeTab === tab.id ? 'text-emerald-600' : 'text-slate-400 hover:text-slate-600'}`}
+                      >
+                        <span className={`material-symbols-outlined text-[18px] transition-transform group-hover:scale-110 ${activeTab === tab.id ? 'text-emerald-600' : 'text-slate-300'}`}>{tab.icon}</span>
+                        {tab.label}
+                        {activeTab === tab.id && <div className="absolute bottom-[-17px] left-0 right-0 h-[3px] bg-emerald-600 rounded-full shadow-[0_2px_8px_rgba(16,185,129,0.3)]" />}
+                      </button>
+                    ))}
+                  </div>
 
-              <div className="flex items-center gap-4 mb-4">
-                <button className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10">
-                  <span className="material-symbols-outlined text-[18px]">print</span>
-                  Export PDF
-                </button>
-              </div>
-            </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => window.print()}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg shadow-emerald-600/20"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">print</span>
+                      Export PDF
+                    </button>
+                  </div>
+                </div>
 
-            <div className="grid grid-cols-12 gap-10">
-              <div className="col-span-12 space-y-10">
-                {activeTab === "requirements" && (
-                  <OcrDocumentIntelligence
-                    academicDocs={academicOcrDocs}
-                    coApplicantDocs={coApplicantOcrDocs}
-                    validationChecks={validationChecks}
-                    loading={loadingDocs}
-                    onAddAcademic={() => {
-                      setNewDocCategory("academic");
-                      setIsAddDocModalOpen(true);
-                    }}
-                    onAddCoApplicant={() => {
-                      setNewDocCategory("financial");
-                      setIsAddDocModalOpen(true);
-                    }}
-                    normalizeConfidence={normalizeConfidence}
-                    formatDocTitle={formatDocTitle}
-                    getDocFieldsCount={getDocFieldsCount}
-                    formatUploadAge={formatUploadAge}
-                    onPreviewDocument={setSelectedDocPreview}
-                    onViewDocument={(doc) => window.open(`/api/documents/view/${userId}/${doc.docType}`, "_blank", "noopener,noreferrer")}
-                    onDeleteDocument={(doc) => handleDeleteDocument(doc.id)}
-                    onUploadDocument={(doc, file) => handleFileUpload(doc.docType, file)}
-                  />
-                )}
+                <div className="grid grid-cols-12 gap-10">
+                  <div className="col-span-12 space-y-10">
+                    {activeTab === "requirements" && (
+                      <OcrDocumentIntelligence
+                        academicDocs={academicOcrDocs}
+                        coApplicantDocs={coApplicantOcrDocs}
+                        validationChecks={validationChecks}
+                        loading={loadingDocs}
+                        onAddAcademic={() => {
+                          setNewDocCategory("academic");
+                          setIsAddDocModalOpen(true);
+                        }}
+                        onAddCoApplicant={() => {
+                          setNewDocCategory("financial");
+                          setIsAddDocModalOpen(true);
+                        }}
+                        normalizeConfidence={normalizeConfidence}
+                        formatDocTitle={formatDocTitle}
+                        getDocFieldsCount={getDocFieldsCount}
+                        formatUploadAge={formatUploadAge}
+                        onPreviewDocument={setSelectedDocPreview}
+                        onViewDocument={(doc) => window.open(`/api/documents/view/${userId}/${doc.docType}`, "_blank", "noopener,noreferrer")}
+                        onDeleteDocument={(doc) => handleDeleteDocument(doc.id)}
+                        onUploadDocument={(doc, file) => handleFileUpload(doc.docType, file)}
+                        crossDocNameMismatch={crossDocNameMismatch}
+                        dobMatched={dobMatched}
+                        extractedDob={String(extractedDob || "")}
+                        application={application}
+                        handleSyncField={handleSyncField}
+                        isSyncing={isSyncing}
+                        fullName={fullName}
+                        extractedName={String(extractedName || "")}
+                        panDoc={panDoc}
+                        passportDoc={passportDoc}
+                        aadhaarDoc={aadhaarDoc}
+                        panName={panName ? String(panName) : null}
+                        passportName={passportName ? String(passportName) : null}
+                        aadhaarName={aadhaarName ? String(aadhaarName) : null}
+                        getComparableValue={getComparableValue}
+                      />
+                    )}
 
                 {activeTab === "kyc" && (
                   <KycSystemDashboard
@@ -1225,6 +1329,21 @@ const OcrDocumentIntelligence = ({
   onViewDocument,
   onDeleteDocument,
   onUploadDocument,
+  crossDocNameMismatch,
+  dobMatched,
+  extractedDob,
+  application,
+  handleSyncField,
+  isSyncing,
+  fullName,
+  extractedName,
+  panDoc,
+  passportDoc,
+  aadhaarDoc,
+  panName,
+  passportName,
+  aadhaarName,
+  getComparableValue,
 }: {
   academicDocs: OcrSummaryDoc[];
   coApplicantDocs: OcrSummaryDoc[];
@@ -1240,54 +1359,136 @@ const OcrDocumentIntelligence = ({
   onViewDocument: (doc: OcrSummaryDoc) => void;
   onDeleteDocument: (doc: OcrSummaryDoc) => void;
   onUploadDocument: (doc: OcrSummaryDoc, file: File) => void;
-}) => (
-  <div className="space-y-7 animate-in fade-in slide-in-from-bottom-4 duration-500">
-    <div className="grid grid-cols-2 gap-6">
-      <OcrDocumentGroup
-        title="Applicant Documents"
-        icon="school"
-        docs={academicDocs}
-        loading={loading}
-        onAdd={onAddAcademic}
-        normalizeConfidence={normalizeConfidence}
-        formatDocTitle={formatDocTitle}
-        getDocFieldsCount={getDocFieldsCount}
-        formatUploadAge={formatUploadAge}
-        onPreviewDocument={onPreviewDocument}
-        onViewDocument={onViewDocument}
-        onDeleteDocument={onDeleteDocument}
-        onUploadDocument={onUploadDocument}
-      />
-      <OcrDocumentGroup
-        title="Family & Co-Applicant Documents"
-        icon="group"
-        docs={coApplicantDocs}
-        loading={loading}
-        onAdd={onAddCoApplicant}
-        normalizeConfidence={normalizeConfidence}
-        formatDocTitle={formatDocTitle}
-        getDocFieldsCount={getDocFieldsCount}
-        formatUploadAge={formatUploadAge}
-        onPreviewDocument={onPreviewDocument}
-        onViewDocument={onViewDocument}
-        onDeleteDocument={onDeleteDocument}
-        onUploadDocument={onUploadDocument}
-      />
-    </div>
+  crossDocNameMismatch: boolean;
+  dobMatched: boolean;
+  extractedDob: string;
+  application: any;
+  handleSyncField: (field: string, value: any) => Promise<void>;
+  isSyncing: boolean;
+  fullName: string;
+  extractedName: string;
+  panDoc?: OcrSummaryDoc;
+  passportDoc?: OcrSummaryDoc;
+  aadhaarDoc?: OcrSummaryDoc;
+  panName: string | null;
+  passportName: string | null;
+  aadhaarName: string | null;
+  getComparableValue: (val: any) => string;
+}) => {
+  const [docSubTab, setDocSubTab] = useState<"action" | "completed">("action");
 
-    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-      <div className="flex items-center gap-3 mb-6">
-        <span className="material-symbols-outlined text-[22px] text-indigo-600">shield</span>
-        <h3 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Cross-Document Validation</h3>
+  const isActionRequired = (doc: OcrSummaryDoc) => {
+    if (!doc.uploaded) return true;
+    const confidence = normalizeConfidence(doc.accuracy);
+    if (confidence < 75) return true;
+    const typeLower = String(doc.docType || "").toLowerCase();
+    if (typeLower === "pan" && panName && getComparableValue(panName) !== getComparableValue(fullName)) return true;
+    if (typeLower === "passport" && passportName && getComparableValue(passportName) !== getComparableValue(fullName)) return true;
+    if (typeLower === "aadhaar" && aadhaarName && getComparableValue(aadhaarName) !== getComparableValue(fullName)) return true;
+    if (typeLower === "aadhaar" && extractedDob && !dobMatched) return true;
+    if (typeLower === "passport" && extractedDob && !dobMatched) return true;
+    return false;
+  };
+
+  const actionRequiredAcademic = academicDocs.filter(isActionRequired);
+  const actionRequiredCoApplicant = coApplicantDocs.filter(isActionRequired);
+
+  const completedAcademic = academicDocs.filter((d) => !isActionRequired(d));
+  const completedCoApplicant = coApplicantDocs.filter((d) => !isActionRequired(d));
+
+  return (
+    <div className="space-y-7 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Sub-tabs for checklists */}
+      <div className="flex items-center gap-4 bg-slate-100 p-1.5 rounded-2xl w-fit border border-slate-200/50">
+        <button
+          onClick={() => setDocSubTab("action")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wider transition-all ${
+            docSubTab === "action"
+              ? "bg-white text-rose-600 shadow-sm border border-rose-100"
+              : "text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          <span className="material-symbols-outlined text-[16px] text-rose-500">warning</span>
+          Action Required ({actionRequiredAcademic.length + actionRequiredCoApplicant.length})
+        </button>
+        <button
+          onClick={() => setDocSubTab("completed")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wider transition-all ${
+            docSubTab === "completed"
+              ? "bg-white text-emerald-600 shadow-sm border border-emerald-100"
+              : "text-slate-500 hover:text-slate-800"
+          }`}
+        >
+          <span className="material-symbols-outlined text-[16px] text-emerald-500">verified</span>
+          Verified / Completed ({completedAcademic.length + completedCoApplicant.length})
+        </button>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        {validationChecks.map((check) => (
-          <OcrValidationCard key={check.label} check={check} />
-        ))}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <OcrDocumentGroup
+          title="Applicant Documents"
+          icon="school"
+          docs={docSubTab === "action" ? actionRequiredAcademic : completedAcademic}
+          loading={loading}
+          onAdd={onAddAcademic}
+          normalizeConfidence={normalizeConfidence}
+          formatDocTitle={formatDocTitle}
+          getDocFieldsCount={getDocFieldsCount}
+          formatUploadAge={formatUploadAge}
+          onPreviewDocument={onPreviewDocument}
+          onViewDocument={onViewDocument}
+          onDeleteDocument={onDeleteDocument}
+          onUploadDocument={onUploadDocument}
+        />
+        <OcrDocumentGroup
+          title="Family & Co-Applicant Documents"
+          icon="group"
+          docs={docSubTab === "action" ? actionRequiredCoApplicant : completedCoApplicant}
+          loading={loading}
+          onAdd={onAddCoApplicant}
+          normalizeConfidence={normalizeConfidence}
+          formatDocTitle={formatDocTitle}
+          getDocFieldsCount={getDocFieldsCount}
+          formatUploadAge={formatUploadAge}
+          onPreviewDocument={onPreviewDocument}
+          onViewDocument={onViewDocument}
+          onDeleteDocument={onDeleteDocument}
+          onUploadDocument={onUploadDocument}
+        />
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+        <div className="flex items-center gap-3 mb-6">
+          <span className="material-symbols-outlined text-[22px] text-emerald-600">shield</span>
+          <h3 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Cross-Document Validation</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {validationChecks.map((check) => (
+            <OcrValidationCard
+              key={check.label}
+              check={check}
+              application={application}
+              fullName={fullName}
+              extractedName={extractedName}
+              extractedDob={extractedDob}
+              dobMatched={dobMatched}
+              crossDocNameMismatch={crossDocNameMismatch}
+              handleSyncField={handleSyncField}
+              isSyncing={isSyncing}
+              panDoc={panDoc}
+              passportDoc={passportDoc}
+              aadhaarDoc={aadhaarDoc}
+              panName={panName}
+              passportName={passportName}
+              aadhaarName={aadhaarName}
+              getComparableValue={getComparableValue}
+            />
+          ))}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const OcrDocumentGroup = ({
   title,
@@ -1321,18 +1522,18 @@ const OcrDocumentGroup = ({
   <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
     <div className="flex items-center justify-between mb-5">
       <div className="flex items-center gap-3">
-        <span className="material-symbols-outlined text-[22px] text-indigo-600">{icon}</span>
+        <span className="material-symbols-outlined text-[22px] text-emerald-600">{icon}</span>
         <h3 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">{title}</h3>
       </div>
-      <button onClick={onAdd} className="flex items-center gap-1.5 text-[14px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors">
+      <button onClick={onAdd} className="flex items-center gap-1.5 text-[13px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors">
         <span className="material-symbols-outlined text-[18px]">upload</span>
         Add
       </button>
     </div>
 
-    <div className="space-y-3">
+    <div className="space-y-4">
       {loading ? (
-        Array.from({ length: 3 }).map((_, idx) => (
+        Array.from({ length: 2 }).map((_, idx) => (
           <div key={idx} className="h-[118px] rounded-lg border border-slate-200 bg-slate-50 animate-pulse" />
         ))
       ) : docs.length > 0 ? (
@@ -1353,9 +1554,9 @@ const OcrDocumentGroup = ({
           />
         ))
       ) : (
-        <div className="rounded-lg border border-dashed border-slate-200 p-8 text-center">
+        <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center bg-slate-50/20">
           <span className="material-symbols-outlined text-[28px] text-slate-300 mb-2 block">description</span>
-          <p className="text-[12px] font-bold text-slate-500">No uploaded documents yet</p>
+          <p className="text-[12px] font-bold text-slate-400">No documents in this view</p>
         </div>
       )}
     </div>
@@ -1399,7 +1600,11 @@ const OcrMiniDocumentCard = ({
           : { text: "text-slate-500", bar: "bg-slate-300", icon: "pending", iconText: "text-slate-400" };
 
   return (
-    <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+    <div className={`rounded-2xl border p-5 shadow-sm transition-all duration-300 ${
+      hasFile 
+        ? "border-slate-200 bg-white" 
+        : "border-dashed border-slate-300 bg-slate-50/40 opacity-75 hover:opacity-100"
+    }`}>
       <input
         ref={fileInputRef}
         type="file"
@@ -1413,80 +1618,144 @@ const OcrMiniDocumentCard = ({
       />
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3 min-w-0">
-          <span className="material-symbols-outlined text-[22px] text-slate-500 mt-0.5">description</span>
+          <span className={`material-symbols-outlined text-[22px] mt-0.5 ${hasFile ? "text-emerald-600" : "text-slate-400"}`}>
+            {hasFile ? "verified_user" : "contact_mail"}
+          </span>
           <div className="min-w-0">
-            <h4 className="text-[17px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] truncate">{title}</h4>
-            <p className="text-[14px] font-medium text-slate-500">{hasFile ? `${fieldsCount} fields extracted` : "Pending upload"}</p>
+            <h4 className="text-[16px] font-bold text-slate-800 truncate">{title}</h4>
+            <p className="text-[13px] font-medium text-slate-500 mt-0.5">
+              {hasFile ? `${fieldsCount} fields extracted` : "⚠️ Pending upload"}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {hasFile && (
+            <>
+              <button
+                type="button"
+                onClick={onPreview}
+                title={`Quick look: ${title}`}
+                className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-emerald-600 hover:border-emerald-200 hover:bg-emerald-50 flex items-center justify-center transition-all"
+              >
+                <span className="material-symbols-outlined text-[18px]">visibility</span>
+              </button>
+              <button
+                type="button"
+                onClick={onDelete}
+                title={`Delete ${title}`}
+                className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 flex items-center justify-center transition-all"
+              >
+                <span className="material-symbols-outlined text-[18px]">delete</span>
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      
+      {hasFile && (
+        <>
+          <div className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+            <span className="material-symbols-outlined text-[15px]">schedule</span>
+            Uploaded: {uploadAge}
+          </div>
+          <div className="mt-4 bg-slate-50/50 p-3 rounded-xl border border-slate-100">
+            <div className="flex justify-between items-center mb-1.5">
+              <p className={`text-[11px] font-black uppercase tracking-widest ${tone.text}`}>
+                OCR Confidence: {confidence}%
+              </p>
+            </div>
+            <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+              <div className={`h-full rounded-full ${tone.bar}`} style={{ width: `${confidence}%` }} />
+            </div>
+          </div>
+        </>
+      )}
+
+      <div className="mt-4 flex items-center gap-3">
+        {hasFile ? (
+          <>
             <button
               type="button"
-              onClick={onPreview}
-              title={`Quick look: ${title}`}
-              className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 flex items-center justify-center transition-all"
+              onClick={onViewFile}
+              className="inline-flex items-center gap-1.5 text-[12px] font-black text-emerald-600 hover:text-emerald-700 uppercase tracking-widest transition-colors"
             >
-              <span className="material-symbols-outlined text-[18px]">visibility</span>
+              <span className="material-symbols-outlined text-[17px]">open_in_new</span>
+              View file
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 text-[12px] font-black text-slate-400 hover:text-slate-600 uppercase tracking-widest transition-colors ml-auto"
+            >
+              <span className="material-symbols-outlined text-[17px]">sync</span>
+              Re-upload
+            </button>
+          </>
+        ) : (
           <button
             type="button"
-            onClick={onDelete}
-            title={`Delete ${title}`}
-            className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 flex items-center justify-center transition-all"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[12px] font-black uppercase tracking-widest shadow-md shadow-emerald-100 hover:scale-[1.02] active:scale-[0.98] transition-all"
           >
-            <span className="material-symbols-outlined text-[18px]">delete</span>
-          </button>
-        </div>
-      </div>
-      <div className="mt-3 flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
-        <span className="material-symbols-outlined text-[15px] text-slate-400">schedule</span>
-        {uploadAge}
-      </div>
-      {hasFile && (
-        <div className="mt-4">
-          <p className={`text-[12px] font-black uppercase tracking-widest mb-2 ${tone.text}`}>
-            {confidence}% Confidence
-          </p>
-          <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-            <div className={`h-full rounded-full ${tone.bar}`} style={{ width: `${confidence}%` }} />
-          </div>
-        </div>
-      )}
-      <div className="mt-4 flex items-center gap-3">
-        {hasFile && (
-          <button
-            type="button"
-            onClick={onViewFile}
-            className="inline-flex items-center gap-2 text-[12px] font-black text-indigo-600 hover:text-indigo-700 uppercase tracking-widest transition-colors"
-          >
-            <span className="material-symbols-outlined text-[17px]">open_in_new</span>
-            View file
+            <span className="material-symbols-outlined text-[18px]">cloud_upload</span>
+            Upload Document
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="inline-flex items-center gap-2 text-[12px] font-black text-slate-500 hover:text-indigo-600 uppercase tracking-widest transition-colors"
-        >
-          <span className="material-symbols-outlined text-[17px]">cloud_upload</span>
-          {hasFile ? "Re-upload" : "Upload"}
-        </button>
       </div>
     </div>
   );
 };
 
-const OcrValidationCard = ({ check }: { check: ValidationCheck }) => {
+const OcrValidationCard = ({
+  check,
+  application,
+  fullName,
+  extractedName,
+  extractedDob,
+  dobMatched,
+  crossDocNameMismatch,
+  handleSyncField,
+  isSyncing,
+  panDoc,
+  passportDoc,
+  aadhaarDoc,
+  panName,
+  passportName,
+  aadhaarName,
+  getComparableValue,
+}: {
+  check: ValidationCheck;
+  application: any;
+  fullName: string;
+  extractedName: string;
+  extractedDob: string;
+  dobMatched: boolean;
+  crossDocNameMismatch: boolean;
+  handleSyncField: (field: string, value: any) => Promise<void>;
+  isSyncing: boolean;
+  panDoc?: OcrSummaryDoc;
+  passportDoc?: OcrSummaryDoc;
+  aadhaarDoc?: OcrSummaryDoc;
+  panName: string | null;
+  passportName: string | null;
+  aadhaarName: string | null;
+  getComparableValue: (val: any) => string;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const isDob = check.label.toLowerCase().includes("dob") || check.label.toLowerCase().includes("birth") || check.detail.toLowerCase().includes("dob");
+  const isName = check.label.toLowerCase().includes("name") || check.detail.toLowerCase().includes("name");
+
+  const hasInteractiveDetails = (isDob && !dobMatched) || (isName && (crossDocNameMismatch || extractedName !== fullName));
+
   const tone =
     check.status === "success"
-      ? "border-emerald-200 bg-emerald-50/40 text-emerald-600"
+      ? "border-emerald-200 bg-emerald-50/40 text-emerald-700 hover:bg-emerald-50/60"
       : check.status === "error"
-        ? "border-rose-200 bg-rose-50/40 text-rose-600 shadow-sm"
+        ? "border-rose-200 bg-rose-50/40 text-rose-700 hover:bg-rose-50/60 shadow-sm"
         : check.status === "warning"
-          ? "border-amber-200 bg-amber-50/40 text-amber-600"
-          : "border-slate-200 bg-slate-50/70 text-slate-500";
+          ? "border-amber-200 bg-amber-50/40 text-amber-700 hover:bg-amber-50/60"
+          : "border-slate-200 bg-slate-50/70 text-slate-500 hover:bg-slate-50";
 
   const icon =
     check.status === "success"
@@ -1498,22 +1767,154 @@ const OcrValidationCard = ({ check }: { check: ValidationCheck }) => {
           : "pending";
 
   return (
-    <div className={`rounded-lg border p-4 flex items-start justify-between gap-3 ${tone}`}>
-      <div className="flex items-start gap-3">
-        <span className="material-symbols-outlined text-[20px] mt-0.5">{icon}</span>
-        <div>
-          <h4 className="text-[14px] font-bold text-[#0d1b2a]">{check.label}</h4>
-          <p className="text-[13px] font-medium text-slate-600 mt-1">{check.detail}</p>
+    <div className={`rounded-2xl border transition-all duration-300 overflow-hidden ${isOpen ? 'ring-2 ring-emerald-500/20' : ''} ${tone}`}>
+      <div
+        onClick={() => hasInteractiveDetails && setIsOpen(!isOpen)}
+        className={`p-5 flex items-start justify-between gap-4 select-none ${hasInteractiveDetails ? 'cursor-pointer' : ''}`}
+      >
+        <div className="flex items-start gap-4">
+          <span className="material-symbols-outlined text-[24px] shrink-0 mt-0.5">{icon}</span>
+          <div>
+            <h4 className="text-[15px] font-bold text-slate-900 flex items-center gap-2">
+              {check.label}
+              {hasInteractiveDetails && (
+                <span className={`material-symbols-outlined text-[16px] transition-transform duration-300 ${isOpen ? 'rotate-180 text-emerald-600' : 'text-slate-400'}`}>
+                  expand_more
+                </span>
+              )}
+            </h4>
+            <p className="text-[13px] font-medium text-slate-600 mt-1">{check.detail}</p>
+          </div>
         </div>
+
+        {hasInteractiveDetails && !isOpen && (
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 shrink-0 self-center bg-slate-100/80 px-2.5 py-1 rounded-lg">
+            View Details
+          </span>
+        )}
       </div>
-      {check.onReview && (
-        <button
-          type="button"
-          onClick={check.onReview}
-          className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md shadow-rose-200 shrink-0 self-center"
-        >
-          Review Discrepancy
-        </button>
+
+      {hasInteractiveDetails && isOpen && (
+        <div className="px-5 pb-5 pt-1 bg-white/70 border-t border-slate-100 animate-in slide-in-from-top-2 duration-200">
+          {isDob && (
+            <div className="space-y-4 mt-3">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                DOB Discrepancy Diff Viewer
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <p className="text-[9px] font-black text-slate-400 uppercase">PROFILE DOB</p>
+                  <p className="text-[14px] font-bold text-slate-800 mt-1">{application.dob || "Not set"}</p>
+                </div>
+                <div className="p-3 bg-rose-50/50 rounded-xl border border-rose-100">
+                  <p className="text-[9px] font-black text-rose-500 uppercase">OCR EXTRACTED DOB</p>
+                  <p className="text-[14px] font-bold text-rose-700 mt-1">{extractedDob || "Not extracted"}</p>
+                </div>
+              </div>
+              {extractedDob && (
+                <button
+                  type="button"
+                  disabled={isSyncing}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    await handleSyncField('date_of_birth', extractedDob);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[16px]">sync</span>
+                  {isSyncing ? "Syncing..." : "Sync DOB to Profile"}
+                </button>
+              )}
+            </div>
+          )}
+
+          {isName && (
+            <div className="space-y-4 mt-3">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                Cross-Document Name Verification
+              </div>
+              
+              <div className="overflow-hidden border border-slate-100 rounded-xl">
+                <table className="min-w-full divide-y divide-slate-100 text-left">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase">Source</th>
+                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase">Extracted Name</th>
+                      <th className="px-4 py-2 text-[9px] font-black text-slate-400 uppercase text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-slate-100 text-[12px]">
+                    <tr>
+                      <td className="px-4 py-2.5 font-extrabold text-slate-500 uppercase">Profile</td>
+                      <td className="px-4 py-2.5 font-bold text-slate-900">{fullName}</td>
+                      <td className="px-4 py-2.5 text-right">-</td>
+                    </tr>
+                    {panDoc?.uploaded && (
+                      <tr>
+                        <td className="px-4 py-2.5 font-extrabold text-slate-500 uppercase">PAN Card</td>
+                        <td className="px-4 py-2.5 font-bold text-slate-900">{panName || "Not extracted"}</td>
+                        <td className="px-4 py-2.5 text-right">
+                          {panName && getComparableValue(panName) !== getComparableValue(fullName) && (
+                            <button
+                              type="button"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                await handleSyncField('full_name', panName);
+                              }}
+                              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-wider transition-colors"
+                            >
+                              Sync
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                    {passportDoc?.uploaded && (
+                      <tr>
+                        <td className="px-4 py-2.5 font-extrabold text-slate-500 uppercase">Passport</td>
+                        <td className="px-4 py-2.5 font-bold text-slate-900">{passportName || "Not extracted"}</td>
+                        <td className="px-4 py-2.5 text-right">
+                          {passportName && getComparableValue(passportName) !== getComparableValue(fullName) && (
+                            <button
+                              type="button"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                await handleSyncField('full_name', passportName);
+                              }}
+                              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-wider transition-colors"
+                            >
+                              Sync
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                    {aadhaarDoc?.uploaded && (
+                      <tr>
+                        <td className="px-4 py-2.5 font-extrabold text-slate-500 uppercase">Aadhaar</td>
+                        <td className="px-4 py-2.5 font-bold text-slate-900">{aadhaarName || "Not extracted"}</td>
+                        <td className="px-4 py-2.5 text-right">
+                          {aadhaarName && getComparableValue(aadhaarName) !== getComparableValue(fullName) && (
+                            <button
+                              type="button"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                await handleSyncField('full_name', aadhaarName);
+                              }}
+                              className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-wider transition-colors"
+                            >
+                              Sync
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

@@ -60,10 +60,10 @@ async function callVisionAPI(base64Data, docType, mimetype) {
 - 12-digit Aadhaar number (masked format)
 - Gender`,
     pan: `This is a PAN Card. Extract:
-- Full Name
-- Father's Name
-- Date of Birth (DD/MM/YYYY)
-- PAN Number`,
+- Full Name, Father's Name, Date of Birth (DD/MM/YYYY), PAN Number (AAAAA9999A)
+- country, authority, government
+- signature_present, photo_present, qr_code_present
+Document validation: Income Tax heading, Govt. of India branding, PAN format, photo, signature, QR, DOB field`,
     passport: `This is a Passport. Extract:
 - Full Name
 - Passport Number

@@ -188,8 +188,8 @@ async function handleResponse<T>(res: Response): Promise<T> {
             err = { message: body || res.statusText };
         }
 
-        // Handle Token Expiration globally
-        if (res.status === 401 && err?.message === 'Token has expired') {
+        // Handle Token Expiration and Unauthorized globally
+        if (res.status === 401) {
             if (typeof window !== "undefined") {
                 clearAllPortalAuthStorage();
                 const portal = getPortalFromPathname(window.location.pathname);
@@ -598,6 +598,12 @@ export const onboardingApi = {
 
     getStatus: (userId: string) =>
         apiFetch(`${API_URL}/onboarding/status/${userId}`),
+
+    share: (data: { studentId: string; studentEmail: string; studentName: string; shareUrl: string }) =>
+        apiFetch(`${API_URL}/onboarding/share`, {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
 };
 
 // ─── Referral ─────────────────────────────────────────────────────────

@@ -32,6 +32,8 @@ interface Profile {
   loanType: string;
   bankStatus: string;
   createdAt: string;
+  documents?: any[];
+  shares?: any[];
 }
 
 interface DocumentItem {
@@ -219,6 +221,15 @@ export default function DocumentTransferCenter() {
         selectedDocs: []
       });
       
+      // Log activity for share with bank
+      const docCount = shareForm.selectedDocs.length;
+      await staffProfileApi.logActivity({
+        type: 'share',
+        msg: `Shared ${docCount} document(s) with ${shareForm.bank_name} (${shareForm.bank_email})`,
+        icon: 'share',
+        color: 'text-indigo-600 bg-indigo-50'
+      }).catch(console.error);
+      
       // Show share link
       if (result.share_link) {
         alert(`Documents shared successfully!\nShare Link: ${result.share_link}`);
@@ -238,7 +249,19 @@ export default function DocumentTransferCenter() {
     if (!selectedProfile || !confirm("Are you sure you want to remove this document?")) return;
 
     try {
+      const removedDoc = selectedProfile.documents?.find((d: any) => d.id === docId);
       await staffProfileApi.removeDocument(selectedProfile.id, docId);
+      
+      // Log activity for document removal
+      if (removedDoc) {
+        await staffProfileApi.logActivity({
+          type: 'rejected',
+          msg: `Removed ${removedDoc.docType?.replace(/_/g, ' ') || 'document'} for ${selectedProfile.linkedUser?.firstName} ${selectedProfile.linkedUser?.lastName}`,
+          icon: 'delete',
+          color: 'text-rose-600 bg-rose-50'
+        }).catch(console.error);
+      }
+      
       await loadProfileDetails(selectedProfile.id);
     } catch (error) {
       console.error("Failed to remove document:", error);

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { extractFullNameFromOcrRaw } from '../ai/utils/ocr-fields.util';
 import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
@@ -238,7 +239,11 @@ export class UsersService {
         }
       }
       
-      const fullNameVal = details.full_name || details.fullName || details.name;
+      const fullNameVal =
+        extractFullNameFromOcrRaw(details) ||
+        details.full_name ||
+        details.fullName ||
+        details.name;
       if (fullNameVal) {
         const parts = fullNameVal.trim().split(/\s+/);
         if (parts.length > 0) {
@@ -279,9 +284,26 @@ export class UsersService {
         compareAndSet(currentUser.fatherName, fatherVal, 'fatherName');
       }
 
-      const addressVal = details.address || details.permanentAddress || details.permanent_address;
+      const addressVal = details.address || details.permanentAddress || details.permanent_address || details.address_formatted;
       if (addressVal) {
-        compareAndSet(currentUser.permanentAddress, addressVal, 'permanentAddress');
+        const addressStr =
+          typeof addressVal === 'object'
+            ? [
+                addressVal.house_details,
+                addressVal.area,
+                addressVal.landmark,
+                addressVal.mandal,
+                addressVal.city,
+                addressVal.district,
+                addressVal.state,
+                addressVal.pincode,
+              ]
+                .filter(Boolean)
+                .join(', ')
+            : addressVal;
+        if (addressStr) {
+          compareAndSet(currentUser.permanentAddress, addressStr, 'permanentAddress');
+        }
       }
 
       const genderVal = details.gender;

@@ -94,7 +94,8 @@ function AdminLoginContent() {
                 email: email.trim(),
                 firstName: data.firstName,
                 lastName: data.lastName,
-                role: data.role as any
+                role: data.role as any,
+                refresh_token: (data as any).refresh_token
             });
 
             const redirectTo = searchParams.get("redirect");

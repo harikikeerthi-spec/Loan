@@ -50,4 +50,18 @@ export class OnboardingController {
             user
         };
     }
+
+    /**
+     * Share student onboarding link via email
+     * POST /onboarding/share
+     * @body { studentId, studentEmail, studentName, shareUrl }
+     */
+    @Post('share')
+    async shareOnboardingLink(@Body() body: any, @Request() req) {
+        const { studentId, studentEmail, studentName, shareUrl } = body;
+        if (!studentId || !studentEmail || !studentName || !shareUrl) {
+            return { success: false, message: 'Missing required parameters: studentId, studentEmail, studentName, shareUrl' };
+        }
+        return this.onboardingService.shareOnboardingLink(studentId, studentEmail, studentName, shareUrl, req.user);
+    }
 }

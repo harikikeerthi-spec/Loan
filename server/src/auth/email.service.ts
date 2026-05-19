@@ -117,10 +117,11 @@ export class EmailService {
     }
   }
 
-  async sendMail(to: string, subject: string, html: string, text?: string) {
+  async sendMail(to: string, subject: string, html: string, text?: string, replyTo?: string) {
     const mailOptions = {
       from: process.env.EMAIL_FROM || '"Vidhya Loan" <noreply@vidhyaloan.com>',
       to: to,
+      replyTo: replyTo,
       subject: subject,
       html: html,
       text: text,

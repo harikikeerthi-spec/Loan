@@ -2,6 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { documentApi } from '@/lib/api';
+import { normalizeOcrFieldsForAutofill } from '@/lib/ocr-fields';
 
 interface KycSystemDashboardProps {
   userId: string;
@@ -55,7 +56,16 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
   ];
 
   const handleAutoFill = async () => {
-    if (!result || !result.extracted_data) return;
+    const rawExtracted =
+      result?.extracted_data ||
+      result?.extractedFields ||
+      result?.details?.extractedFields;
+    if (!result || !rawExtracted) return;
+
+    const extracted = normalizeOcrFieldsForAutofill(
+      rawExtracted as Record<string, unknown>,
+      selectedType,
+    );
     
     setProcessing(true);
     try {
@@ -74,18 +84,150 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
       };
 
       const updates: any = {};
-      Object.entries(result.extracted_data).forEach(([key, value]) => {
+      Object.entries(extracted).forEach(([key, value]) => {
         const profileField = fieldMapping[key];
-        if (profileField) {
+        if (profileField && key !== 'address' && key !== 'permanent_address') {
           updates[profileField] = value;
         }
       });
 
-      // Special handling for full name split
-      if (result.extracted_data.full_name) {
-        const parts = String(result.extracted_data.full_name).split(' ');
+      if (extracted.full_name) {
+        const parts = String(extracted.full_name).split(/\s+/);
         updates.firstName = parts[0];
         updates.lastName = parts.slice(1).join(' ') || '.';
+      }
+
+      // Special address parsing
+      const addressVal = extracted.address || extracted.permanent_address || extracted.permanentAddress;
+      if (addressVal) {
+        const parseAddressDetails = (addressStr: string) => {
+          const resObj = {
+            city: "",
+            state: "",
+            pincode: "",
+            country: ""
+          };
+          if (!addressStr) return resObj;
+
+          // 1. Extract 6-digit Pincode
+          const pinMatch = addressStr.match(/\b\d{6}\b/) || addressStr.match(/\b\d{3}\s\d{3}\b/);
+          if (pinMatch) {
+            resObj.pincode = pinMatch[0].replace(/\s/g, '');
+          }
+
+          // 2. Identify State
+          const states = [
+            'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 
+            'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 
+            'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 
+            'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 
+            'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Delhi', 'Jammu & Kashmir', 
+            'Jammu and Kashmir', 'Puducherry', 'Chandigarh', 'Dadra and Nagar Haveli', 
+            'Daman and Diu', 'Lakshadweep', 'Ladakh', 'Andaman and Nicobar'
+          ];
+          
+          const lowerAddress = addressStr.toLowerCase();
+          let foundState = "";
+          for (const state of states) {
+            if (lowerAddress.includes(state.toLowerCase())) {
+              foundState = state;
+              break;
+            }
+          }
+          if (foundState) {
+            resObj.state = foundState;
+            resObj.country = "India";
+          }
+
+          // 3. Extract City using segments
+          const parts = addressStr.split(/[\n,;:-]+/).map(p => p.trim()).filter(Boolean);
+          if (foundState) {
+            const stateIndex = parts.findIndex(p => p.toLowerCase().includes(foundState.toLowerCase()));
+            if (stateIndex > 0) {
+              let potentialCity = parts[stateIndex - 1];
+              potentialCity = potentialCity.replace(/\b\d+\b/g, '').trim();
+              if (potentialCity && potentialCity.length > 2) {
+                resObj.city = potentialCity;
+              }
+            }
+          }
+
+          if (!resObj.city) {
+            const commonCities = [
+              'Mumbai', 'Delhi', 'Bengaluru', 'Bangalore', 'Hyderabad', 'Ahmedabad', 'Chennai', 
+              'Kolkata', 'Surat', 'Pune', 'Jaipur', 'Lucknow', 'Kanpur', 'Nagpur', 'Indore', 
+              'Thane', 'Bhopal', 'Visakhapatnam', 'Pimpri-Chinchwad', 'Patna', 'Vadodara', 
+              'Ghaziabad', 'Ludhiana', 'Agra', 'Nashik', 'Ranchi', 'Faridabad', 'Meerut', 
+              'Rajkot', 'Kalyan-Dombivli', 'Vasai-Virar', 'Varanasi', 'Srinagar', 'Aurangabad', 
+              'Dhanbad', 'Amritsar', 'Navi Mumbai', 'Allahabad', 'Howrah', 'Gwalior', 
+              'Jabalpur', 'Coimbatore', 'Vijayawada', 'Jodhpur', 'Madurai', 'Raipur', 
+              'Kota', 'Guwahati', 'Chandigarh', 'Solapur', 'Hubli-Dharwad', 'Bareilly', 
+              'Moradabad', 'Mysore', 'Gurgaon', 'Gurugram', 'Aligarh', 'Jalandhar', 'Tiruchirappalli', 
+              'Bhubaneswar', 'Salem', 'Mira-Bhayandar', 'Warangal', 'Guntur', 'Bhiwandi', 
+              'Saharanpur', 'Noida', 'Amravati', 'Kochi', 'Cochin', 'Cuttack', 'Trivandrum', 
+              'Thiruvananthapuram', 'Mangalore', 'Mangaluru', 'Udupi', 'Mysuru', 'Belgaum', 
+              'Hubli', 'Dharwad', 'Gulbarga', 'Shimoga', 'Tumkur', 'Bellary', 'Davangere'
+            ];
+            for (const city of commonCities) {
+              if (lowerAddress.includes(city.toLowerCase())) {
+                resObj.city = city;
+                if (!resObj.state) {
+                  const cityToState: Record<string, string> = {
+                    'mumbai': 'Maharashtra', 'pune': 'Maharashtra', 'nagpur': 'Maharashtra', 'thane': 'Maharashtra', 'nashik': 'Maharashtra', 'aurangabad': 'Maharashtra', 'navi mumbai': 'Maharashtra', 'solapur': 'Maharashtra', 'amravati': 'Maharashtra', 'bhiwandi': 'Maharashtra', 'mira-bhayandar': 'Maharashtra', 'kalyan-dombivli': 'Maharashtra', 'vasai-virar': 'Maharashtra',
+                    'delhi': 'Delhi',
+                    'bengaluru': 'Karnataka', 'bangalore': 'Karnataka', 'mysore': 'Karnataka', 'hubli-dharwad': 'Karnataka', 'mangalore': 'Karnataka', 'mangaluru': 'Karnataka', 'udupi': 'Karnataka', 'mysuru': 'Karnataka', 'belgaum': 'Karnataka', 'hubli': 'Karnataka', 'dharwad': 'Karnataka', 'gulbarga': 'Karnataka', 'shimoga': 'Karnataka', 'tumkur': 'Karnataka', 'bellary': 'Karnataka', 'davangere': 'Karnataka',
+                    'hyderabad': 'Telangana', 'warangal': 'Telangana',
+                    'ahmedabad': 'Gujarat', 'surat': 'Gujarat', 'rose': 'Gujarat', 'vadodara': 'Gujarat', 'rajkot': 'Gujarat',
+                    'chennai': 'Tamil Nadu', 'coimbatore': 'Tamil Nadu', 'madurai': 'Tamil Nadu', 'salem': 'Tamil Nadu', 'tiruchirappalli': 'Tamil Nadu',
+                    'kolkata': 'West Bengal', 'howrah': 'West Bengal',
+                    'jaipur': 'Rajasthan', 'jodhpur': 'Rajasthan', 'kota': 'Rajasthan',
+                    'lucknow': 'Uttar Pradesh', 'kanpur': 'Uttar Pradesh', 'ghaziabad': 'Uttar Pradesh', 'agra': 'Uttar Pradesh', 'meerut': 'Uttar Pradesh', 'varanasi': 'Uttar Pradesh', 'allahabad': 'Uttar Pradesh', 'gwalior': 'Madhya Pradesh', 'jabalpur': 'Madhya Pradesh', 'bhopal': 'Madhya Pradesh', 'indore': 'Madhya Pradesh', 'noida': 'Uttar Pradesh', 'aligarh': 'Uttar Pradesh', 'moradabad': 'Uttar Pradesh', 'bareilly': 'Uttar Pradesh', 'saharanpur': 'Uttar Pradesh',
+                    'visakhapatnam': 'Andhra Pradesh', 'vijayawada': 'Andhra Pradesh', 'guntur': 'Andhra Pradesh',
+                    'patna': 'Bihar',
+                    'ludhiana': 'Punjab', 'amritsar': 'Punjab', 'jalandhar': 'Punjab',
+                    'ranchi': 'Jharkhand', 'dhanbad': 'Jharkhand',
+                    'faridabad': 'Haryana', 'gurgaon': 'Haryana', 'gurugram': 'Haryana',
+                    'srinagar': 'Jammu & Kashmir',
+                    'raipur': 'Chhattisgarh',
+                    'guwahati': 'Assam',
+                    'chandigarh': 'Chandigarh',
+                    'bhubaneswar': 'Odisha', 'cuttack': 'Odisha',
+                    'kochi': 'Kerala', 'cochin': 'Kerala', 'trivandrum': 'Kerala', 'thiruvananthapuram': 'Kerala'
+                  };
+                  const stateVal = cityToState[city.toLowerCase()];
+                  if (stateVal) {
+                    resObj.state = stateVal;
+                    resObj.country = "India";
+                  }
+                }
+                break;
+              }
+            }
+          }
+          return resObj;
+        };
+
+        const parsed = parseAddressDetails(String(addressVal));
+        const explicitPin = extracted.pin_code || extracted.pincode || extracted.zip;
+        const finalPincode = explicitPin || parsed.pincode;
+
+        updates.permanentAddress = {
+          address1: addressVal,
+          city: parsed.city,
+          state: parsed.state,
+          country: parsed.country,
+          pincode: finalPincode
+        };
+        updates.mailingAddress = {
+          address1: addressVal,
+          city: parsed.city,
+          state: parsed.state,
+          country: parsed.country,
+          pincode: finalPincode
+        };
+        if (finalPincode) {
+          updates.pincode = finalPincode;
+        }
       }
 
       const res = await documentApi.updateProfile(userId, updates) as any;

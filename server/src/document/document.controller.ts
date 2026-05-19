@@ -16,6 +16,7 @@ import { UsersService } from '../users/users.service';
 import { DigilockerService } from '../integration/digilocker.service';
 import { DocumentVerificationService } from '../ai/services/document-verification.service';
 import { KycService } from '../ai/services/kyc.service';
+import { maskSensitiveIds } from '../ai/utils/ocr-fields.util';
 import { S3Service } from './s3.service';
 import { memoryStorage } from 'multer';
 import type { Response } from 'express';
@@ -156,7 +157,7 @@ export class DocumentController {
       ) {
         await this.usersService.updateExtractedDetails(userId, {
           documentVerified: true,
-          ...kycResult.extracted_data,
+          ...maskSensitiveIds(kycResult.extracted_data, docType),
         });
       }
 
@@ -188,6 +189,7 @@ export class DocumentController {
             isValid: true,
             confidence: kycResult.confidence_score,
             extractedFields: kycResult.extracted_data,
+            document_validation: kycResult.document_validation,
             reason: 'Verified',
           },
         },
@@ -241,40 +243,59 @@ export class DocumentController {
       ? 'application/pdf'
       : 'image/jpeg';
 
-    const studentProfile = await this.usersService.findById(userId);
-
-    const ocrResult = await this.docVerificationService.verifyAndExtractDocument(
-      docType,
+    const kycResult = await this.kycService.processDocument(
       fileBuffer,
       mimetype,
-      studentProfile
-        ? {
-            firstName: studentProfile.firstName,
-            lastName: studentProfile.lastName,
-            dateOfBirth: studentProfile.dateOfBirth,
-            email: studentProfile.email,
-          }
-        : undefined,
+      docType,
     );
 
-    const newStatus = ocrResult.isValid ? 'uploaded' : 'rejected';
+    const newStatus = kycResult.is_valid ? 'uploaded' : 'rejected';
+    const verificationResult = {
+      isValid: kycResult.is_valid,
+      code: kycResult.is_valid ? 'AI_VERIFIED' : 'AI_REJECTED',
+      confidence: kycResult.confidence_score,
+      details: {
+        message: kycResult.is_valid
+          ? 'Document re-verified by AI OCR.'
+          : kycResult.error || 'Verification failed',
+        extractedFields: kycResult.extracted_data,
+      },
+    };
+
     await this.usersService.upsertUserDocument(userId, docType, {
       uploaded: true,
       filePath: doc.filePath,
       status: newStatus,
+      verificationMetadata: verificationResult,
     });
+
+    if (
+      kycResult.is_valid &&
+      kycResult.extracted_data &&
+      Object.keys(kycResult.extracted_data).length > 0
+    ) {
+      await this.usersService.updateExtractedDetails(userId, {
+        documentVerified: true,
+        ...maskSensitiveIds(kycResult.extracted_data, docType),
+      });
+    }
 
     return {
       success: true,
       data: {
         docType,
         userId,
-        isValid: ocrResult.isValid,
-        confidence: ocrResult.confidence,
-        extractedFields: ocrResult.extractedFields,
-        matchResults: ocrResult.matchResults,
-        reason: ocrResult.reason,
+        isValid: kycResult.is_valid,
+        confidence: kycResult.confidence_score,
+        extractedFields: kycResult.extracted_data,
+        reason: kycResult.error,
         newStatus,
+        verification: verificationResult,
+        ocrResult: {
+          isValid: kycResult.is_valid,
+          confidence: kycResult.confidence_score,
+          extractedFields: kycResult.extracted_data,
+        },
       },
     };
   }

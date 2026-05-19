@@ -114,7 +114,8 @@ function LoginContent() {
                 email: email.trim(),
                 firstName: data.firstName,
                 lastName: data.lastName,
-                role: data.role as any
+                role: data.role as any,
+                refresh_token: data.refresh_token
             });
 
             // Clear stored referral code after login/signup

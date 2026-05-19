@@ -49,10 +49,22 @@ function ProfileList({ onSelect, onlineEmails = [] }: { onSelect: (p: any) => vo
     if (!form.linked_user_id) return;
     setCreating(true);
     try {
-      await staffProfileApi.create(form);
+      const res: any = await staffProfileApi.create(form);
       setShowCreate(false);
       setForm({ linked_user_id: "", target_bank: "", loan_type: "", internal_notes: "" });
       setMsg("Profile created.");
+      
+      // Log activity for profile creation
+      const selectedUser = users.find(u => u.id === form.linked_user_id);
+      if (selectedUser) {
+        await staffProfileApi.logActivity({
+          type: 'new',
+          msg: `Created staff profile for ${selectedUser.firstName} ${selectedUser.lastName}` + (form.target_bank ? ` for ${form.target_bank}` : ''),
+          icon: 'person_add',
+          color: 'text-emerald-600 bg-emerald-50'
+        }).catch(console.error);
+      }
+      
       load();
     } catch (err: any) { setMsg(err.message || "Failed"); }
     finally { setCreating(false); }
@@ -308,13 +320,43 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
     try {
       await staffProfileApi.updateDocumentStatus(profile.id, docId, status);
       setMsg(`✓ Status updated to "${status}" and synced to user profile.`);
+      
+      // Log activity for document status update
+      const doc = docs.find(d => d.id === docId);
+      const activityType = status === 'approved' ? 'approved' : status === 'rejected' ? 'rejected' : 'update';
+      const icons: Record<string, string> = { 'approved': 'task_alt', 'rejected': 'close', 'update': 'edit' };
+      const colors: Record<string, string> = {
+        'approved': 'text-emerald-600 bg-emerald-50',
+        'rejected': 'text-rose-600 bg-rose-50',
+        'update': 'text-blue-600 bg-blue-50'
+      };
+      
+      await staffProfileApi.logActivity({
+        type: activityType,
+        msg: `Updated ${doc?.docType?.replace(/_/g, ' ') || 'document'} status to ${status} for ${profile.linkedUser?.firstName} ${profile.linkedUser?.lastName}`,
+        icon: icons[status] || 'event_note',
+        color: colors[status] || 'text-slate-600 bg-slate-50'
+      }).catch(console.error);
+      
       loadDocs();
     } catch (e: any) { setMsg("✗ " + e.message); }
   };
 
   const removeDoc = async (docId: string) => {
     if (!confirm("Detach this document from the profile?")) return;
+    const removedDoc = docs.find(d => d.id === docId);
     await staffProfileApi.removeDocument(profile.id, docId);
+    
+    // Log activity for document removal
+    if (removedDoc) {
+      await staffProfileApi.logActivity({
+        type: 'rejected',
+        msg: `Removed ${removedDoc.docType?.replace(/_/g, ' ') || 'document'} for ${profile.linkedUser?.firstName} ${profile.linkedUser?.lastName}`,
+        icon: 'delete',
+        color: 'text-rose-600 bg-rose-50'
+      }).catch(console.error);
+    }
+    
     loadDocs();
   };
 
@@ -333,6 +375,15 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
     try {
       await staffProfileApi.uploadDocument(profile.id, file, uploadDocType);
       setMsg("✓ Document uploaded successfully.");
+      
+      // Log activity for document upload
+      await staffProfileApi.logActivity({
+        type: 'upload',
+        msg: `Uploaded ${uploadDocType.replace(/_/g, ' ')} for ${profile.linkedUser?.firstName} ${profile.linkedUser?.lastName}`,
+        icon: 'cloud_upload',
+        color: 'text-purple-600 bg-purple-50'
+      }).catch(console.error);
+      
       loadDocs();
     } catch (e: any) { 
       setMsg("✗ Failed to upload: " + e.message); 
@@ -356,6 +407,16 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
       });
       setShareResult(res.data);
       setShowShare(false);
+      
+      // Log activity for share with bank
+      const docCount = shareForm.selectedDocs.length;
+      await staffProfileApi.logActivity({
+        type: 'share',
+        msg: `Shared ${docCount} document(s) with ${shareForm.bank_name} (${shareForm.bank_email})`,
+        icon: 'share',
+        color: 'text-indigo-600 bg-indigo-50'
+      }).catch(console.error);
+      
       loadDocs();
     } catch (e: any) { setMsg("✗ " + e.message); }
     finally { setSharing(false); }

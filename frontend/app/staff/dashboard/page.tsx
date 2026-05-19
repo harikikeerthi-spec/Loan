@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { io } from "socket.io-client";
 import { adminApi, authApi, documentApi, onboardingApi, staffProfileApi, referenceApi } from "@/lib/api";
+import { normalizeOcrFieldsForAutofill, normalizeGenderForForm, normalizeCountryName, parseOcrDateForInput } from "@/lib/ocr-fields";
+import { examYearToEndDate, inferStartDate } from "@/lib/academic-ocr";
+import { type PanDocumentValidation } from "@/lib/pan-validation";
 import { format } from "date-fns";
 import ChatInterface from "@/components/Chat/ChatInterface";
 import ApplicantsSection from "@/components/staff/ApplicantsSection";
@@ -87,6 +91,41 @@ const TableHeader = ({ children }: { children: React.ReactNode }) => (
     </thead>
 );
 
+/** Fresh applicant profile — KYC/personal fields empty until student enters or uploads documents. */
+function createEmptyNewStudent() {
+    return {
+        email: "", firstName: "", lastName: "", middleName: "", mobile: "", role: "student",
+        dob: "", gender: "", maritalStatus: "", pan: "", aadhaarNumber: "",
+        mailingAddress: { address1: "", address2: "", city: "", state: "", country: "", pincode: "" },
+        permanentAddress: { address1: "", address2: "", city: "", state: "", country: "", pincode: "" },
+        passport: { number: "", issueDate: "", expiryDate: "", issueCountry: "", birthCity: "", birthCountry: "" },
+        nationality: { name: "", citizenship: "", dualCitizenship: "No", livingOtherCountry: "No", livingOtherCountryName: "" },
+        background: { immigrationApplied: "No", immigrationAppliedCountry: "", medicalCondition: "No", medicalConditionDetails: "", visaRefusal: "No", visaRefusalDetails: "", criminalOffence: "No", criminalOffenceDetails: "" },
+        emergencyContact: { name: "", phone: "", email: "", relation: "" },
+        academic: {
+            countryOfEducation: "",
+            highestLevel: "",
+            postgrad: { country: "", state: "", university: "", qualification: "", city: "", grading: "", percentage: "", language: "", startDate: "", endDate: "" },
+            undergrad: { country: "", state: "", university: "", qualification: "", city: "", grading: "", score: "", backlogs: "", language: "", startDate: "", endDate: "" },
+            grade12: { country: "", state: "", board: "", institution: "", city: "", grading: "", score: "", language: "", startDate: "", endDate: "" },
+            grade10: { country: "", state: "", board: "", institution: "", city: "", grading: "", score: "", language: "", startDate: "", endDate: "" }
+        },
+        workExperience: [{ employer: "", role: "", country: "", startDate: "", endDate: "", current: false }],
+        tests: { ielts: "", toefl: "", pte: "", gre: "", gmat: "", sat: "" },
+        family: {
+            fatherName: "", fatherMobile: "", fatherEmail: "", fatherOccupation: "", fatherAadhar: "", fatherPan: "",
+            fatherEmploymentType: "", fatherMonthlyIncome: "",
+            motherName: "", motherMobile: "", motherEmail: "", motherOccupation: "", motherAadhar: "", motherPan: "",
+            motherEmploymentType: "", motherMonthlyIncome: "",
+        },
+        coApplicant: {
+            name: "", mobile: "", email: "", relation: "", occupation: "", aadhar: "", pan: "",
+            employmentType: "", monthlyIncome: "",
+            isSameAsFather: false, isSameAsMother: false
+        }
+    };
+}
+
 export default function StaffDashboardPage() {
     const { user, logout } = useAuth();
     const [activeSection, setActiveSection] = useState("overview");
@@ -98,6 +137,73 @@ export default function StaffDashboardPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [autoStartUser, setAutoStartUser] = useState<any>(null);
     const [showPullModal, setShowPullModal] = useState(false);
+
+    // Premium Document Upload Popup States
+    const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+    const [selectedDocType, setSelectedDocType] = useState<string>("passport");
+    const [selectedDocCategory, setSelectedDocCategory] = useState<'applicant' | 'father' | 'mother' | 'coapplicant'>('applicant');
+    const [selectedDocName, setSelectedDocName] = useState<string>("Passport");
+
+    const getModalDocumentsList = () => {
+        const allDocs = getProfileDocumentRequirements(newStudent);
+
+        let activeGroup: 'student_identity' | 'student_academic' | 'father' | 'mother' | 'coapplicant' = 'student_identity';
+
+        if (selectedDocType.startsWith('father_')) {
+            activeGroup = 'father';
+        } else if (selectedDocType.startsWith('mother_')) {
+            activeGroup = 'mother';
+        } else if (selectedDocType.startsWith('coapplicant_')) {
+            activeGroup = 'coapplicant';
+        } else if (['marksheet_10', 'marksheet_12', 'ug_transcript', 'ug_degree', 'pg_transcript', 'pg_degree', 'english_test', 'aptitude_test', 'resume', 'work_letters'].includes(selectedDocType)) {
+            activeGroup = 'student_academic';
+        }
+
+        if (activeGroup === 'student_identity') {
+            return {
+                title: "Student KYC & Identity",
+                icon: "fingerprint",
+                items: allDocs.filter(d => ['passport', 'national_id', 'pan'].includes(d.type))
+            };
+        } else if (activeGroup === 'student_academic') {
+            return {
+                title: "Student Academic Docs",
+                icon: "school",
+                items: allDocs.filter(d => ['marksheet_10', 'marksheet_12', 'ug_transcript', 'ug_degree', 'pg_transcript', 'pg_degree', 'english_test', 'aptitude_test', 'resume', 'work_letters'].includes(d.type))
+            };
+        } else if (activeGroup === 'father') {
+            const fatherName = newStudent.family.fatherName || "Father";
+            return {
+                title: `${fatherName}'s Documents`,
+                icon: "hail",
+                items: allDocs.filter(d => d.type.startsWith('father_'))
+            };
+        } else if (activeGroup === 'mother') {
+            const motherName = newStudent.family.motherName || "Mother";
+            return {
+                title: `${motherName}'s Documents`,
+                icon: "woman",
+                items: allDocs.filter(d => d.type.startsWith('mother_'))
+            };
+        } else if (activeGroup === 'coapplicant') {
+            const coName = newStudent.coApplicant.name || "Co-applicant";
+            return {
+                title: `${coName}'s Documents`,
+                icon: "group",
+                items: allDocs.filter(d => d.type.startsWith('coapplicant_'))
+            };
+        }
+
+        return {
+            title: "Documents",
+            icon: "folder",
+            items: []
+        };
+    };
+
+    const [countryOfEducation, setCountryOfEducation] = useState<string>("India");
+    const [highestEducation, setHighestEducation] = useState<string>("Select Level");
+    const [selectedTestType, setSelectedTestType] = useState<string>("Select Test");
     const [recentActivity, setRecentActivity] = useState<any[]>([]);
     const [onlineEmails, setOnlineEmails] = useState<string[]>([]);
     const socketRef = useRef<any>(null);
@@ -138,14 +244,14 @@ export default function StaffDashboardPage() {
         socketInstance.on('user_activity', (newActivity: any) => {
             console.log('[StaffDashboard] Live activity received:', newActivity);
             if (newActivity) {
-                setRecentActivity(prev => {
-                    const formatted = {
-                        ...newActivity,
-                        id: newActivity.id || Date.now(),
-                        time: "Just now"
-                    };
-                    return [formatted, ...prev].slice(0, 15);
-                });
+                const formatted = {
+                    ...newActivity,
+                    id: newActivity.id || Date.now(),
+                    time: "Just now",
+                    createdAt: newActivity.createdAt || new Date().toISOString()
+                };
+                setRecentActivity(prev => [formatted, ...prev].slice(0, 15));
+                setFullActivities(prev => [formatted, ...prev].slice(0, 50));
             }
         });
 
@@ -157,21 +263,25 @@ export default function StaffDashboardPage() {
 
     // Premium Aesthetic Activity Simulator (blended with real live events)
     useEffect(() => {
+        const loggedInName = user
+            ? `${user.firstName || 'Staff'} ${user.lastName ? user.lastName[0] + '.' : ''}`.trim()
+            : 'Hariki K.';
+
         const simulatorEvents = [
             {
-                type: 'verification',
+                type: 'update',
                 msg: 'System auto-verified CIBIL score for Student #9012.',
                 icon: 'verified',
                 color: 'bg-emerald-50 text-emerald-700 border-emerald-100'
             },
             {
-                type: 'sharing',
+                type: 'share',
                 msg: 'Staff shared Aadhaar Vault Bundle with ICICI Credit Ops.',
                 icon: 'share',
                 color: 'bg-indigo-50 text-indigo-700 border-indigo-100'
             },
             {
-                type: 'digilocker',
+                type: 'update',
                 msg: 'Student #1089 initiated Digilocker identity extraction.',
                 icon: 'fingerprint',
                 color: 'bg-blue-50 text-blue-700 border-blue-100'
@@ -184,33 +294,44 @@ export default function StaffDashboardPage() {
             },
             {
                 type: 'approved',
-                msg: 'Staff member Hariki K. moved Application #1021 to Approved.',
+                msg: `Staff member ${loggedInName} moved Application #1021 to Approved.`,
                 icon: 'task_alt',
                 color: 'bg-emerald-50 text-emerald-700 border-emerald-100'
             },
             {
-                type: 'cibil_check',
+                type: 'update',
                 msg: 'System triggered automatic Experian Credit Bureau audit.',
                 icon: 'security_update_good',
                 color: 'bg-emerald-50 text-emerald-700 border-emerald-100'
+            },
+            {
+                type: 'new',
+                msg: 'New student registration completed for Keerthi S.',
+                icon: 'person_add',
+                color: 'bg-emerald-50 text-emerald-700 border-emerald-100'
+            },
+            {
+                type: 'rejected',
+                msg: `Staff member ${loggedInName} rejected Application #3041.`,
+                icon: 'delete',
+                color: 'bg-rose-50 text-rose-700 border-rose-100'
             }
         ];
 
         const interval = setInterval(() => {
             const randomEvent = simulatorEvents[Math.floor(Math.random() * simulatorEvents.length)];
-            setRecentActivity(prev => [
-                {
-                    ...randomEvent,
-                    id: Date.now(),
-                    time: "Just now",
-                    createdAt: new Date().toISOString()
-                },
-                ...prev
-            ].slice(0, 15));
+            const formatted = {
+                ...randomEvent,
+                id: Date.now(),
+                time: "Just now",
+                createdAt: new Date().toISOString()
+            };
+            setRecentActivity(prev => [formatted, ...prev].slice(0, 15));
+            setFullActivities(prev => [formatted, ...prev].slice(0, 50));
         }, 40000); // Trigger every 40 seconds to keep the terminal alive and dynamic
 
         return () => clearInterval(interval);
-    }, []);
+    }, [user]);
 
     // IST Timezone offset: +5:30 (19800000 milliseconds)
     const IST_OFFSET = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
@@ -264,25 +385,6 @@ export default function StaffDashboardPage() {
         staffProfileApi.logActivity({ type, msg, icon, color }).catch(console.error);
     };
 
-    useEffect(() => {
-        const loadActivities = async () => {
-            try {
-                const res: any = await staffProfileApi.getDashboardActivities(15);
-                // Backend returns a plain array directly
-                const items: any[] = Array.isArray(res) ? res : (res?.data ?? []);
-                if (items.length > 0) {
-                    setRecentActivity(items.map((a: any) => ({
-                        ...a,
-                        time: formatRelativeTime(a.createdAt || a.time)
-                    })));
-                }
-            } catch (err) {
-                console.error("Failed to load activities", err);
-            }
-        };
-        loadActivities();
-    }, []);
-
     const [fullActivities, setFullActivities] = useState<any[]>([]);
     const [activitiesLoading, setActivitiesLoading] = useState(false);
     const [activitiesTotal, setActivitiesTotal] = useState(0);
@@ -290,6 +392,145 @@ export default function StaffDashboardPage() {
     const [activitiesFilter, setActivitiesFilter] = useState("all");
     const [activitiesSearch, setActivitiesSearch] = useState("");
     const activitiesLimit = 15;
+
+    const getMockActivities = useCallback(() => {
+        const loggedInName = user
+            ? `${user.firstName || 'Staff'} ${user.lastName ? user.lastName[0] + '.' : ''}`.trim()
+            : 'Hariki K.';
+
+        const seedItems = [
+            {
+                id: 'seed-1',
+                type: 'upload',
+                msg: 'Uploaded PASSPORT_SCAN for Rajesh Kumar',
+                icon: 'cloud_upload',
+                color: 'bg-purple-50 text-purple-600 border-purple-100',
+                actorName: loggedInName,
+                createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString() // 5m ago
+            },
+            {
+                id: 'seed-2',
+                type: 'share',
+                msg: 'Shared 3 document(s) with ICICI Bank (ops@icici.com)',
+                icon: 'share',
+                color: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+                actorName: loggedInName,
+                createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString() // 15m ago
+            },
+            {
+                id: 'seed-3',
+                type: 'new',
+                msg: 'Created new applicant profile for Priya Singh',
+                icon: 'person_add',
+                color: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+                actorName: loggedInName,
+                createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString() // 30m ago
+            },
+            {
+                id: 'seed-4',
+                type: 'approved',
+                msg: 'Application #1021 status updated to Approved',
+                icon: 'task_alt',
+                color: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+                actorName: loggedInName,
+                createdAt: new Date(Date.now() - 1 * 3600 * 1000).toISOString() // 1h ago
+            },
+            {
+                id: 'seed-5',
+                type: 'upload',
+                msg: 'Uploaded PAN_CARD_SCAN for Arjun Patel',
+                icon: 'cloud_upload',
+                color: 'bg-purple-50 text-purple-600 border-purple-100',
+                actorName: loggedInName,
+                createdAt: new Date(Date.now() - 2.5 * 3600 * 1000).toISOString() // 2.5h ago
+            },
+            {
+                id: 'seed-6',
+                type: 'rejected',
+                msg: 'Removed AADHAAR_CARD for Meera Sharma',
+                icon: 'delete',
+                color: 'bg-rose-50 text-rose-600 border-rose-100',
+                actorName: loggedInName,
+                createdAt: new Date(Date.now() - 4 * 3600 * 1000).toISOString() // 4h ago
+            },
+            {
+                id: 'seed-7',
+                type: 'update',
+                msg: 'Application #3041 status updated to Rejected',
+                icon: 'close',
+                color: 'bg-rose-50 text-rose-600 border-rose-100',
+                actorName: loggedInName,
+                createdAt: new Date(Date.now() - 6 * 3600 * 1000).toISOString() // 6h ago
+            },
+            {
+                id: 'seed-8',
+                type: 'share',
+                msg: 'Shared 5 document(s) with HDFC Bank (support@hdfc.com)',
+                icon: 'share',
+                color: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+                actorName: loggedInName,
+                createdAt: new Date(Date.now() - 1 * 86400 * 1000).toISOString() // 1d ago
+            },
+            {
+                id: 'seed-9',
+                type: 'new',
+                msg: 'Created new applicant profile for Vikram Desai',
+                icon: 'person_add',
+                color: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+                actorName: loggedInName,
+                createdAt: new Date(Date.now() - 1.5 * 86400 * 1000).toISOString() // 1.5d ago
+            },
+            {
+                id: 'seed-10',
+                type: 'upload',
+                msg: 'Uploaded INCOME_PROOF_DOCUMENT for Nisha Gupta',
+                icon: 'cloud_upload',
+                color: 'bg-purple-50 text-purple-600 border-purple-100',
+                actorName: loggedInName,
+                createdAt: new Date(Date.now() - 2 * 86400 * 1000).toISOString() // 2d ago
+            }
+        ];
+
+        // Dynamically filter seeds based on UI filter selection
+        let filtered = seedItems;
+        if (activitiesFilter && activitiesFilter !== 'all') {
+            filtered = filtered.filter(item => item.type === activitiesFilter);
+        }
+
+        // Dynamically search seeds based on search query
+        if (activitiesSearch) {
+            const searchStr = activitiesSearch.toLowerCase();
+            filtered = filtered.filter(item =>
+                item.msg.toLowerCase().includes(searchStr) ||
+                item.actorName.toLowerCase().includes(searchStr)
+            );
+        }
+
+        return filtered;
+    }, [user, activitiesFilter, activitiesSearch]);
+
+    useEffect(() => {
+        const loadActivities = async () => {
+            try {
+                const res: any = await staffProfileApi.getDashboardActivities(15);
+                // Backend returns a plain array directly
+                const items: any[] = Array.isArray(res) ? res : (res?.data ?? []);
+                const finalItems = items.length > 0 ? items : getMockActivities();
+                setRecentActivity(finalItems.map((a: any) => ({
+                    ...a,
+                    time: formatRelativeTime(a.createdAt || a.time)
+                })));
+            } catch (err) {
+                console.error("Failed to load activities", err);
+                const fallback = getMockActivities();
+                setRecentActivity(fallback.map((a: any) => ({
+                    ...a,
+                    time: formatRelativeTime(a.createdAt || a.time)
+                })));
+            }
+        };
+        loadActivities();
+    }, [user, getMockActivities]);
 
     const loadFullActivities = async () => {
         setActivitiesLoading(true);
@@ -301,14 +542,28 @@ export default function StaffDashboardPage() {
                 type: activitiesFilter,
                 search: activitiesSearch,
             });
-            const items: any[] = Array.isArray(res?.data) ? res.data : [];
+            let items: any[] = Array.isArray(res?.data) ? res.data : [];
+            let total = res?.total ?? items.length;
+
+            if (items.length === 0) {
+                const filteredSeeds = getMockActivities();
+                items = filteredSeeds;
+                total = filteredSeeds.length;
+            }
+
             setFullActivities(items.map((a: any) => ({
                 ...a,
                 time: formatRelativeTime(a.createdAt || a.time)
             })));
-            setActivitiesTotal(res?.total ?? items.length);
+            setActivitiesTotal(total);
         } catch (err) {
-            console.error("Failed to load full activities", err);
+            console.warn("Failed to load full activities from API, falling back to mock seeds:", err);
+            const filteredSeeds = getMockActivities();
+            setFullActivities(filteredSeeds.map((a: any) => ({
+                ...a,
+                time: formatRelativeTime(a.createdAt || a.time)
+            })));
+            setActivitiesTotal(filteredSeeds.length);
         } finally {
             setActivitiesLoading(false);
         }
@@ -413,37 +668,7 @@ export default function StaffDashboardPage() {
     const [createdUser, setCreatedUser] = useState<any>(null);
     const [quickForm, setQuickForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
     const [profileTab, setProfileTab] = useState<"personal" | "academic" | "work" | "tests" | "family">("personal");
-    const [newStudent, setNewStudent] = useState({
-        email: "", firstName: "", lastName: "", middleName: "", mobile: "", role: "student",
-        dob: "", gender: "", maritalStatus: "", pan: "", aadhaarNumber: "",
-        mailingAddress: { address1: "", address2: "", city: "", state: "", country: "", pincode: "" },
-        permanentAddress: { address1: "", address2: "", city: "", state: "", country: "", pincode: "" },
-        passport: { number: "", issueDate: "", expiryDate: "", issueCountry: "", birthCity: "", birthCountry: "" },
-        nationality: { name: "", citizenship: "", dualCitizenship: "No", livingOtherCountry: "No", livingOtherCountryName: "" },
-        background: { immigrationApplied: "No", immigrationAppliedCountry: "", medicalCondition: "No", medicalConditionDetails: "", visaRefusal: "No", visaRefusalDetails: "", criminalOffence: "No", criminalOffenceDetails: "" },
-        emergencyContact: { name: "", phone: "", email: "", relation: "" },
-        academic: {
-            countryOfEducation: "",
-            highestLevel: "",
-            postgrad: { country: "", state: "", university: "", qualification: "", city: "", grading: "", percentage: "", language: "", startDate: "", endDate: "" },
-            undergrad: { country: "", state: "", university: "", qualification: "", city: "", grading: "", score: "", backlogs: "", language: "", startDate: "", endDate: "" },
-            grade12: { country: "", state: "", board: "", institution: "", city: "", grading: "", score: "", language: "", startDate: "", endDate: "" },
-            grade10: { country: "", state: "", board: "", institution: "", city: "", grading: "", score: "", language: "", startDate: "", endDate: "" }
-        },
-        workExperience: [{ employer: "", role: "", country: "", startDate: "", endDate: "", current: false }],
-        tests: { ielts: "", toefl: "", pte: "", gre: "", gmat: "", sat: "" },
-        family: {
-            fatherName: "", fatherMobile: "", fatherEmail: "", fatherOccupation: "", fatherAadhar: "", fatherPan: "",
-            fatherEmploymentType: "", fatherMonthlyIncome: "",
-            motherName: "", motherMobile: "", motherEmail: "", motherOccupation: "", motherAadhar: "", motherPan: "",
-            motherEmploymentType: "", motherMonthlyIncome: "",
-        },
-        coApplicant: {
-            name: "", mobile: "", email: "", relation: "", occupation: "", aadhar: "", pan: "",
-            employmentType: "", monthlyIncome: "",
-            isSameAsFather: false, isSameAsMother: false
-        }
-    });
+    const [newStudent, setNewStudent] = useState(createEmptyNewStudent);
     const [createLoading, setCreateLoading] = useState(false);
 
     // Document state
@@ -451,7 +676,11 @@ export default function StaffDashboardPage() {
     const [docsLoading, setDocsLoading] = useState(false);
     const [uploadingDocs, setUploadingDocs] = useState<{ [key: string]: number }>({});
     const [uploadErrors, setUploadErrors] = useState<{ [key: string]: string }>({});
+    const [uploadMessages, setUploadMessages] = useState<{ [key: string]: { type: 'success' | 'error' | 'warning'; text: string } }>({});
+    const [autofillMessages, setAutofillMessages] = useState<{ [key: string]: { type: 'success' | 'error'; text: string } }>({});
     const [s3Documents, setS3Documents] = useState<any[]>([]);
+    const [ocrResults, setOcrResults] = useState<{ [key: string]: any }>({});
+    const [showOcrReview, setShowOcrReview] = useState<{ [key: string]: boolean }>({});
     const fileInputRefs = useRef<{ [key: string]: HTMLInputElement }>({});
 
     const loadOverview = useCallback(async () => {
@@ -648,11 +877,11 @@ export default function StaffDashboardPage() {
         setTasks(tasks.filter(t => t.id !== id));
     };
 
-    const resetOnboardModal = () => {
-        setActiveSection('overview');
+    const resetOnboardState = () => {
         setOnboardStep(1);
         setCreatedUser(null);
         setQuickForm({ firstName: "", lastName: "", email: "", phone: "" });
+        setNewStudent(createEmptyNewStudent());
         setProfileTab("personal");
         setOnboardMode('new');
         setUserSearchQuery("");
@@ -661,6 +890,23 @@ export default function StaffDashboardPage() {
         setShareName("");
         setShareMessage("");
         setShareResult(null);
+        setUserDocuments([]);
+        setOcrResults({});
+        setShowOcrReview({});
+        setUploadErrors({});
+        setUploadMessages({});
+        setAutofillMessages({});
+        setUploadingDocs({});
+    };
+
+    const startOnboarding = () => {
+        resetOnboardState();
+        setActiveSection('onboarding');
+    };
+
+    const resetOnboardModal = () => {
+        resetOnboardState();
+        setActiveSection('overview');
     };
 
     const handleCheckEmailAndLink = async (e: React.FormEvent) => {
@@ -687,7 +933,7 @@ export default function StaffDashboardPage() {
 
     const handleLinkExistingUser = async (user: any) => {
         setCreatedUser(user);
-        
+
         let fullUser = user;
         try {
             const profileRes: any = await adminApi.getUserProfile(user.email);
@@ -719,7 +965,7 @@ export default function StaffDashboardPage() {
             email: fullUser.email || "",
             mobile: fullUser.mobile || fullUser.phone || "",
             dob: parsedDob,
-            gender: fullUser.gender || "",
+            gender: normalizeGenderForForm(fullUser.gender) || fullUser.gender || "",
             pan: fullUser.panNumber || "",
             aadhaarNumber: fullUser.aadhaarNumber || "",
             permanentAddress: fullUser.permanentAddress ? {
@@ -819,7 +1065,13 @@ export default function StaffDashboardPage() {
             }
 
             setCreatedUser(user);
-            setNewStudent(s => ({ ...s, firstName: quickForm.firstName, lastName: quickForm.lastName, email: quickForm.email, mobile: quickForm.phone }));
+            setNewStudent({
+                ...createEmptyNewStudent(),
+                firstName: quickForm.firstName,
+                lastName: quickForm.lastName,
+                email: quickForm.email,
+                mobile: quickForm.phone,
+            });
 
             // Create a StaffProfile for this user to enable document fetching/syncing
             try {
@@ -855,7 +1107,16 @@ export default function StaffDashboardPage() {
 
     const handleSaveProfile = async (e?: React.FormEvent | boolean) => {
         if (e && typeof e !== 'boolean') e.preventDefault();
-        const silent = typeof e === 'boolean' ? e : false;
+
+        // We only save to the database in two explicit cases:
+        // 1. e is explicitly false (e.g. from buttons/proceed calls: handleSaveProfile(false))
+        // 2. e is a React FormEvent (from <form onSubmit={handleSaveProfile}>)
+        // In all other cases (e is undefined, or e is true), we bypass saving.
+        const silent = e === undefined || e === true;
+
+        // Bypasses all automatic background database saves to ensure the user
+        // only saves to the database once when they explicitly click the Save button.
+        if (silent) return;
 
         if (!createdUser) return;
 
@@ -913,18 +1174,46 @@ export default function StaffDashboardPage() {
             alert("Please register the student first.");
             return;
         }
+
+        const studentEmail = newStudent.email || createdUser?.email || quickForm.email;
+        if (!studentEmail) {
+            alert("Student email is not registered. Please set student email first.");
+            return;
+        }
+
+        const studentName = `${newStudent.firstName || createdUser?.firstName || 'Student'} ${newStudent.lastName || createdUser?.lastName || ''}`.trim();
         const shareUrl = `${window.location.origin}/student/onboarding?studentId=${studentId}`;
+
+        setCreateLoading(true);
         try {
-            await navigator.clipboard.writeText(shareUrl);
-            alert("📋 Student Onboarding Link copied to clipboard!");
-        } catch (err) {
-            const tempInput = document.createElement("input");
-            tempInput.value = shareUrl;
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            document.execCommand("copy");
-            document.body.removeChild(tempInput);
-            alert("📋 Link copied to clipboard (fallback): " + shareUrl);
+            const shareRes: any = await onboardingApi.share({
+                studentId,
+                studentEmail,
+                studentName,
+                shareUrl
+            });
+
+            if (shareRes.success) {
+                try {
+                    await navigator.clipboard.writeText(shareUrl);
+                } catch (clipErr) {
+                    const tempInput = document.createElement("input");
+                    tempInput.value = shareUrl;
+                    document.body.appendChild(tempInput);
+                    tempInput.select();
+                    document.execCommand("copy");
+                    document.body.removeChild(tempInput);
+                }
+                alert(`📧 Onboarding Link shared successfully to student registered email (${studentEmail})!\n📋 Link has also been copied to your clipboard.`);
+                addActivity("approved", `Shared onboarding profile link with student (${studentEmail})`, "mail", "text-indigo-600 bg-indigo-50");
+            } else {
+                alert(`Failed to share onboarding link via email: ${shareRes.message}`);
+            }
+        } catch (err: any) {
+            console.error("Share onboarding error:", err);
+            alert(`Failed to share onboarding profile: ${err.message || err}`);
+        } finally {
+            setCreateLoading(false);
         }
     };
 
@@ -1045,13 +1334,121 @@ export default function StaffDashboardPage() {
     };
 
     const proceedToDocuments = async () => {
-        await handleSaveProfile(true);
+        await handleSaveProfile(false);
         const userId = getCreatedUserId();
         if (userId) {
             await syncRequiredDocumentRecords(userId);
             await fetchUserDocuments(userId);
         }
         setOnboardStep(3);
+    };
+
+    const renderAcademicDocumentStatus = (docType: 'marksheet_10' | 'marksheet_12', label: string) => {
+        const userId = getCreatedUserId();
+        if (!userId) {
+            return (
+                <div className="mb-6 p-4 bg-slate-50 border border-slate-200 border-dashed rounded-2xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <span className="material-symbols-outlined text-slate-400 text-[22px]">info</span>
+                        <div>
+                            <p className="text-xs font-bold text-slate-700">Document Management Locked</p>
+                            <p className="text-[10px] text-slate-500 font-semibold mt-0.5">Please register the student first in Step 1 to upload or verify {label}.</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const doc = userDocuments.find(ud => ud.docType === docType || ud.type === docType);
+        const docStatus = String(doc?.status || "").toLowerCase();
+        const isUploaded = Boolean(doc?.uploaded || ["uploaded", "verified"].includes(docStatus));
+        const isVerified = docStatus === 'verified' || docStatus === 'approved';
+        const confidence = doc?.ocrResult?.confidence_score || doc?.confidence || doc?.details?.confidence_score || null;
+
+        return (
+            <div className={`mb-6 p-4 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${isVerified
+                    ? 'bg-emerald-50/30 border-emerald-200/80 shadow-sm shadow-emerald-500/5'
+                    : isUploaded
+                        ? 'bg-amber-50/30 border-amber-200/80 shadow-sm shadow-amber-500/5'
+                        : 'bg-slate-50/50 border-slate-200/80'
+                }`}>
+                <div className="flex items-start gap-3.5">
+                    <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border shadow-inner ${isVerified
+                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                            : isUploaded
+                                ? 'bg-amber-50 text-amber-600 border-amber-100'
+                                : 'bg-white text-slate-400 border-slate-200'
+                        }`}>
+                        <span className="material-symbols-outlined text-[24px]">
+                            {isVerified ? 'verified' : isUploaded ? 'hourglass_empty' : 'cloud_upload'}
+                        </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-xs font-bold text-slate-800">{label}</p>
+                            <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${isVerified
+                                    ? 'bg-emerald-100/60 text-emerald-700 border-emerald-200/50'
+                                    : isUploaded
+                                        ? 'bg-amber-100/60 text-amber-700 border-amber-200/50 animate-pulse'
+                                        : 'bg-slate-100 text-slate-500 border-slate-200'
+                                }`}>
+                                {isVerified ? 'Verified' : isUploaded ? 'Pending Verification' : 'Not Uploaded'}
+                            </span>
+                            {isVerified && confidence && (
+                                <span className="text-[9px] font-black text-emerald-600 bg-emerald-100/40 border border-emerald-200/30 px-2 py-0.5 rounded-full">
+                                    {confidence}% Match
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-semibold mt-1">
+                            {isVerified
+                                ? `Document successfully verified via premium AI OCR. All academic fields populated.`
+                                : isUploaded
+                                    ? `Scanned copy uploaded. System is running background verification...`
+                                    : `Required document for verification. Uploading details will trigger automated fields populate.`
+                            }
+                        </p>
+                        {isUploaded && (doc?.fileName || doc?.filename) && (
+                            <div className="flex items-center gap-1.5 mt-2 text-[10px] text-slate-600 font-bold bg-white/60 border border-slate-200/60 rounded-lg px-2.5 py-1 w-fit">
+                                <span className="material-symbols-outlined text-slate-400 text-[14px]">description</span>
+                                <span className="truncate max-w-[200px]">{doc.fileName || doc.filename}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 shrink-0 self-end md:self-center">
+                    {isUploaded && (
+                        <button
+                            type="button"
+                            onClick={() => viewFile(docType)}
+                            className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm hover:shadow"
+                        >
+                            <span className="material-symbols-outlined text-[16px]">visibility</span>
+                            View Scan
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setSelectedDocType(docType);
+                            setSelectedDocName(label);
+                            setSelectedDocCategory('applicant');
+                            setIsUploadModalOpen(true);
+                        }}
+                        className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm hover:shadow ${isUploaded
+                                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
+                                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/10'
+                            }`}
+                    >
+                        <span className="material-symbols-outlined text-[16px]">
+                            {isUploaded ? 'settings_backup_restore' : 'cloud_upload'}
+                        </span>
+                        {isUploaded ? 'Re-upload' : 'Upload & Autofill'}
+                    </button>
+                </div>
+            </div>
+        );
     };
 
     const viewFile = async (docType: string) => {
@@ -1080,36 +1477,98 @@ export default function StaffDashboardPage() {
         });
     };
 
-    const parseOcrDate = (dateStr: string): string => {
-        if (!dateStr) return "";
-        try {
-            const clean = dateStr.replace(/[^\d\/\-]/g, '').trim();
-            if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
-            const parts = clean.split(/[\/\-]/);
-            if (parts.length === 3) {
-                if (parts[0].length === 4) {
-                    return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
-                } else if (parts[2].length === 4) {
-                    return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    const getNormalizedStateAndCountry = (stateVal?: string, countryVal?: string) => {
+        let country = countryVal ? normalizeCountryName(countryVal) : 'India';
+        const matchedCountry = getAllCountries().find(c => c.toLowerCase() === country.toLowerCase()) || country;
+
+        let state = stateVal ? String(stateVal).trim() : '';
+        if (state && matchedCountry) {
+            const statesList = getStatesByCountry(matchedCountry);
+            const matchedState = statesList.find(s => s.toLowerCase() === state.toLowerCase());
+            if (matchedState) {
+                state = matchedState;
+            } else {
+                const clean = state.toLowerCase();
+                const aliases: Record<string, string> = {
+                    'tg': 'Telangana', 'ts': 'Telangana', 'ap': 'Andhra Pradesh', 'up': 'Uttar Pradesh',
+                    'mp': 'Madhya Pradesh', 'wb': 'West Bengal', 'mh': 'Maharashtra', 'dl': 'Delhi'
+                };
+                if (aliases[clean]) {
+                    const aliasMatch = statesList.find(s => s.toLowerCase() === aliases[clean].toLowerCase());
+                    if (aliasMatch) state = aliasMatch;
                 }
             }
-            const d = new Date(dateStr);
-            if (!isNaN(d.getTime())) {
-                return d.toISOString().split('T')[0];
-            }
-        } catch (e) {
-            console.warn("Date parsing failed for:", dateStr);
         }
-        return dateStr;
+        return { state, country: matchedCountry };
     };
 
-    const autoFillFromOcr = async (docType: string, extractedFields: any) => {
-        if (!extractedFields || Object.keys(extractedFields).length === 0) return;
-        console.log(`[OCR AUTOFILL] Processing extracted fields for ${docType}:`, extractedFields);
+    const formatStructuredAddress = (addr: Record<string, string | undefined>): string => {
+        return [
+            addr.house_details,
+            addr.area,
+            addr.landmark,
+            addr.mandal,
+            addr.city,
+            addr.district,
+            addr.state,
+            addr.pincode,
+        ].filter(Boolean).join(', ');
+    };
+
+    const applyStructuredAddressToProfile = (
+        addr: Record<string, string | undefined>,
+        permanentAddress: typeof newStudent.permanentAddress,
+        mailingAddress: typeof newStudent.mailingAddress,
+    ) => {
+        const address1Parts = [addr.house_details, addr.area].filter(Boolean);
+        const address2Parts = [addr.landmark, addr.mandal, addr.district].filter(Boolean);
+        const formatted = formatStructuredAddress(addr);
+
+        const norm = getNormalizedStateAndCountry(addr.state, addr.country);
+
+        const nextPermanent = {
+            ...permanentAddress,
+            address1: address1Parts.length ? address1Parts.join(', ') : (formatted || permanentAddress.address1),
+            address2: address2Parts.length ? address2Parts.join(', ') : permanentAddress.address2,
+            city: addr.city || permanentAddress.city,
+            state: norm.state || addr.state || permanentAddress.state,
+            pincode: addr.pincode || permanentAddress.pincode,
+            country: norm.country || permanentAddress.country || 'India',
+        };
+
+        return {
+            permanentAddress: nextPermanent,
+            mailingAddress: {
+                ...mailingAddress,
+                address1: nextPermanent.address1,
+                address2: nextPermanent.address2,
+                city: nextPermanent.city,
+                state: nextPermanent.state,
+                pincode: nextPermanent.pincode,
+                country: nextPermanent.country,
+            },
+        };
+    };
+
+    const parseOcrDate = (dateStr: string): string => parseOcrDateForInput(dateStr);
+
+    const autoFillFromOcr = async (
+        docType: string,
+        extractedFields: any,
+    ): Promise<{ filled: boolean; message: string }> => {
+        const normalized = normalizeOcrFieldsForAutofill(extractedFields || {}, docType);
+        if (!normalized || Object.keys(normalized).length === 0) {
+            return {
+                filled: false,
+                message: 'No readable fields were found in the OCR result. Try re-uploading a clearer scan.',
+            };
+        }
+        console.log(`[OCR AUTOFILL] Processing extracted fields for ${docType}:`, normalized);
+        extractedFields = normalized;
 
         setNewStudent(prev => {
             const updated = { ...prev };
-            
+
             const compareAndSet = (currentVal: string | undefined | null, newVal: string, setter: (val: string) => void) => {
                 if (!newVal) return;
                 const cleanCurrent = String(currentVal || '').trim().toLowerCase();
@@ -1125,7 +1584,7 @@ export default function StaffDashboardPage() {
                 if (parts.length > 0) {
                     const newFirstName = parts[0];
                     const newLastName = parts.slice(1).join(' ');
-                    
+
                     compareAndSet(updated.firstName, newFirstName, (val) => {
                         updated.firstName = val;
                     });
@@ -1137,127 +1596,372 @@ export default function StaffDashboardPage() {
                 }
             };
 
-            if (docType === 'passport') {
-                if (extractedFields.passport_number) {
-                    compareAndSet(updated.passport?.number, extractedFields.passport_number, (val) => {
-                        updated.passport = { ...updated.passport, number: val };
-                    });
+            const parseAddressDetails = (addressStr: string) => {
+                const result = {
+                    house_details: "",
+                    area: "",
+                    landmark: "",
+                    mandal: "",
+                    city: "",
+                    district: "",
+                    state: "",
+                    pincode: "",
+                    country: ""
+                };
+                if (!addressStr) return result;
+
+                // 1. Extract 6-digit Pincode
+                const pinMatch = addressStr.match(/\b\d{6}\b/) || addressStr.match(/\b\d{3}\s\d{3}\b/);
+                if (pinMatch) {
+                    result.pincode = pinMatch[0].replace(/\s/g, '');
                 }
-                if (extractedFields.date_of_issue) {
-                    const parsed = parseOcrDate(extractedFields.date_of_issue);
-                    compareAndSet(updated.passport?.issueDate, parsed, (val) => {
-                        updated.passport = { ...updated.passport, issueDate: val };
-                    });
+
+                // 2. Identify State
+                const states = [
+                    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa',
+                    'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala',
+                    'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland',
+                    'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+                    'Uttar Pradesh', 'Uttarakhand', 'West Bengal', 'Delhi', 'Jammu & Kashmir',
+                    'Jammu and Kashmir', 'Puducherry', 'Chandigarh', 'Dadra and Nagar Haveli',
+                    'Daman and Diu', 'Lakshadweep', 'Ladakh', 'Andaman and Nicobar'
+                ];
+
+                const lowerAddress = addressStr.toLowerCase();
+                let foundState = "";
+                for (const state of states) {
+                    if (lowerAddress.includes(state.toLowerCase())) {
+                        foundState = state;
+                        break;
+                    }
                 }
-                if (extractedFields.date_of_expiry) {
-                    const parsed = parseOcrDate(extractedFields.date_of_expiry);
-                    compareAndSet(updated.passport?.expiryDate, parsed, (val) => {
-                        updated.passport = { ...updated.passport, expiryDate: val };
-                    });
+                if (foundState) {
+                    result.state = foundState;
+                    result.country = "India";
                 }
-                if (extractedFields.place_of_issue) {
-                    compareAndSet(updated.passport?.issueCountry, extractedFields.place_of_issue, (val) => {
-                        updated.passport = { ...updated.passport, issueCountry: val };
-                    });
+
+                // 3. Parse address into components
+                const parts = addressStr.split(/[\n,;:-]+/).map(p => p.trim()).filter(Boolean);
+
+                // Remove state and pincode from parts for easier parsing
+                const filteredParts = parts.filter(p => {
+                    const pLower = p.toLowerCase();
+                    return !states.some(s => pLower.includes(s.toLowerCase())) && !pinMatch?.includes(p);
+                });
+
+                // Assign parts to address components (Aadhar format: house_details, area, landmark, mandal/city, district, state, pincode)
+                if (filteredParts.length > 0) {
+                    result.house_details = filteredParts[0]; // First line - house/plot details
                 }
-                if (extractedFields.place_of_birth) {
-                    compareAndSet(updated.passport?.birthCity, extractedFields.place_of_birth, (val) => {
-                        updated.passport = { ...updated.passport, birthCity: val };
-                    });
+                if (filteredParts.length > 1) {
+                    result.area = filteredParts[1]; // Second line - area/locality
                 }
-                if (extractedFields.nationality) {
-                    compareAndSet(updated.passport?.birthCountry, extractedFields.nationality, (val) => {
-                        updated.passport = { ...updated.passport, birthCountry: val };
-                    });
-                    compareAndSet(updated.nationality?.citizenship, extractedFields.nationality, (val) => {
-                        updated.nationality = {
-                            ...updated.nationality,
-                            citizenship: val,
-                            name: val
+                if (filteredParts.length > 2) {
+                    result.landmark = filteredParts[2]; // Third line - landmark
+                }
+                if (filteredParts.length > 3) {
+                    result.mandal = filteredParts[3]; // Fourth line - mandal/tehsil/taluk
+                }
+                if (filteredParts.length > 4) {
+                    result.district = filteredParts[4]; // Fifth line - district
+                }
+
+                // Extract City using segments
+                if (foundState) {
+                    const stateIndex = parts.findIndex(p => p.toLowerCase().includes(foundState.toLowerCase()));
+                    if (stateIndex > 0) {
+                        let potentialCity = parts[stateIndex - 1];
+                        potentialCity = potentialCity.replace(/\b\d+\b/g, '').trim();
+                        if (potentialCity && potentialCity.length > 2) {
+                            result.city = potentialCity;
+                        }
+                    }
+                }
+
+                if (!result.city) {
+                    const commonCities = [
+                        'Mumbai', 'Delhi', 'Bengaluru', 'Bangalore', 'Hyderabad', 'Ahmedabad', 'Chennai',
+                        'Kolkata', 'Surat', 'Pune', 'Jaipur', 'Lucknow', 'Kanpur', 'Nagpur', 'Indore',
+                        'Thane', 'Bhopal', 'Visakhapatnam', 'Pimpri-Chinchwad', 'Patna', 'Vadodara',
+                        'Ghaziabad', 'Ludhiana', 'Agra', 'Nashik', 'Ranchi', 'Faridabad', 'Meerut',
+                        'Rajkot', 'Kalyan-Dombivli', 'Vasai-Virar', 'Varanasi', 'Srinagar', 'Aurangabad',
+                        'Dhanbad', 'Amritsar', 'Navi Mumbai', 'Allahabad', 'Howrah', 'Gwalior',
+                        'Jabalpur', 'Coimbatore', 'Vijayawada', 'Jodhpur', 'Madurai', 'Raipur',
+                        'Kota', 'Guwahati', 'Chandigarh', 'Solapur', 'Hubli-Dharwad', 'Bareilly',
+                        'Moradabad', 'Mysore', 'Gurgaon', 'Gurugram', 'Aligarh', 'Jalandhar', 'Tiruchirappalli',
+                        'Bhubaneswar', 'Salem', 'Mira-Bhayandar', 'Warangal', 'Guntur', 'Bhiwandi',
+                        'Saharanpur', 'Noida', 'Amravati', 'Kochi', 'Cochin', 'Cuttack', 'Trivandrum',
+                        'Thiruvananthapuram', 'Mangalore', 'Mangaluru', 'Udupi', 'Mysuru', 'Belgaum',
+                        'Hubli', 'Dharwad', 'Gulbarga', 'Shimoga', 'Tumkur', 'Bellary', 'Davangere'
+                    ];
+                    for (const city of commonCities) {
+                        if (lowerAddress.includes(city.toLowerCase())) {
+                            result.city = city;
+                            if (!result.state) {
+                                const cityToState: Record<string, string> = {
+                                    'mumbai': 'Maharashtra', 'pune': 'Maharashtra', 'nagpur': 'Maharashtra', 'thane': 'Maharashtra', 'nashik': 'Maharashtra', 'aurangabad': 'Maharashtra', 'navi mumbai': 'Maharashtra', 'solapur': 'Maharashtra', 'amravati': 'Maharashtra', 'bhiwandi': 'Maharashtra', 'mira-bhayandar': 'Maharashtra', 'kalyan-dombivli': 'Maharashtra', 'vasai-virar': 'Maharashtra',
+                                    'delhi': 'Delhi',
+                                    'bengaluru': 'Karnataka', 'bangalore': 'Karnataka', 'mysore': 'Karnataka', 'hubli-dharwad': 'Karnataka', 'mangalore': 'Karnataka', 'mangaluru': 'Karnataka', 'udupi': 'Karnataka', 'mysuru': 'Karnataka', 'belgaum': 'Karnataka', 'hubli': 'Karnataka', 'dharwad': 'Karnataka', 'gulbarga': 'Karnataka', 'shimoga': 'Karnataka', 'tumkur': 'Karnataka', 'bellary': 'Karnataka', 'davangere': 'Karnataka',
+                                    'hyderabad': 'Telangana', 'warangal': 'Telangana',
+                                    'ahmedabad': 'Gujarat', 'surat': 'Gujarat', 'rose': 'Gujarat', 'vadodara': 'Gujarat', 'rajkot': 'Gujarat',
+                                    'chennai': 'Tamil Nadu', 'coimbatore': 'Tamil Nadu', 'madurai': 'Tamil Nadu', 'salem': 'Tamil Nadu', 'tiruchirappalli': 'Tamil Nadu',
+                                    'kolkata': 'West Bengal', 'howrah': 'West Bengal',
+                                    'jaipur': 'Rajasthan', 'jodhpur': 'Rajasthan', 'kota': 'Rajasthan',
+                                    'lucknow': 'Uttar Pradesh', 'kanpur': 'Uttar Pradesh', 'ghaziabad': 'Uttar Pradesh', 'agra': 'Uttar Pradesh', 'meerut': 'Uttar Pradesh', 'varanasi': 'Uttar Pradesh', 'allahabad': 'Uttar Pradesh', 'gwalior': 'Madhya Pradesh', 'jabalpur': 'Madhya Pradesh', 'bhopal': 'Madhya Pradesh', 'indore': 'Madhya Pradesh', 'noida': 'Uttar Pradesh', 'aligarh': 'Uttar Pradesh', 'moradabad': 'Uttar Pradesh', 'bareilly': 'Uttar Pradesh', 'saharanpur': 'Uttar Pradesh',
+                                    'visakhapatnam': 'Andhra Pradesh', 'vijayawada': 'Andhra Pradesh', 'guntur': 'Andhra Pradesh',
+                                    'patna': 'Bihar',
+                                    'ludhiana': 'Punjab', 'amritsar': 'Punjab', 'jalandhar': 'Punjab',
+                                    'ranchi': 'Jharkhand', 'dhanbad': 'Jharkhand',
+                                    'faridabad': 'Haryana', 'gurgaon': 'Haryana', 'gurugram': 'Haryana',
+                                    'srinagar': 'Jammu & Kashmir',
+                                    'raipur': 'Chhattisgarh',
+                                    'guwahati': 'Assam',
+                                    'chandigarh': 'Chandigarh',
+                                    'bhubaneswar': 'Odisha', 'cuttack': 'Odisha',
+                                    'kochi': 'Kerala', 'cochin': 'Kerala', 'trivandrum': 'Kerala', 'thiruvananthapuram': 'Kerala'
+                                };
+                                const stateVal = cityToState[city.toLowerCase()];
+                                if (stateVal) {
+                                    result.state = stateVal;
+                                    result.country = "India";
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+                return result;
+            };
+
+            const applyAddressFromOcr = (addressInput: string | Record<string, string | undefined>) => {
+                if (!addressInput) return;
+                if (typeof addressInput === 'object' && !Array.isArray(addressInput)) {
+                    const a = addressInput as Record<string, string | undefined>;
+
+                    // Check if this is a structured Aadhar address with granular fields
+                    if (a.house_details || a.area || a.landmark || a.mandal || a.district) {
+                        // Combine house_details and area for address1
+                        const address1 = [a.house_details, a.area].filter(Boolean).join(', ');
+                        // Use landmark for address2
+                        const address2 = a.landmark || '';
+
+                        const norm = getNormalizedStateAndCountry(a.state, a.country);
+                        const nextPermanent = {
+                            ...updated.permanentAddress,
+                            address1: address1 || updated.permanentAddress.address1,
+                            address2: address2 || updated.permanentAddress.address2,
+                            city: a.city || updated.permanentAddress.city,
+                            state: norm.state || a.state || updated.permanentAddress.state,
+                            pincode: a.pincode || a.pin_code || updated.permanentAddress.pincode,
+                            country: norm.country || updated.permanentAddress.country || 'India',
                         };
+                        updated.permanentAddress = nextPermanent;
+                        updated.mailingAddress = { ...updated.mailingAddress, ...nextPermanent };
+                        return;
+                    }
+
+                    if (a.address1 || a.line1 || a.city || a.state || a.pincode) {
+                        const line1 = a.address1 || a.line1 || [a.house_details, a.area].filter(Boolean).join(', ');
+                        const norm = getNormalizedStateAndCountry(a.state, a.country);
+                        const nextPermanent = {
+                            ...updated.permanentAddress,
+                            address1: line1 || updated.permanentAddress.address1,
+                            address2: a.address2 || a.line2 || updated.permanentAddress.address2,
+                            city: a.city || updated.permanentAddress.city,
+                            state: norm.state || a.state || updated.permanentAddress.state,
+                            pincode: a.pincode || a.pin_code || updated.permanentAddress.pincode,
+                            country: norm.country || updated.permanentAddress.country || 'India',
+                        };
+                        updated.permanentAddress = nextPermanent;
+                        updated.mailingAddress = { ...updated.mailingAddress, ...nextPermanent };
+                        return;
+                    }
+                    const applied = applyStructuredAddressToProfile(
+                        addressInput,
+                        updated.permanentAddress,
+                        updated.mailingAddress,
+                    );
+                    updated.permanentAddress = applied.permanentAddress;
+                    updated.mailingAddress = applied.mailingAddress;
+                    return;
+                }
+                const addrStr = String(addressInput);
+                updated.permanentAddress = { ...updated.permanentAddress, address1: addrStr };
+                updated.mailingAddress = { ...updated.mailingAddress, address1: addrStr };
+                syncAddressFields(addrStr);
+            };
+
+            const syncAddressFields = (addr: string) => {
+                if (!addr) return;
+                const parsed = parseAddressDetails(addr);
+                const norm = getNormalizedStateAndCountry(parsed.state, parsed.country);
+                const explicitPin = extractedFields.pin_code || extractedFields.pincode || extractedFields.zip;
+                const finalPincode = explicitPin || parsed.pincode;
+
+                // Update permanent address with parsed components
+                if (parsed.house_details || parsed.area || parsed.landmark) {
+                    const address1 = [parsed.house_details, parsed.area].filter(Boolean).join(', ');
+                    if (address1) {
+                        updated.permanentAddress = { ...updated.permanentAddress, address1 };
+                        updated.mailingAddress = { ...updated.mailingAddress, address1 };
+                    }
+                    if (parsed.landmark) {
+                        updated.permanentAddress = { ...updated.permanentAddress, address2: parsed.landmark };
+                        updated.mailingAddress = { ...updated.mailingAddress, address2: parsed.landmark };
+                    }
+                }
+
+                if (norm.state) {
+                    compareAndSet(updated.permanentAddress?.state, norm.state, (val) => {
+                        updated.permanentAddress = { ...updated.permanentAddress, state: val };
+                    });
+                    compareAndSet(updated.mailingAddress?.state, norm.state, (val) => {
+                        updated.mailingAddress = { ...updated.mailingAddress, state: val };
                     });
                 }
-                if (extractedFields.full_name) {
-                    mapFullName(extractedFields.full_name);
+                if (norm.country) {
+                    compareAndSet(updated.permanentAddress?.country, norm.country, (val) => {
+                        updated.permanentAddress = { ...updated.permanentAddress, country: val };
+                    });
+                    compareAndSet(updated.mailingAddress?.country, norm.country, (val) => {
+                        updated.mailingAddress = { ...updated.mailingAddress, country: val };
+                    });
+                }
+                if (finalPincode) {
+                    compareAndSet(updated.permanentAddress?.pincode, finalPincode, (val) => {
+                        updated.permanentAddress = { ...updated.permanentAddress, pincode: val };
+                    });
+                    compareAndSet(updated.mailingAddress?.pincode, finalPincode, (val) => {
+                        updated.mailingAddress = { ...updated.mailingAddress, pincode: val };
+                    });
+                }
+                if (parsed.city) {
+                    compareAndSet(updated.permanentAddress?.city, parsed.city, (val) => {
+                        updated.permanentAddress = { ...updated.permanentAddress, city: val };
+                    });
+                    compareAndSet(updated.mailingAddress?.city, parsed.city, (val) => {
+                        updated.mailingAddress = { ...updated.mailingAddress, city: val };
+                    });
+                }
+            };
+
+            if (docType === 'passport') {
+                const passportPatch: typeof updated.passport = { ...updated.passport };
+
+                if (extractedFields.passport_number) {
+                    passportPatch.number = String(extractedFields.passport_number);
+                }
+                const issueDate = parseOcrDate(String(extractedFields.date_of_issue || ''));
+                if (issueDate) passportPatch.issueDate = issueDate;
+                const expiryDate = parseOcrDate(String(extractedFields.date_of_expiry || ''));
+                if (expiryDate) passportPatch.expiryDate = expiryDate;
+
+                const issueCountry = extractedFields.issue_country
+                    ? normalizeCountryName(String(extractedFields.issue_country))
+                    : '';
+                if (issueCountry) {
+                    passportPatch.issueCountry = issueCountry;
+                } else if (extractedFields.nationality && /indian|ind\b/i.test(String(extractedFields.nationality))) {
+                    passportPatch.issueCountry = 'India';
+                }
+
+                if (extractedFields.birth_city) {
+                    passportPatch.birthCity = String(extractedFields.birth_city);
+                } else if (extractedFields.place_of_birth) {
+                    passportPatch.birthCity = String(extractedFields.place_of_birth).split(',')[0].trim();
+                }
+
+                const birthCountry = extractedFields.birth_country
+                    ? normalizeCountryName(String(extractedFields.birth_country))
+                    : extractedFields.nationality
+                        ? normalizeCountryName(String(extractedFields.nationality).replace(/^indian$/i, 'India'))
+                        : '';
+                if (birthCountry) passportPatch.birthCountry = birthCountry;
+
+                updated.passport = passportPatch;
+
+                if (extractedFields.nationality) {
+                    const nat = String(extractedFields.nationality);
+                    const citizenship = /indian/i.test(nat) ? 'India' : normalizeCountryName(nat);
+                    updated.nationality = {
+                        ...updated.nationality,
+                        citizenship,
+                        name: /indian/i.test(nat) ? 'Indian' : nat,
+                    };
+                }
+
+                const nameVal = extractedFields.full_name || extractedFields.name || extractedFields.fullName;
+                if (nameVal) {
+                    const parts = String(nameVal).trim().split(/\s+/);
+                    if (parts.length > 0) {
+                        updated.firstName = parts[0];
+                        if (parts.length > 1) updated.lastName = parts.slice(1).join(' ');
+                    }
                 }
                 if (extractedFields.dob) {
-                    const parsed = parseOcrDate(extractedFields.dob);
-                    compareAndSet(updated.dob, parsed, (val) => {
-                        updated.dob = val;
-                    });
+                    const parsedDob = parseOcrDate(String(extractedFields.dob));
+                    if (parsedDob) updated.dob = parsedDob;
                 }
-                if (extractedFields.gender) {
-                    const g = String(extractedFields.gender).toLowerCase();
-                    const newGender = g.startsWith('m') ? 'Male' : g.startsWith('f') ? 'Female' : 'Other';
-                    compareAndSet(updated.gender, newGender, (val) => {
-                        updated.gender = val;
-                    });
-                }
+                const passportGender = normalizeGenderForForm(extractedFields.gender);
+                if (passportGender) updated.gender = passportGender;
                 if (extractedFields.address) {
-                    compareAndSet(updated.permanentAddress?.address1, extractedFields.address, (val) => {
-                        updated.permanentAddress = { ...updated.permanentAddress, address1: val };
-                    });
-                    compareAndSet(updated.mailingAddress?.address1, extractedFields.address, (val) => {
-                        updated.mailingAddress = { ...updated.mailingAddress, address1: val };
-                    });
+                    applyAddressFromOcr(extractedFields.address);
                 }
             } else if (docType === 'pan') {
-                if (extractedFields.pan_number) {
-                    compareAndSet(updated.pan, extractedFields.pan_number, (val) => {
-                        updated.pan = val;
-                    });
+                const panVal = extractedFields.pan_number || extractedFields.panNumber || extractedFields.pan;
+                if (panVal) {
+                    updated.pan = String(panVal).toUpperCase();
                 }
-                if (extractedFields.full_name) {
-                    mapFullName(extractedFields.full_name);
+                const nameVal = extractedFields.full_name || extractedFields.name || extractedFields.fullName;
+                if (nameVal) {
+                    const parts = nameVal.trim().split(/\s+/);
+                    if (parts.length > 0) {
+                        updated.firstName = parts[0];
+                        if (parts.length > 1) {
+                            updated.lastName = parts.slice(1).join(' ');
+                        }
+                    }
                 }
                 if (extractedFields.dob) {
-                    const parsed = parseOcrDate(extractedFields.dob);
-                    compareAndSet(updated.dob, parsed, (val) => {
-                        updated.dob = val;
-                    });
+                    updated.dob = parseOcrDate(extractedFields.dob);
                 }
             } else if (docType === 'national_id' || docType === 'aadhaar_card' || docType === 'aadhaar' || docType === 'aadhar') {
                 const nameVal = extractedFields.full_name || extractedFields.name || extractedFields.fullName;
                 if (nameVal) {
-                    mapFullName(nameVal);
+                    const parts = nameVal.trim().split(/\s+/);
+                    if (parts.length > 0) {
+                        updated.firstName = parts[0];
+                        if (parts.length > 1) {
+                            updated.lastName = parts.slice(1).join(' ');
+                        }
+                    }
                 }
                 const dobVal = extractedFields.dob || extractedFields.date_of_birth || extractedFields.dateOfBirth;
                 if (dobVal) {
-                    const parsed = parseOcrDate(dobVal);
-                    compareAndSet(updated.dob, parsed, (val) => {
-                        updated.dob = val;
-                    });
+                    const parsedDob = parseOcrDate(String(dobVal));
+                    if (parsedDob) updated.dob = parsedDob;
                 }
-                if (extractedFields.gender) {
-                    const g = String(extractedFields.gender).toLowerCase();
-                    const newGender = g.startsWith('m') ? 'Male' : g.startsWith('f') ? 'Female' : 'Other';
-                    compareAndSet(updated.gender, newGender, (val) => {
-                        updated.gender = val;
-                    });
-                }
-                const addressVal = extractedFields.address || extractedFields.permanentAddress || extractedFields.permanent_address;
+                const aadhaarGender = normalizeGenderForForm(extractedFields.gender);
+                if (aadhaarGender) updated.gender = aadhaarGender;
+                const addressVal =
+                    extractedFields.address ||
+                    extractedFields.permanentAddress ||
+                    extractedFields.permanent_address ||
+                    extractedFields.address_formatted;
                 if (addressVal) {
-                    compareAndSet(updated.permanentAddress?.address1, addressVal, (val) => {
-                        updated.permanentAddress = { ...updated.permanentAddress, address1: val };
-                    });
-                    compareAndSet(updated.mailingAddress?.address1, addressVal, (val) => {
-                        updated.mailingAddress = { ...updated.mailingAddress, address1: val };
-                    });
-                }
-                const pincodeVal = extractedFields.pin_code || extractedFields.pincode || extractedFields.zip;
-                if (pincodeVal) {
-                    compareAndSet(updated.permanentAddress?.pincode, pincodeVal, (val) => {
-                        updated.permanentAddress = { ...updated.permanentAddress, pincode: val };
-                    });
-                    compareAndSet(updated.mailingAddress?.pincode, pincodeVal, (val) => {
-                        updated.mailingAddress = { ...updated.mailingAddress, pincode: val };
-                    });
+                    applyAddressFromOcr(
+                        typeof addressVal === 'object' ? addressVal : String(addressVal),
+                    );
+                } else {
+                    const pincodeVal = extractedFields.pin_code || extractedFields.pincode || extractedFields.zip;
+                    if (pincodeVal) {
+                        updated.permanentAddress = { ...updated.permanentAddress, pincode: pincodeVal };
+                        updated.mailingAddress = { ...updated.mailingAddress, pincode: pincodeVal };
+                    }
                 }
                 const aadharNum = extractedFields.aadhaar_number || extractedFields.aadhaar || extractedFields.aadhaarNumber || extractedFields.aadharNumber || extractedFields.national_id_number || extractedFields.document_number;
                 if (aadharNum) {
-                    compareAndSet(updated.aadhaarNumber, aadharNum, (val) => {
-                        updated.aadhaarNumber = val;
-                    });
+                    updated.aadhaarNumber = aadharNum;
                 }
             } else if (docType === 'father_pan') {
                 if (extractedFields.pan_number) {
@@ -1292,6 +1996,136 @@ export default function StaffDashboardPage() {
                         updated.coApplicant = { ...updated.coApplicant, name: val };
                     });
                 }
+            } else if (
+                docType === 'marksheet_10' ||
+                docType === 'marksheet_12' ||
+                docType === 'marksheet_ug' ||
+                docType === 'ug_degree' ||
+                docType === 'ug_transcript' ||
+                docType === 'marksheet_pg' ||
+                docType === 'pg_degree' ||
+                docType === 'pg_transcript'
+            ) {
+                const isGrade10 = docType === 'marksheet_10';
+                const isGrade12 = docType === 'marksheet_12';
+                const isUndergrad = ['marksheet_ug', 'ug_degree', 'ug_transcript'].includes(docType);
+                const isPostgrad = ['marksheet_pg', 'pg_degree', 'pg_transcript'].includes(docType);
+
+                const nameVal = extractedFields.full_name || extractedFields.name;
+                if (nameVal) {
+                    const parts = String(nameVal).trim().split(/\s+/);
+                    if (parts.length > 0) {
+                        compareAndSet(updated.firstName, parts[0], (v) => { updated.firstName = v; });
+                        if (parts.length > 1) {
+                            compareAndSet(updated.lastName, parts.slice(1).join(' '), (v) => { updated.lastName = v; });
+                        }
+                    }
+                }
+                if (extractedFields.dob) {
+                    const parsedDob = parseOcrDate(String(extractedFields.dob));
+                    if (parsedDob) compareAndSet(updated.dob, parsedDob, (v) => { updated.dob = v; });
+                }
+
+                const country = extractedFields.country
+                    ? normalizeCountryName(String(extractedFields.country))
+                    : extractedFields.state
+                        ? 'India'
+                        : '';
+                const state = String(extractedFields.state || '');
+                const city = String(extractedFields.city || '');
+                const board = String(extractedFields.board || '');
+                const institution = String(extractedFields.institution || '');
+                const university = String(extractedFields.university || institution || '');
+                const qualification = String(extractedFields.qualification || '');
+                const grading = String(extractedFields.grading || '');
+                const score = String(extractedFields.score || '');
+                const language = String(extractedFields.language || '');
+
+                let endDate = extractedFields.end_date
+                    ? parseOcrDate(String(extractedFields.end_date))
+                    : examYearToEndDate(String(extractedFields.exam_period || extractedFields.year_of_passing || ''));
+                if (endDate && !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+                    endDate = parseOcrDate(endDate) || endDate;
+                }
+                let startDate = extractedFields.start_date
+                    ? parseOcrDate(String(extractedFields.start_date))
+                    : endDate
+                        ? inferStartDate(
+                            endDate,
+                            isUndergrad || isPostgrad ? 3 : isGrade12 ? 2 : isGrade10 ? 1 : 2,
+                        )
+                        : '';
+                if (startDate && !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+                    startDate = parseOcrDate(startDate) || startDate;
+                }
+
+                if (isGrade10 || isGrade12) {
+                    const key = isGrade10 ? 'grade10' : 'grade12';
+                    const prev = updated.academic[key];
+                    const hl = updated.academic.highestLevel;
+                    const minLevel = isGrade12 ? 'Grade 12' : 'Grade 10';
+                    const shouldRaiseLevel =
+                        !hl ||
+                        (isGrade12 && hl === 'Grade 10');
+                    updated.academic = {
+                        ...updated.academic,
+                        ...(shouldRaiseLevel ? { highestLevel: minLevel } : {}),
+                        countryOfEducation: country || updated.academic.countryOfEducation || 'India',
+                        [key]: {
+                            ...prev,
+                            country: country || prev.country || 'India',
+                            state: state || prev.state,
+                            board: board || prev.board,
+                            institution: institution || prev.institution,
+                            city: city || prev.city,
+                            grading: grading || prev.grading,
+                            score: score || prev.score,
+                            language: language || prev.language,
+                            startDate: startDate || prev.startDate,
+                            endDate: endDate || prev.endDate,
+                        },
+                    };
+                }
+                if (isUndergrad) {
+                    const prev = updated.academic.undergrad;
+                    updated.academic = {
+                        ...updated.academic,
+                        countryOfEducation: country || updated.academic.countryOfEducation || 'India',
+                        undergrad: {
+                            ...prev,
+                            country: country || prev.country || 'India',
+                            state: state || prev.state,
+                            university: university || prev.university,
+                            qualification: qualification || prev.qualification,
+                            city: city || prev.city,
+                            grading: grading || prev.grading,
+                            score: score || prev.score,
+                            language: language || prev.language,
+                            startDate: startDate || prev.startDate,
+                            endDate: endDate || prev.endDate,
+                        },
+                    };
+                }
+                if (isPostgrad) {
+                    const prev = updated.academic.postgrad;
+                    updated.academic = {
+                        ...updated.academic,
+                        countryOfEducation: country || updated.academic.countryOfEducation || 'India',
+                        postgrad: {
+                            ...prev,
+                            country: country || prev.country || 'India',
+                            state: state || prev.state,
+                            university: university || prev.university,
+                            qualification: qualification || prev.qualification,
+                            city: city || prev.city,
+                            grading: grading || prev.grading,
+                            percentage: score || prev.percentage,
+                            language: language || prev.language,
+                            startDate: startDate || prev.startDate,
+                            endDate: endDate || prev.endDate,
+                        },
+                    };
+                }
             }
 
             // Sync the updated profile to backend immediately
@@ -1320,40 +2154,28 @@ export default function StaffDashboardPage() {
                     testScores: updated.tests,
                     workExperience: updated.workExperience,
                     familyDetails: updated.family,
-                    coApplicant: updated.coApplicant
+                    coApplicant: updated.coApplicant,
+                    passport: updated.passport,
+                    nationality: updated.nationality,
+                    emergencyContact: updated.emergencyContact
                 };
-                onboardingApi.submit(payload).then(async () => {
-                    console.log("[OCR AUTOFILL] Persisted synced fields to database successfully.");
-                    try {
-                        const profileRes: any = await adminApi.getUserProfile(updated.email);
-                        if (profileRes?.success && profileRes?.user) {
-                            const fullUser = profileRes.user;
-                            setNewStudent(s => ({
-                                ...s,
-                                pan: fullUser.panNumber || s.pan,
-                                aadhaarNumber: fullUser.aadhaarNumber || s.aadhaarNumber,
-                                permanentAddress: fullUser.permanentAddress ? {
-                                    ...s.permanentAddress,
-                                    address1: fullUser.permanentAddress
-                                } : s.permanentAddress,
-                                mailingAddress: fullUser.permanentAddress ? {
-                                    ...s.mailingAddress,
-                                    address1: fullUser.permanentAddress
-                                } : s.mailingAddress,
-                            }));
-                        }
-                    } catch (fetchErr) {
-                        console.warn("[OCR AUTOFILL] Failed to re-fetch unmasked details:", fetchErr);
-                    }
-                }).catch(err => {
-                    console.error("[OCR AUTOFILL] Failed to persist fields to database:", err);
-                });
+                onboardingApi.submit(payload)
+                    .then(() => {
+                        console.log("[OCR AUTOFILL] Live database sync completed successfully.");
+                    })
+                    .catch(err => {
+                        console.error("[OCR AUTOFILL] Failed to sync live database:", err);
+                    });
             }
 
             return updated;
         });
 
-        alert(`✨ AI OCR Auto-fill Success:\nProfile details (names, document numbers, dates, address) have been successfully extracted from your ${docType.replace(/_/g, ' ').toUpperCase()} and updated in the user profile!`);
+        const isAcademic = /marksheet|ug_|pg_|degree|transcript/.test(docType);
+        const message = isAcademic
+            ? `Academic qualifications have been filled from the ${docType.replace(/_/g, ' ').toUpperCase()} document.`
+            : `Profile details have been filled from the ${docType.replace(/_/g, ' ').toUpperCase()} document.`;
+        return { filled: true, message };
     };
 
     // Handle S3 document upload
@@ -1365,14 +2187,27 @@ export default function StaffDashboardPage() {
         employmentType?: string
     ) => {
         const userId = createdUser?.id || createdUser?.uid || createdUser?._id;
+        const uploadKey = `${docType}-${personType}`;
+
         if (!userId) {
-            alert('User ID not found');
+            const text = 'Student profile not found. Please complete registration first.';
+            setUploadErrors(prev => ({ ...prev, [uploadKey]: text }));
+            setUploadMessages(prev => ({ ...prev, [uploadKey]: { type: 'error', text } }));
             return;
         }
 
-        const uploadKey = `${docType}-${personType}`;
         setUploadingDocs(prev => ({ ...prev, [uploadKey]: 0 }));
         setUploadErrors(prev => ({ ...prev, [uploadKey]: '' }));
+        setUploadMessages(prev => {
+            const next = { ...prev };
+            delete next[uploadKey];
+            return next;
+        });
+        setAutofillMessages(prev => {
+            const next = { ...prev };
+            delete next[uploadKey];
+            return next;
+        });
 
         try {
             // Use the standard multipart upload endpoint which is supported by the backend
@@ -1384,21 +2219,38 @@ export default function StaffDashboardPage() {
             if (res.success) {
                 addActivity("upload", `Uploaded ${docType.replace(/_/g, ' ')} for ${personName}`, "upload_file", "text-purple-600 bg-purple-50");
 
-                // If AI verification was performed, show status
+                const docLabel = docType.replace(/_/g, ' ');
+                let feedbackType: 'success' | 'warning' = 'success';
+                let feedbackText = `✅ ${personName} — ${docLabel} uploaded successfully!`;
+
                 if (res.data?.verification?.code === 'AI_VERIFIED') {
-                    alert(`✅ ${personName} - ${docType.replace(/_/g, ' ')} uploaded and AI-verified successfully!`);
+                    feedbackText = `✅ ${personName} — ${docLabel} uploaded and AI-verified successfully!`;
                 } else if (res.data?.status === 'rejected') {
-                    alert(`⚠️ ${personName} - ${docType.replace(/_/g, ' ')} uploaded but AI rejected: ${res.data?.aiExplanation || 'Invalid document type'}`);
-                } else {
-                    alert(`✅ ${personName} - ${docType.replace(/_/g, ' ')} uploaded successfully!`);
+                    feedbackType = 'warning';
+                    feedbackText = `⚠️ ${personName} — ${docLabel} uploaded but AI rejected: ${res.data?.aiExplanation || 'Invalid document type'}`;
                 }
 
-                // Auto-fill student profile from OCR result if valid
-                const extractedFields = res.data?.ocrResult?.extractedFields || res.data?.verification?.details?.extractedFields;
-                if (extractedFields && Object.keys(extractedFields).length > 0) {
-                    await autoFillFromOcr(docType, extractedFields);
+                const rawExtracted = res.data?.ocrResult?.extractedFields || res.data?.verification?.details?.extractedFields;
+                const panValidation = res.data?.ocrResult?.document_validation as PanDocumentValidation | undefined;
+                if (rawExtracted && Object.keys(rawExtracted).length > 0) {
+                    const extractedFields = normalizeOcrFieldsForAutofill(rawExtracted, docType);
+                    setOcrResults(prev => ({
+                        ...prev,
+                        [uploadKey]: {
+                            ...extractedFields,
+                            ...(panValidation ? { document_validation: panValidation } : {}),
+                        },
+                    }));
+                    setShowOcrReview(prev => ({ ...prev, [uploadKey]: true }));
+                    console.log('📄 [OCR RESULTS CAPTURED]', { docType, extractedFields, panValidation });
+
+                    const ocrHint = ' OCR data is ready — click Autofill to populate profile fields.';
+                    feedbackText = feedbackType === 'warning'
+                        ? `${feedbackText}${ocrHint}`
+                        : `✨ ${docLabel.toUpperCase()} extracted successfully.${ocrHint}`;
                 }
 
+                setUploadMessages(prev => ({ ...prev, [uploadKey]: { type: feedbackType, text: feedbackText } }));
                 fetchUserDocuments(userId);
             } else {
                 throw new Error(res.message || 'Upload failed');
@@ -1406,14 +2258,39 @@ export default function StaffDashboardPage() {
         } catch (error: any) {
             const errorMsg = error.message || 'Upload failed';
             setUploadErrors(prev => ({ ...prev, [uploadKey]: errorMsg }));
+            setUploadMessages(prev => ({ ...prev, [uploadKey]: { type: 'error', text: `❌ Upload failed: ${errorMsg}` } }));
             console.error('Document upload error:', error);
-            alert(`❌ Upload failed: ${errorMsg}`);
         } finally {
             setUploadingDocs(prev => {
                 const updated = { ...prev };
                 delete updated[uploadKey];
                 return updated;
             });
+        }
+    };
+
+    // Handle S3 document deletion
+    const handleDocumentDelete = async (docType: string, category: string, name: string) => {
+        const userId = createdUser?.id || createdUser?.uid || createdUser?._id;
+        if (!userId) {
+            alert('User ID not found');
+            return;
+        }
+        if (!window.confirm(`Are you sure you want to remove the ${docType.replace(/_/g, ' ').toUpperCase()} document?`)) {
+            return;
+        }
+
+        try {
+            const res: any = await documentApi.delete(userId, docType);
+            if (res.success) {
+                alert(`✅ Document deleted successfully!`);
+                addActivity("rejected", `Deleted ${docType.replace(/_/g, ' ')} for ${name}`, "delete", "text-rose-600 bg-rose-50");
+                fetchUserDocuments(userId);
+            } else {
+                throw new Error(res.message || 'Deletion failed');
+            }
+        } catch (error: any) {
+            alert(`❌ Deletion failed: ${error.message || error}`);
         }
     };
 
@@ -1868,27 +2745,37 @@ export default function StaffDashboardPage() {
                             {/* MAIN CONTENT AREA */}
                             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
                                 {onboardStep >= 2 && (
-                                    <div className="bg-white border-b border-slate-200 px-10 py-0 flex items-center gap-10 overflow-x-auto no-scrollbar shrink-0">
-                                        {[
-                                            { id: 'personal', label: 'Personal', icon: 'person' },
-                                            { id: 'academic', label: 'Academic', icon: 'school' },
-                                            { id: 'work', label: 'Work Experience', icon: 'work' },
-                                            { id: 'tests', label: 'Test Scores', icon: 'terminal' },
-                                            { id: 'family', label: 'Family & Co-applicant', icon: 'family_restroom' },
-                                        ].map(tab => (
-                                            <button
-                                                key={tab.id}
-                                                type="button"
-                                                onClick={async () => {
-                                                    await handleSaveProfile(true);
-                                                    setProfileTab(tab.id as any);
-                                                }}
-                                                className={`py-5 flex items-center gap-2 border-b-2 transition-all shrink-0 group ${profileTab === tab.id ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
-                                            >
-                                                <span className={`material-symbols-outlined text-[18px] ${profileTab === tab.id ? 'text-indigo-600' : 'text-slate-300 group-hover:text-slate-400'}`}>{tab.icon}</span>
-                                                <span className="text-[11px] font-bold font-['Playfair_Display',serif] uppercase tracking-widest">{tab.label}</span>
-                                            </button>
-                                        ))}
+                                    <div className="bg-white border-b border-slate-200 px-10 py-0 flex items-center justify-between overflow-x-auto no-scrollbar shrink-0">
+                                        <div className="flex items-center gap-10">
+                                            {[
+                                                { id: 'personal', label: 'Personal', icon: 'person' },
+                                                { id: 'academic', label: 'Academic', icon: 'school' },
+                                                { id: 'work', label: 'Work Experience', icon: 'work' },
+                                                { id: 'tests', label: 'Test Scores', icon: 'terminal' },
+                                                { id: 'family', label: 'Family & Co-applicant', icon: 'family_restroom' },
+                                            ].map(tab => (
+                                                <button
+                                                    key={tab.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setProfileTab(tab.id as any);
+                                                    }}
+                                                    className={`py-5 flex items-center gap-2 border-b-2 transition-all shrink-0 group ${profileTab === tab.id ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                                                >
+                                                    <span className={`material-symbols-outlined text-[18px] ${profileTab === tab.id ? 'text-indigo-600' : 'text-slate-300 group-hover:text-slate-400'}`}>{tab.icon}</span>
+                                                    <span className="text-[11px] font-bold font-['Playfair_Display',serif] uppercase tracking-widest">{tab.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSaveProfile(false)}
+                                            disabled={createLoading}
+                                            className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-md shadow-emerald-600/10 shrink-0 my-3 hover:scale-[1.02] active:scale-[0.98]"
+                                        >
+                                            <span className="material-symbols-outlined text-[16px]">cloud_upload</span>
+                                            {createLoading ? 'Saving...' : 'Save to Database'}
+                                        </button>
                                     </div>
                                 )}
 
@@ -2010,11 +2897,205 @@ export default function StaffDashboardPage() {
                                                             <p className="text-slate-500 text-sm font-medium mt-1">Provide core identification and contact information.</p>
                                                         </div>
                                                         <div className="flex items-center gap-4">
-                                                            <button type="button" onClick={() => handleSaveProfile()} disabled={createLoading} className="px-6 py-3 bg-white border border-slate-200 text-slate-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm">
+                                                            <button type="button" onClick={() => handleSaveProfile(false)} disabled={createLoading} className="px-6 py-3 bg-white border border-slate-200 text-slate-900 rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm">
                                                                 {createLoading ? 'Saving...' : 'Sync with DB'}
                                                             </button>
                                                         </div>
                                                     </div>
+
+                                                    {/* AI Autofill Banner */}
+                                                    <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 border border-indigo-100 rounded-3xl p-6 shadow-sm animate-in fade-in slide-in-from-top-4 duration-300 space-y-4">
+                                                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-600/20 shrink-0 animate-pulse">
+                                                                    <span className="material-symbols-outlined text-[24px]">magic_button</span>
+                                                                </div>
+                                                                <div>
+                                                                    <h4 className="text-sm font-bold text-slate-800 tracking-tight flex items-center gap-2">
+                                                                        Autofill Profile with Premium AI OCR
+                                                                        <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-[9px] font-black uppercase tracking-wider">Manual apply</span>
+                                                                    </h4>
+                                                                    <p className="text-xs text-slate-500 font-medium mt-0.5">Upload identity documents to extract data, then use Autofill in Document Vault to populate profile fields.</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Hidden File Inputs for each document type to avoid state closure race conditions */}
+                                                        <input
+                                                            type="file"
+                                                            accept=".pdf,.jpg,.jpeg,.png"
+                                                            ref={el => {
+                                                                if (el) fileInputRefs.current[`quick-ocr-national_id`] = el;
+                                                            }}
+                                                            onChange={async (e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (file) {
+                                                                    console.log(`[QUICK OCR] Selected ${file.name} for Aadhaar`);
+                                                                    await handleDocumentUpload(
+                                                                        file,
+                                                                        'national_id',
+                                                                        'applicant',
+                                                                        newStudent.firstName + ' ' + newStudent.lastName
+                                                                    );
+                                                                    e.target.value = '';
+                                                                }
+                                                            }}
+                                                            hidden
+                                                        />
+                                                        <input
+                                                            type="file"
+                                                            accept=".pdf,.jpg,.jpeg,.png"
+                                                            ref={el => {
+                                                                if (el) fileInputRefs.current[`quick-ocr-pan`] = el;
+                                                            }}
+                                                            onChange={async (e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (file) {
+                                                                    console.log(`[QUICK OCR] Selected ${file.name} for PAN`);
+                                                                    await handleDocumentUpload(
+                                                                        file,
+                                                                        'pan',
+                                                                        'applicant',
+                                                                        newStudent.firstName + ' ' + newStudent.lastName
+                                                                    );
+                                                                    e.target.value = '';
+                                                                }
+                                                            }}
+                                                            hidden
+                                                        />
+                                                        <input
+                                                            type="file"
+                                                            accept=".pdf,.jpg,.jpeg,.png"
+                                                            ref={el => {
+                                                                if (el) fileInputRefs.current[`quick-ocr-passport`] = el;
+                                                            }}
+                                                            onChange={async (e) => {
+                                                                const file = e.target.files?.[0];
+                                                                if (file) {
+                                                                    console.log(`[QUICK OCR] Selected ${file.name} for Passport`);
+                                                                    await handleDocumentUpload(
+                                                                        file,
+                                                                        'passport',
+                                                                        'applicant',
+                                                                        newStudent.firstName + ' ' + newStudent.lastName
+                                                                    );
+                                                                    e.target.value = '';
+                                                                }
+                                                            }}
+                                                            hidden
+                                                        />
+
+                                                        <div className="flex flex-wrap gap-3 pt-2">
+                                                            {[
+                                                                { type: 'national_id', name: 'National Identity Card (Aadhaar)', label: 'Aadhaar Card', icon: 'badge', color: 'text-indigo-500' },
+                                                                { type: 'pan', name: 'Permanent Account Number (PAN)', label: 'PAN Card', icon: 'credit_card', color: 'text-amber-500' },
+                                                                { type: 'passport', name: 'Passport', label: 'Passport', icon: 'menu_book', color: 'text-purple-500' }
+                                                            ].map((btn) => {
+                                                                const uploadKey = `${btn.type}-applicant`;
+                                                                const isUploading = uploadingDocs[uploadKey] !== undefined;
+                                                                const progress = uploadingDocs[uploadKey] ?? 0;
+
+                                                                return (
+                                                                    <button
+                                                                        key={btn.type}
+                                                                        type="button"
+                                                                        disabled={isUploading}
+                                                                        onClick={() => {
+                                                                            setSelectedDocType(btn.type);
+                                                                            setSelectedDocName(btn.name);
+                                                                            setSelectedDocCategory('applicant');
+                                                                            setOnboardStep(3);
+                                                                            setIsUploadModalOpen(true);
+                                                                        }}
+                                                                        className={`px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all flex items-center gap-2 hover:border-indigo-355 hover:shadow-sm disabled:opacity-75`}
+                                                                    >
+                                                                        {isUploading ? (
+                                                                            <>
+                                                                                <div className="w-4 h-4 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+                                                                                <span>Uploading ({Math.round(progress)}%)</span>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <span className={`material-symbols-outlined ${btn.color} text-[18px]`}>{btn.icon}</span>
+                                                                                <span>Upload {btn.label}</span>
+                                                                            </>
+                                                                        )}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+
+                                                        {/* {Object.entries(uploadMessages)
+                                                            .filter(([key]) => key.endsWith('-applicant'))
+                                                            .map(([key, msg]) => (
+                                                                <div
+                                                                    key={key}
+                                                                    className={`rounded-xl px-4 py-3 text-xs font-bold border ${msg.type === 'success'
+                                                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                                                        : msg.type === 'warning'
+                                                                            ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                                                            : 'bg-rose-50 text-rose-700 border-rose-200'
+                                                                        }`}
+                                                                >
+                                                                    {msg.text}
+                                                                </div>
+                                                            ))} */}
+                                                    </div>
+
+                                                    {/* OCR Results Display Card */}
+                                                    {/* {Object.keys(ocrResults).length > 0 && Object.entries(ocrResults).map(([key, fields]: any) => {
+                                                        const [docType] = key.split('-');
+                                                        return (
+                                                            <div key={key} className="bg-gradient-to-r from-emerald-50 via-emerald-50/50 to-transparent border-2 border-emerald-200 rounded-3xl p-6 shadow-lg shadow-emerald-100/50 animate-in fade-in slide-in-from-bottom-4 duration-300 space-y-4">
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="w-10 h-10 bg-emerald-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                                                                            <span className="material-symbols-outlined text-[20px]">verified_user</span>
+                                                                        </div>
+                                                                        <div>
+                                                                            <h4 className="text-sm font-bold text-emerald-900">✨ OCR Data Successfully Extracted & Attached</h4>
+                                                                            <p className="text-xs text-emerald-700 font-medium mt-0.5">{docType.replace(/_/g, ' ').toUpperCase()} extracted — use Autofill in Document Vault to apply</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setShowOcrReview(prev => ({ ...prev, [key]: !prev[key] }))}
+                                                                        className="px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-100 rounded-lg transition-all"
+                                                                    >
+                                                                        {showOcrReview[key] ? '▼ Hide' : '▶ Show'} Details
+                                                                    </button>
+                                                                </div>
+
+                                                                {showOcrReview[key] && (
+                                                                    <div className="bg-white rounded-2xl p-4 mt-3 border border-emerald-100">
+                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                                            {Object.entries(fields)
+                                                                                .filter(([_, v]) => v != null && (typeof v === 'object' ? Object.keys(v).length > 0 : String(v).trim()))
+                                                                                .flatMap(([fieldName, fieldValue]: any) => {
+                                                                                    if (fieldName === 'address' && typeof fieldValue === 'object' && !Array.isArray(fieldValue)) {
+                                                                                        return Object.entries(fieldValue)
+                                                                                            .filter(([, v]) => v && String(v).trim())
+                                                                                            .map(([subKey, subVal]) => (
+                                                                                                <div key={`${fieldName}-${subKey}`} className="bg-emerald-50/50 rounded-lg p-3 border border-emerald-100">
+                                                                                                    <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">{subKey.replace(/_/g, ' ')}</p>
+                                                                                                    <p className="text-sm font-semibold text-slate-800 break-words">{String(subVal)}</p>
+                                                                                                </div>
+                                                                                            ));
+                                                                                    }
+                                                                                    return [(
+                                                                                        <div key={fieldName} className="bg-emerald-50/50 rounded-lg p-3 border border-emerald-100">
+                                                                                            <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">{fieldName.replace(/_/g, ' ')}</p>
+                                                                                            <p className="text-sm font-semibold text-slate-800 break-words">{typeof fieldValue === 'object' ? JSON.stringify(fieldValue) : String(fieldValue)}</p>
+                                                                                        </div>
+                                                                                    )];
+                                                                                })
+                                                                            }
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })} */}
 
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                                                         {/* ... (rest of personal tab content) */}
@@ -2249,7 +3330,7 @@ export default function StaffDashboardPage() {
                                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
                                                             <div>
                                                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Issue Country*</label>
-                                                                <select value={newStudent.passport.issueCountry} onChange={e => { setNewStudent({ ...newStudent, passport: { ...newStudent.passport, issueCountry: e.target.value } }); handleSaveProfile(); }} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20"><option value="">Select Issue Country</option><option value="India">India</option></select>
+                                                                <select value={newStudent.passport.issueCountry} onChange={e => { setNewStudent({ ...newStudent, passport: { ...newStudent.passport, issueCountry: e.target.value } }); handleSaveProfile(); }} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20"><option value="">Select Issue Country</option>{getAllCountries().map(country => (<option key={`issue-${country}`} value={country}>{country}</option>))}</select>
                                                             </div>
                                                             <div>
                                                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">City of Birth*</label>
@@ -2257,7 +3338,7 @@ export default function StaffDashboardPage() {
                                                             </div>
                                                             <div>
                                                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Country of Birth*</label>
-                                                                <select value={newStudent.passport.birthCountry} onChange={e => { setNewStudent({ ...newStudent, passport: { ...newStudent.passport, birthCountry: e.target.value } }); handleSaveProfile(); }} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20"><option value="">Select Country of Birth</option><option value="India">India</option></select>
+                                                                <select value={newStudent.passport.birthCountry} onChange={e => { setNewStudent({ ...newStudent, passport: { ...newStudent.passport, birthCountry: e.target.value } }); handleSaveProfile(); }} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20"><option value="">Select Country of Birth</option>{getAllCountries().map(country => (<option key={`birth-${country}`} value={country}>{country}</option>))}</select>
                                                             </div>
                                                         </div>
                                                     </section>
@@ -2323,7 +3404,154 @@ export default function StaffDashboardPage() {
                                             )}
 
                                             {profileTab === 'academic' && (
-                                                <div className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 8 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-slate-200"
+                                                >
+                                                    {/* Academic AI OCR Autofill */}
+                                                    <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 border border-emerald-100 rounded-3xl p-6 shadow-sm space-y-4">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-12 h-12 bg-emerald-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-600/20 shrink-0">
+                                                                <span className="material-symbols-outlined text-[24px]">auto_stories</span>
+                                                            </div>
+                                                            <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.08 }}>
+                                                                <h4 className="text-sm font-bold text-slate-800 tracking-tight flex items-center gap-2">
+                                                                    Autofill Academic Qualifications with AI OCR
+                                                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[9px] font-black uppercase tracking-wider">Manual apply</span>
+                                                                </h4>
+                                                                <p className="text-xs text-slate-500 font-medium mt-0.5">
+                                                                    Upload marksheets to extract academic data, then use Autofill in Document Vault to populate qualification fields.
+                                                                </p>
+                                                            </motion.div>
+                                                        </div>
+
+                                                        {(['marksheet_10', 'marksheet_12', 'marksheet_ug', 'marksheet_pg'] as const).map((docType) => (
+                                                            <input
+                                                                key={docType}
+                                                                type="file"
+                                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                                ref={el => {
+                                                                    if (el) fileInputRefs.current[`quick-ocr-${docType}`] = el;
+                                                                }}
+                                                                onChange={async (e) => {
+                                                                    const file = e.target.files?.[0];
+                                                                    if (file) {
+                                                                        await handleDocumentUpload(
+                                                                            file,
+                                                                            docType,
+                                                                            'applicant',
+                                                                            `${newStudent.firstName} ${newStudent.lastName}`.trim() || 'Applicant',
+                                                                        );
+                                                                        e.target.value = '';
+                                                                    }
+                                                                }}
+                                                                hidden
+                                                            />
+                                                        ))}
+
+                                                        <div className="flex flex-wrap gap-3 pt-1">
+                                                            {([
+                                                                { type: 'marksheet_10', label: '10th / SSC', icon: 'school', color: 'text-blue-600', levels: ['Grade 10', 'Grade 12', 'Undergraduate', 'Postgraduate'] },
+                                                                { type: 'marksheet_12', label: '12th / Intermediate', icon: 'menu_book', color: 'text-indigo-600', levels: ['Grade 12', 'Undergraduate', 'Postgraduate'] },
+                                                                { type: 'marksheet_ug', label: 'Undergraduate', icon: 'history_edu', color: 'text-violet-600', levels: ['Undergraduate', 'Postgraduate'] },
+                                                                { type: 'marksheet_pg', label: 'Postgraduate', icon: 'workspace_premium', color: 'text-amber-600', levels: ['Postgraduate'] },
+                                                            ] as const).map((btn) => {
+                                                                const hl = newStudent.academic.highestLevel;
+                                                                const isRelevant = !hl || (btn.levels as readonly string[]).includes(hl);
+                                                                const uploadKey = `${btn.type}-applicant`;
+                                                                const isUploading = uploadingDocs[uploadKey] !== undefined;
+                                                                const progress = uploadingDocs[uploadKey] ?? 0;
+
+                                                                return (
+                                                                    <button
+                                                                        key={btn.type}
+                                                                        type="button"
+                                                                        disabled={isUploading || !isRelevant}
+                                                                        title={!isRelevant ? 'Set Highest Level of Education to enable' : undefined}
+                                                                        onClick={() => {
+                                                                            if (!createdUser?.id && !createdUser?.uid && !createdUser?._id) {
+                                                                                alert('Please register the student first (Step 1) before uploading documents.');
+                                                                                return;
+                                                                            }
+                                                                            setSelectedDocType(btn.type);
+                                                                            setSelectedDocName(btn.label + " Marksheet");
+                                                                            setSelectedDocCategory('applicant');
+                                                                            setOnboardStep(3);
+                                                                            setIsUploadModalOpen(true);
+                                                                        }}
+                                                                        className={`px-4 py-2.5 bg-white border rounded-xl text-xs font-bold transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed ${isRelevant
+                                                                            ? 'hover:bg-slate-50 border-slate-200 text-slate-700 hover:border-emerald-300 hover:shadow-sm'
+                                                                            : 'border-slate-100 text-slate-400'
+                                                                            }`}
+                                                                    >
+                                                                        {isUploading ? (
+                                                                            <>
+                                                                                <div className="w-4 h-4 border-2 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+                                                                                <span>Uploading ({Math.round(progress)}%)</span>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <span className={`material-symbols-outlined ${btn.color} text-[18px]`}>{btn.icon}</span>
+                                                                                <span>Upload {btn.label}</span>
+                                                                            </>
+                                                                        )}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                        {!newStudent.academic.highestLevel && (
+                                                            <p className="text-[11px] text-amber-700 font-medium">
+                                                                Tip: Select &quot;Highest Level of Education&quot; below to enable the most relevant upload buttons.
+                                                            </p>
+                                                        )}
+                                                    </div>
+
+                                                    {Object.entries(ocrResults).filter(([key]) => {
+                                                        const [docType] = key.split('-');
+                                                        return /marksheet|ug_|pg_/.test(docType);
+                                                    }).map(([key, fields]: [string, Record<string, unknown>]) => {
+                                                        const [docType] = key.split('-');
+                                                        return (
+                                                            <div key={key} className="bg-gradient-to-r from-emerald-50 via-teal-50/50 to-transparent border-2 border-emerald-200 rounded-3xl p-6 shadow-lg shadow-emerald-100/50 space-y-4">
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <motion.div
+                                                                            initial={{ scale: 0.9, opacity: 0 }}
+                                                                            animate={{ scale: 1, opacity: 1 }}
+                                                                            className="w-10 h-10 bg-emerald-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20"
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-[20px]">verified</span>
+                                                                        </motion.div>
+                                                                        <div>
+                                                                            <h4 className="text-sm font-bold text-emerald-900">Academic OCR — fields auto-filled</h4>
+                                                                            <p className="text-xs text-emerald-700 font-medium mt-0.5">{docType.replace(/_/g, ' ').toUpperCase()}</p>
+                                                                        </div>
+                                                                    </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => setShowOcrReview(prev => ({ ...prev, [key]: !prev[key] }))}
+                                                                        className="text-xs font-bold text-emerald-700 hover:text-emerald-900"
+                                                                    >
+                                                                        {showOcrReview[key] ? '▼ Hide' : '▶ Show'} Details
+                                                                    </button>
+                                                                </div>
+                                                                {showOcrReview[key] !== false && (
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                                                                        {Object.entries(fields || {}).map(([k, v]) => (
+                                                                            v != null && String(v).trim() !== '' && (
+                                                                                <div key={k} className="bg-white/80 rounded-xl px-4 py-2 border border-emerald-100">
+                                                                                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">{k.replace(/_/g, ' ')}</p>
+                                                                                    <p className="text-sm font-semibold text-slate-800 truncate">{String(v)}</p>
+                                                                                </div>
+                                                                            )
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+
                                                     <section>
                                                         <div className="flex items-center gap-2 mb-6 text-emerald-600 font-bold text-sm">
                                                             <span className="material-symbols-outlined text-emerald-500 bg-emerald-50 p-1 rounded-full">school</span>
@@ -2513,6 +3741,7 @@ export default function StaffDashboardPage() {
                                                                     <span className="material-symbols-outlined text-emerald-500 bg-emerald-50 p-1 rounded-full">school</span>
                                                                     Grade 12th or equivalent education
                                                                 </div>
+                                                                {renderAcademicDocumentStatus('marksheet_12', '12th Marksheet')}
                                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                                                     <div>
                                                                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Country of Study*</label>
@@ -2588,6 +3817,7 @@ export default function StaffDashboardPage() {
                                                                     <span className="material-symbols-outlined text-emerald-500 bg-emerald-50 p-1 rounded-full">school</span>
                                                                     Grade 10th or equivalent
                                                                 </div>
+                                                                {renderAcademicDocumentStatus('marksheet_10', '10th Marksheet')}
                                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                                                     <div>
                                                                         <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Country of Study*</label>
@@ -2649,7 +3879,7 @@ export default function StaffDashboardPage() {
                                                                     </div>
                                                                 </div>
                                                                 <div className="mt-6 flex justify-center md:justify-start">
-                                                                    <button type="button" onClick={async () => { await handleSaveProfile(true); setProfileTab('work'); }} className="px-10 py-3 bg-emerald-500 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-all shadow-md shadow-emerald-500/20">Save & Continue</button>
+                                                                    <button type="button" onClick={() => setProfileTab('work')} className="px-10 py-3 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/20">Continue</button>
                                                                 </div>
                                                                 <div className="mt-8 flex justify-center border-t border-dashed border-slate-200 pt-6">
                                                                     <button type="button" className="flex items-center gap-2 text-emerald-600 text-sm font-bold hover:text-emerald-700 transition-all">
@@ -2660,7 +3890,84 @@ export default function StaffDashboardPage() {
                                                             </section>
                                                         </>
                                                     )}
-                                                </div>
+
+                                                    {/* Premium Academic Certificates Checklist */}
+                                                    {/* <div className="mt-12 pt-8 border-t border-slate-100 space-y-6">
+                                                        <h4 className="text-sm font-bold text-slate-800 tracking-tight flex items-center gap-2">
+                                                            <span className="material-symbols-outlined text-indigo-600 text-[20px]">folder_managed</span>
+                                                            Required Academic Certificates & Transcripts
+                                                        </h4>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            {(() => {
+                                                                const studentDocs = getStudentDocumentRequirements(newStudent);
+                                                                const academicDocs = studentDocs.filter(d => d.category === 'academic' && d.type !== 'resume' && d.type !== 'work_letters' && d.type !== 'english_test' && d.type !== 'aptitude_test');
+                                                                return academicDocs.map((doc, idx) => {
+                                                                    const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
+                                                                    const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                                                    const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+                                                                    
+                                                                    return (
+                                                                        <div key={idx} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${isUploaded ? 'bg-emerald-50/30 border-emerald-100 shadow-sm' : 'bg-slate-50 border-slate-200 hover:border-slate-300'}`}>
+                                                                            <div className="flex items-center gap-3">
+                                                                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${isUploaded ? 'bg-white text-emerald-500 border-emerald-100' : 'bg-white border-slate-200 text-slate-400'}`}>
+                                                                                    <span className="material-symbols-outlined text-[18px]">{isUploaded ? 'task_alt' : 'description'}</span>
+                                                                                </div>
+                                                                                <div>
+                                                                                    <h5 className="text-xs font-bold text-slate-900">{doc.name}</h5>
+                                                                                    <p className="text-[10px] text-slate-500 font-medium mt-0.5">{doc.type.toUpperCase().replace(/_/g, ' ')} • PDF/JPG/PNG</p>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <input
+                                                                                    type="file"
+                                                                                    accept=".pdf,.jpg,.jpeg,.png"
+                                                                                    ref={el => {
+                                                                                        if (el) fileInputRefs.current[`academic-tab-${doc.type}`] = el;
+                                                                                    }}
+                                                                                    onChange={async (e) => {
+                                                                                        const file = e.target.files?.[0];
+                                                                                        if (file) {
+                                                                                            await handleDocumentUpload(
+                                                                                                file,
+                                                                                                doc.type,
+                                                                                                'applicant',
+                                                                                                `${newStudent.firstName} ${newStudent.lastName}`.trim() || 'Applicant'
+                                                                                            );
+                                                                                            e.target.value = '';
+                                                                                        }
+                                                                                    }}
+                                                                                    hidden
+                                                                                />
+                                                                                {isUploaded ? (
+                                                                                    <>
+                                                                                        <button type="button" onClick={() => viewFile(doc.type)} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all flex items-center gap-1">
+                                                                                            <span className="material-symbols-outlined text-[14px]">visibility</span>
+                                                                                            Review
+                                                                                        </button>
+                                                                                        <button type="button" onClick={() => handleDocumentDelete(doc.type, 'applicant', doc.name)} className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-bold hover:bg-rose-100 transition-all flex items-center gap-1">
+                                                                                            <span className="material-symbols-outlined text-[14px]">delete</span>
+                                                                                            Remove
+                                                                                        </button>
+                                                                                    </>
+                                                                                ) : (
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => fileInputRefs.current[`academic-tab-${doc.type}`]?.click()}
+                                                                                        disabled={uploadingDocs[`${doc.type}-applicant`] !== undefined}
+                                                                                        className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-bold hover:bg-indigo-700 transition-all shadow-sm disabled:opacity-50 flex items-center gap-1"
+                                                                                    >
+                                                                                        <span className="material-symbols-outlined text-[14px]">upload</span>
+                                                                                        {uploadingDocs[`${doc.type}-applicant`] !== undefined ? `${Math.round(uploadingDocs[`${doc.type}-applicant`])}%` : 'Upload'}
+                                                                                    </button>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                });
+                                                            })()}
+                                                        </div>
+                                                    </div> */}
+                                                </motion.div>
                                             )}
 
                                             {profileTab === 'work' && (
@@ -2755,8 +4062,84 @@ export default function StaffDashboardPage() {
                                                             <span className="material-symbols-outlined text-[18px]">add</span>
                                                             Add Experience
                                                         </button>
+                                                        {/* Premium Work Experience Documents Checklist */}
+                                                        <div className="mt-12 pt-8 border-t border-slate-100 space-y-6">
+                                                            <h4 className="text-sm font-bold text-slate-800 tracking-tight flex items-center gap-2">
+                                                                <span className="material-symbols-outlined text-indigo-600 text-[20px]">folder_managed</span>
+                                                                Required Professional Experience Documents
+                                                            </h4>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                {(() => {
+                                                                    const studentDocs = getStudentDocumentRequirements(newStudent);
+                                                                    const workDocs = studentDocs.filter(d => d.type === 'resume' || d.type === 'work_letters');
+                                                                    return workDocs.map((doc, idx) => {
+                                                                        const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
+                                                                        const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                                                        const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+
+                                                                        return (
+                                                                            <div key={idx} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${isUploaded ? 'bg-emerald-50/30 border-emerald-100 shadow-sm' : 'bg-slate-50 border-slate-200 hover:border-slate-300'}`}>
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${isUploaded ? 'bg-white text-emerald-500 border-emerald-100' : 'bg-white border-slate-200 text-slate-400'}`}>
+                                                                                        <span className="material-symbols-outlined text-[18px]">{isUploaded ? 'task_alt' : 'description'}</span>
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <h5 className="text-xs font-bold text-slate-900">{doc.name}</h5>
+                                                                                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">{doc.type.toUpperCase().replace(/_/g, ' ')} • PDF/JPG/PNG</p>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <input
+                                                                                        type="file"
+                                                                                        accept=".pdf,.jpg,.jpeg,.png"
+                                                                                        ref={el => {
+                                                                                            if (el) fileInputRefs.current[`work-tab-${doc.type}`] = el;
+                                                                                        }}
+                                                                                        onChange={async (e) => {
+                                                                                            const file = e.target.files?.[0];
+                                                                                            if (file) {
+                                                                                                await handleDocumentUpload(
+                                                                                                    file,
+                                                                                                    doc.type,
+                                                                                                    'applicant',
+                                                                                                    `${newStudent.firstName} ${newStudent.lastName}`.trim() || 'Applicant'
+                                                                                                );
+                                                                                                e.target.value = '';
+                                                                                            }
+                                                                                        }}
+                                                                                        hidden
+                                                                                    />
+                                                                                    {isUploaded ? (
+                                                                                        <>
+                                                                                            <button type="button" onClick={() => viewFile(doc.type)} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all flex items-center gap-1">
+                                                                                                <span className="material-symbols-outlined text-[14px]">visibility</span>
+                                                                                                Review
+                                                                                            </button>
+                                                                                            <button type="button" onClick={() => handleDocumentDelete(doc.type, 'applicant', doc.name)} className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-bold hover:bg-rose-100 transition-all flex items-center gap-1">
+                                                                                                <span className="material-symbols-outlined text-[14px]">delete</span>
+                                                                                                Remove
+                                                                                            </button>
+                                                                                        </>
+                                                                                    ) : (
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => fileInputRefs.current[`work-tab-${doc.type}`]?.click()}
+                                                                                            disabled={uploadingDocs[`${doc.type}-applicant`] !== undefined}
+                                                                                            className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-bold hover:bg-indigo-700 transition-all shadow-sm disabled:opacity-50 flex items-center gap-1"
+                                                                                        >
+                                                                                            <span className="material-symbols-outlined text-[14px]">upload</span>
+                                                                                            {uploadingDocs[`${doc.type}-applicant`] !== undefined ? `${Math.round(uploadingDocs[`${doc.type}-applicant`])}%` : 'Upload'}
+                                                                                        </button>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    });
+                                                                })()}
+                                                            </div>
+                                                        </div>
                                                         <div className="mt-8 flex justify-end">
-                                                            <button type="button" onClick={async () => { await handleSaveProfile(true); setProfileTab('tests'); }} className="px-10 py-3 bg-emerald-500 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-all shadow-md shadow-emerald-500/20">Save & Continue</button>
+                                                            <button type="button" onClick={() => setProfileTab('tests')} className="px-10 py-3 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/20">Continue</button>
                                                         </div>
                                                     </section>
                                                 </div>
@@ -2809,8 +4192,84 @@ export default function StaffDashboardPage() {
                                                                 <p className="text-xs text-slate-500 leading-relaxed font-medium">Standardized test scores help in determining the eligibility for various universities and visa requirements.</p>
                                                             </div>
                                                         </div>
+                                                        {/* Premium Test Scores Documents Checklist */}
+                                                        {/* <div className="mt-12 pt-8 border-t border-slate-100 space-y-6">
+                                                            <h4 className="text-sm font-bold text-slate-800 tracking-tight flex items-center gap-2">
+                                                                <span className="material-symbols-outlined text-indigo-600 text-[20px]">folder_managed</span>
+                                                                Required Standardized Test Scorecards
+                                                            </h4>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                {(() => {
+                                                                    const studentDocs = getStudentDocumentRequirements(newStudent);
+                                                                    const testDocs = studentDocs.filter(d => d.type === 'english_test' || d.type === 'aptitude_test');
+                                                                    return testDocs.map((doc, idx) => {
+                                                                        const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
+                                                                        const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                                                        const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+
+                                                                        return (
+                                                                            <div key={idx} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${isUploaded ? 'bg-emerald-50/30 border-emerald-100 shadow-sm' : 'bg-slate-50 border-slate-200 hover:border-slate-300'}`}>
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${isUploaded ? 'bg-white text-emerald-500 border-emerald-100' : 'bg-white border-slate-200 text-slate-400'}`}>
+                                                                                        <span className="material-symbols-outlined text-[18px]">{isUploaded ? 'task_alt' : 'description'}</span>
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <h5 className="text-xs font-bold text-slate-900">{doc.name}</h5>
+                                                                                        <p className="text-[10px] text-slate-500 font-medium mt-0.5">{doc.type.toUpperCase().replace(/_/g, ' ')} • PDF/JPG/PNG</p>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <input
+                                                                                        type="file"
+                                                                                        accept=".pdf,.jpg,.jpeg,.png"
+                                                                                        ref={el => {
+                                                                                            if (el) fileInputRefs.current[`tests-tab-${doc.type}`] = el;
+                                                                                        }}
+                                                                                        onChange={async (e) => {
+                                                                                            const file = e.target.files?.[0];
+                                                                                            if (file) {
+                                                                                                await handleDocumentUpload(
+                                                                                                    file,
+                                                                                                    doc.type,
+                                                                                                    'applicant',
+                                                                                                    `${newStudent.firstName} ${newStudent.lastName}`.trim() || 'Applicant'
+                                                                                                );
+                                                                                                e.target.value = '';
+                                                                                            }
+                                                                                        }}
+                                                                                        hidden
+                                                                                    />
+                                                                                    {isUploaded ? (
+                                                                                        <>
+                                                                                            <button type="button" onClick={() => viewFile(doc.type)} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all flex items-center gap-1">
+                                                                                                <span className="material-symbols-outlined text-[14px]">visibility</span>
+                                                                                                Review
+                                                                                            </button>
+                                                                                            <button type="button" onClick={() => handleDocumentDelete(doc.type, 'applicant', doc.name)} className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-bold hover:bg-rose-100 transition-all flex items-center gap-1">
+                                                                                                <span className="material-symbols-outlined text-[14px]">delete</span>
+                                                                                                Remove
+                                                                                            </button>
+                                                                                        </>
+                                                                                    ) : (
+                                                                                        <button
+                                                                                            type="button"
+                                                                                            onClick={() => fileInputRefs.current[`tests-tab-${doc.type}`]?.click()}
+                                                                                            disabled={uploadingDocs[`${doc.type}-applicant`] !== undefined}
+                                                                                            className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-bold hover:bg-indigo-700 transition-all shadow-sm disabled:opacity-50 flex items-center gap-1"
+                                                                                        >
+                                                                                            <span className="material-symbols-outlined text-[14px]">upload</span>
+                                                                                            {uploadingDocs[`${doc.type}-applicant`] !== undefined ? `${Math.round(uploadingDocs[`${doc.type}-applicant`])}%` : 'Upload'}
+                                                                                        </button>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    });
+                                                                })()}
+                                                            </div>
+                                                        </div> */}
                                                         <div className="mt-8 flex justify-end">
-                                                            <button type="button" onClick={async () => { await handleSaveProfile(true); setProfileTab('family'); }} className="px-10 py-3 bg-emerald-500 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-all shadow-md shadow-emerald-500/20">Save & Continue</button>
+                                                            <button type="button" onClick={() => setProfileTab('family')} className="px-10 py-3 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-600/20">Continue</button>
                                                         </div>
                                                     </section>
                                                 </div>
@@ -3012,6 +4471,7 @@ export default function StaffDashboardPage() {
                                                                         <option value="self_employed_professional">Self-Employed (Professional)</option>
                                                                         <option value="retired">Retired</option>
                                                                         <option value="not_employed">Not Employed</option>
+                                                                        <option value="expired">Deceased / Expired</option>
                                                                     </select>
                                                                 </div>
                                                                 <div>
@@ -3034,6 +4494,7 @@ export default function StaffDashboardPage() {
                                                                         <option value="self_employed_professional">Self-Employed (Professional)</option>
                                                                         <option value="retired">Retired</option>
                                                                         <option value="not_employed">Not Employed</option>
+                                                                        <option value="expired">Deceased / Expired</option>
                                                                     </select>
                                                                 </div>
                                                                 <div>
@@ -3057,6 +4518,7 @@ export default function StaffDashboardPage() {
                                                                             <option value="self_employed_professional">Self-Employed (Professional)</option>
                                                                             <option value="retired">Retired</option>
                                                                             <option value="not_employed">Not Employed</option>
+                                                                            <option value="expired">Deceased / Expired</option>
                                                                         </select>
                                                                     </div>
                                                                     <div>
@@ -3067,6 +4529,266 @@ export default function StaffDashboardPage() {
                                                             </div>
                                                         )}
                                                     </section>
+
+                                                    {/* Dynamic Family & Co-applicant Documents Upload Checklists */}
+                                                    <div className="mt-12 pt-8 border-t border-slate-100 space-y-8">
+                                                        <div className="flex items-center gap-2 mb-4">
+                                                            <span className="material-symbols-outlined text-indigo-600">badge</span>
+                                                            <h4 className="text-sm font-black uppercase tracking-wider text-slate-800">Family & Co-Applicant Verification Documents</h4>
+                                                        </div>
+
+                                                        {/* Father's Documents Checklist */}
+                                                        {newStudent.family.fatherEmploymentType ? (
+                                                            <div className="space-y-4">
+                                                                <h5 className="text-xs font-bold text-slate-700 flex items-center gap-1.5 pb-2 border-b border-slate-100">
+                                                                    <span className="material-symbols-outlined text-[16px] text-indigo-500">hail</span>
+                                                                    {newStudent.family.fatherName || "Father"}'s Required Documents
+                                                                </h5>
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                    {(() => {
+                                                                        const docs = getRequiredDocuments(newStudent.family.fatherEmploymentType, newStudent.family.fatherName || "Father", 'father');
+                                                                        return docs.map((doc, idx) => {
+                                                                            const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
+                                                                            const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                                                            const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+                                                                            const uploadKey = `${doc.type}-father`;
+                                                                            return (
+                                                                                <div key={idx} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${isUploaded ? 'bg-emerald-50/30 border-emerald-100 shadow-sm' : 'bg-slate-50 border-slate-200 hover:border-slate-300'}`}>
+                                                                                    <div className="flex items-center gap-3">
+                                                                                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${isUploaded ? 'bg-white text-emerald-500 border-emerald-100' : 'bg-white border-slate-200 text-slate-400'}`}>
+                                                                                            <span className="material-symbols-outlined text-[18px]">{isUploaded ? 'task_alt' : 'description'}</span>
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <h5 className="text-xs font-bold text-slate-900">{doc.name}</h5>
+                                                                                            <p className="text-[10px] text-slate-500 font-medium mt-0.5">{doc.type.toUpperCase().replace(/_/g, ' ')} • PDF/JPG/PNG</p>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <input
+                                                                                            type="file"
+                                                                                            accept=".pdf,.jpg,.jpeg,.png"
+                                                                                            ref={el => {
+                                                                                                if (el) fileInputRefs.current[`father-tab-${doc.type}`] = el;
+                                                                                            }}
+                                                                                            onChange={async (e) => {
+                                                                                                const file = e.target.files?.[0];
+                                                                                                if (file) {
+                                                                                                    await handleDocumentUpload(file, doc.type, 'father', newStudent.family.fatherName || "Father", newStudent.family.fatherEmploymentType);
+                                                                                                    e.target.value = '';
+                                                                                                }
+                                                                                            }}
+                                                                                            hidden
+                                                                                        />
+                                                                                        {isUploaded ? (
+                                                                                            <>
+                                                                                                <button type="button" onClick={() => viewFile(doc.type)} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all flex items-center gap-1">
+                                                                                                    <span className="material-symbols-outlined text-[14px]">visibility</span>
+                                                                                                    Review
+                                                                                                </button>
+                                                                                                <button type="button" onClick={() => handleDocumentDelete(doc.type, 'father', doc.name)} className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-bold hover:bg-rose-100 transition-all flex items-center gap-1">
+                                                                                                    <span className="material-symbols-outlined text-[14px]">delete</span>
+                                                                                                    Remove
+                                                                                                </button>
+                                                                                            </>
+                                                                                        ) : (
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                onClick={() => {
+                                                                                                    setSelectedDocType(doc.type);
+                                                                                                    setSelectedDocName(doc.name);
+                                                                                                    setSelectedDocCategory('father');
+                                                                                                    setOnboardStep(3);
+                                                                                                    setIsUploadModalOpen(true);
+                                                                                                }}
+                                                                                                disabled={uploadingDocs[uploadKey] !== undefined}
+                                                                                                className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-bold hover:bg-indigo-700 transition-all shadow-sm disabled:opacity-50 flex items-center gap-1"
+                                                                                            >
+                                                                                                <span className="material-symbols-outlined text-[14px]">upload</span>
+                                                                                                {uploadingDocs[uploadKey] !== undefined ? `${Math.round(uploadingDocs[uploadKey])}%` : 'Upload'}
+                                                                                            </button>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        });
+                                                                    })()}
+                                                                </div>
+                                                            </div>
+                                                        ) : null}
+
+                                                        {/* Mother's Documents Checklist */}
+                                                        {newStudent.family.motherEmploymentType ? (
+                                                            <div className="space-y-4 mt-6">
+                                                                <h5 className="text-xs font-bold text-slate-700 flex items-center gap-1.5 pb-2 border-b border-slate-100">
+                                                                    <span className="material-symbols-outlined text-[16px] text-indigo-500">woman</span>
+                                                                    {newStudent.family.motherName || "Mother"}'s Required Documents
+                                                                </h5>
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                    {(() => {
+                                                                        const docs = getRequiredDocuments(newStudent.family.motherEmploymentType, newStudent.family.motherName || "Mother", 'mother');
+                                                                        return docs.map((doc, idx) => {
+                                                                            const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
+                                                                            const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                                                            const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+                                                                            const uploadKey = `${doc.type}-mother`;
+                                                                            return (
+                                                                                <div key={idx} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${isUploaded ? 'bg-emerald-50/30 border-emerald-100 shadow-sm' : 'bg-slate-50 border-slate-200 hover:border-slate-300'}`}>
+                                                                                    <div className="flex items-center gap-3">
+                                                                                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${isUploaded ? 'bg-white text-emerald-500 border-emerald-100' : 'bg-white border-slate-200 text-slate-400'}`}>
+                                                                                            <span className="material-symbols-outlined text-[18px]">{isUploaded ? 'task_alt' : 'description'}</span>
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <h5 className="text-xs font-bold text-slate-900">{doc.name}</h5>
+                                                                                            <p className="text-[10px] text-slate-500 font-medium mt-0.5">{doc.type.toUpperCase().replace(/_/g, ' ')} • PDF/JPG/PNG</p>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <input
+                                                                                            type="file"
+                                                                                            accept=".pdf,.jpg,.jpeg,.png"
+                                                                                            ref={el => {
+                                                                                                if (el) fileInputRefs.current[`mother-tab-${doc.type}`] = el;
+                                                                                            }}
+                                                                                            onChange={async (e) => {
+                                                                                                const file = e.target.files?.[0];
+                                                                                                if (file) {
+                                                                                                    await handleDocumentUpload(file, doc.type, 'mother', newStudent.family.motherName || "Mother", newStudent.family.motherEmploymentType);
+                                                                                                    e.target.value = '';
+                                                                                                }
+                                                                                            }}
+                                                                                            hidden
+                                                                                        />
+                                                                                        {isUploaded ? (
+                                                                                            <>
+                                                                                                <button type="button" onClick={() => viewFile(doc.type)} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all flex items-center gap-1">
+                                                                                                    <span className="material-symbols-outlined text-[14px]">visibility</span>
+                                                                                                    Review
+                                                                                                </button>
+                                                                                                <button type="button" onClick={() => handleDocumentDelete(doc.type, 'mother', doc.name)} className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-bold hover:bg-rose-100 transition-all flex items-center gap-1">
+                                                                                                    <span className="material-symbols-outlined text-[14px]">delete</span>
+                                                                                                    Remove
+                                                                                                </button>
+                                                                                            </>
+                                                                                        ) : (
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                onClick={() => {
+                                                                                                    setSelectedDocType(doc.type);
+                                                                                                    setSelectedDocName(doc.name);
+                                                                                                    setSelectedDocCategory('mother');
+                                                                                                    setOnboardStep(3);
+                                                                                                    setIsUploadModalOpen(true);
+                                                                                                }}
+                                                                                                disabled={uploadingDocs[uploadKey] !== undefined}
+                                                                                                className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-bold hover:bg-indigo-700 transition-all shadow-sm disabled:opacity-50 flex items-center gap-1"
+                                                                                            >
+                                                                                                <span className="material-symbols-outlined text-[14px]">upload</span>
+                                                                                                {uploadingDocs[uploadKey] !== undefined ? `${Math.round(uploadingDocs[uploadKey])}%` : 'Upload'}
+                                                                                            </button>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        });
+                                                                    })()}
+                                                                </div>
+                                                            </div>
+                                                        ) : null}
+
+                                                        {/* Co-applicant's Documents Checklist */}
+                                                        {newStudent.coApplicant.employmentType ? (
+                                                            <div className="space-y-4 mt-6">
+                                                                <h5 className="text-xs font-bold text-slate-700 flex items-center gap-1.5 pb-2 border-b border-slate-100">
+                                                                    <span className="material-symbols-outlined text-[16px] text-indigo-500">group</span>
+                                                                    {newStudent.coApplicant.name || "Co-applicant"}'s Required Documents
+                                                                </h5>
+                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                    {(() => {
+                                                                        const docs = [
+                                                                            ...getRequiredDocuments(newStudent.coApplicant.employmentType, newStudent.coApplicant.name || "Co-applicant", 'coapplicant'),
+                                                                            { name: "Relation Proof with Applicant", type: "coapplicant_relation", required: true }
+                                                                        ];
+                                                                        return docs.map((doc, idx) => {
+                                                                            const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
+                                                                            const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                                                            const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+                                                                            const uploadKey = `${doc.type}-coapplicant`;
+                                                                            return (
+                                                                                <div key={idx} className={`flex items-center justify-between p-4 rounded-xl border transition-all ${isUploaded ? 'bg-emerald-50/30 border-emerald-100 shadow-sm' : 'bg-slate-50 border-slate-200 hover:border-slate-300'}`}>
+                                                                                    <div className="flex items-center gap-3">
+                                                                                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${isUploaded ? 'bg-white text-emerald-500 border-emerald-100' : 'bg-white border-slate-200 text-slate-400'}`}>
+                                                                                            <span className="material-symbols-outlined text-[18px]">{isUploaded ? 'task_alt' : 'description'}</span>
+                                                                                        </div>
+                                                                                        <div>
+                                                                                            <h5 className="text-xs font-bold text-slate-900">{doc.name}</h5>
+                                                                                            <p className="text-[10px] text-slate-500 font-medium mt-0.5">{doc.type.toUpperCase().replace(/_/g, ' ')} • PDF/JPG/PNG</p>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <input
+                                                                                            type="file"
+                                                                                            accept=".pdf,.jpg,.jpeg,.png"
+                                                                                            ref={el => {
+                                                                                                if (el) fileInputRefs.current[`coapplicant-tab-${doc.type}`] = el;
+                                                                                            }}
+                                                                                            onChange={async (e) => {
+                                                                                                const file = e.target.files?.[0];
+                                                                                                if (file) {
+                                                                                                    await handleDocumentUpload(file, doc.type, 'coapplicant', newStudent.coApplicant.name || "Co-applicant", newStudent.coApplicant.employmentType);
+                                                                                                    e.target.value = '';
+                                                                                                }
+                                                                                            }}
+                                                                                            hidden
+                                                                                        />
+                                                                                        {isUploaded ? (
+                                                                                            <>
+                                                                                                <button type="button" onClick={() => viewFile(doc.type)} className="px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-[10px] font-bold hover:bg-slate-50 transition-all flex items-center gap-1">
+                                                                                                    <span className="material-symbols-outlined text-[14px]">visibility</span>
+                                                                                                    Review
+                                                                                                </button>
+                                                                                                <button type="button" onClick={() => handleDocumentDelete(doc.type, 'coapplicant', doc.name)} className="px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg text-[10px] font-bold hover:bg-rose-100 transition-all flex items-center gap-1">
+                                                                                                    <span className="material-symbols-outlined text-[14px]">delete</span>
+                                                                                                    Remove
+                                                                                                </button>
+                                                                                            </>
+                                                                                        ) : (
+                                                                                            <button
+                                                                                                type="button"
+                                                                                                onClick={() => {
+                                                                                                    setSelectedDocType(doc.type);
+                                                                                                    setSelectedDocName(doc.name);
+                                                                                                    setSelectedDocCategory('coapplicant');
+                                                                                                    setOnboardStep(3);
+                                                                                                    setIsUploadModalOpen(true);
+                                                                                                }}
+                                                                                                disabled={uploadingDocs[uploadKey] !== undefined}
+                                                                                                className="px-4 py-1.5 bg-indigo-600 text-white rounded-lg text-[10px] font-bold hover:bg-indigo-700 transition-all shadow-sm disabled:opacity-50 flex items-center gap-1"
+                                                                                            >
+                                                                                                <span className="material-symbols-outlined text-[14px]">upload</span>
+                                                                                                {uploadingDocs[uploadKey] !== undefined ? `${Math.round(uploadingDocs[uploadKey])}%` : 'Upload'}
+                                                                                            </button>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            );
+                                                                        });
+                                                                    })()}
+                                                                </div>
+                                                            </div>
+                                                        ) : null}
+
+                                                        {/* Optional Fallback Notice */}
+                                                        {!newStudent.family.fatherEmploymentType && !newStudent.family.motherEmploymentType && !newStudent.coApplicant.employmentType ? (
+                                                            <div className="p-6 bg-amber-50/50 border border-amber-100 rounded-2xl flex items-center gap-4 text-amber-800">
+                                                                <span className="material-symbols-outlined text-[32px] text-amber-500">info_outline</span>
+                                                                <div>
+                                                                    <h5 className="text-xs font-bold">Dynamic Documents List Pending</h5>
+                                                                    <p className="text-[10px] font-medium text-amber-600/90 mt-0.5">Please select employment types for father, mother, or co-applicant to view and upload their required financial and KYC documents.</p>
+                                                                </div>
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+
                                                     <div className="mt-8 flex justify-end">
                                                         <button type="button" onClick={async () => { await proceedToDocuments(); addActivity("person", `Completed profile for ${newStudent.firstName}`, "person", "text-emerald-600 bg-emerald-50"); }} className="px-10 py-3 bg-emerald-500 text-white text-xs font-bold rounded-xl hover:bg-emerald-600 transition-all shadow-md shadow-emerald-500/20">Finalize & Proceed to Documents</button>
                                                     </div>
@@ -3096,6 +4818,406 @@ export default function StaffDashboardPage() {
                                             </div>
                                         </div>
                                     ) : onboardStep === 3 ? (
+                                        /* STEP 3: Documents Summary Dashboard */
+                                        <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in zoom-in-95 duration-300 pb-12 mt-4 font-['Plus_Jakarta_Sans',sans-serif]">
+                                            <div className="bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200 p-10 relative overflow-hidden">
+                                                {/* Background Accents */}
+                                                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full filter blur-3xl -z-10 opacity-60" />
+                                                <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-50 rounded-full filter blur-3xl -z-10 opacity-60" />
+
+                                                <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 pb-8 border-b border-slate-100 gap-6">
+                                                    <div className="flex items-center gap-5">
+                                                        <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                                                            <span className="material-symbols-outlined text-[28px]">folder_managed</span>
+                                                        </div>
+                                                        <div>
+                                                            <h3 className="text-2xl font-bold text-slate-900 tracking-tight font-display">Document Vault</h3>
+                                                            <p className="text-xs text-slate-500 font-medium">Verify required KYC and academic credentials to finalize onboarding.</p>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => {
+                                                            const userId = createdUser?.id || createdUser?.uid || createdUser?._id;
+                                                            if (userId) fetchUserDocuments(userId);
+                                                        }}
+                                                        disabled={docsLoading}
+                                                        className="px-5 py-3 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 rounded-xl text-xs font-bold flex items-center gap-2 transition-all disabled:opacity-50 hover:shadow-sm"
+                                                    >
+                                                        <span className={`material-symbols-outlined text-[18px] ${docsLoading ? 'animate-spin' : ''}`}>sync</span>
+                                                        {docsLoading ? 'Syncing...' : 'Sync Profile'}
+                                                    </button>
+                                                </div>
+
+                                                {Object.keys(uploadMessages).length > 0 && (
+                                                    <div className="space-y-2 mb-8">
+                                                        {Object.entries(uploadMessages).map(([key, msg]) => (
+                                                            <div
+                                                                key={key}
+                                                                className={`rounded-2xl px-4 py-3 text-xs font-bold border ${msg.type === 'success'
+                                                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                                                    : msg.type === 'warning'
+                                                                        ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                                                        : 'bg-rose-50 text-rose-700 border-rose-200'
+                                                                    }`}
+                                                            >
+                                                                {msg.text}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {/* Visual Completeness Bar */}
+                                                {(() => {
+                                                    const allReqs = getProfileDocumentRequirements(newStudent);
+
+
+                                                    const total = allReqs.length;
+                                                    const uploaded = allReqs.filter(d => {
+                                                        const existingDoc = userDocuments.find(ud => ud.docType === d.type || ud.type === d.type);
+                                                        const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                                        return Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+                                                    }).length;
+
+                                                    const percent = total > 0 ? Math.round((uploaded / total) * 100) : 0;
+
+                                                    return (
+                                                        <div className="space-y-6 mb-10">
+                                                            <div className="flex justify-between items-center">
+                                                                <div>
+                                                                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Vault Completeness</p>
+                                                                    <h4 className="text-3xl font-extrabold text-slate-900 tracking-tight mt-1">{percent}% <span className="text-xs text-slate-500 font-semibold">({uploaded} of {total} documents uploaded)</span></h4>
+                                                                </div>
+                                                                <div className={`px-3 py-1.5 rounded-full text-xs font-bold tracking-wide ${percent === 100 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
+                                                                    {percent === 100 ? '🎉 All Set' : '⏳ Action Required'}
+                                                                </div>
+                                                            </div>
+                                                            <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200/50 p-0.5">
+                                                                <div className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-500 shadow-sm" style={{ width: `${percent}%` }} />
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
+
+                                                {/* Central Gorgeous Popup Button Call-to-Action */}
+                                                <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-8 text-center space-y-6 mb-10 relative overflow-hidden group hover:border-indigo-200 hover:bg-indigo-50/5 transition-all">
+                                                    <div className="w-16 h-16 bg-white border border-slate-100 shadow-sm rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-colors mx-auto group-hover:scale-105 transition-transform duration-300">
+                                                        <span className="material-symbols-outlined text-[32px]">cloud_upload</span>
+                                                    </div>
+                                                    <div className="max-w-md mx-auto">
+                                                        <h4 className="text-lg font-bold text-slate-900 leading-tight">Interactive Document Manager</h4>
+                                                        <p className="text-xs text-slate-500 font-semibold mt-2">Click below to open the dedicated upload workspace to manage primary student KYC and identity verification documents (Passport, Aadhaar and PAN).</p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const allReqs = getProfileDocumentRequirements(newStudent);
+                                                            if (allReqs.length > 0) {
+                                                                setSelectedDocType(allReqs[0].type);
+                                                                setSelectedDocName(allReqs[0].name);
+
+                                                                let cat: 'applicant' | 'father' | 'mother' | 'coapplicant' = 'applicant';
+                                                                if (allReqs[0].type.startsWith('father_')) cat = 'father';
+                                                                else if (allReqs[0].type.startsWith('mother_')) cat = 'mother';
+                                                                else if (allReqs[0].type.startsWith('coapplicant_')) cat = 'coapplicant';
+                                                                setSelectedDocCategory(cat);
+                                                            }
+                                                            setIsUploadModalOpen(true);
+                                                        }}
+                                                        className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:shadow-indigo-600/35 transition-all flex items-center gap-2.5 mx-auto"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+                                                        Open Upload Documents Popup
+                                                    </button>
+                                                </div>
+
+                                                {/* Dynamic Document Directory Directory Grid */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10 mt-8">
+                                                    {/* Card 1: Student Identity & KYC */}
+                                                    {/* <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 space-y-4 shadow-sm hover:shadow-md transition-all">
+                                                        <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200">
+                                                            <span className="material-symbols-outlined text-[20px] text-indigo-600">fingerprint</span>
+                                                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">Student Identity & KYC</h4>
+                                                        </div>
+                                                        <div className="space-y-3">
+                                                            {getStudentDocumentRequirements(newStudent).filter(d => ['passport', 'national_id', 'pan'].includes(d.type)).map((doc, idx) => {
+                                                                const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
+                                                                const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                                                const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+                                                                return (
+                                                                    <div key={idx} className="flex items-center justify-between p-3.5 bg-white border border-slate-200/60 rounded-xl hover:border-slate-300 transition-all shadow-sm">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <span className={`material-symbols-outlined text-[18px] ${isUploaded ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                                                                {isUploaded ? 'check_circle' : 'circle'}
+                                                                            </span>
+                                                                            <div>
+                                                                                <span className="text-xs font-semibold text-slate-800">{doc.name}</span>
+                                                                                {!isUploaded && (
+                                                                                    <span className={`ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${doc.required ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
+                                                                                        {doc.required ? 'Required' : 'Optional'}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setSelectedDocType(doc.type);
+                                                                                setSelectedDocName(doc.name);
+                                                                                setSelectedDocCategory('applicant');
+                                                                                setIsUploadModalOpen(true);
+                                                                            }}
+                                                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 ${
+                                                                                isUploaded 
+                                                                                    ? 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200' 
+                                                                                    : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-100/50'
+                                                                            }`}
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-[13px]">{isUploaded ? 'rate_review' : 'cloud_upload'}</span>
+                                                                            {isUploaded ? 'Review / Edit' : 'Upload'}
+                                                                        </button>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div> */}
+
+                                                    {/* Card 2: Academic & Credentials */}
+                                                    {/* <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 space-y-4 shadow-sm hover:shadow-md transition-all">
+                                                        <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200">
+                                                            <span className="material-symbols-outlined text-[20px] text-indigo-600">school</span>
+                                                            <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">Academic & Credentials</h4>
+                                                        </div>
+                                                        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 no-scrollbar">
+                                                            {getStudentDocumentRequirements(newStudent).filter(d => ['marksheet_10', 'marksheet_12', 'ug_transcript', 'ug_degree', 'pg_transcript', 'pg_degree', 'english_test', 'aptitude_test', 'resume', 'work_letters'].includes(d.type)).map((doc, idx) => {
+                                                                const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
+                                                                const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                                                const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+                                                                return (
+                                                                    <div key={idx} className="flex items-center justify-between p-3.5 bg-white border border-slate-200/60 rounded-xl hover:border-slate-300 transition-all shadow-sm">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <span className={`material-symbols-outlined text-[18px] ${isUploaded ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                                                                {isUploaded ? 'check_circle' : 'circle'}
+                                                                            </span>
+                                                                            <div>
+                                                                                <span className="text-xs font-semibold text-slate-800">{doc.name}</span>
+                                                                                {!isUploaded && (
+                                                                                    <span className={`ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${doc.required ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
+                                                                                        {doc.required ? 'Required' : 'Optional'}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setSelectedDocType(doc.type);
+                                                                                setSelectedDocName(doc.name);
+                                                                                setSelectedDocCategory('applicant');
+                                                                                setIsUploadModalOpen(true);
+                                                                            }}
+                                                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 ${
+                                                                                isUploaded 
+                                                                                    ? 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200' 
+                                                                                    : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-100/50'
+                                                                            }`}
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-[13px]">{isUploaded ? 'rate_review' : 'cloud_upload'}</span>
+                                                                            {isUploaded ? 'Review / Edit' : 'Upload'}
+                                                                        </button>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div> */}
+
+                                                    {/* Card 3: Father's Verification */}
+                                                    {/* {(() => {
+                                                        const docs = getProfileDocumentRequirements(newStudent).filter(d => d.type.startsWith('father_'));
+                                                        if (docs.length === 0) return null;
+                                                        const fatherName = newStudent.family.fatherName || "Father";
+                                                        return (
+                                                            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 space-y-4 shadow-sm hover:shadow-md transition-all">
+                                                                <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200">
+                                                                    <span className="material-symbols-outlined text-[20px] text-indigo-600">hail</span>
+                                                                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">{fatherName}'s Documents</h4>
+                                                                </div>
+                                                                <div className="space-y-3">
+                                                                    {docs.map((doc, idx) => {
+                                                                        const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
+                                                                        const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                                                        const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+                                                                        return (
+                                                                            <div key={idx} className="flex items-center justify-between p-3.5 bg-white border border-slate-200/60 rounded-xl hover:border-slate-300 transition-all shadow-sm">
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <span className={`material-symbols-outlined text-[18px] ${isUploaded ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                                                                        {isUploaded ? 'check_circle' : 'circle'}
+                                                                                    </span>
+                                                                                    <div>
+                                                                                        <span className="text-xs font-semibold text-slate-800">{doc.name}</span>
+                                                                                        {!isUploaded && (
+                                                                                            <span className={`ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${doc.required ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
+                                                                                                {doc.required ? 'Required' : 'Optional'}
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        setSelectedDocType(doc.type);
+                                                                                        setSelectedDocName(doc.name);
+                                                                                        setSelectedDocCategory('father');
+                                                                                        setIsUploadModalOpen(true);
+                                                                                    }}
+                                                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 ${
+                                                                                        isUploaded 
+                                                                                            ? 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200' 
+                                                                                            : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-100/50'
+                                                                                    }`}
+                                                                                >
+                                                                                    <span className="material-symbols-outlined text-[13px]">{isUploaded ? 'rate_review' : 'cloud_upload'}</span>
+                                                                                    {isUploaded ? 'Review / Edit' : 'Upload'}
+                                                                                </button>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()} */}
+
+                                                    {/* Card 4: Mother's Verification */}
+                                                    {/* {(() => {
+                                                        const docs = getProfileDocumentRequirements(newStudent).filter(d => d.type.startsWith('mother_'));
+                                                        if (docs.length === 0) return null;
+                                                        const motherName = newStudent.family.motherName || "Mother";
+                                                        return (
+                                                            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 space-y-4 shadow-sm hover:shadow-md transition-all">
+                                                                <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200">
+                                                                    <span className="material-symbols-outlined text-[20px] text-indigo-600">woman</span>
+                                                                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">{motherName}'s Documents</h4>
+                                                                </div>
+                                                                <div className="space-y-3">
+                                                                    {docs.map((doc, idx) => {
+                                                                        const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
+                                                                        const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                                                        const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+                                                                        return (
+                                                                            <div key={idx} className="flex items-center justify-between p-3.5 bg-white border border-slate-200/60 rounded-xl hover:border-slate-300 transition-all shadow-sm">
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <span className={`material-symbols-outlined text-[18px] ${isUploaded ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                                                                        {isUploaded ? 'check_circle' : 'circle'}
+                                                                                    </span>
+                                                                                    <div>
+                                                                                        <span className="text-xs font-semibold text-slate-800">{doc.name}</span>
+                                                                                        {!isUploaded && (
+                                                                                            <span className={`ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${doc.required ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
+                                                                                                {doc.required ? 'Required' : 'Optional'}
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        setSelectedDocType(doc.type);
+                                                                                        setSelectedDocName(doc.name);
+                                                                                        setSelectedDocCategory('mother');
+                                                                                        setIsUploadModalOpen(true);
+                                                                                    }}
+                                                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 ${isUploaded
+                                                                                            ? 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
+                                                                                            : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-100/50'
+                                                                                        }`}
+                                                                                >
+                                                                                    <span className="material-symbols-outlined text-[13px]">{isUploaded ? 'rate_review' : 'cloud_upload'}</span>
+                                                                                    {isUploaded ? 'Review / Edit' : 'Upload'}
+                                                                                </button>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()} */}
+
+                                                    {/* Card 5: Co-applicant Verification */}
+                                                    {/* {(() => {
+                                                        const docs = getProfileDocumentRequirements(newStudent).filter(d => d.type.startsWith('coapplicant_'));
+                                                        if (docs.length === 0) return null;
+                                                        const coName = newStudent.coApplicant.name || "Co-applicant";
+                                                        return (
+                                                            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 space-y-4 shadow-sm hover:shadow-md transition-all">
+                                                                <div className="flex items-center gap-2.5 pb-3 border-b border-slate-200">
+                                                                    <span className="material-symbols-outlined text-[20px] text-indigo-600">group</span>
+                                                                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-800">{coName}'s Documents</h4>
+                                                                </div>
+                                                                <div className="space-y-3">
+                                                                    {docs.map((doc, idx) => {
+                                                                        const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
+                                                                        const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                                                        const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+                                                                        return (
+                                                                            <div key={idx} className="flex items-center justify-between p-3.5 bg-white border border-slate-200/60 rounded-xl hover:border-slate-300 transition-all shadow-sm">
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <span className={`material-symbols-outlined text-[18px] ${isUploaded ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                                                                        {isUploaded ? 'check_circle' : 'circle'}
+                                                                                    </span>
+                                                                                    <div>
+                                                                                        <span className="text-xs font-semibold text-slate-800">{doc.name}</span>
+                                                                                        {!isUploaded && (
+                                                                                            <span className={`ml-2 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${doc.required ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'}`}>
+                                                                                                {doc.required ? 'Required' : 'Optional'}
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        setSelectedDocType(doc.type);
+                                                                                        setSelectedDocName(doc.name);
+                                                                                        setSelectedDocCategory('coapplicant');
+                                                                                        setIsUploadModalOpen(true);
+                                                                                    }}
+                                                                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 ${
+                                                                                        isUploaded 
+                                                                                            ? 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200' 
+                                                                                            : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-100/50'
+                                                                                    }`}
+                                                                                >
+                                                                                    <span className="material-symbols-outlined text-[13px]">{isUploaded ? 'rate_review' : 'cloud_upload'}</span>
+                                                                                    {isUploaded ? 'Review / Edit' : 'Upload'}
+                                                                                </button>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })()} */}
+                                                </div>
+
+                                                {/* Bottom Navigation Row */}
+                                                {/* Bottom Navigation Row */}
+                                                <div className="pt-8 border-t border-slate-100 flex justify-between items-center">
+                                                    <button type="button" onClick={() => setOnboardStep(2)} className="px-6 py-3.5 text-slate-600 font-bold text-xs uppercase tracking-widest hover:text-slate-900 transition-all flex items-center gap-2 bg-white border border-slate-200 rounded-2xl">
+                                                        <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                                                        Back to Profile
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleFinalOnboardSubmit}
+                                                        disabled={createLoading}
+                                                        className="px-8 py-3.5 bg-emerald-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-600/20 flex items-center gap-2 group disabled:opacity-50"
+                                                    >
+                                                        {createLoading ? 'Finalizing...' : 'Complete Onboarding'}
+                                                        {!createLoading && <span className="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">verified</span>}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : false ? (
                                         /* STEP 3: Documents */
                                         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in zoom-in-95 duration-300 pb-12 mt-4">
                                             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
@@ -3737,7 +5859,7 @@ export default function StaffDashboardPage() {
                                         <span className="material-symbols-outlined text-[14px]">refresh</span>
                                         Refresh
                                     </button>
-                                    <button onClick={() => setActiveSection('onboarding')} className="px-3 py-1.5 rounded bg-white border border-slate-200 text-slate-700 font-medium text-[11px] hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center gap-1.5 shadow-sm">
+                                    <button onClick={startOnboarding} className="px-3 py-1.5 rounded bg-white border border-slate-200 text-slate-700 font-medium text-[11px] hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center gap-1.5 shadow-sm">
                                         <span className="material-symbols-outlined text-[16px]">person_add</span> Add Student
                                     </button>
                                 </div>
@@ -4220,7 +6342,7 @@ export default function StaffDashboardPage() {
                                     </button>
                                     {activeSection === 'users' && (
                                         <button
-                                            onClick={() => setActiveSection('onboarding')}
+                                            onClick={startOnboarding}
                                             className="px-5 py-2.5 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2"
                                         >
                                             <span className="material-symbols-outlined text-[18px]">person_add</span>
@@ -4630,14 +6752,50 @@ export default function StaffDashboardPage() {
                                                                     )}
                                                                 </td>
                                                                 <td className="px-5 py-4">
-                                                                    {item.createdAt ? (
-                                                                        <>
-                                                                            <p className="text-[14px] font-semibold text-slate-800">{format(convertToIST(item.createdAt), 'MMM d, yyyy').toUpperCase()}</p>
-                                                                            <p className="text-[12px] text-slate-400 mt-0.5">{format(convertToIST(item.createdAt), 'hh:mm aa')}</p>
-                                                                        </>
-                                                                    ) : (
-                                                                        <span className="text-[12px] font-mono text-slate-400">NO_RECORD</span>
-                                                                    )}
+                                                                    {(() => {
+                                                                        const regTime = item.registeredAtIndia || item.createdAt;
+                                                                        if (!regTime) return <span className="text-[12px] font-mono text-slate-400">NO_RECORD</span>;
+
+                                                                        try {
+                                                                            if (typeof regTime === 'string' && regTime.endsWith(' IST')) {
+                                                                                const parts = regTime.split(' ');
+                                                                                if (parts.length >= 2) {
+                                                                                    const datePart = parts[0]; // "YYYY-MM-DD"
+                                                                                    const timePart = parts[1]; // "HH:MM:SS"
+                                                                                    const ymd = datePart.split('-');
+                                                                                    const hms = timePart.split(':');
+                                                                                    if (ymd.length === 3 && hms.length >= 2) {
+                                                                                        const year = parseInt(ymd[0], 10);
+                                                                                        const month = parseInt(ymd[1], 10) - 1;
+                                                                                        const day = parseInt(ymd[2], 10);
+                                                                                        const hours = parseInt(hms[0], 10);
+                                                                                        const minutes = parseInt(hms[1], 10);
+
+                                                                                        const dateObj = new Date(year, month, day, hours, minutes);
+                                                                                        return (
+                                                                                            <>
+                                                                                                <p className="text-[14px] font-semibold text-slate-800">{format(dateObj, 'MMM d, yyyy').toUpperCase()}</p>
+                                                                                                <p className="text-[12px] text-slate-400 mt-0.5">{format(dateObj, 'hh:mm aa')}</p>
+                                                                                            </>
+                                                                                        );
+                                                                                    }
+                                                                                }
+                                                                            }
+
+                                                                            const dateObj = convertToIST(regTime);
+                                                                            if (!isNaN(dateObj.getTime())) {
+                                                                                return (
+                                                                                    <>
+                                                                                        <p className="text-[14px] font-semibold text-slate-800">{format(dateObj, 'MMM d, yyyy').toUpperCase()}</p>
+                                                                                        <p className="text-[12px] text-slate-400 mt-0.5">{format(dateObj, 'hh:mm aa')}</p>
+                                                                                    </>
+                                                                                );
+                                                                            }
+                                                                        } catch (e) {
+                                                                            console.error('[User Directory registered formatting error]', e);
+                                                                        }
+                                                                        return <span className="text-[13px] font-semibold text-slate-800">{regTime}</span>;
+                                                                    })()}
                                                                 </td>
                                                                 <td className="px-5 py-4">
                                                                     <div className="flex items-center justify-center gap-2">
@@ -4922,6 +7080,421 @@ export default function StaffDashboardPage() {
                                     />
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Premium Interactive Document Upload Modal Popup */}
+            {isUploadModalOpen && (
+                <div className="fixed inset-0 z-[95] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md transition-all animate-in fade-in duration-300 font-['Plus_Jakarta_Sans',sans-serif]">
+                    <div className="bg-white w-full max-w-5xl h-[85vh] rounded-3xl flex flex-col overflow-hidden shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-300">
+                        {/* Header Section */}
+                        <div className="px-8 py-6 border-b border-slate-100 bg-white shrink-0">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-xl font-bold text-slate-800 tracking-tight flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-indigo-600 text-2xl">cloud_upload</span>
+                                    Upload Documents
+                                </h3>
+                                <button
+                                    onClick={() => setIsUploadModalOpen(false)}
+                                    className="w-9 h-9 rounded-full bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center transition-all border border-slate-100 hover:scale-105"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">close</span>
+                                </button>
+                            </div>
+
+                            {/* Simplified Info Banner */}
+                            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                                <span className="material-symbols-outlined text-indigo-600 text-[18px]">verified_user</span>
+                                <span>Primary identity & KYC documents are required for background verification.</span>
+                            </div>
+                        </div>
+
+                        {/* Split-Screen Main Content Body */}
+                        <div className="flex-1 overflow-hidden flex min-h-0">
+                            {/* LEFT SIDEBAR PANEL: Interactive Documents List */}
+                            <div className="w-5/12 bg-slate-50/50 border-r border-slate-100 flex flex-col min-h-0">
+                                <div className="px-6 py-4 border-b border-slate-100 bg-white shrink-0 flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-indigo-600 text-[18px]">folder_special</span>
+                                    <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Document Vault Workspace</span>
+                                </div>
+
+                                {/* Dynamic Document Items List */}
+                                <div className="flex-1 overflow-y-auto p-5 space-y-6 no-scrollbar bg-slate-50/30">
+                                    {(() => {
+                                        const groups = [
+                                            {
+                                                title: "Student KYC & Identity",
+                                                icon: "fingerprint",
+                                                items: getStudentDocumentRequirements(newStudent).filter(d => ['passport', 'national_id', 'pan'].includes(d.type)),
+                                                category: 'applicant' as const
+                                            },
+                                            {
+                                                title: "Student Academic Docs",
+                                                icon: "school",
+                                                items: getStudentDocumentRequirements(newStudent).filter(d => ['marksheet_10', 'marksheet_12', 'ug_transcript', 'ug_degree', 'pg_transcript', 'pg_degree', 'english_test', 'aptitude_test', 'resume', 'work_letters'].includes(d.type)),
+                                                category: 'applicant' as const
+                                            },
+                                            {
+                                                title: `${newStudent.family.fatherName || "Father"}'s Documents`,
+                                                icon: "hail",
+                                                items: getProfileDocumentRequirements(newStudent).filter(d => d.type.startsWith('father_')),
+                                                category: 'father' as const
+                                            },
+                                            {
+                                                title: `${newStudent.family.motherName || "Mother"}'s Documents`,
+                                                icon: "woman",
+                                                items: getProfileDocumentRequirements(newStudent).filter(d => d.type.startsWith('mother_')),
+                                                category: 'mother' as const
+                                            },
+                                            {
+                                                title: `${newStudent.coApplicant.name || "Co-applicant"}'s Documents`,
+                                                icon: "group",
+                                                items: getProfileDocumentRequirements(newStudent).filter(d => d.type.startsWith('coapplicant_')),
+                                                category: 'coapplicant' as const
+                                            }
+                                        ];
+
+                                        return groups.map((g, gIdx) => {
+                                            if (g.items.length === 0) return null;
+
+                                            return (
+                                                <div key={gIdx} className="space-y-3">
+                                                    <div className="flex items-center gap-1.5 px-1 py-1 shrink-0">
+                                                        <span className="material-symbols-outlined text-slate-400 text-[15px]">{g.icon}</span>
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider">{g.title}</span>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        {g.items.map((doc, idx) => {
+                                                            const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
+                                                            const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                                            const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+                                                            const isActive = selectedDocType === doc.type;
+
+                                                            let helper = "Required KYC / financial document";
+                                                            if (doc.type === 'passport' || doc.type === 'national_id' || doc.type === 'pan') helper = "Fills identity and compliance details";
+                                                            else if (doc.type === 'marksheet_10' || doc.type === 'marksheet_12' || doc.type === 'marksheet_ug' || doc.type === 'marksheet_pg') helper = "Fills fields of Academic qualifications";
+                                                            else if (doc.type === 'resume') helper = "Fills fields of Work Experience Details";
+                                                            else if (doc.type === 'english_test') helper = "Fills selected Tests Details";
+
+                                                            return (
+                                                                <div
+                                                                    key={idx}
+                                                                    onClick={() => {
+                                                                        setSelectedDocType(doc.type);
+                                                                        setSelectedDocName(doc.name);
+                                                                        setSelectedDocCategory(g.category);
+                                                                    }}
+                                                                    className={`relative p-3.5 rounded-xl border transition-all cursor-pointer ${isActive
+                                                                        ? 'bg-white border-indigo-600 shadow-md shadow-indigo-600/5'
+                                                                        : isUploaded
+                                                                            ? 'bg-emerald-50/20 border-emerald-100 hover:border-emerald-200'
+                                                                            : 'bg-white border-slate-200/80 hover:border-slate-300'
+                                                                        }`}
+                                                                >
+                                                                    {isActive && (
+                                                                        <div className="absolute right-[-1px] top-1/2 -translate-y-1/2 w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-r-[6px] border-r-indigo-600 z-10" />
+                                                                    )}
+
+                                                                    <div className="pr-1">
+                                                                        <div className="flex items-start justify-between gap-2">
+                                                                            <div>
+                                                                                <h4 className="text-[11px] font-bold text-slate-800 leading-tight">{doc.name}</h4>
+                                                                                <p className="text-[8px] text-slate-400 font-semibold mt-0.5 leading-normal">{helper}</p>
+                                                                            </div>
+                                                                            {isUploaded && (
+                                                                                <span className="w-4.5 h-4.5 rounded-full bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-emerald-500/10">
+                                                                                    <span className="material-symbols-outlined text-[10px] font-black">check</span>
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+
+                                                                        {isUploaded && existingDoc && (
+                                                                            <div className="flex items-center justify-between mt-2.5 pt-2.5 border-t border-dashed border-slate-100 text-[8px] font-black uppercase tracking-wider" onClick={(e) => e.stopPropagation()}>
+                                                                                <button
+                                                                                    onClick={() => viewFile(doc.type)}
+                                                                                    className="text-red-500 hover:text-red-600 hover:underline flex items-center gap-0.5 leading-none"
+                                                                                >
+                                                                                    <span className="material-symbols-outlined text-[11px] font-black">description</span>
+                                                                                    Review File
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => handleDocumentDelete(doc.type, g.category, doc.name)}
+                                                                                    className="text-slate-400 hover:text-rose-600 flex items-center gap-0.5 transition-colors leading-none"
+                                                                                >
+                                                                                    <span className="material-symbols-outlined text-[12px]">delete</span>
+                                                                                    Remove
+                                                                                </button>
+                                                                            </div>
+                                                                        )}
+
+                                                                        {doc.type === 'english_test' && (
+                                                                            <div className="mt-2.5" onClick={(e) => e.stopPropagation()}>
+                                                                                <div className="relative">
+                                                                                    <select
+                                                                                        value={selectedTestType}
+                                                                                        onChange={(e) => setSelectedTestType(e.target.value)}
+                                                                                        className="w-full appearance-none bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 pr-7 text-[9px] font-bold text-slate-600 focus:outline-none focus:border-indigo-500 transition-all cursor-pointer"
+                                                                                    >
+                                                                                        <option value="Select Test">Select Test</option>
+                                                                                        <option value="IELTS">IELTS</option>
+                                                                                        <option value="TOEFL">TOEFL</option>
+                                                                                        <option value="PTE">PTE Academic</option>
+                                                                                        <option value="Duolingo">Duolingo Test</option>
+                                                                                    </select>
+                                                                                    <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[12px]">expand_more</span>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            );
+                                        });
+                                    })()}
+                                </div>
+                            </div>
+
+                            {/* RIGHT CONTENT PANEL: Active Upload Zone & Instructions */}
+                            {(() => {
+                                const docType = selectedDocType;
+                                const personType = selectedDocCategory;
+                                const uploadKey = `${docType}-${personType}`;
+                                const isUploading = uploadingDocs[uploadKey] !== undefined;
+                                const uploadProgress = uploadingDocs[uploadKey] ?? 0;
+                                const uploadError = uploadErrors[uploadKey];
+                                const uploadFeedback = uploadMessages[uploadKey];
+                                const autofillFeedback = autofillMessages[uploadKey];
+
+                                const existingDoc = userDocuments.find(ud => ud.docType === docType || ud.type === docType);
+                                const existingStatus = String(existingDoc?.status || "").toLowerCase();
+                                const isUploaded = Boolean(existingDoc?.uploaded || ["uploaded", "verified"].includes(existingStatus));
+
+                                let personName = newStudent.firstName + ' ' + newStudent.lastName;
+                                let employmentType = undefined;
+                                if (personType === 'father') {
+                                    personName = newStudent.family.fatherName || 'Father';
+                                    employmentType = newStudent.family.fatherEmploymentType;
+                                } else if (personType === 'mother') {
+                                    personName = newStudent.family.motherName || 'Mother';
+                                    employmentType = newStudent.family.motherEmploymentType;
+                                } else if (personType === 'coapplicant') {
+                                    personName = newStudent.coApplicant.name || 'Co-applicant';
+                                    employmentType = newStudent.coApplicant.employmentType;
+                                }
+
+                                let customInstruction = "Merge the front and back pages of student's Passport and upload it as a single file.";
+                                if (docType.includes('marksheet')) {
+                                    customInstruction = `Provide all semesters / consolidated marksheet copies for student's ${selectedDocName}.`;
+                                } else if (docType === 'resume') {
+                                    customInstruction = "Upload student's detailed CV covering academics, projects and work milestones.";
+                                } else if (docType.includes('pan')) {
+                                    customInstruction = "Provide clear scanned copy of PAN Card with legible signature and photograph.";
+                                } else if (docType.includes('aadhar')) {
+                                    customInstruction = "Merge the front side and back side of Aadhaar card into a single PDF or image file.";
+                                }
+
+                                return (
+                                    <div className="w-7/12 p-8 flex flex-col justify-between overflow-y-auto no-scrollbar bg-white">
+                                        <div className="space-y-6">
+                                            <div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md">
+                                                    {personType.toUpperCase()} - {selectedDocName}
+                                                </span>
+                                                <h4 className="text-lg font-black text-slate-800 tracking-tight mt-2">{selectedDocName} Workspace</h4>
+                                                <p className="text-xs text-slate-400 font-semibold mt-1">Upload, review and verify metadata using premium AI extraction.</p>
+                                            </div>
+
+                                            {(uploadFeedback || uploadError) && (
+                                                <div
+                                                    className={`rounded-2xl px-4 py-3 text-xs font-bold border animate-in fade-in slide-in-from-top-2 duration-200 ${uploadFeedback?.type === 'success'
+                                                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                                        : uploadFeedback?.type === 'warning'
+                                                            ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                                            : 'bg-rose-50 text-rose-700 border-rose-200'
+                                                        }`}
+                                                >
+                                                    {uploadFeedback?.text || uploadError}
+                                                </div>
+                                            )}
+
+                                            <input
+                                                type="file"
+                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                ref={el => {
+                                                    if (el) fileInputRefs.current[`modal-${uploadKey}`] = el;
+                                                }}
+                                                onChange={async (e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (file) {
+                                                        await handleDocumentUpload(file, docType, personType, personName, employmentType);
+                                                        e.target.value = '';
+                                                    }
+                                                }}
+                                                hidden
+                                            />
+
+                                            <div className="border-2 border-dashed border-slate-200 hover:border-indigo-400 rounded-3xl p-8 text-center transition-all bg-slate-50/50 flex flex-col items-center justify-center min-h-[220px]">
+                                                {isUploaded && existingDoc ? (
+                                                    <div className="space-y-4 animate-in fade-in duration-300">
+                                                        <div className="w-16 h-16 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center border border-emerald-100 shadow-md shadow-emerald-500/5 mx-auto">
+                                                            <span className="material-symbols-outlined text-[32px] font-black">check</span>
+                                                        </div>
+                                                        <div>
+                                                            <h5 className="text-sm font-bold text-slate-800 tracking-tight">{existingDoc.fileName || existingDoc.filename || `${selectedDocName}.pdf`}</h5>
+                                                            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mt-1">Upload Complete</p>
+                                                            {uploadFeedback && (
+                                                                <p className={`text-[10px] font-bold mt-2 max-w-sm mx-auto px-3 py-1.5 rounded-lg border ${uploadFeedback.type === 'success'
+                                                                    ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
+                                                                    : uploadFeedback.type === 'warning'
+                                                                        ? 'text-amber-700 bg-amber-50 border-amber-100'
+                                                                        : 'text-rose-700 bg-rose-50 border-rose-100'
+                                                                    }`}>
+                                                                    {uploadFeedback.text}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex gap-3 justify-center pt-2">
+                                                            <button
+                                                                onClick={() => viewFile(docType)}
+                                                                className="px-4 py-2 bg-white border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl text-xs font-bold hover:bg-slate-50 hover:shadow-sm transition-all flex items-center gap-1.5"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[16px]">visibility</span>
+                                                                Review File
+                                                            </button>
+                                                            <button
+                                                                onClick={() => fileInputRefs.current[`modal-${uploadKey}`]?.click()}
+                                                                className="px-4 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl text-xs font-bold hover:shadow-sm transition-all flex items-center gap-1.5"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[16px]">replay</span>
+                                                                Re-upload
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : isUploading ? (
+                                                    <div className="space-y-4 animate-in fade-in duration-200">
+                                                        <div className="relative w-16 h-16 rounded-full border-4 border-slate-100 border-t-indigo-600 animate-spin mx-auto flex items-center justify-center" />
+                                                        <div>
+                                                            <h5 className="text-xs font-bold text-slate-800">Uploading File...</h5>
+                                                            <p className="text-[11px] font-bold text-indigo-600 mt-1">{Math.round(uploadProgress)}% Complete</p>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div
+                                                        onClick={() => fileInputRefs.current[`modal-${uploadKey}`]?.click()}
+                                                        className="space-y-4 cursor-pointer hover:scale-[1.01] transition-transform duration-200 w-full py-4"
+                                                    >
+                                                        <div className="w-14 h-14 bg-white border border-slate-100 shadow-sm rounded-2xl flex items-center justify-center text-slate-400 mx-auto">
+                                                            <span className="material-symbols-outlined text-[28px]">cloud_upload</span>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs font-bold text-slate-700">Drag & drop student file here, or <span className="text-indigo-600 hover:underline">browse</span></p>
+                                                            <p className="text-[10px] text-slate-400 font-semibold mt-1">Supports PDF, JPG, PNG files up to 5MB</p>
+                                                        </div>
+                                                        {uploadError && (
+                                                            <p className="text-[10px] text-rose-500 font-bold bg-rose-50 px-3 py-1 rounded-md border border-rose-100 max-w-xs mx-auto">{uploadError}</p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="border-t border-slate-100 pt-6 space-y-4">
+                                                <h5 className="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
+                                                    <span className="material-symbols-outlined text-slate-400 text-[18px]">info</span>
+                                                    Instructions:
+                                                </h5>
+                                                <ul className="text-[11px] text-slate-500 font-semibold space-y-2.5 list-disc pl-5 leading-relaxed">
+                                                    <li>{customInstruction}</li>
+                                                    <li>Maximum 2 successful file uploads per document</li>
+                                                    <li>This functionality supports only .jpg, .png, and .pdf files.</li>
+                                                    <li>This functionality supports files up to 5 MB.</li>
+                                                    <li>This functionality supports one file at a time.</li>
+                                                    <li>If you remove the document, you will lose the information in the corresponding section.</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+
+                                        {autofillFeedback && (
+                                            <div
+                                                className={`mt-4 rounded-2xl px-4 py-3 text-xs font-bold border animate-in fade-in duration-200 ${autofillFeedback.type === 'success'
+                                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                                                    }`}
+                                            >
+                                                {autofillFeedback.text}
+                                            </div>
+                                        )}
+
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                if (!isUploaded || !existingDoc) {
+                                                    setAutofillMessages(prev => ({
+                                                        ...prev,
+                                                        [uploadKey]: { type: 'error', text: 'Please upload the document first before using Autofill.' },
+                                                    }));
+                                                    return;
+                                                }
+                                                const userId = createdUser?.id || createdUser?.uid || createdUser?._id;
+                                                if (!userId) return;
+
+                                                const meta = existingDoc.verificationMetadata || existingDoc.metadata;
+                                                let extractedFields = meta?.details?.extractedFields || meta?.extractedFields || meta?.ocrResult?.extractedFields;
+
+                                                if ((!extractedFields || Object.keys(extractedFields).length === 0) && ocrResults[uploadKey]) {
+                                                    extractedFields = ocrResults[uploadKey];
+                                                }
+
+                                                if (!extractedFields || Object.keys(extractedFields).length === 0) {
+                                                    try {
+                                                        const res: any = await documentApi.ocrReverify(userId, docType);
+                                                        extractedFields = res?.data?.extractedFields || res?.data?.ocrResult?.extractedFields;
+                                                        if (extractedFields && Object.keys(extractedFields).length > 0) {
+                                                            await fetchUserDocuments(userId);
+                                                        }
+                                                    } catch (err: any) {
+                                                        setAutofillMessages(prev => ({
+                                                            ...prev,
+                                                            [uploadKey]: {
+                                                                type: 'error',
+                                                                text: `OCR extraction failed: ${err?.message || 'Could not read document. Please re-upload a clear image.'}`,
+                                                            },
+                                                        }));
+                                                        return;
+                                                    }
+                                                }
+
+                                                if (extractedFields && Object.keys(extractedFields).length > 0) {
+                                                    const result = await autoFillFromOcr(docType, extractedFields);
+                                                    setAutofillMessages(prev => ({
+                                                        ...prev,
+                                                        [uploadKey]: {
+                                                            type: result.filled ? 'success' : 'error',
+                                                            text: result.filled ? `✨ ${result.message}` : result.message,
+                                                        },
+                                                    }));
+                                                } else {
+                                                    setAutofillMessages(prev => ({
+                                                        ...prev,
+                                                        [uploadKey]: {
+                                                            type: 'error',
+                                                            text: 'Could not extract data from this document. Please upload a clearer image or PDF.',
+                                                        },
+                                                    }));
+                                                }
+                                            }}
+                                            className="w-full mt-6 py-4 bg-emerald-500 hover:bg-emerald-600 active:scale-[0.99] text-white rounded-2xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/10"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">magic_button</span>
+                                            Autofill
+                                        </button>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>
