@@ -136,15 +136,16 @@ export default function BankTasks() {
                     <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="inline-flex items-center gap-3 px-4 py-2 bg-white/60 backdrop-blur-xl rounded-full border border-[#6605c7]/10 shadow-sm"
+                        className="inline-flex items-center gap-3 px-4 py-2 rounded-full border shadow-sm"
+                        style={{ backgroundColor: 'rgba(255,255,255,0.7)', borderColor: 'rgba(102,5,199,0.12)' }}
                     >
-                        <div className="w-2 h-2 rounded-full bg-[#6605c7] animate-pulse shadow-[0_0_8px_#6605c7]" />
-                        <span className="text-[10px] font-black text-[#6605c7] uppercase tracking-[0.2em]">Strategy Terminal Alpha</span>
+                        <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#6605c7', boxShadow: '0 0 8px #6605c7' }} />
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: '#6605c7' }}>Strategy Terminal Alpha</span>
                     </motion.div>
 
                     <div>
                         <h2 className="text-5xl lg:text-6xl font-black font-display text-gray-900 tracking-tighter italic leading-none">
-                            Mission <span className="text-[#6605c7]">Control</span>
+                            Mission <span style={{ color: '#6605c7' }}>Control</span>
                         </h2>
                         <p className="text-gray-400 font-bold uppercase tracking-[0.3em] text-[10px] flex items-center gap-2 mt-3 italic">
                             <span className="material-symbols-outlined text-xs">lan</span>
@@ -164,7 +165,8 @@ export default function BankTasks() {
                     <motion.button
                         whileHover={{ y: -2, scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="px-8 py-4 rounded-[1.5rem] bg-[#6605c7] text-white flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-purple-500/25 group"
+                        className="px-8 py-4 rounded-[1.5rem] text-white flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] shadow-xl group"
+                        style={{ background: 'linear-gradient(135deg, #6605c7, #8b24e5)', boxShadow: '0 8px 25px rgba(102,5,199,0.3)' }}
                     >
                         <span className="material-symbols-outlined text-xl group-hover:rotate-90 transition-transform duration-500">assignment_add</span>
                         New Directive

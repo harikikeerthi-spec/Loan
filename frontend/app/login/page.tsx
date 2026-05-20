@@ -248,9 +248,11 @@ function LoginContent() {
                 {/* Logo */}
                 <div className="text-center mb-8">
                     <Link href="/" className="inline-flex items-center gap-2 mb-6 group">
-                        <div className="w-10 h-10 rounded-xl bg-[#6605c7] flex items-center justify-center text-white shadow-lg shadow-[#6605c7]/20 group-hover:scale-105 transition-transform">
-                            <span className="material-symbols-outlined text-xl">school</span>
-                        </div>
+                        <img 
+                            src="/vidhyaloan_logo.png" 
+                            alt="Vidhyaloan Logo" 
+                            className="w-10 h-10 object-contain group-hover:scale-105 transition-transform" 
+                        />
                         <span className="font-bold text-2xl font-display text-gray-900 tracking-tight">Vidhyaloan</span>
                     </Link>
                     <h1 className="text-2xl font-bold text-gray-900 font-display mb-1.5 tracking-tight">
