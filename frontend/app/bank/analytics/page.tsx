@@ -10,7 +10,7 @@ export default function AnalyticsReports() {
     if (!mounted) return null;
 
     return (
-        <div className="min-h-screen p-8 lg:p-12 pl-[100px] lg:pl-[320px] transition-all duration-300">
+        <div className="min-h-screen p-8 lg:p-12 transition-all duration-300">
             <div className="max-w-7xl mx-auto space-y-12">
                 
                 {/* Header */}

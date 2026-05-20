@@ -252,10 +252,10 @@ export default function BankDashboard() {
                         className="inline-flex items-center gap-3 px-4 py-2 bg-white/50 backdrop-blur-xl rounded-full border border-[#6605c7]/10 shadow-sm"
                     >
                         <div className="w-2 h-2 rounded-full bg-[#6605c7] animate-pulse shadow-[0_0_8px_#6605c7]" />
-                        <span className="text-[10px] font-black text-[#6605c7] uppercase tracking-[0.2em]">Partner Core v4.28</span>
+                        <span className="text-[10px] font-black text-[#6605c7] uppercase tracking-[0.2em]">Module 01 • Partner Core v4.28</span>
                     </motion.div>
                     <h2 className="text-5xl lg:text-6xl font-black font-display text-gray-900 tracking-tighter italic leading-none">
-                        System <span className="text-[#6605c7]">Terminal</span>
+                        Portfolio <span className="text-[#6605c7]">Overview</span>
                     </h2>
                     <p className="text-gray-400 font-bold uppercase tracking-[0.3em] text-[10px] flex items-center gap-2 pl-1">
                         <span className="material-symbols-outlined text-xs">sync</span>
