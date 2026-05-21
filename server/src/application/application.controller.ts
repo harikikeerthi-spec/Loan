@@ -144,6 +144,7 @@ export class ApplicationController {
         @Query('offset') offset?: string,
         @Query('sortBy') sortBy?: string,
         @Query('sortOrder') sortOrder?: string,
+        @Query('userId') userId?: string,
     ) {
         return this.applicationService.getAllApplications({
             status,
@@ -157,6 +158,7 @@ export class ApplicationController {
             offset: offset ? parseInt(offset, 10) : 0,
             sortBy,
             sortOrder: sortOrder as 'asc' | 'desc',
+            userId,
         });
     }
 

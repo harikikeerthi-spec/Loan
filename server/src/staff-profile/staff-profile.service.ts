@@ -588,6 +588,96 @@ export class StaffProfileService {
     return { items, total: count || items.length };
   }
 
+  private parseDate(dateStr: string | null | undefined): string | null {
+    if (!dateStr) return null;
+
+    // Try native parsing first
+    let d = new Date(dateStr);
+    if (!isNaN(d.getTime())) return d.toISOString();
+
+    // Try DD-MM-YYYY or DD/MM/YYYY
+    const parts = dateStr.split(/[-/]/);
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+
+      if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+        d = new Date(year, month, day);
+        if (!isNaN(d.getTime())) return d.toISOString();
+      }
+    }
+
+    return null;
+  }
+
+  private mapOnboardingToApplication(onboarding: any) {
+    if (!onboarding) return {};
+
+    const academic = onboarding.academic || {};
+    const highestLevel = academic.highestLevel || '';
+    
+    // Pick university/course details based on highest level or default to undergrad/postgrad if available
+    let universityName = '';
+    let courseName = '';
+    if (highestLevel === 'Postgraduate') {
+      universityName = academic.postgrad?.university || '';
+      courseName = academic.postgrad?.qualification || '';
+    } else if (highestLevel === 'Undergraduate') {
+      universityName = academic.undergrad?.university || '';
+      courseName = academic.undergrad?.qualification || '';
+    } else if (academic.postgrad?.university) {
+      universityName = academic.postgrad.university;
+      courseName = academic.postgrad.qualification;
+    } else if (academic.undergrad?.university) {
+      universityName = academic.undergrad.university;
+      courseName = academic.undergrad.qualification;
+    }
+
+    // Co-applicant income
+    let coApplicantIncome: number | null = null;
+    if (onboarding.coApplicant?.monthlyIncome) {
+      coApplicantIncome = parseFloat(onboarding.coApplicant.monthlyIncome) * 12; // convert monthly to annual
+    }
+
+    // Co-applicant mapping
+    const hasCoApplicant = !!(onboarding.coApplicant?.name || onboarding.coApplicant?.email || onboarding.coApplicant?.mobile);
+
+    // Primary address (using mailing address)
+    const mailing = onboarding.mailingAddress || {};
+    const addressString = [mailing.address1, mailing.address2].filter(Boolean).join(', ');
+
+    return {
+      firstName: onboarding.firstName || null,
+      lastName: onboarding.lastName || null,
+      email: onboarding.email || null,
+      phone: onboarding.mobile || null,
+      dateOfBirth: onboarding.dob ? this.parseDate(onboarding.dob) : null,
+      gender: onboarding.gender || null,
+      nationality: onboarding.nationality?.name || null,
+      address: addressString || null,
+      city: mailing.city || null,
+      state: mailing.state || null,
+      pincode: mailing.pincode || null,
+      country: mailing.country || null,
+      universityName: universityName || null,
+      courseName: courseName || null,
+      employmentType: onboarding.coApplicant?.employmentType || null,
+      hasCoApplicant: hasCoApplicant,
+      coApplicantName: onboarding.coApplicant?.name || null,
+      coApplicantRelation: onboarding.coApplicant?.relation || null,
+      coApplicantPhone: onboarding.coApplicant?.mobile || null,
+      coApplicantEmail: onboarding.coApplicant?.email || null,
+      coApplicantIncome: coApplicantIncome,
+      fatherName: onboarding.family?.fatherName || null,
+      fatherPhone: onboarding.family?.fatherMobile || null,
+      fatherEmail: onboarding.family?.fatherEmail || null,
+      motherName: onboarding.family?.motherName || null,
+      motherPhone: onboarding.family?.motherMobile || null,
+      motherEmail: onboarding.family?.motherEmail || null,
+    };
+  }
+
   // ─── Share applicant profile (Step 4 of onboarding) ────────────────────────
   async shareProfile(
     studentId: string,
@@ -598,6 +688,7 @@ export class StaffProfileService {
       recipientEmail: string;
       message?: string;
       sharedBy?: string;
+      studentDetails?: any;
     },
   ) {
     if (!studentId) throw new BadRequestException('studentId is required');
@@ -740,26 +831,26 @@ export class StaffProfileService {
       : 'Staff';
 
     if (!application) {
+      const mappedDetails = this.mapOnboardingToApplication(body.studentDetails);
       const appNumber = `VL-${Date.now()}`;
       const insertApp = {
         id: 'la-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
         userId: studentId,
         bank: body.recipientName || 'Credila',
         loanType: 'Education Loan',
-        amount: 1500000,
+        amount: body.studentDetails?.loanAmount ? parseFloat(body.studentDetails.loanAmount) : 1500000,
         status: 'pending',
         stage: 'Pre-login',
         progress: 10,
         date: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         applicationNumber: appNumber,
-        firstName: studentUser?.firstName || 'Student',
-        lastName: studentUser?.lastName || 'Applicant',
-        email: studentUser?.email || null,
-        phone: studentUser?.mobile || studentUser?.phone || null,
-        hasCoApplicant: false,
-        hasCollateral: false,
-        priorityLevel: 'medium'
+        priorityLevel: 'medium',
+        ...mappedDetails,
+        firstName: mappedDetails.firstName || studentUser?.firstName || 'Student',
+        lastName: mappedDetails.lastName || studentUser?.lastName || 'Applicant',
+        email: mappedDetails.email || studentUser?.email || null,
+        phone: mappedDetails.phone || studentUser?.mobile || studentUser?.phone || null,
       };
 
       const { data: newApp, error: createAppErr } = await this.db
@@ -789,6 +880,29 @@ export class StaffProfileService {
         isAutomatic: true,
         createdAt: new Date().toISOString()
       });
+    } else {
+      // If application already exists, update it with onboarding details!
+      const mappedDetails = this.mapOnboardingToApplication(body.studentDetails);
+      const { data: updatedApp, error: updateAppErr } = await this.db
+        .from('LoanApplication')
+        .update({
+          bank: body.recipientName || application.bank,
+          updatedAt: new Date().toISOString(),
+          ...mappedDetails,
+          firstName: mappedDetails.firstName || application.firstName || studentUser?.firstName || 'Student',
+          lastName: mappedDetails.lastName || application.lastName || studentUser?.lastName || 'Applicant',
+          email: mappedDetails.email || application.email || studentUser?.email || null,
+          phone: mappedDetails.phone || application.phone || studentUser?.mobile || studentUser?.phone || null,
+        })
+        .eq('id', application.id)
+        .select()
+        .single();
+      
+      if (!updateAppErr && updatedApp) {
+        application = updatedApp;
+      } else if (updateAppErr) {
+        console.error('[StaffProfileService.shareProfile] Failed to update existing LoanApplication with onboarding details:', updateAppErr);
+      }
     }
 
     // 5. Execute state machine progression to submitted_to_bank

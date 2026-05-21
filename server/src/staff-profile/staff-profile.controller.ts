@@ -152,6 +152,7 @@ export class StaffProfileController {
       recipientEmail: string;
       message?: string;
       sharedBy?: string;
+      studentDetails?: any;
     },
   ) {
     const result = await this.svc.shareProfile(studentId, req.user, body);

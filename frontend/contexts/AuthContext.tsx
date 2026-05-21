@@ -38,6 +38,7 @@ interface AuthUser {
     admitStatus?: string;
     pincode?: string;
     referralCode?: string;
+    bankId?: string;
 }
 
 interface AuthContextType {

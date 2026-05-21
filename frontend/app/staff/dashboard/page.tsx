@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { io } from "socket.io-client";
-import { adminApi, authApi, documentApi, onboardingApi, staffProfileApi, referenceApi } from "@/lib/api";
+import { adminApi, authApi, documentApi, onboardingApi, staffProfileApi, referenceApi, applicationApi } from "@/lib/api";
 import { HttpApiPaths } from "@/lib/http-api-paths";
 import { normalizeOcrFieldsForAutofill, normalizeGenderForForm, normalizeCountryName, parseOcrDateForInput } from "@/lib/ocr-fields";
 import { examYearToEndDate, inferStartDate } from "@/lib/academic-ocr";
@@ -1286,7 +1286,8 @@ export default function StaffDashboardPage() {
                 recipientName: shareName || (shareTarget === 'student' ? `${newStudent.firstName} ${newStudent.lastName}` : "Bank Representative"),
                 recipientEmail: shareEmail,
                 message: shareMessage,
-                sharedBy: "staff"
+                sharedBy: "staff",
+                studentDetails: newStudent
             });
 
             if (res.success || res.url) {
@@ -1298,16 +1299,46 @@ export default function StaffDashboardPage() {
                 // Update application status and progress if sharing to bank
                 if (shareTarget === 'bank' && shareName) {
                     try {
-                        await adminApi.updateApplicationStatus(studentId, {
-                            status: "processing",
-                            bank: shareName,
-                            progress: 50,
-                            currentStage: "Under Review",
-                            remarks: `Application shared with ${shareName} on ${new Date().toLocaleDateString()}`
-                        });
+                        const appsRes: any = await adminApi.getApplications({ userId: studentId });
+                        const applications = appsRes?.data || [];
+                        let activeApp = applications.find((app: any) => app.userId === studentId || app.email === (createdUser?.email || newStudent?.email));
                         
-                        // Refresh the active applications list
-                        await loadData();
+                        let targetAppId = activeApp?.id;
+
+                        if (!targetAppId) {
+                            const studentEmail = createdUser?.email || newStudent?.email;
+                            const amountVal = createdUser?.loanAmount || (newStudent as any)?.loanAmount || "1500000";
+                            
+                            const newAppRes: any = await applicationApi.create({
+                                userId: studentId,
+                                bank: shareName,
+                                loanType: "education",
+                                amount: amountVal,
+                                purpose: "education_loan",
+                                firstName: newStudent.firstName || createdUser?.firstName || "Student",
+                                lastName: newStudent.lastName || createdUser?.lastName || "",
+                                email: studentEmail,
+                                phone: newStudent.mobile || createdUser?.mobile || createdUser?.phoneNumber || "",
+                                dateOfBirth: newStudent.dob || createdUser?.dateOfBirth,
+                                address: newStudent.mailingAddress?.address1 ? `${newStudent.mailingAddress.address1}, ${newStudent.mailingAddress.city || ''}`.trim() : undefined
+                            });
+
+                            if (newAppRes?.success && newAppRes?.application?.id) {
+                                targetAppId = newAppRes.application.id;
+                            }
+                        }
+
+                        if (targetAppId) {
+                            await adminApi.updateApplicationStatus(targetAppId, {
+                                status: "submitted_to_bank",
+                                bank: shareName,
+                                progress: 50,
+                                currentStage: "Submitted",
+                                remarks: `Application shared with ${shareName} on ${new Date().toLocaleDateString()}`
+                            });
+                            
+                            await loadData();
+                        }
                     } catch (updateError) {
                         console.warn("Failed to update application status after sharing", updateError);
                     }

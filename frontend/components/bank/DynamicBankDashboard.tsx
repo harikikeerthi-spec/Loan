@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
+import { bankApi } from "@/lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -54,13 +55,15 @@ export default function DynamicBankDashboard() {
 
   const [showFileLoggingModal, setShowFileLoggingModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState<any>(null);
+  const [lanInput, setLanInput] = useState("");
+  const [isSubmittingLan, setIsSubmittingLan] = useState(false);
 
   // Fetch analytics data
   const fetchAnalytics = useCallback(async () => {
     try {
       setAnalytics(prev => ({ ...prev, loading: true }));
 
-      const headers = { "x-bank-id": user?.bankId || user?.firstName };
+      const headers = { "x-bank-id": user?.bankId || user?.firstName || "" };
 
       const [channelRes, rejectionsRes, pipelineRes, agingRes, slaRes] = await Promise.all([
         fetch(`${API_BASE}/api/bank/dashboard/analytics/channel`, { headers }),
@@ -146,65 +149,99 @@ export default function DynamicBankDashboard() {
   );
 
   // File Logging Modal
-  const FileLoggingModal = () => (
-    <AnimatePresence>
-      {showFileLoggingModal && (
-        <motion.div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl"
-          >
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Log File & Enter LAN</h2>
+  const FileLoggingModal = () => {
+    const handleLogFile = async () => {
+      if (!selectedFile || !lanInput.trim()) {
+        alert("Please enter a valid LAN number.");
+        return;
+      }
+      setIsSubmittingLan(true);
+      try {
+        await bankApi.logFile(selectedFile.id, { lanNumber: lanInput.trim() });
+        alert(`🎉 Success! File logged with LAN: ${lanInput}`);
+        setLanInput("");
+        setSelectedFile(null);
+        setShowFileLoggingModal(false);
+        await fetchAnalytics();
+      } catch (error: any) {
+        alert("Failed to log file: " + (error.message || "Unknown error"));
+      } finally {
+        setIsSubmittingLan(false);
+      }
+    };
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Application ID
-                </label>
-                <input
-                  type="text"
-                  disabled
-                  value={selectedFile?.id || ""}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
-                />
-              </div>
+    return (
+      <AnimatePresence>
+        {showFileLoggingModal && (
+          <motion.div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl"
+            >
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Log File & Enter LAN</h2>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  LAN Number
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., VLAN-2026-001"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500"
-                />
-              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Application ID
+                  </label>
+                  <input
+                    type="text"
+                    disabled
+                    value={selectedFile?.id || ""}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                  />
+                </div>
 
-              <div className="flex gap-4 pt-4">
-                <button
-                  onClick={() => setShowFileLoggingModal(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    // Handle LAN submission
-                    setShowFileLoggingModal(false);
-                  }}
-                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
-                >
-                  Log File
-                </button>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    LAN Number
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g., VLAN-2026-001"
+                    value={lanInput}
+                    onChange={(e) => setLanInput(e.target.value)}
+                    disabled={isSubmittingLan}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 text-slate-800 font-medium"
+                  />
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button
+                    onClick={() => {
+                      setLanInput("");
+                      setShowFileLoggingModal(false);
+                    }}
+                    disabled={isSubmittingLan}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleLogFile}
+                    disabled={isSubmittingLan || !lanInput.trim()}
+                    className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {isSubmittingLan ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Logging...
+                      </>
+                    ) : (
+                      "Log File"
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
+        )}
+      </AnimatePresence>
+    );
+  };
 
   // Overview Tab Content
   const OverviewContent = () => (

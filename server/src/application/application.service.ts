@@ -513,7 +513,7 @@ export class ApplicationService {
     return { success: true, message: 'Document deleted successfully' };
   }
 
-  async getAllApplications(filters?: { status?: string; stage?: string; loanType?: string; bank?: string; search?: string; fromDate?: string; toDate?: string; limit?: number; offset?: number; sortBy?: string; sortOrder?: 'asc' | 'desc' }) {
+  async getAllApplications(filters?: { status?: string; stage?: string; loanType?: string; bank?: string; search?: string; fromDate?: string; toDate?: string; limit?: number; offset?: number; sortBy?: string; sortOrder?: 'asc' | 'desc'; userId?: string }) {
     try {
       console.log('[ApplicationService.getAllApplications] Filters:', JSON.stringify(filters));
       
@@ -530,6 +530,7 @@ export class ApplicationService {
       if (filters?.stage) query = query.eq('stage', filters.stage);
       if (filters?.loanType) query = query.eq('loanType', filters.loanType);
       if (filters?.bank) query = query.eq('bank', filters.bank);
+      if (filters?.userId) query = query.eq('userId', filters.userId);
       
       if (filters?.search) {
         const search = filters.search;

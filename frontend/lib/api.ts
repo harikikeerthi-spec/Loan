@@ -1143,6 +1143,7 @@ export const staffProfileApi = {
         recipientEmail: string;
         message?: string;
         sharedBy?: string;
+        studentDetails?: any;
     }) =>
         apiFetch(HttpApiPaths.staffProfiles.shareProfile(studentId), {
             method: 'POST',
