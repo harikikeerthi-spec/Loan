@@ -84,11 +84,9 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
         { icon: "help", label: "Queries", path: "/bank/applications?tab=queries" },
         { icon: "gavel", label: "Decisions", path: "/bank/applications?tab=decisions" },
         { icon: "payments", label: "Disbursement Confirm", path: "/bank/disbursements" },
-        { icon: "forum", label: "Chat with Staff", path: "/bank/communication" },
+        { icon: "forum", label: "Chat with Staff", path: "/bank/chat" },
         { icon: "monitoring", label: "Analytics & Reports", path: "/bank/analytics" },
-        { icon: "database", label: "Export / API", path: "/bank/analytics?tab=export" },
         { icon: "extension", label: "Integrations", path: "/bank/integrations" },
-        { icon: "settings", label: "Settings & Products", path: "/bank/settings" },
     ];
 
     if (pathname === '/bank/login') {
