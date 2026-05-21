@@ -4,6 +4,8 @@ import { SupabaseModule } from '../supabase/supabase.module';
 import { UsersModule } from '../users/users.module';
 import { BankController } from './bank.controller';
 import { BankService } from './bank.service';
+import { BankDashboardController } from './bank-dashboard.controller';
+import { BankDashboardService } from './bank-dashboard.service';
 import { SlackService } from './slack.service';
 import { SalesforceService } from './salesforce.service';
 import { BankCronService } from './bank-cron.service';
@@ -18,14 +20,15 @@ import { BankRbacInterceptor } from './bank-rbac.middleware';
       signOptions: { expiresIn: '7d' },
     }),
   ],
-  controllers: [BankController],
+  controllers: [BankController, BankDashboardController],
   providers: [
     BankService,
+    BankDashboardService,
     SlackService,
     SalesforceService,
     BankCronService,
     BankRbacInterceptor
   ],
-  exports: [BankService, BankCronService]
+  exports: [BankService, BankDashboardService, BankCronService]
 })
 export class BankModule {}

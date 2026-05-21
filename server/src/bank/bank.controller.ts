@@ -19,7 +19,7 @@ import { StaffGuard } from '../auth/staff.guard';
 import { BankRbacInterceptor } from './bank-rbac.middleware';
 import { BankService } from './bank.service';
 
-@Controller('api/bank')
+@Controller('bank')
 @UseGuards(StaffGuard)
 @UseInterceptors(BankRbacInterceptor)
 export class BankController {
