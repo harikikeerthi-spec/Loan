@@ -19,7 +19,7 @@ import {
     Filler
 } from 'chart.js';
 import { Line, Doughnut } from 'react-chartjs-2';
-import { adminApi } from "@/lib/api";
+import { adminApi, bankApi } from "@/lib/api";
 import ChatInterface from "@/components/Chat/ChatInterface";
 
 ChartJS.register(
@@ -122,19 +122,16 @@ export default function BankDashboard() {
         setMounted(true);
         const fetchData = async () => {
             try {
-                // Fetch all applications
-                const res = await adminApi.getApplications({ limit: "200" }) as any;
-                if (res.success && Array.isArray(res.data)) {
-                    // Filter matching current bank
-                    const filtered = res.data.filter((app: any) => {
-                        if (user?.role === "admin" || user?.role === "super_admin") return true;
-                        if (!app.bank) return false;
-                        const appBankLower = app.bank.toLowerCase();
-                        const activeBankLower = currentBankName.toLowerCase();
-                        return appBankLower.includes(activeBankLower) || activeBankLower.includes(appBankLower) || appBankLower.includes(user?.firstName?.toLowerCase() || "");
-                    });
-                    setAllApplications(filtered);
-                }
+                // Fetch all applications dynamically from new bank endpoints
+                const incoming = await bankApi.getIncomingFiles() as any[];
+                const myFiles = await bankApi.getMyFiles() as any[];
+                const allFetched = [...(incoming || []), ...(myFiles || [])];
+                
+                // Deduplicate by ID
+                const uniqueApps = Array.from(new Map(allFetched.map(item => [item.id, item])).values());
+                
+                // Set applications (no need to filter locally since bankApi handles bank/RBAC scoping automatically)
+                setAllApplications(uniqueApps);
             } catch (error) {
                 console.error("Failed to fetch dashboard data:", error);
             } finally {

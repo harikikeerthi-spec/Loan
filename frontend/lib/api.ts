@@ -1150,5 +1150,41 @@ export const staffProfileApi = {
         }),
 };
 
+export const bankApi = {
+    getIncomingFiles: (limit?: number, offset?: number) => apiFetch(HttpApiPaths.bank.incomingFiles(limit, offset)),
+    logFile: (id: string, data: { lanNumber: string }) => apiFetch(HttpApiPaths.bank.logFile(id), { method: "POST", body: JSON.stringify(data) }),
+    getDocuments: (applicationId: string) => apiFetch(HttpApiPaths.bank.documents(applicationId)),
+    downloadDocumentsZip: (applicationId: string) => fetchBlob(HttpApiPaths.bank.documentsZip(applicationId)),
+    submitDecision: (data: any) => apiFetch(HttpApiPaths.bank.decisions(), { method: "POST", body: JSON.stringify(data) }),
+    raiseQuery: (data: any) => apiFetch(HttpApiPaths.bank.queries(), { method: "POST", body: JSON.stringify(data) }),
+    confirmDisbursement: (data: any) => apiFetch(HttpApiPaths.bank.confirmDisbursement(), { method: "POST", body: JSON.stringify(data) }),
+    conditionalSanction: (data: any) => apiFetch(HttpApiPaths.bank.conditionalSanctions(), { method: "POST", body: JSON.stringify(data) }),
+    partialSanction: (data: any) => apiFetch(HttpApiPaths.bank.partialSanctions(), { method: "POST", body: JSON.stringify(data) }),
+    counterOffer: (data: any) => apiFetch(HttpApiPaths.bank.counterOffers(), { method: "POST", body: JSON.stringify(data) }),
+    fileQualityScore: (data: any) => apiFetch(HttpApiPaths.bank.fileQualityScore(), { method: "POST", body: JSON.stringify(data) }),
+    getChannelAnalytics: () => apiFetch(HttpApiPaths.bank.analyticsChannel()),
+    getRejectionAnalytics: () => apiFetch(HttpApiPaths.bank.analyticsRejections()),
+    getSlaTracker: () => apiFetch(HttpApiPaths.bank.slaTracker()),
+    getLoanProducts: () => apiFetch(HttpApiPaths.bank.loanProducts()),
+    createLoanProduct: (data: any) => apiFetch(HttpApiPaths.bank.loanProducts(), { method: "POST", body: JSON.stringify(data) }),
+    updateLoanProduct: (id: string, data: any) => apiFetch(HttpApiPaths.bank.updateLoanProduct(id), { method: "PUT", body: JSON.stringify(data) }),
+    getBranches: () => apiFetch(HttpApiPaths.bank.branches()),
+    createBranch: (data: any) => apiFetch(HttpApiPaths.bank.branches(), { method: "POST", body: JSON.stringify(data) }),
+    getOfficers: () => apiFetch(HttpApiPaths.bank.officers()),
+    getFileDetail: (id: string) => apiFetch(HttpApiPaths.bank.fileDetail(id)),
+    lookupByLan: (lan: string) => apiFetch(HttpApiPaths.bank.lookupByLan(lan)),
+    getMyFiles: (filters?: any) => apiFetch(HttpApiPaths.bank.myFiles(filters)),
+    amendDecision: (decisionId: string, data: any) => apiFetch(HttpApiPaths.bank.amendDecision(decisionId), { method: "PUT", body: JSON.stringify(data) }),
+    uploadSanctionLetter: (id: string, fileUrl: string) => apiFetch(HttpApiPaths.bank.sanctionLetter(id), { method: "POST", body: JSON.stringify({ fileUrl }) }),
+    setRoi: (id: string, data: any) => apiFetch(HttpApiPaths.bank.roi(id), { method: "POST", body: JSON.stringify(data) }),
+    setProcessingFee: (id: string, data: any) => apiFetch(HttpApiPaths.bank.fee(id), { method: "POST", body: JSON.stringify(data) }),
+    updateProcessingFee: (id: string, data: any) => apiFetch(HttpApiPaths.bank.fee(id), { method: "PUT", body: JSON.stringify(data) }),
+    getQueryThread: (queryId: string) => apiFetch(HttpApiPaths.bank.queryThread(queryId)),
+    resolveQuery: (queryId: string) => apiFetch(HttpApiPaths.bank.resolveQuery(queryId), { method: "POST" }),
+    getAnalyticsMetrics: () => apiFetch(HttpApiPaths.bank.analyticsMetrics()),
+    exportCsv: () => apiFetch(HttpApiPaths.bank.exportCsv()),
+    exportMis: () => apiFetch(HttpApiPaths.bank.exportMis()),
+};
+
 /** Shared REST path builders + staff-dashboard catalog (single source for URLs). */
 export { HTTP_API_PREFIX, HttpApiPaths, staffDashboardApiCatalog } from "./http-api-paths";

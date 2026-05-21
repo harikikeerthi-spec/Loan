@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { adminApi } from "@/lib/api";
+import { adminApi, bankApi } from "@/lib/api";
 import { format } from "date-fns";
 
 export default function DisbursementTracker() {
@@ -43,40 +43,27 @@ export default function DisbursementTracker() {
     const fetchDisbursements = async () => {
         setLoading(true);
         try {
-            const res = await adminApi.getApplications({ limit: "200" }) as any;
-            if (res.success && Array.isArray(res.data)) {
-                const filtered = res.data.filter((app: any) => {
-                    if (user?.role === "admin" || user?.role === "super_admin") return true;
-                    if (!app.bank) return false;
-                    const appBankLower = app.bank.toLowerCase();
-                    const activeBankLower = currentBankName.toLowerCase();
-                    return appBankLower.includes(activeBankLower) || activeBankLower.includes(appBankLower);
-                });
-
-                // Fetch remarks for each application to resolve disbursed tranches
-                const appsWithRemarks = await Promise.all(
-                    filtered.map(async (app: any) => {
-                        try {
-                            const remarksRes = await adminApi.getRemarks(app.id) as any;
-                            const remarksList = remarksRes.success && remarksRes.data ? remarksRes.data : [];
-                            
-                            // Find disbursement notes
-                            const disbNotes = remarksList
-                                .filter((r: any) => r.type === "disbursement_confirmed")
-                                .map((r: any) => {
-                                    try { return JSON.parse(r.content); } catch (e) { return null; }
-                                })
-                                .filter(Boolean);
-
+            const res = await bankApi.getMyFiles() as any;
+            if (res) {
+                const appsWithRemarks = res.map((app: any) => {
+                    const disbNotes = (app.decisions || [])
+                        .filter((d: any) => d.decisionType === 'DISBURSED')
+                        .map((d: any) => {
+                            // Extract metadata from decisionNotes "UTR: ..., Mode: ..., Tranche: ..."
+                            const utrMatch = d.decisionNotes?.match(/UTR:\s([^,]+)/);
+                            const trancheMatch = d.decisionNotes?.match(/Tranche:\s(.+)$/);
                             return {
-                                ...app,
-                                disbursementRecords: disbNotes,
+                                utr: utrMatch ? utrMatch[1] : "N/A",
+                                tranche: trancheMatch ? trancheMatch[1] : "Tranche",
+                                amount: d.amount
                             };
-                        } catch (e) {
-                            return { ...app, disbursementRecords: [] };
-                        }
-                    })
-                );
+                        });
+
+                    return {
+                        ...app,
+                        disbursementRecords: disbNotes,
+                    };
+                });
                 setApplications(appsWithRemarks);
             }
         } catch (error) {
@@ -131,22 +118,13 @@ export default function DisbursementTracker() {
         if (!selectedApp) return;
 
         try {
-            await adminApi.updateApplicationStatus(selectedAppId, {
-                status: "disbursed",
-                stage: "disbursement",
-                progress: 100,
-                remarks: `Disbursement confirmed: ₹${disbAmount} released via UTR ${disbUtr.trim()} (${disbMode}).`
-            });
-            await adminApi.addRemark(selectedAppId, {
-                type: "disbursement_confirmed",
-                content: JSON.stringify({
-                    utr: disbUtr.trim(),
-                    mode: disbMode,
-                    amount: disbAmount,
-                    releaseDate: disbReleaseDate || format(new Date(), "yyyy-MM-dd"),
-                    tranche: disbTranche,
-                    date: new Date().toISOString()
-                })
+            await bankApi.confirmDisbursement({
+                applicationId: selectedAppId,
+                utr: disbUtr.trim(),
+                mode: disbMode,
+                amount: parseFloat(disbAmount),
+                releaseDate: disbReleaseDate || format(new Date(), "yyyy-MM-dd"),
+                tranche: disbTranche
             });
 
             setSelectedAppId("");

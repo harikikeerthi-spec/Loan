@@ -216,29 +216,104 @@ export class BankController {
   @Get('config/loan-products')
   async getLoanProducts(@Request() req) {
     const bankName = this.resolveBankName(req);
-    return {
-      success: true,
-      products: [
-        { id: '1', bank: bankName, name: 'Global Scholar Loan', roi: '9.25% - 11.50%' },
-        { id: '2', bank: bankName, name: 'Domestic Executive Loan', roi: '10.50% - 13.00%' }
-      ]
-    };
+    return this.bankService.getProducts(bankName);
   }
 
   @Post('config/loan-products')
   async createLoanProduct(@Body() body: any) {
-    return { success: true, message: 'Product configuration added successfully', data: body };
+    return this.bankService.createProduct(body);
+  }
+
+  @Put('config/loan-products/:id')
+  async updateLoanProduct(@Param('id') id: string, @Body() body: any) {
+    return this.bankService.updateProduct(id, body);
   }
 
   @Get('config/branches')
   async getBranches(@Request() req) {
     const bankName = this.resolveBankName(req);
-    return {
-      success: true,
-      branches: [
-        { id: 'b1', name: `${bankName} — Hyderabad Hub`, city: 'Hyderabad' },
-        { id: 'b2', name: `${bankName} — Bangalore Hub`, city: 'Bangalore' }
-      ]
-    };
+    return this.bankService.getBranches(bankName);
+  }
+
+  @Post('config/branches')
+  async createBranch(@Body() body: any) {
+    return this.bankService.createBranch(body);
+  }
+
+  @Get('config/officers')
+  async getOfficers(@Request() req) {
+    const bankName = this.resolveBankName(req);
+    return this.bankService.getOfficers(bankName);
+  }
+
+  // ==================== NEW ENDPOINTS ====================
+
+  @Get('applications/:id/detail')
+  async getFileDetail(@Param('id') id: string) {
+    return this.bankService.getFileDetail(id);
+  }
+
+  @Get('lookup/:lan')
+  async lookupByLan(@Param('lan') lan: string) {
+    return this.bankService.lookupByLan(lan);
+  }
+
+  @Get('my-files')
+  async getMyFiles(@Request() req, @Query() filters: any) {
+    const bankName = this.resolveBankName(req);
+    return this.bankService.getMyFiles(bankName, filters);
+  }
+
+  @Put('decisions/:decisionId')
+  async amendDecision(@Param('decisionId') decisionId: string, @Body('applicationId') applicationId: string, @Body('details') details: any, @Request() req) {
+    return this.bankService.amendDecision(applicationId, decisionId, details, req.user);
+  }
+
+  @Post('applications/:id/sanction-letter')
+  async uploadSanctionLetter(@Param('id') id: string, @Body('fileUrl') fileUrl: string, @Request() req) {
+    return this.bankService.uploadSanctionLetter(id, fileUrl, req.user);
+  }
+
+  @Post('applications/:id/roi')
+  async setRoi(@Param('id') id: string, @Body() roiData: any, @Request() req) {
+    return this.bankService.setRoi(id, roiData, req.user);
+  }
+
+  @Post('applications/:id/fee')
+  async setProcessingFee(@Param('id') id: string, @Body() feeData: any) {
+    return this.bankService.setProcessingFee(id, feeData);
+  }
+
+  @Put('applications/:id/fee')
+  async updateProcessingFee(@Param('id') id: string, @Body() updateData: any) {
+    return this.bankService.updateProcessingFee(id, updateData);
+  }
+
+  @Get('queries/:queryId')
+  async getQueryThread(@Param('queryId') queryId: string) {
+    return this.bankService.getQueryThread(queryId);
+  }
+
+  @Post('queries/:queryId/resolve')
+  async resolveQuery(@Param('queryId') queryId: string) {
+    return this.bankService.resolveQuery(queryId);
+  }
+
+  @Get('analytics/metrics')
+  async getAnalyticsMetrics(@Request() req) {
+    const bankName = this.resolveBankName(req);
+    return this.bankService.getAnalyticsMetrics(bankName);
+  }
+
+  @Get('export/csv')
+  async exportApplicationsCsv(@Request() req) {
+    const bankName = this.resolveBankName(req);
+    return this.bankService.exportApplicationsCsv(bankName);
+  }
+
+  @Get('export/mis')
+  async exportMisReports(@Request() req) {
+    const bankName = this.resolveBankName(req);
+    return this.bankService.exportMisReports(bankName);
   }
 }

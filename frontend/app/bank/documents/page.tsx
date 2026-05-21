@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { adminApi } from "@/lib/api";
+import { adminApi, bankApi } from "@/lib/api";
 import { format } from "date-fns";
 
 export default function DocumentManagement() {
@@ -33,32 +33,26 @@ export default function DocumentManagement() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const res = await adminApi.getApplications({ limit: "200" }) as any;
-                if (res.success && Array.isArray(res.data)) {
-                    const filtered = res.data.filter((app: any) => {
-                        if (user?.role === "admin" || user?.role === "super_admin") return true;
-                        if (!app.bank) return false;
-                        const appBankLower = app.bank.toLowerCase();
-                        const activeBankLower = currentBankName.toLowerCase();
-                        return appBankLower.includes(activeBankLower) || activeBankLower.includes(appBankLower);
-                    });
-                    
-                    // Retrieve documents for each application
-                    const appsWithDocs = await Promise.all(
-                        filtered.map(async (app: any) => {
-                            try {
-                                const docRes = await adminApi.getApplicationDocuments(app.id) as any;
-                                return {
-                                    ...app,
-                                    documentsList: docRes.success && docRes.data ? docRes.data : [],
-                                };
-                            } catch (e) {
-                                return { ...app, documentsList: [] };
-                            }
-                        })
-                    );
-                    setApplications(appsWithDocs);
-                }
+                const incoming = await bankApi.getIncomingFiles() as any[];
+                const myFiles = await bankApi.getMyFiles() as any[];
+                const allFetched = [...(incoming || []), ...(myFiles || [])];
+                const uniqueApps = Array.from(new Map(allFetched.map(item => [item.id, item])).values());
+                
+                // Retrieve documents for each application
+                const appsWithDocs = await Promise.all(
+                    uniqueApps.map(async (app: any) => {
+                        try {
+                            const docRes = await bankApi.getDocuments(app.id) as any;
+                            return {
+                                ...app,
+                                documentsList: docRes ? (Array.isArray(docRes) ? docRes : (docRes.data || [])) : [],
+                            };
+                        } catch (e) {
+                            return { ...app, documentsList: [] };
+                        }
+                    })
+                );
+                setApplications(appsWithDocs);
             } catch (error) {
                 console.error("Failed to load documents:", error);
             } finally {

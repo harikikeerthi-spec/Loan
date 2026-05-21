@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
-import { adminApi } from "@/lib/api";
+import { adminApi, bankApi } from "@/lib/api";
 import { format } from "date-fns";
 
 export default function ApplicationManagement() {
@@ -83,18 +83,11 @@ export default function ApplicationManagement() {
     const fetchApplications = async () => {
         setLoading(true);
         try {
-            const res = await adminApi.getApplications({ limit: "200" }) as any;
-            if (res.success && Array.isArray(res.data)) {
-                // Filter matching current bank (bank role only views their matching student nodes)
-                const filtered = res.data.filter((app: any) => {
-                    if (user?.role === "admin" || user?.role === "super_admin") return true;
-                    if (!app.bank) return false;
-                    const appBankLower = app.bank.toLowerCase();
-                    const activeBankLower = currentBankName.toLowerCase();
-                    return appBankLower.includes(activeBankLower) || activeBankLower.includes(appBankLower) || appBankLower.includes(user?.firstName?.toLowerCase() || "");
-                });
-                setApplications(filtered);
-            }
+            const incoming = await bankApi.getIncomingFiles() as any[];
+            const myFiles = await bankApi.getMyFiles() as any[];
+            const allFetched = [...(incoming || []), ...(myFiles || [])];
+            const uniqueApps = Array.from(new Map(allFetched.map(item => [item.id, item])).values());
+            setApplications(uniqueApps);
         } catch (error) {
             console.error("Failed to fetch applications:", error);
         } finally {
@@ -121,16 +114,46 @@ export default function ApplicationManagement() {
         setLoadingRemarks(true);
         setLoadingDocs(true);
         try {
-            // Fetch remarks (notes)
-            const remarksRes = await adminApi.getRemarks(appId) as any;
-            if (remarksRes.success && Array.isArray(remarksRes.data)) {
-                setAppRemarks(remarksRes.data);
+            // Fetch detailed record directly from Bank APIs
+            const detailRes = await bankApi.getFileDetail(appId) as any;
+            if (detailRes) {
+                // mock appRemarks from detailRes for backward compatibility with UI parsing logic
+                const mockRemarks = [];
+                if (detailRes.lanNumber) {
+                    mockRemarks.push({ type: "lan_assigned", content: JSON.stringify({ lan: detailRes.lanNumber }) });
+                }
+                if (detailRes.queries) {
+                    detailRes.queries.forEach((q: any) => {
+                        mockRemarks.push({ type: "query_raised", content: JSON.stringify({ category: q.category, query: q.queryText, date: q.createdAt }) });
+                    });
+                }
+                if (detailRes.decisions) {
+                    detailRes.decisions.forEach((d: any) => {
+                        let type = "sanction_approved";
+                        let content: any = {};
+                        if (d.decisionType === "SANCTION") {
+                            type = "sanction_approved";
+                            content = { amount: d.amount, roi: d.roi, tenure: d.tenure, product: d.sanctionProduct };
+                        } else if (d.decisionType === "CONDITIONAL") {
+                            type = "conditional_sanction";
+                            content = { tasks: d.conditionalChecklist, deadline: d.conditionalDeadline };
+                        } else if (d.decisionType === "COUNTER_OFFER") {
+                            type = "counter_offer";
+                            content = { amount: d.amount, roi: d.roi, tenure: d.tenure };
+                        } else if (d.decisionType === "REJECTED") {
+                            type = "rejected";
+                            content = { reason: d.rejectionReason, comments: d.rejectionComments };
+                        }
+                        mockRemarks.push({ type, content: JSON.stringify({ ...content, date: d.createdAt }) });
+                    });
+                }
+                setAppRemarks(mockRemarks);
             }
 
             // Fetch documents
-            const docsRes = await adminApi.getApplicationDocuments(appId) as any;
-            if (docsRes.success && docsRes.data) {
-                setAppDocs(docsRes.data);
+            const docsRes = await bankApi.getDocuments(appId) as any;
+            if (docsRes) {
+                setAppDocs(Array.isArray(docsRes) ? docsRes : docsRes.data || []);
             }
         } catch (error) {
             console.error("Failed to load details for app:", error);
@@ -203,19 +226,8 @@ export default function ApplicationManagement() {
         e.preventDefault();
         if (!selectedApp || !lanInput.trim()) return;
         try {
-            // Update status in live DB
-            await adminApi.updateApplicationStatus(selectedApp.id, {
-                status: "file_logged",
-                stage: "bank_review",
-                progress: 30,
-                remarks: `Bank LAN ${lanInput.trim()} assigned and file logged.`
-            });
-            // Write a serialized note for metadata retention
-            await adminApi.addRemark(selectedApp.id, {
-                type: "lan_assigned",
-                content: JSON.stringify({ lan: lanInput.trim(), date: new Date().toISOString() })
-            });
-
+            await bankApi.logFile(selectedApp.id, { lanNumber: lanInput.trim() });
+            
             // Reload state
             await loadRemarksAndDocs(selectedApp.id);
             fetchApplications();
@@ -231,20 +243,15 @@ export default function ApplicationManagement() {
         e.preventDefault();
         if (!selectedApp) return;
         try {
-            await adminApi.addRemark(selectedApp.id, {
-                type: "roi_fee_set",
-                content: JSON.stringify({
-                    rate: interestRate,
-                    type: interestType,
-                    baseRate: baseRate,
-                    subsidy: subsidyEligible,
-                    feeAmount: processingFeeAmount,
-                    feeState: processingFeeState,
-                    date: new Date().toISOString()
-                })
+            await bankApi.setRoi(selectedApp.id, {
+                rate: parseFloat(interestRate),
+                type: interestType,
+                baseRate: parseFloat(baseRate),
+                subsidy: subsidyEligible === "Yes"
             });
-            await adminApi.updateApplicationStatus(selectedApp.id, {
-                remarks: `ROI set to ${interestRate}% (${interestType}), Processing Fee ₹${processingFeeAmount} (${processingFeeState}).`
+            await bankApi.setProcessingFee(selectedApp.id, {
+                amount: parseFloat(processingFeeAmount),
+                status: processingFeeState
             });
 
             await loadRemarksAndDocs(selectedApp.id);
@@ -259,17 +266,10 @@ export default function ApplicationManagement() {
         e.preventDefault();
         if (!selectedApp || !queryText.trim()) return;
         try {
-            await adminApi.updateApplicationStatus(selectedApp.id, {
-                status: "query_raised",
-                remarks: `Query raised regarding ${queryDocCategory.replace(/_/g, " ").toUpperCase()}: ${queryText.trim()}`
-            });
-            await adminApi.addRemark(selectedApp.id, {
-                type: "query_raised",
-                content: JSON.stringify({
-                    category: queryDocCategory,
-                    query: queryText.trim(),
-                    date: new Date().toISOString()
-                })
+            await bankApi.raiseQuery({
+                applicationId: selectedApp.id,
+                category: queryDocCategory,
+                queryText: queryText.trim()
             });
 
             setQueryText("");
@@ -287,45 +287,23 @@ export default function ApplicationManagement() {
         if (!selectedApp) return;
         try {
             let status = "approved";
-            let stage = "sanction";
-            let progress = 90;
-            let payload: any = {};
-            let textRemarks = "";
+            let payload: any = { applicationId: selectedApp.id };
 
             if (decisionType === "sanction") {
                 status = "approved";
-                payload = { amount: sanctionAmount, roi: interestRate, tenure: sanctionTenure, product: sanctionProduct };
-                textRemarks = `${sanctionProduct} approved for ₹${sanctionAmount} at ROI ${interestRate}% for ${sanctionTenure} months.`;
+                payload = { ...payload, decisionType: "SANCTION", amount: parseFloat(sanctionAmount), roi: parseFloat(interestRate), tenure: parseInt(sanctionTenure), sanctionProduct };
             } else if (decisionType === "conditional") {
                 status = "approved";
-                progress = 85;
-                payload = { tasks: conditionalChecklist, deadline: conditionalDeadline };
-                textRemarks = `Conditional Sanction issued: ${conditionalChecklist}. Deadline: ${conditionalDeadline}.`;
+                payload = { ...payload, decisionType: "CONDITIONAL", conditionalChecklist, conditionalDeadline };
             } else if (decisionType === "counter") {
                 status = "processing";
-                payload = { amount: counterOfferAmount, roi: counterOfferRoi, tenure: counterOfferTenure };
-                textRemarks = `Counter offer issued: ₹${counterOfferAmount} at ROI ${counterOfferRoi}% for ${counterOfferTenure} months.`;
+                payload = { ...payload, decisionType: "COUNTER_OFFER", amount: parseFloat(counterOfferAmount), roi: parseFloat(counterOfferRoi), tenure: parseInt(counterOfferTenure) };
             } else if (decisionType === "reject") {
                 status = "rejected";
-                progress = 0;
-                payload = { reason: rejectionReason, comments: rejectionComments };
-                textRemarks = `Rejected due to: ${rejectionReason}. Comments: ${rejectionComments}`;
+                payload = { ...payload, decisionType: "REJECTED", rejectionReason, rejectionComments };
             }
 
-            await adminApi.updateApplicationStatus(selectedApp.id, {
-                status,
-                stage,
-                progress,
-                remarks: textRemarks,
-                rejectionReason: decisionType === "reject" ? rejectionReason : undefined
-            });
-
-            await adminApi.addRemark(selectedApp.id, {
-                type: decisionType === "sanction" ? "sanction_approved" :
-                      decisionType === "conditional" ? "conditional_sanction" :
-                      decisionType === "counter" ? "counter_offer" : "rejected",
-                content: JSON.stringify({ ...payload, date: new Date().toISOString() })
-            });
+            await bankApi.submitDecision(payload);
 
             await loadRemarksAndDocs(selectedApp.id);
             fetchApplications();
@@ -340,22 +318,13 @@ export default function ApplicationManagement() {
         e.preventDefault();
         if (!selectedApp || !disbUtr.trim()) return;
         try {
-            await adminApi.updateApplicationStatus(selectedApp.id, {
-                status: "disbursed",
-                stage: "disbursement",
-                progress: 100,
-                remarks: `Disbursement confirmed: ₹${disbAmount} released via UTR ${disbUtr.trim()} (${disbMode}).`
-            });
-            await adminApi.addRemark(selectedApp.id, {
-                type: "disbursement_confirmed",
-                content: JSON.stringify({
-                    utr: disbUtr.trim(),
-                    mode: disbMode,
-                    amount: disbAmount,
-                    releaseDate: disbReleaseDate,
-                    tranche: disbTranche,
-                    date: new Date().toISOString()
-                })
+            await bankApi.confirmDisbursement({
+                applicationId: selectedApp.id,
+                utr: disbUtr.trim(),
+                mode: disbMode,
+                amount: parseFloat(disbAmount),
+                releaseDate: disbReleaseDate,
+                tranche: disbTranche
             });
 
             await loadRemarksAndDocs(selectedApp.id);

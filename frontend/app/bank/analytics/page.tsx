@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion } from "framer-motion";
-import { adminApi } from "@/lib/api";
+import { adminApi, bankApi } from "@/lib/api";
 import { format } from "date-fns";
 import {
     Chart as ChartJS,
@@ -54,17 +54,11 @@ export default function AnalyticsReports() {
         const fetchStats = async () => {
             setLoading(true);
             try {
-                const res = await adminApi.getApplications({ limit: "200" }) as any;
-                if (res.success && Array.isArray(res.data)) {
-                    const filtered = res.data.filter((app: any) => {
-                        if (user?.role === "admin" || user?.role === "super_admin") return true;
-                        if (!app.bank) return false;
-                        const appBankLower = app.bank.toLowerCase();
-                        const activeBankLower = currentBankName.toLowerCase();
-                        return appBankLower.includes(activeBankLower) || activeBankLower.includes(appBankLower);
-                    });
-                    setApplications(filtered);
-                }
+                const incoming = await bankApi.getIncomingFiles() as any[];
+                const myFiles = await bankApi.getMyFiles() as any[];
+                const allFetched = [...(incoming || []), ...(myFiles || [])];
+                const uniqueApps = Array.from(new Map(allFetched.map(item => [item.id, item])).values());
+                setApplications(uniqueApps);
             } catch (error) {
                 console.error("Failed to load analytics data:", error);
             } finally {

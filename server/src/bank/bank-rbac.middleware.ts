@@ -111,16 +111,49 @@ export class BankRbacInterceptor implements NestInterceptor {
 
     // Object Payload processing
     if (typeof payload === 'object') {
-      const isBank = role === 'bank' || role === 'partner_bank';
-      const isStaff = role === 'staff';
+      const formattedRole = (role || '').toUpperCase();
+      const isBank = formattedRole === 'BANK' || formattedRole === 'PARTNER_BANK';
+      const isStaff = formattedRole === 'STAFF';
+      const isAdmin = formattedRole === 'ADMIN' || formattedRole === 'SUPER_ADMIN';
+
+      // Blueprint Hidden Fields mapping
+      const HIDDEN_FIELDS: Record<string, string[]> = {
+        STAFF: [
+          'disbursements',
+          'utrNumber',
+          'agentCommission',
+          'referralFee',
+          'creditScore',
+          'fileLoggedAt',
+          'sanctionConditionsInternal'
+        ],
+        BANK: [
+          'disbursements',
+          'agentCommission',
+          'referralFee',
+          'staffMetrics',
+          'revenueData'
+        ],
+        ADMIN: [],
+        SUPER_ADMIN: []
+      };
+
+      // Determine active exclusion set
+      const activeRoleKey = isBank ? 'BANK' : isStaff ? 'STAFF' : isAdmin ? 'ADMIN' : 'STAFF';
+      const exclusions = HIDDEN_FIELDS[activeRoleKey] || [];
 
       const cleaned: any = {};
 
       for (const [key, value] of Object.entries(payload)) {
-        // Enforce Multi-tenant isolation: Bank must never see financial details belonging to agent payouts
+        // Exclude fields based on HIDDEN_FIELDS list
+        if (exclusions.includes(key)) {
+          continue;
+        }
+
+        // Additional legacy and multi-tenant safety mappings
         if (isBank) {
           if (['commissionAmount', 'agentCommission', 'referralFee', 'referralFeeAmount'].includes(key)) {
-            continue; // Strips fields entirely
+            continue;
           }
           if (key === 'utrNumber' || key === 'disbursementUtr') {
             cleaned[key] = 'UTR details restricted at partner node';
@@ -128,9 +161,8 @@ export class BankRbacInterceptor implements NestInterceptor {
           }
         }
 
-        // Staff must never see internal bank sanction conditions
         if (isStaff) {
-          if (['internalConditions', 'bankReviewRemarks', 'officerChecklist'].includes(key)) {
+          if (['internalConditions', 'bankReviewRemarks', 'officerChecklist', 'sanctionConditionsInternal'].includes(key)) {
             continue;
           }
         }
@@ -144,13 +176,12 @@ export class BankRbacInterceptor implements NestInterceptor {
         cleaned[key] = value;
       }
 
-      // Check Consent and Mask PII (e.g., PAN/Aadhaar)
+      // Check Consent and Mask PII (e.g., PAN/Aadhaar) if consent_records is missing active flag
       const studentUserId = payload.userId || payload.studentId;
       if (studentUserId) {
         const hasConsent = await this.checkConsent(studentUserId);
         
         if (!hasConsent) {
-          // If no active consent, mask student identifier details
           if (cleaned.aadhaar) cleaned.aadhaar = this.maskPII(cleaned.aadhaar, 4);
           if (cleaned.pan) cleaned.pan = this.maskPII(cleaned.pan, 3);
           if (cleaned.email && cleaned.email !== userEmail) cleaned.email = 'masked_student_contact@vidyaloans.com';
