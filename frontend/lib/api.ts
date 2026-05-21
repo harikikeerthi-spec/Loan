@@ -1167,3 +1167,94 @@ export const staffProfileApi = {
         }),
 };
 
+// ─── Bank Portal ──────────────────────────────────────────────────────
+export const bankApi = {
+    // Incoming Files
+    getIncomingFiles: (params?: { page?: number; limit?: number }) => {
+        const q = new URLSearchParams();
+        if (params?.page) q.set('page', String(params.page));
+        if (params?.limit) q.set('limit', String(params.limit));
+        return apiFetch(`/api/bank/incoming?${q.toString()}`);
+    },
+    getIncomingFileDetail: (id: string) => apiFetch(`/api/bank/incoming/${id}`),
+
+    // File Logging
+    logFile: (id: string, data: { lanNumber: string; assignedOfficer?: string; branchId?: string; productId?: string; notes?: string }) =>
+        apiFetch(`/api/bank/applications/${id}/log-file`, { method: 'POST', body: JSON.stringify(data) }),
+    getByLan: (lan: string) => apiFetch(`/api/bank/applications/by-lan/${encodeURIComponent(lan)}`),
+
+    // My Files
+    getMyFiles: (params?: { status?: string; search?: string; page?: number; limit?: number }) => {
+        const q = new URLSearchParams();
+        if (params?.status) q.set('status', params.status);
+        if (params?.search) q.set('search', params.search);
+        if (params?.page) q.set('page', String(params.page));
+        if (params?.limit) q.set('limit', String(params.limit));
+        return apiFetch(`/api/bank/my-files?${q.toString()}`);
+    },
+    getMyFileDetail: (id: string) => apiFetch(`/api/bank/my-files/${id}`),
+
+    // Decisions
+    createDecision: (id: string, data: any) =>
+        apiFetch(`/api/bank/applications/${id}/decision`, { method: 'POST', body: JSON.stringify(data) }),
+    amendDecision: (id: string, data: any) =>
+        apiFetch(`/api/bank/applications/${id}/decision`, { method: 'PUT', body: JSON.stringify(data) }),
+    uploadSanctionLetter: (id: string, data: { sanctionLetterUrl: string }) =>
+        apiFetch(`/api/bank/applications/${id}/sanction-letter`, { method: 'POST', body: JSON.stringify(data) }),
+
+    // ROI & Processing Fee
+    setROI: (id: string, data: { roiType: string; roiBase: number; roiEffective: number; roiSubsidy?: number }) =>
+        apiFetch(`/api/bank/applications/${id}/roi`, { method: 'PUT', body: JSON.stringify(data) }),
+    setProcessingFee: (id: string, data: any) =>
+        apiFetch(`/api/bank/applications/${id}/processing-fee`, { method: 'POST', body: JSON.stringify(data) }),
+    updateProcessingFee: (id: string, data: any) =>
+        apiFetch(`/api/bank/applications/${id}/processing-fee`, { method: 'PUT', body: JSON.stringify(data) }),
+
+    // Queries
+    raiseQuery: (id: string, data: { queryType: string; description: string; requiredDocs?: string }) =>
+        apiFetch(`/api/bank/applications/${id}/query`, { method: 'POST', body: JSON.stringify(data) }),
+    getQueries: (status?: string) => {
+        const q = status ? `?status=${status}` : '';
+        return apiFetch(`/api/bank/queries${q}`);
+    },
+    getQueryThread: (queryId: string) => apiFetch(`/api/bank/queries/${queryId}`),
+    resolveQuery: (queryId: string) => apiFetch(`/api/bank/queries/${queryId}/resolve`, { method: 'PUT' }),
+
+    // Documents
+    getApplicationDocuments: (id: string) => apiFetch(`/api/bank/applications/${id}/documents`),
+
+    // Disbursement
+    confirmDisbursement: (id: string, data: any) =>
+        apiFetch(`/api/bank/applications/${id}/disbursement`, { method: 'POST', body: JSON.stringify(data) }),
+    getDisbursements: () => apiFetch('/api/bank/disbursements'),
+
+    // Quality Rating
+    rateFileQuality: (id: string, data: { completeness: number; accuracy: number; clarity: number; overall: number; comments?: string }) =>
+        apiFetch(`/api/bank/applications/${id}/quality-rating`, { method: 'POST', body: JSON.stringify(data) }),
+
+    // Analytics
+    getChannelAnalytics: () => apiFetch('/api/bank/analytics/channel'),
+    getRejectionAnalytics: () => apiFetch('/api/bank/analytics/rejections'),
+    getPipelineAnalytics: () => apiFetch('/api/bank/analytics/pipeline'),
+    getAgingReport: () => apiFetch('/api/bank/analytics/aging'),
+    getSLAAnalytics: () => apiFetch('/api/bank/analytics/sla'),
+
+    // Config
+    getProducts: () => apiFetch('/api/bank/products'),
+    createProduct: (data: any) => apiFetch('/api/bank/products', { method: 'POST', body: JSON.stringify(data) }),
+    updateProduct: (id: string, data: any) => apiFetch(`/api/bank/products/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    getBranches: () => apiFetch('/api/bank/branches'),
+    createBranch: (data: any) => apiFetch('/api/bank/branches', { method: 'POST', body: JSON.stringify(data) }),
+    getOfficers: () => apiFetch('/api/bank/officers'),
+
+    // Export
+    exportApplications: (format?: string) => apiFetch(`/api/bank/export/applications${format ? `?format=${format}` : ''}`),
+
+    // Notifications
+    getNotifications: () => apiFetch('/api/bank/notifications'),
+    markNotificationRead: (id: string) => apiFetch(`/api/bank/notifications/${id}/read`, { method: 'PUT' }),
+
+    // Feedback
+    submitFeedback: (data: any) => apiFetch('/api/bank/feedback', { method: 'POST', body: JSON.stringify(data) }),
+};
+

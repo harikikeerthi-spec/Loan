@@ -58,6 +58,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
         { icon: "grid_view", label: "Matrix", path: "/bank/applications" },
         { icon: "monitoring", label: "Intelligence", path: "/bank/analytics" },
         { icon: "assignment", label: "Protocols", path: "/bank/tasks" },
+        { icon: "forum", label: "Queries", path: "/bank/queries" },
         { icon: "settings", label: "Config", path: "/bank/settings" },
     ];
 

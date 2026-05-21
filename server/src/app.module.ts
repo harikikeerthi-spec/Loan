@@ -21,6 +21,7 @@ import { ConnectedModule } from './connected/connected.module';
 import { UniversityModule } from './university/university.module';
 import { ChatModule } from './chat/chat.module';
 import { StaffProfileModule } from './staff-profile/staff-profile.module';
+import { BankModule } from './bank/bank.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 
@@ -50,6 +51,7 @@ import { join } from 'path';
     UniversityModule,
     ChatModule,
     StaffProfileModule,
+    BankModule,
   ],
   controllers: [AppController],
   providers: [AppService],
