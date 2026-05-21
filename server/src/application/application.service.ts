@@ -700,7 +700,18 @@ export class ApplicationService {
     }
 
     const { data: document } = await this.db.from('ApplicationDocument').select('id').eq('id', documentId).single();
-    if (!document) throw new NotFoundException('Document not found');
+    if (!document) {
+      const { data: userDoc } = await this.db.from('UserDocument').select('id').eq('id', documentId).single();
+      if (userDoc) {
+        const update: any = { status: data.status === 'verified' ? 'approved' : 'rejected' };
+        if (data.status === 'verified') update.updatedAt = new Date().toISOString();
+        
+        const { error } = await this.db.from('UserDocument').update(update).eq('id', documentId);
+        if (error) throw error;
+        return { success: true, message: `Vault document ${data.status} successfully` };
+      }
+      throw new NotFoundException('Document not found');
+    }
 
     const { data: updated, error } = await this.db
       .from('ApplicationDocument')

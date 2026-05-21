@@ -36,6 +36,7 @@
     "cache-manager": "^7.2.8",
     "dotenv": "^17.2.3",
     "firebase-admin": "^13.8.0",
+    "jsforce": "^3.10.15",
     "nodemailer": "^7.0.12",
     "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
