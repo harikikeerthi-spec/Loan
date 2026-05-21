@@ -11,26 +11,26 @@ import Link from "next/link";
 const NavItem = ({ icon, label, path, active, collapsed }: any) => (
     <Link
         href={path}
-        className={`flex items-center gap-4 p-4 rounded-[1.5rem] transition-all relative group overflow-hidden ${
-            active ? "text-white shadow-xl" : "text-gray-400 hover:text-gray-800"
+        className={`flex items-center gap-3 py-2 px-3 rounded-xl transition-all relative group overflow-hidden ${
+            active ? "text-white" : "text-gray-400 hover:text-gray-800"
         }`}
         style={active ? {
             background: 'linear-gradient(135deg, #6605c7, #8b24e5)',
-            boxShadow: '0 8px 25px rgba(102, 5, 199, 0.25)'
+            boxShadow: '0 4px 14px rgba(102, 5, 199, 0.22)'
         } : undefined}
     >
         {/* Hover background */}
         {!active && (
-            <div className="absolute inset-0 rounded-[1.5rem] opacity-0 group-hover:opacity-100 transition-opacity" 
+            <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
                 style={{ backgroundColor: 'rgba(102, 5, 199, 0.06)' }} />
         )}
 
-        <span className={`material-symbols-outlined text-xl relative z-10 transition-transform duration-300 ${active ? "scale-110" : "group-hover:scale-105"}`}>
+        <span className={`material-symbols-outlined text-[18px] relative z-10 transition-transform duration-300 ${active ? "scale-110" : "group-hover:scale-105"}`}>
             {icon}
         </span>
 
         {!collapsed && (
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] relative z-10 italic whitespace-nowrap">
+            <span className="text-[9.5px] font-black uppercase tracking-[0.18em] relative z-10 italic whitespace-nowrap">
                 {label}
             </span>
         )}
@@ -139,12 +139,12 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 }}
             >
                 {/* Logo Section */}
-                <div className="flex items-center gap-4 px-5 py-7 mb-4">
+                <div className="flex items-center gap-3 px-4 py-4 mb-2">
                     <div
-                        className="w-11 h-11 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-lg"
-                        style={{ background: 'linear-gradient(135deg, #6605c7, #8b24e5)', boxShadow: '0 8px 20px rgba(102,5,199,0.3)' }}
+                        className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg"
+                        style={{ background: 'linear-gradient(135deg, #6605c7, #8b24e5)', boxShadow: '0 6px 16px rgba(102,5,199,0.3)' }}
                     >
-                        <span className="material-symbols-outlined text-xl">account_balance</span>
+                        <span className="material-symbols-outlined text-lg">account_balance</span>
                     </div>
                     <AnimatePresence>
                         {!collapsed && (
@@ -155,11 +155,12 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                 transition={{ duration: 0.2 }}
                                 className="flex flex-col min-w-0"
                             >
-                                <span className="text-lg font-black text-gray-900 leading-none italic tracking-tight uppercase">
-                                    Vidya<span style={{ color: '#6605c7' }}>Loans</span>
+                                <span className="text-lg font-black text-gray-900 leading-none italic tracking-tight">
+                                    Vidhya<span style={{ color: '#6605c7' }}>Bank</span>
                                 </span>
-                                <span className="text-[8px] font-black uppercase tracking-[0.2em] mt-1 opacity-80 italic text-purple-600 truncate max-w-[150px]">
-                                    Bank Portal - {bankName}
+                                <span className="text-[8px] font-black uppercase tracking-[0.3em] mt-1 opacity-50 italic"
+                                    style={{ color: '#6605c7' }}>
+                                    Partner Matrix
                                 </span>
                             </motion.div>
                         )}
@@ -167,7 +168,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 </div>
 
                 {/* Nav Section */}
-                <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto no-scrollbar">
+                <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto no-scrollbar">
                     {navItems.map((item) => (
                         <NavItem
                             key={item.path}
@@ -179,40 +180,44 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 </nav>
 
                 {/* Footer Section */}
-                <div className="mt-auto px-4 pb-6 space-y-2">
-                    {/* Collapse Toggle */}
-                    <button
-                        onClick={() => setCollapsed(!collapsed)}
-                        className="w-full flex items-center gap-4 p-4 rounded-[1.5rem] text-gray-400 transition-all group"
-                        style={{ }}
-                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.04)')}
-                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
-                    >
-                        <span className={`material-symbols-outlined text-xl transition-transform duration-300 ${collapsed ? "rotate-180" : ""}`}>
-                            chevron_left
-                        </span>
-                        {!collapsed && <span className="text-[10px] font-black uppercase tracking-[0.2em] italic">Collapse</span>}
-                    </button>
+                <div className="mt-auto px-3 pb-4 space-y-2">
+                    {/* Collapse + Sign Out side by side */}
+                    <div className="flex gap-1.5">
+                        {/* Collapse */}
+                        <button
+                            onClick={() => setCollapsed(!collapsed)}
+                            title="Collapse"
+                            className="flex-1 flex items-center justify-center gap-2 py-2 px-2 rounded-xl text-gray-400 transition-all group"
+                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)')}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
+                        >
+                            <span className={`material-symbols-outlined text-[18px] transition-transform duration-300 ${collapsed ? "rotate-180" : ""}`}>
+                                chevron_left
+                            </span>
+                            {!collapsed && <span className="text-[9px] font-black uppercase tracking-[0.15em] italic">Collapse</span>}
+                        </button>
 
-                    {/* Logout */}
-                    <button
-                        onClick={async () => {
-                            await logout();
-                            sessionStorage.removeItem("selectedBank");
-                            router.push('/bank/login');
-                        }}
-                        className="w-full flex items-center gap-4 p-4 rounded-[1.5rem] transition-all group"
-                        style={{ color: '#f43f5e' }}
-                        onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(244,63,94,0.06)')}
-                        onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
-                    >
-                        <span className="material-symbols-outlined text-xl group-hover:rotate-12 transition-transform">power_settings_new</span>
-                        {!collapsed && <span className="text-[10px] font-black uppercase tracking-[0.2em] italic">Sign Out</span>}
-                    </button>
+                        {/* Sign Out */}
+                        <button
+                            onClick={async () => {
+                                await logout();
+                                sessionStorage.removeItem("selectedBank");
+                                router.push('/bank/login');
+                            }}
+                            title="Sign Out"
+                            className="flex-1 flex items-center justify-center gap-2 py-2 px-2 rounded-xl transition-all group"
+                            style={{ color: '#f43f5e' }}
+                            onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(244,63,94,0.06)')}
+                            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
+                        >
+                            <span className="material-symbols-outlined text-[18px] group-hover:rotate-12 transition-transform">power_settings_new</span>
+                            {!collapsed && <span className="text-[9px] font-black uppercase tracking-[0.15em] italic">Sign Out</span>}
+                        </button>
+                    </div>
 
                     {/* User Card */}
                     <div
-                        className="flex items-center gap-3 p-3 rounded-[1.5rem] border"
+                        className="flex items-center gap-2.5 p-2.5 rounded-xl border"
                         style={{
                             backgroundColor: 'rgba(102, 5, 199, 0.03)',
                             borderColor: 'rgba(102, 5, 199, 0.08)',
@@ -220,7 +225,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                         }}
                     >
                         <div
-                            className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-[11px] italic shrink-0 shadow-md"
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-[10px] italic shrink-0 shadow-md"
                             style={{ background: 'linear-gradient(135deg, #6605c7, #8b24e5)' }}
                         >
                             {user.firstName?.[0]}{user.lastName?.[0]}
@@ -233,14 +238,11 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                     exit={{ opacity: 0 }}
                                     className="flex-1 min-w-0"
                                 >
-                                    <p className="text-[10px] font-black text-gray-900 truncate uppercase italic">
+                                    <p className="text-[9.5px] font-black text-gray-900 truncate uppercase italic">
                                         {user.firstName} {user.lastName}
                                     </p>
-                                    <p className="text-[8px] font-bold text-purple-600 uppercase tracking-widest mt-0.5 truncate">
-                                        {bankName} Officer
-                                    </p>
-                                    <p className="text-[7px] font-bold text-gray-400 uppercase tracking-widest truncate">
-                                        {branchName}
+                                    <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
+                                        Bank Auditor
                                     </p>
                                 </motion.div>
                             )}

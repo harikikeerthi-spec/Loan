@@ -5,17 +5,151 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { authApi } from "@/lib/api";
-import { auth, googleProvider } from "@/lib/firebase";
-import { signInWithPopup } from "firebase/auth";
 
 const SUPPORTED_BANKS = [
-    { id: "auxilo", name: "Auxilo Finserve", logo: "/banks/auxilo.png" },
-    { id: "avanse", name: "Avanse Financial", logo: "/banks/avanse.png" },
-    { id: "credila", name: "HDFC Credila", logo: "/banks/credila.png" },
-    { id: "idfc", name: "IDFC FIRST Bank", logo: "/banks/idfc.png" },
+    { id: "auxilo",     name: "Auxilo Finserve",    logo: "/banks/auxilo.png" },
+    { id: "avanse",     name: "Avanse Financial",   logo: "/banks/avanse.png" },
+    { id: "credila",    name: "HDFC Credila",        logo: "/banks/credila.png" },
+    { id: "idfc",       name: "IDFC FIRST Bank",    logo: "/banks/idfc.png" },
     { id: "poonawalla", name: "Poonawalla Fincorp", logo: "/banks/poonawalla.jpg" },
 ];
 
+// ---------------------------------------------------------------------------
+// BankDropdown — opens a scrollable list below the trigger button
+// ---------------------------------------------------------------------------
+function BankDropdown({
+    selected,
+    onChange,
+}: {
+    selected: string | null;
+    onChange: (id: string) => void;
+}) {
+    const [open, setOpen] = useState(false);
+    const ref = useRef<HTMLDivElement>(null);
+
+    const selectedBank = SUPPORTED_BANKS.find((b) => b.id === selected);
+
+    // Close on outside click
+    useEffect(() => {
+        const handler = (e: MouseEvent) => {
+            if (ref.current && !ref.current.contains(e.target as Node)) {
+                setOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handler);
+        return () => document.removeEventListener("mousedown", handler);
+    }, []);
+
+    return (
+        <div ref={ref} className="relative">
+            {/* Trigger */}
+            <button
+                type="button"
+                onClick={() => setOpen((o) => !o)}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all"
+                style={{
+                    background: open ? "rgba(102,5,199,0.04)" : "rgba(249,250,251,0.7)",
+                    borderColor: open ? "rgba(102,5,199,0.4)" : "rgba(0,0,0,0.08)",
+                    boxShadow: open ? "0 0 0 4px rgba(102,5,199,0.06)" : "none",
+                }}
+            >
+                {selectedBank ? (
+                    <>
+                        <div className="w-8 h-8 rounded-lg border border-gray-100 bg-white flex items-center justify-center overflow-hidden p-0.5 shrink-0">
+                            <img src={selectedBank.logo} alt={selectedBank.name} className="w-full h-full object-contain" />
+                        </div>
+                        <span className="text-sm font-bold text-gray-900 flex-1">{selectedBank.name}</span>
+                    </>
+                ) : (
+                    <>
+                        <span className="material-symbols-outlined text-xl text-gray-400">account_balance</span>
+                        <span className="text-sm text-gray-400 flex-1">Select your bank…</span>
+                    </>
+                )}
+                <span
+                    className="material-symbols-outlined text-gray-400 shrink-0 transition-transform duration-200"
+                    style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", fontSize: 20 }}
+                >
+                    expand_more
+                </span>
+            </button>
+
+            {/* Dropdown panel */}
+            {open && (
+                <div
+                    className="absolute left-0 right-0 z-50 mt-2 rounded-2xl border overflow-hidden"
+                    style={{
+                        background: "rgba(255,255,255,0.98)",
+                        backdropFilter: "blur(20px)",
+                        WebkitBackdropFilter: "blur(20px)",
+                        borderColor: "rgba(102,5,199,0.12)",
+                        boxShadow: "0 16px 48px rgba(102,5,199,0.14), 0 2px 8px rgba(0,0,0,0.06)",
+                    }}
+                >
+                    {/* Scrollable list — max 3.5 items visible */}
+                    <div className="overflow-y-auto" style={{ maxHeight: 252 }}>
+                        {SUPPORTED_BANKS.map((bank, i) => {
+                            const isSelected = bank.id === selected;
+                            return (
+                                <button
+                                    key={bank.id}
+                                    type="button"
+                                    onClick={() => { onChange(bank.id); setOpen(false); }}
+                                    className="w-full flex items-center gap-3 px-4 py-3.5 text-left transition-all"
+                                    style={{
+                                        background: isSelected
+                                            ? "linear-gradient(90deg, rgba(102,5,199,0.07) 0%, rgba(139,36,229,0.04) 100%)"
+                                            : undefined,
+                                        borderBottom: i < SUPPORTED_BANKS.length - 1
+                                            ? "1px solid rgba(0,0,0,0.05)"
+                                            : undefined,
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isSelected) e.currentTarget.style.background = "rgba(102,5,199,0.04)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isSelected) e.currentTarget.style.background = "";
+                                    }}
+                                >
+                                    <div
+                                        className="w-9 h-9 rounded-xl border flex items-center justify-center overflow-hidden p-1 shrink-0"
+                                        style={{
+                                            borderColor: isSelected ? "rgba(102,5,199,0.25)" : "rgba(0,0,0,0.07)",
+                                            background: isSelected ? "rgba(102,5,199,0.06)" : "#fff",
+                                            boxShadow: isSelected ? "0 2px 10px rgba(102,5,199,0.12)" : "0 1px 3px rgba(0,0,0,0.05)",
+                                        }}
+                                    >
+                                        <img src={bank.logo} alt={bank.name} className="w-full h-full object-contain" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p
+                                            className="text-sm font-bold truncate"
+                                            style={{ color: isSelected ? "#6605c7" : "#111827" }}
+                                        >
+                                            {bank.name}
+                                        </p>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mt-0.5">
+                                            Partner Institution
+                                        </p>
+                                    </div>
+                                    {isSelected && (
+                                        <span className="material-symbols-outlined shrink-0" style={{ color: "#6605c7", fontSize: 18 }}>
+                                            check_circle
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Main login page
+// ---------------------------------------------------------------------------
 function BankLoginContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -24,7 +158,7 @@ function BankLoginContent() {
     const [selectedBank, setSelectedBank] = useState<string | null>(null);
     const [email, setEmail] = useState("");
     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
-    const [step, setStep] = useState<"bank_select" | "email" | "otp">("bank_select");
+    const [step, setStep] = useState<"form" | "otp">("form");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [resendDisabled, setResendDisabled] = useState(false);
@@ -41,18 +175,13 @@ function BankLoginContent() {
         }
     }, [countdown]);
 
-    const handleBankSelect = (bankId: string) => {
-        setSelectedBank(bankId);
-        // We can store it in sessionStorage so the dashboard knows which bank they selected
-        sessionStorage.setItem("selectedBank", bankId);
-        setStep("email");
-    };
-
     const sendOtp = async () => {
+        if (!selectedBank) { setError("Please select your bank first"); return; }
         if (!email.trim()) { setError("Please enter your email"); return; }
         setLoading(true);
         setError("");
         try {
+            sessionStorage.setItem("selectedBank", selectedBank);
             await authApi.sendOtp(email.trim()) as { success: boolean };
             setStep("otp");
             setResendDisabled(true);
@@ -70,9 +199,7 @@ function BankLoginContent() {
         const newOtp = [...otp];
         newOtp[index] = digit;
         setOtp(newOtp);
-        if (digit && index < 5) {
-            otpRefs.current[index + 1]?.focus();
-        }
+        if (digit && index < 5) otpRefs.current[index + 1]?.focus();
     };
 
     const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
@@ -103,10 +230,8 @@ function BankLoginContent() {
                 email: email.trim(),
                 firstName: data.firstName,
                 lastName: data.lastName,
-                role: data.role as any
+                role: data.role as any,
             });
-
-            // Redirect bankers to their dashboard
             if (data.role === "bank" || data.role === "partner_bank" || data.role === "admin") {
                 router.push("/bank/dashboard");
             } else {
@@ -119,164 +244,193 @@ function BankLoginContent() {
         }
     };
 
-    const handleGoogleLogin = async () => {
-        setLoading(true);
-        setError("");
-        try {
-            if (!auth) throw new Error("Google Login is not configured.");
-            const result = await signInWithPopup(auth, googleProvider);
-            const idToken = await result.user.getIdToken();
-            
-            const data = await authApi.firebaseLogin(idToken) as any;
-            if (data.refresh_token) localStorage.setItem("refreshToken", data.refresh_token);
-            
-            login(data.access_token, {
-                id: data.userId,
-                email: result.user.email || "",
-                firstName: data.firstName,
-                lastName: data.lastName,
-                role: data.role as any
-            });
-
-            if (data.role === "bank" || data.role === "partner_bank" || data.role === "admin") {
-                router.push("/bank/dashboard");
-            } else {
-                setError("Unauthorized role. You must be bank staff to access this portal.");
-            }
-        } catch (e: any) {
-            setError(e.message || "Failed to login with Google");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (step === "email") sendOtp();
-        else if (step === "otp") verifyOtp();
-    };
+    const selectedBankName = SUPPORTED_BANKS.find((b) => b.id === selectedBank)?.name;
 
     return (
-        <div className="min-h-screen flex items-center justify-center px-4 relative bg-gray-50/50">
+        <div
+            className="min-h-screen flex items-center justify-center px-4 relative"
+            style={{
+                background: `
+                    radial-gradient(ellipse 70% 60% at 10% 10%, rgba(102,5,199,0.10) 0%, transparent 60%),
+                    radial-gradient(ellipse 60% 50% at 90% 10%, rgba(224,195,137,0.10) 0%, transparent 55%),
+                    radial-gradient(ellipse 70% 70% at 50% 100%, rgba(79,70,229,0.07) 0%, transparent 60%),
+                    linear-gradient(160deg, #f5f0ff 0%, #faf8ff 40%, #f0f4ff 70%, #f8f5ff 100%)
+                `,
+            }}
+        >
             <div className="relative z-10 w-full max-w-md">
-                
-                {/* Logo Area */}
+
+                {/* Logo */}
                 <div className="text-center mb-8">
                     <Link href="/" className="inline-flex items-center gap-2 mb-6 group">
-                        <img 
-                            src="/vidhyaloan_logo.png" 
-                            alt="Vidhyaloan Logo" 
-                            className="w-10 h-10 object-contain group-hover:scale-105 transition-transform" 
+                        <img
+                            src="/vidhyaloan_logo.png"
+                            alt="Vidhyaloan Logo"
+                            className="w-10 h-10 object-contain group-hover:scale-105 transition-transform"
                         />
-                        <span className="font-bold text-2xl font-display text-gray-900 tracking-tight">Vidhyaloan Staff</span>
+                        <span className="font-bold text-2xl font-display text-gray-900 tracking-tight">
+                            Vidhyaloan Staff
+                        </span>
                     </Link>
                     <h1 className="text-2xl font-bold text-gray-900 font-display mb-1.5 tracking-tight">
-                        {step === "bank_select" ? "Select Your Bank Node" : step === "email" ? "Banker Access" : "Verify Authorization"}
+                        {step === "form" ? "Banker Access" : "Verify Authorization"}
                     </h1>
-                    <p className="text-gray-500 text-[13px] font-normal">
-                        {step === "bank_select" 
-                            ? "Please choose your financial institution to proceed"
-                            : step === "email"
-                            ? `Authenticating for ${SUPPORTED_BANKS.find(b => b.id === selectedBank)?.name}`
+                    <p className="text-gray-500 text-[13px]">
+                        {step === "form"
+                            ? "Select your bank and enter your corporate email"
                             : `Secure OTP sent to ${email}`}
                     </p>
                 </div>
 
-                <div className="bg-white rounded-2xl p-8 shadow-xl shadow-black/[0.03] border border-gray-100">
-                    {step === "bank_select" && (
-                        <div className="space-y-3">
-                            {SUPPORTED_BANKS.map((bank) => (
-                                <button
-                                    key={bank.id}
-                                    onClick={() => handleBankSelect(bank.id)}
-                                    className="w-full p-4 rounded-xl border border-gray-100 hover:border-[#6605c7] hover:bg-[#6605c7]/5 flex items-center gap-4 transition-all group text-left"
-                                >
-                                    <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center shadow-sm overflow-hidden border border-gray-100 p-1">
-                                        <img src={bank.logo} alt={bank.name} className="w-full h-full object-contain" />
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-bold text-gray-900">{bank.name}</p>
-                                        <p className="text-[10px] text-gray-400 uppercase tracking-wider font-bold">Partner Institution</p>
-                                    </div>
-                                    <span className="material-symbols-outlined ml-auto text-gray-300 group-hover:text-[#6605c7]">chevron_right</span>
-                                </button>
-                            ))}
+                {/* Card */}
+                <div
+                    className="rounded-3xl p-8 border"
+                    style={{
+                        background: "rgba(255,255,255,0.88)",
+                        backdropFilter: "blur(24px)",
+                        WebkitBackdropFilter: "blur(24px)",
+                        borderColor: "rgba(102,5,199,0.10)",
+                        boxShadow: "0 20px 60px rgba(102,5,199,0.08), 0 2px 8px rgba(0,0,0,0.04)",
+                    }}
+                >
+                    {/* ── FORM STEP ── */}
+                    {step === "form" && (
+                        <div className="space-y-5">
+
+                            {/* Bank dropdown */}
+                            <div>
+                                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">
+                                    Select Your Bank
+                                </label>
+                                <BankDropdown selected={selectedBank} onChange={setSelectedBank} />
+                            </div>
+
+                            {/* Email */}
+                            <div>
+                                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">
+                                    Corporate Email Address
+                                </label>
+                                <input
+                                    type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    disabled={loading}
+                                    placeholder="staff@bank.com"
+                                    className="w-full px-4 py-3 rounded-xl text-gray-900 text-sm placeholder-gray-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                                    style={{
+                                        background: "rgba(249,250,251,0.7)",
+                                        border: "1px solid rgba(0,0,0,0.08)",
+                                        outline: "none",
+                                    }}
+                                    onFocus={(e) => {
+                                        e.target.style.borderColor = "rgba(102,5,199,0.4)";
+                                        e.target.style.boxShadow = "0 0 0 4px rgba(102,5,199,0.06)";
+                                    }}
+                                    onBlur={(e) => {
+                                        e.target.style.borderColor = "rgba(0,0,0,0.08)";
+                                        e.target.style.boxShadow = "none";
+                                    }}
+                                    onKeyDown={(e) => e.key === "Enter" && sendOtp()}
+                                />
+                            </div>
+
+                            {/* Error */}
+                            {error && (
+                                <div className="px-4 py-2.5 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs font-medium flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-base">error</span>
+                                    {error}
+                                </div>
+                            )}
+
+                            {/* Submit */}
+                            <button
+                                type="button"
+                                onClick={sendOtp}
+                                disabled={loading}
+                                className="w-full py-3.5 text-white font-bold rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-2 text-[14px]"
+                                style={{
+                                    background: "linear-gradient(135deg, #6605c7 0%, #8b24e5 100%)",
+                                    boxShadow: "0 8px 24px rgba(102,5,199,0.28)",
+                                }}
+                                onMouseEnter={(e) => { if (!loading) e.currentTarget.style.boxShadow = "0 12px 32px rgba(102,5,199,0.38)"; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "0 8px 24px rgba(102,5,199,0.28)"; }}
+                            >
+                                {loading ? (
+                                    <>
+                                        <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
+                                        Sending OTP…
+                                    </>
+                                ) : (
+                                    <>
+                                        Get OTP
+                                        <span className="material-symbols-outlined text-base">arrow_forward</span>
+                                    </>
+                                )}
+                            </button>
                         </div>
                     )}
 
-                    {step === "email" && (
-                        <>
-                            <button
-                                type="button"
-                                onClick={handleGoogleLogin}
-                                disabled={loading}
-                                className="w-full py-3 px-4 bg-white border border-gray-200 rounded-xl flex items-center justify-center gap-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all mb-6"
-                            >
-                                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-                                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.66l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                                </svg>
-                                Continue with Google
-                            </button>
+                    {/* ── OTP STEP ── */}
+                    {step === "otp" && (
+                        <div className="space-y-6">
+                            {/* Bank badge */}
+                            {selectedBankName && (
+                                <div
+                                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-bold"
+                                    style={{
+                                        background: "rgba(102,5,199,0.06)",
+                                        color: "#6605c7",
+                                        border: "1px solid rgba(102,5,199,0.15)",
+                                    }}
+                                >
+                                    <span className="material-symbols-outlined text-base">account_balance</span>
+                                    {selectedBankName}
+                                </div>
+                            )}
 
-                            <div className="relative flex items-center gap-4 mb-6">
-                                <div className="flex-1 h-px bg-gray-100"></div>
-                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Or corporate email</span>
-                                <div className="flex-1 h-px bg-gray-100"></div>
-                            </div>
-                        </>
-                    )}
-
-                    {step !== "bank_select" && (
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            {step === "email" && (
-                                <div>
-                                    <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Corporate Email Address</label>
-                                    <div className="relative">
+                            <div>
+                                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 ml-1">
+                                    Enter OTP
+                                </label>
+                                <div className="flex gap-2.5 justify-center" onPaste={handleOtpPaste}>
+                                    {otp.map((digit, i) => (
                                         <input
-                                            type="email"
-                                            value={email}
-                                            onChange={(e) => setEmail(e.target.value)}
-                                            disabled={loading}
-                                            placeholder="staff@bank.com"
-                                            className="w-full px-4 py-3 bg-gray-50/50 border border-gray-100 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-                                            required
+                                            key={i}
+                                            ref={(el) => { otpRefs.current[i] = el; }}
+                                            type="text"
+                                            inputMode="numeric"
+                                            maxLength={1}
+                                            value={digit}
+                                            onChange={(e) => handleOtpChange(i, e.target.value)}
+                                            onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                                            className="w-11 h-12 text-center text-lg font-bold rounded-xl transition-all"
+                                            style={{
+                                                background: "rgba(249,250,251,0.7)",
+                                                border: "1px solid rgba(0,0,0,0.08)",
+                                                outline: "none",
+                                                color: "#111",
+                                            }}
+                                            onFocus={(e) => {
+                                                e.target.style.borderColor = "rgba(102,5,199,0.4)";
+                                                e.target.style.boxShadow = "0 0 0 4px rgba(102,5,199,0.06)";
+                                            }}
+                                            onBlur={(e) => {
+                                                e.target.style.borderColor = "rgba(0,0,0,0.08)";
+                                                e.target.style.boxShadow = "none";
+                                            }}
                                         />
-                                    </div>
+                                    ))}
                                 </div>
-                            )}
-
-                            {step === "otp" && (
-                                <div>
-                                    <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 ml-1">Enter OTP</label>
-                                    <div className="flex gap-2.5 justify-center" onPaste={handleOtpPaste}>
-                                        {otp.map((digit, i) => (
-                                            <input
-                                                key={i}
-                                                ref={(el) => { otpRefs.current[i] = el; }}
-                                                type="text"
-                                                inputMode="numeric"
-                                                maxLength={1}
-                                                value={digit}
-                                                onChange={(e) => handleOtpChange(i, e.target.value)}
-                                                onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                                                className="w-11 h-12 text-center text-lg font-bold bg-gray-50/50 border border-gray-100 rounded-xl text-gray-900 focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 transition-all"
-                                            />
-                                        ))}
-                                    </div>
-                                    <div className="text-center mt-4">
-                                        {resendDisabled ? (
-                                            <span className="text-[11px] text-gray-400 font-medium tracking-tight">Resend code in {countdown}s</span>
-                                        ) : (
-                                            <button type="button" onClick={sendOtp} className="text-[11px] text-[#6605c7] hover:underline font-bold uppercase tracking-wider">
-                                                Resend OTP
-                                            </button>
-                                        )}
-                                    </div>
+                                <div className="text-center mt-4">
+                                    {resendDisabled ? (
+                                        <span className="text-[11px] text-gray-400 font-medium">Resend code in {countdown}s</span>
+                                    ) : (
+                                        <button type="button" onClick={sendOtp} className="text-[11px] text-[#6605c7] hover:underline font-bold uppercase tracking-wider">
+                                            Resend OTP
+                                        </button>
+                                    )}
                                 </div>
-                            )}
+                            </div>
 
                             {error && (
                                 <div className="px-4 py-2.5 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs font-medium flex items-center gap-2">
@@ -286,32 +440,40 @@ function BankLoginContent() {
                             )}
 
                             <button
-                                type="submit"
+                                type="button"
+                                onClick={verifyOtp}
                                 disabled={loading}
-                                className="w-full py-3.5 bg-[#6605c7] text-white font-bold rounded-xl hover:bg-[#5a04b1] active:scale-[0.98] transition-all disabled:opacity-60 flex items-center justify-center gap-2 shadow-lg shadow-[#6605c7]/20 text-[14px]"
+                                className="w-full py-3.5 text-white font-bold rounded-xl transition-all disabled:opacity-60 flex items-center justify-center gap-2 text-[14px]"
+                                style={{
+                                    background: "linear-gradient(135deg, #6605c7 0%, #8b24e5 100%)",
+                                    boxShadow: "0 8px 24px rgba(102,5,199,0.28)",
+                                }}
                             >
                                 {loading ? (
                                     <>
                                         <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
-                                        {step === "email" ? "Sending..." : "Verifying..."}
+                                        Verifying…
                                     </>
-                                ) : step === "email" ? (
-                                    <>Get OTP <span className="material-symbols-outlined text-base">arrow_forward</span></>
                                 ) : (
-                                    <>Authorize Access <span className="material-symbols-outlined text-base">security</span></>
+                                    <>
+                                        Authorize Access
+                                        <span className="material-symbols-outlined text-base">security</span>
+                                    </>
                                 )}
                             </button>
-                            
-                            {step !== "otp" && (
-                                <button type="button" onClick={() => setStep("bank_select")} className="w-full text-center text-[11px] text-gray-400 hover:text-[#6605c7] font-bold uppercase tracking-widest mt-4">
-                                    ← Change Bank
-                                </button>
-                            )}
-                        </form>
+
+                            <button
+                                type="button"
+                                onClick={() => { setStep("form"); setOtp(["", "", "", "", "", ""]); setError(""); }}
+                                className="w-full text-center text-[11px] text-gray-400 hover:text-[#6605c7] font-bold uppercase tracking-widest"
+                            >
+                                ← Change Bank or Email
+                            </button>
+                        </div>
                     )}
                 </div>
 
-                <p className="text-center text-gray-400 text-[11px] mt-8 font-normal leading-relaxed">
+                <p className="text-center text-gray-400 text-[11px] mt-8 leading-relaxed">
                     By accessing this portal, you agree to strict confidentiality agreements. Unauthorized access is prohibited.
                 </p>
             </div>

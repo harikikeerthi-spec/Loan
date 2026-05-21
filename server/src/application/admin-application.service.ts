@@ -298,11 +298,29 @@ export class AdminApplicationService {
     /**
      * Get portfolio analysis and health metrics
      */
-    async getPortfolioAnalysis() {
+    async getPortfolioAnalysis(user?: any, bankId?: string) {
         try {
-            const { data: applications, error } = await this.db
-                .from('LoanApplication')
-                .select('*');
+            const isBank = (user?.role === 'bank' || user?.role === 'partner_bank');
+            let bankName: string | null = null;
+            if (isBank) {
+                const bId = bankId || user?.firstName;
+                if (bId) {
+                    const lower = bId.toLowerCase();
+                    if (lower.includes('credila')) bankName = 'HDFC Credila';
+                    else if (lower.includes('poonawalla')) bankName = 'Poonawalla Fincorp';
+                    else if (lower.includes('idfc')) bankName = 'IDFC First Bank';
+                    else if (lower.includes('avanse')) bankName = 'Avanse Financial Services';
+                    else if (lower.includes('auxilo')) bankName = 'Auxilo';
+                    else bankName = bId;
+                }
+            }
+
+            let query = this.db.from('LoanApplication').select('*');
+            if (isBank && bankName) {
+                query = query.ilike('bank', `%${bankName}%`);
+            }
+
+            const { data: applications, error } = await query;
 
             if (error) throw error;
 
@@ -337,6 +355,31 @@ export class AdminApplicationService {
                     ),
                 }));
 
+            // Group by month for the last 6 months (based on submittedAt)
+            const monthlyAmounts: number[] = [0, 0, 0, 0, 0, 0];
+            const months: string[] = [];
+            const now = new Date();
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                months.push(d.toLocaleString('en-US', { month: 'short' }));
+            }
+
+            applications.forEach(app => {
+                if (app.status !== 'draft' && app.submittedAt) {
+                    const date = new Date(app.submittedAt);
+                    const diffMonths = (now.getFullYear() - date.getFullYear()) * 12 + (now.getMonth() - date.getMonth());
+                    if (diffMonths >= 0 && diffMonths < 6) {
+                        const index = 5 - diffMonths;
+                        monthlyAmounts[index] += (app.amount || 0);
+                    }
+                }
+            });
+
+            const disbursementTrend = months.map((month, idx) => ({
+                month,
+                amount: Number((monthlyAmounts[idx] / 10000000).toFixed(2)) // in Cr
+            }));
+
             return {
                 totalPortfolioValue: totalValue,
                 totalApplications: totalCount,
@@ -347,22 +390,42 @@ export class AdminApplicationService {
                     .filter(a => a.status === 'disbursed')
                     .reduce((sum, a) => sum + (a.amount || 0), 0),
                 topUniversities,
+                disbursementTrend,
             };
         } catch (e) {
             throw new BadRequestException(`Portfolio analysis failed: ${e.message}`);
         }
     }
 
-    /**
-     * Get compliance report
-     */
-    async getComplianceReport() {
+    async getComplianceReport(user?: any, bankId?: string) {
         try {
-            const { data: applications, error } = await this.db
-                .from('LoanApplication')
-                .select('*');
+            const isBank = (user?.role === 'bank' || user?.role === 'partner_bank');
+            let bankName: string | null = null;
+            if (isBank) {
+                const bId = bankId || user?.firstName;
+                if (bId) {
+                    const lower = bId.toLowerCase();
+                    if (lower.includes('credila')) bankName = 'HDFC Credila';
+                    else if (lower.includes('poonawalla')) bankName = 'Poonawalla Fincorp';
+                    else if (lower.includes('idfc')) bankName = 'IDFC First Bank';
+                    else if (lower.includes('avanse')) bankName = 'Avanse Financial Services';
+                    else if (lower.includes('auxilo')) bankName = 'Auxilo';
+                    else bankName = bId;
+                }
+            }
+
+            let query = this.db.from('LoanApplication').select('*');
+            if (isBank && bankName) {
+                query = query.ilike('bank', `%${bankName}%`);
+            }
+
+            const { data: applications, error } = await query;
 
             if (error) throw error;
+
+            const totalCount = applications.length;
+            const verifiedCount = applications.filter(a => a.isVerified).length;
+            const overallCompliance = totalCount > 0 ? Math.round((verifiedCount / totalCount) * 100) : 100;
 
             const report = {
                 rbiCompliance: {
@@ -393,7 +456,7 @@ export class AdminApplicationService {
                     status: 'compliant',
                     detail: 'All applicants verified through DigiLocker',
                 },
-                overallCompliance: Math.round((applications.filter(a => a.isVerified).length / applications.length) * 100),
+                overallCompliance,
             };
 
             return report;
