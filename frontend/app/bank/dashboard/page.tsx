@@ -165,11 +165,11 @@ export default function BankDashboard() {
     // Kanban board data
     const kanbanData = useMemo(() => {
         return {
-            incoming: allApplications.filter(app => app.status?.toLowerCase() === "pending"),
-            logged: allApplications.filter(app => app.status?.toLowerCase() === "submitted"),
-            review: allApplications.filter(app => ["submitted_to_bank", "under_bank_review"].includes(app.status?.toLowerCase())),
-            decided: allApplications.filter(app => ["approved", "rejected"].includes(app.status?.toLowerCase())),
-            closed: allApplications.filter(app => app.status?.toLowerCase() === "disbursed")
+            incoming: allApplications.filter((app: any) => app.status?.toLowerCase() === "pending"),
+            logged: allApplications.filter((app: any) => app.status?.toLowerCase() === "submitted"),
+            review: allApplications.filter((app: any) => ["submitted_to_bank", "under_bank_review"].includes(app.status?.toLowerCase())),
+            decided: allApplications.filter((app: any) => ["approved", "rejected"].includes(app.status?.toLowerCase())),
+            closed: allApplications.filter((app: any) => app.status?.toLowerCase() === "disbursed")
         };
     }, [allApplications]);
 
@@ -203,15 +203,15 @@ export default function BankDashboard() {
     // Derived Statistics
     const metrics = useMemo(() => {
         const total = allApplications.length;
-        const totalValue = allApplications.reduce((acc, app) => acc + (app.amount || 0), 0);
+        const totalValue = allApplications.reduce((acc: number, app: any) => acc + (app.amount || 0), 0);
         
-        const sanctionedApps = allApplications.filter(app => ["approved", "sanctioned", "conditional_sanction", "disbursed"].includes(app.status?.toLowerCase()));
+        const sanctionedApps = allApplications.filter((app: any) => ["approved", "sanctioned", "conditional_sanction", "disbursed"].includes(app.status?.toLowerCase()));
         const sanctionRate = total > 0 ? (sanctionedApps.length / total) * 100 : 0;
         
-        const disbursedApps = allApplications.filter(app => app.status?.toLowerCase() === "disbursed");
-        const disbursedValue = disbursedApps.reduce((acc, app) => acc + (app.amount || 0), 0);
+        const disbursedApps = allApplications.filter((app: any) => app.status?.toLowerCase() === "disbursed");
+        const disbursedValue = disbursedApps.reduce((acc: number, app: any) => acc + (app.amount || 0), 0);
 
-        const pendingApps = allApplications.filter(app => ["pending", "submitted", "submitted_to_bank"].includes(app.status?.toLowerCase()));
+        const pendingApps = allApplications.filter((app: any) => ["pending", "submitted", "submitted_to_bank"].includes(app.status?.toLowerCase()));
 
         return {
             total,
@@ -225,7 +225,7 @@ export default function BankDashboard() {
 
     // Aging SLA report groupings
     const agingReport = useMemo(() => {
-        return allApplications.map((app) => {
+        return allApplications.map((app: any) => {
             const submittedDate = app.submittedAt ? new Date(app.submittedAt) : new Date();
             const days = differenceInDays(new Date(), submittedDate);
             
@@ -420,7 +420,7 @@ export default function BankDashboard() {
                         onClick={() => {
                             const csvContent = "data:text/csv;charset=utf-8," 
                                 + ["ID,Name,Amount,Type,Status"].join(",") + "\n"
-                                + allApplications.map(e => `${e.applicationNumber},${e.firstName} ${e.lastName},${e.amount},${e.loanType},${e.status}`).join("\n");
+                                + allApplications.map((e: any) => `${e.applicationNumber},${e.firstName} ${e.lastName},${e.amount},${e.loanType},${e.status}`).join("\n");
                             const encodedUri = encodeURI(csvContent);
                             const link = document.createElement("a");
                             link.setAttribute("href", encodedUri);

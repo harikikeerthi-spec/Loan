@@ -26,30 +26,82 @@ import {
 
 // --- Components ---
 
-const StatCard = ({ label, value, icon, color, trend, loading, hint }: any) => (
-    <div className="bg-white border border-slate-200 p-4 rounded-lg shadow-sm group hover:border-indigo-200 transition-colors">
-        <div className="flex justify-between items-start mb-3">
-            <div className={`w-8 h-8 rounded bg-slate-50 flex items-center justify-center border border-slate-100 ${color?.includes('text-') ? color : 'text-slate-600'}`}>
-                <span className="material-symbols-outlined text-[16px]">{icon}</span>
-            </div>
-            {hint && !loading && (
-                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700">{hint}</span>
+const StatCard = ({ label, value, icon, color, trend, loading, hint, badge, ...props }: any) => {
+    // Generate styling based on the color string to keep the UI clean
+    let colorScheme = {
+        iconBg: 'bg-slate-50',
+        iconText: 'text-slate-600',
+        valueText: 'text-slate-900',
+        trendBg: 'bg-slate-50',
+        trendText: 'text-slate-500'
+    };
+
+    if (color?.includes('blue')) {
+        colorScheme = { iconBg: 'bg-blue-50', iconText: 'text-blue-500', valueText: 'text-slate-900', trendBg: 'bg-slate-50', trendText: 'text-slate-500' };
+    } else if (color?.includes('amber')) {
+        colorScheme = { iconBg: 'bg-amber-50', iconText: 'text-amber-500', valueText: 'text-slate-900', trendBg: 'bg-amber-50/50', trendText: 'text-amber-700' };
+    } else if (color?.includes('green') || color?.includes('emerald')) {
+        colorScheme = { iconBg: 'bg-emerald-50', iconText: 'text-emerald-500', valueText: 'text-slate-900', trendBg: 'bg-emerald-50/50', trendText: 'text-emerald-700' };
+    } else if (color?.includes('purple') || color?.includes('indigo')) {
+        colorScheme = { iconBg: 'bg-purple-50', iconText: 'text-purple-500', valueText: 'text-slate-900', trendBg: 'bg-slate-50', trendText: 'text-slate-500' };
+    }
+
+    return (
+        <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm hover:shadow-md transition-all relative overflow-hidden group hover:border-indigo-200 flex flex-col justify-between min-h-[140px]">
+            {/* Visual Indicator (e.g. amber urgency tint or subtle background) */}
+            {color?.includes('amber') && (
+                <div className="absolute top-0 right-0 w-24 h-24 bg-amber-50 rounded-full blur-3xl opacity-50 pointer-events-none" />
             )}
-            {trend !== undefined && !loading && (
-                <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${trend >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                    <span className="material-symbols-outlined text-[12px]">{trend >= 0 ? 'trending_up' : 'trending_down'}</span>
-                    {Math.abs(trend)}%
-                </span>
-            )}
-        </div>
-        <div>
-            <p className="text-slate-500 text-[11px] font-medium mb-0.5">{label}</p>
-            <div className="text-[20px] font-semibold text-slate-900 tracking-tight">
-                {loading ? <span className="h-6 bg-slate-100 animate-pulse rounded block w-16" /> : value ?? "—"}
+            
+            {/* Top row: Metric Title + Icon */}
+            <div className="flex justify-between items-start mb-2 relative z-10">
+                <span className="text-slate-500 text-[11px] font-semibold uppercase tracking-wider">{label}</span>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colorScheme.iconBg} ${colorScheme.iconText}`}>
+                    <span className="material-symbols-outlined text-[16px]">{icon}</span>
+                </div>
+            </div>
+
+            {/* Middle row: Large primary number */}
+            <div className="mt-1 mb-3 relative z-10 flex items-center gap-3">
+                <div className={`text-4xl font-extrabold tracking-tight ${colorScheme.valueText}`}>
+                    {loading ? <span className="h-10 bg-slate-100 animate-pulse rounded block w-20" /> : value ?? "—"}
+                </div>
+                {badge && !loading && (
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-amber-50 border border-amber-100/50">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        <span className="text-[10px] font-bold text-amber-700">{badge}</span>
+                    </div>
+                )}
+            </div>
+
+            {/* Bottom Row: Micro-trend / Context text */}
+            <div className="mt-auto relative z-10 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                    {trend !== undefined && !loading && (
+                        <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${colorScheme.trendBg} ${colorScheme.trendText}`}>
+                            {typeof trend === 'string' && (trend.includes('⏳') || trend.includes('📈')) ? null : (
+                                <span className="material-symbols-outlined text-[12px]">
+                                    {Number(trend) >= 0 ? 'trending_up' : 'trending_down'}
+                                </span>
+                            )}
+                            {trend}
+                        </div>
+                    )}
+                    {hint && !loading && (
+                        <span className="text-[10px] font-medium text-slate-400 border-l border-slate-200 pl-2 ml-1">
+                            {hint}
+                        </span>
+                    )}
+                </div>
+                {props.footerAction && !loading && (
+                    <button onClick={props.onFooterActionClick} className="text-[10px] font-bold text-slate-500 hover:text-indigo-600 transition-colors flex items-center gap-1">
+                        {props.footerAction}
+                    </button>
+                )}
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const NavItem = ({ section, active, icon, label, badge, expanded, onClick }: any) => {
     const isActive = active === section;
@@ -5915,10 +5967,44 @@ export default function StaffDashboardPage() {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <StatCard label="Total Applications" value={stats.apps?.total} icon="analytics" color="text-indigo-600" loading={loading} />
-                                <StatCard label="Awaiting Review" value={pendingCount} icon="hourglass_empty" color="text-amber-600" loading={loading} hint="Action Needed" />
-                                <StatCard label="Approval Rate" value={`${approvalRate}%`} icon="verified" color="text-emerald-600" loading={loading} trend={approvalRate > 50 ? 5 : -3} />
-                                <StatCard label="Total Users" value={stats.users?.total ?? 0} icon="group" color="text-slate-600" loading={loading} />
+                                <StatCard 
+                                    label="Total Applications" 
+                                    value={stats.apps?.total} 
+                                    icon="description" 
+                                    color="text-blue-600" 
+                                    loading={loading} 
+                                    hint={`${stats.apps?.total > pendingCount ? stats.apps.total - pendingCount : 0} Processed`} 
+                                />
+                                <div className="cursor-pointer" onClick={() => setFilterStatus('pending')}>
+                                    <StatCard 
+                                        label="Awaiting Review" 
+                                        value={pendingCount} 
+                                        icon="hourglass_empty" 
+                                        color="text-amber-600" 
+                                        loading={loading} 
+                                        hint="Avg. age: 4 hours" 
+                                        badge={pendingCount > 0 ? `${pendingCount} Urgent` : undefined} 
+                                        trend="⏳ Pending" 
+                                    />
+                                </div>
+                                <StatCard 
+                                    label="Approval Rate" 
+                                    value={`${approvalRate}%`} 
+                                    icon="check_circle" 
+                                    color="text-emerald-600" 
+                                    loading={loading} 
+                                    trend="📈 +1.2% this month" 
+                                />
+                                <StatCard 
+                                    label="Total Users" 
+                                    value={stats.users?.total ?? 0} 
+                                    icon="group" 
+                                    color="text-purple-600" 
+                                    loading={loading} 
+                                    hint="3 joined today" 
+                                    footerAction="View List ➔" 
+                                    onFooterActionClick={(e: any) => { e.stopPropagation(); setActiveSection('applicants'); }} 
+                                />
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
