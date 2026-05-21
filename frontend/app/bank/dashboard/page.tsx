@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, differenceInDays } from "date-fns";
+import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Chart as ChartJS,
@@ -19,7 +19,7 @@ import {
     Filler
 } from 'chart.js';
 import { Line, Doughnut } from 'react-chartjs-2';
-import { adminApi, bankApi } from "@/lib/api";
+import { adminApi } from "@/lib/api";
 import ChatInterface from "@/components/Chat/ChatInterface";
 
 ChartJS.register(
@@ -35,11 +35,12 @@ ChartJS.register(
     Filler
 );
 
-// --- Quick Action Component ---
+// --- Components ---
+
 const QuickAction = ({ icon, label, sublabel, bgColor, iconColor, onClick }: any) => (
     <button
         onClick={onClick}
-        className="glass-card p-6 rounded-[2.5rem] bg-white group hover:bg-[#6605c7]/5 transition-all text-left border border-[#6605c7]/10 relative overflow-hidden"
+        className="glass-card p-6 rounded-[2.5rem] bg-white group hover:bg-[#6605c7]/5 transition-all text-left border-[#6605c7]/10 relative overflow-hidden"
     >
         <div className="relative z-10">
             <div className={`w-12 h-12 rounded-2xl ${bgColor || 'bg-[#6605c7]/10'} flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500`}>
@@ -56,13 +57,12 @@ const QuickAction = ({ icon, label, sublabel, bgColor, iconColor, onClick }: any
     </button>
 );
 
-// --- Stat Card Component ---
 const StatMiniCard = ({ label, value, trend, icon, bgColor, iconColor, delay = 0 }: any) => (
     <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay, duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
-        className="glass-card stat-card-gradient p-8 rounded-[3rem] relative overflow-hidden group border-[#6605c7]/5"
+        className="glass-card stat-card-gradient p-4 rounded-2xl relative overflow-hidden group"
     >
         <div className="flex justify-between items-start relative z-10">
             <div className="space-y-2">
@@ -71,9 +71,9 @@ const StatMiniCard = ({ label, value, trend, icon, bgColor, iconColor, delay = 0
                     {value}
                 </div>
                 {trend !== undefined && (
-                    <div className={`flex items-center gap-2 ${Number(trend) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest ${Number(trend) >= 0 ? 'bg-emerald-50' : 'bg-rose-50'}`}>
-                            <span className="material-symbols-outlined text-[10px] font-black">{Number(trend) >= 0 ? 'trending_up' : 'trending_down'}</span>
+                    <div className={`flex items-center gap-1.5 ${Number(trend) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${Number(trend) >= 0 ? 'bg-emerald-50' : 'bg-rose-50'}`}>
+                            <span className="material-symbols-outlined text-[9px] font-black">{Number(trend) >= 0 ? 'trending_up' : 'trending_down'}</span>
                             {trend}%
                         </div>
                         <span className="text-[7.5px] font-bold text-gray-400 uppercase tracking-widest">vs last month</span>
@@ -84,12 +84,6 @@ const StatMiniCard = ({ label, value, trend, icon, bgColor, iconColor, delay = 0
                 <span className={`material-symbols-outlined text-xl ${iconColor || 'text-[#6605c7]'}`}>{icon}</span>
             </div>
         </div>
-        
-        {/* Animated Background Element */}
-        <div className="absolute -right-10 -bottom-10 opacity-[0.04] pointer-events-none group-hover:scale-125 group-hover:-rotate-12 transition-transform duration-1000">
-            <span className="material-symbols-outlined text-[12rem]">{icon}</span>
-        </div>
-        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[#6605c7]/5 to-transparent rounded-full -mr-16 -mt-16 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
     </motion.div>
 );
 
@@ -98,188 +92,135 @@ interface AdminStatsResponse {
     data?: any;
 }
 
-// --- Page ---
-
-// Supported banks configuration
 const SUPPORTED_BANKS = [
-    { id: "auxilo", name: "Auxilo Finserve", logo: "/bank-logos/auxilo.png" },
-    { id: "avanse", name: "Avanse Financial", logo: "/bank-logos/avanse.png" },
-    { id: "credila", name: "HDFC Credila", logo: "/bank-logos/credila.png" },
-    { id: "idfc", name: "IDFC FIRST Bank", logo: "/bank-logos/idfc.png" },
-    { id: "poonawalla", name: "Poonawalla Fincorp", logo: "/bank-logos/poonawalla.png" },
+    { id: "auxilo",     name: "Auxilo Finserve",    logo: "/banks/auxilo.png" },
+    { id: "avanse",     name: "Avanse Financial",   logo: "/banks/avanse.png" },
+    { id: "credila",    name: "HDFC Credila",        logo: "/banks/credila.png" },
+    { id: "idfc",       name: "IDFC FIRST Bank",    logo: "/banks/idfc.png" },
+    { id: "poonawalla", name: "Poonawalla Fincorp", logo: "/banks/poonawalla.jpg" },
 ];
+
+// --- Page ---
 
 export default function BankDashboard() {
     const router = useRouter();
     const { user } = useAuth();
     const [stats, setStats] = useState<any>(null);
+    const [portfolio, setPortfolio] = useState<any>(null);
+    const [compliance, setCompliance] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [showChat, setShowChat] = useState(false);
     const [mounted, setMounted] = useState(false);
+
+    const [currentBankId, setCurrentBankId] = useState<string>("idfc");
     const [dropdownOpen, setDropdownOpen] = useState(false);
-    const [selectedBankId, setCurrentBankId] = useState<string>(
-        typeof window !== "undefined" ? sessionStorage.getItem("selectedBank") || "auxilo" : "auxilo"
-    );
 
-    // Bank detection helpers
-    const currentBankId = selectedBankId;
-    const currentBankName = useMemo(() => {
-        if (!currentBankId) return user?.firstName || "SBI";
-        const map: Record<string, string> = {
-            auxilo: "Auxilo Finserve",
-            avanse: "Avanse Financial",
-            credila: "HDFC Credila",
-            idfc: "IDFC FIRST Bank",
-            poonawalla: "Poonawalla Fincorp",
-        };
-        return map[currentBankId] || currentBankId.toUpperCase();
-    }, [currentBankId, user]);
+    const fetchAllData = async (bankId: string) => {
+        try {
+            const [statsRes, portfolioRes, complianceRes] = await Promise.all([
+                adminApi.getApplicationStats(bankId).catch(err => { console.error("Stats API error:", err); return null; }),
+                adminApi.getPortfolioAnalysis(bankId).catch(err => { console.error("Portfolio API error:", err); return null; }),
+                adminApi.getComplianceReport(bankId).catch(err => { console.error("Compliance API error:", err); return null; })
+            ]) as [any, any, any];
 
-    const branchName = useMemo(() => {
-        return `${currentBankName} — Hyderabad Hub`;
-    }, [currentBankName]);
+            if (statsRes && statsRes.success) {
+                setStats(statsRes.data);
+            }
+            if (portfolioRes && portfolioRes.success) {
+                setPortfolio(portfolioRes.data);
+            }
+            if (complianceRes) {
+                if (complianceRes.success) {
+                    setCompliance(complianceRes.data);
+                } else {
+                    setCompliance(complianceRes);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to fetch dashboard metrics:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
         setMounted(true);
-        const fetchStats = async () => {
-            try {
-                const res = await adminApi.getApplicationStats() as AdminStatsResponse;
-                if (res.success) {
-                    setStats(res.data);
-                }
-            } catch (error) {
-                console.error("Failed to fetch dashboard stats:", error);
-            } finally {
-                setLoading(false);
+        if (typeof window !== 'undefined') {
+            const saved = sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank");
+            if (saved && saved !== currentBankId) {
+                setCurrentBankId(saved);
+                return;
             }
-        };
+        }
+        fetchAllData(currentBankId);
+    }, [currentBankId]);
 
-        fetchStats();
-    }, []);
-
-    // Mock data for applications
-    const allApplications = useMemo(() => {
-        return stats?.applications || [];
-    }, [stats]);
-
-    // Kanban board data
-    const kanbanData = useMemo(() => {
-        return {
-            incoming: allApplications.filter(app => app.status?.toLowerCase() === "pending"),
-            logged: allApplications.filter(app => app.status?.toLowerCase() === "submitted"),
-            review: allApplications.filter(app => ["submitted_to_bank", "under_bank_review"].includes(app.status?.toLowerCase())),
-            decided: allApplications.filter(app => ["approved", "rejected"].includes(app.status?.toLowerCase())),
-            closed: allApplications.filter(app => app.status?.toLowerCase() === "disbursed")
-        };
-    }, [allApplications]);
-
-    // Disbursement trend chart data
-    const disbursementTrendData = useMemo(() => ({
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        datasets: [{
-            label: 'Capital Flow (₹ Cr)',
-            data: [0.45, 0.52, 0.60, 0.48, 0.75, 0.90],
-            borderColor: '#6605c7',
-            backgroundColor: (context: any) => {
-                const chart = context.chart;
-                const {ctx, chartArea} = chart;
-                if (!chartArea) return 'rgba(102, 5, 199, 0.05)';
-                const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-                gradient.addColorStop(0, 'rgba(102, 5, 199, 0)');
-                gradient.addColorStop(1, 'rgba(102, 5, 199, 0.15)');
-                return gradient;
-            },
-            tension: 0.5,
-            fill: true,
-            pointRadius: 0,
-            pointHoverRadius: 8,
-            pointHoverBackgroundColor: '#6605c7',
-            pointHoverBorderColor: '#fff',
-            pointHoverBorderWidth: 4,
-            borderWidth: 4,
-        }]
-    }), []);
-
-    // Derived Statistics
-    const metrics = useMemo(() => {
-        const total = allApplications.length;
-        const totalValue = allApplications.reduce((acc, app) => acc + (app.amount || 0), 0);
-        
-        const sanctionedApps = allApplications.filter(app => ["approved", "sanctioned", "conditional_sanction", "disbursed"].includes(app.status?.toLowerCase()));
-        const sanctionRate = total > 0 ? (sanctionedApps.length / total) * 100 : 0;
-        
-        const disbursedApps = allApplications.filter(app => app.status?.toLowerCase() === "disbursed");
-        const disbursedValue = disbursedApps.reduce((acc, app) => acc + (app.amount || 0), 0);
-
-        const pendingApps = allApplications.filter(app => ["pending", "submitted", "submitted_to_bank"].includes(app.status?.toLowerCase()));
-
-        return {
-            total,
-            totalValue,
-            sanctionRate,
-            disbursedCount: disbursedApps.length,
-            disbursedValue,
-            pendingCount: pendingApps.length
-        };
-    }, [allApplications]);
-
-    // Aging SLA report groupings
-    const agingReport = useMemo(() => {
-        return allApplications.map((app) => {
-            const submittedDate = app.submittedAt ? new Date(app.submittedAt) : new Date();
-            const days = differenceInDays(new Date(), submittedDate);
-            
-            let status = "On Track";
-            let color = "text-emerald-500 bg-emerald-50 border-emerald-100";
-            
-            if (days >= 4 && days <= 7) {
-                status = "Follow Up";
-                color = "text-amber-500 bg-amber-50 border-amber-100";
-            } else if (days >= 8 && days <= 14) {
-                status = "Escalate";
-                color = "text-orange-500 bg-orange-50 border-orange-100";
-            } else if (days > 14) {
-                status = "SLA Breach";
-                color = "text-rose-500 bg-rose-50 border-rose-100 animate-pulse";
-            }
-
-            return {
-                id: app.applicationNumber || `VL${app.id}`,
-                name: `${app.firstName || ''} ${app.lastName || ''}`.trim() || "Student Node",
-                days,
-                status,
-                color
-            };
-        }).slice(0, 5);
-    }, [allApplications]);
-
-    // Chart visual definitions
+    // Derived Charts Data
     const statusDistribution = useMemo(() => {
-        const labels = ["Incoming", "Logged", "Review", "Decided", "Closed"];
-        const data = [
-            kanbanData.incoming.length,
-            kanbanData.logged.length,
-            kanbanData.review.length,
-            kanbanData.decided.length,
-            kanbanData.closed.length
-        ];
+        if (!stats?.statusStats) return null;
+
+        const labels = Object.keys(stats.statusStats).map(s => s.charAt(0).toUpperCase() + s.slice(1));
+        const data = Object.values(stats.statusStats);
 
         return {
             labels,
             datasets: [{
                 data,
                 backgroundColor: [
-                    '#3b82f6', // blue
-                    '#f59e0b', // amber
-                    '#6605c7', // purple
                     '#10b981', // emerald
-                    '#8b24e5', // indigo
+                    '#f59e0b', // amber
+                    '#ef4444', // rose
+                    '#6605c7', // primary
+                    '#3b82f6', // info
+                ],
+                hoverBackgroundColor: [
+                    '#059669',
+                    '#d97706',
+                    '#dc2626',
+                    '#4a0394',
+                    '#2563eb',
                 ],
                 borderWidth: 0,
-                hoverOffset: 12
+                hoverOffset: 20
             }]
         };
-    }, [kanbanData]);
+    }, [stats]);
+
+    const disbursementData = useMemo(() => {
+        const hasData = portfolio?.disbursementTrend?.some((t: any) => t.amount > 0);
+        const chartDataValues = hasData
+            ? portfolio.disbursementTrend.map((t: any) => t.amount)
+            : [0.45, 0.52, 0.60, 0.48, 0.75, 0.90];
+        const chartLabels = portfolio?.disbursementTrend
+            ? portfolio.disbursementTrend.map((t: any) => t.month)
+            : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+
+        return {
+            labels: chartLabels,
+            datasets: [{
+                label: 'Capital Flow (Γé╣ Cr)',
+                data: chartDataValues,
+                borderColor: '#6605c7',
+                backgroundColor: (context: any) => {
+                    const chart = context.chart;
+                    const {ctx, chartArea} = chart;
+                    if (!chartArea) return 'rgba(102, 5, 199, 0.05)';
+                    const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                    gradient.addColorStop(0, 'rgba(102, 5, 199, 0)');
+                    gradient.addColorStop(1, 'rgba(102, 5, 199, 0.15)');
+                    return gradient;
+                },
+                tension: 0.5,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 8,
+                pointHoverBackgroundColor: '#6605c7',
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 4,
+                borderWidth: 4,
+            }]
+        };
+    }, [portfolio]);
 
     const statusColors: Record<string, string> = {
         pending: "bg-amber-50 text-amber-600 border-amber-100 shadow-[0_0_8px_rgba(245,158,11,0.1)]",
@@ -308,7 +249,7 @@ export default function BankDashboard() {
     }
 
     return (
-        <div className="p-8 lg:p-12 space-y-12 animate-fade-in relative z-10">
+        <div className="p-5 lg:p-8 space-y-6 animate-fade-in relative z-10">
             {/* Header / Greet Section */}
             <AnimatePresence>
                 {showChat && (
@@ -342,7 +283,6 @@ export default function BankDashboard() {
                 )}
             </AnimatePresence>
 
-            {/* Title Section */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
                 <div className="space-y-4">
                     <motion.div 
@@ -351,13 +291,13 @@ export default function BankDashboard() {
                         className="inline-flex items-center gap-3 px-4 py-2 bg-white/50 backdrop-blur-xl rounded-full border border-[#6605c7]/10 shadow-sm"
                     >
                         <div className="w-2 h-2 rounded-full bg-[#6605c7] animate-pulse shadow-[0_0_8px_#6605c7]" />
-                        <span className="text-[10px] font-black text-[#6605c7] uppercase tracking-[0.2em]">Partner Core v4.28</span>
+                        <span className="text-[10px] font-black text-[#6605c7] uppercase tracking-[0.2em]">Module 01 ΓÇó Partner Core v4.28</span>
                     </motion.div>
-                    <h2 className="text-5xl lg:text-6xl font-black font-display text-gray-900 tracking-tighter italic leading-none">
-                        System <span className="text-[#6605c7]">Terminal</span>
+                    <h2 className="text-3xl lg:text-4xl font-black font-display text-gray-900 tracking-tighter italic leading-none">
+                        Portfolio <span className="text-[#6605c7]">Overview</span>
                     </h2>
                     <p className="text-gray-400 font-bold uppercase tracking-[0.3em] text-[10px] flex items-center gap-2 pl-1">
-                        <span className="material-symbols-outlined text-xs animate-spin">sync</span>
+                        <span className="material-symbols-outlined text-xs">sync</span>
                         Network Sync: {mounted ? format(new Date(), 'MMM dd, HH:mm:ss') : '--:--:--'} (UTC+5:30)
                     </p>
                 </div>
@@ -418,21 +358,19 @@ export default function BankDashboard() {
                     <motion.button 
                         whileHover={{ y: -2 }}
                         onClick={() => {
-                            const csvContent = "data:text/csv;charset=utf-8," 
-                                + ["ID,Name,Amount,Type,Status"].join(",") + "\n"
-                                + allApplications.map(e => `${e.applicationNumber},${e.firstName} ${e.lastName},${e.amount},${e.loanType},${e.status}`).join("\n");
-                            const encodedUri = encodeURI(csvContent);
-                            const link = document.createElement("a");
-                            link.setAttribute("href", encodedUri);
-                            link.setAttribute("download", `bank_portfolio_${currentBankName.replace(/\s+/g, '_')}.csv`);
-                            document.body.appendChild(link);
-                            link.click();
-                            document.body.removeChild(link);
+                            const content = document.querySelector('.admin-table')?.parentElement?.innerText || 'Dashboard Data';
+                            const element = document.createElement("a");
+                            const file = new Blob([content], {type: 'text/plain'});
+                            element.href = URL.createObjectURL(file);
+                            element.download = `bank-matrix-audit-${format(new Date(), 'yyyy-MM-dd')}.txt`;
+                            document.body.appendChild(element);
+                            element.click();
+                            document.body.removeChild(element);
                         }}
                         className="px-6 py-4 rounded-[1.5rem] bg-white/80 border border-[#6605c7]/10 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#6605c7] hover:bg-white transition-all shadow-sm group"
                     >
                         <span className="material-symbols-outlined text-xl group-hover:scale-125 transition-transform">database</span> 
-                        Extract CSV Matrix
+                        Extract Matrix
                     </motion.button>
                     <motion.button 
                         whileHover={{ y: -2, scale: 1.02 }}
@@ -441,16 +379,16 @@ export default function BankDashboard() {
                         className="px-8 py-4 rounded-[1.5rem] bg-[#6605c7] text-white flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-purple-500/30 group"
                     >
                         <span className="material-symbols-outlined text-xl group-hover:rotate-90 transition-transform duration-500">add_circle</span> 
-                        Review Decisions
+                        Initialize Pulse
                     </motion.button>
                 </div>
             </div>
 
             {/* Performance Matrix */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatMiniCard
                     label="Active Portfolio"
-                    value={`₹${(( (Array.isArray(stats?.loanTypeStats) ? stats.loanTypeStats : []).reduce((acc: number, curr: any) => acc + (curr.totalAmount || 0), 0) || 0) / 10000000).toFixed(2)}Cr`}
+                    value={portfolio ? `Γé╣${(portfolio.totalPortfolioValue / 10000000).toFixed(2)} Cr` : `Γé╣${(( (Array.isArray(stats?.loanTypeStats) ? stats.loanTypeStats : []).reduce((acc: number, curr: any) => acc + (curr.totalAmount || 0), 0) || 0) / 10000000).toFixed(2)}Cr`}
                     trend={stats?.monthlyComparison?.change || "+12.4"}
                     icon="account_balance_wallet"
                     iconColor="text-[#6605c7]"
@@ -459,17 +397,17 @@ export default function BankDashboard() {
                 />
                 <StatMiniCard
                     label="Quantum Units"
-                    value={metrics.total}
-                    trend={`+${kanbanData.incoming.length} New`}
+                    value={`${stats?.total || 0}`}
+                    trend="+4.1"
                     icon="grid_view"
                     iconColor="text-blue-500"
                     bgColor="bg-blue-500/5"
                     delay={0.2}
                 />
                 <StatMiniCard
-                    label="Conversion Vector"
-                    value={`${((stats?.statusStats?.disbursed || 0) / (stats?.total || 1) * 100).toFixed(1)}%`}
-                    trend="-2.1"
+                    label="Approval Vector"
+                    value={portfolio ? `${portfolio.approvalRate}%` : `${((stats?.statusStats?.disbursed || 0) / (stats?.total || 1) * 100).toFixed(1)}%`}
+                    trend={portfolio ? `-${portfolio.defaultRate}` : "-2.1"}
                     icon="electric_bolt"
                     iconColor="text-emerald-500"
                     bgColor="bg-emerald-500/5"
@@ -477,7 +415,7 @@ export default function BankDashboard() {
                 />
                 <StatMiniCard
                     label="Pending Audit"
-                    value={`${stats?.statusStats?.submitted || 0}`}
+                    value={`${stats?.statusStats?.submitted || stats?.statusStats?.pending || 0}`}
                     trend="+0.8"
                     icon="monitoring"
                     iconColor="text-rose-500"
@@ -487,77 +425,87 @@ export default function BankDashboard() {
             </div>
 
             {/* Intelligence Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                 {/* Capital Flow Visual */}
                 <motion.div 
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
-                    className="lg:col-span-8 glass-card p-12 rounded-[4rem] border-[#6605c7]/10 bg-white/70 relative overflow-hidden group shadow-2xl shadow-purple-900/[0.02]"
+                    className="lg:col-span-8 glass-card p-6 rounded-3xl border-[#6605c7]/10 bg-white/70 relative overflow-hidden group shadow-xl shadow-purple-900/[0.02]"
                 >
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-12 relative z-10">
-                        <div className="flex items-center gap-5">
-                            <div className="w-12 h-12 rounded-2xl bg-[#6605c7]/5 flex items-center justify-center text-[#6605c7]">
-                                <span className="material-symbols-outlined text-2xl">monitoring</span>
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 relative z-10">
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-[#6605c7]/5 flex items-center justify-center text-[#6605c7]">
+                                <span className="material-symbols-outlined text-lg">monitoring</span>
                             </div>
                             <div>
-                                <h3 className="text-2xl font-black font-display text-gray-900 tracking-tight italic">Disbursement Pulse</h3>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.3em] mt-2 italic">Global Node Capital Flow Protocol</p>
+                                <h3 className="text-base font-black font-display text-gray-900 tracking-tight italic">Disbursement Pulse</h3>
+                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.25em] mt-0.5 italic">Capital Flow ΓÇö Jan to Jun</p>
                             </div>
                         </div>
-                        <div className="flex gap-2 p-1.5 bg-gray-50 rounded-2xl border border-gray-100">
+                        <div className="flex gap-1.5 p-1 bg-gray-50 rounded-xl border border-gray-100">
                             {['Real-time', 'Quarterly'].map((mode) => (
-                                <button key={mode} className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${mode === 'Real-time' ? 'bg-[#6605c7] text-white shadow-lg' : 'text-gray-400 hover:text-gray-900'}`}>
+                                <button key={mode} className={`px-3 py-1.5 rounded-lg text-[8.5px] font-black uppercase tracking-widest transition-all ${mode === 'Real-time' ? 'bg-[#6605c7] text-white shadow' : 'text-gray-400 hover:text-gray-900'}`}>
                                     {mode}
                                 </button>
                             ))}
                         </div>
                     </div>
-                    <div className="h-[350px] relative z-10">
+                    <div className="h-[200px] relative z-10">
                         <Line
-                            data={disbursementTrendData}
+                            data={disbursementData}
                             options={{
                                 responsive: true,
                                 maintainAspectRatio: false,
                                 plugins: { 
                                     legend: { display: false }, 
                                     tooltip: {
-                                        backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.98)',
                                         titleColor: '#111',
                                         bodyColor: '#6605c7',
-                                        padding: 15,
-                                        cornerRadius: 15,
+                                        padding: 12,
+                                        cornerRadius: 12,
                                         displayColors: false,
-                                        borderColor: 'rgba(102, 5, 199, 0.1)',
+                                        borderColor: 'rgba(102, 5, 199, 0.15)',
                                         borderWidth: 1,
-                                        bodyFont: { weight: 'bold', size: 12 },
-                                        callbacks: { label: (c) => `₹ ${c.formattedValue} Cr Transmitted` }
+                                        titleFont: { weight: 'bold', size: 11 },
+                                        bodyFont: { weight: 'bold', size: 13 },
+                                        callbacks: { label: (c) => `Γé╣ ${c.formattedValue} Cr` }
                                     } 
                                 },
                                 scales: {
-                                    y: { border: { display: false }, grid: { color: 'rgba(0,0,0,0.02)' }, ticks: { font: { weight: 'bold', size: 10 }, color: '#999' } },
-                                    x: { border: { display: false }, grid: { display: false }, ticks: { font: { weight: 'bold', size: 10 }, color: '#999' } }
+                                    y: { 
+                                        border: { display: false }, 
+                                        grid: { color: 'rgba(0,0,0,0.06)' }, 
+                                        ticks: { font: { weight: 'bold', size: 11 }, color: '#666', padding: 6 },
+                                        beginAtZero: true
+                                    },
+                                    x: { 
+                                        border: { display: false }, 
+                                        grid: { display: false }, 
+                                        ticks: { font: { weight: 'bold', size: 11 }, color: '#666', padding: 4 }
+                                    }
                                 }
                             }}
                         />
                     </div>
                 </motion.div>
 
-                {/* State Distribution Pie widget */}
+                {/* Status Matrix */}
                 <motion.div 
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.6 }}
-                    className="lg:col-span-4 glass-card p-12 rounded-[4rem] border-[#6605c7]/10 bg-white/70 flex flex-col shadow-2xl shadow-purple-900/[0.02]"
+                    className="lg:col-span-4 glass-card p-6 rounded-3xl border-[#6605c7]/10 bg-white/70 flex flex-col shadow-xl shadow-purple-900/[0.02]"
                 >
-                    <h3 className="text-xl font-black font-display text-gray-900 mb-10 text-center uppercase tracking-tighter italic">State Matrix</h3>
-                    <div className="flex-1 relative flex items-center justify-center mb-8">
+                    <h3 className="text-sm font-black font-display text-gray-900 mb-3 text-center uppercase tracking-widest italic">Application Status</h3>
+                    <div className="relative flex items-center justify-center mb-4" style={{ height: 160 }}>
                         {statusDistribution && (
-                            <div className="w-full max-w-[280px]">
+                            <div className="w-full max-w-[160px]">
                                 <Doughnut
                                     data={statusDistribution}
                                     options={{
-                                        cutout: '82%',
+                                        cutout: '78%',
                                         plugins: { legend: { display: false } },
                                         animation: { animateScale: true, animateRotate: true }
                                     }}
@@ -565,93 +513,189 @@ export default function BankDashboard() {
                             </div>
                         )}
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-5xl font-black font-display text-gray-900 tracking-tighter leading-none italic">{stats?.total || 0}</span>
-                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mt-2 italic">Active Units</span>
+                            <span className="text-3xl font-black font-display text-gray-900 tracking-tighter leading-none italic">{stats?.total || 0}</span>
+                            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-400 mt-1 italic">Total</span>
                         </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                        {statusDistribution?.labels?.slice(0, 4)?.map((label, i) => (
-                            <div key={label} className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50/50 border border-gray-100/50">
-                                <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: statusDistribution?.datasets?.[0]?.backgroundColor?.[i] }} />
-                                <div className="min-w-0">
-                                    <p className="text-[8px] font-black uppercase tracking-widest text-gray-400 truncate">{label}</p>
-                                    <p className="text-xs font-black text-gray-900">{String(statusDistribution?.datasets?.[0]?.data?.[i] ?? 0)}</p>
-                                </div>
+                    <div className="space-y-1.5">
+                        {statusDistribution?.labels?.map((label, i) => (
+                            <div key={label} className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-gray-50/60 border border-gray-100/60">
+                                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: statusDistribution?.datasets?.[0]?.backgroundColor?.[i] }} />
+                                <p className="text-[9px] font-black uppercase tracking-wider text-gray-500 flex-1 truncate">{label}</p>
+                                <p className="text-[11px] font-black text-gray-900">{String(statusDistribution?.datasets?.[0]?.data?.[i] ?? 0)}</p>
                             </div>
                         ))}
                     </div>
                 </motion.div>
             </div>
 
-            {/* Conditionally Displayed Role-Based Metrics (Blueprint Feature Category C) */}
-            {user?.role === "admin" || user?.role === "super_admin" ? (
-                <>
-                    <motion.div className="glass-card p-12 rounded-[4rem] border border-[#6605c7]/10 bg-white/70 space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                {/* Recent Transmission Sync */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.7 }}
+                    className="lg:col-span-2 glass-card rounded-[4rem] border-[#6605c7]/10 bg-white/70 overflow-hidden shadow-2xl shadow-purple-900/[0.05]"
+                >
+                    <div className="p-12 pb-6 flex justify-between items-end">
                         <div className="flex items-center gap-5">
-                            <div className="w-12 h-12 rounded-2xl bg-yellow-50 text-yellow-600 flex items-center justify-center">
-                                <span className="material-symbols-outlined text-2xl">admin_panel_settings</span>
+                            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                                <span className="material-symbols-outlined text-2xl animate-pulse">sensors</span>
                             </div>
-                            <div>
-                                <h3 className="text-2xl font-black font-display text-gray-900 tracking-tight italic">👨‍💼 VidyaLoans Admin-Only Matrix</h3>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.3em] mt-1">Cross-Bank performance and staff revenue audit</p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4">
-                            <div className="p-6 rounded-3xl bg-gray-50 border border-gray-100">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-purple-600">Total Referral Revenue (VL Rev)</p>
-                                <h4 className="text-3xl font-black text-gray-900 italic mt-2">₹{(metrics.disbursedValue * 0.01).toLocaleString()}</h4>
-                                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-1">Estimated 1.00% Channel Sourcing Fee</p>
-                            </div>
-                            <div className="p-6 rounded-3xl bg-gray-50 border border-gray-100">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Agent Commission Payable</p>
-                                <h4 className="text-3xl font-black text-gray-900 italic mt-2">₹{(metrics.disbursedValue * 0.0045).toLocaleString()}</h4>
-                                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-1">Estimated 0.45% Channel payout</p>
+                            <div className="space-y-1">
+                                <h3 className="text-2xl font-black font-display text-gray-900 tracking-tight italic">Live Signal Stream</h3>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.3em] italic">Incoming Transmissions from Staff Hub</p>
                             </div>
                         </div>
-                    </motion.div>
+                        <button 
+                            onClick={() => router.push('/bank/applications')}
+                            className="px-6 py-3 rounded-2xl bg-[#6605c7]/5 text-[10px] font-black uppercase tracking-[0.2em] text-[#6605c7] hover:bg-[#6605c7] hover:text-white transition-all shadow-sm"
+                        >
+                            Sync All Nodes
+                        </button>
+                    </div>
+                    
+                    <div className="p-8 pt-0">
+                        <div className="overflow-x-auto no-scrollbar">
+                            <table className="w-full text-left">
+                                <thead className="bg-[#6605c7]/[0.02] border-b border-gray-100">
+                                    <tr>
+                                        <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]">Identity Node</th>
+                                        <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]">Quant Load</th>
+                                        <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]">Current State</th>
+                                        <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.3em] text-right text-[#6605c7]">Sync Interval</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-50/50">
+                                    {stats?.recentApplications?.slice(0, 5)?.map((app: any, i: number) => (
+                                        <tr key={app.id || i} className="group hover:bg-[#6605c7]/[0.03] transition-all duration-300">
+                                            <td className="px-6 py-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#6605c7]/10 to-transparent flex items-center justify-center font-black text-[#6605c7] text-[11px] border border-[#6605c7]/5 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+                                                        {app.firstName?.[0]}{app.lastName?.[0]}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs font-black text-gray-900 tracking-tight italic uppercase">{app.firstName} {app.lastName}</p>
+                                                        <p className="text-[9px] font-black text-gray-400 font-mono tracking-tighter uppercase mt-0.5">{app.applicationNumber}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-6">
+                                                <p className="text-xs font-black text-[#6605c7] italic tracking-tight">Γé╣{app.amount?.toLocaleString()}</p>
+                                                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{app.loanType}</p>
+                                            </td>
+                                            <td className="px-6 py-6">
+                                                <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.2em] border ${statusColors[app.status] || 'bg-gray-50 text-gray-400'}`}>
+                                                    {app.status?.replace(/_/g, ' ')}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-6 text-right">
+                                                <p className="text-[9px] font-black text-gray-900 font-mono tracking-tighter uppercase">
+                                                    {(() => {
+                                                        try {
+                                                            return format(new Date(app.date || app.submittedAt || new Date()), "HH:mm:ss");
+                                                        } catch (e) {
+                                                            return "--:--:--";
+                                                        }
+                                                    })()}
+                                                </p>
+                                                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
+                                                    {(() => {
+                                                        try {
+                                                            return format(new Date(app.date || app.submittedAt || new Date()), "MMM dd, yyyy");
+                                                        } catch (e) {
+                                                            return "N/A";
+                                                        }
+                                                    })()}
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </motion.div>
 
-                    {/* Directive & Security Matrix */}
-                    <motion.div 
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.8 }}
-                        className="space-y-10"
+                {/* Directive & Security Matrix */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 30 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.8 }}
+                    className="space-y-4"
+                >
+                    <div className="glass-card p-5 rounded-2xl relative overflow-hidden group">
+                        <h3 className="text-sm font-black font-display text-gray-900 mb-4 tracking-tight italic relative z-10">Direct Commands</h3>
+                        <div className="grid grid-cols-1 gap-2.5 relative z-10">
+                            <QuickAction icon="chat_bubble" label="Initialize Chat" sublabel="WhatsApp Secure Channel" onClick={() => setShowChat(true)} />
+                            <QuickAction icon="assignment_add" label="Distribute Tasks" sublabel="Task Allocation Matrix" onClick={() => router.push('/bank/tasks')} />
+                            <QuickAction icon="verified" label="Validate Assets" sublabel="Compliance Review" iconColor="text-emerald-500" bgColor="bg-emerald-500/5" onClick={() => router.push('/bank/applications')} />
+                        </div>
+                    </div>
+
+                    {portfolio?.topUniversities && portfolio.topUniversities.length > 0 && (
+                        <div className="glass-card p-5 rounded-2xl relative overflow-hidden group">
+                            <div className="flex justify-between items-center mb-3">
+                                <h3 className="text-xs font-black font-display text-gray-900 uppercase tracking-widest italic">Top University Partners</h3>
+                                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Approved %</span>
+                            </div>
+                            <div className="space-y-2">
+                                {portfolio.topUniversities.map((uni: any, idx: number) => (
+                                    <div key={idx} className="flex justify-between items-center gap-3">
+                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                            <span className="material-symbols-outlined text-sm text-[#6605c7]">school</span>
+                                            <span className="text-[10px] font-black text-gray-700 truncate">{uni.name}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <span className="text-[8px] font-bold text-gray-400">{uni.count} apps</span>
+                                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-black ${uni.approvalRate >= 70 ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                                                {uni.approvalRate}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    <div
+                        className="p-5 rounded-2xl overflow-hidden relative group"
+                        style={{
+                            background: 'linear-gradient(135deg, #6605c7 0%, #8b24e5 100%)',
+                            boxShadow: '0 8px 32px rgba(102,5,199,0.30)'
+                        }}
                     >
-                        <div className="glass-card p-10 rounded-[4rem] border-[#6605c7]/10 bg-white/70 shadow-2xl shadow-purple-900/[0.05] relative overflow-hidden group">
-                            <h3 className="text-xl font-black font-display text-gray-900 mb-8 tracking-tight italic relative z-10">Direct Commands</h3>
-                            <div className="grid grid-cols-1 gap-4 relative z-10">
-                                <QuickAction icon="chat_bubble" label="Initialize Chat" sublabel="WhatsApp Secure Channel" onClick={() => setShowChat(true)} />
-                                <QuickAction icon="assignment_add" label="Distribute Tasks" sublabel="Task Allocation Matrix" onClick={() => router.push('/bank/tasks')} />
-                                <QuickAction icon="verified" label="Validate Assets" sublabel="Compliance Review" iconColor="text-emerald-500" bgColor="bg-emerald-500/5" onClick={() => router.push('/bank/applications')} />
-                            </div>
-                        </div>
-
-                        <div className="glass-card p-10 rounded-[4rem] bg-[#6605c7] text-white overflow-hidden relative group shadow-2xl shadow-purple-900/20">
-                            <div className="relative z-10">
-                                <h3 className="text-xl font-black font-display mb-3 uppercase tracking-tighter italic">Compliance Shield</h3>
-                                <p className="text-white/70 text-[10px] font-bold uppercase tracking-[0.2em] mb-8 leading-relaxed">Core synchronized under <span className="text-white">RBI-GDRP-v2.0</span> protocols. Integrity verified.</p>
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center backdrop-blur-md">
-                                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_15px_#4ade80]" />
-                                    </div>
-                                    <div className="space-y-0.5">
-                                        <span className="text-[10px] font-black uppercase tracking-[0.3em] block">Sentinel Engine Live</span>
-                                        <span className="text-[8px] font-bold text-white/40 uppercase tracking-[0.2em]">All nodes stable</span>
-                                    </div>
+                        <div className="relative z-10">
+                            <h3 className="text-sm font-black text-white mb-2 uppercase tracking-widest">Compliance Shield</h3>
+                            <p className="text-white/70 text-[9px] font-bold uppercase tracking-[0.18em] mb-4 leading-relaxed">
+                                {compliance 
+                                    ? `Score: ${compliance.overallCompliance || 100}% ΓÇó RBI & NHB Compliant`
+                                    : 'Synchronized under RBI-GDRP-v2.0 protocol.'}
+                            </p>
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_#4ade80]" />
+                                </div>
+                                <div>
+                                    <span className="text-[9px] font-black text-white uppercase tracking-[0.25em] block">
+                                        {compliance ? 'System Validated' : 'Sentinel Engine Live'}
+                                    </span>
+                                    <span className="text-[7.5px] font-bold text-white/40 uppercase tracking-widest">
+                                        {compliance?.gstCompliance?.status === 'warning' 
+                                            ? compliance.gstCompliance.detail 
+                                            : 'All nodes stable & verified'}
+                                    </span>
                                 </div>
                             </div>
-                            <span className="material-symbols-outlined text-[15rem] absolute -right-16 -bottom-16 text-white/5 group-hover:scale-125 group-hover:rotate-12 transition-transform duration-1000 pointer-events-none select-none">verified_user</span>
-                            
-                            {/* Interactive scan line */}
-                            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                                <div className="w-full h-[1px] bg-white/10 absolute top-0 animate-scan-line" />
-                            </div>
                         </div>
-                    </motion.div>
-                </>
-            ) : null}
+                        <span className="material-symbols-outlined text-[8rem] absolute -right-6 -bottom-6 text-white/5 group-hover:scale-125 transition-transform duration-700 pointer-events-none select-none">verified_user</span>
+                    </div>
+                </motion.div>
+            </div>
+            
+            {/* Mesh background subtle overlay */}
+            <div className="fixed inset-0 bg-mesh-gradient opacity-[0.03] pointer-events-none -z-10" />
         </div>
     );
 }
