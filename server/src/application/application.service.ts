@@ -253,6 +253,42 @@ export class ApplicationService {
     return { success: true, data: updated, message: 'Application updated successfully' };
   }
 
+  async adminUpdateApplication(applicationId: string, data: any) {
+    const updatePayload: any = { ...data };
+
+    // Convert numeric fields if present
+    if (data.amount !== undefined) updatePayload.amount = data.amount ? parseFloat(data.amount) : null;
+    if (data.tenure !== undefined) updatePayload.tenure = data.tenure ? parseInt(data.tenure) : null;
+    if (data.sanctionAmount !== undefined) updatePayload.sanctionAmount = data.sanctionAmount ? parseFloat(data.sanctionAmount) : null;
+    if (data.disbursedAmount !== undefined) updatePayload.disbursedAmount = data.disbursedAmount ? parseFloat(data.disbursedAmount) : null;
+    if (data.interestRate !== undefined) updatePayload.interestRate = data.interestRate ? parseFloat(data.interestRate) : null;
+    if (data.sanctionedInterestRate !== undefined) updatePayload.sanctionedInterestRate = data.sanctionedInterestRate ? parseFloat(data.sanctionedInterestRate) : null;
+    if (data.processingFee !== undefined) updatePayload.processingFee = data.processingFee ? parseFloat(data.processingFee) : null;
+    if (data.roiBase !== undefined) updatePayload.roiBase = data.roiBase ? parseFloat(data.roiBase) : null;
+    if (data.roiEffective !== undefined) updatePayload.roiEffective = data.roiEffective ? parseFloat(data.roiEffective) : null;
+    if (data.roiSubsidy !== undefined) updatePayload.roiSubsidy = data.roiSubsidy ? parseFloat(data.roiSubsidy) : null;
+
+    // Clean up undefined properties to avoid Supabase errors
+    Object.keys(updatePayload).forEach(key => {
+      if (updatePayload[key] === undefined) {
+        delete updatePayload[key];
+      }
+    });
+
+    const { data: updated, error } = await this.db
+      .from('LoanApplication')
+      .update(updatePayload)
+      .eq('id', applicationId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('[ApplicationService.adminUpdateApplication] DB Error:', error);
+      throw error;
+    }
+    return { success: true, data: updated, message: 'Application updated successfully' };
+  }
+
   async cancelApplication(applicationId: string, userId: string, reason?: string) {
     const application = await this.getApplicationById(applicationId);
     if (application.userId !== userId) throw new BadRequestException('Unauthorized to cancel this application');
@@ -529,7 +565,7 @@ export class ApplicationService {
       if (filters?.status) query = query.eq('status', filters.status);
       if (filters?.stage) query = query.eq('stage', filters.stage);
       if (filters?.loanType) query = query.eq('loanType', filters.loanType);
-      if (filters?.bank) query = query.eq('bank', filters.bank);
+      if (filters?.bank) query = query.ilike('bank', `%${filters.bank}%`);
       
       if (filters?.search) {
         const search = filters.search;
@@ -695,14 +731,26 @@ export class ApplicationService {
     return { success: true, data: notes || [] };
   }
 
-  async getApplicationStats(user?: any) {
+  async getApplicationStats(user?: any, bankId?: string) {
     try {
       const now = new Date();
       const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
 
       const isBank = (user?.role === 'bank' || user?.role === 'partner_bank');
-      const bankName = user?.firstName; // Following the convention used in ChatService
+      let bankName: string | null = null;
+      if (isBank) {
+        const bId = bankId || user?.firstName;
+        if (bId) {
+          const lower = bId.toLowerCase();
+          if (lower.includes('credila')) bankName = 'HDFC Credila';
+          else if (lower.includes('poonawalla')) bankName = 'Poonawalla Fincorp';
+          else if (lower.includes('idfc')) bankName = 'IDFC First Bank';
+          else if (lower.includes('avanse')) bankName = 'Avanse Financial Services';
+          else if (lower.includes('auxilo')) bankName = 'Auxilo';
+          else bankName = bId;
+        }
+      }
 
       let totalQuery = this.db.from('LoanApplication').select('*', { count: 'exact', head: true });
       let allAppsQuery = this.db.from('LoanApplication').select('status, loanType, amount');
@@ -711,11 +759,11 @@ export class ApplicationService {
       let lastMonthQuery = this.db.from('LoanApplication').select('*', { count: 'exact', head: true });
 
       if (isBank && bankName) {
-        totalQuery = totalQuery.eq('bank', bankName);
-        allAppsQuery = allAppsQuery.eq('bank', bankName);
-        recentAppsQuery = recentAppsQuery.eq('bank', bankName);
-        thisMonthQuery = thisMonthQuery.eq('bank', bankName);
-        lastMonthQuery = lastMonthQuery.eq('bank', bankName);
+        totalQuery = totalQuery.ilike('bank', `%${bankName}%`);
+        allAppsQuery = allAppsQuery.ilike('bank', `%${bankName}%`);
+        recentAppsQuery = recentAppsQuery.ilike('bank', `%${bankName}%`);
+        thisMonthQuery = thisMonthQuery.ilike('bank', `%${bankName}%`);
+        lastMonthQuery = lastMonthQuery.ilike('bank', `%${bankName}%`);
       }
 
       console.log(`[Stats] Executing queries for ${bankName || 'all banks'}...`);

@@ -14,6 +14,11 @@ const allowedDevOrigins: string[] = [
 ];
 
 const nextConfig: NextConfig = {
+  // Fix: explicitly set Turbopack root to this directory so Next.js does not
+  // incorrectly infer the parent Loan/ folder as the workspace root.
+  turbopack: {
+    root: __dirname,
+  },
   // Allow specific dev origins to request Next.js assets in development.
   // Use the ALLOWED_DEV_ORIGINS env var (comma-separated) to add more without changing code.
   allowedDevOrigins,

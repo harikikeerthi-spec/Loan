@@ -667,8 +667,12 @@ export const adminApi = {
     // Stats
     getBlogStats: () =>
         apiFetch(`${API_URL}/blogs/admin/stats`),
-    getApplicationStats: () =>
-        apiFetch(`${API_URL}/applications/admin/stats`),
+    getApplicationStats: (bankId?: string) =>
+        apiFetch(`${API_URL}/applications/admin/stats${bankId ? `?bankId=${bankId}` : ''}`),
+    getPortfolioAnalysis: (bankId?: string) =>
+        apiFetch(`${API_URL}/admin/applications/portfolio/analysis${bankId ? `?bankId=${bankId}` : ''}`),
+    getComplianceReport: (bankId?: string) =>
+        apiFetch(`${API_URL}/admin/applications/compliance/report${bankId ? `?bankId=${bankId}` : ''}`),
 
     // Blogs
     getBlogs: (params?: Record<string, string>) => {

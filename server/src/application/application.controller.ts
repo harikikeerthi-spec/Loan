@@ -145,11 +145,23 @@ export class ApplicationController {
         @Query('sortBy') sortBy?: string,
         @Query('sortOrder') sortOrder?: string,
     ) {
+        let dbBankName: string | undefined = bank;
+        if (bank) {
+            const mappings: Record<string, string> = {
+                credila: 'HDFC Credila',
+                poonawalla: 'Poonawalla Fincorp',
+                idfc: 'IDFC First Bank',
+                avanse: 'Avanse Financial Services',
+                auxilo: 'Auxilo'
+            };
+            dbBankName = mappings[bank.toLowerCase()] || bank;
+        }
+
         return this.applicationService.getAllApplications({
             status,
             stage,
             loanType,
-            bank,
+            bank: dbBankName,
             search,
             fromDate,
             toDate,
@@ -166,8 +178,8 @@ export class ApplicationController {
      */
     @Get('admin/stats')
     @UseGuards(StaffGuard)
-    async getApplicationStats(@Request() req) {
-        return this.applicationService.getApplicationStats(req.user);
+    async getApplicationStats(@Request() req, @Query('bankId') bankId?: string) {
+        return this.applicationService.getApplicationStats(req.user, bankId);
     }
 
     /**
@@ -188,6 +200,19 @@ export class ApplicationController {
     @UseGuards(StaffGuard)
     async syncVaultDocuments(@Param('id') id: string) {
         return this.applicationService.syncApplicationDocuments(id);
+    }
+
+    /**
+     * Update application details (Admin/Staff/Bank)
+     * PUT /applications/admin/:id
+     */
+    @Put('admin/:id')
+    @UseGuards(StaffGuard)
+    async updateApplicationDetails(
+        @Param('id') id: string,
+        @Body() body: any
+    ) {
+        return this.applicationService.adminUpdateApplication(id, body);
     }
 
     /**

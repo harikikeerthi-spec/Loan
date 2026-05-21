@@ -126,8 +126,9 @@ export class AdminApplicationController {
      * Get portfolio analysis
      */
     @Get('portfolio/analysis')
-    async getPortfolioAnalysis() {
-        const analysis = await this.adminApplicationService.getPortfolioAnalysis();
+    async getPortfolioAnalysis(@Request() req) {
+        const bankId = req.query.bankId as string | undefined;
+        const analysis = await this.adminApplicationService.getPortfolioAnalysis(req.user, bankId);
         return { success: true, data: analysis };
     }
 
@@ -136,8 +137,9 @@ export class AdminApplicationController {
      * Get compliance report
      */
     @Get('compliance/report')
-    async getComplianceReport() {
-        const report = await this.adminApplicationService.getComplianceReport();
+    async getComplianceReport(@Request() req) {
+        const bankId = req.query.bankId as string | undefined;
+        const report = await this.adminApplicationService.getComplianceReport(req.user, bankId);
         return { success: true, data: report };
     }
 }
