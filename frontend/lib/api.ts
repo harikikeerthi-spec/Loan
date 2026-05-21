@@ -4,7 +4,9 @@
 
 // Relative path: works on localhost, Cloudflare tunnels, and production alike.
 // Next.js rewrites /api/* → http://localhost:5000/* on the server side.
-const API_URL = "/api";
+import { HTTP_API_PREFIX, HttpApiPaths } from "./http-api-paths";
+
+const API_URL = HTTP_API_PREFIX;
 
 type Portal = "student" | "staff" | "admin" | "bank";
 
@@ -246,49 +248,49 @@ async function fetchBlob(url: string, options: RequestInit = {}): Promise<Blob> 
 // ─── Auth ─────────────────────────────────────────────────────────────
 export const authApi = {
     sendOtp: (email: string) =>
-        fetch(`${API_URL}/auth/send-otp`, {
+        fetch(HttpApiPaths.auth.sendOtp(), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email }),
         }).then(handleResponse),
 
     verifyOtp: (email: string, otp: string, referralCode?: string) =>
-        fetch(`${API_URL}/auth/verify-otp`, {
+        fetch(HttpApiPaths.auth.verifyOtp(), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, otp, referralCode }),
         }).then(handleResponse),
 
     firebaseLogin: (idToken: string) =>
-        fetch(`${API_URL}/auth/firebase`, {
+        fetch(HttpApiPaths.auth.firebase(), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ idToken }),
         }).then(handleResponse),
 
     refresh: (refreshToken: string) =>
-        fetch(`${API_URL}/auth/refresh`, {
+        fetch(HttpApiPaths.auth.refresh(), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ refresh_token: refreshToken }),
         }).then(handleResponse),
 
     logout: (email: string) =>
-        fetch(`${API_URL}/auth/logout`, {
+        fetch(HttpApiPaths.auth.logout(), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email }),
         }).then(handleResponse),
 
     getDashboard: (email: string) =>
-        fetch(`${API_URL}/auth/dashboard`, {
+        fetch(HttpApiPaths.auth.dashboard(), {
             method: "POST",
             headers: authHeaders(),
             body: JSON.stringify({ email }),
         }).then(handleResponse),
 
     getDashboardData: (userId: string) =>
-        fetch(`${API_URL}/auth/dashboard-data`, {
+        fetch(HttpApiPaths.auth.dashboardData(), {
             method: "POST",
             headers: authHeaders(),
             body: JSON.stringify({ userId }),
@@ -301,7 +303,7 @@ export const authApi = {
         dateOfBirth: string;
         passportNumber?: string;
     }) =>
-        fetch(`${API_URL}/auth/update-details`, {
+        fetch(HttpApiPaths.auth.updateDetails(), {
             method: "POST",
             headers: authHeaders(),
             body: JSON.stringify({ email, ...details }),
@@ -313,7 +315,7 @@ export const authApi = {
         uploaded: boolean;
         filePath?: string;
     }) =>
-        fetch(`${API_URL}/auth/upload-document`, {
+        fetch(HttpApiPaths.auth.uploadDocument(), {
             method: "POST",
             headers: authHeaders(),
             body: JSON.stringify(data),
@@ -478,14 +480,14 @@ export const exploreApi = {
 // ─── Applications ─────────────────────────────────────────────────────
 export const applicationApi = {
     create: (data: Record<string, unknown>) =>
-        fetch(`${API_URL}/auth/create-application`, {
+        fetch(HttpApiPaths.auth.createApplication(), {
             method: "POST",
             headers: authHeaders(),
             body: JSON.stringify(data),
         }).then(handleResponse),
 
     delete: (id: string) =>
-        fetch(`${API_URL}/auth/application/${id}`, {
+        fetch(HttpApiPaths.auth.applicationById(id), {
             method: "DELETE",
             headers: authHeaders(),
         }).then(handleResponse),
@@ -581,26 +583,26 @@ export const aiApi = {
 
 // ─── Reference Data ───────────────────────────────────────────────────
 export const referenceApi = {
-    getBanks: () => fetch(`${API_URL}/reference/banks`).then(handleResponse),
+    getBanks: () => fetch(HttpApiPaths.reference.banks()).then(handleResponse),
     getCountries: () =>
-        fetch(`${API_URL}/reference/countries`).then(handleResponse),
+        fetch(HttpApiPaths.reference.countries()).then(handleResponse),
     getUniversities: () =>
-        fetch(`${API_URL}/reference/universities`).then(handleResponse),
+        fetch(HttpApiPaths.reference.universities()).then(handleResponse),
 };
 
 // ─── Onboarding ───────────────────────────────────────────────────────
 export const onboardingApi = {
     submit: (data: Record<string, unknown>) =>
-        apiFetch(`${API_URL}/onboarding`, {
+        apiFetch(HttpApiPaths.onboarding.root(), {
             method: "POST",
             body: JSON.stringify(data),
         }),
 
     getStatus: (userId: string) =>
-        apiFetch(`${API_URL}/onboarding/status/${userId}`),
+        apiFetch(HttpApiPaths.onboarding.status(userId)),
 
     share: (data: { studentId: string; studentEmail: string; studentName: string; shareUrl: string }) =>
-        apiFetch(`${API_URL}/onboarding/share`, {
+        apiFetch(HttpApiPaths.onboarding.share(), {
             method: "POST",
             body: JSON.stringify(data),
         }),
@@ -666,201 +668,191 @@ export const referralApi = {
 export const adminApi = {
     // Stats
     getBlogStats: () =>
-        apiFetch(`${API_URL}/blogs/admin/stats`),
+        apiFetch(HttpApiPaths.admin.blogsStats()),
     getApplicationStats: () =>
-        apiFetch(`${API_URL}/applications/admin/stats`),
+        apiFetch(HttpApiPaths.admin.applicationsStats()),
 
     // Blogs
-    getBlogs: (params?: Record<string, string>) => {
-        const query = params ? "?" + new URLSearchParams(params).toString() : "";
-        return apiFetch(`${API_URL}/blogs/admin/all${query}`);
-    },
+    getBlogs: (params?: Record<string, string>) =>
+        apiFetch(HttpApiPaths.admin.blogsAll(params)),
     bulkUpdateBlogStatus: (blogIds: string[], isPublished: boolean) =>
-        fetch(`${API_URL}/blogs/admin/bulk-status`, {
+        fetch(HttpApiPaths.admin.blogsBulkStatus(), {
             method: "POST",
             headers: authHeaders(),
             body: JSON.stringify({ blogIds, isPublished }),
         }).then(handleResponse),
     deleteBlog: (id: string) =>
-        fetch(`${API_URL}/blogs/${id}`, {
+        fetch(HttpApiPaths.admin.blogById(id), {
             method: "DELETE",
             headers: authHeaders(),
         }).then(handleResponse),
     createBlog: (data: any) =>
-        apiFetch(`${API_URL}/blogs`, {
+        apiFetch(HttpApiPaths.admin.blogsCreate(), {
             method: "POST",
             body: JSON.stringify(data),
         }),
 
     getUserStats: () =>
-        apiFetch(`${API_URL}/users/admin/stats`),
+        apiFetch(HttpApiPaths.admin.usersStats()),
 
     // Users
-    getUsers: (limit = 30, offset = 0, search = "", role = "") => {
-        let url = `${API_URL}/users/admin/list?limit=${limit}&offset=${offset}`;
-        if (search) url += `&search=${encodeURIComponent(search)}`;
-        if (role) url += `&role=${encodeURIComponent(role)}`;
-        return apiFetch(url);
-    },
+    getUsers: (limit = 30, offset = 0, search = "", role = "") =>
+        apiFetch(HttpApiPaths.admin.usersList(limit, offset, search, role)),
     updateUserRole: (email: string, role: string) =>
-        apiFetch(`${API_URL}/users/make-admin`, {
+        apiFetch(HttpApiPaths.admin.makeAdmin(), {
             method: "POST",
             body: JSON.stringify({ email, role }),
         }),
     deleteUser: (id: string) =>
-        apiFetch(`${API_URL}/users/admin/${id}`, {
+        apiFetch(HttpApiPaths.admin.userByAdminId(id), {
             method: "DELETE",
         }),
 
     // Applications
-    getApplications: (params?: Record<string, string>) => {
-        const query = params ? "?" + new URLSearchParams(params).toString() : "";
-        return apiFetch(`${API_URL}/applications/admin/all${query}`);
-    },
+    getApplications: (params?: Record<string, string>) =>
+        apiFetch(HttpApiPaths.admin.applicationsAll(params)),
     getApplication: (id: string) =>
-        apiFetch(`${API_URL}/applications/${id}`),
+        apiFetch(HttpApiPaths.admin.applicationById(id)),
     getApplicationTracking: (id: string) =>
-        apiFetch(`${API_URL}/applications/admin/${id}/tracking`),
+        apiFetch(HttpApiPaths.admin.applicationTracking(id)),
     getApplicationDocuments: (id: string) =>
-        apiFetch(`${API_URL}/applications/admin/${id}/documents`),
+        apiFetch(HttpApiPaths.admin.applicationDocuments(id)),
     updateApplicationStatus: (id: string, data: Record<string, unknown>) =>
-        apiFetch(`${API_URL}/applications/admin/${id}/status`, {
+        apiFetch(HttpApiPaths.admin.applicationStatus(id), {
             method: "PUT",
             body: JSON.stringify(data),
         }),
     updateApplication: (id: string, data: Record<string, unknown>) =>
-        apiFetch(`${API_URL}/applications/admin/${id}`, {
+        apiFetch(HttpApiPaths.admin.applicationUpdate(id), {
             method: "PUT",
             body: JSON.stringify(data),
         }),
     aiReviewApplication: (id: string) =>
-        apiFetch(`${API_URL}/applications/admin/${id}/ai-review`, {
+        apiFetch(HttpApiPaths.admin.applicationAiReview(id), {
             method: "POST",
         }),
     deleteApplication: (id: string) =>
-        apiFetch(`${API_URL}/applications/admin/${id}`, {
+        apiFetch(HttpApiPaths.admin.applicationDelete(id), {
             method: "DELETE",
         }),
     shareApplication: (id: string) =>
-        apiFetch(`${API_URL}/applications/admin/${id}/share`, {
+        apiFetch(HttpApiPaths.admin.applicationShare(id), {
             method: "POST",
         }),
     syncVaultDocuments: (id: string) =>
-        apiFetch(`${API_URL}/applications/admin/${id}/sync-vault`, {
+        apiFetch(HttpApiPaths.admin.applicationSyncVault(id), {
             method: "POST",
         }),
 
     // Community
     getCommunityStats: () =>
-        apiFetch(`${API_URL}/community/admin/stats`),
+        apiFetch(HttpApiPaths.admin.communityStats()),
     getForumPosts: (limit = 20, offset = 0) =>
-        apiFetch(`${API_URL}/community/admin/forum/posts?limit=${limit}&offset=${offset}`),
+        apiFetch(HttpApiPaths.admin.forumPostsAdmin(limit, offset)),
     getMentors: () =>
-        apiFetch(`${API_URL}/community/mentors`),
+        apiFetch(HttpApiPaths.admin.mentors()),
     createMentor: (data: any) =>
-        apiFetch(`${API_URL}/community/admin/mentors`, {
+        apiFetch(HttpApiPaths.admin.mentorsAdminCreate(), {
             method: "POST",
             body: JSON.stringify(data),
         }),
     deleteMentor: (id: string) =>
-        apiFetch(`${API_URL}/community/admin/mentors/${id}`, {
+        apiFetch(HttpApiPaths.admin.mentorAdminDelete(id), {
             method: "DELETE",
         }),
-    getCommunityResources: (params?: Record<string, string>) => {
-        const query = params ? "?" + new URLSearchParams(params).toString() : "";
-        return apiFetch(`${API_URL}/community/resources${query}`);
-    },
+    getCommunityResources: (params?: Record<string, string>) =>
+        apiFetch(HttpApiPaths.admin.communityResources(params)),
     createCommunityResource: (data: any) =>
-        apiFetch(`${API_URL}/community/admin/resources`, {
+        apiFetch(HttpApiPaths.admin.communityResourcesAdminCreate(), {
             method: "POST",
             body: JSON.stringify(data),
         }),
     deleteCommunityResource: (id: string) =>
-        apiFetch(`${API_URL}/community/admin/resources/${id}`, {
+        apiFetch(HttpApiPaths.admin.communityResourceAdminDelete(id), {
             method: "DELETE",
         }),
     togglePinForumPost: (id: string, isPinned: boolean) =>
-        apiFetch(`${API_URL}/community/admin/forum/posts/${id}/pin`, {
+        apiFetch(HttpApiPaths.admin.forumPostPin(id), {
             method: "PUT",
             body: JSON.stringify({ isPinned }),
         }),
     deleteForumPost: (id: string) =>
-        apiFetch(`${API_URL}/community/forum/${id}`, {
+        apiFetch(HttpApiPaths.admin.forumPostDelete(id), {
             method: "DELETE",
         }),
     getAuditLogs: (limit = 20) =>
-        apiFetch(`${API_URL}/blogs/admin/matrix-logs?limit=${limit}`),
+        apiFetch(HttpApiPaths.admin.matrixLogs(limit)),
     sendEmail: (data: { to?: string; subject: string; content: string; role?: string; isBulk?: boolean }) =>
-        apiFetch(`${API_URL}/users/admin/send-email`, {
+        apiFetch(HttpApiPaths.admin.sendEmail(), {
             method: "POST",
             body: JSON.stringify(data),
         }),
     createUser: (data: any) =>
-        apiFetch(`${API_URL}/users/admin/create`, {
+        apiFetch(HttpApiPaths.admin.usersCreate(), {
             method: "POST",
             body: JSON.stringify(data),
         }),
     updateUserDetails: (data: { email: string; firstName: string; lastName: string; phoneNumber: string; dateOfBirth: string }) =>
-        apiFetch(`${API_URL}/users/admin/update-details`, {
+        apiFetch(HttpApiPaths.admin.usersUpdateDetails(), {
             method: "POST",
             body: JSON.stringify(data),
         }),
     getUserProfile: (email: string) =>
-        apiFetch(`${API_URL}/users/profile`, {
+        apiFetch(HttpApiPaths.admin.usersProfile(), {
             method: "POST",
             body: JSON.stringify({ email }),
             headers: authHeaders(),
         }),
 
     addRemark: (id: string, data: { type: string; content: string }) =>
-        apiFetch(`${API_URL}/applications/admin/${id}/notes`, {
+        apiFetch(HttpApiPaths.admin.applicationNotes(id), {
             method: 'POST',
             body: JSON.stringify(data),
             headers: authHeaders(),
         }),
 
     getRemarks: (id: string) =>
-        apiFetch(`${API_URL}/applications/admin/${id}/notes`, {
+        apiFetch(HttpApiPaths.admin.applicationNotes(id), {
             headers: authHeaders(),
         }),
 
     verifyDocument: (applicationId: string, documentId: string, status: string, rejectionReason?: string) =>
-        apiFetch(`${API_URL}/applications/admin/documents/${documentId}/verify`, {
+        apiFetch(HttpApiPaths.admin.documentVerify(documentId), {
             method: 'PUT',
             body: JSON.stringify({ status, rejectionReason }),
             headers: authHeaders(),
         }),
 
     viewDocument: (applicationId: string, documentId: string): Promise<Blob> =>
-        fetchBlob(`${API_URL}/applications/admin/${applicationId}/documents/${documentId}/view`),
+        fetchBlob(HttpApiPaths.admin.applicationDocumentView(applicationId, documentId)),
 };
 
 // ─── Documents ────────────────────────────────────────────────────────
 export const documentApi = {
     getUsersDocuments: (userId: string) =>
-        apiFetch(`${API_URL}/documents/${userId}`),
+        apiFetch(HttpApiPaths.documents.byUserId(userId)),
 
     getUserDocuments: (userId: string) =>
-        apiFetch(`${API_URL}/documents/${userId}`),
+        apiFetch(HttpApiPaths.documents.byUserId(userId)),
 
     delete: (userId: string, docType: string) =>
-        apiFetch(`${API_URL}/documents/${userId}/${docType}`, {
+        apiFetch(HttpApiPaths.documents.byUserIdAndDocType(userId, docType), {
             method: "DELETE",
         }),
 
     initiateDigilocker: (userId: string, docType: string) => {
         // Redirect directly — backend handles the OAuth flow
-        window.location.href = `/api/digilocker/authorize?userId=${encodeURIComponent(userId)}&docType=${encodeURIComponent(docType)}`;
+        window.location.href = HttpApiPaths.documents.digilockerAuthorizeRedirect(userId, docType);
     },
 
     initiateDigiLockerPull: (userId: string, docType: string) =>
-        apiFetch(`${API_URL}/documents/digilocker/initiate`, {
+        apiFetch(HttpApiPaths.documents.digilockerInitiate(), {
             method: 'POST',
             body: JSON.stringify({ userId, docType }),
         }),
 
     syncFromDigilocker: (userId: string, docType: string) =>
-        fetch(`${API_URL}/digilocker/sync`, {
+        fetch(HttpApiPaths.documents.digilockerSync(), {
             method: "POST",
             headers: authHeaders(),
             body: JSON.stringify({ userId, docType }),
@@ -899,32 +891,32 @@ export const documentApi = {
 
             xhr.addEventListener('error', () => reject(new Error('Network error')));
             
-            xhr.open('POST', `${API_URL}/documents/upload`);
+            xhr.open('POST', HttpApiPaths.documents.upload());
             if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
             xhr.send(form);
         });
     },
 
     ocrReverify: (userId: string, docType: string) => {
-        return apiFetch(`${API_URL}/documents/ocr-reverify`, {
+        return apiFetch(HttpApiPaths.documents.ocrReverify(), {
             method: 'POST',
             body: JSON.stringify({ userId, docType }),
         });
     },
 
     addRequirement: (userId: string, docType: string, docName?: string) =>
-        apiFetch(`${API_URL}/documents/requirement`, {
+        apiFetch(HttpApiPaths.documents.requirement(), {
             method: 'POST',
             body: JSON.stringify({ userId, docType, docName }),
         }),
 
     /** Get a short-lived S3 presigned URL to view/preview a document. */
     getPresignedView: (userId: string, docType: string) =>
-        apiFetch(`${API_URL}/documents/presigned-view/${encodeURIComponent(userId)}/${encodeURIComponent(docType)}`),
+        apiFetch(HttpApiPaths.documents.presignedView(userId, docType)),
 
     /** Update student profile fields (e.g. from OCR extraction results). */
     updateProfile: (userId: string, updates: any) =>
-        apiFetch(`${API_URL}/onboarding`, {
+        apiFetch(HttpApiPaths.onboarding.root(), {
             method: "POST",
             body: JSON.stringify({ userId, ...updates }),
         }),
@@ -976,54 +968,51 @@ export const universityApi = {
 // ─── Chat ─────────────────────────────────────────────────────────────
 export const chatApi = {
     connect: () =>
-        fetch(`${API_URL}/chat/connect`, {
+        fetch(HttpApiPaths.chat.connect(), {
             method: "POST",
             headers: authHeaders(),
         }).then(handleResponse),
 
     getConversations: () =>
-        fetch(`${API_URL}/chat/conversations`, {
+        fetch(HttpApiPaths.chat.conversations(), {
             headers: authHeaders(),
         }).then(handleResponse),
 
     getMessages: (conversationId: string) =>
-        fetch(`${API_URL}/chat/messages/${conversationId}`, {
+        fetch(HttpApiPaths.chat.messages(conversationId), {
             headers: authHeaders(),
         }).then(handleResponse),
-};// ─── Staff Profile (Intermediary Flow) ───────────────────────────────
+}; 
+// ─── Staff Profile (Intermediary Flow) ───────────────────────────────
 export const staffProfileApi = {
     // List all profiles (with optional search / bankStatus filter)
-    list: (params?: { search?: string; bankStatus?: string }) => {
-        const q = new URLSearchParams();
-        if (params?.search) q.set('search', params.search);
-        if (params?.bankStatus) q.set('bankStatus', params.bankStatus);
-        return apiFetch(`${API_URL}/staff-profiles?${q.toString()}`);
-    },
+    list: (params?: { search?: string; bankStatus?: string }) =>
+        apiFetch(HttpApiPaths.staffProfiles.list(params)),
 
     // Check if a profile already exists for a linked user
     checkExists: (userId: string) =>
-        apiFetch(`${API_URL}/staff-profiles/check/${userId}`),
+        apiFetch(HttpApiPaths.staffProfiles.check(userId)),
 
     // Create a staff profile linked to a website user
     create: (data: { linked_user_id: string; target_bank?: string; loan_type?: string; internal_notes?: string }) =>
-        apiFetch(`${API_URL}/staff-profiles`, {
+        apiFetch(HttpApiPaths.staffProfiles.root(), {
             method: 'POST',
             body: JSON.stringify(data),
         }),
 
     // Get a single profile with its documents
     get: (profileId: string) =>
-        apiFetch(`${API_URL}/staff-profiles/${profileId}`),
+        apiFetch(HttpApiPaths.staffProfiles.byId(profileId)),
 
     // Pull and attach all documents uploaded by the linked user
     fetchUserDocuments: (profileId: string) =>
-        apiFetch(`${API_URL}/staff-profiles/${profileId}/fetch-documents`, {
+        apiFetch(HttpApiPaths.staffProfiles.fetchDocuments(profileId), {
             method: 'POST',
         }),
 
     // Get documents currently attached to a profile
     getDocuments: (profileId: string) =>
-        apiFetch(`${API_URL}/staff-profiles/${profileId}/documents`),
+        apiFetch(HttpApiPaths.staffProfiles.documents(profileId)),
 
     // Staff manually uploads a document and attaches it
     uploadDocument: (profileId: string, file: File, docType: string, onProgress?: (progress: number) => void, description?: string) => {
@@ -1059,7 +1048,7 @@ export const staffProfileApi = {
 
             xhr.addEventListener('error', () => reject(new Error('Network error')));
             
-            xhr.open('POST', `${API_URL}/staff-profiles/${profileId}/documents`);
+            xhr.open('POST', HttpApiPaths.staffProfiles.documents(profileId));
             if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
             xhr.send(form);
         });
@@ -1067,14 +1056,14 @@ export const staffProfileApi = {
 
     // Update a document's status (also back-syncs to user's profile)
     updateDocumentStatus: (profileId: string, docId: string, status: string, rejectionReason?: string) =>
-        apiFetch(`${API_URL}/staff-profiles/${profileId}/documents/${docId}/status`, {
+        apiFetch(HttpApiPaths.staffProfiles.documentStatus(profileId, docId), {
             method: 'PATCH',
             body: JSON.stringify({ status, rejection_reason: rejectionReason }),
         }),
 
     // Remove (detach) a document from the profile
     removeDocument: (profileId: string, docId: string) =>
-        apiFetch(`${API_URL}/staff-profiles/${profileId}/documents/${docId}`, {
+        apiFetch(HttpApiPaths.staffProfiles.documentById(profileId, docId), {
             method: 'DELETE',
         }),
 
@@ -1086,72 +1075,66 @@ export const staffProfileApi = {
         expires_in_days?: number;
         access_note?: string;
     }) =>
-        apiFetch(`${API_URL}/staff-profiles/${profileId}/share`, {
+        apiFetch(HttpApiPaths.staffProfiles.share(profileId), {
             method: 'POST',
             body: JSON.stringify(data),
         }),
 
     // Get share history for a profile
     getShares: (profileId: string) =>
-        apiFetch(`${API_URL}/staff-profiles/${profileId}/shares`),
+        apiFetch(HttpApiPaths.staffProfiles.shares(profileId)),
 
     // S3 Document Management
     // Get presigned URL for S3 upload
     getS3PresignedUrl: (userId: string, docType: string, fileName: string, fileType: string) =>
-        apiFetch(`${API_URL}/documents/presigned-url`, {
+        apiFetch(HttpApiPaths.documents.presignedUrl(), {
             method: 'POST',
             body: JSON.stringify({ userId, docType, fileName, fileType }),
         }),
 
     // Complete S3 document upload (register in database)
     completeS3Upload: (userId: string, docId: string, docType: string, s3Key: string, s3Url: string, personType: string, employmentType?: string) =>
-        apiFetch(`${API_URL}/documents/complete-upload`, {
+        apiFetch(HttpApiPaths.documents.completeUpload(), {
             method: 'POST',
             body: JSON.stringify({ userId, docId, docType, s3Key, s3Url, personType, employmentType }),
         }),
 
     // Fetch user documents from S3
     fetchUserS3Documents: (userId: string) =>
-        apiFetch(`${API_URL}/documents/user/${userId}`),
+        apiFetch(HttpApiPaths.documents.userDocumentsLegacy(userId)),
 
     // Delete S3 document
     deleteS3Document: (docId: string) =>
-        apiFetch(`${API_URL}/documents/${docId}`, {
+        apiFetch(HttpApiPaths.documents.byDocId(docId), {
             method: 'DELETE',
         }),
 
     // Download document from S3
     downloadS3Document: (s3Key: string) =>
-        apiFetch(`${API_URL}/documents/download`, {
+        apiFetch(HttpApiPaths.documents.download(), {
             method: 'POST',
             body: JSON.stringify({ s3Key }),
         }),
 
     // Verify S3 document
     verifyS3Document: (docId: string, status: string, rejectionReason?: string) =>
-        apiFetch(`${API_URL}/documents/${docId}/verify`, {
+        apiFetch(HttpApiPaths.documents.verifyByDocId(docId), {
             method: 'PATCH',
             body: JSON.stringify({ status, rejection_reason: rejectionReason }),
         }),
 
     // Dashboard Activities
     logActivity: (data: { type: string; msg: string; icon: string; color: string }) =>
-        apiFetch(`${API_URL}/staff-profiles/activities`, {
+        apiFetch(HttpApiPaths.staffProfiles.activities(), {
             method: 'POST',
             body: JSON.stringify(data),
         }),
 
     getDashboardActivities: (limit = 15) =>
-        apiFetch(`${API_URL}/staff-profiles/dashboard/activities?limit=${limit}`),
+        apiFetch(HttpApiPaths.staffProfiles.dashboardActivities(limit)),
 
-    getAllDashboardActivities: (opts: { limit?: number; offset?: number; type?: string; search?: string }) => {
-        const params = new URLSearchParams();
-        if (opts.limit !== undefined) params.append('limit', opts.limit.toString());
-        if (opts.offset !== undefined) params.append('offset', opts.offset.toString());
-        if (opts.type) params.append('type', opts.type);
-        if (opts.search) params.append('search', opts.search);
-        return apiFetch(`${API_URL}/staff-profiles/activities/all?${params.toString()}`);
-    },
+    getAllDashboardActivities: (opts: { limit?: number; offset?: number; type?: string; search?: string }) =>
+        apiFetch(HttpApiPaths.staffProfiles.activitiesAll(opts)),
 
     // Share a student profile with a bank or the student (Step 4 of onboarding)
     shareProfile: (studentId: string, data: {
@@ -1161,9 +1144,11 @@ export const staffProfileApi = {
         message?: string;
         sharedBy?: string;
     }) =>
-        apiFetch(`${API_URL}/staff-profiles/share-profile/${studentId}`, {
+        apiFetch(HttpApiPaths.staffProfiles.shareProfile(studentId), {
             method: 'POST',
             body: JSON.stringify(data),
         }),
 };
 
+/** Shared REST path builders + staff-dashboard catalog (single source for URLs). */
+export { HTTP_API_PREFIX, HttpApiPaths, staffDashboardApiCatalog } from "./http-api-paths";

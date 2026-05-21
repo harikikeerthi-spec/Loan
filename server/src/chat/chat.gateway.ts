@@ -210,32 +210,40 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @OnEvent('user.login')
   handleUserLogin(payload: any) {
     this.logger.log(`Broadcasting login alert for ${payload.email} to staff`);
-    this.server.to('room_staff').emit('user_activity', {
-      id: Date.now(),
-      type: payload.isNewUser ? 'registration' : 'login',
-      msg: `${payload.firstName || 'Student'} ${payload.lastName || ''} logged in.`,
-      time: 'Just now',
-      color: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-      icon: 'login',
-      actorName: `${payload.firstName || 'Student'} ${payload.lastName || ''}`.trim() || payload.email,
-      actorEmail: payload.email,
-      createdAt: new Date().toISOString()
-    });
+    if (this.server) {
+      this.server.to('room_staff').emit('user_activity', {
+        id: Date.now(),
+        type: payload.isNewUser ? 'registration' : 'login',
+        msg: `${payload.firstName || 'Student'} ${payload.lastName || ''} logged in.`,
+        time: 'Just now',
+        color: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+        icon: 'login',
+        actorName: `${payload.firstName || 'Student'} ${payload.lastName || ''}`.trim() || payload.email,
+        actorEmail: payload.email,
+        createdAt: new Date().toISOString()
+      });
+    } else {
+      this.logger.warn(`WS server not initialized. Skipping user.login broadcast.`);
+    }
   }
 
   @OnEvent('dashboard.activity')
   handleDashboardActivity(payload: any) {
     this.logger.log(`Broadcasting dashboard activity: ${payload.msg}`);
-    this.server.to('room_staff').emit('user_activity', {
-      id: payload.id || Date.now(),
-      type: payload.type || 'info',
-      msg: payload.msg,
-      time: payload.time || 'Just now',
-      icon: payload.icon || 'history',
-      color: payload.color || 'bg-slate-50 text-slate-600 border-slate-100',
-      actorName: payload.actorName || 'System',
-      actorEmail: payload.actorEmail || null,
-      createdAt: payload.createdAt || new Date().toISOString()
-    });
+    if (this.server) {
+      this.server.to('room_staff').emit('user_activity', {
+        id: payload.id || Date.now(),
+        type: payload.type || 'info',
+        msg: payload.msg,
+        time: payload.time || 'Just now',
+        icon: payload.icon || 'history',
+        color: payload.color || 'bg-slate-50 text-slate-600 border-slate-100',
+        actorName: payload.actorName || 'System',
+        actorEmail: payload.actorEmail || null,
+        createdAt: payload.createdAt || new Date().toISOString()
+      });
+    } else {
+      this.logger.warn(`WS server not initialized. Skipping dashboard.activity broadcast.`);
+    }
   }
 }

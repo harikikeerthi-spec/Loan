@@ -1,0 +1,582 @@
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { SupabaseService } from '../supabase/supabase.service';
+import { LoanStateMachine } from './loan-state-machine';
+import { SlackService } from './slack.service';
+import { SalesforceService } from './salesforce.service';
+
+@Injectable()
+export class BankService {
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly slack: SlackService,
+    private readonly salesforce: SalesforceService
+  ) {}
+
+  private get db() {
+    return this.supabase.getClient();
+  }
+
+  /**
+   * Helper to detect active bank context by matching string
+   */
+  private matchBankFilter(query: any, bankName: string) {
+    if (!bankName) return query;
+    return query.ilike('bank', `%${bankName}%`);
+  }
+
+  /**
+   * Category A: Fetch incoming student file queue
+   */
+  async getIncomingFiles(bankName: string, filters: any): Promise<any[]> {
+    console.log(`[BankService] Fetching incoming queue for bank: "${bankName}"`);
+    
+    let query = this.db
+      .from('LoanApplication')
+      .select('*')
+      .in('status', ['submitted', 'submitted_to_bank', 'pending']);
+
+    query = this.matchBankFilter(query, bankName);
+
+    if (filters.limit) query = query.limit(parseInt(filters.limit, 10));
+    if (filters.offset) query = query.range(
+      parseInt(filters.offset, 10),
+      parseInt(filters.offset, 10) + (parseInt(filters.limit, 10) || 20) - 1
+    );
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+  }
+
+  /**
+   * Category A: Log file & assign unique LAN code
+   */
+  async logFile(
+    applicationId: string,
+    lanNumber: string,
+    bankUser: any
+  ): Promise<any> {
+    console.log(`[BankService] Manual LAN logging triggered for App ID: ${applicationId}, LAN: ${lanNumber}`);
+
+    // Fetch existing application
+    const { data: application, error: fetchError } = await this.db
+      .from('LoanApplication')
+      .select('*')
+      .eq('id', applicationId)
+      .single();
+
+    if (fetchError || !application) {
+      throw new NotFoundException(`Loan application with ID "${applicationId}" not found`);
+    }
+
+    // State machine check
+    LoanStateMachine.validateTransition(application.status, 'file_logged', bankUser.role);
+
+    // Save LAN entry in lan_records
+    const { error: lanError } = await this.db.from('lan_records').insert({
+      applicationId: applicationId,
+      lanNumber: lanNumber,
+      assignedBy: bankUser.email
+    });
+    if (lanError) throw lanError;
+
+    // Update LoanApplication record
+    const updatedStatus = 'file_logged';
+    const updatedStage = LoanStateMachine.getStageByStatus(updatedStatus);
+    const updatedProgress = LoanStateMachine.getProgressByStatus(updatedStatus);
+
+    const { data: updatedApp, error: updateError } = await this.db
+      .from('LoanApplication')
+      .update({
+        status: updatedStatus,
+        stage: updatedStage,
+        progress: updatedProgress,
+        applicationNumber: lanNumber, // Sync LAN to applicationNumber field
+        remarks: `LAN ${lanNumber} assigned manually by bank user: ${bankUser.firstName || 'Banker'}.`,
+        updatedAt: new Date().toISOString()
+      })
+      .eq('id', applicationId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    // Log status history transition
+    await this.db.from('ApplicationStatusHistory').insert({
+      applicationId: applicationId,
+      fromStatus: application.status,
+      toStatus: updatedStatus,
+      fromStage: application.stage,
+      toStage: updatedStage,
+      changedBy: bankUser.id,
+      changedByName: `${bankUser.firstName || ''} ${bankUser.lastName || ''}`.trim() || bankUser.email,
+      changeReason: `Manual LAN Logged: ${lanNumber}`,
+      isAutomatic: false,
+      createdAt: new Date().toISOString()
+    });
+
+    // Thread in ApplicationNote as serialization protocol
+    await this.db.from('ApplicationNote').insert({
+      applicationId: applicationId,
+      authorId: bankUser.id,
+      authorName: `${bankUser.firstName || ''} ${bankUser.lastName || ''}`.trim() || bankUser.email,
+      content: JSON.stringify({
+        action: 'lan_assigned',
+        lanNumber: lanNumber,
+        timestamp: new Date().toISOString()
+      }),
+      type: 'lan_assigned',
+      isInternal: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    // CRM Trigger
+    await this.salesforce.syncLeadOrOpportunity(
+      applicationId,
+      `${application.firstName} ${application.lastName}`,
+      application.amount,
+      updatedStatus,
+      lanNumber
+    );
+
+    return {
+      success: true,
+      message: 'File logged successfully with LAN number',
+      application: updatedApp
+    };
+  }
+
+  /**
+   * Category A: Retrieve application documents list
+   */
+  async getDocuments(applicationId: string): Promise<any[]> {
+    const { data, error } = await this.db
+      .from('ApplicationDocument')
+      .select('*')
+      .eq('applicationId', applicationId);
+    
+    if (error) throw error;
+    return data || [];
+  }
+
+  /**
+   * Category A: Simulated bulk zip document compiler
+   */
+  async generateDocumentsZip(applicationId: string): Promise<any> {
+    console.log(`[BankService] Building bulk documents ZIP buffer for App ID: ${applicationId}`);
+    
+    const documents = await this.getDocuments(applicationId);
+    if (!documents || documents.length === 0) {
+      throw new NotFoundException(`No student documents found for App ID: ${applicationId}`);
+    }
+
+    // Returns a mock base64/binary payload zip representation
+    const mockZipBase64 = 'UEsDBAoAAAAAACGP1VgAAAAAAAAAAAAAAAAJABwAdGVzdC50eHRVVAkAA8D6aWRg+mlkdXgIAQk4AAAAAABIZWxsbyBXb3JsZCEhUEsBAh4DCgAAAAAAIY/VWAYBAADAAQAAAJIAAAAAAAEAIAAAAAAAAAB0ZXN0LnR4dFVUBQADwPppZHV4CgEJMAAAAAABSAAAAABQSwUGAAAAAAEAAQBLAAAAUgAAAAAA';
+    
+    return {
+      success: true,
+      fileName: `VL_Student_Docs_${applicationId}.zip`,
+      mimeType: 'application/zip',
+      fileSize: 409600,
+      buffer: Buffer.from(mockZipBase64, 'base64')
+    };
+  }
+
+  /**
+   * Category A: Register decisions (Sanction, Reject, Partial, etc.)
+   */
+  async registerDecision(
+    applicationId: string,
+    decisionType: string,
+    details: any,
+    bankUser: any
+  ): Promise<any> {
+    console.log(`[BankService] Decision "${decisionType}" submitted for App ID: ${applicationId}`);
+
+    const { data: application, error: fetchError } = await this.db
+      .from('LoanApplication')
+      .select('*')
+      .eq('id', applicationId)
+      .single();
+
+    if (fetchError || !application) {
+      throw new NotFoundException(`Loan application with ID "${applicationId}" not found`);
+    }
+
+    // Determine target status mapped from decision type
+    let targetStatus = 'under_bank_review';
+    if (decisionType === 'sanction_approved' || decisionType === 'sanction') {
+      targetStatus = 'sanctioned';
+    } else if (decisionType === 'conditional_sanction') {
+      targetStatus = 'conditional_sanction';
+    } else if (decisionType === 'counter_offer') {
+      targetStatus = 'counter_offer';
+    } else if (decisionType === 'rejected' || decisionType === 'reject') {
+      targetStatus = 'rejected';
+    } else {
+      throw new BadRequestException(`Unsupported decision type: "${decisionType}"`);
+    }
+
+    // State machine validation
+    LoanStateMachine.validateTransition(application.status, targetStatus, bankUser.role);
+
+    // Save decision entry in specialized tables
+    const nowStr = new Date().toISOString();
+    if (targetStatus === 'sanctioned') {
+      await this.db.from('sanctions').insert({
+        applicationId: applicationId,
+        sanctionAmount: details.sanctionAmount || application.amount,
+        interestRate: details.interestRate || 9.5,
+        tenure: details.tenure || 120,
+        sanctionedAt: nowStr
+      });
+    } else if (targetStatus === 'conditional_sanction') {
+      await this.db.from('conditional_sanctions').insert({
+        applicationId: applicationId,
+        conditionsList: details.conditions || ['Provide academic marksheets'],
+        deadline: details.deadline || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+        status: 'pending',
+        createdAt: nowStr
+      });
+    } else if (targetStatus === 'counter_offer') {
+      await this.db.from('counter_offers').insert({
+        applicationId: applicationId,
+        offeredAmount: details.offeredAmount || application.amount * 0.9,
+        offeredRate: details.offeredRate || 10.5,
+        offeredTenure: details.offeredTenure || 96,
+        status: 'pending'
+      });
+    } else if (targetStatus === 'rejected') {
+      await this.db.from('rejections').insert({
+        applicationId: applicationId,
+        reason: details.reason || 'Credit score shortfall',
+        rejectedAt: nowStr
+      });
+    }
+
+    // Update main application status
+    const updatedStage = LoanStateMachine.getStageByStatus(targetStatus);
+    const updatedProgress = LoanStateMachine.getProgressByStatus(targetStatus);
+
+    const { data: updatedApp, error: updateError } = await this.db
+      .from('LoanApplication')
+      .update({
+        status: targetStatus,
+        stage: updatedStage,
+        progress: updatedProgress,
+        interestRate: details.interestRate || application.interestRate,
+        processingFee: details.processingFee || application.processingFee,
+        sanctionAmount: details.sanctionAmount || application.sanctionAmount,
+        rejectionReason: targetStatus === 'rejected' ? details.reason : null,
+        approvedAt: targetStatus === 'sanctioned' ? nowStr : application.approvedAt,
+        rejectedAt: targetStatus === 'rejected' ? nowStr : application.rejectedAt,
+        remarks: `Decision "${decisionType.toUpperCase()}" registered by ${bankUser.firstName || 'Banker'}.`,
+        updatedAt: nowStr
+      })
+      .eq('id', applicationId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    // Log status history transition
+    await this.db.from('ApplicationStatusHistory').insert({
+      applicationId: applicationId,
+      fromStatus: application.status,
+      toStatus: targetStatus,
+      fromStage: application.stage,
+      toStage: updatedStage,
+      changedBy: bankUser.id,
+      changedByName: `${bankUser.firstName || ''} ${bankUser.lastName || ''}`.trim() || bankUser.email,
+      changeReason: `Decision submitted: ${decisionType}`,
+      isAutomatic: false,
+      createdAt: nowStr
+    });
+
+    // Thread serialization in ApplicationNote
+    await this.db.from('ApplicationNote').insert({
+      applicationId: applicationId,
+      authorId: bankUser.id,
+      authorName: `${bankUser.firstName || ''} ${bankUser.lastName || ''}`.trim() || bankUser.email,
+      content: JSON.stringify({
+        action: decisionType,
+        details: details,
+        timestamp: nowStr
+      }),
+      type: decisionType,
+      isInternal: false,
+      createdAt: nowStr,
+      updatedAt: nowStr
+    });
+
+    // Trigger Integrations
+    const studentName = `${application.firstName || ''} ${application.lastName || ''}`.trim() || 'Student';
+    await this.slack.publishDecisionNotification(
+      application.bank,
+      studentName,
+      application.applicationNumber,
+      decisionType,
+      details
+    );
+
+    await this.salesforce.syncLeadOrOpportunity(
+      applicationId,
+      studentName,
+      application.amount,
+      targetStatus,
+      application.applicationNumber
+    );
+
+    return {
+      success: true,
+      message: `Decision "${decisionType}" registered successfully.`,
+      application: updatedApp
+    };
+  }
+
+  /**
+   * Category A: Raise query to VidyaLoans staff
+   */
+  async raiseQuery(
+    applicationId: string,
+    content: string,
+    bankUser: any
+  ): Promise<any> {
+    console.log(`[BankService] Raising document query on App ID: ${applicationId}`);
+
+    const { data: application } = await this.db
+      .from('LoanApplication')
+      .select('status, stage, bank, applicationNumber')
+      .eq('id', applicationId)
+      .single();
+
+    // Check if status shifts to query_raised
+    if (application && application.status !== 'query_raised') {
+      await this.db
+        .from('LoanApplication')
+        .update({
+          status: 'query_raised',
+          progress: LoanStateMachine.getProgressByStatus('query_raised'),
+          updatedAt: new Date().toISOString()
+        })
+        .eq('id', applicationId);
+    }
+
+    // Insert Query
+    const { data: queryRecord, error: queryError } = await this.db
+      .from('queries')
+      .insert({
+        applicationId: applicationId,
+        authorId: bankUser.id,
+        authorName: `${bankUser.firstName || ''} ${bankUser.lastName || ''}`.trim() || bankUser.email,
+        content: content,
+        status: 'open'
+      })
+      .select()
+      .single();
+
+    if (queryError) throw queryError;
+
+    // Serialize ApplicationNote query
+    await this.db.from('ApplicationNote').insert({
+      applicationId: applicationId,
+      authorId: bankUser.id,
+      authorName: `${bankUser.firstName || ''} ${bankUser.lastName || ''}`.trim() || bankUser.email,
+      content: JSON.stringify({
+        action: 'query_raised',
+        content: content,
+        timestamp: new Date().toISOString()
+      }),
+      type: 'query_raised',
+      isInternal: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    // Notify via in-app
+    await this.db.from('Notification').insert({
+      userId: 'staff',
+      title: '❓ Partner Query Raised',
+      message: `Bank officer ${bankUser.firstName || 'Banker'} raised a clarification query on App: ${application?.applicationNumber || applicationId}`,
+      type: 'query_raised',
+      isRead: false,
+      createdAt: new Date().toISOString()
+    });
+
+    return {
+      success: true,
+      message: 'Query raised successfully',
+      query: queryRecord
+    };
+  }
+
+  /**
+   * Category A: Confirm Tranche Disbursements (Admin and bank visible only)
+   */
+  async confirmDisbursement(
+    applicationId: string,
+    disbursementAmount: number,
+    trancheNumber: number,
+    transferMode: string,
+    utrNumber: string,
+    bankUser: any
+  ): Promise<any> {
+    console.log(`[BankService] Final Tranche ${trancheNumber} disbursement confirmation processing for App: ${applicationId}`);
+
+    const { data: application } = await this.db
+      .from('LoanApplication')
+      .select('*')
+      .eq('id', applicationId)
+      .single();
+
+    if (!application) {
+      throw new NotFoundException(`Loan application with ID "${applicationId}" not found`);
+    }
+
+    // State machine check
+    LoanStateMachine.validateTransition(application.status, 'disbursement_confirmed', bankUser.role);
+
+    // Save disbursement entry
+    const { error: disbError } = await this.db.from('disbursements').insert({
+      applicationId: applicationId,
+      disbursementAmount: disbursementAmount,
+      trancheNumber: trancheNumber,
+      transferMode: transferMode,
+      utrNumber: utrNumber,
+      disbursedAt: new Date().toISOString()
+    });
+    if (disbError) throw disbError;
+
+    // Calculate payouts
+    const commissionVal = disbursementAmount * 0.0045; // 0.45% agent commission
+    const referralVal = disbursementAmount * 0.0100;   // 1.00% referral fee
+
+    await this.db.from('commissions').insert({
+      applicationId: applicationId,
+      commissionAmount: commissionVal,
+      payoutStatus: 'pending'
+    });
+
+    await this.db.from('referral_fees').insert({
+      applicationId: applicationId,
+      referralFeeAmount: referralVal,
+      status: 'pending'
+    });
+
+    // Update application
+    const targetStatus = 'disbursement_confirmed';
+    const updatedStage = LoanStateMachine.getStageByStatus(targetStatus);
+    const updatedProgress = LoanStateMachine.getProgressByStatus(targetStatus);
+
+    const { data: updatedApp, error: updateError } = await this.db
+      .from('LoanApplication')
+      .update({
+        status: targetStatus,
+        stage: updatedStage,
+        progress: updatedProgress,
+        disbursedAmount: (application.disbursedAmount || 0) + disbursementAmount,
+        disbursedAt: new Date().toISOString(),
+        remarks: `Tranche ${trancheNumber} disbursed (UTR: ${utrNumber}) confirmed by ${bankUser.firstName || 'Banker'}.`,
+        updatedAt: new Date().toISOString()
+      })
+      .eq('id', applicationId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    // Log status history transition
+    await this.db.from('ApplicationStatusHistory').insert({
+      applicationId: applicationId,
+      fromStatus: application.status,
+      toStatus: targetStatus,
+      fromStage: application.stage,
+      toStage: updatedStage,
+      changedBy: bankUser.id,
+      changedByName: `${bankUser.firstName || ''} ${bankUser.lastName || ''}`.trim() || bankUser.email,
+      changeReason: `Disbursement confirmed: Tranche ${trancheNumber}`,
+      isAutomatic: false,
+      createdAt: new Date().toISOString()
+    });
+
+    // Application note serialization
+    await this.db.from('ApplicationNote').insert({
+      applicationId: applicationId,
+      authorId: bankUser.id,
+      authorName: `${bankUser.firstName || ''} ${bankUser.lastName || ''}`.trim() || bankUser.email,
+      content: JSON.stringify({
+        action: 'disbursement_confirmed',
+        disbursementAmount: disbursementAmount,
+        trancheNumber: trancheNumber,
+        transferMode: transferMode,
+        utrNumber: utrNumber,
+        timestamp: new Date().toISOString()
+      }),
+      type: 'disbursement_confirmed',
+      isInternal: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+
+    // CRM Trigger
+    await this.salesforce.syncLeadOrOpportunity(
+      applicationId,
+      `${application.firstName} ${application.lastName}`,
+      application.amount,
+      targetStatus,
+      application.applicationNumber
+    );
+
+    return {
+      success: true,
+      message: 'Disbursement UTR confirmed successfully',
+      application: updatedApp
+    };
+  }
+
+  /**
+   * Category C: File Quality Rating submissions
+   */
+  async submitFileQualityScore(
+    applicationId: string,
+    rating: number,
+    feedback: string
+  ): Promise<any> {
+    const { data, error } = await this.db
+      .from('file_quality_scores')
+      .insert({
+        applicationId: applicationId,
+        rating: rating,
+        feedback: feedback
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return {
+      success: true,
+      message: 'File quality score rated',
+      ratingRecord: data
+    };
+  }
+
+  /**
+   * Category C: Fetch SLA complying TAT trackers
+   */
+  async getSlaTrackingMetrics(bankName: string): Promise<any> {
+    console.log(`[BankService] Querying SLA track logs for bank: ${bankName}`);
+
+    // Returns simulated average response benchmarks matching blueprint Section 3
+    return {
+      success: true,
+      bank: bankName || 'All Partner Banks',
+      promisedTAT: '5.0 Days',
+      averageVerificationTAT: '2.4 Days',
+      averageSanctionTAT: '4.2 Days',
+      averageDisbursementTAT: '1.8 Days',
+      slaComplianceRate: '96.4%',
+      activeBreachesCount: 0
+    };
+  }
+}

@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '@/contexts/AuthContext';
+import { HttpApiPaths } from '@/lib/http-api-paths';
 
 interface Message {
     id: string;
@@ -47,8 +48,6 @@ export default function ChatInterface({ role, initialUser, portalTitle }: ChatIn
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const activeConversationRef = useRef<string | null>(null);
 
-    const apiUrl = "/api";
-
     // Sync ref with state
     useEffect(() => {
         activeConversationRef.current = activeConversation;
@@ -56,7 +55,7 @@ export default function ChatInterface({ role, initialUser, portalTitle }: ChatIn
 
     const fetchConversations = async () => {
         try {
-            const res = await fetch(`${apiUrl}/chat/conversations?role=${role}`, {
+            const res = await fetch(HttpApiPaths.chat.conversations(role), {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const data: Conversation[] = await res.json();
@@ -70,7 +69,7 @@ export default function ChatInterface({ role, initialUser, portalTitle }: ChatIn
         if (role !== 'staff' && role !== 'agent') return;
         setLoadingUsers(true);
         try {
-            const res = await fetch(`${apiUrl}/users/admin/list`, {
+            const res = await fetch(HttpApiPaths.admin.usersList(30, 0), {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const responseData = await res.json();
@@ -150,7 +149,7 @@ export default function ChatInterface({ role, initialUser, portalTitle }: ChatIn
         if (socket && activeConversation) {
             socket.emit('join_conversation', activeConversation);
 
-            fetch(`${apiUrl}/chat/messages/${activeConversation}`, {
+            fetch(HttpApiPaths.chat.messages(activeConversation), {
                 headers: { Authorization: `Bearer ${token}` }
             })
                 .then(res => res.json())
@@ -202,7 +201,7 @@ export default function ChatInterface({ role, initialUser, portalTitle }: ChatIn
             return;
         }
         try {
-            const res = await fetch(`${apiUrl}/chat/staff-start`, {
+            const res = await fetch(HttpApiPaths.chat.staffStart(), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

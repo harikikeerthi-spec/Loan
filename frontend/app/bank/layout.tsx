@@ -56,16 +56,39 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
         }
     }, [user, isLoading, isBank, isAdmin, router, pathname]);
 
+    const [bankName, setBankName] = useState("SBI");
+    const [branchName, setBranchName] = useState("Hyderabad Branch");
+
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            const selected = sessionStorage.getItem("selectedBank");
+            if (selected) {
+                const map: Record<string, string> = {
+                    auxilo: "Auxilo Finserve",
+                    avanse: "Avanse Financial",
+                    credila: "HDFC Credila",
+                    idfc: "IDFC FIRST Bank",
+                    poonawalla: "Poonawalla Fincorp",
+                };
+                setBankName(map[selected] || selected.toUpperCase());
+            } else if (user?.firstName) {
+                setBankName(user.firstName);
+            }
+        }
+    }, [user]);
+
     const navItems = [
-        { icon: "dashboard", label: "Overview", path: "/bank/dashboard" },
-        { icon: "gavel", label: "Decisions", path: "/bank/applications" },
+        { icon: "download", label: "Incoming Files", path: "/bank/dashboard" },
+        { icon: "assignment", label: "My Files (Logged)", path: "/bank/applications" },
         { icon: "description", label: "Documents", path: "/bank/documents" },
-        { icon: "payments", label: "Disbursal", path: "/bank/disbursements" },
-        { icon: "verified_user", label: "Risk & Comp", path: "/bank/compliance" },
-        { icon: "forum", label: "Comms Hub", path: "/bank/communication" },
-        { icon: "monitoring", label: "Analytics", path: "/bank/analytics" },
+        { icon: "help", label: "Queries", path: "/bank/applications?tab=queries" },
+        { icon: "gavel", label: "Decisions", path: "/bank/applications?tab=decisions" },
+        { icon: "payments", label: "Disbursement Confirm", path: "/bank/disbursements" },
+        { icon: "forum", label: "Chat with Staff", path: "/bank/communication" },
+        { icon: "monitoring", label: "Analytics & Reports", path: "/bank/analytics" },
+        { icon: "database", label: "Export / API", path: "/bank/analytics?tab=export" },
         { icon: "extension", label: "Integrations", path: "/bank/integrations" },
-        { icon: "settings", label: "Settings", path: "/bank/settings" },
+        { icon: "settings", label: "Settings & Products", path: "/bank/settings" },
     ];
 
     if (pathname === '/bank/login') {
@@ -132,12 +155,11 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                 transition={{ duration: 0.2 }}
                                 className="flex flex-col min-w-0"
                             >
-                                <span className="text-lg font-black text-gray-900 leading-none italic tracking-tight">
-                                    Vidhya<span style={{ color: '#6605c7' }}>Bank</span>
+                                <span className="text-lg font-black text-gray-900 leading-none italic tracking-tight uppercase">
+                                    Vidya<span style={{ color: '#6605c7' }}>Loans</span>
                                 </span>
-                                <span className="text-[8px] font-black uppercase tracking-[0.3em] mt-1 opacity-50 italic"
-                                    style={{ color: '#6605c7' }}>
-                                    Partner Matrix
+                                <span className="text-[8px] font-black uppercase tracking-[0.2em] mt-1 opacity-80 italic text-purple-600 truncate max-w-[150px]">
+                                    Bank Portal - {bankName}
                                 </span>
                             </motion.div>
                         )}
@@ -214,8 +236,11 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                     <p className="text-[10px] font-black text-gray-900 truncate uppercase italic">
                                         {user.firstName} {user.lastName}
                                     </p>
-                                    <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
-                                        Bank Auditor
+                                    <p className="text-[8px] font-bold text-purple-600 uppercase tracking-widest mt-0.5 truncate">
+                                        {bankName} Officer
+                                    </p>
+                                    <p className="text-[7px] font-bold text-gray-400 uppercase tracking-widest truncate">
+                                        {branchName}
                                     </p>
                                 </motion.div>
                             )}

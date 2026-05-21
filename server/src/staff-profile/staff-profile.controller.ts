@@ -141,6 +141,23 @@ export class StaffProfileController {
     return { success: true, data: result };
   }
 
+  // ─── Share student profile with bank (Onboarding Step 4) ───────────────────
+  @Post('share-profile/:studentId')
+  async shareProfile(
+    @Param('studentId') studentId: string,
+    @Req() req: any,
+    @Body() body: {
+      recipientType: string;
+      recipientName: string;
+      recipientEmail: string;
+      message?: string;
+      sharedBy?: string;
+    },
+  ) {
+    const result = await this.svc.shareProfile(studentId, req.user, body);
+    return { success: true, ...result };
+  }
+
   // ─── Get share history for a profile ──────────────────────────────────────
   @Get(':id/shares')
   async getShares(@Param('id') id: string) {

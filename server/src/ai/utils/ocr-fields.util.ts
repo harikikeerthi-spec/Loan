@@ -184,6 +184,138 @@ export function extractNameFromLabeledOcrText(text: string): string | undefined 
     return undefined;
 }
 
+export function parseMRZLine1(line: string, rawText?: string): { surname?: string; given_names?: string; full_name?: string } {
+    const match = line.match(/^P<([A-Z]{3})([A-Z0-9<]+)$/);
+    if (!match) return {};
+
+    const namePart = match[2];
+    const parts = namePart.split('<<');
+    if (parts.length < 2) return {};
+
+    const rawSurname = parts[0];
+    const rawGivenNames = parts[1];
+
+    const cleanName = (raw: string) => {
+        return raw.split('<').map(p => p.trim()).filter(Boolean);
+    };
+
+    const surnameWords = cleanName(rawSurname);
+    let givenWords = cleanName(rawGivenNames);
+
+    if (rawText) {
+        const nonMRZLines = rawText.split('\n')
+            .map(l => l.trim().toUpperCase())
+            .filter(l => !l.startsWith('P<') && !l.includes('<<') && !/^[A-Z0-9<]{30,45}$/.test(l));
+        
+        const allWords = new Set<string>();
+        for (const l of nonMRZLines) {
+            const words = l.split(/[^A-Z]/).map(w => w.trim()).filter(w => w.length > 0);
+            for (const w of words) allWords.add(w);
+        }
+
+        if (allWords.size > 0) {
+            givenWords = givenWords.filter((w, idx) => {
+                if (allWords.has(w)) return true;
+                if (idx === givenWords.length - 1 && w.length <= 2) return false;
+                if (idx >= 2 && !allWords.has(w)) return false;
+                return true;
+            });
+        }
+    }
+
+    const surname = surnameWords.join(' ');
+    const given_names = givenWords.join(' ');
+    const full_name = [given_names, surname].filter(Boolean).join(' ');
+
+    return { surname, given_names, full_name };
+}
+
+export function parseMRZLine2(line: string): { passport_number?: string; dob?: string; gender?: string; date_of_expiry?: string } {
+    const clean = line.replace(/\s+/g, '').toUpperCase();
+    let genderIndex = -1;
+    for (let i = 15; i < clean.length; i++) {
+        if (clean[i] === 'M' || clean[i] === 'F') {
+            genderIndex = i;
+            break;
+        }
+    }
+
+    const out: any = {};
+
+    const passMatch = clean.match(/^([A-Z0-9]{5,10})/);
+    if (passMatch) {
+        out.passport_number = passMatch[1].replace(/</g, '').trim();
+    }
+
+    const cleanDigits = (s: string) => {
+        return s.replace(/D/g, '0')
+                .replace(/O/g, '0')
+                .replace(/I/g, '1')
+                .replace(/Z/g, '2')
+                .replace(/S/g, '5')
+                .replace(/B/g, '8')
+                .replace(/G/g, '6')
+                .replace(/T/g, '7')
+                .replace(/[^0-9]/g, '0');
+    };
+
+    if (genderIndex !== -1) {
+        out.gender = clean[genderIndex] === 'M' ? 'male' : 'female';
+
+        if (genderIndex >= 7) {
+            const rawDob = clean.substring(genderIndex - 7, genderIndex - 1);
+            const dobDigits = cleanDigits(rawDob);
+            if (/^\d{6}$/.test(dobDigits)) {
+                const yy = parseInt(dobDigits.substring(0, 2), 10);
+                const mm = dobDigits.substring(2, 4);
+                const dd = dobDigits.substring(4, 6);
+                const yearPrefix = yy < 50 ? '20' : '19';
+                out.dob = `${dd}/${mm}/${yearPrefix}${dobDigits.substring(0, 2)}`;
+            }
+        }
+
+        if (genderIndex + 7 <= clean.length) {
+            const rawExpiry = clean.substring(genderIndex + 1, genderIndex + 7);
+            const expiryDigits = cleanDigits(rawExpiry);
+            if (/^\d{6}$/.test(expiryDigits)) {
+                const yy = expiryDigits.substring(0, 2);
+                const mm = expiryDigits.substring(2, 4);
+                const dd = expiryDigits.substring(4, 6);
+                out.date_of_expiry = `${dd}/${mm}/20${yy}`;
+            }
+        }
+    } else if (clean.length >= 28) {
+        // Fallback absolute parsing
+        const rawPass = clean.substring(0, 9);
+        out.passport_number = rawPass.replace(/</g, '').trim();
+
+        const rawDob = clean.substring(13, 19);
+        const dobDigits = cleanDigits(rawDob);
+        if (/^\d{6}$/.test(dobDigits)) {
+            const yy = parseInt(dobDigits.substring(0, 2), 10);
+            const mm = dobDigits.substring(2, 4);
+            const dd = dobDigits.substring(4, 6);
+            const yearPrefix = yy < 50 ? '20' : '19';
+            out.dob = `${dd}/${mm}/${yearPrefix}${dobDigits.substring(0, 2)}`;
+        }
+
+        const rawGender = clean.charAt(20);
+        if (rawGender === 'M') out.gender = 'male';
+        else if (rawGender === 'F') out.gender = 'female';
+
+        const rawExpiry = clean.substring(21, 27);
+        const expiryDigits = cleanDigits(rawExpiry);
+        if (/^\d{6}$/.test(expiryDigits)) {
+            const yy = expiryDigits.substring(0, 2);
+            const mm = expiryDigits.substring(2, 4);
+            const dd = expiryDigits.substring(4, 6);
+            out.date_of_expiry = `${dd}/${mm}/20${yy}`;
+        }
+    }
+
+    return out;
+}
+
 /**
  * Vision models return the printed person name under many keys. Prefer schema keys, then common alternates.
  * Passports often expose surname + given_names without a single full_name line.
@@ -193,6 +325,48 @@ export function extractFullNameFromOcrRaw(
     docType?: string,
 ): string | undefined {
     const kind = docType ? normalizeDocTypeKey(docType) : 'generic';
+
+    const rawText = pickFirst(
+        raw.raw_text_summary,
+        raw.rawOcrText,
+        raw.raw_text,
+        raw.rawText,
+    ) as string | undefined;
+
+    // For passports, prioritize MRZ first, then structured given names and surname
+    if (kind === 'passport') {
+        if (rawText) {
+            const lines = String(rawText).split('\n').map(l => l.trim());
+            const mrzLine1 = lines.find(l => /^P</i.test(l) && l.replace(/\s+/g, '').length >= 30);
+            if (mrzLine1) {
+                const cleanMRZ1 = mrzLine1.replace(/\s+/g, '').toUpperCase();
+                const parsed = parseMRZLine1(cleanMRZ1, String(rawText));
+                if (parsed.full_name) {
+                    return parsed.full_name;
+                }
+            }
+        }
+
+        const sur = pickFirst(
+            raw.surname,
+            raw.last_name,
+            raw.family_name,
+            raw.lastName,
+        ) as string | undefined;
+        const given = pickFirst(
+            raw.given_names,
+            raw.given_name,
+            raw.first_name,
+            raw.other_names,
+            raw.firstName,
+        ) as string | undefined;
+        if (given && sur) {
+            const combined = dedupeOcrFullName(
+                `${String(given).trim()} ${String(sur).trim()}`.replace(/\s+/g, ' '),
+            );
+            return combined || undefined;
+        }
+    }
 
     const direct = pickFirst(
         raw.full_name,
@@ -236,12 +410,6 @@ export function extractFullNameFromOcrRaw(
             raw.other_names,
             raw.firstName,
         ) as string | undefined;
-        if (given && sur) {
-            const combined = dedupeOcrFullName(
-                `${String(given).trim()} ${String(sur).trim()}`.replace(/\s+/g, ' '),
-            );
-            return combined || undefined;
-        }
         const one = given || sur;
         if (one) {
             const cleaned = dedupeOcrFullName(String(one).trim());
@@ -249,12 +417,6 @@ export function extractFullNameFromOcrRaw(
         }
     }
 
-    const rawText = pickFirst(
-        raw.raw_text_summary,
-        raw.rawOcrText,
-        raw.raw_text,
-        raw.rawText,
-    ) as string | undefined;
     if (rawText) {
         const fromLabel = extractNameFromLabeledOcrText(String(rawText));
         if (fromLabel) return fromLabel;
@@ -350,12 +512,55 @@ export function canonicalizeOcrFields(
             if (raw[flag] === true || raw[flag] === false) out[flag] = raw[flag];
         }
     } else if (kind === 'passport') {
+        const rawText = pickFirst(
+            raw.raw_text_summary,
+            raw.rawOcrText,
+            raw.raw_text,
+            raw.rawText,
+        ) as string | undefined;
+
+        let mrzData: any = {};
+        if (rawText) {
+            const lines = String(rawText).split('\n').map(l => l.trim());
+            const mrz1 = lines.find(l => /^P</i.test(l) && l.replace(/\s+/g, '').length >= 30);
+            if (mrz1) {
+                const cleanMRZ1 = mrz1.replace(/\s+/g, '').toUpperCase();
+                mrzData = { ...mrzData, ...parseMRZLine1(cleanMRZ1, String(rawText)) };
+            }
+            const mrz2 = lines.find(l => {
+                const clean = l.replace(/\s+/g, '');
+                return clean.length >= 30 && !clean.startsWith('P<') && (clean.includes('<') || /\d{6}/.test(clean));
+            });
+            if (mrz2) {
+                const cleanMRZ2 = mrz2.replace(/\s+/g, '').toUpperCase();
+                mrzData = { ...mrzData, ...parseMRZLine2(cleanMRZ2) };
+            }
+        }
+
         const passportNum = pickFirst(
             raw.passport_number,
             raw.passportNumber,
             raw.document_number,
+            mrzData.passport_number,
         );
         if (passportNum) out.passport_number = String(passportNum).trim();
+
+        const given = pickFirst(
+            raw.given_names,
+            raw.given_name,
+            raw.first_name,
+            raw.firstName,
+            mrzData.given_names,
+        ) as string | undefined;
+        if (given) out.given_names = String(given).trim();
+
+        const sur = pickFirst(
+            raw.surname,
+            raw.last_name,
+            raw.lastName,
+            mrzData.surname,
+        ) as string | undefined;
+        if (sur) out.surname = String(sur).trim();
 
         const nationality = pickFirst(raw.nationality, raw.citizenship);
         if (nationality) out.nationality = String(nationality).trim();
@@ -363,8 +568,24 @@ export function canonicalizeOcrFields(
         const issueDate = pickFirst(raw.date_of_issue, raw.issue_date, raw.issueDate);
         if (issueDate) out.date_of_issue = normalizeDobValue(String(issueDate).trim());
 
-        const expiry = pickFirst(raw.date_of_expiry, raw.expiry_date, raw.expiryDate);
+        const expiry = pickFirst(
+            raw.date_of_expiry,
+            raw.expiry_date,
+            raw.expiryDate,
+            mrzData.date_of_expiry,
+        );
         if (expiry) out.date_of_expiry = normalizeDobValue(String(expiry).trim());
+
+        const dob = pickFirst(
+            out.dob,
+            mrzData.dob,
+        );
+        if (dob) out.dob = normalizeDobValue(String(dob).trim());
+
+        const gender = normalizeGender(
+            pickFirst(out.gender, mrzData.gender) as string | undefined,
+        );
+        if (gender) out.gender = gender;
 
         const issueCountry = pickFirst(
             raw.issue_country,

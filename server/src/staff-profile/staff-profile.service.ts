@@ -587,4 +587,404 @@ export class StaffProfileService {
 
     return { items, total: count || items.length };
   }
+
+  // ─── Share applicant profile (Step 4 of onboarding) ────────────────────────
+  async shareProfile(
+    studentId: string,
+    staffUser: any,
+    body: {
+      recipientType: string;
+      recipientName: string;
+      recipientEmail: string;
+      message?: string;
+      sharedBy?: string;
+    },
+  ) {
+    if (!studentId) throw new BadRequestException('studentId is required');
+    if (!body.recipientEmail) throw new BadRequestException('Recipient email is required');
+    if (!body.recipientName) throw new BadRequestException('Recipient name is required');
+
+    // 1. Get or create the student's StaffProfile
+    let { data: profile, error: profileErr } = await this.db
+      .from('StaffProfile')
+      .select('*')
+      .eq('linkedUserId', studentId)
+      .maybeSingle();
+
+    if (!profile) {
+      const insertData = {
+        id: 'sp-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        linkedUserId: studentId,
+        assignedStaffId: staffUser?.id || staffUser?.uid || 'system',
+        targetBank: body.recipientName,
+        loanType: 'Education Loan',
+        internalNotes: body.message || null,
+        bankStatus: 'PENDING',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      const { data: newProfile, error: createProfileErr } = await this.db
+        .from('StaffProfile')
+        .insert(insertData)
+        .select()
+        .single();
+        
+      if (createProfileErr) {
+        console.error('[StaffProfileService.shareProfile] Failed to create StaffProfile:', createProfileErr);
+        throw new BadRequestException(`Failed to create StaffProfile: ${createProfileErr.message}`);
+      }
+      profile = newProfile;
+    } else {
+      const { data: updatedProfile, error: updateProfileErr } = await this.db
+        .from('StaffProfile')
+        .update({
+          bankStatus: 'PENDING',
+          targetBank: body.recipientName,
+          updatedAt: new Date().toISOString()
+        })
+        .eq('id', profile.id)
+        .select()
+        .single();
+        
+      if (updateProfileErr) {
+        console.error('[StaffProfileService.shareProfile] Failed to update StaffProfile:', updateProfileErr);
+      } else {
+        profile = updatedProfile;
+      }
+    }
+
+    // 2. Fetch or auto-create documents attached to the profile
+    const { data: docs } = await this.db
+      .from('StaffProfileDocument')
+      .select('id')
+      .eq('staffProfileId', profile.id);
+    const documentIds = (docs || []).map((d: any) => d.id);
+
+    if (documentIds.length === 0) {
+      const { data: userDocs } = await this.db
+        .from('UserDocument')
+        .select('*')
+        .eq('userId', studentId);
+      if (userDocs && userDocs.length > 0) {
+        const rows = userDocs.map((doc: any) => ({
+          id: 'spd-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+          staffProfileId: profile.id,
+          userDocumentId: doc.id,
+          docType: doc.docType || doc.type || 'Academic',
+          filePath: doc.filePath,
+          originalFilename: doc.filePath?.split('/').pop() || doc.docType || 'Document',
+          source: 'USER_UPLOAD',
+          status: doc.status || 'pending',
+          uploadedBy: doc.userId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }));
+        const { data: insertedDocs } = await this.db
+          .from('StaffProfileDocument')
+          .insert(rows)
+          .select();
+        if (insertedDocs) {
+          insertedDocs.forEach((d: any) => documentIds.push(d.id));
+        }
+      }
+    }
+
+    // 3. Create the StaffProfileShare token and record
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+    const token = Buffer.from(
+      JSON.stringify({ profileId: profile.id, ts: Date.now(), r: Math.random() })
+    ).toString('base64url');
+
+    const shareId = 'share-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    const { data: share, error: shareErr } = await this.db
+      .from('StaffProfileShare')
+      .insert({
+        id: shareId,
+        staffProfileId: profile.id,
+        sharedBy: staffUser?.id || staffUser?.uid || 'system',
+        bankName: body.recipientName,
+        bankEmail: body.recipientEmail,
+        documentIds: documentIds,
+        token,
+        expiresAt: expiresAt.toISOString(),
+        accessNote: body.message || null,
+        accessCount: 0,
+        revoked: false,
+        createdAt: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (shareErr) {
+      console.error('[StaffProfileService.shareProfile] Failed to create StaffProfileShare:', shareErr);
+      throw new BadRequestException(`Failed to create StaffProfileShare: ${shareErr.message}`);
+    }
+
+    // 4. Fetch or create the active LoanApplication for the student
+    const { data: studentUser } = await this.db
+      .from('User')
+      .select('*')
+      .eq('id', studentId)
+      .maybeSingle();
+
+    let { data: application, error: appErr } = await this.db
+      .from('LoanApplication')
+      .select('*')
+      .eq('userId', studentId)
+      .maybeSingle();
+
+    const authorName = staffUser 
+      ? `${staffUser.firstName || ''} ${staffUser.lastName || ''}`.trim() || staffUser.email || 'Staff' 
+      : 'Staff';
+
+    if (!application) {
+      const appNumber = `VL-${Date.now()}`;
+      const insertApp = {
+        id: 'la-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        userId: studentId,
+        bank: body.recipientName || 'Credila',
+        loanType: 'Education Loan',
+        amount: 1500000,
+        status: 'pending',
+        stage: 'Pre-login',
+        progress: 10,
+        date: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        applicationNumber: appNumber,
+        firstName: studentUser?.firstName || 'Student',
+        lastName: studentUser?.lastName || 'Applicant',
+        email: studentUser?.email || null,
+        phone: studentUser?.mobile || studentUser?.phone || null,
+        hasCoApplicant: false,
+        hasCollateral: false,
+        priorityLevel: 'medium'
+      };
+
+      const { data: newApp, error: createAppErr } = await this.db
+        .from('LoanApplication')
+        .insert(insertApp)
+        .select()
+        .single();
+
+      if (createAppErr) {
+        console.error('[StaffProfileService.shareProfile] Failed to create LoanApplication:', createAppErr);
+        throw new BadRequestException(`Failed to create LoanApplication: ${createAppErr.message}`);
+      }
+      application = newApp;
+
+      // Log initial pending status history
+      await this.db.from('ApplicationStatusHistory').insert({
+        id: 'ash-' + Date.now() + '-pending',
+        applicationId: application.id,
+        fromStatus: null,
+        toStatus: 'pending',
+        fromStage: null,
+        toStage: 'Pre-login',
+        changedBy: staffUser?.id || staffUser?.uid || 'system',
+        changedByName: authorName,
+        changeReason: 'Initial setup',
+        notes: 'Loan application initialized in system.',
+        isAutomatic: true,
+        createdAt: new Date().toISOString()
+      });
+    }
+
+    // 5. Execute state machine progression to submitted_to_bank
+    if (body.recipientType?.toLowerCase() === 'bank') {
+      const currentStatus = application.status?.toLowerCase() || 'pending';
+      const steps: Array<{
+        from: string;
+        to: string;
+        stage: string;
+        progress: number;
+        reason: string;
+        notes: string;
+      }> = [];
+
+      if (currentStatus === 'pending') {
+        steps.push({
+          from: 'pending',
+          to: 'docs_received',
+          stage: 'Pre-login',
+          progress: 25,
+          reason: 'Documents verified',
+          notes: 'VidyaLoans staff has received and verified all submitted academic, financial, and PII documents.'
+        });
+        steps.push({
+          from: 'docs_received',
+          to: 'staff_verified',
+          stage: 'Pre-login',
+          progress: 40,
+          reason: 'Staff verification completed',
+          notes: 'VidyaLoans staff has completed the validation checks and marked the profile as verified.'
+        });
+        steps.push({
+          from: 'staff_verified',
+          to: 'submitted_to_bank',
+          stage: 'Submitted',
+          progress: 50,
+          reason: 'Submitted to Bank',
+          notes: `Application bundle shared and submitted directly to partner bank ${body.recipientName}.`
+        });
+      } else if (currentStatus === 'docs_received') {
+        steps.push({
+          from: 'docs_received',
+          to: 'staff_verified',
+          stage: 'Pre-login',
+          progress: 40,
+          reason: 'Staff verification completed',
+          notes: 'VidyaLoans staff has completed the validation checks and marked the profile as verified.'
+        });
+        steps.push({
+          from: 'staff_verified',
+          to: 'submitted_to_bank',
+          stage: 'Submitted',
+          progress: 50,
+          reason: 'Submitted to Bank',
+          notes: `Application bundle shared and submitted directly to partner bank ${body.recipientName}.`
+        });
+      } else if (currentStatus === 'staff_verified') {
+        steps.push({
+          from: 'staff_verified',
+          to: 'submitted_to_bank',
+          stage: 'Submitted',
+          progress: 50,
+          reason: 'Submitted to Bank',
+          notes: `Application bundle shared and submitted directly to partner bank ${body.recipientName}.`
+        });
+      } else {
+        steps.push({
+          from: currentStatus,
+          to: 'submitted_to_bank',
+          stage: 'Submitted',
+          progress: 50,
+          reason: 'Resubmitted to Bank',
+          notes: `Application shared again with partner bank ${body.recipientName}.`
+        });
+      }
+
+      // Transition sequentially through state changes
+      for (let i = 0; i < steps.length; i++) {
+        const step = steps[i];
+        
+        await this.db
+          .from('LoanApplication')
+          .update({
+            status: step.to,
+            stage: step.stage,
+            progress: step.progress,
+            bank: body.recipientName,
+            updatedAt: new Date().toISOString()
+          })
+          .eq('id', application.id);
+
+        await this.db.from('ApplicationStatusHistory').insert({
+          id: `ash-${Date.now()}-${step.to}`,
+          applicationId: application.id,
+          fromStatus: step.from,
+          toStatus: step.to,
+          fromStage: i === 0 ? application.stage : steps[i - 1].stage,
+          toStage: step.stage,
+          changedBy: staffUser?.id || staffUser?.uid || 'system',
+          changedByName: authorName,
+          changeReason: step.reason,
+          notes: step.notes,
+          isAutomatic: false,
+          createdAt: new Date().toISOString()
+        });
+
+        await this.db.from('ApplicationNote').insert({
+          id: `note-${Date.now()}-${step.to}`,
+          applicationId: application.id,
+          authorId: staffUser?.id || staffUser?.uid || 'system',
+          authorName: authorName,
+          content: `${step.reason}: ${step.notes}`,
+          type: 'status_change',
+          isInternal: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      // Add user note if supplied
+      if (body.message) {
+        await this.db.from('ApplicationNote').insert({
+          id: `note-msg-${Date.now()}`,
+          applicationId: application.id,
+          authorId: staffUser?.id || staffUser?.uid || 'system',
+          authorName: authorName,
+          content: `Staff note: ${body.message}`,
+          type: 'general',
+          isInternal: true,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      // Update staff profile bank status to SENT
+      await this.db
+        .from('StaffProfile')
+        .update({
+          bankStatus: 'SENT',
+          updatedAt: new Date().toISOString()
+        })
+        .eq('id', profile.id);
+
+      // 6. Notify partner bank representative via in-app alert
+      let bankUserId = null;
+      const { data: matchedBankUser } = await this.db
+        .from('User')
+        .select('id')
+        .eq('email', body.recipientEmail)
+        .maybeSingle();
+
+      if (matchedBankUser) {
+        bankUserId = matchedBankUser.id;
+      } else {
+        const { data: bankUsers } = await this.db
+          .from('User')
+          .select('id')
+          .eq('role', 'bank')
+          .limit(1);
+        if (bankUsers && bankUsers.length > 0) {
+          bankUserId = bankUsers[0].id;
+        }
+      }
+
+      if (bankUserId) {
+        const notifId = 'notif-' + Date.now();
+        await this.db
+          .from('Notification')
+          .insert({
+            id: notifId,
+            userId: bankUserId,
+            title: `📬 New Application Shared: ${application.applicationNumber || 'VL-' + Date.now()}`,
+            body: `Student profile ${studentUser?.firstName || 'Student'} ${studentUser?.lastName || ''} has been fully verified and shared with ${body.recipientName} bank representative.`,
+            type: 'incoming_file',
+            isRead: false,
+            timestamp: new Date().toISOString()
+          });
+      }
+    }
+
+    // 7. Log and emit dashboard activity log
+    await this.logDashboardActivity(staffUser, {
+      type: 'share',
+      msg: `Shared profile for ${studentUser?.firstName || 'Student'} ${studentUser?.lastName || ''} with ${body.recipientName}`,
+      icon: 'send',
+      color: 'text-indigo-600 bg-indigo-50'
+    });
+
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    return {
+      shareId: share.id,
+      token: token,
+      url: `${baseUrl}/share/${token}`,
+      expiresAt: expiresAt.toISOString(),
+      documentsShared: documentIds.length
+    };
+  }
 }
+

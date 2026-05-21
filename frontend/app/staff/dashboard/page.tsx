@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
 import { io } from "socket.io-client";
 import { adminApi, authApi, documentApi, onboardingApi, staffProfileApi, referenceApi } from "@/lib/api";
+import { HttpApiPaths } from "@/lib/http-api-paths";
 import { normalizeOcrFieldsForAutofill, normalizeGenderForForm, normalizeCountryName, parseOcrDateForInput } from "@/lib/ocr-fields";
 import { examYearToEndDate, inferStartDate } from "@/lib/academic-ocr";
 import { type PanDocumentValidation } from "@/lib/pan-validation";
@@ -1293,6 +1294,25 @@ export default function StaffDashboardPage() {
                     url: res.url || `${window.location.origin}/share/${res.shareId || 'test'}`,
                     expires: res.expiresAt || new Date(Date.now() + IST_OFFSET + 30 * 24 * 60 * 60 * 1000).toISOString()
                 });
+
+                // Update application status and progress if sharing to bank
+                if (shareTarget === 'bank' && shareName) {
+                    try {
+                        await adminApi.updateApplicationStatus(studentId, {
+                            status: "processing",
+                            bank: shareName,
+                            progress: 50,
+                            currentStage: "Under Review",
+                            remarks: `Application shared with ${shareName} on ${new Date().toLocaleDateString()}`
+                        });
+                        
+                        // Refresh the active applications list
+                        await loadData();
+                    } catch (updateError) {
+                        console.warn("Failed to update application status after sharing", updateError);
+                    }
+                }
+
                 addActivity("share", `Shared profile with ${shareName || shareEmail}`, "send", "text-indigo-600 bg-indigo-50");
             } else {
                 throw new Error(res.message || "Failed to generate share link");
@@ -1455,7 +1475,7 @@ export default function StaffDashboardPage() {
         const userId = getCreatedUserId();
         if (!userId) return;
         try {
-            const res = await fetch(`/api/documents/presigned-view/${userId}/${docType}`, {
+            const res = await fetch(HttpApiPaths.documents.presignedView(userId, docType), {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken')}`
                 }
@@ -1472,7 +1492,7 @@ export default function StaffDashboardPage() {
         }
         // Fallback: direct streaming URL route
         setPreviewDoc({
-            url: `/api/documents/view/${userId}/${docType}`,
+            url: HttpApiPaths.documents.streamView(userId, docType),
             name: docType.toUpperCase().replace(/_/g, ' ')
         });
     };
@@ -1799,15 +1819,16 @@ export default function StaffDashboardPage() {
                 const finalPincode = explicitPin || parsed.pincode;
 
                 // Update permanent address with parsed components
-                if (parsed.house_details || parsed.area || parsed.landmark) {
+                if (parsed.house_details || parsed.area || parsed.landmark || parsed.mandal || parsed.district) {
                     const address1 = [parsed.house_details, parsed.area].filter(Boolean).join(', ');
                     if (address1) {
                         updated.permanentAddress = { ...updated.permanentAddress, address1 };
                         updated.mailingAddress = { ...updated.mailingAddress, address1 };
                     }
-                    if (parsed.landmark) {
-                        updated.permanentAddress = { ...updated.permanentAddress, address2: parsed.landmark };
-                        updated.mailingAddress = { ...updated.mailingAddress, address2: parsed.landmark };
+                    const address2 = [parsed.landmark, parsed.mandal, parsed.district].filter(Boolean).join(', ');
+                    if (address2) {
+                        updated.permanentAddress = { ...updated.permanentAddress, address2 };
+                        updated.mailingAddress = { ...updated.mailingAddress, address2 };
                     }
                 }
 
@@ -1890,78 +1911,43 @@ export default function StaffDashboardPage() {
                     };
                 }
 
-                const nameVal = extractedFields.full_name || extractedFields.name || extractedFields.fullName;
-                if (nameVal) {
-                    const parts = String(nameVal).trim().split(/\s+/);
-                    if (parts.length > 0) {
-                        updated.firstName = parts[0];
-                        if (parts.length > 1) updated.lastName = parts.slice(1).join(' ');
+                if (extractedFields.given_names || extractedFields.surname) {
+                    if (extractedFields.given_names) {
+                        updated.firstName = String(extractedFields.given_names).trim();
+                    }
+                    if (extractedFields.surname) {
+                        updated.lastName = String(extractedFields.surname).trim();
+                    }
+                } else {
+                    const nameVal = extractedFields.full_name || extractedFields.name || extractedFields.fullName;
+                    if (nameVal) {
+                        const parts = String(nameVal).trim().split(/\s+/);
+                        if (parts.length > 0) {
+                            updated.firstName = parts[0];
+                            if (parts.length > 1) updated.lastName = parts.slice(1).join(' ');
+                        }
                     }
                 }
                 if (extractedFields.dob) {
                     const parsedDob = parseOcrDate(String(extractedFields.dob));
                     if (parsedDob) updated.dob = parsedDob;
                 }
-                const passportGender = normalizeGenderForForm(extractedFields.gender);
+                const passportGender = normalizeGenderForForm(extractedFields.gender || extractedFields.sex);
                 if (passportGender) updated.gender = passportGender;
                 if (extractedFields.address) {
                     applyAddressFromOcr(extractedFields.address);
                 }
             } else if (docType === 'pan') {
+                // PAN: Only extract and autofill the PAN Card number
                 const panVal = extractedFields.pan_number || extractedFields.panNumber || extractedFields.pan;
                 if (panVal) {
                     updated.pan = String(panVal).toUpperCase();
                 }
-                const nameVal = extractedFields.full_name || extractedFields.name || extractedFields.fullName;
-                if (nameVal) {
-                    const parts = nameVal.trim().split(/\s+/);
-                    if (parts.length > 0) {
-                        updated.firstName = parts[0];
-                        if (parts.length > 1) {
-                            updated.lastName = parts.slice(1).join(' ');
-                        }
-                    }
-                }
-                if (extractedFields.dob) {
-                    updated.dob = parseOcrDate(extractedFields.dob);
-                }
             } else if (docType === 'national_id' || docType === 'aadhaar_card' || docType === 'aadhaar' || docType === 'aadhar') {
-                const nameVal = extractedFields.full_name || extractedFields.name || extractedFields.fullName;
-                if (nameVal) {
-                    const parts = nameVal.trim().split(/\s+/);
-                    if (parts.length > 0) {
-                        updated.firstName = parts[0];
-                        if (parts.length > 1) {
-                            updated.lastName = parts.slice(1).join(' ');
-                        }
-                    }
-                }
-                const dobVal = extractedFields.dob || extractedFields.date_of_birth || extractedFields.dateOfBirth;
-                if (dobVal) {
-                    const parsedDob = parseOcrDate(String(dobVal));
-                    if (parsedDob) updated.dob = parsedDob;
-                }
-                const aadhaarGender = normalizeGenderForForm(extractedFields.gender);
-                if (aadhaarGender) updated.gender = aadhaarGender;
-                const addressVal =
-                    extractedFields.address ||
-                    extractedFields.permanentAddress ||
-                    extractedFields.permanent_address ||
-                    extractedFields.address_formatted;
-                if (addressVal) {
-                    applyAddressFromOcr(
-                        typeof addressVal === 'object' ? addressVal : String(addressVal),
-                    );
-                } else {
-                    const pincodeVal = extractedFields.pin_code || extractedFields.pincode || extractedFields.zip;
-                    if (pincodeVal) {
-                        updated.permanentAddress = { ...updated.permanentAddress, pincode: pincodeVal };
-                        updated.mailingAddress = { ...updated.mailingAddress, pincode: pincodeVal };
-                    }
-                }
+                // Aadhaar: Only extract and autofill the Aadhaar number
                 const aadharNum = extractedFields.aadhaar_number || extractedFields.aadhaar || extractedFields.aadhaarNumber || extractedFields.aadharNumber || extractedFields.national_id_number || extractedFields.document_number;
                 if (aadharNum) {
-                    updated.aadhaarNumber = aadharNum;
+                    updated.aadhaarNumber = String(aadharNum).replace(/\s/g, '');
                 }
             } else if (docType === 'father_pan') {
                 if (extractedFields.pan_number) {
@@ -2244,10 +2230,35 @@ export default function StaffDashboardPage() {
                     setShowOcrReview(prev => ({ ...prev, [uploadKey]: true }));
                     console.log('📄 [OCR RESULTS CAPTURED]', { docType, extractedFields, panValidation });
 
-                    const ocrHint = ' OCR data is ready — click Autofill to populate profile fields.';
-                    feedbackText = feedbackType === 'warning'
-                        ? `${feedbackText}${ocrHint}`
-                        : `✨ ${docLabel.toUpperCase()} extracted successfully.${ocrHint}`;
+                    // Auto-trigger autofill for identity documents (Aadhaar, PAN, Passport)
+                    const isIdentityDoc = /aadhaar|aadhar|national_id|pan|passport/.test(docType);
+                    if (isIdentityDoc) {
+                        try {
+                            const autofillResult = await autoFillFromOcr(docType, extractedFields);
+                            console.log('🪄 [AUTO-AUTOFILL TRIGGERED]', { docType, result: autofillResult });
+                            if (autofillResult.filled) {
+                                feedbackText = `✨ ${docLabel.toUpperCase()} verified & autofilled successfully! ${autofillResult.message}`;
+                                setAutofillMessages(prev => ({
+                                    ...prev,
+                                    [uploadKey]: { type: 'success', text: `✨ ${autofillResult.message}` },
+                                }));
+                            } else {
+                                const ocrHint = ' OCR data is ready — click Autofill to populate profile fields.';
+                                feedbackText = feedbackType === 'warning'
+                                    ? `${feedbackText}${ocrHint}`
+                                    : `✨ ${docLabel.toUpperCase()} extracted successfully.${ocrHint}`;
+                            }
+                        } catch (autofillErr) {
+                            console.error('[AUTO-AUTOFILL ERROR]', autofillErr);
+                            const ocrHint = ' OCR data is ready — click Autofill to populate profile fields.';
+                            feedbackText = `✨ ${docLabel.toUpperCase()} extracted successfully.${ocrHint}`;
+                        }
+                    } else {
+                        const ocrHint = ' OCR data is ready — click Autofill to populate profile fields.';
+                        feedbackText = feedbackType === 'warning'
+                            ? `${feedbackText}${ocrHint}`
+                            : `✨ ${docLabel.toUpperCase()} extracted successfully.${ocrHint}`;
+                    }
                 }
 
                 setUploadMessages(prev => ({ ...prev, [uploadKey]: { type: feedbackType, text: feedbackText } }));
@@ -5660,7 +5671,14 @@ export default function StaffDashboardPage() {
                                                             {shareTarget === 'bank' && (
                                                                 <div>
                                                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Bank Name</label>
-                                                                    <input type="text" value={shareName} onChange={e => setShareName(e.target.value)} placeholder="e.g. HDFC Bank, SBI..." className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all" />
+                                                                    <select value={shareName} onChange={e => setShareName(e.target.value)} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all appearance-none cursor-pointer" style={{backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23475569' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', paddingRight: '2.5rem'}}>
+                                                                        <option value="">Select a bank</option>
+                                                                        <option value="IDFC FIRST Bank">IDFC FIRST Bank</option>
+                                                                        <option value="Avanse Financial">Avanse Financial</option>
+                                                                        <option value="Auxilo Finserve">Auxilo Finserve</option>
+                                                                        <option value="HDFC Credila">HDFC Credila</option>
+                                                                        <option value="Poonawalla Fincorp">Poonawalla Fincorp</option>
+                                                                    </select>
                                                                 </div>
                                                             )}
 
@@ -5677,10 +5695,10 @@ export default function StaffDashboardPage() {
 
                                                         <button
                                                             onClick={handleDistributionShare}
-                                                            disabled={isSharing || !shareEmail}
+                                                            disabled={isSharing || !shareEmail || (shareTarget === 'bank' && !shareName)}
                                                             className="w-full py-5 bg-indigo-600 text-white rounded-[24px] font-black text-[12px] uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 shadow-xl shadow-indigo-600/20 disabled:opacity-50"
                                                         >
-                                                            {isSharing ? 'Generating Link...' : 'Share Complete Profile'}
+                                                            {isSharing ? 'Sharing with Bank...' : 'Share Complete Profile'}
                                                             {!isSharing && <span className="material-symbols-outlined text-[20px]">send</span>}
                                                         </button>
                                                     </div>

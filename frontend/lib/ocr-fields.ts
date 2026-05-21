@@ -104,6 +104,27 @@ export function extractFullNameFromOcrRaw(
     const d = docType.toLowerCase();
     const isPassport = d.includes('passport');
 
+    // For passports, prioritize structured given names and surname first to prevent garbled splitting
+    if (isPassport) {
+        const sur = pickName(
+            raw.surname as string,
+            raw.last_name as string,
+            raw.family_name as string,
+            raw.lastName as string,
+        );
+        const given = pickName(
+            raw.given_names as string,
+            raw.given_name as string,
+            raw.first_name as string,
+            raw.other_names as string,
+            raw.firstName as string,
+        );
+        if (given && sur) {
+            const combined = dedupeOcrFullName(`${given} ${sur}`.replace(/\s+/g, ' '));
+            return combined || undefined;
+        }
+    }
+
     const direct = pickName(
         raw.full_name as string,
         raw.fullName as string,
@@ -146,10 +167,6 @@ export function extractFullNameFromOcrRaw(
             raw.other_names as string,
             raw.firstName as string,
         );
-        if (given && sur) {
-            const combined = dedupeOcrFullName(`${given} ${sur}`.replace(/\s+/g, ' '));
-            return combined || undefined;
-        }
         const one = given || sur;
         if (one) {
             const cleaned = dedupeOcrFullName(one);
@@ -334,6 +351,21 @@ export function normalizeOcrFieldsForAutofill(
             raw.document_number as string,
         );
         if (passport) out.passport_number = passport;
+
+        const given = pick(
+            raw.given_names as string,
+            raw.given_name as string,
+            raw.first_name as string,
+            raw.firstName as string,
+        );
+        if (given) out.given_names = given;
+
+        const sur = pick(
+            raw.surname as string,
+            raw.last_name as string,
+            raw.lastName as string,
+        );
+        if (sur) out.surname = sur;
 
         const nat = pick(raw.nationality as string, raw.citizenship as string);
         if (nat) out.nationality = nat;
