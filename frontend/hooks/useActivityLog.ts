@@ -1,9 +1,5 @@
-/**
- * Custom hook for managing real-time activity logs in the staff dashboard
- * Provides methods to log activities and subscribe to activity updates
- */
-
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { io, Socket } from 'socket.io-client';
 import { staffProfileApi } from '@/lib/api';
 
 export interface Activity {
@@ -20,24 +16,54 @@ export interface Activity {
 
 export interface ActivityLogOptions {
   limit?: number;
-  pollInterval?: number; // in milliseconds, default 30000 (30s)
+  pollInterval?: number;
   autoRefresh?: boolean;
+  enableWebSocket?: boolean;
+}
+
+// Helper function to format relative time
+function formatRelativeTime(dateStr: string): string {
+  if (!dateStr) return 'Just now';
+  
+  try {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    
+    return date.toLocaleDateString('en-IN');
+  } catch {
+    return 'Recently';
+  }
 }
 
 export const useActivityLog = (options: ActivityLogOptions = {}) => {
   const {
     limit = 15,
     pollInterval = 30000,
-    autoRefresh = true
+    autoRefresh = true,
+    enableWebSocket = true
   } = options;
 
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+  const socketRef = useRef<Socket | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFetchRef = useRef<number>(0);
 
   // Fetch activities from backend
   const fetchActivities = useCallback(async () => {
+    const now = Date.now();
+    if (now - lastFetchRef.current < 1000) return; // Debounce
+
     try {
       setLoading(true);
       setError(null);
@@ -50,6 +76,7 @@ export const useActivityLog = (options: ActivityLogOptions = {}) => {
       })));
       
       setLastUpdated(new Date());
+      lastFetchRef.current = now;
     } catch (err: any) {
       console.error('[useActivityLog] Failed to fetch activities:', err);
       setError(err.message || 'Failed to fetch activities');
@@ -57,6 +84,68 @@ export const useActivityLog = (options: ActivityLogOptions = {}) => {
       setLoading(false);
     }
   }, [limit]);
+
+  // Initialize WebSocket connection
+  useEffect(() => {
+    if (!enableWebSocket) return;
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (
+      typeof window !== 'undefined' &&
+      !window.location.hostname.includes('localhost') &&
+      !window.location.hostname.includes('127.0.0.1')
+        ? window.location.origin
+        : 'http://localhost:5000'
+    );
+
+    const socketUrl = baseApiUrl.endsWith('/api')
+      ? baseApiUrl.replace('/api', '/chat')
+      : `${baseApiUrl.replace(/\/$/, '')}/chat`;
+
+    const socket = io(socketUrl, {
+      auth: { token },
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5,
+    });
+
+    socket.on('connect', () => {
+      console.log('[useActivityLog] WebSocket connected');
+      setIsConnected(true);
+    });
+
+    socket.on('staff_activity', (newActivity: Activity) => {
+      console.log('[useActivityLog] Received staff activity:', newActivity);
+      const formatted: Activity = {
+        ...newActivity,
+        id: newActivity.id || `act-${Date.now()}-${Math.random()}`,
+        time: formatRelativeTime(newActivity.createdAt || new Date().toISOString()),
+        createdAt: newActivity.createdAt || new Date().toISOString(),
+      };
+
+      setActivities((prev) => [formatted, ...prev].slice(0, limit));
+    });
+
+    socket.on('disconnect', () => {
+      console.log('[useActivityLog] WebSocket disconnected');
+      setIsConnected(false);
+    });
+
+    socket.on('connect_error', (error: any) => {
+      console.error('[useActivityLog] WebSocket connection error:', error);
+    });
+
+    socketRef.current = socket;
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, [enableWebSocket, limit]);
 
   // Log a new activity
   const logActivity = useCallback(async (
@@ -83,7 +172,7 @@ export const useActivityLog = (options: ActivityLogOptions = {}) => {
     actorName?: string
   ) => {
     const newActivity: Activity = {
-      id: Date.now().toString(),
+      id: `act-${Date.now()}-${Math.random()}`,
       type,
       msg,
       icon,
@@ -107,9 +196,13 @@ export const useActivityLog = (options: ActivityLogOptions = {}) => {
     fetchActivities();
 
     // Set up polling interval
-    const interval = setInterval(fetchActivities, pollInterval);
+    pollIntervalRef.current = setInterval(fetchActivities, pollInterval);
 
-    return () => clearInterval(interval);
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
   }, [fetchActivities, autoRefresh, pollInterval]);
 
   return {
@@ -117,30 +210,11 @@ export const useActivityLog = (options: ActivityLogOptions = {}) => {
     loading,
     error,
     lastUpdated,
+    isConnected,
     fetchActivities,
     logActivity,
     addActivityOptimistic
   };
 };
-
-// Helper function to format relative time
-function formatRelativeTime(dateStr: string): string {
-  if (!dateStr) return 'Just now';
-  
-  try {
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (diffInSeconds < 60) return 'Just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-    
-    return date.toLocaleDateString('en-IN');
-  } catch {
-    return 'Recently';
-  }
-}
 
 export default useActivityLog;

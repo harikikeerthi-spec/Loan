@@ -1,0 +1,256 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { io, Socket } from "socket.io-client";
+import { staffProfileApi } from "@/lib/api";
+
+interface Activity {
+  id: string;
+  type: string;
+  msg: string;
+  icon: string;
+  color: string;
+  actorName?: string;
+  createdAt: string;
+}
+
+interface ActivityLogWidgetProps {
+  limit?: number;
+  refreshInterval?: number;
+  showFullLog?: boolean;
+}
+
+const getActivityStyles = (type: string) => {
+  const styles: Record<string, { bg: string; text: string; border: string }> = {
+    new: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
+    update: { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-100" },
+    upload: { bg: "bg-purple-50", text: "text-purple-700", border: "border-purple-100" },
+    share: { bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-100" },
+    approved: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
+    rejected: { bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-100" },
+    link: { bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-100" },
+    sync: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
+  };
+  return styles[type] || styles.update;
+};
+
+const formatRelativeTime = (dateStr: string): string => {
+  if (!dateStr) return "Just now";
+  try {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+    if (diffInSeconds < 60) return "Just now";
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+  } catch {
+    return "Just now";
+  }
+};
+
+export default function ActivityLogWidget({ 
+  limit = 10, 
+  refreshInterval = 30000,
+  showFullLog = false 
+}: ActivityLogWidgetProps) {
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const socketRef = useRef<Socket | null>(null);
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Fetch activities from backend
+  const fetchActivities = async () => {
+    try {
+      setLoading(true);
+      const res: any = await staffProfileApi.getDashboardActivities(limit);
+      const data = Array.isArray(res) ? res : res?.data || [];
+      
+      const formattedActivities = data.map((activity: any) => ({
+        ...activity,
+        id: activity.id || `act-${Date.now()}-${Math.random()}`,
+        createdAt: activity.createdAt || new Date().toISOString(),
+      }));
+
+      setActivities(formattedActivities);
+      setError(null);
+    } catch (err) {
+      console.error("Failed to fetch activities:", err);
+      setError("Failed to load activities");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initialize WebSocket connection for real-time updates
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (
+      typeof window !== "undefined" && !window.location.hostname.includes("localhost") && !window.location.hostname.includes("127.0.0.1")
+        ? window.location.origin
+        : "http://localhost:5000"
+    );
+    
+    const socketUrl = baseApiUrl.endsWith("/api")
+      ? baseApiUrl.replace("/api", "/chat")
+      : `${baseApiUrl.replace(/\/$/, "")}/chat`;
+
+    const socket = io(socketUrl, {
+      auth: { token },
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5,
+    });
+
+    socket.on("connect", () => {
+      console.log("[ActivityLogWidget] WebSocket connected");
+    });
+
+    socket.on("staff_activity", (newActivity: Activity) => {
+      console.log("[ActivityLogWidget] Received staff activity:", newActivity);
+      const formatted = {
+        ...newActivity,
+        id: newActivity.id || `act-${Date.now()}-${Math.random()}`,
+        createdAt: newActivity.createdAt || new Date().toISOString(),
+      };
+      
+      setActivities((prev) => [formatted, ...prev].slice(0, limit));
+    });
+
+    socket.on("disconnect", () => {
+      console.log("[ActivityLogWidget] WebSocket disconnected");
+    });
+
+    socketRef.current = socket;
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, [limit]);
+
+  // Setup polling for activities
+  useEffect(() => {
+    fetchActivities();
+
+    pollIntervalRef.current = setInterval(() => {
+      fetchActivities();
+    }, refreshInterval);
+
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, [limit, refreshInterval]);
+
+  return (
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3">
+        <h3 className="text-[12px] font-black uppercase tracking-widest text-slate-600 flex items-center gap-2">
+          <span className="material-symbols-outlined text-[16px]">history</span>
+          Real-Time Activity
+        </h3>
+        <div className="flex items-center gap-1.5">
+          {loading && (
+            <div className="w-4 h-4 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+          )}
+          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Live" />
+        </div>
+      </div>
+
+      {/* Activities List */}
+      <div className="space-y-2 max-h-[600px] overflow-y-auto">
+        <AnimatePresence mode="popLayout">
+          {activities.length === 0 ? (
+            <div className="text-center py-8 px-4">
+              <span className="material-symbols-outlined text-4xl text-slate-200 block mb-2">
+                history
+              </span>
+              <p className="text-[12px] font-medium text-slate-400">
+                No activities yet
+              </p>
+            </div>
+          ) : (
+            activities.map((activity, index) => {
+              const styles = getActivityStyles(activity.type);
+              const relativeTime = formatRelativeTime(activity.createdAt);
+
+              return (
+                <motion.div
+                  key={activity.id}
+                  layout
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ duration: 0.3 }}
+                  className={`p-3 rounded-lg border ${styles.bg} ${styles.border} hover:shadow-md transition-all group cursor-pointer`}
+                >
+                  <div className="flex gap-3">
+                    {/* Icon */}
+                    <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center ${styles.bg} border ${styles.border}`}>
+                      <span className={`material-symbols-outlined text-[16px] ${styles.text}`}>
+                        {activity.icon}
+                      </span>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[12px] font-semibold ${styles.text} line-clamp-2`}>
+                        {activity.msg}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        {activity.actorName && (
+                          <span className="text-[10px] font-medium text-slate-500">
+                            by {activity.actorName}
+                          </span>
+                        )}
+                        <span className="text-[10px] text-slate-400">{relativeTime}</span>
+                      </div>
+                    </div>
+
+                    {/* Badge for type */}
+                    {index === 0 && (
+                      <div className="flex-shrink-0">
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${styles.bg} ${styles.text}`}>
+                          Latest
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Error State */}
+      {error && (
+        <div className="p-3 rounded-lg bg-rose-50 border border-rose-100">
+          <p className="text-[11px] font-medium text-rose-600 flex items-center gap-2">
+            <span className="material-symbols-outlined text-[14px]">error</span>
+            {error}
+          </p>
+        </div>
+      )}
+
+      {/* Footer */}
+      <button
+        onClick={fetchActivities}
+        className="w-full py-2 text-[11px] font-bold uppercase tracking-widest text-slate-600 hover:bg-slate-50 rounded-lg transition-colors flex items-center justify-center gap-2"
+      >
+        <span className="material-symbols-outlined text-[14px]">refresh</span>
+        Refresh
+      </button>
+    </div>
+  );
+}

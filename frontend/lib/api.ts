@@ -83,7 +83,7 @@ function getToken(): string | null {
     if (typeof window === "undefined") return null;
     const portal = getPortalFromPathname(window.location.pathname);
     const keys = getStorageKeys(portal);
-    
+
     // 1. Try portal-specific token
     const portalToken = localStorage.getItem(keys.token);
     if (portalToken) return portalToken;
@@ -102,9 +102,27 @@ function getToken(): string | null {
 
 function authHeaders(): HeadersInit {
     const token = getToken();
-    return token
+    const headers: Record<string, string> = token
         ? { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
         : { "Content-Type": "application/json" };
+
+    if (typeof window !== "undefined") {
+        const selectedBankId = sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank");
+        if (selectedBankId) {
+            const bankNameMap: Record<string, string> = {
+                auxilo: "Auxilo Finserve",
+                avanse: "Avanse Financial",
+                credila: "HDFC Credila",
+                idfc: "IDFC FIRST Bank",
+                poonawalla: "Poonawalla Fincorp",
+            };
+            const mappedBankName = bankNameMap[selectedBankId];
+            if (mappedBankName) {
+                headers["x-selected-bank"] = mappedBankName;
+            }
+        }
+    }
+    return headers;
 }
 
 /**
@@ -167,16 +185,16 @@ async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
 async function handleResponse<T>(res: Response): Promise<T> {
     const contentType = res.headers.get("content-type");
     let body: any;
-    
+
     if (contentType && contentType.includes("application/json")) {
         body = await res.json();
     } else {
         body = await res.text();
     }
-    
-    console.log(`[API Response] ${res.status} ${res.url}`, { 
-        ok: res.ok, 
-        contentType, 
+
+    console.log(`[API Response] ${res.status} ${res.url}`, {
+        ok: res.ok,
+        contentType,
         body,
         bodyKeys: typeof body === 'object' ? Object.keys(body) : 'not-an-object'
     });
@@ -226,7 +244,7 @@ async function fetchBlob(url: string, options: RequestInit = {}): Promise<Blob> 
     if (!res.ok) {
         const contentType = res.headers.get("content-type");
         let errorMessage = `HTTP ${res.status}`;
-        
+
         try {
             if (contentType?.includes("application/json")) {
                 const errorBody = await res.json();
@@ -868,7 +886,7 @@ export const documentApi = {
                 if (typeof window === 'undefined') return null;
                 return localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken');
             })();
-            
+
             const xhr = new XMLHttpRequest();
             const form = new FormData();
             form.append('file', file);
@@ -894,7 +912,7 @@ export const documentApi = {
             });
 
             xhr.addEventListener('error', () => reject(new Error('Network error')));
-            
+
             xhr.open('POST', HttpApiPaths.documents.upload());
             if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
             xhr.send(form);
@@ -986,7 +1004,7 @@ export const chatApi = {
         fetch(HttpApiPaths.chat.messages(conversationId), {
             headers: authHeaders(),
         }).then(handleResponse),
-}; 
+};
 // ─── Staff Profile (Intermediary Flow) ───────────────────────────────
 export const staffProfileApi = {
     // List all profiles (with optional search / bankStatus filter)
@@ -1025,7 +1043,7 @@ export const staffProfileApi = {
                 if (typeof window === 'undefined') return null;
                 return localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken');
             })();
-            
+
             const xhr = new XMLHttpRequest();
             const form = new FormData();
             form.append('file', file);
@@ -1051,7 +1069,7 @@ export const staffProfileApi = {
             });
 
             xhr.addEventListener('error', () => reject(new Error('Network error')));
-            
+
             xhr.open('POST', HttpApiPaths.staffProfiles.documents(profileId));
             if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
             xhr.send(form);

@@ -58,7 +58,7 @@ const QuickAction = ({ icon, label, sublabel, bgColor, iconColor, onClick }: any
 
 // --- Stat Card Component ---
 const StatMiniCard = ({ label, value, trend, icon, bgColor, iconColor, delay = 0 }: any) => (
-    <motion.div 
+    <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay, duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
@@ -84,7 +84,7 @@ const StatMiniCard = ({ label, value, trend, icon, bgColor, iconColor, delay = 0
                 <span className={`material-symbols-outlined text-xl ${iconColor || 'text-[#6605c7]'}`}>{icon}</span>
             </div>
         </div>
-        
+
         {/* Animated Background Element */}
         <div className="absolute -right-10 -bottom-10 opacity-[0.04] pointer-events-none group-hover:scale-125 group-hover:-rotate-12 transition-transform duration-1000">
             <span className="material-symbols-outlined text-[12rem]">{icon}</span>
@@ -182,7 +182,7 @@ export default function BankDashboard() {
             borderColor: '#6605c7',
             backgroundColor: (context: any) => {
                 const chart = context.chart;
-                const {ctx, chartArea} = chart;
+                const { ctx, chartArea } = chart;
                 if (!chartArea) return 'rgba(102, 5, 199, 0.05)';
                 const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
                 gradient.addColorStop(0, 'rgba(102, 5, 199, 0)');
@@ -204,10 +204,10 @@ export default function BankDashboard() {
     const metrics = useMemo(() => {
         const total = allApplications.length;
         const totalValue = allApplications.reduce((acc: number, app: any) => acc + (app.amount || 0), 0);
-        
+
         const sanctionedApps = allApplications.filter((app: any) => ["approved", "sanctioned", "conditional_sanction", "disbursed"].includes(app.status?.toLowerCase()));
         const sanctionRate = total > 0 ? (sanctionedApps.length / total) * 100 : 0;
-        
+
         const disbursedApps = allApplications.filter((app: any) => app.status?.toLowerCase() === "disbursed");
         const disbursedValue = disbursedApps.reduce((acc: number, app: any) => acc + (app.amount || 0), 0);
 
@@ -228,10 +228,10 @@ export default function BankDashboard() {
         return allApplications.map((app: any) => {
             const submittedDate = app.submittedAt ? new Date(app.submittedAt) : new Date();
             const days = differenceInDays(new Date(), submittedDate);
-            
+
             let status = "On Track";
             let color = "text-emerald-500 bg-emerald-50 border-emerald-100";
-            
+
             if (days >= 4 && days <= 7) {
                 status = "Follow Up";
                 color = "text-amber-500 bg-amber-50 border-amber-100";
@@ -312,7 +312,7 @@ export default function BankDashboard() {
             {/* Header / Greet Section */}
             <AnimatePresence>
                 {showChat && (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
@@ -328,8 +328,8 @@ export default function BankDashboard() {
                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mt-1">Encrypted WhatsApp Protocol Alpha-9</p>
                                 </div>
                             </div>
-                            <button 
-                                onClick={() => setShowChat(false)} 
+                            <button
+                                onClick={() => setShowChat(false)}
                                 className="w-12 h-12 rounded-2xl bg-gray-50 text-gray-400 hover:text-rose-500 hover:bg-rose-50 transition-all flex items-center justify-center group"
                             >
                                 <span className="material-symbols-outlined group-hover:rotate-90 transition-transform duration-500">close</span>
@@ -345,7 +345,7 @@ export default function BankDashboard() {
             {/* Title Section */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
                 <div className="space-y-4">
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         className="inline-flex items-center gap-3 px-4 py-2 bg-white/50 backdrop-blur-xl rounded-full border border-[#6605c7]/10 shadow-sm"
@@ -361,7 +361,7 @@ export default function BankDashboard() {
                         Network Sync: {mounted ? format(new Date(), 'MMM dd, HH:mm:ss') : '--:--:--'} (UTC+5:30)
                     </p>
                 </div>
-                
+
                 <div className="flex flex-wrap gap-4 items-center relative">
                     {/* Premium Bank Selector Dropdown */}
                     <div className="relative">
@@ -395,11 +395,10 @@ export default function BankDashboard() {
                                                 localStorage.setItem("selectedBank", b.id);
                                                 setDropdownOpen(false);
                                             }}
-                                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${
-                                                currentBankId === b.id
+                                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${currentBankId === b.id
                                                     ? 'bg-[#6605c7]/10 text-[#6605c7] font-black'
                                                     : 'text-gray-600 hover:bg-[#6605c7]/5 font-bold'
-                                            }`}
+                                                }`}
                                         >
                                             <div className="w-6 h-6 rounded-lg border border-gray-100 bg-white flex items-center justify-center overflow-hidden p-0.5 shrink-0">
                                                 <img src={b.logo} alt={b.name} className="w-full h-full object-contain" />
@@ -415,10 +414,10 @@ export default function BankDashboard() {
                         )}
                     </div>
 
-                    <motion.button 
+                    <motion.button
                         whileHover={{ y: -2 }}
                         onClick={() => {
-                            const csvContent = "data:text/csv;charset=utf-8," 
+                            const csvContent = "data:text/csv;charset=utf-8,"
                                 + ["ID,Name,Amount,Type,Status"].join(",") + "\n"
                                 + allApplications.map((e: any) => `${e.applicationNumber},${e.firstName} ${e.lastName},${e.amount},${e.loanType},${e.status}`).join("\n");
                             const encodedUri = encodeURI(csvContent);
@@ -431,16 +430,16 @@ export default function BankDashboard() {
                         }}
                         className="px-6 py-4 rounded-[1.5rem] bg-white/80 border border-[#6605c7]/10 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#6605c7] hover:bg-white transition-all shadow-sm group"
                     >
-                        <span className="material-symbols-outlined text-xl group-hover:scale-125 transition-transform">database</span> 
+                        <span className="material-symbols-outlined text-xl group-hover:scale-125 transition-transform">database</span>
                         Extract CSV Matrix
                     </motion.button>
-                    <motion.button 
+                    <motion.button
                         whileHover={{ y: -2, scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => router.push('/bank/applications')}
                         className="px-8 py-4 rounded-[1.5rem] bg-[#6605c7] text-white flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-purple-500/30 group"
                     >
-                        <span className="material-symbols-outlined text-xl group-hover:rotate-90 transition-transform duration-500">add_circle</span> 
+                        <span className="material-symbols-outlined text-xl group-hover:rotate-90 transition-transform duration-500">add_circle</span>
                         Review Decisions
                     </motion.button>
                 </div>
@@ -450,7 +449,7 @@ export default function BankDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
                 <StatMiniCard
                     label="Active Portfolio"
-                    value={`₹${(( (Array.isArray(stats?.loanTypeStats) ? stats.loanTypeStats : []).reduce((acc: number, curr: any) => acc + (curr.totalAmount || 0), 0) || 0) / 10000000).toFixed(2)}Cr`}
+                    value={`₹${(((Array.isArray(stats?.loanTypeStats) ? stats.loanTypeStats : []).reduce((acc: number, curr: any) => acc + (curr.totalAmount || 0), 0) || 0) / 10000000).toFixed(2)}Cr`}
                     trend={stats?.monthlyComparison?.change || "+12.4"}
                     icon="account_balance_wallet"
                     iconColor="text-[#6605c7]"
@@ -489,7 +488,7 @@ export default function BankDashboard() {
             {/* Intelligence Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                 {/* Capital Flow Visual */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
@@ -519,8 +518,8 @@ export default function BankDashboard() {
                             options={{
                                 responsive: true,
                                 maintainAspectRatio: false,
-                                plugins: { 
-                                    legend: { display: false }, 
+                                plugins: {
+                                    legend: { display: false },
                                     tooltip: {
                                         backgroundColor: 'rgba(255, 255, 255, 0.95)',
                                         titleColor: '#111',
@@ -532,7 +531,7 @@ export default function BankDashboard() {
                                         borderWidth: 1,
                                         bodyFont: { weight: 'bold', size: 12 },
                                         callbacks: { label: (c) => `₹ ${c.formattedValue} Cr Transmitted` }
-                                    } 
+                                    }
                                 },
                                 scales: {
                                     y: { border: { display: false }, grid: { color: 'rgba(0,0,0,0.02)' }, ticks: { font: { weight: 'bold', size: 10 }, color: '#999' } },
@@ -544,7 +543,7 @@ export default function BankDashboard() {
                 </motion.div>
 
                 {/* State Distribution Pie widget */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.6 }}
@@ -569,7 +568,7 @@ export default function BankDashboard() {
                             <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 mt-2 italic">Active Units</span>
                         </div>
                     </div>
-                    
+
                     <div className="grid grid-cols-2 gap-4">
                         {statusDistribution?.labels?.slice(0, 4)?.map((label, i) => (
                             <div key={label} className="flex items-center gap-3 p-3 rounded-2xl bg-gray-50/50 border border-gray-100/50">
@@ -613,7 +612,7 @@ export default function BankDashboard() {
                     </motion.div>
 
                     {/* Directive & Security Matrix */}
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.8 }}
@@ -643,7 +642,7 @@ export default function BankDashboard() {
                                 </div>
                             </div>
                             <span className="material-symbols-outlined text-[15rem] absolute -right-16 -bottom-16 text-white/5 group-hover:scale-125 group-hover:rotate-12 transition-transform duration-1000 pointer-events-none select-none">verified_user</span>
-                            
+
                             {/* Interactive scan line */}
                             <div className="absolute inset-0 pointer-events-none overflow-hidden">
                                 <div className="w-full h-[1px] bg-white/10 absolute top-0 animate-scan-line" />

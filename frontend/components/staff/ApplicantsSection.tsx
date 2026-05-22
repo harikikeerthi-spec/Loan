@@ -499,6 +499,20 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
             <span className="material-symbols-outlined text-lg">share</span>
             Share with Bank
           </button>
+          <button 
+            onClick={() => {
+              // Log activity for complete profile share
+              staffProfileApi.logActivity({
+                type: 'share',
+                msg: `Initiated complete profile share for ${profile.linkedUser?.firstName} ${profile.linkedUser?.lastName}`,
+                icon: 'send',
+                color: 'text-indigo-600 bg-indigo-50'
+              }).catch(console.error);
+            }}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 flex items-center gap-2 shadow-lg shadow-indigo-600/20">
+            <span className="material-symbols-outlined text-lg">send</span>
+            Share Complete Profile
+          </button>
         </div>
       </div>
 

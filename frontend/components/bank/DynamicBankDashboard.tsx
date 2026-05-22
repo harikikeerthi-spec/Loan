@@ -406,11 +406,10 @@ export default function DynamicBankDashboard() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-3 font-medium capitalize border-b-2 transition-all ${
-                activeTab === tab
+              className={`px-4 py-3 font-medium capitalize border-b-2 transition-all ${activeTab === tab
                   ? "border-purple-600 text-purple-600"
                   : "border-transparent text-gray-600 hover:text-gray-900"
-              }`}
+                }`}
             >
               {tab}
             </button>

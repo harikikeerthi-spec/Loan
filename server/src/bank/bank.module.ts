@@ -34,4 +34,4 @@ import { BankRbacInterceptor } from './bank-rbac.middleware';
   ],
   exports: [BankService, BankDashboardService, BankWorkflowService, BankCronService]
 })
-export class BankModule {}
+export class BankModule { }
