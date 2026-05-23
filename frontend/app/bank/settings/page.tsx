@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
@@ -52,7 +52,7 @@ export default function BankSettings() {
                     <div className="glass-card bg-white/80 backdrop-blur-md border border-purple-50 p-6 rounded-3xl text-center relative overflow-hidden shadow-lg shadow-purple-900/[0.01]">
                         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-purple-600 to-indigo-600" />
                         
-                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#6605c7] to-[#8b24e5] text-white flex items-center justify-center text-2xl font-black italic mx-auto shadow-md shadow-purple-500/25 mb-4">
+                        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#6605c7] to-[#8b24e5] text-white flex items-center justify-center text-2xl font-black mx-auto shadow-md shadow-purple-500/25 mb-4">
                             {user.firstName?.[0]}{user.lastName?.[0]}
                         </div>
                         

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -667,7 +667,7 @@ function SetupPhase({
                     </div>
                 </motion.div>
                 <h1 className="text-4xl md:text-6xl font-black text-gray-900 tracking-tight mb-6 uppercase">
-                    MOCK <span className="text-[#6605c7] italic">SIMULATOR</span>
+                    MOCK <span className="text-[#6605c7]">SIMULATOR</span>
                 </h1>
                 <p className="text-gray-500 text-base max-w-2xl mx-auto font-medium leading-relaxed">
                     Practice your visa interview with our AI consular officer.
@@ -1018,7 +1018,7 @@ function ReportPhase({
                             <span className="inline-block px-3 py-1 rounded-full bg-[#6605c7]/5 text-[#6605c7] text-[10px] font-black uppercase tracking-widest border border-[#6605c7]/10">Official Audit</span>
                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{new Date().toLocaleDateString()}</span>
                         </div>
-                        <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight uppercase italic mb-6">
+                        <h1 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight uppercase mb-6">
                             Consular <span className="text-[#6605c7]">Performance</span> Audit
                         </h1>
                         <p className="text-base text-gray-500 leading-relaxed font-medium">
@@ -1027,7 +1027,7 @@ function ReportPhase({
                     </div>
                     
                     <div className="flex flex-col items-start md:items-end">
-                        <div className="text-7xl font-black font-display tracking-tighter leading-none mb-4 italic">
+                        <div className="text-7xl font-black font-display tracking-tighter leading-none mb-4">
                             <span className={scoreColor}>{report.overallScore}</span>
                             <span className="text-xl text-gray-300 font-bold ml-1 uppercase">Score</span>
                         </div>
@@ -1051,7 +1051,7 @@ function ReportPhase({
             {/* Metrics Triple Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
                 <MetricBox title="Risk Profile" icon="security">
-                    <div className={`text-4xl font-black uppercase tracking-tight italic ${
+                    <div className={`text-4xl font-black uppercase tracking-tight ${
                         report.overallRisk === "Low" ? "text-green-500" : report.overallRisk === "Medium" ? "text-amber-500" : "text-red-500"
                     }`}>
                         {report.overallRisk}
@@ -1061,19 +1061,19 @@ function ReportPhase({
                 <MetricBox title="Engagement Data" icon="hub">
                     <div className="flex items-end gap-6">
                         <div>
-                            <div className="text-4xl font-black text-gray-900 italic">{messages.filter(m => m.role === "officer").length}</div>
+                            <div className="text-4xl font-black text-gray-900">{messages.filter(m => m.role === "officer").length}</div>
                             <div className="text-[9px] text-gray-400 font-black uppercase tracking-widest">Queries</div>
                         </div>
                         <div className="h-10 w-px bg-gray-100" />
                         <div>
-                            <div className="text-4xl font-black text-gray-900 italic">{evaluations.length}</div>
+                            <div className="text-4xl font-black text-gray-900">{evaluations.length}</div>
                             <div className="text-[9px] text-gray-400 font-black uppercase tracking-widest">Evaluated</div>
                         </div>
                     </div>
                 </MetricBox>
                 <MetricBox title="Synaptic Score" icon="analytics">
                     <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full border-4 border-[#6605c7]/10 border-t-[#6605c7] flex items-center justify-center font-black text-sm text-[#6605c7] italic">
+                        <div className="w-12 h-12 rounded-full border-4 border-[#6605c7]/10 border-t-[#6605c7] flex items-center justify-center font-black text-sm text-[#6605c7]">
                             {report.overallScore}%
                         </div>
                         <div className="text-[10px] text-gray-500 font-bold leading-relaxed uppercase tracking-widest">Global Percentile Standing</div>
@@ -1089,7 +1089,7 @@ function ReportPhase({
                         <div key={key}>
                             <div className="flex justify-between items-center mb-3">
                                 <span className="text-[11px] font-black text-gray-600 uppercase tracking-widest">{key.replace(/([A-Z])/g, ' $1').replace(/_/g, ' ')}</span>
-                                <span className={`text-[13px] font-black italic ${(val as number) >= 7 ? "text-green-500" : "text-amber-500"}`}>{(val as number) * 10}%</span>
+                                <span className={`text-[13px] font-black ${(val as number) >= 7 ? "text-green-500" : "text-amber-500"}`}>{(val as number) * 10}%</span>
                             </div>
                             <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
                                 <motion.div 
@@ -1132,9 +1132,9 @@ function ReportPhase({
                             <div className="w-12 h-12 rounded-2xl bg-[#6605c7] flex items-center justify-center shadow-lg">
                                 <span className="material-symbols-outlined text-white text-2xl">gavel</span>
                             </div>
-                            <h4 className="text-[11px] font-black uppercase tracking-[0.4em] italic text-[#a855f7]">Final Executive Verdict</h4>
+                            <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-[#a855f7]">Final Executive Verdict</h4>
                         </div>
-                        <p className="text-xl md:text-2xl font-black italic leading-relaxed text-purple-50 underline decoration-[#6605c7] decoration-4 underline-offset-8 relative z-10">
+                        <p className="text-xl md:text-2xl font-black leading-relaxed text-purple-50 underline decoration-[#6605c7] decoration-4 underline-offset-8 relative z-10">
                             "{report.verdict}"
                         </p>
                     </div>

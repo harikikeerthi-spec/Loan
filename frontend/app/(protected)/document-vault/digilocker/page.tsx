@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -149,7 +149,7 @@ function DigilockerIntegrationContent() {
                                     </div>
                                     <div>
                                         <h2 className="text-2xl font-black mb-1">Paperless Documentation</h2>
-                                        <p className="text-white/70 text-sm font-medium italic">Powered by Ministry of Electronics & IT</p>
+                                        <p className="text-white/70 text-sm font-medium">Powered by Ministry of Electronics & IT</p>
                                     </div>
                                 </div>
 

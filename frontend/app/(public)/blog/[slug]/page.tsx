@@ -1,4 +1,4 @@
-
+﻿
 "use client";
 
 import { useState, useEffect } from "react";
@@ -74,7 +74,7 @@ export default function BlogPostPage() {
                     <span>{blog.readTime || 5} min read</span>
                 </div>
 
-                <h1 className="text-4xl md:text-6xl font-black text-gray-900 leading-[1.1] tracking-tight mb-8 font-display italic">
+                <h1 className="text-4xl md:text-6xl font-black text-gray-900 leading-[1.1] tracking-tight mb-8 font-display">
                     {blog.title}
                 </h1>
 
@@ -140,7 +140,7 @@ export default function BlogPostPage() {
                         <span className="material-symbols-outlined text-9xl text-white">mail</span>
                     </div>
                     <div className="relative z-10 max-w-xl mx-auto">
-                        <h2 className="text-3xl font-black text-white mb-6 italic font-display">
+                        <h2 className="text-3xl font-black text-white mb-6 font-display">
                             LIKE WHAT YOU READ?
                         </h2>
                         <p className="text-gray-400 text-lg mb-10 leading-relaxed font-medium">

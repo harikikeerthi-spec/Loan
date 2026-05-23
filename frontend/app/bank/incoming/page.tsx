@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -179,7 +179,7 @@ export default function IncomingQueuePage() {
             sortable: true,
             cell: (row: any) => (
                 <div>
-                    <p className="font-black text-gray-900 uppercase tracking-tight italic">
+                    <p className="font-black text-gray-900 uppercase tracking-tight">
                         {row.firstName} {row.lastName}
                     </p>
                     <p className="text-[10px] text-gray-400 font-medium lowercase">

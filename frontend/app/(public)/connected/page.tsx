@@ -105,7 +105,7 @@ const SectionHeader = ({ subtitle, title, light = false }: { subtitle: string; t
             <span className={`inline-block px-4 py-1.5 ${light ? "bg-black text-white" : "bg-[#F7C600] text-black"} text-[10px] font-black uppercase tracking-[0.3em] rounded-full mb-6`}>
                 {subtitle}
             </span>
-            <h2 className={`text-5xl md:text-7xl font-black ${light ? "text-black" : "text-white"} leading-[1.1] tracking-tighter italic font-display`}>
+            <h2 className={`text-5xl md:text-7xl font-black ${light ? "text-black" : "text-white"} leading-[1.1] tracking-tighter font-display`}>
                 {title}
             </h2>
         </motion.div>
@@ -207,7 +207,7 @@ export default function ConnectedPage() {
                                 Admissions Ready Delhi Cohort
                             </span>
 
-                            <h1 className="text-6xl md:text-[140px] font-black text-white leading-[0.85] tracking-[-0.05em] mb-12 italic font-display">
+                            <h1 className="text-6xl md:text-[140px] font-black text-white leading-[0.85] tracking-[-0.05em] mb-12 font-display">
                                 BUILD YOUR <br />
                                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F7C600] via-white to-white">COHORT.</span>
                             </h1>
@@ -301,7 +301,7 @@ export default function ConnectedPage() {
                                 whileInView={{ opacity: 1, scale: 1 }}
                                 transition={{ duration: 1 }}
                             >
-                                <h3 className="text-4xl md:text-7xl font-black text-white italic font-display mb-8">
+                                <h3 className="text-4xl md:text-7xl font-black text-white font-display mb-8">
                                     YOUR NETWORK <br /> IS YOUR NET WORTH.
                                 </h3>
                                 <MagneticButton>
@@ -377,7 +377,7 @@ export default function ConnectedPage() {
                                 <span className="text-white/40 uppercase font-black text-[11px] tracking-[0.5em]">Delhi Edition</span>
                             </div>
 
-                            <h2 className="text-7xl md:text-[120px] font-black text-white leading-none tracking-tighter italic mb-12 font-display">
+                            <h2 className="text-7xl md:text-[120px] font-black text-white leading-none tracking-tighter mb-12 font-display">
                                 APPLY <br /> TO THE <br /> <span className="text-[#F7C600]">CIRCLE.</span>
                             </h2>
 
@@ -405,7 +405,7 @@ export default function ConnectedPage() {
 
                 {/* Background Text Shadow */}
                 <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center opacity-[0.02] pointer-events-none select-none">
-                    <span className="text-[40vw] font-black italic">CONNECTED</span>
+                    <span className="text-[40vw] font-black">CONNECTED</span>
                 </div>
             </section>
 
@@ -527,7 +527,7 @@ function CohortApplicationForm() {
                 >
                     <span className="material-symbols-outlined text-black text-5xl font-black">check</span>
                 </motion.div>
-                <h3 className="text-3xl font-black text-white italic">Intent Received.</h3>
+                <h3 className="text-3xl font-black text-white">Intent Received.</h3>
                 <p className="text-white/50 font-medium leading-relaxed max-w-xs">
                     Welcome to the waitlist, <span className="text-[#F7C600] font-black">{form.fullName.split(" ")[0]}</span>. Our team will reach you within 48 hours.
                 </p>
@@ -727,7 +727,7 @@ function BenefitCard({ icon, title, desc, delay }: { icon: string; title: string
             <div className="w-16 h-16 bg-white rounded-2xl shadow-lg border border-gray-100 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-[#F7C600] transition-all duration-500">
                 <span className="material-symbols-outlined text-black text-3xl group-hover:font-black">{icon}</span>
             </div>
-            <h3 className="text-2xl font-black text-black mb-4 font-display italic tracking-tight uppercase">{title}</h3>
+            <h3 className="text-2xl font-black text-black mb-4 font-display tracking-tight uppercase">{title}</h3>
             <p className="text-black/40 font-medium leading-relaxed">
                 {desc}
             </p>
@@ -759,7 +759,7 @@ function TimelineStep({ number, title, desc }: { number: string; title: string; 
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
         >
-            <div className="text-4xl md:text-5xl font-black text-gray-100 group-hover:text-[#F7C600] transition-colors font-display italic">
+            <div className="text-4xl md:text-5xl font-black text-gray-100 group-hover:text-[#F7C600] transition-colors font-display">
                 {number}
             </div>
             <div className="pt-2">

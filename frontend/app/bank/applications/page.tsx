@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -386,7 +386,7 @@ export default function ApplicationManagement() {
                                         sortable: true,
                                         cell: (row: any) => (
                                             <div>
-                                                <span className="font-black text-gray-900 uppercase tracking-tight italic block">
+                                                <span className="font-black text-gray-900 uppercase tracking-tight block">
                                                     {row.firstName} {row.lastName}
                                                 </span>
                                                 <span className="text-[10px] text-gray-400 block truncate max-w-[150px]">

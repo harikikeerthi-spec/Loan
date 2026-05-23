@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
@@ -5671,7 +5671,7 @@ export default function StaffDashboardPage() {
                                                                 {newStudent.coApplicant.isSameAsFather ? "Father & Co-applicant Documents" : "Father's Documents"} {newStudent.family.fatherName && `(${newStudent.family.fatherName})`}
                                                             </h4>
                                                             {!newStudent.family.fatherEmploymentType && (
-                                                                <span className="text-[9px] text-slate-500 font-medium italic">📋 Select employment type to see required documents</span>
+                                                                <span className="text-[9px] text-slate-500 font-medium">📋 Select employment type to see required documents</span>
                                                             )}
                                                         </div>
                                                         <div className="space-y-3">
@@ -5750,7 +5750,7 @@ export default function StaffDashboardPage() {
                                                                 {newStudent.coApplicant.isSameAsMother ? "Mother & Co-applicant Documents" : "Mother's Documents"} {newStudent.family.motherName && `(${newStudent.family.motherName})`}
                                                             </h4>
                                                             {!newStudent.family.motherEmploymentType && (
-                                                                <span className="text-[9px] text-slate-500 font-medium italic">📋 Select employment type to see required documents</span>
+                                                                <span className="text-[9px] text-slate-500 font-medium">📋 Select employment type to see required documents</span>
                                                             )}
                                                         </div>
                                                         <div className="space-y-3">
@@ -5827,7 +5827,7 @@ export default function StaffDashboardPage() {
                                                         <div className="mb-5 flex items-center justify-between">
                                                             <h4 className="text-[10px] font-black uppercase tracking-widest text-violet-600 bg-violet-50 px-3 py-1 rounded-full w-fit">Co-applicant Documents {newStudent.coApplicant.name && `(${newStudent.coApplicant.name})`}</h4>
                                                             {!newStudent.coApplicant.employmentType && (
-                                                                <span className="text-[9px] text-slate-500 font-medium italic">📋 Select employment type to see required documents</span>
+                                                                <span className="text-[9px] text-slate-500 font-medium">📋 Select employment type to see required documents</span>
                                                             )}
                                                         </div>
                                                         <div className="space-y-3">

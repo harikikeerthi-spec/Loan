@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
@@ -90,7 +90,7 @@ export default function WhatsAppSimulator() {
                         <div className="w-24 h-24 bg-gradient-to-tr from-[#6605c7] to-[#a855f7] rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-[#6605c7]/20 rotate-[10deg] hover:rotate-0 transition-all duration-500 border border-white">
                             <span className="material-symbols-outlined text-white text-5xl">hub</span>
                         </div>
-                        <h1 className="text-4xl font-black text-gray-900 mb-4 tracking-tighter italic uppercase">WA NODE</h1>
+                        <h1 className="text-4xl font-black text-gray-900 mb-4 tracking-tighter uppercase">WA NODE</h1>
                         <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.4em]">Simulator Initialization</p>
                     </div>
 
@@ -139,7 +139,7 @@ export default function WhatsAppSimulator() {
                                 <span className="material-symbols-outlined text-white text-xl">sensors</span>
                             </div>
                             <div>
-                                <h3 className="text-gray-900 font-black text-lg tracking-tight uppercase italic underline underline-offset-4 decoration-[#6605c7]">Live Simulation</h3>
+                                <h3 className="text-gray-900 font-black text-lg tracking-tight uppercase underline underline-offset-4 decoration-[#6605c7]">Live Simulation</h3>
                                 <p className="text-[8px] font-black uppercase tracking-widest text-[#25D366] mt-1">Bridge Active</p>
                             </div>
                         </div>
@@ -191,7 +191,7 @@ export default function WhatsAppSimulator() {
                                 {phone.substring(0, 1)}
                             </div>
                             <div>
-                                <h4 className="text-gray-900 font-black text-xl tracking-tighter italic uppercase">{phone}</h4>
+                                <h4 className="text-gray-900 font-black text-xl tracking-tighter uppercase">{phone}</h4>
                                 <div className="flex items-center gap-2 mt-1">
                                     <div className="w-1.5 h-1.5 bg-[#25D366] rounded-full animate-pulse shadow-[0_0_8px_#25D366]" />
                                     <span className="text-[9px] text-[#25D366] font-black uppercase tracking-widest">Active via Bridge</span>

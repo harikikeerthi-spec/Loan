@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -201,15 +201,15 @@ export default function BranchMatrix() {
                             <div className="grid grid-cols-3 gap-2 border-t border-purple-50/50 pt-4 mb-5">
                                 <div className="text-center border-r border-purple-50/50">
                                     <p className="text-[8px] font-black text-gray-400 uppercase tracking-wider">Active Files</p>
-                                    <p className="text-sm font-black text-gray-800 mt-1 italic font-display">{branch.activeApplications}</p>
+                                    <p className="text-sm font-black text-gray-800 mt-1 font-display">{branch.activeApplications}</p>
                                 </div>
                                 <div className="text-center border-r border-purple-50/50">
                                     <p className="text-[8px] font-black text-gray-400 uppercase tracking-wider">Disbursed</p>
-                                    <p className="text-sm font-black text-[#6605c7] mt-1 italic font-display">₹{branch.portfolioVolume}Cr</p>
+                                    <p className="text-sm font-black text-[#6605c7] mt-1 font-display">₹{branch.portfolioVolume}Cr</p>
                                 </div>
                                 <div className="text-center">
                                     <p className="text-[8px] font-black text-gray-400 uppercase tracking-wider">SLA Score</p>
-                                    <p className="text-sm font-black text-emerald-600 mt-1 italic font-display">{branch.slaScore}%</p>
+                                    <p className="text-sm font-black text-emerald-600 mt-1 font-display">{branch.slaScore}%</p>
                                 </div>
                             </div>
 

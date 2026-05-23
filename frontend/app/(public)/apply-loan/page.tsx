@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -515,7 +515,7 @@ export default function ApplyLoanPage() {
                                                 <span className="material-symbols-outlined text-sm">notes</span>
                                                 Internal Observations
                                             </h3>
-                                            <p className="text-[13px] text-gray-700 font-medium leading-loose italic">"{formData.notes}"</p>
+                                            <p className="text-[13px] text-gray-700 font-medium leading-loose">"{formData.notes}"</p>
                                         </div>
                                     </div>
                                 )}

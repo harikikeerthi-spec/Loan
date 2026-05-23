@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -123,7 +123,7 @@ export default function Integrations() {
                             <span className="material-symbols-outlined text-[#6605c7] bg-purple-50 p-2 rounded-xl">extension</span>
                             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#6605c7]">Module 10 • System Integrations</span>
                         </div>
-                        <h1 className="text-4xl font-display font-black text-gray-900 tracking-tight italic uppercase">
+                        <h1 className="text-4xl font-display font-black text-gray-900 tracking-tight uppercase">
                             Collaboration Hub
                         </h1>
                         <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
@@ -137,7 +137,7 @@ export default function Integrations() {
                     <div className="glass-card bg-white p-6 border border-gray-100 rounded-[2rem] flex items-center justify-between shadow-sm">
                         <div>
                             <span className="text-[8px] font-black uppercase tracking-widest text-gray-400 block mb-1">Salesforce Node</span>
-                            <span className="text-base font-black text-gray-900 uppercase italic">CRM Gateway</span>
+                            <span className="text-base font-black text-gray-900 uppercase">CRM Gateway</span>
                             <span className="text-[9px] font-bold text-gray-400 block mt-1">Last Synced: {lastSfSync}</span>
                         </div>
                         <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
@@ -150,7 +150,7 @@ export default function Integrations() {
                     <div className="glass-card bg-white p-6 border border-gray-100 rounded-[2rem] flex items-center justify-between shadow-sm">
                         <div>
                             <span className="text-[8px] font-black uppercase tracking-widest text-gray-400 block mb-1">Slack Hook</span>
-                            <span className="text-base font-black text-gray-900 uppercase italic">Block Kit Alert</span>
+                            <span className="text-base font-black text-gray-900 uppercase">Block Kit Alert</span>
                             <span className="text-[9px] font-bold text-[#6605c7] block mt-1">Target: {slackChannel}</span>
                         </div>
                         <span className={`px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${
@@ -163,7 +163,7 @@ export default function Integrations() {
                     <div className="glass-card bg-white p-6 border border-gray-100 rounded-[2rem] flex items-center justify-between shadow-sm">
                         <div>
                             <span className="text-[8px] font-black uppercase tracking-widest text-gray-400 block mb-1">Listener Endpoint</span>
-                            <span className="text-base font-black text-gray-900 uppercase italic">REST Webhooks</span>
+                            <span className="text-base font-black text-gray-900 uppercase">REST Webhooks</span>
                             <span className="text-[9px] font-bold text-gray-400 block mt-1">Status: Listening to events</span>
                         </div>
                         <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping" />
@@ -255,7 +255,7 @@ export default function Integrations() {
                                                                         setMappings(prev => prev.filter((_, idx) => idx !== i));
                                                                         addLog("WARNING", `Revoked schema map field: ${item.localField}`);
                                                                     }}
-                                                                    className="text-rose-600 hover:text-rose-800 text-[9px] font-black uppercase tracking-widest italic"
+                                                                    className="text-rose-600 hover:text-rose-800 text-[9px] font-black uppercase tracking-widest"
                                                                 >
                                                                     Revoke
                                                                 </button>

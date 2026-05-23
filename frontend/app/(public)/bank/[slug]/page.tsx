@@ -1,4 +1,4 @@
-
+﻿
 import { banks } from "@/lib/bankData";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -417,7 +417,7 @@ export default async function BankPage({ params }: Props) {
                                         <p className="text-sm text-[#6605c7]">{testimonial.school || "Student"}</p>
                                     </div>
                                 </div>
-                                <p className="text-gray-600 italic mb-4">"{testimonial.quote}"</p>
+                                <p className="text-gray-600 mb-4">"{testimonial.quote}"</p>
                                 <div className="flex items-center gap-2 text-sm text-gray-500">
                                     <span className="material-symbols-outlined text-lg">star</span>
                                     {testimonial.highlight || "5 Stars"}

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -185,7 +185,7 @@ export default function AnalyticsReports() {
                             <span className="material-symbols-outlined text-[#6605c7] bg-purple-50 p-2 rounded-xl">monitoring</span>
                             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#6605c7]">Module 09 • Analytics & SLA</span>
                         </div>
-                        <h1 className="text-4xl font-display font-black text-gray-900 tracking-tight italic uppercase">Channel Intelligence</h1>
+                        <h1 className="text-4xl font-display font-black text-gray-900 tracking-tight uppercase">Channel Intelligence</h1>
                         <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">
                             SLA Tracking, TAT Response metrics, and asset yields for {currentBankName}
                         </p>
@@ -214,7 +214,7 @@ export default function AnalyticsReports() {
                     <div className="glass-card bg-white p-8 border border-gray-100 rounded-[2.5rem] flex flex-col justify-between shadow-sm">
                         <div className="space-y-2">
                             <span className="text-[8px] font-black uppercase tracking-widest text-gray-400">Promised SLA Threshold</span>
-                            <h3 className="text-2xl font-black italic text-[#6605c7]">5.0 Days TAT</h3>
+                            <h3 className="text-2xl font-black text-[#6605c7]">5.0 Days TAT</h3>
                             <p className="text-[10px] text-gray-400 uppercase tracking-widest leading-relaxed mt-1">
                                 Service Level Agreement promised to student applicants for full-review decisions.
                             </p>
@@ -227,7 +227,7 @@ export default function AnalyticsReports() {
                     <div className="glass-card bg-white p-8 border border-gray-100 rounded-[2.5rem] flex flex-col justify-between shadow-sm">
                         <div className="space-y-2">
                             <span className="text-[8px] font-black uppercase tracking-widest text-gray-400">Actual Average Turnaround</span>
-                            <h3 className="text-2xl font-black italic text-emerald-500">{analyticsData.tatAverageDays} Days</h3>
+                            <h3 className="text-2xl font-black text-emerald-500">{analyticsData.tatAverageDays} Days</h3>
                             <p className="text-[10px] text-gray-400 uppercase tracking-widest leading-relaxed mt-1">
                                 Live moving average based on application logging to final decision matrices.
                             </p>
@@ -240,7 +240,7 @@ export default function AnalyticsReports() {
                     <div className="glass-card bg-white p-8 border border-gray-100 rounded-[2.5rem] flex flex-col justify-between shadow-sm">
                         <div className="space-y-2">
                             <span className="text-[8px] font-black uppercase tracking-widest text-gray-400">SLA Status Health</span>
-                            <h3 className="text-2xl font-black italic text-purple-600">On Track (SLA Compliant)</h3>
+                            <h3 className="text-2xl font-black text-purple-600">On Track (SLA Compliant)</h3>
                             <p className="text-[10px] text-gray-400 uppercase tracking-widest leading-relaxed mt-1">
                                 Compliance rate is outstanding. Your channel is operating {((analyticsData.targetTATDays - analyticsData.tatAverageDays) / analyticsData.targetTATDays * 100).toFixed(0)}% faster than promised.
                             </p>
