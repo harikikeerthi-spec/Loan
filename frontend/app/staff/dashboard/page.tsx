@@ -23,33 +23,87 @@ import {
     getStudentDocumentRequirements,
     type DocumentRequirement,
 } from "@/lib/documentRequirements";
+import ActivityLogWidget from "@/components/staff/ActivityLogWidget";
+import ShareProfileToBankModal from "@/components/staff/ShareProfileToBankModal";
 
 // --- Components ---
 
-const StatCard = ({ label, value, icon, color, trend, loading, hint }: any) => (
-    <div className="bg-white border border-slate-200 p-4 rounded-lg shadow-sm group hover:border-indigo-200 transition-colors">
-        <div className="flex justify-between items-start mb-3">
-            <div className={`w-8 h-8 rounded bg-slate-50 flex items-center justify-center border border-slate-100 ${color?.includes('text-') ? color : 'text-slate-600'}`}>
-                <span className="material-symbols-outlined text-[16px]">{icon}</span>
-            </div>
-            {hint && !loading && (
-                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700">{hint}</span>
+const StatCard = ({ label, value, icon, color, trend, loading, hint, badge, ...props }: any) => {
+    // Generate styling based on the color string to keep the UI clean
+    let colorScheme = {
+        iconBg: 'bg-slate-50',
+        iconText: 'text-slate-600',
+        valueText: 'text-slate-900',
+        trendBg: 'bg-slate-50',
+        trendText: 'text-slate-500'
+    };
+
+    if (color?.includes('blue')) {
+        colorScheme = { iconBg: 'bg-blue-50', iconText: 'text-blue-500', valueText: 'text-slate-900', trendBg: 'bg-slate-50', trendText: 'text-slate-500' };
+    } else if (color?.includes('amber')) {
+        colorScheme = { iconBg: 'bg-amber-50', iconText: 'text-amber-500', valueText: 'text-slate-900', trendBg: 'bg-amber-50/50', trendText: 'text-amber-700' };
+    } else if (color?.includes('green') || color?.includes('emerald')) {
+        colorScheme = { iconBg: 'bg-emerald-50', iconText: 'text-emerald-500', valueText: 'text-slate-900', trendBg: 'bg-emerald-50/50', trendText: 'text-emerald-700' };
+    } else if (color?.includes('purple') || color?.includes('indigo')) {
+        colorScheme = { iconBg: 'bg-purple-50', iconText: 'text-purple-500', valueText: 'text-slate-900', trendBg: 'bg-slate-50', trendText: 'text-slate-500' };
+    }
+
+    return (
+        <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm hover:shadow-md transition-all relative overflow-hidden group hover:border-indigo-200 flex flex-col justify-between min-h-[140px]">
+            {/* Visual Indicator (e.g. amber urgency tint or subtle background) */}
+            {color?.includes('amber') && (
+                <div className="absolute top-0 right-0 w-24 h-24 bg-amber-50 rounded-full blur-3xl opacity-50 pointer-events-none" />
             )}
-            {trend !== undefined && !loading && (
-                <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${trend >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                    <span className="material-symbols-outlined text-[12px]">{trend >= 0 ? 'trending_up' : 'trending_down'}</span>
-                    {Math.abs(trend)}%
-                </span>
-            )}
-        </div>
-        <div>
-            <p className="text-slate-500 text-[11px] font-medium mb-0.5">{label}</p>
-            <div className="text-[20px] font-semibold text-slate-900 tracking-tight">
-                {loading ? <span className="h-6 bg-slate-100 animate-pulse rounded block w-16" /> : value ?? "—"}
+
+            {/* Top row: Metric Title + Icon */}
+            <div className="flex justify-between items-start mb-2 relative z-10">
+                <span className="text-slate-500 text-[11px] font-semibold uppercase tracking-wider">{label}</span>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${colorScheme.iconBg} ${colorScheme.iconText}`}>
+                    <span className="material-symbols-outlined text-[16px]">{icon}</span>
+                </div>
+            </div>
+
+            {/* Middle row: Large primary number */}
+            <div className="mt-1 mb-3 relative z-10 flex items-center gap-3">
+                <div className={`text-4xl font-extrabold tracking-tight ${colorScheme.valueText}`}>
+                    {loading ? <span className="h-10 bg-slate-100 animate-pulse rounded block w-20" /> : value ?? "—"}
+                </div>
+                {badge && !loading && (
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-amber-50 border border-amber-100/50">
+                        <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        <span className="text-[10px] font-bold text-amber-700">{badge}</span>
+                    </div>
+                )}
+            </div>
+
+            {/* Bottom Row: Micro-trend / Context text */}
+            <div className="mt-auto relative z-10 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                    {trend !== undefined && !loading && (
+                        <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${colorScheme.trendBg} ${colorScheme.trendText}`}>
+                            {typeof trend === 'string' && (trend.includes('⏳') || trend.includes('📈')) ? null : (
+                                <span className="material-symbols-outlined text-[12px]">
+                                    {Number(trend) >= 0 ? 'trending_up' : 'trending_down'}
+                                </span>
+                            )}
+                            {trend}
+                        </div>
+                    )}
+                    {hint && !loading && (
+                        <span className="text-[10px] font-medium text-slate-400 border-l border-slate-200 pl-2 ml-1">
+                            {hint}
+                        </span>
+                    )}
+                </div>
+                {props.footerAction && !loading && (
+                    <button onClick={props.onFooterActionClick} className="text-[10px] font-bold text-slate-500 hover:text-indigo-600 transition-colors flex items-center gap-1">
+                        {props.footerAction}
+                    </button>
+                )}
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const NavItem = ({ section, active, icon, label, badge, expanded, onClick }: any) => {
     const isActive = active === section;
@@ -123,7 +177,16 @@ function createEmptyNewStudent() {
             name: "", mobile: "", email: "", relation: "", occupation: "", aadhar: "", pan: "",
             employmentType: "", monthlyIncome: "",
             isSameAsFather: false, isSameAsMother: false
-        }
+        },
+        loanAmount: "",
+        targetUniversity: "",
+        studyDestination: "",
+        courseName: "",
+        budget: "",
+        pincode: "",
+        admitStatus: "",
+        intakeSeason: "",
+        goal: ""
     };
 }
 
@@ -138,6 +201,8 @@ export default function StaffDashboardPage() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [autoStartUser, setAutoStartUser] = useState<any>(null);
     const [showPullModal, setShowPullModal] = useState(false);
+    const [showShareProfileModal, setShowShareProfileModal] = useState(false);
+    const [shareProfileData, setShareProfileData] = useState<any>(null);
 
     // Premium Document Upload Popup States
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -631,6 +696,8 @@ export default function StaffDashboardPage() {
     const [shareMessage, setShareMessage] = useState("");
     const [isSharing, setIsSharing] = useState(false);
     const [shareResult, setShareResult] = useState<{ url: string; expires: string } | null>(null);
+    const [availableBanks, setAvailableBanks] = useState<any[]>([]);
+    const [bankUsers, setBankUsers] = useState<any[]>([]);
 
     // Fetch suggestions as user types for "Link Existing"
     useEffect(() => {
@@ -655,6 +722,22 @@ export default function StaffDashboardPage() {
         return () => clearTimeout(timer);
     }, [userSearchQuery, onboardMode]);
 
+    // Fetch banks and bank users for dynamic distribution matching
+    useEffect(() => {
+        const fetchBanksAndUsers = async () => {
+            try {
+                const banksRes: any = await referenceApi.getBanks();
+                setAvailableBanks(banksRes?.data || banksRes || []);
+
+                const usersRes: any = await adminApi.getUsers(100, 0, "", "bank");
+                setBankUsers(usersRes?.data || usersRes || []);
+            } catch (e) {
+                console.error("Failed to load reference banks or bank users", e);
+            }
+        };
+        fetchBanksAndUsers();
+    }, []);
+
     // Validation Helpers removed - using shared lib
 
     // Helper function to generate required documents based on employment type
@@ -668,7 +751,7 @@ export default function StaffDashboardPage() {
     const [onboardStep, setOnboardStep] = useState<1 | 2 | 3 | 4>(1);
     const [createdUser, setCreatedUser] = useState<any>(null);
     const [quickForm, setQuickForm] = useState({ firstName: "", lastName: "", email: "", phone: "" });
-    const [profileTab, setProfileTab] = useState<"personal" | "academic" | "work" | "tests" | "family">("personal");
+    const [profileTab, setProfileTab] = useState<"personal" | "academic" | "loan" | "work" | "tests" | "family">("personal");
     const [newStudent, setNewStudent] = useState(createEmptyNewStudent);
     const [createLoading, setCreateLoading] = useState(false);
 
@@ -1006,6 +1089,15 @@ export default function StaffDashboardPage() {
                 fatherName: fullUser.fatherName || "",
             },
             coApplicant: fullUser.coApplicant || s.coApplicant,
+            loanAmount: fullUser.loanAmount || "",
+            targetUniversity: fullUser.targetUniversity || "",
+            studyDestination: fullUser.studyDestination || "",
+            courseName: fullUser.courseName || "",
+            budget: fullUser.budget || "",
+            pincode: fullUser.pincode || "",
+            admitStatus: fullUser.admitStatus || "",
+            intakeSeason: fullUser.intakeSeason || "",
+            goal: fullUser.goal || "",
         }));
 
         // Check if StaffProfile exists first to prevent 409 Conflict error
@@ -1143,14 +1235,22 @@ export default function StaffDashboardPage() {
                     permanent: newStudent.permanentAddress
                 },
                 academic: newStudent.academic,
-                studyDestination: newStudent.academic.countryOfEducation || newStudent.academic.undergrad?.country,
+                studyDestination: newStudent.studyDestination || newStudent.academic.countryOfEducation || newStudent.academic.undergrad?.country,
                 testScores: newStudent.tests,
                 workExperience: newStudent.workExperience,
                 familyDetails: newStudent.family,
                 coApplicant: newStudent.coApplicant,
                 passport: newStudent.passport,
                 nationality: newStudent.nationality,
-                emergencyContact: newStudent.emergencyContact
+                emergencyContact: newStudent.emergencyContact,
+                loanAmount: newStudent.loanAmount,
+                targetUniversity: newStudent.targetUniversity,
+                courseName: newStudent.courseName,
+                budget: newStudent.budget,
+                pincode: newStudent.pincode,
+                admitStatus: newStudent.admitStatus,
+                intakeSeason: newStudent.intakeSeason,
+                goal: newStudent.goal
             };
 
             await onboardingApi.submit(payload);
@@ -1272,6 +1372,58 @@ export default function StaffDashboardPage() {
         }
     };
 
+    const handleBankSelect = (selectedName: string) => {
+        setShareName(selectedName);
+        if (!selectedName) {
+            setShareEmail("");
+            return;
+        }
+
+        const lowercaseSelected = selectedName.toLowerCase().trim();
+        
+        // 1. Dynamic check in loaded bankUsers
+        const matched = bankUsers.find((u: any) => {
+            const firstName = (u.firstName || "").toLowerCase().trim();
+            const lastName = (u.lastName || "").toLowerCase().trim();
+            const email = (u.email || "").toLowerCase().trim();
+            return (
+                (firstName && (lowercaseSelected.includes(firstName) || firstName.includes(lowercaseSelected))) ||
+                (lastName && (lowercaseSelected.includes(lastName) || lastName.includes(lowercaseSelected))) ||
+                (email && email.includes(lowercaseSelected))
+            );
+        });
+
+        if (matched?.email) {
+            setShareEmail(matched.email);
+            return;
+        }
+
+        // 2. Predefined fallback mapping for test users in DB
+        const bankRepMap: Record<string, string> = {
+            "hdfc credila": "keerthichinnu0728@gmail.com",
+            "auxilo finserve": "shannukalneedi@gmail.com",
+            "idfc first bank": "shannukalneedi@gmail.com",
+            "avanse financial": "keerthichinnu0728@gmail.com",
+            "poonawalla fincorp": "keerthichinnu0728@gmail.com",
+        };
+
+        const fallbackEmail = bankRepMap[lowercaseSelected];
+        if (fallbackEmail) {
+            const exists = bankUsers.some((u: any) => u.email.toLowerCase().trim() === fallbackEmail.toLowerCase().trim());
+            if (exists) {
+                setShareEmail(fallbackEmail);
+                return;
+            }
+        }
+
+        // 3. Absolute fallback
+        if (bankUsers.length > 0) {
+            setShareEmail(bankUsers[0].email);
+        } else {
+            setShareEmail("");
+        }
+    };
+
     const handleDistributionShare = async () => {
         const studentId = createdUser?.id || createdUser?.uid || createdUser?._id;
         if (!studentId) {
@@ -1302,13 +1454,13 @@ export default function StaffDashboardPage() {
                         const appsRes: any = await adminApi.getApplications({ userId: studentId });
                         const applications = appsRes?.data || [];
                         let activeApp = applications.find((app: any) => app.userId === studentId || app.email === (createdUser?.email || newStudent?.email));
-                        
+
                         let targetAppId = activeApp?.id;
 
                         if (!targetAppId) {
                             const studentEmail = createdUser?.email || newStudent?.email;
                             const amountVal = createdUser?.loanAmount || (newStudent as any)?.loanAmount || "1500000";
-                            
+
                             const newAppRes: any = await applicationApi.create({
                                 userId: studentId,
                                 bank: shareName,
@@ -1336,7 +1488,7 @@ export default function StaffDashboardPage() {
                                 currentStage: "Submitted",
                                 remarks: `Application shared with ${shareName} on ${new Date().toLocaleDateString()}`
                             });
-                            
+
                             await loadData();
                         }
                     } catch (updateError) {
@@ -1418,17 +1570,17 @@ export default function StaffDashboardPage() {
 
         return (
             <div className={`mb-6 p-4 rounded-2xl border transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 ${isVerified
-                    ? 'bg-emerald-50/30 border-emerald-200/80 shadow-sm shadow-emerald-500/5'
-                    : isUploaded
-                        ? 'bg-amber-50/30 border-amber-200/80 shadow-sm shadow-amber-500/5'
-                        : 'bg-slate-50/50 border-slate-200/80'
+                ? 'bg-emerald-50/30 border-emerald-200/80 shadow-sm shadow-emerald-500/5'
+                : isUploaded
+                    ? 'bg-amber-50/30 border-amber-200/80 shadow-sm shadow-amber-500/5'
+                    : 'bg-slate-50/50 border-slate-200/80'
                 }`}>
                 <div className="flex items-start gap-3.5">
                     <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border shadow-inner ${isVerified
-                            ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                            : isUploaded
-                                ? 'bg-amber-50 text-amber-600 border-amber-100'
-                                : 'bg-white text-slate-400 border-slate-200'
+                        ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                        : isUploaded
+                            ? 'bg-amber-50 text-amber-600 border-amber-100'
+                            : 'bg-white text-slate-400 border-slate-200'
                         }`}>
                         <span className="material-symbols-outlined text-[24px]">
                             {isVerified ? 'verified' : isUploaded ? 'hourglass_empty' : 'cloud_upload'}
@@ -1438,10 +1590,10 @@ export default function StaffDashboardPage() {
                         <div className="flex flex-wrap items-center gap-2">
                             <p className="text-xs font-bold text-slate-800">{label}</p>
                             <span className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${isVerified
-                                    ? 'bg-emerald-100/60 text-emerald-700 border-emerald-200/50'
-                                    : isUploaded
-                                        ? 'bg-amber-100/60 text-amber-700 border-amber-200/50 animate-pulse'
-                                        : 'bg-slate-100 text-slate-500 border-slate-200'
+                                ? 'bg-emerald-100/60 text-emerald-700 border-emerald-200/50'
+                                : isUploaded
+                                    ? 'bg-amber-100/60 text-amber-700 border-amber-200/50 animate-pulse'
+                                    : 'bg-slate-100 text-slate-500 border-slate-200'
                                 }`}>
                                 {isVerified ? 'Verified' : isUploaded ? 'Pending Verification' : 'Not Uploaded'}
                             </span>
@@ -1488,8 +1640,8 @@ export default function StaffDashboardPage() {
                             setIsUploadModalOpen(true);
                         }}
                         className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm hover:shadow ${isUploaded
-                                ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
-                                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/10'
+                            ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
+                            : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/10'
                             }`}
                     >
                         <span className="material-symbols-outlined text-[16px]">
@@ -2792,6 +2944,7 @@ export default function StaffDashboardPage() {
                                             {[
                                                 { id: 'personal', label: 'Personal', icon: 'person' },
                                                 { id: 'academic', label: 'Academic', icon: 'school' },
+                                                { id: 'loan', label: 'Loan Details', icon: 'account_balance' },
                                                 { id: 'work', label: 'Work Experience', icon: 'work' },
                                                 { id: 'tests', label: 'Test Scores', icon: 'terminal' },
                                                 { id: 'family', label: 'Family & Co-applicant', icon: 'family_restroom' },
@@ -2809,7 +2962,7 @@ export default function StaffDashboardPage() {
                                                 </button>
                                             ))}
                                         </div>
-                                        <button
+                                        {/* <button
                                             type="button"
                                             onClick={() => handleSaveProfile(false)}
                                             disabled={createLoading}
@@ -2817,7 +2970,7 @@ export default function StaffDashboardPage() {
                                         >
                                             <span className="material-symbols-outlined text-[16px]">cloud_upload</span>
                                             {createLoading ? 'Saving...' : 'Save to Database'}
-                                        </button>
+                                        </button> */}
                                     </div>
                                 )}
 
@@ -4009,6 +4162,121 @@ export default function StaffDashboardPage() {
                                                             })()}
                                                         </div>
                                                     </div> */}
+                                                </motion.div>
+                                            )}
+
+                                            {profileTab === 'loan' && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: 8 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    className="space-y-8 bg-white p-8 rounded-xl shadow-sm border border-slate-200"
+                                                >
+                                                    <section>
+                                                        <div className="flex items-center gap-2 mb-6 text-emerald-600 font-bold text-sm">
+                                                            <span className="material-symbols-outlined text-emerald-500 bg-emerald-50 p-1 rounded-full">account_balance</span>
+                                                            Education Loan Details
+                                                        </div>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                            <div>
+                                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Loan Amount Needed (₹)*</label>
+                                                                <input type="text" value={newStudent.loanAmount} onChange={e => setNewStudent({ ...newStudent, loanAmount: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="e.g. 2500000" />
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Target University / College*</label>
+                                                                <input type="text" value={newStudent.targetUniversity} onChange={e => setNewStudent({ ...newStudent, targetUniversity: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="e.g. Stanford University" />
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                                                            <div>
+                                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Country of Study*</label>
+                                                                <select value={newStudent.studyDestination} onChange={e => setNewStudent({ ...newStudent, studyDestination: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                                                                    <option value="">Select Country</option>
+                                                                    {getAllCountries().map(country => (
+                                                                        <option key={country} value={country}>{country}</option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Course / Program Name*</label>
+                                                                <input type="text" value={newStudent.courseName} onChange={e => setNewStudent({ ...newStudent, courseName: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="e.g. MS in Computer Science" />
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                                                            <div>
+                                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Academic Goal / Degree Level*</label>
+                                                                <select value={newStudent.goal} onChange={e => setNewStudent({ ...newStudent, goal: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                                                                    <option value="">Select Goal...</option>
+                                                                    <option value="Postgraduate">Postgraduate</option>
+                                                                    <option value="Undergraduate">Undergraduate</option>
+                                                                    <option value="Doctorate">Doctorate</option>
+                                                                    <option value="Diploma">Diploma / Certificate</option>
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Target Intake Season*</label>
+                                                                <select value={newStudent.intakeSeason} onChange={e => setNewStudent({ ...newStudent, intakeSeason: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                                                                    <option value="">Select Intake...</option>
+                                                                    <option value="Fall 2026">Fall 2026</option>
+                                                                    <option value="Spring 2026">Spring 2026</option>
+                                                                    <option value="Summer 2026">Summer 2026</option>
+                                                                    <option value="Fall 2027">Fall 2027</option>
+                                                                    <option value="Spring 2027">Spring 2027</option>
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Study Budget / Estimated Cost*</label>
+                                                                <select value={newStudent.budget} onChange={e => setNewStudent({ ...newStudent, budget: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                                                                    <option value="">Select Budget...</option>
+                                                                    <option value="Under ₹15 Lakhs">Under ₹15 Lakhs</option>
+                                                                    <option value="₹15 Lakhs - ₹25 Lakhs">₹15 Lakhs - ₹25 Lakhs</option>
+                                                                    <option value="₹25 Lakhs - ₹40 Lakhs">₹25 Lakhs - ₹40 Lakhs</option>
+                                                                    <option value="₹40 Lakhs - ₹60 Lakhs">₹40 Lakhs - ₹60 Lakhs</option>
+                                                                    <option value="Above ₹60 Lakhs">Above ₹60 Lakhs</option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                                                            <div>
+                                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Admit Status*</label>
+                                                                <select value={newStudent.admitStatus} onChange={e => setNewStudent({ ...newStudent, admitStatus: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
+                                                                    <option value="">Select Status...</option>
+                                                                    <option value="Admitted">Admitted (Has Admit Letter)</option>
+                                                                    <option value="Applied">Applied (Awaiting Decision)</option>
+                                                                    <option value="Planning">Planning to Apply</option>
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Residential Pincode*</label>
+                                                                <input type="text" maxLength={6} value={newStudent.pincode} onChange={e => setNewStudent({ ...newStudent, pincode: e.target.value.replace(/\D/g, '') })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="e.g. 560001" />
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="mt-8 pt-6 border-t border-slate-100 flex items-center justify-between">
+                                                            <button
+                                                                type="button"
+                                                                onClick={async () => {
+                                                                    await handleSaveProfile(false);
+                                                                }}
+                                                                className="px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-500/20"
+                                                            >
+                                                                Save Loan Details
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={async () => {
+                                                                    await handleSaveProfile(false);
+                                                                    setProfileTab('work');
+                                                                }}
+                                                                className="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/20 flex items-center gap-2"
+                                                            >
+                                                                Continue
+                                                                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                                                            </button>
+                                                        </div>
+                                                    </section>
                                                 </motion.div>
                                             )}
 
@@ -5702,13 +5970,21 @@ export default function StaffDashboardPage() {
                                                             {shareTarget === 'bank' && (
                                                                 <div>
                                                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Bank Name</label>
-                                                                    <select value={shareName} onChange={e => setShareName(e.target.value)} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all appearance-none cursor-pointer" style={{backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23475569' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', paddingRight: '2.5rem'}}>
+                                                                    <select value={shareName} onChange={e => handleBankSelect(e.target.value)} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all appearance-none cursor-pointer" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23475569' d='M6 9L1 4h10z'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 1rem center', paddingRight: '2.5rem' }}>
                                                                         <option value="">Select a bank</option>
-                                                                        <option value="IDFC FIRST Bank">IDFC FIRST Bank</option>
-                                                                        <option value="Avanse Financial">Avanse Financial</option>
-                                                                        <option value="Auxilo Finserve">Auxilo Finserve</option>
-                                                                        <option value="HDFC Credila">HDFC Credila</option>
-                                                                        <option value="Poonawalla Fincorp">Poonawalla Fincorp</option>
+                                                                        {availableBanks.length > 0 ? (
+                                                                            availableBanks.map((b: any, idx: number) => (
+                                                                                <option key={b.id || idx} value={b.name}>{b.name}</option>
+                                                                            ))
+                                                                        ) : (
+                                                                            <>
+                                                                                <option value="IDFC FIRST Bank">IDFC FIRST Bank</option>
+                                                                                <option value="Avanse Financial">Avanse Financial</option>
+                                                                                <option value="Auxilo Finserve">Auxilo Finserve</option>
+                                                                                <option value="HDFC Credila">HDFC Credila</option>
+                                                                                <option value="Poonawalla Fincorp">Poonawalla Fincorp</option>
+                                                                            </>
+                                                                        )}
                                                                     </select>
                                                                 </div>
                                                             )}
@@ -5915,10 +6191,44 @@ export default function StaffDashboardPage() {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <StatCard label="Total Applications" value={stats.apps?.total} icon="analytics" color="text-indigo-600" loading={loading} />
-                                <StatCard label="Awaiting Review" value={pendingCount} icon="hourglass_empty" color="text-amber-600" loading={loading} hint="Action Needed" />
-                                <StatCard label="Approval Rate" value={`${approvalRate}%`} icon="verified" color="text-emerald-600" loading={loading} trend={approvalRate > 50 ? 5 : -3} />
-                                <StatCard label="Total Users" value={stats.users?.total ?? 0} icon="group" color="text-slate-600" loading={loading} />
+                                <StatCard
+                                    label="Total Applications"
+                                    value={stats.apps?.total}
+                                    icon="description"
+                                    color="text-blue-600"
+                                    loading={loading}
+                                    hint={`${stats.apps?.total > pendingCount ? stats.apps.total - pendingCount : 0} Processed`}
+                                />
+                                <div className="cursor-pointer" onClick={() => setFilterStatus('pending')}>
+                                    <StatCard
+                                        label="Awaiting Review"
+                                        value={pendingCount}
+                                        icon="hourglass_empty"
+                                        color="text-amber-600"
+                                        loading={loading}
+                                        hint="Avg. age: 4 hours"
+                                        badge={pendingCount > 0 ? `${pendingCount} Urgent` : undefined}
+                                        trend="⏳ Pending"
+                                    />
+                                </div>
+                                <StatCard
+                                    label="Approval Rate"
+                                    value={`${approvalRate}%`}
+                                    icon="check_circle"
+                                    color="text-emerald-600"
+                                    loading={loading}
+                                    trend="📈 +1.2% this month"
+                                />
+                                <StatCard
+                                    label="Total Users"
+                                    value={stats.users?.total ?? 0}
+                                    icon="group"
+                                    color="text-purple-600"
+                                    loading={loading}
+                                    hint="3 joined today"
+                                    footerAction="View List ➔"
+                                    onFooterActionClick={(e: any) => { e.stopPropagation(); setActiveSection('applicants'); }}
+                                />
                             </div>
 
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

@@ -10,7 +10,7 @@ export class BankService {
     private readonly supabase: SupabaseService,
     private readonly slack: SlackService,
     private readonly salesforce: SalesforceService
-  ) {}
+  ) { }
 
   private get db() {
     return this.supabase.getClient();
@@ -29,7 +29,7 @@ export class BankService {
    */
   async getIncomingFiles(bankName: string, filters: any): Promise<any[]> {
     console.log(`[BankService] Fetching incoming queue for bank: "${bankName}"`);
-    
+
     let query = this.db
       .from('LoanApplication')
       .select('*')
@@ -155,7 +155,7 @@ export class BankService {
       .from('ApplicationDocument')
       .select('*')
       .eq('applicationId', applicationId);
-    
+
     if (error) throw error;
     return data || [];
   }
@@ -165,7 +165,7 @@ export class BankService {
    */
   async generateDocumentsZip(applicationId: string): Promise<any> {
     console.log(`[BankService] Building bulk documents ZIP buffer for App ID: ${applicationId}`);
-    
+
     const documents = await this.getDocuments(applicationId);
     if (!documents || documents.length === 0) {
       throw new NotFoundException(`No student documents found for App ID: ${applicationId}`);
@@ -173,7 +173,7 @@ export class BankService {
 
     // Returns a mock base64/binary payload zip representation
     const mockZipBase64 = 'UEsDBAoAAAAAACGP1VgAAAAAAAAAAAAAAAAJABwAdGVzdC50eHRVVAkAA8D6aWRg+mlkdXgIAQk4AAAAAABIZWxsbyBXb3JsZCEhUEsBAh4DCgAAAAAAIY/VWAYBAADAAQAAAJIAAAAAAAEAIAAAAAAAAAB0ZXN0LnR4dFVUBQADwPppZHV4CgEJMAAAAAABSAAAAABQSwUGAAAAAAEAAQBLAAAAUgAAAAAA';
-    
+
     return {
       success: true,
       fileName: `VL_Student_Docs_${applicationId}.zip`,

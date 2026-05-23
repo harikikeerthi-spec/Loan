@@ -23,7 +23,7 @@ import { BankService } from './bank.service';
 @UseGuards(StaffGuard)
 @UseInterceptors(BankRbacInterceptor)
 export class BankController {
-  constructor(private readonly bankService: BankService) {}
+  constructor(private readonly bankService: BankService) { }
 
   /**
    * Helper to resolve active bank name from selectedBank header/session or email domain
@@ -31,7 +31,7 @@ export class BankController {
   private resolveBankName(req: any): string {
     const headerBank = req.headers['x-selected-bank'];
     if (headerBank) return headerBank.toString();
-    
+
     // Fallback: extract from user profile (firstName carries bank mapping)
     if (req.user?.role === 'bank') {
       return req.user.firstName || 'SBI';

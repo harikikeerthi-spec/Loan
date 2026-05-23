@@ -11,7 +11,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class BankRbacInterceptor implements NestInterceptor {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(private readonly supabase: SupabaseService) { }
 
   private get db() {
     return this.supabase.getClient();
@@ -34,7 +34,7 @@ export class BankRbacInterceptor implements NestInterceptor {
     // 1. Log Data Access in background
     const path = request.url;
     const method = request.method;
-    
+
     // Extract application/student ID if present in query or params
     const appId = request.params.id || request.params.applicationId || request.query.applicationId || null;
 
@@ -80,7 +80,7 @@ export class BankRbacInterceptor implements NestInterceptor {
         .eq('status', 'active')
         .limit(1)
         .maybeSingle();
-      
+
       return !!data;
     } catch (err) {
       console.error('[Consent Check] Error checking consent:', err.message);
@@ -180,7 +180,7 @@ export class BankRbacInterceptor implements NestInterceptor {
       const studentUserId = payload.userId || payload.studentId;
       if (studentUserId) {
         const hasConsent = await this.checkConsent(studentUserId);
-        
+
         if (!hasConsent) {
           if (cleaned.aadhaar) cleaned.aadhaar = this.maskPII(cleaned.aadhaar, 4);
           if (cleaned.pan) cleaned.pan = this.maskPII(cleaned.pan, 3);
