@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import JourneyPath from "../../components/JourneyPath";
@@ -99,7 +99,7 @@ export default async function HomePage() {
 
                             <h1 className="text-4xl md:text-6xl font-bold font-display leading-[1.1] mb-6 text-[#1a1626] tracking-tight">
                                 Fund Your{' '}
-                                <span className="text-[#6605c7] italic">Dream</span>
+                                <span className="text-[#6605c7]">Dream</span>
                                 <br />
                                 Education Abroad
                             </h1>
@@ -247,7 +247,7 @@ export default async function HomePage() {
                             </span>
                             <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-6 leading-tight">
                                 Everything you need to finance your <br />
-                                <span className="text-[#6605c7] italic">international education</span>, simplified
+                                <span className="text-[#6605c7]">international education</span>, simplified
                             </h2>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -415,7 +415,7 @@ export default async function HomePage() {
                         <div className="text-center mb-20">
                             <span className="inline-block px-4 py-2 rounded-full bg-[#6605c7]/10 text-[#6605c7] text-[10px] font-bold uppercase tracking-widest mb-4">Premium AI Ecosystem</span>
                             <h2 className="text-4xl md:text-6xl font-bold font-display mb-6 text-gray-900">
-                                Smart Tools for <span className="text-[#6605c7] italic">Global Success</span>
+                                Smart Tools for <span className="text-[#6605c7]">Global Success</span>
                             </h2>
                             <p className="text-gray-600 max-w-2xl mx-auto">Empowering your study abroad journey with data-driven insights and AI precision.</p>
                         </div>
@@ -625,7 +625,7 @@ export default async function HomePage() {
                                 Testimonials
                             </span>
                             <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-4 leading-tight">
-                                Loved by <span className="text-[#6605c7] italic">10,000+</span> Students
+                                Loved by <span className="text-[#6605c7]">10,000+</span> Students
                             </h2>
                             <p className="text-gray-500 text-[13px] font-medium">Real stories from students who funded their dreams with us</p>
                         </div>

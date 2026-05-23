@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, DragEvent } from "react";
 import Link from "next/link";
@@ -289,7 +289,7 @@ export default function CreateBlogPage() {
                             const items = b.content.split("\n").map((item) => `<li>${item.replace(/^[•\-]\s*/, "")}</li>`).join("");
                             return `<ul class="list-disc list-inside my-4 space-y-2 text-gray-700">${items}</ul>`;
                         case "quote":
-                            return `<blockquote class="border-l-4 border-purple-500 pl-6 py-4 italic text-xl text-gray-600 my-8 bg-purple-50 rounded-r-xl">"${b.content}"</blockquote>`;
+                            return `<blockquote class="border-l-4 border-purple-500 pl-6 py-4 text-xl text-gray-600 my-8 bg-purple-50 rounded-r-xl">"${b.content}"</blockquote>`;
                         case "code":
                             return `<pre class="bg-gray-900 text-green-400 p-6 rounded-xl my-6 overflow-x-auto"><code>${b.content}</code></pre>`;
                         case "divider":
@@ -405,7 +405,7 @@ export default function CreateBlogPage() {
                             contentEditable
                             suppressContentEditableWarning
                             onBlur={(e) => updateBlock(block.id, e.currentTarget.textContent || "")}
-                            className="text-xl italic text-gray-600 outline-none"
+                            className="text-xl text-gray-600 outline-none"
                         >
                             "{block.content}"
                         </p>

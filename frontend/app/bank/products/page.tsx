@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -171,7 +171,7 @@ export default function LoanProducts() {
             <PageHeader 
                 title="Active Loan Products" 
                 description="Configure education loan catalog products, baseline interest rates (ROI), maximum borrow thresholds, and compliance structures."
-                moduleName="Module 12 • Product Matrix"
+                moduleName="Module 12 • Active Products"
                 icon="shopping_bag"
                 actionSlot={
                     <div className="flex flex-col sm:flex-row gap-3">
@@ -237,15 +237,15 @@ export default function LoanProducts() {
                             <div className="grid grid-cols-3 gap-2 border-t border-purple-50/50 pt-4 mb-5">
                                 <div className="text-center border-r border-purple-50/50">
                                     <p className="text-[8px] font-black text-gray-400 uppercase tracking-wider">Base ROI</p>
-                                    <p className="text-sm font-black text-gray-800 mt-1 italic font-display">{p.interestRate}%</p>
+                                    <p className="text-sm font-black text-gray-800 mt-1 font-display">{p.interestRate}%</p>
                                 </div>
                                 <div className="text-center border-r border-purple-50/50">
                                     <p className="text-[8px] font-black text-gray-400 uppercase tracking-wider">Proc. Fee</p>
-                                    <p className="text-sm font-black text-gray-800 mt-1 italic font-display">{p.processingFee}%</p>
+                                    <p className="text-sm font-black text-gray-800 mt-1 font-display">{p.processingFee}%</p>
                                 </div>
                                 <div className="text-center">
                                     <p className="text-[8px] font-black text-gray-400 uppercase tracking-wider">Max Amount</p>
-                                    <p className="text-sm font-black text-[#6605c7] mt-1 italic font-display">₹{p.maxAmount}L</p>
+                                    <p className="text-sm font-black text-[#6605c7] mt-1 font-display">₹{p.maxAmount}L</p>
                                 </div>
                             </div>
 

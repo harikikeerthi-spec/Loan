@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -32,7 +32,7 @@ const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => (
             </span>
 
             {!collapsed && (
-                <span className="text-[9.5px] font-black uppercase tracking-[0.18em] relative z-10 italic whitespace-nowrap truncate">
+                <span className="text-[11.5px] font-semibold tracking-wide relative z-10 whitespace-nowrap truncate" style={{ fontFamily: '"DM Sans", sans-serif' }}>
                     {label}
                 </span>
             )}
@@ -146,7 +146,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 <div className="flex flex-col items-center gap-6">
                     <div className="w-16 h-16 border-4 border-gray-100 rounded-full animate-spin"
                         style={{ borderTopColor: '#6605c7' }} />
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 animate-pulse italic">
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 animate-pulse">
                         Synchronizing Node...
                     </p>
                 </div>
@@ -199,11 +199,11 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                 transition={{ duration: 0.2 }}
                                 className="flex flex-col min-w-0"
                             >
-                                <span className="text-lg font-black text-gray-900 leading-none italic tracking-tight">
+                                <span className="text-lg font-bold text-gray-900 leading-none tracking-tight" style={{ fontFamily: '"DM Sans", sans-serif' }}>
                                     Vidya<span style={{ color: '#6605c7' }}>Bank</span>
                                 </span>
-                                <span className="text-[8px] font-black uppercase tracking-[0.3em] mt-1 opacity-50 italic"
-                                    style={{ color: '#6605c7' }}>
+                                <span className="text-[8.5px] font-bold uppercase tracking-[0.2em] mt-1 opacity-55"
+                                    style={{ color: '#6605c7', fontFamily: '"DM Sans", sans-serif' }}>
                                     Partner Matrix
                                 </span>
                             </motion.div>
@@ -238,7 +238,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                             <span className={`material-symbols-outlined text-[18px] transition-transform duration-300 ${collapsed ? "rotate-180" : ""}`}>
                                 chevron_left
                             </span>
-                            {!collapsed && <span className="text-[9px] font-black uppercase tracking-[0.15em] italic">Collapse</span>}
+                            {!collapsed && <span className="text-[11px] font-semibold tracking-wide" style={{ fontFamily: '"DM Sans", sans-serif' }}>Collapse</span>}
                         </button>
 
                         {/* Sign Out */}
@@ -255,7 +255,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
                         >
                             <span className="material-symbols-outlined text-[18px] group-hover:rotate-12 transition-transform">power_settings_new</span>
-                            {!collapsed && <span className="text-[9px] font-black uppercase tracking-[0.15em] italic">Sign Out</span>}
+                            {!collapsed && <span className="text-[11px] font-semibold tracking-wide" style={{ fontFamily: '"DM Sans", sans-serif' }}>Sign Out</span>}
                         </button>
                     </div>
 
@@ -269,8 +269,8 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                         }}
                     >
                         <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-[10px] italic shrink-0 shadow-md"
-                            style={{ background: 'linear-gradient(135deg, #6605c7, #8b24e5)' }}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-[10px] shrink-0 shadow-md"
+                            style={{ background: 'linear-gradient(135deg, #6605c7, #8b24e5)', fontFamily: '"DM Sans", sans-serif' }}
                         >
                             {user.firstName?.[0]}{user.lastName?.[0]}
                         </div>
@@ -282,10 +282,10 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                     exit={{ opacity: 0 }}
                                     className="flex-1 min-w-0"
                                 >
-                                    <p className="text-[9.5px] font-black text-gray-900 truncate uppercase italic">
+                                    <p className="text-[11.5px] font-bold text-gray-900 truncate" style={{ fontFamily: '"DM Sans", sans-serif' }}>
                                         {user.firstName} {user.lastName}
                                     </p>
-                                    <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
+                                    <p className="text-[8.5px] font-semibold text-gray-400 uppercase tracking-widest mt-0.5" style={{ fontFamily: '"DM Sans", sans-serif' }}>
                                         Bank Auditor
                                     </p>
                                 </motion.div>
@@ -312,10 +312,10 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 >
                     {scrolled && (
                         <div className="h-full flex items-center justify-between px-10">
-                            <h2 className="text-sm font-black uppercase tracking-[0.3em] text-gray-900 italic">Terminal Active</h2>
+                            <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-gray-900" style={{ fontFamily: '"DM Sans", sans-serif' }}>Terminal Active</h2>
                             <div className="flex items-center gap-3">
                                 <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#6605c7' }} />
-                                <span className="text-[9px] font-black uppercase tracking-[0.2em]" style={{ color: '#6605c7' }}>Live Protocol</span>
+                                <span className="text-[10px] font-bold uppercase tracking-[0.15em]" style={{ color: '#6605c7', fontFamily: '"DM Sans", sans-serif' }}>Live Protocol</span>
                             </div>
                         </div>
                     )}
@@ -368,3 +368,5 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
         </div>
     );
 }
+
+

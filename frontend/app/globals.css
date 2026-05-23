@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,100..900;1,100..900&family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Plus+Jakarta+Sans:wght@200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 @import "tailwindcss";
 
@@ -15,8 +15,8 @@
   --color-danger: #ef4444;
   --color-info: #3b82f6;
   --background-light: #f7f5f8;
-  --font-display: 'Noto Serif', serif;
-  --font-sans: 'Noto Sans', sans-serif;
+  --font-display: 'DM Sans', sans-serif;
+  --font-sans: 'DM Sans', sans-serif;
   --transition-base: 0.3s ease-in-out;
 }
 
@@ -26,7 +26,7 @@ html {
 }
 
 body {
-  font-family: 'Noto Sans', 'Plus Jakarta Sans', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   min-height: 100vh;
   background-color: white;
 }
@@ -38,7 +38,17 @@ h4,
 h5,
 h6,
 .font-display {
-  font-family: 'Noto Serif', 'Playfair Display', serif;
+  font-family: 'DM Sans', sans-serif;
+}
+
+/* Force DM Sans font universally, maintaining material icons */
+body, h1, h2, h3, h4, h5, h6, p, span, div, a, button, input, select, textarea, label {
+  font-family: 'DM Sans', sans-serif !important;
+  font-style: normal !important;
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined' !important;
 }
 
 @keyframes float {

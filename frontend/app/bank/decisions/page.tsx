@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -278,7 +278,7 @@ export default function DecisionsHub() {
             <PageHeader 
                 title="Underwriting Decisions Hub" 
                 description="Evaluate loan applications, review credit assessment criteria, sanction loans, raise queries, or submit final approvals."
-                moduleName="Module 05 • Credit Matrix"
+                moduleName="Module 05 • Decisions Hub"
                 icon="gavel"
                 actionSlot={
                     <div className="flex flex-col sm:flex-row gap-3">
@@ -307,7 +307,7 @@ export default function DecisionsHub() {
                 <div className="glass-card bg-white/70 p-4.5 rounded-2xl border-purple-100/50 flex items-center justify-between">
                     <div>
                         <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Decisions Executed</p>
-                        <p className="text-2xl font-black text-gray-900 mt-1 italic font-display">{stats.totalDecisions}</p>
+                        <p className="text-2xl font-black text-gray-900 mt-1 font-display">{stats.totalDecisions}</p>
                     </div>
                     <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-[#6605c7]">
                         <span className="material-symbols-outlined">verified</span>
@@ -316,7 +316,7 @@ export default function DecisionsHub() {
                 <div className="glass-card bg-white/70 p-4.5 rounded-2xl border-purple-100/50 flex items-center justify-between">
                     <div>
                         <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Awaiting Decision</p>
-                        <p className="text-2xl font-black text-gray-900 mt-1 italic font-display">{stats.pendingDecisions}</p>
+                        <p className="text-2xl font-black text-gray-900 mt-1 font-display">{stats.pendingDecisions}</p>
                     </div>
                     <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
                         <span className="material-symbols-outlined">pending_actions</span>
@@ -325,7 +325,7 @@ export default function DecisionsHub() {
                 <div className="glass-card bg-white/70 p-4.5 rounded-2xl border-purple-100/50 flex items-center justify-between">
                     <div>
                         <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Queries Outstanding</p>
-                        <p className="text-2xl font-black text-gray-900 mt-1 italic font-display">{stats.queryRaised}</p>
+                        <p className="text-2xl font-black text-gray-900 mt-1 font-display">{stats.queryRaised}</p>
                     </div>
                     <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
                         <span className="material-symbols-outlined">help_center</span>
@@ -397,7 +397,7 @@ export default function DecisionsHub() {
                                 </div>
                                 <div className="text-right">
                                     <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Sought Quantum</p>
-                                    <p className="text-sm font-black text-[#6605c7] italic mt-0.5">₹{selectedApp.amount?.toLocaleString()}</p>
+                                    <p className="text-sm font-black text-[#6605c7] mt-0.5">₹{selectedApp.amount?.toLocaleString()}</p>
                                 </div>
                             </div>
 

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -80,7 +80,7 @@ function ReferCard() {
                         <div className="text-[10px] font-black uppercase tracking-[0.4em] text-[#e0c389] mb-4 border-l-2 border-[#e0c389] pl-3">Exclusive Offer</div>
                         <div className="text-3xl md:text-4xl font-black leading-none mb-2 tracking-tighter">
                             EARN <br />
-                            <span className="text-white text-5xl italic">₹1L</span>
+                            <span className="text-white text-5xl">₹1L</span>
                         </div>
                         <div className="text-[11px] text-purple-200/60 font-medium tracking-widest uppercase">Per Successful Referral</div>
                     </div>
@@ -305,7 +305,7 @@ export default function HomeContent() {
                             </div>
 
                             <h1 className="text-4xl md:text-5xl font-black leading-[1.1] mb-8 text-[#1a1626] tracking-tight uppercase">
-                                Fund Your <span className="text-[#6605c7] italic">Dream</span> <br /> Education Abroad
+                                Fund Your <span className="text-[#6605c7]">Dream</span> <br /> Education Abroad
                             </h1>
 
                             <p className="text-[15px] text-gray-500 mb-10 leading-relaxed font-medium max-w-lg">
@@ -467,7 +467,7 @@ export default function HomeContent() {
                             <span className="text-[#6605c7] font-black text-[11px] tracking-widest uppercase mb-4 block">Benefits</span>
                             <h2 className="text-3xl md:text-5xl font-black text-gray-900 mb-6 uppercase tracking-tight">
                                 Education Finance <br className="hidden md:block" />
-                                <span className="text-[#6605c7] italic">Simplified</span> for You
+                                <span className="text-[#6605c7]">Simplified</span> for You
                             </h2>
                             <p className="text-gray-500 text-[13px] font-medium max-w-2xl mx-auto">
                                 We've removed the complexity from education loans. Access guaranteed best rates and expert guidance in one place.
@@ -521,7 +521,7 @@ export default function HomeContent() {
                         >
                             <span className="inline-block px-4 py-2 rounded-full bg-[#6605c7]/5 text-[#6605c7] text-[10px] font-black uppercase tracking-widest mb-4 border border-[#6605c7]/10">Premium AI Ecosystem</span>
                             <h2 className="text-3xl md:text-5xl font-black mb-6 text-gray-900 uppercase tracking-tight">
-                                Smart Tools for <span className="text-[#6605c7] italic">Global Success</span>
+                                Smart Tools for <span className="text-[#6605c7]">Global Success</span>
                             </h2>
                             <p className="text-[13px] text-gray-500 max-w-2xl mx-auto font-medium">Empowering your study abroad journey with data-driven insights and AI precision.</p>
                         </motion.div>
@@ -656,7 +656,7 @@ export default function HomeContent() {
                             className="text-center mb-16"
                         >
                             <span className="text-[#6605c7] font-black text-[11px] tracking-widest uppercase mb-4 block">Testimonials</span>
-                            <h2 className="text-3xl md:text-5xl font-black text-gray-900 uppercase tracking-tight">Loved by <span className="text-[#6605c7] italic">10,000+</span> Students</h2>
+                            <h2 className="text-3xl md:text-5xl font-black text-gray-900 uppercase tracking-tight">Loved by <span className="text-[#6605c7]">10,000+</span> Students</h2>
                         </motion.div>
                         <TestimonialsCarousel />
                     </div>

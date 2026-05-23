@@ -1,4 +1,4 @@
-import { banks } from "@/lib/bankData";
+﻿import { banks } from "@/lib/bankData";
 
 export const metadata = {
     title: "Partner Banks & Reviews - VidyaLoan",
@@ -13,7 +13,7 @@ export default function BankReviewsPage() {
             <div className="text-center mb-16">
                 <span className="text-[#6605c7] font-bold text-[11px] tracking-[0.2em] uppercase mb-4 block">Our Partners</span>
                 <h1 className="text-5xl md:text-6xl font-bold font-display mb-6 text-gray-900">
-                    Partner <span className="text-[#6605c7] italic">Banks</span> & Reviews
+                    Partner <span className="text-[#6605c7]">Banks</span> & Reviews
                 </h1>
                 <p className="text-xl text-gray-500 max-w-2xl mx-auto leading-relaxed font-sans">
                     Compare offers, read reviews, and find the perfect funding partner for your education.

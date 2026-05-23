@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -129,7 +129,7 @@ export default function DisbursementTracker() {
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <span className="material-symbols-outlined text-emerald-600 bg-emerald-50 p-2 rounded-xl">payments</span>
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-600">Module 04 ΓÇó Funds Release</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-600">Module 06 • Disbursement Board</span>
                         </div>
                         <h1 className="text-4xl font-display font-bold text-gray-900 tracking-tight">Disbursement Tracker</h1>
                         <p className="text-sm text-gray-500 mt-2 font-medium">Verify sanction files, execute fund payouts, and record payment transaction tokens.</p>
@@ -216,12 +216,12 @@ export default function DisbursementTracker() {
                                                     <span className="text-[10px] text-gray-400 block truncate max-w-[200px]">{app.universityName}</span>
                                                 </td>
                                                 <td className="py-5">
-                                                    <span className="text-xs font-bold text-gray-900 block">Γé╣{(app.sanctionAmount || app.amount).toLocaleString()}</span>
+                                                    <span className="text-xs font-bold text-gray-900 block">₹{(app.sanctionAmount || app.amount).toLocaleString()}</span>
                                                     <span className="text-[9px] font-bold text-emerald-600 block">{app.sanctionedInterestRate || app.interestRate || "N/A"}% Effective ROI</span>
                                                 </td>
                                                 <td className="py-5">
                                                     <span className="text-xs font-black text-gray-900 block">
-                                                        {app.disbursedAmount ? `Γé╣${(app.disbursedAmount).toLocaleString()}` : "ΓÇö"}
+                                                        {app.disbursedAmount ? `₹${(app.disbursedAmount).toLocaleString()}` : "—"}
                                                     </span>
                                                     {app.disbursedAt && (
                                                         <span className="text-[9px] font-semibold text-gray-400 block mt-1">
@@ -289,7 +289,7 @@ export default function DisbursementTracker() {
 
                             <form onSubmit={handleConfirmDisbursement} className="space-y-4">
                                 <div>
-                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Disbursed Amount (Γé╣)</label>
+                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Disbursed Amount (₹)</label>
                                     <input 
                                         type="number"
                                         required

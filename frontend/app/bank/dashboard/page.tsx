@@ -198,7 +198,7 @@ export default function BankDashboard() {
         return {
             labels: chartLabels,
             datasets: [{
-                label: 'Capital Flow (Γé╣ Cr)',
+                label: 'Capital Flow (₹ Cr)',
                 data: chartDataValues,
                 borderColor: '#6605c7',
                 backgroundColor: (context: any) => {
@@ -265,7 +265,7 @@ export default function BankDashboard() {
                                     <span className="material-symbols-outlined text-2xl">chat_bubble</span>
                                 </div>
                                 <div>
-                                    <h2 className="text-3xl font-black text-gray-900 tracking-tight italic">Active Transmissions</h2>
+                                    <h2 className="text-3xl font-black text-gray-900 tracking-tight">Active Transmissions</h2>
                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mt-1">Encrypted WhatsApp Protocol Alpha-9</p>
                                 </div>
                             </div>
@@ -291,9 +291,9 @@ export default function BankDashboard() {
                         className="inline-flex items-center gap-3 px-4 py-2 bg-white/50 backdrop-blur-xl rounded-full border border-[#6605c7]/10 shadow-sm"
                     >
                         <div className="w-2 h-2 rounded-full bg-[#6605c7] animate-pulse shadow-[0_0_8px_#6605c7]" />
-                        <span className="text-[10px] font-black text-[#6605c7] uppercase tracking-[0.2em]">Module 01 ΓÇó Partner Core v4.28</span>
+                        <span className="text-[10px] font-black text-[#6605c7] uppercase tracking-[0.2em]">Module 01 • Overview Dashboard</span>
                     </motion.div>
-                    <h2 className="text-3xl lg:text-4xl font-black font-display text-gray-900 tracking-tighter italic leading-none">
+                    <h2 className="text-3xl lg:text-4xl font-black font-display text-gray-900 tracking-tighter leading-none">
                         Portfolio <span className="text-[#6605c7]">Overview</span>
                     </h2>
                     <p className="text-gray-400 font-bold uppercase tracking-[0.3em] text-[10px] flex items-center gap-2 pl-1">
@@ -388,7 +388,7 @@ export default function BankDashboard() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatMiniCard
                     label="Active Portfolio"
-                    value={portfolio ? `Γé╣${(portfolio.totalPortfolioValue / 10000000).toFixed(2)} Cr` : `Γé╣${(( (Array.isArray(stats?.loanTypeStats) ? stats.loanTypeStats : []).reduce((acc: number, curr: any) => acc + (curr.totalAmount || 0), 0) || 0) / 10000000).toFixed(2)}Cr`}
+                    value={portfolio ? `₹${(portfolio.totalPortfolioValue / 10000000).toFixed(2)} Cr` : `₹${(( (Array.isArray(stats?.loanTypeStats) ? stats.loanTypeStats : []).reduce((acc: number, curr: any) => acc + (curr.totalAmount || 0), 0) || 0) / 10000000).toFixed(2)}Cr`}
                     trend={stats?.monthlyComparison?.change || "+12.4"}
                     icon="account_balance_wallet"
                     iconColor="text-[#6605c7]"
@@ -439,8 +439,8 @@ export default function BankDashboard() {
                                 <span className="material-symbols-outlined text-lg">monitoring</span>
                             </div>
                             <div>
-                                <h3 className="text-base font-black font-display text-gray-900 tracking-tight italic">Disbursement Pulse</h3>
-                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.25em] mt-0.5 italic">Capital Flow ΓÇö Jan to Jun</p>
+                                <h3 className="text-base font-black font-display text-gray-900 tracking-tight">Disbursement Pulse</h3>
+                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.25em] mt-0.5">Capital Flow — Jan to Jun</p>
                             </div>
                         </div>
                         <div className="flex gap-1.5 p-1 bg-gray-50 rounded-xl border border-gray-100">
@@ -470,7 +470,7 @@ export default function BankDashboard() {
                                         borderWidth: 1,
                                         titleFont: { weight: 'bold', size: 11 },
                                         bodyFont: { weight: 'bold', size: 13 },
-                                        callbacks: { label: (c) => `Γé╣ ${c.formattedValue} Cr` }
+                                        callbacks: { label: (c) => `₹ ${c.formattedValue} Cr` }
                                     } 
                                 },
                                 scales: {
@@ -498,7 +498,7 @@ export default function BankDashboard() {
                     transition={{ delay: 0.6 }}
                     className="lg:col-span-4 glass-card p-6 rounded-3xl border-[#6605c7]/10 bg-white/70 flex flex-col shadow-xl shadow-purple-900/[0.02]"
                 >
-                    <h3 className="text-sm font-black font-display text-gray-900 mb-3 text-center uppercase tracking-widest italic">Application Status</h3>
+                    <h3 className="text-sm font-black font-display text-gray-900 mb-3 text-center uppercase tracking-widest">Application Status</h3>
                     <div className="relative flex items-center justify-center mb-4" style={{ height: 160 }}>
                         {statusDistribution && (
                             <div className="w-full max-w-[160px]">
@@ -513,8 +513,8 @@ export default function BankDashboard() {
                             </div>
                         )}
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                            <span className="text-3xl font-black font-display text-gray-900 tracking-tighter leading-none italic">{stats?.total || 0}</span>
-                            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-400 mt-1 italic">Total</span>
+                            <span className="text-3xl font-black font-display text-gray-900 tracking-tighter leading-none">{stats?.total || 0}</span>
+                            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-400 mt-1">Total</span>
                         </div>
                     </div>
                     
@@ -544,8 +544,8 @@ export default function BankDashboard() {
                                 <span className="material-symbols-outlined text-2xl animate-pulse">sensors</span>
                             </div>
                             <div className="space-y-1">
-                                <h3 className="text-2xl font-black font-display text-gray-900 tracking-tight italic">Live Signal Stream</h3>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.3em] italic">Incoming Transmissions from Staff Hub</p>
+                                <h3 className="text-2xl font-black font-display text-gray-900 tracking-tight">Live Signal Stream</h3>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.3em]">Incoming Transmissions from Staff Hub</p>
                             </div>
                         </div>
                         <button 
@@ -576,13 +576,13 @@ export default function BankDashboard() {
                                                         {app.firstName?.[0]}{app.lastName?.[0]}
                                                     </div>
                                                     <div>
-                                                        <p className="text-xs font-black text-gray-900 tracking-tight italic uppercase">{app.firstName} {app.lastName}</p>
+                                                        <p className="text-xs font-black text-gray-900 tracking-tight uppercase">{app.firstName} {app.lastName}</p>
                                                         <p className="text-[9px] font-black text-gray-400 font-mono tracking-tighter uppercase mt-0.5">{app.applicationNumber}</p>
                                                     </div>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-6">
-                                                <p className="text-xs font-black text-[#6605c7] italic tracking-tight">Γé╣{app.amount?.toLocaleString()}</p>
+                                                <p className="text-xs font-black text-[#6605c7] tracking-tight">₹{app.amount?.toLocaleString()}</p>
                                                 <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{app.loanType}</p>
                                             </td>
                                             <td className="px-6 py-6">
@@ -626,7 +626,7 @@ export default function BankDashboard() {
                     className="space-y-4"
                 >
                     <div className="glass-card p-5 rounded-2xl relative overflow-hidden group">
-                        <h3 className="text-sm font-black font-display text-gray-900 mb-4 tracking-tight italic relative z-10">Direct Commands</h3>
+                        <h3 className="text-sm font-black font-display text-gray-900 mb-4 tracking-tight relative z-10">Direct Commands</h3>
                         <div className="grid grid-cols-1 gap-2.5 relative z-10">
                             <QuickAction icon="chat_bubble" label="Initialize Chat" sublabel="WhatsApp Secure Channel" onClick={() => setShowChat(true)} />
                             <QuickAction icon="assignment_add" label="Distribute Tasks" sublabel="Task Allocation Matrix" onClick={() => router.push('/bank/tasks')} />
@@ -637,7 +637,7 @@ export default function BankDashboard() {
                     {portfolio?.topUniversities && portfolio.topUniversities.length > 0 && (
                         <div className="glass-card p-5 rounded-2xl relative overflow-hidden group">
                             <div className="flex justify-between items-center mb-3">
-                                <h3 className="text-xs font-black font-display text-gray-900 uppercase tracking-widest italic">Top University Partners</h3>
+                                <h3 className="text-xs font-black font-display text-gray-900 uppercase tracking-widest">Top University Partners</h3>
                                 <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Approved %</span>
                             </div>
                             <div className="space-y-2">
@@ -670,7 +670,7 @@ export default function BankDashboard() {
                             <h3 className="text-sm font-black text-white mb-2 uppercase tracking-widest">Compliance Shield</h3>
                             <p className="text-white/70 text-[9px] font-bold uppercase tracking-[0.18em] mb-4 leading-relaxed">
                                 {compliance 
-                                    ? `Score: ${compliance.overallCompliance || 100}% ΓÇó RBI & NHB Compliant`
+                                    ? `Score: ${compliance.overallCompliance || 100}% • RBI & NHB Compliant`
                                     : 'Synchronized under RBI-GDRP-v2.0 protocol.'}
                             </p>
                             <div className="flex items-center gap-3">

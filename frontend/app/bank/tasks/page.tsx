@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -177,7 +177,7 @@ export default function TaskMatrix() {
             <PageHeader 
                 title="Task Allocation Matrix" 
                 description="Monitor verification pipelines, reallocate caseloads, and track credit officer SLA performance in real-time."
-                moduleName="Module 08 • Operations"
+                moduleName="Module 08 • Task Matrix"
                 icon="assignment_add"
                 actionSlot={
                     <div className="flex flex-col sm:flex-row gap-3">
@@ -214,7 +214,7 @@ export default function TaskMatrix() {
                                 <div className="flex justify-between items-center mb-4 px-2">
                                     <div className="flex items-center gap-2">
                                         <span className="material-symbols-outlined text-purple-600 text-sm">{col.icon}</span>
-                                        <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest italic">{col.label}</span>
+                                        <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest">{col.label}</span>
                                     </div>
                                     <span className="px-2 py-0.5 rounded-full text-[8.5px] font-black bg-purple-50 text-[#6605c7]">
                                         {cards.length}
@@ -262,7 +262,7 @@ export default function TaskMatrix() {
                                                                 {app.officer}
                                                             </span>
                                                         </div>
-                                                        <span className="text-[8px] font-black text-[#6605c7] italic shrink-0">
+                                                        <span className="text-[8px] font-black text-[#6605c7] shrink-0">
                                                             ₹{app.amount ? Math.round(app.amount / 100000) : 0}L
                                                         </span>
                                                     </div>
