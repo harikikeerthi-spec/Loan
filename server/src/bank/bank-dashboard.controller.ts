@@ -64,8 +64,10 @@ export class BankDashboardController {
   }
 
   @Get('files')
-  async listFiles(@Request() req, @Query('status') status?: string, @Query('lanNumber') lanNumber?: string) {
-    const bankId = this.resolveBankId(req);
+  async listFiles(@Request() req, @Query('status') status?: string, @Query('lanNumber') lanNumber?: string, @Query('bankId') queryBankId?: string) {
+    // Allow filtering by bankId query param, or resolve from user context
+    // resolveBankIdOrAll returns null for staff/admin → shows all banks
+    const bankId = queryBankId || this.resolveBankIdOrAll(req);
     return this.dashboardService.listBankFiles(bankId, status, lanNumber);
   }
 
@@ -81,6 +83,11 @@ export class BankDashboardController {
     @Body() body: any
   ) {
     return this.dashboardService.logFileWithLAN(applicationId, body.lanNumber, req.user);
+  }
+
+  @Get('files/:fileId/log')
+  async getFileLog(@Param('fileId') fileId: string) {
+    return this.dashboardService.getFileLog(fileId);
   }
 
   @Get('files/by-lan/:lanNumber')
@@ -354,13 +361,31 @@ export class BankDashboardController {
   // ==================== HELPER ====================
 
   private resolveBankId(req: any): string {
+    return this.resolveBankIdOrAll(req) || 'credila';
+  }
+
+  private resolveBankIdOrAll(req: any): string | null {
     const headerBank = req.headers['x-bank-id'];
     if (headerBank) return headerBank.toString();
     
     if (req.user?.bankId) return req.user.bankId;
-    if (req.user?.firstName) return req.user.firstName;
+    if (req.user?.firstName) {
+      const lowerName = req.user.firstName.toLowerCase();
+      const validBanks = ['credila', 'auxilo', 'avanse', 'idfc', 'poonawalla', 'sbi', 'icici', 'axis'];
+      if (validBanks.includes(lowerName)) {
+        return lowerName;
+      }
+      const matched = validBanks.find(b => b.includes(lowerName) || lowerName.includes(b));
+      if (matched) return matched;
+    }
     
-    throw new Error('Bank ID not found in request');
+    // Staff/admin/super_admin users without a specific bank context see all banks
+    const adminRoles = ['staff', 'admin', 'super_admin'];
+    if (req.user?.role && adminRoles.includes(req.user.role)) {
+      return null; // null means "all banks"
+    }
+    
+    return null;
   }
 }
 

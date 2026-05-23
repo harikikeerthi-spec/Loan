@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
@@ -1472,12 +1472,24 @@ export default function StaffDashboardPage() {
                                 email: studentEmail,
                                 phone: newStudent.mobile || createdUser?.mobile || createdUser?.phoneNumber || "",
                                 dateOfBirth: newStudent.dob || createdUser?.dateOfBirth,
-                                address: newStudent.mailingAddress?.address1 ? `${newStudent.mailingAddress.address1}, ${newStudent.mailingAddress.city || ''}`.trim() : undefined
+                                address: newStudent.mailingAddress?.address1 ? `${newStudent.mailingAddress.address1}, ${newStudent.mailingAddress.city || ''}`.trim() : undefined,
+                                universityName: newStudent.targetUniversity,
+                                university: newStudent.targetUniversity,
+                                targetUniversity: newStudent.targetUniversity,
+                                courseName: newStudent.courseName,
+                                courseType: newStudent.courseName,
+                                program: newStudent.courseName,
+                                programFocus: newStudent.courseName
                             });
 
                             if (newAppRes?.success && newAppRes?.application?.id) {
                                 targetAppId = newAppRes.application.id;
                             }
+                        } else if (!activeApp?.universityName || !activeApp?.courseName) {
+                            await adminApi.updateApplication(targetAppId, {
+                                universityName: activeApp?.universityName || newStudent.targetUniversity,
+                                courseName: activeApp?.courseName || newStudent.courseName
+                            });
                         }
 
                         if (targetAppId) {
@@ -2575,6 +2587,12 @@ export default function StaffDashboardPage() {
         }
         return true;
     });
+
+    // Client-side pagination for applications (30 per page)
+    const appsTotalItems = activeSection === 'applications' ? filteredData.length : totalItems;
+    const pagedData = activeSection === 'applications'
+        ? filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+        : filteredData;
 
     const statusColors: Record<string, string> = {
         pending: "bg-amber-100 text-amber-700 border-amber-200",
@@ -6847,7 +6865,7 @@ export default function StaffDashboardPage() {
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            ) : filteredData.length > 0 ? filteredData.map((item, idx) => (
+                                            ) : pagedData.length > 0 ? pagedData.map((item, idx) => (
                                                 <tr key={idx} className="group hover:bg-slate-50 transition-colors">
                                                     {activeSection === "blogs" && (
                                                         <>
@@ -7235,14 +7253,17 @@ export default function StaffDashboardPage() {
                                         </tbody>
                                     </table>
                                 </div>
-                                {activeSection === 'users' && totalItems > itemsPerPage && (
+                                {((activeSection === 'users' && totalItems > itemsPerPage) || (activeSection === 'applications' && appsTotalItems > itemsPerPage)) && (
                                     <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
                                         <div className="flex flex-col">
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Navigation Console</p>
                                             <p className="text-[11px] font-bold text-slate-700">
-                                                Page <span className="text-indigo-600">{currentPage}</span> of {Math.ceil(totalItems / itemsPerPage)}
+                                                Page <span className="text-indigo-600">{currentPage}</span> of {Math.ceil((activeSection === 'applications' ? appsTotalItems : totalItems) / itemsPerPage)}
                                                 <span className="mx-2 text-slate-300">|</span>
-                                                Total Records: <span className="text-slate-900">{totalItems}</span>
+                                                Total Records: <span className="text-slate-900">{activeSection === 'applications' ? appsTotalItems : totalItems}</span>
+                                                {activeSection === 'applications' && (
+                                                    <span className="ml-2 text-slate-400"> &bull; Showing {Math.min((currentPage - 1) * itemsPerPage + 1, appsTotalItems)}&ndash;{Math.min(currentPage * itemsPerPage, appsTotalItems)}</span>
+                                                )}
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -7258,23 +7279,32 @@ export default function StaffDashboardPage() {
                                                 Previous
                                             </button>
                                             <div className="flex items-center gap-1 mx-2">
-                                                {[...Array(Math.min(5, Math.ceil(totalItems / itemsPerPage)))].map((_, i) => {
-                                                    const pageNum = i + 1;
-                                                    // Simple logic to show a few pages around current
-                                                    return (
+                                                {(() => {
+                                                    const totalPages = Math.ceil((activeSection === 'applications' ? appsTotalItems : totalItems) / itemsPerPage);
+                                                    const pages: number[] = [];
+                                                    if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
+                                                    else {
+                                                        pages.push(1);
+                                                        if (currentPage > 3) pages.push(-1);
+                                                        for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) pages.push(i);
+                                                        if (currentPage < totalPages - 2) pages.push(-2);
+                                                        pages.push(totalPages);
+                                                    }
+                                                    return pages.map((pageNum, i) => pageNum < 0 ? (
+                                                        <span key={`ellipsis-${i}`} className="text-slate-400 text-[10px] font-black px-1">...</span>
+                                                    ) : (
                                                         <button
                                                             key={pageNum}
-                                                            onClick={() => setCurrentPage(pageNum)}
+                                                            onClick={() => { setCurrentPage(pageNum); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                                                             className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${currentPage === pageNum ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white border border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600'}`}
                                                         >
                                                             {pageNum}
                                                         </button>
-                                                    );
-                                                })}
-                                                {Math.ceil(totalItems / itemsPerPage) > 5 && <span className="text-slate-400 text-[10px] font-black px-1">...</span>}
+                                                    ));
+                                                })()}
                                             </div>
                                             <button
-                                                disabled={currentPage >= Math.ceil(totalItems / itemsPerPage) || loading}
+                                                disabled={currentPage >= Math.ceil((activeSection === 'applications' ? appsTotalItems : totalItems) / itemsPerPage) || loading}
                                                 onClick={() => {
                                                     setCurrentPage(prev => prev + 1);
                                                     window.scrollTo({ top: 0, behavior: 'smooth' });

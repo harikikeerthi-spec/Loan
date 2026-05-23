@@ -385,8 +385,13 @@ export class UsersService {
       amount: number;
       purpose?: string;
       courseType?: string;
+      courseName?: string;
+      program?: string;
+      programFocus?: string;
       country?: string;
       university?: string;
+      universityName?: string;
+      targetUniversity?: string;
       annualFee?: string;
       livingCost?: string;
       coApplicant?: string;
@@ -411,6 +416,9 @@ export class UsersService {
     const estimatedCompletionAt = new Date();
     estimatedCompletionAt.setDate(estimatedCompletionAt.getDate() + 14);
     
+    const universityName = data.universityName || data.targetUniversity || data.university || null;
+    const courseName = data.courseName || data.programFocus || data.program || data.courseType || null;
+
     const { data: application, error } = await this.db
       .from('LoanApplication')
       .insert({
@@ -420,9 +428,9 @@ export class UsersService {
         loanType: data.loanType,
         amount: data.amount,
         purpose: data.purpose || null,
-        universityName: data.university || null,
+        universityName,
         country: data.country || null,
-        courseName: data.courseType || null,
+        courseName,
         firstName: data.firstName || null,
         lastName: data.lastName || null,
         email: data.email || null,

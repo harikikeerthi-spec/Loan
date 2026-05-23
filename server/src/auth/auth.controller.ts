@@ -234,8 +234,13 @@ export class AuthController {
     amount: number;
     purpose?: string;
     courseType?: string;
+    courseName?: string;
+    program?: string;
+    programFocus?: string;
     country?: string;
     university?: string;
+    universityName?: string;
+    targetUniversity?: string;
     annualFee?: string;
     livingCost?: string;
     coApplicant?: string;
@@ -273,8 +278,13 @@ export class AuthController {
         amount: amountVal,
         purpose: body.purpose,
         courseType: body.courseType,
+        courseName: body.courseName,
+        program: body.program,
+        programFocus: body.programFocus,
         country: body.country,
         university: body.university,
+        universityName: body.universityName,
+        targetUniversity: body.targetUniversity,
         annualFee: body.annualFee,
         livingCost: body.livingCost,
         coApplicant: body.coApplicant,

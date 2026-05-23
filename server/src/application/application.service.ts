@@ -129,8 +129,8 @@ export class ApplicationService {
         jobTitle: data.jobTitle,
         annualIncome: data.annualIncome ? parseFloat(data.annualIncome) : null,
         workExperience: data.workExperience ? parseInt(data.workExperience) : null,
-        universityName: data.universityName,
-        courseName: data.courseName,
+        universityName: data.universityName || data.university,
+        courseName: data.courseName || data.courseType || data.course,
         courseDuration: data.courseDuration ? parseInt(data.courseDuration) : null,
         courseStartDate: this.parseDate(data.courseStartDate),
 
@@ -239,7 +239,8 @@ export class ApplicationService {
       annualIncome: data.annualIncome ? parseFloat(data.annualIncome) : undefined,
       dateOfBirth: data.dateOfBirth ? this.parseDate(data.dateOfBirth) : undefined,
       courseStartDate: data.courseStartDate ? this.parseDate(data.courseStartDate) : undefined,
-
+      universityName: data.universityName || data.university || undefined,
+      courseName: data.courseName || data.courseType || data.course || undefined,
     };
 
     const { data: updated, error } = await this.db

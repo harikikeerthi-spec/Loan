@@ -540,9 +540,11 @@ export class BankDashboardService {
       entityType: auditData.entityType,
       entityId: auditData.entityId,
       action: auditData.action,
-      performedBy: auditData.performedBy,
-      role: auditData.role,
-      details: auditData.details,
+      initiatedBy: auditData.performedBy,
+      changes: {
+        ...(auditData.details || {}),
+        role: auditData.role,
+      },
       createdAt: new Date().toISOString()
     });
   }
@@ -589,11 +591,76 @@ export class BankDashboardService {
     return data;
   }
 
-  async listBankFiles(bankId: string, status?: string, lanNumber?: string): Promise<any[]> {
+  async listBankFiles(bankId: string | null, status?: string, lanNumber?: string): Promise<any[]> {
+    // Self-healing database mechanism:
+    // Synchronize LoanApplications matching this bankId with FileEntry records
+    try {
+      const BANK_MAPPING: Record<string, string[]> = {
+        credila: ['HDFC Credila', 'Credila'],
+        poonawalla: ['Poonawalla Fincorp', 'Poonawalla'],
+        idfc: ['IDFC First Bank', 'IDFC FIRST Bank', 'IDFC'],
+        avanse: ['Avanse Financial Services', 'Avanse Financial', 'Avanse'],
+        auxilo: ['Auxilo Finserve', 'Auxilo']
+      };
+
+      let appQuery = this.db.from('LoanApplication').select('*');
+
+      if (bankId) {
+        // Filter by specific bank
+        const searchTerms = BANK_MAPPING[bankId.toLowerCase()] || [bankId];
+        if (searchTerms.length === 1) {
+          appQuery = appQuery.ilike('bank', `%${searchTerms[0]}%`);
+        } else {
+          const orConditions = searchTerms.map(term => `bank.ilike.%${term}%`).join(',');
+          appQuery = appQuery.or(orConditions);
+        }
+      }
+      // When bankId is null, fetch ALL applications (no bank filter)
+
+      const { data: applications } = await appQuery;
+
+      if (applications && applications.length > 0) {
+        for (const app of applications) {
+          // Resolve the normalized bankId for this application
+          const appBankId = bankId || this.normalizeBankName(app.bank);
+
+          let existingQuery = this.db
+            .from('FileEntry')
+            .select('id')
+            .eq('applicationId', app.id);
+
+          if (appBankId) {
+            existingQuery = existingQuery.eq('bankId', appBankId);
+          }
+
+          const { data: existing } = await existingQuery.maybeSingle();
+
+          if (!existing) {
+            await this.db.from('FileEntry').insert({
+              applicationId: app.id,
+              bankId: appBankId || app.bank || 'unknown',
+              fileName: `${app.firstName || 'Student'}_${app.lastName || ''}_Dossier`.trim(),
+              category: 'EDUCATION_LOAN',
+              status: app.status === 'file_logged' ? 'ACTIVE' : 'DRAFT',
+              createdBy: 'system@vidhyaloans.com',
+              createdAt: app.createdAt || new Date().toISOString(),
+              updatedAt: app.updatedAt || new Date().toISOString()
+            });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[listBankFiles] Self-healing error:', err.message);
+    }
+
     let query = this.db
       .from('FileEntry')
-      .select('*, LoanApplication(id, firstName, lastName, amount, status)')
-      .eq('bankId', bankId);
+      .select('*, LoanApplication(id, firstName, lastName, amount, status, lanNumber, priority, assignedOfficer, bank)');
+
+    // Only filter by bankId if a specific bank is requested
+    if (bankId) {
+      query = query.eq('bankId', bankId);
+    }
 
     if (status) {
       query = query.eq('status', status);
@@ -609,15 +676,132 @@ export class BankDashboardService {
     return data || [];
   }
 
+  /**
+   * Normalize a bank name from LoanApplication.bank to a short bankId key
+   */
+  private normalizeBankName(bankName: string | null): string {
+    if (!bankName) return 'unknown';
+    const lower = bankName.toLowerCase();
+
+    const REVERSE_MAPPING: Record<string, string> = {
+      'hdfc credila': 'credila',
+      'credila': 'credila',
+      'hdfc': 'credila',
+      'poonawalla fincorp': 'poonawalla',
+      'poonawalla': 'poonawalla',
+      'idfc first bank': 'idfc',
+      'idfc': 'idfc',
+      'avanse financial services': 'avanse',
+      'avanse financial': 'avanse',
+      'avanse': 'avanse',
+      'auxilo finserve': 'auxilo',
+      'auxilo': 'auxilo',
+      'incred': 'incred',
+      'sbi': 'sbi',
+      'icici': 'icici',
+      'axis': 'axis',
+    };
+
+    // Exact match first
+    if (REVERSE_MAPPING[lower]) return REVERSE_MAPPING[lower];
+
+    // Partial match
+    for (const [key, value] of Object.entries(REVERSE_MAPPING)) {
+      if (lower.includes(key)) return value;
+    }
+
+    return bankName;
+  }
+
   async getFileDetails(fileId: string): Promise<any> {
-    const { data, error } = await this.db
+    let { data, error } = await this.db
       .from('FileEntry')
       .select('*, LoanApplication(*), documents:FileDocument(*)')
       .eq('id', fileId)
-      .single();
+      .maybeSingle();
 
-    if (error) throw new NotFoundException(`File ${fileId} not found`);
+    if (!data || error) {
+      // Fallback: search by applicationId
+      const { data: fallbackData } = await this.db
+        .from('FileEntry')
+        .select('*, LoanApplication(*), documents:FileDocument(*)')
+        .eq('applicationId', fileId)
+        .maybeSingle();
+      
+      if (fallbackData) {
+        return fallbackData;
+      }
+      
+      // Fallback 2: check LoanApplication directly
+      const { data: app } = await this.db
+        .from('LoanApplication')
+        .select('*')
+        .eq('id', fileId)
+        .maybeSingle();
+      
+      if (app) {
+        return {
+          id: fileId,
+          applicationId: app.id,
+          bankId: app.bank || 'credila',
+          fileName: `${app.firstName || 'Student'}_${app.lastName || ''}_Dossier`.trim(),
+          category: 'EDUCATION_LOAN',
+          status: app.status === 'file_logged' ? 'ACTIVE' : 'DRAFT',
+          createdBy: 'system@vidhyaloans.com',
+          createdAt: app.createdAt || new Date().toISOString(),
+          updatedAt: app.updatedAt || new Date().toISOString(),
+          LoanApplication: app,
+          documents: []
+        };
+      }
+      
+      throw new NotFoundException(`File ${fileId} not found`);
+    }
     return data;
+  }
+
+  async getFileLog(fileId: string): Promise<any> {
+    // Search first by fileId in FileEntry
+    let { data: file } = await this.db
+      .from('FileEntry')
+      .select('*, LoanApplication(*)')
+      .eq('id', fileId)
+      .maybeSingle();
+
+    if (!file) {
+      // Fallback: search by applicationId
+      const { data: fallbackFile } = await this.db
+        .from('FileEntry')
+        .select('*, LoanApplication(*)')
+        .eq('applicationId', fileId)
+        .maybeSingle();
+      file = fallbackFile;
+    }
+
+    let application = file?.LoanApplication;
+
+    if (!application) {
+      // Fallback: search LoanApplication directly
+      const { data: app } = await this.db
+        .from('LoanApplication')
+        .select('*')
+        .eq('id', fileId)
+        .maybeSingle();
+      application = app;
+    }
+
+    if (!application) {
+      throw new NotFoundException(`File/Application ${fileId} not found`);
+    }
+
+    return {
+      lanNumber: application.lanNumber || 'PENDING',
+      lanEnteredAt: application.lanEnteredAt || application.updatedAt || new Date().toISOString(),
+      priority: application.priority || 'NORMAL',
+      assignedOfficer: application.assignedOfficer || application.fileLoggedBy || 'UNASSIGNED',
+      applicationId: application.id,
+      fileId: file?.id || null
+    };
   }
 
   // ==================== DOCUMENT MANAGEMENT ====================
@@ -658,14 +842,85 @@ export class BankDashboardService {
   }
 
   async getFileDocuments(fileId: string): Promise<any[]> {
-    const { data, error } = await this.db
-      .from('FileDocument')
-      .select('*')
-      .eq('fileId', fileId)
-      .order('uploadedAt', { ascending: false });
+    let { data: file } = await this.db
+      .from('FileEntry')
+      .select('id, applicationId')
+      .eq('id', fileId)
+      .maybeSingle();
 
-    if (error) throw error;
-    return data || [];
+    if (!file) {
+      const { data: fallbackFile } = await this.db
+        .from('FileEntry')
+        .select('id, applicationId')
+        .eq('applicationId', fileId)
+        .maybeSingle();
+      file = fallbackFile;
+    }
+
+    const applicationId = file?.applicationId || fileId;
+    const { data: application } = await this.db
+      .from('LoanApplication')
+      .select('id, userId')
+      .eq('id', applicationId)
+      .maybeSingle();
+
+    const [fileDocsResult, appDocsResult, vaultDocsResult] = await Promise.all([
+      file?.id
+        ? this.db.from('FileDocument').select('*').eq('fileId', file.id)
+        : Promise.resolve({ data: [], error: null } as any),
+      application?.id
+        ? this.db.from('ApplicationDocument').select('*').eq('applicationId', application.id)
+        : Promise.resolve({ data: [], error: null } as any),
+      application?.userId
+        ? this.db.from('UserDocument').select('*').eq('userId', application.userId)
+        : Promise.resolve({ data: [], error: null } as any),
+    ]);
+
+    if (fileDocsResult.error) throw fileDocsResult.error;
+    if (appDocsResult.error) throw appDocsResult.error;
+    if (vaultDocsResult.error) throw vaultDocsResult.error;
+
+    const normalize = (doc: any, source: 'file' | 'application' | 'vault') => {
+      const status = String(doc.status || '').toLowerCase();
+      const verified = Boolean(
+        doc.verified === true ||
+        doc.isVerified === true ||
+        doc.verifiedAt ||
+        status === 'verified' ||
+        status === 'approved'
+      );
+
+      return {
+        id: source === 'vault' ? `vault_${doc.id}` : doc.id,
+        name: doc.fileName || doc.filename || doc.docName || doc.documentName || doc.documentType || doc.docType || 'Document',
+        type: doc.documentType || doc.docType || doc.mimeType || doc.fileType || 'document',
+        size: doc.fileSize || doc.size || null,
+        date: doc.uploadedAt || doc.createdAt || doc.updatedAt || null,
+        verified,
+        status: doc.status || (verified ? 'verified' : 'uploaded'),
+        source,
+        url: doc.fileUrl || doc.filePath || doc.s3Url || doc.url || null,
+        metadata: doc.verificationMetadata || doc.metadata || null,
+      };
+    };
+
+    const docs = [
+      ...(fileDocsResult.data || []).map((doc: any) => normalize(doc, 'file')),
+      ...(appDocsResult.data || []).map((doc: any) => normalize(doc, 'application')),
+      ...(vaultDocsResult.data || [])
+        .filter((doc: any) => doc.uploaded || doc.filePath || doc.fileUrl || doc.s3Url)
+        .map((doc: any) => normalize(doc, 'vault')),
+    ];
+
+    const seen = new Set<string>();
+    return docs
+      .filter((doc) => {
+        const key = [doc.type, doc.url, doc.name].join('|').toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime());
   }
 
   async getDocumentDetails(fileId: string, documentId: string): Promise<any> {
@@ -699,22 +954,283 @@ export class BankDashboardService {
   // ==================== TIMELINE & EVENTS ====================
 
   async getFileTimeline(applicationId: string): Promise<any[]> {
-    const { data: auditLogs, error } = await this.db
-      .from('AuditLog')
-      .select('*')
-      .eq('entityId', applicationId)
-      .in('entityType', ['FILE', 'LOAN', 'DOCUMENT', 'DISBURSEMENT'])
-      .order('createdAt', { ascending: false });
+    // Resolve the applicationId: it may be a FileEntry id or a LoanApplication id
+    let resolvedAppId = applicationId;
+    const { data: fileEntry } = await this.db
+      .from('FileEntry')
+      .select('id, applicationId')
+      .eq('id', applicationId)
+      .maybeSingle();
+    if (fileEntry?.applicationId) {
+      resolvedAppId = fileEntry.applicationId;
+    }
 
-    if (error) throw error;
+    // Fetch all data sources in parallel
+    const [
+      auditRes,
+      appRes,
+      queriesRes,
+      decisionsRes,
+      disbursementsRes,
+      feesRes,
+      fileEntriesRes,
+      docsRes,
+    ] = await Promise.all([
+      // 1. AuditLog entries (match on entityId = applicationId OR fileEntry id)
+      this.db
+        .from('AuditLog')
+        .select('*')
+        .or(`entityId.eq.${resolvedAppId}${fileEntry ? `,entityId.eq.${fileEntry.id}` : ''}`)
+        .order('createdAt', { ascending: false }),
 
-    return (auditLogs || []).map(log => ({
-      timestamp: log.createdAt,
-      action: log.action,
-      performedBy: log.performedBy,
-      role: log.role,
-      details: log.details
-    }));
+      // 2. LoanApplication itself (for lifecycle timestamps)
+      this.db
+        .from('LoanApplication')
+        .select('id, status, stage, date, updatedAt, submittedAt, reviewStartedAt, approvedAt, rejectedAt, disbursedAt, lanEnteredAt, sanctionDate, fileLoggedAt, lanNumber, firstName, lastName, bank, assignedOfficer, rejectionReason')
+        .eq('id', resolvedAppId)
+        .maybeSingle(),
+
+      // 3. BankQuery
+      this.db
+        .from('BankQuery')
+        .select('id, queryType, description, status, raisedBy, raisedAt, resolvedAt')
+        .eq('applicationId', resolvedAppId)
+        .order('raisedAt', { ascending: false }),
+
+      // 4. BankDecision
+      this.db
+        .from('BankDecision')
+        .select('id, decision, sanctionAmount, interestRate, roiType, conditions, rejectionReason, remarks, decidedBy, decidedAt')
+        .eq('applicationId', resolvedAppId)
+        .order('decidedAt', { ascending: false }),
+
+      // 5. Disbursement
+      this.db
+        .from('Disbursement')
+        .select('id, trancheNumber, amount, mode, utrNumber, beneficiary, status, disbursedAt, confirmedBy')
+        .eq('applicationId', resolvedAppId)
+        .order('disbursedAt', { ascending: false }),
+
+      // 6. ProcessingFee
+      this.db
+        .from('ProcessingFee')
+        .select('id, feeAmount, gstAmount, totalAmount, status, paymentMode, paymentRef, paidAt, waivedBy, waiverReason, createdAt')
+        .eq('applicationId', resolvedAppId),
+
+      // 7. FileEntry (creation events)
+      this.db
+        .from('FileEntry')
+        .select('id, fileName, category, status, createdBy, createdAt')
+        .eq('applicationId', resolvedAppId)
+        .order('createdAt', { ascending: false }),
+
+      // 8. FileDocuments (uploaded to any FileEntry linked to this application)
+      fileEntry?.id
+        ? this.db
+            .from('FileDocument')
+            .select('id, documentType, fileName, fileSize, uploadedBy, uploadedAt')
+            .eq('fileId', fileEntry.id)
+            .order('uploadedAt', { ascending: false })
+        : Promise.resolve({ data: [], error: null } as any),
+    ]);
+
+    const events: any[] = [];
+
+    // --- 1. Audit log entries ---
+    for (const log of auditRes.data || []) {
+      events.push({
+        timestamp: log.createdAt,
+        category: 'audit',
+        action: log.action,
+        entityType: log.entityType,
+        performedBy: log.initiatedBy,
+        details: log.changes,
+      });
+    }
+
+    // --- 2. Application lifecycle milestones ---
+    const app = appRes.data;
+    if (app) {
+      const milestones: { field: string; action: string; label: string }[] = [
+        { field: 'date', action: 'APPLICATION_CREATED', label: 'Application created' },
+        { field: 'submittedAt', action: 'APPLICATION_SUBMITTED', label: 'Application submitted' },
+        { field: 'fileLoggedAt', action: 'FILE_LOGGED', label: 'File logged with bank' },
+        { field: 'lanEnteredAt', action: 'LAN_ASSIGNED', label: `LAN assigned: ${app.lanNumber || ''}` },
+        { field: 'reviewStartedAt', action: 'REVIEW_STARTED', label: 'Bank review started' },
+        { field: 'sanctionDate', action: 'APPLICATION_SANCTIONED', label: 'Application sanctioned' },
+        { field: 'approvedAt', action: 'APPLICATION_APPROVED', label: 'Application approved' },
+        { field: 'rejectedAt', action: 'APPLICATION_REJECTED', label: 'Application rejected' },
+        { field: 'disbursedAt', action: 'APPLICATION_DISBURSED', label: 'Loan disbursed' },
+      ];
+
+      for (const m of milestones) {
+        const ts = app[m.field];
+        if (ts) {
+          events.push({
+            timestamp: ts,
+            category: 'milestone',
+            action: m.action,
+            entityType: 'LOAN',
+            performedBy: null,
+            details: {
+              label: m.label,
+              status: app.status,
+              assignedOfficer: app.assignedOfficer,
+              ...(m.field === 'rejectedAt' && app.rejectionReason ? { rejectionReason: app.rejectionReason } : {}),
+              ...(m.field === 'lanEnteredAt' ? { lanNumber: app.lanNumber } : {}),
+            },
+          });
+        }
+      }
+    }
+
+    // --- 3. Bank queries ---
+    for (const q of queriesRes.data || []) {
+      events.push({
+        timestamp: q.raisedAt,
+        category: 'query',
+        action: 'QUERY_RAISED',
+        entityType: 'QUERY',
+        performedBy: q.raisedBy,
+        details: { queryType: q.queryType, description: q.description, queryId: q.id },
+      });
+      if (q.resolvedAt) {
+        events.push({
+          timestamp: q.resolvedAt,
+          category: 'query',
+          action: 'QUERY_RESOLVED',
+          entityType: 'QUERY',
+          performedBy: null,
+          details: { queryType: q.queryType, queryId: q.id },
+        });
+      }
+    }
+
+    // --- 4. Bank decisions ---
+    for (const d of decisionsRes.data || []) {
+      events.push({
+        timestamp: d.decidedAt,
+        category: 'decision',
+        action: `BANK_DECISION_${(d.decision || 'UNKNOWN').toUpperCase()}`,
+        entityType: 'DECISION',
+        performedBy: d.decidedBy,
+        details: {
+          decision: d.decision,
+          sanctionAmount: d.sanctionAmount,
+          interestRate: d.interestRate,
+          conditions: d.conditions,
+          remarks: d.remarks,
+          rejectionReason: d.rejectionReason,
+        },
+      });
+    }
+
+    // --- 5. Disbursements ---
+    for (const dis of disbursementsRes.data || []) {
+      events.push({
+        timestamp: dis.disbursedAt,
+        category: 'disbursement',
+        action: 'DISBURSEMENT_CONFIRMED',
+        entityType: 'DISBURSEMENT',
+        performedBy: dis.confirmedBy,
+        details: {
+          trancheNumber: dis.trancheNumber,
+          amount: dis.amount,
+          mode: dis.mode,
+          utrNumber: dis.utrNumber,
+          beneficiary: dis.beneficiary,
+          status: dis.status,
+        },
+      });
+    }
+
+    // --- 6. Processing fees ---
+    for (const fee of feesRes.data || []) {
+      events.push({
+        timestamp: fee.createdAt,
+        category: 'fee',
+        action: 'PROCESSING_FEE_SET',
+        entityType: 'FEE',
+        performedBy: null,
+        details: {
+          feeAmount: fee.feeAmount,
+          gstAmount: fee.gstAmount,
+          totalAmount: fee.totalAmount,
+          status: fee.status,
+        },
+      });
+      if (fee.paidAt) {
+        events.push({
+          timestamp: fee.paidAt,
+          category: 'fee',
+          action: 'PROCESSING_FEE_PAID',
+          entityType: 'FEE',
+          performedBy: null,
+          details: {
+            totalAmount: fee.totalAmount,
+            paymentMode: fee.paymentMode,
+            paymentRef: fee.paymentRef,
+          },
+        });
+      }
+      if (fee.waivedBy) {
+        events.push({
+          timestamp: fee.createdAt, // no separate waivedAt column
+          category: 'fee',
+          action: 'PROCESSING_FEE_WAIVED',
+          entityType: 'FEE',
+          performedBy: fee.waivedBy,
+          details: { waiverReason: fee.waiverReason },
+        });
+      }
+    }
+
+    // --- 7. File entries ---
+    for (const fe of fileEntriesRes.data || []) {
+      events.push({
+        timestamp: fe.createdAt,
+        category: 'file',
+        action: 'FILE_CREATED',
+        entityType: 'FILE',
+        performedBy: fe.createdBy,
+        details: { fileName: fe.fileName, category: fe.category, status: fe.status },
+      });
+    }
+
+    // --- 8. File documents ---
+    for (const doc of docsRes.data || []) {
+      events.push({
+        timestamp: doc.uploadedAt,
+        category: 'document',
+        action: 'DOCUMENT_UPLOADED',
+        entityType: 'DOCUMENT',
+        performedBy: doc.uploadedBy,
+        details: { documentType: doc.documentType, fileName: doc.fileName, fileSize: doc.fileSize },
+      });
+    }
+
+    // Deduplicate: if an audit log entry has the same action + similar timestamp as a
+    // table-derived event, prefer the table-derived event (richer data) and drop the audit dupe
+    const nonAuditKeys = new Set(
+      events
+        .filter(e => e.category !== 'audit')
+        .map(e => `${e.action}|${e.timestamp ? new Date(e.timestamp).toISOString().slice(0, 16) : ''}`)
+    );
+
+    const deduped = events.filter(e => {
+      if (e.category !== 'audit') return true;
+      const key = `${e.action}|${e.timestamp ? new Date(e.timestamp).toISOString().slice(0, 16) : ''}`;
+      return !nonAuditKeys.has(key);
+    });
+
+    // Sort chronologically descending (newest first)
+    deduped.sort((a, b) => {
+      const tA = a.timestamp ? new Date(a.timestamp).getTime() : 0;
+      const tB = b.timestamp ? new Date(b.timestamp).getTime() : 0;
+      return tB - tA;
+    });
+
+    return deduped;
   }
 
   async getFileEvents(applicationId: string, type?: string): Promise<any[]> {

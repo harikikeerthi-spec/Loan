@@ -459,6 +459,11 @@ export class StaffProfileService {
     user: any,
     data: { type: string; msg: string; icon: string; color: string },
   ) {
+    const type = data?.type || 'info';
+    const msg = data?.msg || 'Activity logged';
+    const icon = data?.icon || 'event_note';
+    const color = data?.color || 'text-slate-600 bg-slate-50';
+
     const actorName = user
       ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Staff'
       : 'System';
@@ -466,13 +471,13 @@ export class StaffProfileService {
     await this.auditLog.logAction(
       `STAFF_ACTIVITY`,
       'DASHBOARD',
-      data.type.toUpperCase(),
+      type.toUpperCase(),
       user || { id: 'system' },
       {
-        msg: data.msg,
-        icon: data.icon,
-        color: data.color,
-        activityType: data.type,
+        msg,
+        icon,
+        color,
+        activityType: type,
         actorName,
         isDashboardActivity: true,
       },
@@ -480,10 +485,10 @@ export class StaffProfileService {
 
     // Broadcast the activity log dynamically via NestJS event emitter to socket.io
     this.eventEmitter.emit('dashboard.activity', {
-      type: data.type,
-      msg: data.msg,
-      icon: data.icon,
-      color: data.color,
+      type,
+      msg,
+      icon,
+      color,
       actorName,
       actorEmail: user?.email || null,
       createdAt: new Date().toISOString()

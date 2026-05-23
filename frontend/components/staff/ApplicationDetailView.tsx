@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from "react";
 import { format } from "date-fns";
 import { documentApi, staffProfileApi } from "@/lib/api";
@@ -84,7 +84,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   ]);
   const [notes, setNotes] = useState([
     { id: 1, author: "Ananya Deshmukh", role: "Senior Auditor", text: "Student has excellent academic pedigree. Waitlisted at UofT but current profile shows high employability in data science. Financials look solid; father's income is consistent for last 3 years.", time: "2 DAYS AGO" },
-    { id: 2, author: "Staff Member", role: "Relationship Manager", text: "Requested a clearer scan of 10th marksheet. Verification pending for academic section.", time: "TODAY • 10:15 AM" },
+    { id: 2, author: "Staff Member", role: "Relationship Manager", text: "Requested a clearer scan of 10th marksheet. Verification pending for academic section.", time: "TODAY â€¢ 10:15 AM" },
   ]);
   const [msgInput, setMsgInput] = useState("");
   const [noteInput, setNoteInput] = useState("");
@@ -297,22 +297,17 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const createdDateIST = (() => {
     const regAtInd = application.registeredAtIndia || application.student?.registeredAtIndia || application.user?.registeredAtIndia;
     if (regAtInd && typeof regAtInd === 'string' && regAtInd.endsWith(' IST')) return regAtInd;
-    
     const ds = regAtInd || application.createdAt || application.created_at || application.student?.createdAt || application.student?.created_at || application.user?.createdAt || application.user?.created_at;
-    if (!ds) return "—";
+    if (!ds) return "â€”";
     try {
       const date = new Date(ds);
-      if (isNaN(date.getTime())) return "—";
+      if (isNaN(date.getTime())) return "â€”";
       return new Intl.DateTimeFormat('en-IN', {
         timeZone: 'Asia/Kolkata',
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: true
       }).format(date) + " IST";
-    } catch (e) { return "—"; }
+    } catch (e) { return "â€”"; }
   })();
 
   const shortCreatedDateIST = (() => {
@@ -336,7 +331,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
             }
           }
         }
-      } catch {}
+      } catch { }
       return regAtInd.split(' ')[0];
     }
     const ds = regAtInd || application.createdAt || application.created_at || application.student?.createdAt || application.student?.created_at || application.user?.createdAt || application.user?.created_at;
@@ -362,46 +357,77 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     return "BANK REVIEW";
   };
 
-  // Format timestamp as compact "APR 28, 15:24" to match the progress bar style
+  /**
+   * Converts any raw timestamp (UTC ISO string, or "YYYY-MM-DD HH:MM:SS IST" from the
+   * staff dashboard user directory) to Indian Standard Time by adding +5:30, then formats
+   * it as "MMM DD YYYY, HH:MM +5:30" for display in the application view page.
+   */
   const formatStepDateTime = (ds?: string): string => {
     if (!ds) return "";
     try {
+      let date: Date;
+
+      // Handle "YYYY-MM-DD HH:MM:SS IST" strings stored in the user directory.
+      // These already represent IST wall-clock time, so we parse them directly
+      // as UTC (treating the IST wall-clock hours as-is) to avoid double-shifting.
       if (typeof ds === 'string' && ds.endsWith(' IST')) {
-        const parts = ds.split(' ');
-        if (parts.length >= 2) {
-          const datePart = parts[0]; // "YYYY-MM-DD"
-          const timePart = parts[1]; // "HH:MM:SS"
-          const ymd = datePart.split('-');
-          const hms = timePart.split(':');
-          if (ymd.length === 3 && hms.length >= 2) {
-            const year = parseInt(ymd[0], 10);
-            const month = parseInt(ymd[1], 10) - 1;
-            const day = parseInt(ymd[2], 10);
-            const hours = hms[0];
-            const minutes = hms[1];
-            
-            const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-            const monthStr = months[month] || "JAN";
-            const dayStr = String(day).padStart(2, '0');
-            
-            return `${monthStr} ${dayStr}, ${hours}:${minutes}`;
-          }
-        }
+        const bare = ds.slice(0, ds.length - 4).trim(); // strip " IST"
+        // bare is "YYYY-MM-DD HH:MM:SS" — treat as a plain datetime string
+        date = new Date(bare.replace(' ', 'T') + 'Z'); // parse as UTC to preserve the stored IST wall-clock value
+        // The stored wall-clock is already IST, so we format it directly
+        const [datePart, timePart] = bare.split(' ');
+        const [y, m, d] = datePart.split('-').map(Number);
+        const [hh, mm] = timePart.split(':');
+        const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+        return `${MONTHS[m - 1]} ${String(d).padStart(2, '0')} ${y}, ${hh}:${mm} +5:30`;
       }
-      const date = new Date(ds);
+
+      // All other timestamps are UTC ISO strings (e.g. "2026-05-23T04:23:00.000Z").
+      // Add +5 hours 30 minutes to convert to Indian Standard Time.
+      date = new Date(ds);
       if (isNaN(date.getTime())) return "";
-      const raw = date.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
-      const monthMatch = raw.match(/([A-Za-z]{3})/)?.[1]?.toUpperCase() || '';
-      const dayMatch = raw.match(/(\d{2}(?=\s[A-Za-z])|(?<=[A-Za-z]\s)\d{2})/)?.[0] || String(date.getDate()).padStart(2, '0');
-      const timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-      return `${monthMatch} ${dayMatch}, ${timeStr}`;
+
+      // Use Intl.DateTimeFormat with Asia/Kolkata to correctly apply the +5:30 offset
+      const ist = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).formatToParts(date);
+
+      const get = (type: string) => ist.find(p => p.type === type)?.value ?? '00';
+      const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+      const monthIdx = parseInt(get('month'), 10) - 1;
+      const monthStr = MONTHS[monthIdx] ?? 'JAN';
+      const day = get('day');
+      const year = get('year');
+      const hr = get('hour');
+      const min = get('minute');
+
+      return `${monthStr} ${day} ${year}, ${hr}:${min} `;
     } catch {
       return "";
     }
   };
 
+  // The primary user-directory timestamp â€” sourced from registeredAtIndia / createdAt
+  // in the staff dashboard user record. Used as the authoritative time for stage timestamps.
+  const userDirectoryTimestamp =
+    application.registeredAtIndia ||
+    application.student?.registeredAtIndia ||
+    application.user?.registeredAtIndia ||
+    application.student?.createdAt ||
+    application.student?.created_at ||
+    application.user?.createdAt ||
+    application.user?.created_at ||
+    application.createdAt ||
+    application.created_at;
+
   // Determine per-step timestamps from application data
-  const appCreatedAt = application.createdAt || application.created_at || application.submittedAt || application.submitted_at;
+  const appCreatedAt = userDirectoryTimestamp || application.submittedAt || application.submitted_at;
   const appUpdatedAt = application.updatedAt || application.updated_at || appCreatedAt;
 
   // Find the index of the last completed stage
@@ -416,7 +442,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   // All completed steps show a timestamp; we look up status history or use fallbacks
   const getStageTimestamp = (stageIdx: number, completed: boolean, active?: boolean): string | undefined => {
     if (!completed && !active) return undefined;
-    
+
     // Attempt to search application.statusHistory first
     const history = application.statusHistory || [];
     if (history.length > 0) {
@@ -462,7 +488,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
           statusHistoryTime = findHistoryTime(['disbursement_confirmed', 'closed']);
           break;
       }
-      
+
       if (statusHistoryTime) {
         return statusHistoryTime;
       }
@@ -572,7 +598,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const hasCoapplicantPan = coApplicantOcrDocs.some((doc) => String(doc.docType || "").toLowerCase().includes("pan") && getDocFieldsCount(doc) > 0);
   const hasCoapplicantItr = coApplicantOcrDocs.some((doc) => String(doc.docType || "").toLowerCase().includes("itr") && getDocFieldsCount(doc) > 0);
 
-  // ─── Cross-Document Discrepancy Detection ──────────────────────────────
+  // â”€â”€â”€ Cross-Document Discrepancy Detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const panDoc = documents.find(d => String(d.docType || "").toLowerCase() === "pan");
   const panName = panDoc?.uploaded ? (panDoc.extractedData?.full_name || panDoc.extractedData?.name) : null;
 
@@ -661,7 +687,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
             <span className="material-symbols-outlined text-[17px]">print</span>
             Export PDF
           </button>
-          
+
           <button
             onClick={() => setActiveTab("notes")}
             className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-md"
@@ -758,8 +784,8 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                         <div className="flex flex-wrap items-center gap-3 mb-2">
                           <p className="text-[11px] font-['Playfair_Display',serif] font-black text-slate-400 uppercase tracking-[0.25em]">UNIVERSITY OF {(application.universityName || application.college || "TORONTO").toUpperCase()}</p>
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border tracking-widest uppercase shadow-sm ${['PENDING', 'UNDER REVIEW', 'IN PROGRESS'].includes(status)
-                              ? 'bg-amber-50 text-amber-600 border-amber-100/50'
-                              : 'bg-emerald-50 text-emerald-600 border-emerald-100/50'
+                            ? 'bg-amber-50 text-amber-600 border-amber-100/50'
+                            : 'bg-emerald-50 text-emerald-600 border-emerald-100/50'
                             }`}>{status}</span>
                         </div>
                         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
@@ -795,7 +821,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                     <div className="bg-emerald-950 border border-emerald-900 rounded-3xl p-5 text-left shadow-lg shadow-emerald-950/10 min-w-[200px]">
                       <p className="text-[9px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-2">LOAN AMOUNT APPLIED</p>
                       <div className="flex items-baseline gap-1">
-                        <span className="text-[20px] font-bold text-emerald-400">₹</span>
+                        <span className="text-[20px] font-bold text-emerald-400">â‚¹</span>
                         <span className="text-[32px] font-black text-white tracking-tight leading-none">
                           {formatAmountInINR(Number(application.amount || application.loanAmount || application.student?.loanAmount || 3999999))}
                         </span>
@@ -950,427 +976,427 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                       />
                     )}
 
-                {activeTab === "kyc" && (
-                  <KycSystemDashboard
-                    userId={userId}
-                    application={application}
-                    onRefresh={fetchDocuments}
-                  />
-                )}
+                    {activeTab === "kyc" && (
+                      <KycSystemDashboard
+                        userId={userId}
+                        application={application}
+                        onRefresh={fetchDocuments}
+                      />
+                    )}
 
-                {activeTab === "records" && (
-                  <div className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm flex flex-col h-[620px]">
-                    <div className="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100">
-                          <span className="material-symbols-outlined text-[22px]">forum</span>
-                        </div>
-                        <div>
-                          <h3 className="text-[18px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Communication Hub</h3>
-                          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Direct two-way channel</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-8 space-y-5 bg-slate-50/40">
-                      {messages.map((msg) => (
-                        <React.Fragment key={msg.id}>
-                          {msg.type === "notification" ? (
-                            <div className="flex justify-center">
-                              <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100 text-[11px] font-bold">
-                                <span className="material-symbols-outlined text-[16px]">file_present</span>
-                                {msg.text}
-                              </div>
+                    {activeTab === "records" && (
+                      <div className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm flex flex-col h-[620px]">
+                        <div className="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-11 h-11 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100">
+                              <span className="material-symbols-outlined text-[22px]">forum</span>
                             </div>
-                          ) : (
-                            <div className={`flex flex-col space-y-2 ${msg.sender === "staff" ? "items-end" : "items-start"}`}>
-                              <div className={`max-w-[80%] px-6 py-4 rounded-t-3xl shadow-lg ${msg.sender === "staff" ? "bg-indigo-600 text-white rounded-bl-3xl shadow-indigo-100" : "bg-white border border-slate-100 text-slate-700 rounded-br-3xl shadow-sm"}`}>
-                                <p className="text-[14px] leading-relaxed">{msg.text}</p>
-                              </div>
-                              <p className={`text-[10px] font-bold text-slate-400 ${msg.sender === "staff" ? "mr-2" : "ml-2"}`}>
-                                {msg.sender === "staff" ? "STAFF" : "STUDENT"} • {msg.time}
-                              </p>
+                            <div>
+                              <h3 className="text-[18px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Communication Hub</h3>
+                              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Direct two-way channel</p>
                             </div>
-                          )}
-                        </React.Fragment>
-                      ))}
-                    </div>
-                    <div className="p-6 bg-white border-t border-slate-100">
-                      <div className="flex items-center gap-4 bg-slate-50 border border-slate-200 rounded-3xl p-2 pl-6 focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/5 transition-all">
-                        <input
-                          type="text"
-                          value={msgInput}
-                          onChange={(e) => setMsgInput(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-                          placeholder="Request documents or ask for information..."
-                          className="flex-1 bg-transparent border-none focus:ring-0 text-[14px] py-3 font-medium placeholder:text-slate-400"
-                        />
-                        <button onClick={handleSendMessage} className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-200 hover:scale-105 active:scale-95 transition-all">
-                          <span className="material-symbols-outlined text-[24px]">send</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === "notes" && (
-                  <div className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm space-y-6">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-100">
-                          <span className="material-symbols-outlined text-[22px]">sticky_note_2</span>
-                        </div>
-                        <div>
-                          <h3 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Internal Staff Notes</h3>
-                          <p className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">Confidential • staff only</p>
-                        </div>
-                      </div>
-                      <button onClick={handleAddNote} className="flex items-center gap-2 px-5 py-2.5 bg-[#0d1b2a] text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10">
-                        <span className="material-symbols-outlined text-[18px]">add</span>
-                        New Note
-                      </button>
-                    </div>
-                    <div className="space-y-4">
-                      {notes.map((note) => (
-                        <div key={note.id} className="p-6 rounded-3xl bg-slate-50/80 border border-slate-100 hover:border-amber-200 transition-all">
-                          <div className="flex items-start justify-between mb-3">
-                            <p className="text-[12px] font-black text-slate-900">{note.author} <span className="font-medium text-slate-400 ml-2">{note.role}</span></p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">{note.time}</p>
                           </div>
-                          <p className="text-[14px] text-slate-600 leading-relaxed">{note.text}</p>
                         </div>
-                      ))}
-                    </div>
-                    <textarea
-                      rows={3}
-                      value={noteInput}
-                      onChange={(e) => setNoteInput(e.target.value)}
-                      placeholder="Write an internal observation or note..."
-                      className="w-full bg-slate-50/50 border border-slate-200 rounded-3xl p-5 text-[14px] font-medium focus:outline-none focus:ring-4 focus:ring-amber-500/5 focus:border-amber-500/50 transition-all resize-none"
-                    />
+                        <div className="flex-1 overflow-y-auto p-8 space-y-5 bg-slate-50/40">
+                          {messages.map((msg) => (
+                            <React.Fragment key={msg.id}>
+                              {msg.type === "notification" ? (
+                                <div className="flex justify-center">
+                                  <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100 text-[11px] font-bold">
+                                    <span className="material-symbols-outlined text-[16px]">file_present</span>
+                                    {msg.text}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className={`flex flex-col space-y-2 ${msg.sender === "staff" ? "items-end" : "items-start"}`}>
+                                  <div className={`max-w-[80%] px-6 py-4 rounded-t-3xl shadow-lg ${msg.sender === "staff" ? "bg-indigo-600 text-white rounded-bl-3xl shadow-indigo-100" : "bg-white border border-slate-100 text-slate-700 rounded-br-3xl shadow-sm"}`}>
+                                    <p className="text-[14px] leading-relaxed">{msg.text}</p>
+                                  </div>
+                                  <p className={`text-[10px] font-bold text-slate-400 ${msg.sender === "staff" ? "mr-2" : "ml-2"}`}>
+                                    {msg.sender === "staff" ? "STAFF" : "STUDENT"} â€¢ {msg.time}
+                                  </p>
+                                </div>
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </div>
+                        <div className="p-6 bg-white border-t border-slate-100">
+                          <div className="flex items-center gap-4 bg-slate-50 border border-slate-200 rounded-3xl p-2 pl-6 focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/5 transition-all">
+                            <input
+                              type="text"
+                              value={msgInput}
+                              onChange={(e) => setMsgInput(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                              placeholder="Request documents or ask for information..."
+                              className="flex-1 bg-transparent border-none focus:ring-0 text-[14px] py-3 font-medium placeholder:text-slate-400"
+                            />
+                            <button onClick={handleSendMessage} className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-200 hover:scale-105 active:scale-95 transition-all">
+                              <span className="material-symbols-outlined text-[24px]">send</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === "notes" && (
+                      <div className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm space-y-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-100">
+                              <span className="material-symbols-outlined text-[22px]">sticky_note_2</span>
+                            </div>
+                            <div>
+                              <h3 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Internal Staff Notes</h3>
+                              <p className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">Confidential â€¢ staff only</p>
+                            </div>
+                          </div>
+                          <button onClick={handleAddNote} className="flex items-center gap-2 px-5 py-2.5 bg-[#0d1b2a] text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10">
+                            <span className="material-symbols-outlined text-[18px]">add</span>
+                            New Note
+                          </button>
+                        </div>
+                        <div className="space-y-4">
+                          {notes.map((note) => (
+                            <div key={note.id} className="p-6 rounded-3xl bg-slate-50/80 border border-slate-100 hover:border-amber-200 transition-all">
+                              <div className="flex items-start justify-between mb-3">
+                                <p className="text-[12px] font-black text-slate-900">{note.author} <span className="font-medium text-slate-400 ml-2">{note.role}</span></p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase">{note.time}</p>
+                              </div>
+                              <p className="text-[14px] text-slate-600 leading-relaxed">{note.text}</p>
+                            </div>
+                          ))}
+                        </div>
+                        <textarea
+                          rows={3}
+                          value={noteInput}
+                          onChange={(e) => setNoteInput(e.target.value)}
+                          placeholder="Write an internal observation or note..."
+                          className="w-full bg-slate-50/50 border border-slate-200 rounded-3xl p-5 text-[14px] font-medium focus:outline-none focus:ring-4 focus:ring-amber-500/5 focus:border-amber-500/50 transition-all resize-none"
+                        />
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
           )}
-        {activeSidebarMenu === 'student' && (
-          <div className="max-w-[1400px] mx-auto p-10 space-y-10 animate-in fade-in zoom-in-95 duration-300">
-            <div className="flex items-center gap-5">
-              <button
-                onClick={onBack}
-                className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-lg transition-all"
-              >
-                <span className="material-symbols-outlined text-[22px]">arrow_back</span>
-              </button>
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-200">
-                  <span className="material-symbols-outlined text-[20px]">person</span>
+          {activeSidebarMenu === 'student' && (
+            <div className="max-w-[1400px] mx-auto p-10 space-y-10 animate-in fade-in zoom-in-95 duration-300">
+              <div className="flex items-center gap-5">
+                <button
+                  onClick={onBack}
+                  className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-lg transition-all"
+                >
+                  <span className="material-symbols-outlined text-[22px]">arrow_back</span>
+                </button>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-200">
+                    <span className="material-symbols-outlined text-[20px]">person</span>
+                  </div>
+                  <div>
+                    <h2 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Student Profile</h2>
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Registered: {createdDateIST}</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Student Profile</h2>
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Registered: {createdDateIST}</p>
+              </div>
+
+              <div className="bg-white/70 backdrop-blur-sm rounded-[40px] p-10 border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.04)] relative">
+                <div className="flex gap-16">
+                  <div className="flex-1 space-y-8">
+                    <section>
+                      <h3 className="text-[14px] font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4"><span className="material-symbols-outlined text-emerald-500">person</span> Personal Information</h3>
+                      <div className="grid grid-cols-3 gap-6">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Registration Time</p>
+                          <p className="text-[14px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded inline-block">{createdDateIST}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">First Name</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.firstName || application.student?.firstName || "â€”"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Last Name</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.lastName || application.student?.lastName || "â€”"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Date of Birth</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.dob || application.student?.dob || "â€”"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Email Address</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.email || application.student?.email || "â€”"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Phone Number</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.phone || application.student?.phone || application.mobile || "â€”"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Gender</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.gender || application.student?.gender || "â€”"}</p>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section>
+                      <h3 className="text-[14px] font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4"><span className="material-symbols-outlined text-emerald-500">location_on</span> Address Details</h3>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Address</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.address || application.student?.mailingAddress?.address1 || application.student?.address || "â€”"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">City / Pincode</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.city || application.student?.mailingAddress?.city || "â€”"} - {application.pincode || application.student?.mailingAddress?.pincode || "â€”"}</p>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section>
+                      <h3 className="text-[14px] font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4"><span className="material-symbols-outlined text-emerald-500">public</span> Nationality & Background</h3>
+                      <div className="grid grid-cols-3 gap-6">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Nationality</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.nationality || application.student?.nationality?.name || "Indian"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Visa Refusal</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.student?.background?.visaRefusal || "No"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Medical Condition</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.student?.background?.medicalCondition || "No"}</p>
+                        </div>
+                      </div>
+                    </section>
+
+                    <section>
+                      <h3 className="text-[14px] font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4"><span className="material-symbols-outlined text-emerald-500">contact_emergency</span> Emergency Contact</h3>
+                      <div className="grid grid-cols-3 gap-6">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Contact Name</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.name || application.emergencyContactName || "â€”"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Relation</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.relation || application.emergencyContactRelation || "â€”"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Phone</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.phone || application.emergencyContactPhone || "â€”"}</p>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
                 </div>
               </div>
             </div>
+          )}
 
-            <div className="bg-white/70 backdrop-blur-sm rounded-[40px] p-10 border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.04)] relative">
-              <div className="flex gap-16">
-                <div className="flex-1 space-y-8">
-                  <section>
-                    <h3 className="text-[14px] font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4"><span className="material-symbols-outlined text-emerald-500">person</span> Personal Information</h3>
-                    <div className="grid grid-cols-3 gap-6">
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Registration Time</p>
-                        <p className="text-[14px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded inline-block">{createdDateIST}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">First Name</p>
-                        <p className="text-[14px] font-semibold text-slate-900">{application.firstName || application.student?.firstName || "—"}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Last Name</p>
-                        <p className="text-[14px] font-semibold text-slate-900">{application.lastName || application.student?.lastName || "—"}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Date of Birth</p>
-                        <p className="text-[14px] font-semibold text-slate-900">{application.dob || application.student?.dob || "—"}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Email Address</p>
-                        <p className="text-[14px] font-semibold text-slate-900">{application.email || application.student?.email || "—"}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Phone Number</p>
-                        <p className="text-[14px] font-semibold text-slate-900">{application.phone || application.student?.phone || application.mobile || "—"}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Gender</p>
-                        <p className="text-[14px] font-semibold text-slate-900">{application.gender || application.student?.gender || "—"}</p>
-                      </div>
-                    </div>
-                  </section>
-
-                  <section>
-                    <h3 className="text-[14px] font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4"><span className="material-symbols-outlined text-emerald-500">location_on</span> Address Details</h3>
-                    <div className="grid grid-cols-2 gap-6">
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Address</p>
-                        <p className="text-[14px] font-semibold text-slate-900">{application.address || application.student?.mailingAddress?.address1 || application.student?.address || "—"}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">City / Pincode</p>
-                        <p className="text-[14px] font-semibold text-slate-900">{application.city || application.student?.mailingAddress?.city || "—"} - {application.pincode || application.student?.mailingAddress?.pincode || "—"}</p>
-                      </div>
-                    </div>
-                  </section>
-
-                  <section>
-                    <h3 className="text-[14px] font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4"><span className="material-symbols-outlined text-emerald-500">public</span> Nationality & Background</h3>
-                    <div className="grid grid-cols-3 gap-6">
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Nationality</p>
-                        <p className="text-[14px] font-semibold text-slate-900">{application.nationality || application.student?.nationality?.name || "Indian"}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Visa Refusal</p>
-                        <p className="text-[14px] font-semibold text-slate-900">{application.student?.background?.visaRefusal || "No"}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Medical Condition</p>
-                        <p className="text-[14px] font-semibold text-slate-900">{application.student?.background?.medicalCondition || "No"}</p>
-                      </div>
-                    </div>
-                  </section>
-
-                  <section>
-                    <h3 className="text-[14px] font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4"><span className="material-symbols-outlined text-emerald-500">contact_emergency</span> Emergency Contact</h3>
-                    <div className="grid grid-cols-3 gap-6">
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Contact Name</p>
-                        <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.name || application.emergencyContactName || "—"}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Relation</p>
-                        <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.relation || application.emergencyContactRelation || "—"}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Phone</p>
-                        <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.phone || application.emergencyContactPhone || "—"}</p>
-                      </div>
-                    </div>
-                  </section>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-      </div>
-    </div>
-      {/* Modals & Sub-components */ }
-  {
-    isAddDocModalOpen && (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
-        <div className="absolute inset-0 bg-[#0d1b2a]/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsAddDocModalOpen(false)} />
-        <div className="bg-white w-full max-w-lg rounded-[32px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20">
-          <div className="p-8 border-b border-slate-100 bg-slate-50/50">
-            <h3 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Add Document Requirement</h3>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Define what the student needs to upload</p>
-          </div>
-
-          <div className="p-8 space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Document Name</label>
-              <input
-                type="text"
-                value={newDocName}
-                onChange={(e) => setNewDocName(e.target.value)}
-                placeholder="e.g. Master's Admission Letter"
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-[14px] font-medium focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/50 transition-all"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Category</label>
-              <div className="grid grid-cols-2 gap-3">
-                {['academic', 'financial', 'identity'].map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setNewDocCategory(cat)}
-                    className={`py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all ${newDocCategory === cat
-                      ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200'
-                      : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:bg-indigo-50/30'
-                      }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="p-8 bg-slate-50/50 border-t border-slate-100 flex gap-4">
-            <button
-              onClick={() => setIsAddDocModalOpen(false)}
-              className="flex-1 py-3.5 rounded-2xl text-[12px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 transition-all"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleAddDocument}
-              disabled={!newDocName.trim()}
-              className="flex-1 py-3.5 bg-indigo-600 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none"
-            >
-              Create Requirement
-            </button>
-          </div>
         </div>
       </div>
-    )
-  }
-
-  {
-    selectedDocPreview && (
-      <DocumentPreviewDrawer
-        doc={selectedDocPreview}
-        userId={userId}
-        title={formatDocTitle(selectedDocPreview)}
-        uploadAge={formatUploadAge(selectedDocPreview.uploadedAt)}
-        onClose={() => setSelectedDocPreview(null)}
-      />
-    )
-  }
-
-  {
-    activeDiscrepancy && (
-      <SideBySideComparisonModal
-        doc1={activeDiscrepancy.doc1}
-        doc2={activeDiscrepancy.doc2}
-        userId={userId}
-        onClose={() => setActiveDiscrepancy(null)}
-      />
-    )
-  }
-
-  {/* OCR Sync Modal */ }
-  {
-    isSyncModalOpen && selectedDocForSync && (
-      <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
-        <div className="absolute inset-0 bg-[#0d1b2a]/60 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsSyncModalOpen(false)} />
-        <div className="bg-white w-full max-w-[1100px] h-[85vh] rounded-[40px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20 flex flex-col">
-
-          {/* Modal Header */}
-          <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-5">
-              <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-100">
-                <span className="material-symbols-outlined text-[32px]">sync_alt</span>
-              </div>
-              <div>
-                <h3 className="text-[24px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Review & Sync Data</h3>
-                <p className="text-[11px] font-black text-indigo-600 uppercase tracking-widest mt-0.5">AI-Powered Extraction Verification</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setIsSyncModalOpen(false)}
-              className="w-12 h-12 rounded-2xl hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-all"
-            >
-              <span className="material-symbols-outlined">close</span>
-            </button>
-          </div>
-
-          <div className="flex-1 flex overflow-hidden">
-            {/* Left Side: Document Preview */}
-            <div className="w-1/2 bg-slate-900 flex items-center justify-center relative group">
-              <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] pointer-events-none" />
-              <img
-                src={`/api/documents/view/${userId}/${selectedDocForSync.docType}`}
-                alt="Document Preview"
-                className="max-h-[90%] max-w-[90%] object-contain shadow-2xl rounded-lg border border-white/10"
-                onError={(e: any) => {
-                  e.target.src = "https://images.unsplash.com/photo-1586281380349-631531a34d4f?q=80&w=2070&auto=format&fit=crop";
-                }}
-              />
-              <div className="absolute bottom-6 left-6 right-6 p-4 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <p className="text-white text-[11px] font-medium text-center">Original scan provided by the applicant</p>
-              </div>
-            </div>
-
-            {/* Right Side: Comparison Table */}
-            <div className="w-1/2 flex flex-col bg-white overflow-hidden">
-              <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-white sticky top-0 z-10">
-                <h4 className="text-[14px] font-black text-slate-900 uppercase tracking-widest">Field Mapping</h4>
-                <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full border border-emerald-100">
-                  {selectedDocForSync.accuracy?.toFixed(1)}% CONFIDENCE
-                </span>
+      {/* Modals & Sub-components */}
+      {
+        isAddDocModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <div className="absolute inset-0 bg-[#0d1b2a]/40 backdrop-blur-sm animate-in fade-in duration-300" onClick={() => setIsAddDocModalOpen(false)} />
+            <div className="bg-white w-full max-w-lg rounded-[32px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300 border border-white/20">
+              <div className="p-8 border-b border-slate-100 bg-slate-50/50">
+                <h3 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Add Document Requirement</h3>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Define what the student needs to upload</p>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-8 space-y-6">
-                {/* Field Row Component */}
-                {[
-                  { label: 'Full Name', key: 'full_name', current: application.firstName + " " + application.lastName, extracted: selectedDocForSync.extractedData?.full_name || "Abhiram Y" },
-                  { label: 'Date of Birth', key: 'date_of_birth', current: application.dob || "—", extracted: selectedDocForSync.extractedData?.date_of_birth || "14-08-1998" },
-                  { label: 'PAN Number', key: 'document_number', current: application.panNumber || "—", extracted: selectedDocForSync.extractedData?.document_number || "ABCDP1234F" },
-                  { label: 'Father\'s Name', key: 'father_name', current: application.fatherName || "—", extracted: selectedDocForSync.extractedData?.father_name || "Y. Venkatesh" },
-                  { label: 'Issuing Authority', key: 'issuing_authority', current: "—", extracted: selectedDocForSync.extractedData?.issuing_authority || "Income Tax Dept." }
-                ].map((field, idx) => (
-                  <div key={idx} className="group/row">
-                    <div className="flex items-center justify-between mb-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{field.label}</label>
-                      {field.current !== field.extracted && field.extracted && (
-                        <span className="text-[9px] font-bold text-amber-500 flex items-center gap-1 animate-pulse">
-                          <span className="material-symbols-outlined text-[12px]">warning</span>
-                          Mismatched
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Profile Value</p>
-                        <p className="text-[14px] font-bold text-slate-600">{field.current}</p>
-                      </div>
-
-                      <div className={`p-4 rounded-2xl border relative group transition-all ${field.current === field.extracted ? 'bg-emerald-50/30 border-emerald-100' : 'bg-indigo-50/30 border-indigo-100 hover:shadow-lg hover:shadow-indigo-500/5'}`}>
-                        <p className="text-[9px] font-bold text-indigo-400 uppercase mb-1">AI Extracted</p>
-                        <p className="text-[14px] font-bold text-indigo-700">{field.extracted}</p>
-
-                        <button
-                          onClick={() => handleSyncField(field.key, field.extracted)}
-                          disabled={isSyncing || field.current === field.extracted}
-                          className={`absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl flex items-center justify-center transition-all ${field.current === field.extracted
-                            ? 'bg-emerald-500 text-white cursor-default'
-                            : 'bg-indigo-600 text-white hover:scale-110 active:scale-95 shadow-lg shadow-indigo-200'
-                            }`}
-                        >
-                          <span className="material-symbols-outlined text-[20px]">
-                            {field.current === field.extracted ? 'check' : 'sync'}
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="p-8 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-emerald-500">verified_user</span>
-                  <p className="text-[11px] font-medium text-slate-600">Manual review recommended before final sync</p>
+              <div className="p-8 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Document Name</label>
+                  <input
+                    type="text"
+                    value={newDocName}
+                    onChange={(e) => setNewDocName(e.target.value)}
+                    placeholder="e.g. Master's Admission Letter"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-3.5 text-[14px] font-medium focus:outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500/50 transition-all"
+                  />
                 </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Category</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {['academic', 'financial', 'identity'].map(cat => (
+                      <button
+                        key={cat}
+                        onClick={() => setNewDocCategory(cat)}
+                        className={`py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all ${newDocCategory === cat
+                          ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg shadow-indigo-200'
+                          : 'bg-white border-slate-200 text-slate-500 hover:border-indigo-300 hover:bg-indigo-50/30'
+                          }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-8 bg-slate-50/50 border-t border-slate-100 flex gap-4">
                 <button
-                  onClick={() => setIsSyncModalOpen(false)}
-                  className="px-8 py-3.5 bg-[#0d1b2a] text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10"
+                  onClick={() => setIsAddDocModalOpen(false)}
+                  className="flex-1 py-3.5 rounded-2xl text-[12px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 transition-all"
                 >
-                  Complete Review
+                  Cancel
+                </button>
+                <button
+                  onClick={handleAddDocument}
+                  disabled={!newDocName.trim()}
+                  className="flex-1 py-3.5 bg-indigo-600 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:shadow-none"
+                >
+                  Create Requirement
                 </button>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    )
-  }
+        )
+      }
+
+      {
+        selectedDocPreview && (
+          <DocumentPreviewDrawer
+            doc={selectedDocPreview}
+            userId={userId}
+            title={formatDocTitle(selectedDocPreview)}
+            uploadAge={formatUploadAge(selectedDocPreview.uploadedAt)}
+            onClose={() => setSelectedDocPreview(null)}
+          />
+        )
+      }
+
+      {
+        activeDiscrepancy && (
+          <SideBySideComparisonModal
+            doc1={activeDiscrepancy.doc1}
+            doc2={activeDiscrepancy.doc2}
+            userId={userId}
+            onClose={() => setActiveDiscrepancy(null)}
+          />
+        )
+      }
+
+      {/* OCR Sync Modal */}
+      {
+        isSyncModalOpen && selectedDocForSync && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+            <div className="absolute inset-0 bg-[#0d1b2a]/60 backdrop-blur-md animate-in fade-in duration-300" onClick={() => setIsSyncModalOpen(false)} />
+            <div className="bg-white w-full max-w-[1100px] h-[85vh] rounded-[40px] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20 flex flex-col">
+
+              {/* Modal Header */}
+              <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-5">
+                  <div className="w-14 h-14 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-100">
+                    <span className="material-symbols-outlined text-[32px]">sync_alt</span>
+                  </div>
+                  <div>
+                    <h3 className="text-[24px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Review & Sync Data</h3>
+                    <p className="text-[11px] font-black text-indigo-600 uppercase tracking-widest mt-0.5">AI-Powered Extraction Verification</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsSyncModalOpen(false)}
+                  className="w-12 h-12 rounded-2xl hover:bg-slate-100 flex items-center justify-center text-slate-400 transition-all"
+                >
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+              </div>
+
+              <div className="flex-1 flex overflow-hidden">
+                {/* Left Side: Document Preview */}
+                <div className="w-1/2 bg-slate-900 flex items-center justify-center relative group">
+                  <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] pointer-events-none" />
+                  <img
+                    src={`/api/documents/view/${userId}/${selectedDocForSync.docType}`}
+                    alt="Document Preview"
+                    className="max-h-[90%] max-w-[90%] object-contain shadow-2xl rounded-lg border border-white/10"
+                    onError={(e: any) => {
+                      e.target.src = "https://images.unsplash.com/photo-1586281380349-631531a34d4f?q=80&w=2070&auto=format&fit=crop";
+                    }}
+                  />
+                  <div className="absolute bottom-6 left-6 right-6 p-4 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                    <p className="text-white text-[11px] font-medium text-center">Original scan provided by the applicant</p>
+                  </div>
+                </div>
+
+                {/* Right Side: Comparison Table */}
+                <div className="w-1/2 flex flex-col bg-white overflow-hidden">
+                  <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-white sticky top-0 z-10">
+                    <h4 className="text-[14px] font-black text-slate-900 uppercase tracking-widest">Field Mapping</h4>
+                    <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-black rounded-full border border-emerald-100">
+                      {selectedDocForSync.accuracy?.toFixed(1)}% CONFIDENCE
+                    </span>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                    {/* Field Row Component */}
+                    {[
+                      { label: 'Full Name', key: 'full_name', current: application.firstName + " " + application.lastName, extracted: selectedDocForSync.extractedData?.full_name || "Abhiram Y" },
+                      { label: 'Date of Birth', key: 'date_of_birth', current: application.dob || "â€”", extracted: selectedDocForSync.extractedData?.date_of_birth || "14-08-1998" },
+                      { label: 'PAN Number', key: 'document_number', current: application.panNumber || "â€”", extracted: selectedDocForSync.extractedData?.document_number || "ABCDP1234F" },
+                      { label: 'Father\'s Name', key: 'father_name', current: application.fatherName || "â€”", extracted: selectedDocForSync.extractedData?.father_name || "Y. Venkatesh" },
+                      { label: 'Issuing Authority', key: 'issuing_authority', current: "â€”", extracted: selectedDocForSync.extractedData?.issuing_authority || "Income Tax Dept." }
+                    ].map((field, idx) => (
+                      <div key={idx} className="group/row">
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{field.label}</label>
+                          {field.current !== field.extracted && field.extracted && (
+                            <span className="text-[9px] font-bold text-amber-500 flex items-center gap-1 animate-pulse">
+                              <span className="material-symbols-outlined text-[12px]">warning</span>
+                              Mismatched
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                            <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Profile Value</p>
+                            <p className="text-[14px] font-bold text-slate-600">{field.current}</p>
+                          </div>
+
+                          <div className={`p-4 rounded-2xl border relative group transition-all ${field.current === field.extracted ? 'bg-emerald-50/30 border-emerald-100' : 'bg-indigo-50/30 border-indigo-100 hover:shadow-lg hover:shadow-indigo-500/5'}`}>
+                            <p className="text-[9px] font-bold text-indigo-400 uppercase mb-1">AI Extracted</p>
+                            <p className="text-[14px] font-bold text-indigo-700">{field.extracted}</p>
+
+                            <button
+                              onClick={() => handleSyncField(field.key, field.extracted)}
+                              disabled={isSyncing || field.current === field.extracted}
+                              className={`absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl flex items-center justify-center transition-all ${field.current === field.extracted
+                                ? 'bg-emerald-500 text-white cursor-default'
+                                : 'bg-indigo-600 text-white hover:scale-110 active:scale-95 shadow-lg shadow-indigo-200'
+                                }`}
+                            >
+                              <span className="material-symbols-outlined text-[20px]">
+                                {field.current === field.extracted ? 'check' : 'sync'}
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="p-8 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-3">
+                      <span className="material-symbols-outlined text-emerald-500">verified_user</span>
+                      <p className="text-[11px] font-medium text-slate-600">Manual review recommended before final sync</p>
+                    </div>
+                    <button
+                      onClick={() => setIsSyncModalOpen(false)}
+                      className="px-8 py-3.5 bg-[#0d1b2a] text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10"
+                    >
+                      Complete Review
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
     </div >
   );
 };
@@ -1463,22 +1489,20 @@ const OcrDocumentIntelligence = ({
       <div className="flex items-center gap-4 bg-slate-100 p-1.5 rounded-2xl w-fit border border-slate-200/50">
         <button
           onClick={() => setDocSubTab("action")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wider transition-all ${
-            docSubTab === "action"
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wider transition-all ${docSubTab === "action"
               ? "bg-white text-rose-600 shadow-sm border border-rose-100"
               : "text-slate-500 hover:text-slate-800"
-          }`}
+            }`}
         >
           <span className="material-symbols-outlined text-[16px] text-rose-500">warning</span>
           Action Required ({actionRequiredAcademic.length + actionRequiredCoApplicant.length})
         </button>
         <button
           onClick={() => setDocSubTab("completed")}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wider transition-all ${
-            docSubTab === "completed"
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wider transition-all ${docSubTab === "completed"
               ? "bg-white text-emerald-600 shadow-sm border border-emerald-100"
               : "text-slate-500 hover:text-slate-800"
-          }`}
+            }`}
         >
           <span className="material-symbols-outlined text-[16px] text-emerald-500">verified</span>
           Verified / Completed ({completedAcademic.length + completedCoApplicant.length})
@@ -1661,11 +1685,10 @@ const OcrMiniDocumentCard = ({
           : { text: "text-slate-500", bar: "bg-slate-300", icon: "pending", iconText: "text-slate-400" };
 
   return (
-    <div className={`rounded-2xl border p-5 shadow-sm transition-all duration-300 ${
-      hasFile 
-        ? "border-slate-200 bg-white" 
+    <div className={`rounded-2xl border p-5 shadow-sm transition-all duration-300 ${hasFile
+        ? "border-slate-200 bg-white"
         : "border-dashed border-slate-300 bg-slate-50/40 opacity-75 hover:opacity-100"
-    }`}>
+      }`}>
       <input
         ref={fileInputRef}
         type="file"
@@ -1685,7 +1708,7 @@ const OcrMiniDocumentCard = ({
           <div className="min-w-0">
             <h4 className="text-[16px] font-bold text-slate-800 truncate">{title}</h4>
             <p className="text-[13px] font-medium text-slate-500 mt-0.5">
-              {hasFile ? `${fieldsCount} fields extracted` : "⚠️ Pending upload"}
+              {hasFile ? `${fieldsCount} fields extracted` : "âš ï¸ Pending upload"}
             </p>
           </div>
         </div>
@@ -1712,7 +1735,7 @@ const OcrMiniDocumentCard = ({
           )}
         </div>
       </div>
-      
+
       {hasFile && (
         <>
           <div className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
@@ -1894,7 +1917,7 @@ const OcrValidationCard = ({
               <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                 Cross-Document Name Verification
               </div>
-              
+
               <div className="overflow-hidden border border-slate-100 rounded-xl">
                 <table className="min-w-full divide-y divide-slate-100 text-left">
                   <thead className="bg-slate-50">

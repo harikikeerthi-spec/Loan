@@ -78,7 +78,10 @@ export class BankRbacInterceptor implements NestInterceptor {
       throw new ForbiddenException('Authentication required for bank operations.');
     }
 
-    const role = user.role?.toUpperCase();
+    let role = user.role?.toUpperCase();
+    if (role === 'BANK') {
+      role = 'BANK_OFFICER';
+    }
     const email = user.email;
     const method = request.method.toUpperCase();
 
