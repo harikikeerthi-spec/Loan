@@ -55,7 +55,24 @@ export class BankDashboardController {
     return this.dashboardService.addBankBranch(bankId, body);
   }
 
-  // ==================== FILE LOGGING ====================
+  // ==================== FILE MANAGEMENT ====================
+
+  @Post('files')
+  async createFile(@Request() req, @Body() body: any) {
+    const bankId = this.resolveBankId(req);
+    return this.dashboardService.createFileEntry(body.applicationId, bankId, body, req.user);
+  }
+
+  @Get('files')
+  async listFiles(@Request() req, @Query('status') status?: string, @Query('lanNumber') lanNumber?: string) {
+    const bankId = this.resolveBankId(req);
+    return this.dashboardService.listBankFiles(bankId, status, lanNumber);
+  }
+
+  @Get('files/:fileId')
+  async getFile(@Param('fileId') fileId: string) {
+    return this.dashboardService.getFileDetails(fileId);
+  }
 
   @Post('files/:applicationId/log')
   async logFile(
@@ -69,6 +86,61 @@ export class BankDashboardController {
   @Get('files/by-lan/:lanNumber')
   async getByLAN(@Param('lanNumber') lanNumber: string) {
     return this.dashboardService.getFilesByLAN(lanNumber);
+  }
+
+  // ==================== DOCUMENT MANAGEMENT ====================
+
+  @Post('files/:fileId/documents')
+  async uploadDocuments(
+    @Request() req,
+    @Param('fileId') fileId: string,
+    @Body() body: any
+  ) {
+    return this.dashboardService.addDocumentToFile(fileId, body, req.user);
+  }
+
+  @Get('files/:fileId/documents')
+  async getDocuments(@Param('fileId') fileId: string) {
+    return this.dashboardService.getFileDocuments(fileId);
+  }
+
+  @Get('files/:fileId/documents/:documentId')
+  async getDocument(@Param('fileId') fileId: string, @Param('documentId') documentId: string) {
+    return this.dashboardService.getDocumentDetails(fileId, documentId);
+  }
+
+  @Get('files/:fileId/download')
+  async downloadDocuments(@Param('fileId') fileId: string) {
+    return this.dashboardService.downloadFileAsArchive(fileId);
+  }
+
+  // ==================== TIMELINE & AUDIT ====================
+
+  @Get('files/:applicationId/timeline')
+  async getFileTimeline(@Param('applicationId') applicationId: string) {
+    return this.dashboardService.getFileTimeline(applicationId);
+  }
+
+  @Get('files/:applicationId/events')
+  async getFileEvents(@Param('applicationId') applicationId: string, @Query('type') type?: string) {
+    return this.dashboardService.getFileEvents(applicationId, type);
+  }
+
+  // ==================== LAN VALIDATION ====================
+
+  @Post('lan/validate')
+  async validateLAN(@Body() body: any) {
+    return this.dashboardService.validateLANFormat(body.lanNumber);
+  }
+
+  @Get('lan/:lanNumber')
+  async checkLAN(@Param('lanNumber') lanNumber: string) {
+    return this.dashboardService.checkLANExists(lanNumber);
+  }
+
+  @Get('lan/:lanNumber/details')
+  async getLANDetails(@Param('lanNumber') lanNumber: string) {
+    return this.dashboardService.getLANDetails(lanNumber);
   }
 
   // ==================== ROI & FEES ====================
@@ -100,7 +172,36 @@ export class BankDashboardController {
     return this.dashboardService.updateProcessingFeeStatus(applicationId, body.status, body.details);
   }
 
-  // ==================== QUERIES ====================
+  // ==================== SANCTION & DECISION ====================
+
+  @Post('applications/:applicationId/sanction')
+  async sanctionApplication(
+    @Request() req,
+    @Param('applicationId') applicationId: string,
+    @Body() body: any
+  ) {
+    return this.dashboardService.sanctionApplication(applicationId, body, req.user);
+  }
+
+  @Put('applications/:applicationId/sanction')
+  async updateSanction(
+    @Request() req,
+    @Param('applicationId') applicationId: string,
+    @Body() body: any
+  ) {
+    return this.dashboardService.updateSanction(applicationId, body, req.user);
+  }
+
+  @Post('applications/:applicationId/decision')
+  async recordBankDecision(
+    @Request() req,
+    @Param('applicationId') applicationId: string,
+    @Body() body: any
+  ) {
+    return this.dashboardService.recordBankDecision(applicationId, body, req.user);
+  }
+
+  // ==================== QUERIES & CONSENTS ====================
 
   @Post('applications/:applicationId/query')
   async raiseQuery(
@@ -113,15 +214,13 @@ export class BankDashboardController {
 
   @Get('queries')
   async getQueries(@Request() req, @Query('applicationId') applicationId?: string) {
-    if (applicationId) {
-      const { data, error } = await this.supabase.getClient()
-        .from('BankQuery')
-        .select('*')
-        .eq('applicationId', applicationId)
-        .order('raisedAt', { ascending: false });
-      return data;
-    }
-    return [];
+    const bankId = this.resolveBankId(req);
+    return this.dashboardService.getBankQueries(bankId, applicationId);
+  }
+
+  @Get('queries/:queryId')
+  async getQuery(@Param('queryId') queryId: string) {
+    return this.dashboardService.getQueryDetails(queryId);
   }
 
   @Post('queries/:queryId/response')
@@ -133,12 +232,43 @@ export class BankDashboardController {
     return this.dashboardService.respondToQuery(queryId, body, req.user);
   }
 
+  @Get('queries/:queryId/responses')
+  async getQueryResponses(@Param('queryId') queryId: string) {
+    return this.dashboardService.getQueryResponses(queryId);
+  }
+
   @Put('queries/:queryId/resolve')
   async resolveQuery(
     @Request() req,
-    @Param('queryId') queryId: string
+    @Param('queryId') queryId: string,
+    @Body() body: any
   ) {
-    return this.dashboardService.resolveQuery(queryId, req.user);
+    return this.dashboardService.resolveQuery(queryId, body, req.user);
+  }
+
+  // ==================== CONSENT & REFERRAL ====================
+
+  @Post('applications/:applicationId/consent')
+  async recordConsent(
+    @Request() req,
+    @Param('applicationId') applicationId: string,
+    @Body() body: any
+  ) {
+    return this.dashboardService.recordConsent(applicationId, body, req.user);
+  }
+
+  @Get('applications/:applicationId/consent')
+  async getConsent(@Param('applicationId') applicationId: string) {
+    return this.dashboardService.getConsentStatus(applicationId);
+  }
+
+  @Post('applications/:applicationId/referral-fee')
+  async updateReferralFee(
+    @Request() req,
+    @Param('applicationId') applicationId: string,
+    @Body() body: any
+  ) {
+    return this.dashboardService.updateReferralFee(applicationId, body, req.user);
   }
 
   // ==================== DISBURSEMENTS ====================

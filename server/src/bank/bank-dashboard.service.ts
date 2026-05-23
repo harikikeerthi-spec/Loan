@@ -557,4 +557,453 @@ export class BankDashboardService {
     if (error) throw error;
     return data || [];
   }
+
+  // ==================== FILE MANAGEMENT ====================
+
+  async createFileEntry(applicationId: string, bankId: string, fileData: any, bankUser: any): Promise<any> {
+    const { data, error } = await this.db
+      .from('FileEntry')
+      .insert({
+        applicationId,
+        bankId,
+        fileName: fileData.fileName,
+        category: fileData.category || 'GENERAL',
+        status: 'DRAFT',
+        createdBy: bankUser.email,
+        createdAt: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await this.logAudit({
+      entityType: 'FILE',
+      entityId: data.id,
+      action: 'FILE_CREATED',
+      performedBy: bankUser.email,
+      role: bankUser.role,
+      details: { fileName: fileData.fileName }
+    });
+
+    return data;
+  }
+
+  async listBankFiles(bankId: string, status?: string, lanNumber?: string): Promise<any[]> {
+    let query = this.db
+      .from('FileEntry')
+      .select('*, LoanApplication(id, firstName, lastName, amount, status)')
+      .eq('bankId', bankId);
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    if (lanNumber) {
+      query = query.eq('LoanApplication.lanNumber', lanNumber);
+    }
+
+    const { data, error } = await query.order('createdAt', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getFileDetails(fileId: string): Promise<any> {
+    const { data, error } = await this.db
+      .from('FileEntry')
+      .select('*, LoanApplication(*), documents:FileDocument(*)')
+      .eq('id', fileId)
+      .single();
+
+    if (error) throw new NotFoundException(`File ${fileId} not found`);
+    return data;
+  }
+
+  // ==================== DOCUMENT MANAGEMENT ====================
+
+  async addDocumentToFile(fileId: string, docData: any, bankUser: any): Promise<any> {
+    const { data, error } = await this.db
+      .from('FileDocument')
+      .insert({
+        fileId,
+        documentType: docData.documentType,
+        fileName: docData.fileName,
+        fileUrl: docData.fileUrl,
+        fileSize: docData.fileSize,
+        uploadedBy: bankUser.email,
+        uploadedAt: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Update file status
+    await this.db
+      .from('FileEntry')
+      .update({ status: 'ACTIVE', updatedAt: new Date().toISOString() })
+      .eq('id', fileId);
+
+    await this.logAudit({
+      entityType: 'DOCUMENT',
+      entityId: fileId,
+      action: 'DOCUMENT_ADDED',
+      performedBy: bankUser.email,
+      role: bankUser.role,
+      details: { documentType: docData.documentType }
+    });
+
+    return data;
+  }
+
+  async getFileDocuments(fileId: string): Promise<any[]> {
+    const { data, error } = await this.db
+      .from('FileDocument')
+      .select('*')
+      .eq('fileId', fileId)
+      .order('uploadedAt', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getDocumentDetails(fileId: string, documentId: string): Promise<any> {
+    const { data, error } = await this.db
+      .from('FileDocument')
+      .select('*')
+      .eq('fileId', fileId)
+      .eq('id', documentId)
+      .single();
+
+    if (error) throw new NotFoundException(`Document ${documentId} not found`);
+    return data;
+  }
+
+  async downloadFileAsArchive(fileId: string): Promise<any> {
+    const { data: documents, error: docError } = await this.db
+      .from('FileDocument')
+      .select('*')
+      .eq('fileId', fileId);
+
+    if (docError) throw docError;
+
+    return {
+      success: true,
+      documentCount: documents?.length || 0,
+      downloadUrl: `/bank/files/${fileId}/archive`,
+      documents: documents || []
+    };
+  }
+
+  // ==================== TIMELINE & EVENTS ====================
+
+  async getFileTimeline(applicationId: string): Promise<any[]> {
+    const { data: auditLogs, error } = await this.db
+      .from('AuditLog')
+      .select('*')
+      .eq('entityId', applicationId)
+      .in('entityType', ['FILE', 'LOAN', 'DOCUMENT', 'DISBURSEMENT'])
+      .order('createdAt', { ascending: false });
+
+    if (error) throw error;
+
+    return (auditLogs || []).map(log => ({
+      timestamp: log.createdAt,
+      action: log.action,
+      performedBy: log.performedBy,
+      role: log.role,
+      details: log.details
+    }));
+  }
+
+  async getFileEvents(applicationId: string, type?: string): Promise<any[]> {
+    let query = this.db
+      .from('AuditLog')
+      .select('*')
+      .eq('entityId', applicationId);
+
+    if (type) {
+      query = query.eq('action', type);
+    }
+
+    const { data, error } = await query.order('createdAt', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  // ==================== LAN VALIDATION ====================
+
+  async validateLANFormat(lanNumber: string): Promise<any> {
+    // LAN format: typically starts with a prefix (e.g., 'LAN') followed by numbers
+    const lanRegex = /^([A-Z]{2,4})[0-9]{6,10}$/;
+    
+    if (!lanNumber || !lanRegex.test(lanNumber)) {
+      return {
+        valid: false,
+        message: 'Invalid LAN format. Expected format: [PREFIX][6-10 digits]',
+        example: 'LAN123456'
+      };
+    }
+
+    return {
+      valid: true,
+      message: 'Valid LAN format',
+      lanNumber
+    };
+  }
+
+  async checkLANExists(lanNumber: string): Promise<any> {
+    const { data, error } = await this.db
+      .from('LoanApplication')
+      .select('id, status, firstName, lastName, amount')
+      .eq('lanNumber', lanNumber)
+      .single();
+
+    if (error || !data) {
+      return {
+        exists: false,
+        lanNumber,
+        message: 'LAN not found in system'
+      };
+    }
+
+    return {
+      exists: true,
+      lanNumber,
+      application: data
+    };
+  }
+
+  async getLANDetails(lanNumber: string): Promise<any> {
+    const { data: application, error: appError } = await this.db
+      .from('LoanApplication')
+      .select(`
+        *,
+        BankDecision(*),
+        FileEntry(*),
+        Disbursement(*),
+        ProcessingFee(*),
+        BankQuery(*)
+      `)
+      .eq('lanNumber', lanNumber)
+      .single();
+
+    if (appError || !application) {
+      throw new NotFoundException(`LAN ${lanNumber} not found`);
+    }
+
+    return application;
+  }
+
+  // ==================== SANCTION & DECISION ====================
+
+  async sanctionApplication(applicationId: string, sanctionData: any, bankUser: any): Promise<any> {
+    const { data: updated, error } = await this.db
+      .from('LoanApplication')
+      .update({
+        status: 'sanctioned',
+        sanctionAmount: sanctionData.sanctionAmount,
+        sanctionExpiry: sanctionData.sanctionExpiry,
+        sanctionDate: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      })
+      .eq('id', applicationId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await this.logAudit({
+      entityType: 'LOAN',
+      entityId: applicationId,
+      action: 'APPLICATION_SANCTIONED',
+      performedBy: bankUser.email,
+      role: bankUser.role,
+      details: { sanctionAmount: sanctionData.sanctionAmount }
+    });
+
+    return updated;
+  }
+
+  async updateSanction(applicationId: string, sanctionData: any, bankUser: any): Promise<any> {
+    const { data: updated, error } = await this.db
+      .from('LoanApplication')
+      .update({
+        sanctionAmount: sanctionData.sanctionAmount,
+        sanctionExpiry: sanctionData.sanctionExpiry,
+        updatedAt: new Date().toISOString()
+      })
+      .eq('id', applicationId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await this.logAudit({
+      entityType: 'LOAN',
+      entityId: applicationId,
+      action: 'SANCTION_UPDATED',
+      performedBy: bankUser.email,
+      role: bankUser.role
+    });
+
+    return updated;
+  }
+
+  async recordBankDecision(applicationId: string, decisionData: any, bankUser: any): Promise<any> {
+    const { data, error } = await this.db
+      .from('BankDecision')
+      .insert({
+        applicationId,
+        decision: decisionData.decision, // APPROVED, REJECTED, CONDITIONAL
+        remarks: decisionData.remarks,
+        rejectionReason: decisionData.rejectionReason,
+        conditions: decisionData.conditions,
+        decidedBy: bankUser.email,
+        decidedAt: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // Update application status based on decision
+    const newStatus = decisionData.decision === 'APPROVED' ? 'under_bank_review' : 'rejected';
+    await this.db
+      .from('LoanApplication')
+      .update({ status: newStatus })
+      .eq('id', applicationId);
+
+    await this.logAudit({
+      entityType: 'LOAN',
+      entityId: applicationId,
+      action: 'BANK_DECISION_RECORDED',
+      performedBy: bankUser.email,
+      role: bankUser.role,
+      details: { decision: decisionData.decision }
+    });
+
+    return data;
+  }
+
+  // ==================== QUERIES - ENHANCED ====================
+
+  async getBankQueries(bankId: string, applicationId?: string): Promise<any[]> {
+    let query = this.db
+      .from('BankQuery')
+      .select(`
+        *,
+        LoanApplication:applicationId(id, firstName, lastName)
+      `);
+
+    if (applicationId) {
+      query = query.eq('applicationId', applicationId);
+    }
+
+    const { data, error } = await query.order('raisedAt', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  async getQueryDetails(queryId: string): Promise<any> {
+    const { data, error } = await this.db
+      .from('BankQuery')
+      .select(`
+        *,
+        responses:QueryResponse(*)
+      `)
+      .eq('id', queryId)
+      .single();
+
+    if (error) throw new NotFoundException(`Query ${queryId} not found`);
+    return data;
+  }
+
+  async getQueryResponses(queryId: string): Promise<any[]> {
+    const { data, error } = await this.db
+      .from('QueryResponse')
+      .select('*')
+      .eq('queryId', queryId)
+      .order('respondedAt', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  // ==================== CONSENT & REFERRAL ====================
+
+  async recordConsent(applicationId: string, consentData: any, bankUser: any): Promise<any> {
+    const { data, error } = await this.db
+      .from('ConsentRecord')
+      .upsert(
+        {
+          applicationId,
+          consentType: consentData.consentType,
+          status: 'ACCEPTED',
+          recordedAt: new Date().toISOString(),
+          recordedBy: bankUser.email
+        },
+        { onConflict: 'applicationId' }
+      )
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await this.logAudit({
+      entityType: 'LOAN',
+      entityId: applicationId,
+      action: 'CONSENT_RECORDED',
+      performedBy: bankUser.email,
+      role: bankUser.role
+    });
+
+    return data;
+  }
+
+  async getConsentStatus(applicationId: string): Promise<any> {
+    const { data, error } = await this.db
+      .from('ConsentRecord')
+      .select('*')
+      .eq('applicationId', applicationId)
+      .single();
+
+    if (error || !data) {
+      return { applicationId, status: 'PENDING', consentType: null };
+    }
+
+    return data;
+  }
+
+  async updateReferralFee(applicationId: string, feeData: any, bankUser: any): Promise<any> {
+    const { data: updated, error } = await this.db
+      .from('LoanApplication')
+      .update({
+        referralFee: feeData.referralFee,
+        agentCommission: feeData.agentCommission,
+        updatedAt: new Date().toISOString()
+      })
+      .eq('id', applicationId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await this.logAudit({
+      entityType: 'LOAN',
+      entityId: applicationId,
+      action: 'REFERRAL_FEE_UPDATED',
+      performedBy: bankUser.email,
+      role: bankUser.role,
+      details: {
+        referralFee: feeData.referralFee,
+        agentCommission: feeData.agentCommission
+      }
+    });
+
+    return updated;
+  }
 }
