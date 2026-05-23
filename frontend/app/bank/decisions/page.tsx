@@ -278,7 +278,7 @@ export default function DecisionsHub() {
             <PageHeader 
                 title="Underwriting Decisions Hub" 
                 description="Evaluate loan applications, review credit assessment criteria, sanction loans, raise queries, or submit final approvals."
-                moduleName="Module 05 • Credit Matrix"
+                moduleName="Module 05 • Decisions Hub"
                 icon="gavel"
                 actionSlot={
                     <div className="flex flex-col sm:flex-row gap-3">

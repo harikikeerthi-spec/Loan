@@ -171,7 +171,7 @@ export default function LoanProducts() {
             <PageHeader 
                 title="Active Loan Products" 
                 description="Configure education loan catalog products, baseline interest rates (ROI), maximum borrow thresholds, and compliance structures."
-                moduleName="Module 12 • Product Matrix"
+                moduleName="Module 12 • Active Products"
                 icon="shopping_bag"
                 actionSlot={
                     <div className="flex flex-col sm:flex-row gap-3">

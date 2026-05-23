@@ -263,7 +263,7 @@ export default function IncomingQueuePage() {
                 <PageHeader 
                     title="Incoming Loan Files"
                     description="Incoming loan portfolios from VidyaLoans system awaiting validation and assignation of LAN."
-                    moduleName="Module 01 • Incoming Queue"
+                    moduleName="Module 02 • Incoming Queue"
                     icon="download"
                 />
 

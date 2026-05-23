@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -198,7 +198,7 @@ export default function BankDashboard() {
         return {
             labels: chartLabels,
             datasets: [{
-                label: 'Capital Flow (Γé╣ Cr)',
+                label: 'Capital Flow (₹ Cr)',
                 data: chartDataValues,
                 borderColor: '#6605c7',
                 backgroundColor: (context: any) => {
@@ -291,7 +291,7 @@ export default function BankDashboard() {
                         className="inline-flex items-center gap-3 px-4 py-2 bg-white/50 backdrop-blur-xl rounded-full border border-[#6605c7]/10 shadow-sm"
                     >
                         <div className="w-2 h-2 rounded-full bg-[#6605c7] animate-pulse shadow-[0_0_8px_#6605c7]" />
-                        <span className="text-[10px] font-black text-[#6605c7] uppercase tracking-[0.2em]">Module 01 ΓÇó Partner Core v4.28</span>
+                        <span className="text-[10px] font-black text-[#6605c7] uppercase tracking-[0.2em]">Module 01 • Overview Dashboard</span>
                     </motion.div>
                     <h2 className="text-3xl lg:text-4xl font-black font-display text-gray-900 tracking-tighter italic leading-none">
                         Portfolio <span className="text-[#6605c7]">Overview</span>
@@ -388,7 +388,7 @@ export default function BankDashboard() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatMiniCard
                     label="Active Portfolio"
-                    value={portfolio ? `Γé╣${(portfolio.totalPortfolioValue / 10000000).toFixed(2)} Cr` : `Γé╣${(( (Array.isArray(stats?.loanTypeStats) ? stats.loanTypeStats : []).reduce((acc: number, curr: any) => acc + (curr.totalAmount || 0), 0) || 0) / 10000000).toFixed(2)}Cr`}
+                    value={portfolio ? `₹${(portfolio.totalPortfolioValue / 10000000).toFixed(2)} Cr` : `₹${(( (Array.isArray(stats?.loanTypeStats) ? stats.loanTypeStats : []).reduce((acc: number, curr: any) => acc + (curr.totalAmount || 0), 0) || 0) / 10000000).toFixed(2)}Cr`}
                     trend={stats?.monthlyComparison?.change || "+12.4"}
                     icon="account_balance_wallet"
                     iconColor="text-[#6605c7]"
@@ -440,7 +440,7 @@ export default function BankDashboard() {
                             </div>
                             <div>
                                 <h3 className="text-base font-black font-display text-gray-900 tracking-tight italic">Disbursement Pulse</h3>
-                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.25em] mt-0.5 italic">Capital Flow ΓÇö Jan to Jun</p>
+                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.25em] mt-0.5 italic">Capital Flow — Jan to Jun</p>
                             </div>
                         </div>
                         <div className="flex gap-1.5 p-1 bg-gray-50 rounded-xl border border-gray-100">
@@ -470,7 +470,7 @@ export default function BankDashboard() {
                                         borderWidth: 1,
                                         titleFont: { weight: 'bold', size: 11 },
                                         bodyFont: { weight: 'bold', size: 13 },
-                                        callbacks: { label: (c) => `Γé╣ ${c.formattedValue} Cr` }
+                                        callbacks: { label: (c) => `₹ ${c.formattedValue} Cr` }
                                     } 
                                 },
                                 scales: {
@@ -582,7 +582,7 @@ export default function BankDashboard() {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-6">
-                                                <p className="text-xs font-black text-[#6605c7] italic tracking-tight">Γé╣{app.amount?.toLocaleString()}</p>
+                                                <p className="text-xs font-black text-[#6605c7] italic tracking-tight">₹{app.amount?.toLocaleString()}</p>
                                                 <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{app.loanType}</p>
                                             </td>
                                             <td className="px-6 py-6">
@@ -670,7 +670,7 @@ export default function BankDashboard() {
                             <h3 className="text-sm font-black text-white mb-2 uppercase tracking-widest">Compliance Shield</h3>
                             <p className="text-white/70 text-[9px] font-bold uppercase tracking-[0.18em] mb-4 leading-relaxed">
                                 {compliance 
-                                    ? `Score: ${compliance.overallCompliance || 100}% ΓÇó RBI & NHB Compliant`
+                                    ? `Score: ${compliance.overallCompliance || 100}% • RBI & NHB Compliant`
                                     : 'Synchronized under RBI-GDRP-v2.0 protocol.'}
                             </p>
                             <div className="flex items-center gap-3">

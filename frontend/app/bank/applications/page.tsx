@@ -214,7 +214,7 @@ export default function ApplicationManagement() {
                 payload = {
                     status: "processing",
                     stage: "counter_offer",
-                    remarks: `Counter Offer proposed: Amount Γé╣${counterAmount}, Rate ${counterRate}%, Tenure ${counterTenure} months`
+                    remarks: `Counter Offer proposed: Amount ₹${counterAmount}, Rate ${counterRate}%, Tenure ${counterTenure} months`
                 };
             }
 
@@ -276,8 +276,8 @@ export default function ApplicationManagement() {
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
-                            <span className="material-symbols-outlined text-rose-600 bg-rose-50 p-2 rounded-xl">gavel</span>
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-600">Module 02 ΓÇó Decisions</span>
+                            <span className="material-symbols-outlined text-[#6605c7] bg-purple-50 p-2 rounded-xl">assignment</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#6605c7]">Module 03 • My Files (Logged)</span>
                         </div>
                         <h1 className="text-4xl font-display font-bold text-gray-900 tracking-tight">Application Management</h1>
                         <p className="text-sm text-gray-500 mt-2 font-medium">Verify documents, log file numbers, and record credit underwriting decisions.</p>
@@ -509,7 +509,7 @@ export default function ApplicationManagement() {
                                 <div className="grid grid-cols-2 gap-4 bg-gray-50/50 p-5 rounded-2xl border border-gray-100/50">
                                     <div>
                                         <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Requested Amount</span>
-                                        <span className="text-sm font-bold text-gray-900">Γé╣{(selectedApp.amount).toLocaleString()}</span>
+                                        <span className="text-sm font-bold text-gray-900">₹{(selectedApp.amount).toLocaleString()}</span>
                                     </div>
                                     <div>
                                         <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Course Program</span>
@@ -523,7 +523,7 @@ export default function ApplicationManagement() {
                                         <div className="col-span-2 border-t border-gray-100 pt-3">
                                             <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Co-Applicant details</span>
                                             <span className="text-sm font-bold text-gray-900 block">{selectedApp.coApplicantName} ({selectedApp.coApplicantRelation})</span>
-                                            <span className="text-[10px] text-gray-400">Income: Γé╣{(selectedApp.coApplicantIncome || 0).toLocaleString()}/yr</span>
+                                            <span className="text-[10px] text-gray-400">Income: ₹{(selectedApp.coApplicantIncome || 0).toLocaleString()}/yr</span>
                                         </div>
                                     )}
                                 </div>
@@ -786,7 +786,7 @@ export default function ApplicationManagement() {
                                     <div className="space-y-4 border-t border-gray-50 pt-4">
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Sanctioned Amount (Γé╣)</label>
+                                                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Sanctioned Amount (₹)</label>
                                                 <input 
                                                     type="number" 
                                                     required
@@ -796,7 +796,7 @@ export default function ApplicationManagement() {
                                                 />
                                             </div>
                                             <div>
-                                                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Processing Fee (Γé╣)</label>
+                                                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Processing Fee (₹)</label>
                                                 <input 
                                                     type="number" 
                                                     placeholder="0"
@@ -910,7 +910,7 @@ export default function ApplicationManagement() {
                                     <div className="space-y-4 border-t border-gray-50 pt-4">
                                         <div className="grid grid-cols-3 gap-3">
                                             <div>
-                                                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Counter Amount (Γé╣)</label>
+                                                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Counter Amount (₹)</label>
                                                 <input 
                                                     type="number" 
                                                     required

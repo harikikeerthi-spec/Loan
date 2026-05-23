@@ -8,6 +8,10 @@ export default function BankChatPage() {
         <div className="p-8 space-y-8 animate-fade-in relative z-10 h-[calc(100vh-80px)] overflow-hidden flex flex-col">
             <div className="flex justify-between items-end gap-6 mb-2">
                 <div>
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#6605c7] animate-pulse shadow-[0_0_8px_#6605c7]" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#6605c7]">Module 07 • Secure Chat Stream</span>
+                    </div>
                     <h2 className="text-4xl font-black font-display mb-2 text-gray-900 tracking-tight italic">ACTIVE TRANSMISSIONS</h2>
                     <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2">
                         <span className="material-symbols-outlined text-xs text-emerald-500">sensors</span>

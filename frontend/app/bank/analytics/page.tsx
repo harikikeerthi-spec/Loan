@@ -175,7 +175,7 @@ export default function AnalyticsReports() {
     if (!mounted) return null;
 
     return (
-        <div className="min-h-screen p-8 lg:p-12 pl-[100px] lg:pl-[320px] transition-all duration-300">
+        <div className="min-h-screen p-8 lg:p-12 transition-all duration-300">
             <div className="max-w-7xl mx-auto space-y-12">
                 
                 {/* Header */}
@@ -183,7 +183,7 @@ export default function AnalyticsReports() {
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <span className="material-symbols-outlined text-[#6605c7] bg-purple-50 p-2 rounded-xl">monitoring</span>
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#6605c7]">Analytics Console</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#6605c7]">Module 09 • Analytics & SLA</span>
                         </div>
                         <h1 className="text-4xl font-display font-black text-gray-900 tracking-tight italic uppercase">Channel Intelligence</h1>
                         <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">

@@ -177,7 +177,7 @@ export default function TaskMatrix() {
             <PageHeader 
                 title="Task Allocation Matrix" 
                 description="Monitor verification pipelines, reallocate caseloads, and track credit officer SLA performance in real-time."
-                moduleName="Module 08 • Operations"
+                moduleName="Module 08 • Task Matrix"
                 icon="assignment_add"
                 actionSlot={
                     <div className="flex flex-col sm:flex-row gap-3">
