@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { authApi } from "@/lib/api";
+import { motion, AnimatePresence } from "framer-motion";
 
 const SUPPORTED_BANKS = [
     { id: "auxilo",     name: "Auxilo Finserve",    logo: "/banks/auxilo.png" },
@@ -164,7 +165,29 @@ function BankLoginContent() {
     const [resendDisabled, setResendDisabled] = useState(false);
     const [countdown, setCountdown] = useState(0);
 
+    // Forgot password states
+    const [showForgotModal, setShowForgotModal] = useState(false);
+    const [forgotEmail, setForgotEmail] = useState("");
+    const [forgotLoading, setForgotLoading] = useState(false);
+    const [forgotSuccess, setForgotSuccess] = useState(false);
+    const [forgotError, setForgotError] = useState("");
+
     const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+    const handleForgotSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!forgotEmail.trim()) { setForgotError("Email is required"); return; }
+        setForgotLoading(true);
+        setForgotError("");
+        try {
+            await new Promise((r) => setTimeout(r, 1200));
+            setForgotSuccess(true);
+        } catch (err) {
+            setForgotError("Failed to trigger recovery token.");
+        } finally {
+            setForgotLoading(false);
+        }
+    };
 
     useEffect(() => {
         if (countdown > 0) {
@@ -262,16 +285,40 @@ function BankLoginContent() {
 
                 {/* Logo */}
                 <div className="text-center mb-8">
-                    <Link href="/" className="inline-flex items-center gap-2 mb-6 group">
-                        <img
-                            src="/vidhyaloan_logo.png"
-                            alt="Vidhyaloan Logo"
-                            className="w-10 h-10 object-contain group-hover:scale-105 transition-transform"
-                        />
-                        <span className="font-bold text-2xl font-display text-gray-900 tracking-tight">
-                            Vidhyaloan Staff
-                        </span>
-                    </Link>
+                    <div className="inline-flex items-center justify-center gap-4 mb-6">
+                        {selectedBank ? (
+                            <motion.div 
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="flex items-center gap-2.5 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl border border-purple-200/50 shadow-md shadow-purple-500/5"
+                            >
+                                <img
+                                    src="/vidhyaloan_logo.png"
+                                    alt="Vidhyaloan Logo"
+                                    className="w-7 h-7 object-contain"
+                                />
+                                <span className="text-gray-300 text-base font-light">×</span>
+                                <div className="w-7 h-7 flex items-center justify-center overflow-hidden">
+                                    <img
+                                        src={SUPPORTED_BANKS.find(b => b.id === selectedBank)?.logo}
+                                        alt="Bank Logo"
+                                        className="w-full h-full object-contain"
+                                    />
+                                </div>
+                            </motion.div>
+                        ) : (
+                            <Link href="/" className="inline-flex items-center gap-2 group">
+                                <img
+                                    src="/vidhyaloan_logo.png"
+                                    alt="Vidhyaloan Logo"
+                                    className="w-10 h-10 object-contain group-hover:scale-105 transition-transform"
+                                />
+                                <span className="font-bold text-2xl font-display text-gray-900 tracking-tight">
+                                    Vidhyaloan Staff
+                                </span>
+                            </Link>
+                        )}
+                    </div>
                     <h1 className="text-2xl font-bold text-gray-900 font-display mb-1.5 tracking-tight">
                         {step === "form" ? "Banker Access" : "Verify Authorization"}
                     </h1>
@@ -332,6 +379,15 @@ function BankLoginContent() {
                                     }}
                                     onKeyDown={(e) => e.key === "Enter" && sendOtp()}
                                 />
+                                <div className="flex justify-end mt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => { setShowForgotModal(true); setForgotSuccess(false); setForgotEmail(""); setForgotError(""); }}
+                                        className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] hover:underline"
+                                    >
+                                        Forgot Password?
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Error */}
@@ -477,6 +533,81 @@ function BankLoginContent() {
                     By accessing this portal, you agree to strict confidentiality agreements. Unauthorized access is prohibited.
                 </p>
             </div>
+
+            {/* Forgot Password Modal */}
+            <AnimatePresence>
+                {showForgotModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                        <div className="fixed inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setShowForgotModal(false)} />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white rounded-[2rem] border border-gray-100 shadow-2xl p-8 max-w-md w-full z-10 relative overflow-hidden"
+                        >
+                            <h3 className="text-xl font-black text-gray-900 mb-2 uppercase tracking-tight">Recover Credentials</h3>
+                            <p className="text-xs text-gray-400 mb-6 font-bold uppercase tracking-wider">A security recovery protocol will be sent to your corporate address.</p>
+                            
+                            {forgotSuccess ? (
+                                <div className="space-y-6">
+                                    <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-700 text-xs font-semibold flex items-start gap-2.5 leading-relaxed">
+                                        <span className="material-symbols-outlined text-emerald-600 mt-0.5 shrink-0">check_circle</span>
+                                        <div>
+                                            <p className="font-black uppercase tracking-wider text-[10px] mb-1">Recovery Token Sent</p>
+                                            <p className="opacity-90">A link has been dispatched. Please check your inbox or contact your IT security administrator.</p>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        type="button"
+                                        onClick={() => setShowForgotModal(false)}
+                                        className="w-full py-3 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 transition-all"
+                                    >
+                                        Done
+                                    </button>
+                                </div>
+                            ) : (
+                                <form onSubmit={handleForgotSubmit} className="space-y-5">
+                                    <div>
+                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Corporate Email Address</label>
+                                        <input 
+                                            type="email" 
+                                            required
+                                            placeholder="staff@bank.com"
+                                            value={forgotEmail}
+                                            onChange={(e) => setForgotEmail(e.target.value)}
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm transition-all"
+                                        />
+                                    </div>
+                                    
+                                    {forgotError && (
+                                        <div className="px-4 py-2.5 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs font-medium flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-base">error</span>
+                                            {forgotError}
+                                        </div>
+                                    )}
+                                    
+                                    <div className="flex gap-4 pt-3">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setShowForgotModal(false)}
+                                            className="flex-1 py-3 border border-gray-200 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button 
+                                            type="submit"
+                                            disabled={forgotLoading}
+                                            className="flex-1 py-3 bg-[#6605c7] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#5203a4] shadow-lg shadow-purple-500/10 transition-all flex items-center justify-center"
+                                        >
+                                            {forgotLoading ? "..." : "Send Token"}
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

@@ -1,9 +1,10 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { format } from "date-fns";
+import { format, differenceInDays, parseISO } from "date-fns";
 import { adminApi } from "@/lib/api";
+import { DataTable, StatusBadge, PriorityTag } from "@/components/bank/SharedUI";
 
 export default function ApplicationManagement() {
     const [mounted, setMounted] = useState(false);
@@ -38,6 +39,17 @@ export default function ApplicationManagement() {
     // Message/remarks state
     const [newRemark, setNewRemark] = useState("");
     const [remarksLoading, setRemarksLoading] = useState(false);
+
+    // Advanced Log File Modal states (Task 9)
+    const [priority, setPriority] = useState("medium");
+    const [assignedOfficer, setAssignedOfficer] = useState("Sarah Jenkins (Senior Underwriter)");
+    const [confirmingLog, setConfirmingLog] = useState(false);
+    const [officers] = useState<string[]>([
+        "Sarah Jenkins (Senior Underwriter)",
+        "David Lee (Credit Analyst)",
+        "Amanda Vance (Risk Assessor)",
+        "Rajesh Patel (Loan Manager)"
+    ]);
 
     useEffect(() => {
         setMounted(true);
@@ -130,17 +142,29 @@ export default function ApplicationManagement() {
         e.preventDefault();
         if (!selectedApp || !lanNumber.trim()) return;
 
+        if (!confirmingLog) {
+            setConfirmingLog(true);
+            return;
+        }
+
         try {
+            const remarkText = `[Bank System - Logged]: Assigned LAN: ${lanNumber.trim()} (Priority: ${priority.toUpperCase()}) to officer ${assignedOfficer}`;
+            const mergedRemarks = selectedApp.remarks 
+                ? `${selectedApp.remarks}\n${remarkText}`
+                : remarkText;
+
             const payload = {
                 lanNumber: lanNumber.trim(),
                 lanEnteredAt: new Date().toISOString(),
                 stage: "under_review",
-                status: "processing"
+                status: "processing",
+                remarks: mergedRemarks
             };
             const res: any = await adminApi.updateApplication(selectedApp.id, payload);
             if (res && res.success) {
                 setShowLanModal(false);
                 setLanNumber("");
+                setConfirmingLog(false);
                 // Refresh list & drawer
                 handleRefresh();
             }
@@ -343,52 +367,100 @@ export default function ApplicationManagement() {
                                 <p className="text-xs text-gray-400 max-w-xs">There are no files in this stage matching your filter criteria.</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {filteredApps.map((app) => (
-                                    <motion.div
-                                        key={app.id}
-                                        layoutId={app.id}
-                                        onClick={() => setSelectedApp(app)}
-                                        whileHover={{ y: -4 }}
-                                        className="p-6 bg-white border border-gray-100 rounded-2xl shadow-sm hover:shadow-md hover:border-[#6605c7]/20 transition-all cursor-pointer flex flex-col justify-between h-56"
-                                    >
-                                        <div>
-                                            <div className="flex justify-between items-start mb-4">
-                                                <span className="text-[8px] font-black uppercase tracking-widest text-[#6605c7] bg-purple-50 px-2 py-1 rounded-md">
-                                                    {app.loanType || "Education Loan"}
-                                                </span>
-                                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">
-                                                    {app.applicationNumber}
-                                                </span>
-                                            </div>
-                                            <h3 className="text-base font-black text-gray-900 uppercase tracking-tight truncate">
-                                                {app.firstName} {app.lastName}
-                                            </h3>
-                                            <p className="text-[10px] font-semibold text-gray-400 truncate mt-1">
-                                                {app.universityName || "Stanford University"}
-                                            </p>
-                                        </div>
-                                        
-                                        <div className="border-t border-gray-50 pt-4 flex justify-between items-end">
+                            <DataTable
+                                data={filteredApps}
+                                columns={[
+                                    {
+                                        header: "LAN Number",
+                                        accessorKey: "lanNumber",
+                                        sortable: true,
+                                        cell: (row: any) => (
+                                            <span className="font-mono font-black text-purple-700 bg-purple-50 px-2.5 py-1 rounded-md uppercase text-[10px]">
+                                                {row.lanNumber || "Pending"}
+                                            </span>
+                                        )
+                                    },
+                                    {
+                                        header: "Student",
+                                        accessorKey: "firstName",
+                                        sortable: true,
+                                        cell: (row: any) => (
                                             <div>
-                                                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Requested Spread</span>
-                                                <span className="text-lg font-black text-gray-900 font-display">Γé╣{(app.amount / 100000).toFixed(1)}L</span>
+                                                <span className="font-black text-gray-900 uppercase tracking-tight italic block">
+                                                    {row.firstName} {row.lastName}
+                                                </span>
+                                                <span className="text-[10px] text-gray-400 block truncate max-w-[150px]">
+                                                    {row.universityName || "Stanford University"}
+                                                </span>
                                             </div>
-                                            <div className="text-right">
-                                                {app.lanNumber ? (
-                                                    <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md uppercase tracking-wider">
-                                                        LAN: {app.lanNumber}
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-[9px] font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-md uppercase tracking-wider">
-                                                        Gate Pending
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                ))}
-                            </div>
+                                        )
+                                    },
+                                    {
+                                        header: "Requested Amt",
+                                        accessorKey: "amount",
+                                        sortable: true,
+                                        cell: (row: any) => (
+                                            <span className="font-bold text-gray-800">
+                                                ₹{row.amount?.toLocaleString() || "—"}
+                                            </span>
+                                        )
+                                    },
+                                    {
+                                        header: "File Age",
+                                        accessorKey: "lanEnteredAt",
+                                        sortable: true,
+                                        cell: (row: any) => {
+                                            const logDate = row.lanEnteredAt || row.submittedAt || row.createdAt;
+                                            if (!logDate) return "0 days";
+                                            const diff = differenceInDays(new Date(), parseISO(logDate));
+                                            return (
+                                                <span className="font-bold text-gray-600">
+                                                    {diff} {diff === 1 ? "day" : "days"}
+                                                </span>
+                                            );
+                                        }
+                                    },
+                                    {
+                                        header: "Assigned Officer",
+                                        accessorKey: "remarks",
+                                        sortable: false,
+                                        cell: (row: any) => {
+                                            const match = (row.remarks || "").match(/officer ([\w\s\(\)]+)/i);
+                                            const name = match ? match[1].trim() : "Sarah Jenkins (Credit Officer)";
+                                            return (
+                                                <span className="text-gray-500 font-semibold text-[11px]">
+                                                    {name}
+                                                </span>
+                                            );
+                                        }
+                                    },
+                                    {
+                                        header: "Audit Verdict",
+                                        accessorKey: "status",
+                                        sortable: true,
+                                        cell: (row: any) => <StatusBadge status={row.status} />
+                                    },
+                                    {
+                                        header: "Actions",
+                                        accessorKey: "actions",
+                                        sortable: false,
+                                        cell: (row: any) => (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedApp(row);
+                                                }}
+                                                className="px-3.5 py-1.5 bg-gray-900 text-white hover:bg-gray-800 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm"
+                                            >
+                                                Review
+                                            </button>
+                                        )
+                                    }
+                                ]}
+                                onRowClick={(row) => setSelectedApp(row)}
+                                emptyMessage="Queue is empty. There are no files in this stage matching your filter criteria."
+                                defaultSortKey="lanNumber"
+                            />
                         )}
                     </div>
                 </div>
@@ -566,17 +638,18 @@ export default function ApplicationManagement() {
             <AnimatePresence>
                 {showLanModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <div className="fixed inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setShowLanModal(false)} />
+                        <div className="fixed inset-0 bg-black/45 backdrop-blur-sm" onClick={() => { setShowLanModal(false); setConfirmingLog(false); }} />
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
                             className="bg-white rounded-[2rem] border border-gray-100 shadow-2xl p-8 max-w-md w-full z-10 relative overflow-hidden"
                         >
-                            <h3 className="text-xl font-black text-gray-900 mb-2 uppercase tracking-tight">Log File & Enter LAN</h3>
+                            <h3 className="text-xl font-black text-gray-900 mb-2 uppercase tracking-tight">Log File & Assign LAN</h3>
                             <p className="text-xs text-gray-400 mb-6 font-bold uppercase tracking-wider">Acknowledge receipt and assign the bank's internal Loan Account Number.</p>
                             
                             <form onSubmit={handleLogFile} className="space-y-5">
+                                {/* LAN Number */}
                                 <div>
                                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Loan Account Number (LAN)</label>
                                     <input 
@@ -588,19 +661,76 @@ export default function ApplicationManagement() {
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm transition-all"
                                     />
                                 </div>
+
+                                {/* Priority Level */}
+                                <div>
+                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Priority Level</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {["low", "medium", "high"].map((p) => (
+                                            <button
+                                                key={p}
+                                                type="button"
+                                                onClick={() => setPriority(p)}
+                                                className={`py-2 px-3 border rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                                                    priority === p 
+                                                        ? p === "high" 
+                                                            ? "border-rose-500 bg-rose-50 text-rose-600"
+                                                            : p === "medium"
+                                                                ? "border-amber-500 bg-amber-50 text-amber-600"
+                                                                : "border-emerald-500 bg-emerald-50 text-emerald-600"
+                                                        : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                                                }`}
+                                            >
+                                                {p}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Officer Assignment */}
+                                <div>
+                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Assign Credit Officer</label>
+                                    <select
+                                        value={assignedOfficer}
+                                        onChange={(e) => setAssignedOfficer(e.target.value)}
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-[#6605c7]"
+                                    >
+                                        {officers.map((off) => (
+                                            <option key={off} value={off}>
+                                                {off}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Confirmation Step */}
+                                {confirmingLog && (
+                                    <motion.div 
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        className="p-4 bg-purple-50 border border-purple-100 rounded-2xl text-[11px] text-purple-700 font-medium leading-relaxed"
+                                    >
+                                        <p className="font-black uppercase tracking-wider text-[9px] mb-1">Confirm Configuration</p>
+                                        <p>You are assigning LAN <span className="font-bold font-mono">{lanNumber}</span> to <strong>{assignedOfficer}</strong>. This file will move to active review.</p>
+                                    </motion.div>
+                                )}
+
                                 <div className="flex gap-4 pt-3">
                                     <button 
                                         type="button" 
-                                        onClick={() => setShowLanModal(false)}
+                                        onClick={() => {
+                                            if (confirmingLog) setConfirmingLog(false);
+                                            else setShowLanModal(false);
+                                        }}
                                         className="flex-1 py-3 border border-gray-200 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all"
                                     >
-                                        Cancel
+                                        {confirmingLog ? "Back" : "Cancel"}
                                     </button>
                                     <button 
                                         type="submit"
                                         className="flex-1 py-3 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 shadow-lg shadow-gray-900/10 transition-all"
                                     >
-                                        Save & Log File
+                                        {confirmingLog ? "Confirm Log" : "Log File"}
                                     </button>
                                 </div>
                             </form>
