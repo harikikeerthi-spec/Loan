@@ -1,43 +1,43 @@
-"use client";
+﻿"use client";
 
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState, useMemo } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { bankApi } from "@/lib/api";
+import { format } from "date-fns";
+import { adminApi } from "@/lib/api";
 
 export default function DisbursementTracker() {
-    const { user } = useAuth();
     const [mounted, setMounted] = useState(false);
-    
-    // Core data states
+    const [currentBankId, setCurrentBankId] = useState<string>("idfc");
     const [applications, setApplications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [activeTab, setActiveTab] = useState<"pending" | "released">("pending");
-
-    // Modal & confirmation states
+    const [search, setSearch] = useState("");
+    const [activeTab, setActiveTab] = useState<"pending" | "completed">("pending");
+    
+    // Payout modal states
     const [selectedApp, setSelectedApp] = useState<any | null>(null);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [disbursedAmount, setDisbursedAmount] = useState("");
-    const [disbursedAt, setDisbursedAt] = useState("");
+    const [disbursedAt, setDisbursedAt] = useState(format(new Date(), "yyyy-MM-dd"));
     const [utrNumber, setUtrNumber] = useState("");
     const [confirming, setConfirming] = useState(false);
 
     useEffect(() => {
         setMounted(true);
+        if (typeof window !== "undefined") {
+            const saved = sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank");
+            if (saved) setCurrentBankId(saved);
+        }
     }, []);
 
-    // Fetch all applications ready for fund release or already disbursed
-    const fetchApplications = async () => {
+    const fetchApplications = async (bankId: string) => {
         setLoading(true);
         try {
-            const incoming = await bankApi.getIncomingFiles() as any[];
-            const myFiles = await bankApi.getMyFiles() as any[];
-            const allFetched = [...(incoming || []), ...(myFiles || [])];
-            const uniqueApps = Array.from(new Map(allFetched.map(item => [item.id, item])).values());
-            setApplications(uniqueApps);
-        } catch (error) {
-            console.error("Failed to load applications for disbursements:", error);
+            const res: any = await adminApi.getApplications({ bank: bankId });
+            if (res && res.success) {
+                setApplications(res.data || []);
+            }
+        } catch (err) {
+            console.error("Failed to load applications for disbursements:", err);
         } finally {
             setLoading(false);
         }
@@ -45,72 +45,74 @@ export default function DisbursementTracker() {
 
     useEffect(() => {
         if (mounted) {
-            fetchApplications();
+            fetchApplications(currentBankId);
         }
-    }, [mounted]);
+    }, [currentBankId, mounted]);
 
-    // Filter applications based on active queue status and search query
-    const filteredApplications = useMemo(() => {
+    const handleRefresh = () => {
+        fetchApplications(currentBankId);
+    };
+
+    // Filter applications based on sanction / disbursed statuses
+    const filteredApps = useMemo(() => {
         return applications.filter(app => {
-            const status = app.status?.toLowerCase() || "";
-            let inTab = false;
+            const matchesSearch = 
+                (app.applicationNumber || "").toLowerCase().includes(search.toLowerCase()) ||
+                (`${app.firstName || ""} ${app.lastName || ""}`).toLowerCase().includes(search.toLowerCase()) ||
+                (app.lanNumber || "").toLowerCase().includes(search.toLowerCase());
+
+            if (!matchesSearch) return false;
+
+            const isApproved = app.status === "approved";
+            const isDisbursed = app.status === "disbursed";
+
             if (activeTab === "pending") {
-                inTab = ["approved", "sanctioned"].includes(status);
-            } else if (activeTab === "released") {
-                inTab = status === "disbursed";
+                return isApproved;
+            } else {
+                return isDisbursed;
             }
-
-            if (!inTab) return false;
-
-            if (!searchTerm.trim()) return true;
-            const term = searchTerm.toLowerCase();
-            const fullName = `${app.firstName || ""} ${app.lastName || ""}`.toLowerCase();
-            const appNum = (app.applicationNumber || "").toLowerCase();
-            return fullName.includes(term) || appNum.includes(term);
         });
-    }, [applications, activeTab, searchTerm]);
+    }, [applications, activeTab, search]);
 
-    // Compute queue counts for tab indicators
-    const pendingCount = useMemo(() => {
-        return applications.filter(app => ["approved", "sanctioned"].includes(app.status?.toLowerCase() || "")).length;
+    const tabCounts = useMemo(() => {
+        const counts = { pending: 0, completed: 0 };
+        applications.forEach(app => {
+            if (app.status === "approved") counts.pending++;
+            else if (app.status === "disbursed") counts.completed++;
+        });
+        return counts;
     }, [applications]);
 
-    const releasedCount = useMemo(() => {
-        return applications.filter(app => (app.status?.toLowerCase() || "") === "disbursed").length;
-    }, [applications]);
-
-    // Submit disbursement confirmation details
     const handleConfirmDisbursement = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedApp) return;
-
+        if (!selectedApp || !disbursedAmount || !utrNumber.trim()) return;
         setConfirming(true);
+
         try {
-            await bankApi.confirmDisbursement({
-                applicationId: selectedApp.id,
-                disbursedAmount: Number(disbursedAmount),
-                disbursedAt,
-                utrNumber
-            });
-            alert("Disbursement confirmed successfully.");
-            
-            // Sync status locally in state
-            setApplications(prev => 
-                prev.map(app => 
-                    app.id === selectedApp.id 
-                        ? { ...app, status: "disbursed", disbursedAmount: Number(disbursedAmount), disbursedAt, utrNumber }
-                        : app
-                )
-            );
-            
-            setShowConfirmModal(false);
-            setSelectedApp(null);
-            setDisbursedAmount("");
-            setDisbursedAt("");
-            setUtrNumber("");
-        } catch (error) {
-            console.error("Failed to confirm disbursement:", error);
-            alert("Failed to confirm disbursement: " + (error as Error).message);
+            const mergedRemarks = selectedApp.remarks 
+                ? `${selectedApp.remarks}\n[Disbursed - ${format(new Date(), 'MMM dd, HH:mm')}]: UTR: ${utrNumber.trim()}`
+                : `[Disbursed - ${format(new Date(), 'MMM dd, HH:mm')}]: UTR: ${utrNumber.trim()}`;
+
+            const payload = {
+                status: "disbursed",
+                stage: "disbursed",
+                progress: 100,
+                disbursedAmount: parseFloat(disbursedAmount),
+                disbursedAt: new Date(disbursedAt).toISOString(),
+                remarks: mergedRemarks
+            };
+
+            const res: any = await adminApi.updateApplication(selectedApp.id, payload);
+            if (res && res.success) {
+                setShowConfirmModal(false);
+                setSelectedApp(null);
+                setUtrNumber("");
+                setDisbursedAmount("");
+                handleRefresh();
+            }
+        } catch (err) {
+            console.error("Error confirming disbursement:", err);
+            alert("Failed to record disbursement");
         } finally {
             setConfirming(false);
         }
@@ -119,134 +121,146 @@ export default function DisbursementTracker() {
     if (!mounted) return null;
 
     return (
-        <div className="min-h-screen p-8 lg:p-12 pl-[100px] lg:pl-[320px] transition-all duration-300">
-            <div className="max-w-7xl mx-auto space-y-12">
-                
+        <div className="min-h-screen p-8 lg:p-12 transition-all duration-300">
+            <div className="max-w-7xl mx-auto space-y-8">
+
                 {/* Header */}
-                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex justify-between items-end">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <span className="material-symbols-outlined text-emerald-600 bg-emerald-50 p-2 rounded-xl">payments</span>
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-600">Module 04 • Funds Release</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-600">Module 04 ΓÇó Funds Release</span>
                         </div>
                         <h1 className="text-4xl font-display font-bold text-gray-900 tracking-tight">Disbursement Tracker</h1>
-                        <p className="text-sm text-gray-500 mt-2 font-medium">Monitoring and tracking the release of sanctioned funds to students.</p>
+                        <p className="text-sm text-gray-500 mt-2 font-medium">Verify sanction files, execute fund payouts, and record payment transaction tokens.</p>
                     </div>
-                    <div className="flex gap-4">
-                        <button className="w-12 h-12 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-[#6605c7] flex items-center justify-center transition-all">
-                            <span className="material-symbols-outlined text-gray-400">filter_list</span>
-                        </button>
-                        <div className="relative">
+                    <div className="flex gap-4 w-full lg:w-auto">
+                        <div className="relative flex-1 lg:flex-none">
                             <input 
                                 type="text" 
-                                placeholder="Search by Applicant ID or Name..." 
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-12 pr-6 py-3 w-72 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm transition-all"
+                                placeholder="Search LAN, student, number..." 
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="pl-12 pr-6 py-3 w-full lg:w-72 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm transition-all"
                             />
                             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
                         </div>
-                        <button 
-                            onClick={fetchApplications} 
-                            className="w-12 h-12 bg-white border border-gray-200 rounded-2xl shadow-sm hover:border-[#6605c7] flex items-center justify-center transition-all text-[#6605c7]"
-                            title="Reload Disbursements Tracker"
-                        >
-                            <span className="material-symbols-outlined">refresh</span>
-                        </button>
                     </div>
-                </motion.div>
+                </div>
 
-                {/* Queue Dashboard Matrix */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white/80 backdrop-blur-xl rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/20 overflow-hidden">
-                    <div className="p-8 border-b border-gray-100 flex gap-8">
+                {/* Payout Channels Card */}
+                <div className="bg-white/80 backdrop-blur-xl rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/20 overflow-hidden">
+                    <div className="p-4 border-b border-gray-100 flex flex-wrap gap-4">
                         <button 
-                            onClick={() => setActiveTab("pending")} 
-                            className={`text-sm font-bold pb-2 transition-all ${activeTab === "pending" ? "text-emerald-600 border-b-2 border-emerald-600" : "text-gray-400 hover:text-gray-600"}`}
+                            onClick={() => setActiveTab("pending")}
+                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                                activeTab === "pending" 
+                                    ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/25" 
+                                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                            }`}
                         >
-                            Pending Release ({pendingCount})
+                            <span>Awaiting Payout (Sanctioned)</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${activeTab === "pending" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                                {tabCounts.pending}
+                            </span>
                         </button>
                         <button 
-                            onClick={() => setActiveTab("released")} 
-                            className={`text-sm font-bold pb-2 transition-all ${activeTab === "released" ? "text-emerald-600 border-b-2 border-emerald-600" : "text-gray-400 hover:text-gray-600"}`}
+                            onClick={() => setActiveTab("completed")}
+                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                                activeTab === "completed" 
+                                    ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/25" 
+                                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                            }`}
                         >
-                            Released Funds ({releasedCount})
+                            <span>Disbursed Portfolio</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${activeTab === "completed" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                                {tabCounts.completed}
+                            </span>
                         </button>
                     </div>
-                    
-                    <div className="p-8 min-h-[400px]">
+
+                    <div className="p-8">
                         {loading ? (
-                            <div className="flex flex-col items-center justify-center py-20">
-                                <div className="w-12 h-12 border-4 border-emerald-600/10 border-t-emerald-600 rounded-full animate-spin mb-4" />
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Opening capital pipelines...</p>
+                            <div className="h-[400px] flex flex-col items-center justify-center gap-4">
+                                <div className="w-12 h-12 border-4 border-gray-100 border-t-emerald-600 rounded-full animate-spin" />
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest animate-pulse">Syncing disbursement records...</span>
                             </div>
-                        ) : filteredApplications.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 text-center">
+                        ) : filteredApps.length === 0 ? (
+                            <div className="h-[300px] flex flex-col items-center justify-center text-center">
                                 <span className="material-symbols-outlined text-gray-200 text-6xl mb-4">account_balance_wallet</span>
-                                <h3 className="text-lg font-bold text-gray-900 mb-1">No Applications Found</h3>
-                                <p className="text-xs text-gray-400 max-w-sm">No student files match this capital status or search filters.</p>
+                                <h3 className="text-sm font-bold text-gray-900 mb-1">No applications found</h3>
+                                <p className="text-xs text-gray-400 max-w-xs">There are no files in this stage matching your disbursement filter.</p>
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left border-collapse">
                                     <thead>
                                         <tr className="border-b border-gray-100">
-                                            <th className="pb-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Application Ref</th>
-                                            <th className="pb-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Applicant</th>
-                                            <th className="pb-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Sanctioned Capital</th>
-                                            <th className="pb-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Branch & Institution</th>
-                                            <th className="pb-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Disbursement details</th>
-                                            <th className="pb-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                                            <th className="pb-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Application & LAN</th>
+                                            <th className="pb-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Student & Program</th>
+                                            <th className="pb-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Sanction Details</th>
+                                            <th className="pb-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Disbursed Amount</th>
+                                            <th className="pb-4 text-[9px] font-black uppercase tracking-widest text-gray-400">Status</th>
+                                            <th className="pb-4 text-[9px] font-black uppercase tracking-widest text-gray-400 text-right">Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {filteredApplications.map((app) => (
-                                            <tr key={app.id} className="hover:bg-gray-50/50 transition-all group">
-                                                <td className="py-5 pr-4">
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-100">
-                                                        {app.applicationNumber || `APP-${app.id.substring(0, 8).toUpperCase()}`}
+                                    <tbody>
+                                        {filteredApps.map((app) => (
+                                            <tr key={app.id} className="border-b border-gray-50/50 hover:bg-gray-50/20 transition-all">
+                                                <td className="py-5">
+                                                    <span className="text-xs font-bold text-gray-900 block">{app.applicationNumber}</span>
+                                                    <span className="text-[9px] font-black text-[#6605c7] uppercase tracking-wider block mt-1">LAN: {app.lanNumber || "N/A"}</span>
+                                                </td>
+                                                <td className="py-5">
+                                                    <span className="text-xs font-bold text-gray-900 uppercase tracking-tight block">{app.firstName} {app.lastName}</span>
+                                                    <span className="text-[10px] text-gray-400 block truncate max-w-[200px]">{app.universityName}</span>
+                                                </td>
+                                                <td className="py-5">
+                                                    <span className="text-xs font-bold text-gray-900 block">Γé╣{(app.sanctionAmount || app.amount).toLocaleString()}</span>
+                                                    <span className="text-[9px] font-bold text-emerald-600 block">{app.sanctionedInterestRate || app.interestRate || "N/A"}% Effective ROI</span>
+                                                </td>
+                                                <td className="py-5">
+                                                    <span className="text-xs font-black text-gray-900 block">
+                                                        {app.disbursedAmount ? `Γé╣${(app.disbursedAmount).toLocaleString()}` : "ΓÇö"}
                                                     </span>
+                                                    {app.disbursedAt && (
+                                                        <span className="text-[9px] font-semibold text-gray-400 block mt-1">
+                                                            {format(new Date(app.disbursedAt), "dd MMM yyyy")}
+                                                        </span>
+                                                    )}
                                                 </td>
-                                                <td className="py-5 pr-4">
-                                                    <div className="font-bold text-gray-900">{app.firstName} {app.lastName}</div>
-                                                    <div className="text-[10px] text-gray-400 font-medium mt-0.5">{app.email}</div>
-                                                </td>
-                                                <td className="py-5 pr-4 text-sm font-bold text-gray-900">
-                                                    ₹{app.amount ? app.amount.toLocaleString() : "0"}
-                                                </td>
-                                                <td className="py-5 pr-4">
-                                                    <div className="text-xs font-semibold text-gray-700 max-w-[180px] truncate">{app.universityName || "Foreign Institution"}</div>
-                                                    <div className="text-[10px] text-gray-400 font-medium mt-0.5 max-w-[180px] truncate">{app.courseName || "Program Degree"}</div>
-                                                </td>
-                                                <td className="py-5 pr-4">
-                                                    {app.status?.toLowerCase() === "disbursed" ? (
-                                                        <div>
-                                                            <div className="text-xs font-bold text-emerald-600">UTR: {app.utrNumber || "N/A"}</div>
-                                                            <div className="text-[9px] text-gray-400 uppercase tracking-wider font-bold mt-0.5">Amt: ₹{app.disbursedAmount?.toLocaleString() || "0"} · Date: {app.disbursedAt || "N/A"}</div>
-                                                        </div>
+                                                <td className="py-5">
+                                                    {app.status === "disbursed" ? (
+                                                        <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md uppercase tracking-wider">
+                                                            Paid Out
+                                                        </span>
                                                     ) : (
-                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border bg-amber-50 text-amber-600 border-amber-100 animate-pulse">
-                                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-                                                            Awaiting Release
+                                                        <span className="text-[9px] font-black text-amber-600 bg-amber-50 px-2 py-1 rounded-md uppercase tracking-wider animate-pulse">
+                                                            Awaiting release
                                                         </span>
                                                     )}
                                                 </td>
                                                 <td className="py-5 text-right">
-                                                    {app.status?.toLowerCase() !== "disbursed" ? (
+                                                    {app.status === "approved" ? (
                                                         <button 
                                                             onClick={() => {
                                                                 setSelectedApp(app);
-                                                                setDisbursedAmount(app.amount ? app.amount.toString() : "");
-                                                                setDisbursedAt(new Date().toISOString().split("T")[0]);
+                                                                setDisbursedAmount((app.sanctionAmount || app.amount).toString());
                                                                 setShowConfirmModal(true);
                                                             }}
-                                                            className="px-4 py-2 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-emerald-600 shadow-sm transition-all group-hover:scale-105"
+                                                            className="px-4 py-2 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-emerald-700 shadow-md shadow-emerald-500/10 transition-all flex items-center gap-1.5 ml-auto"
                                                         >
-                                                            Confirm Payout
+                                                            <span className="material-symbols-outlined text-xs">payments</span> Release Funds
                                                         </button>
                                                     ) : (
-                                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center justify-end gap-1.5">
-                                                            <span className="material-symbols-outlined text-emerald-500 text-base">check_circle</span> Disbursed
-                                                        </span>
+                                                        <a 
+                                                            href={app.sanctionLetterUrl || "#"}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="px-4 py-2 border border-gray-200 text-gray-400 hover:text-gray-700 hover:border-gray-300 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all inline-flex items-center gap-1.5"
+                                                        >
+                                                            <span className="material-symbols-outlined text-xs">print</span> Sanction doc
+                                                        </a>
                                                     )}
                                                 </td>
                                             </tr>
@@ -256,8 +270,7 @@ export default function DisbursementTracker() {
                             </div>
                         )}
                     </div>
-                </motion.div>
-
+                </div>
             </div>
 
             {/* Confirm Payout Modal */}
@@ -276,7 +289,7 @@ export default function DisbursementTracker() {
 
                             <form onSubmit={handleConfirmDisbursement} className="space-y-4">
                                 <div>
-                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Disbursed Amount (₹)</label>
+                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Disbursed Amount (Γé╣)</label>
                                     <input 
                                         type="number"
                                         required

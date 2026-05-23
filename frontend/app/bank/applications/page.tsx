@@ -1,61 +1,73 @@
 "use client";
 
+import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useEffect, useState, useMemo } from "react";
-import { useAuth } from "@/contexts/AuthContext";
-import { adminApi, bankApi } from "@/lib/api";
+import { format, differenceInDays, parseISO } from "date-fns";
+import { adminApi } from "@/lib/api";
+import { DataTable, StatusBadge, PriorityTag } from "@/components/bank/SharedUI";
 
 export default function ApplicationManagement() {
-    const { user } = useAuth();
     const [mounted, setMounted] = useState(false);
-    
-    // Core data states
+    const [currentBankId, setCurrentBankId] = useState<string>("idfc");
     const [applications, setApplications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [activeTab, setActiveTab] = useState<"pending" | "approved" | "rejected">("pending");
-
-    // Sidebar & notes states
+    const [search, setSearch] = useState("");
+    const [activeTab, setActiveTab] = useState<"incoming" | "active" | "sanctioned" | "rejected">("incoming");
     const [selectedApp, setSelectedApp] = useState<any | null>(null);
-    const [remarksLoading, setRemarksLoading] = useState(false);
-    const [newRemark, setNewRemark] = useState("");
-
-    // Modal states
     const [showLanModal, setShowLanModal] = useState(false);
-    const [lanNumber, setLanNumber] = useState("");
     const [showDecisionModal, setShowDecisionModal] = useState(false);
-    const [decisionType, setDecisionType] = useState<"sanctioned" | "conditional" | "counter" | "rejected">("sanctioned");
 
-    // Underwriting decision form fields
+    // Form states
+    const [lanNumber, setLanNumber] = useState("");
+    const [decisionType, setDecisionType] = useState<"sanctioned" | "conditional" | "counter" | "rejected">("sanctioned");
     const [sanctionAmount, setSanctionAmount] = useState("");
-    const [processingFee, setProcessingFee] = useState("");
+    const [sanctionedInterestRate, setSanctionedInterestRate] = useState("");
     const [roiType, setRoiType] = useState("floating");
     const [roiBase, setRoiBase] = useState("");
-    const [roiSubsidy, setRoiSubsidy] = useState("");
+    const [roiSubsidy, setRoiSubsidy] = useState("0");
     const [roiEffective, setRoiEffective] = useState("");
-    const [sanctionedInterestRate, setSanctionedInterestRate] = useState("");
+    const [processingFee, setProcessingFee] = useState("");
     const [sanctionLetterUrl, setSanctionLetterUrl] = useState("");
-    const [rejectionReason, setRejectionReason] = useState("");
     const [conditions, setConditions] = useState("");
+    const [rejectionReason, setRejectionReason] = useState("");
+    
+    // Counter offer terms
     const [counterAmount, setCounterAmount] = useState("");
     const [counterRate, setCounterRate] = useState("");
     const [counterTenure, setCounterTenure] = useState("");
 
+    // Message/remarks state
+    const [newRemark, setNewRemark] = useState("");
+    const [remarksLoading, setRemarksLoading] = useState(false);
+
+    // Advanced Log File Modal states (Task 9)
+    const [priority, setPriority] = useState("medium");
+    const [assignedOfficer, setAssignedOfficer] = useState("Sarah Jenkins (Senior Underwriter)");
+    const [confirmingLog, setConfirmingLog] = useState(false);
+    const [officers] = useState<string[]>([
+        "Sarah Jenkins (Senior Underwriter)",
+        "David Lee (Credit Analyst)",
+        "Amanda Vance (Risk Assessor)",
+        "Rajesh Patel (Loan Manager)"
+    ]);
+
     useEffect(() => {
         setMounted(true);
+        if (typeof window !== "undefined") {
+            const saved = sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank");
+            if (saved) setCurrentBankId(saved);
+        }
     }, []);
 
-    // Fetch applications from the backend
-    const fetchApplications = async () => {
+    const fetchApplications = async (bankId: string) => {
         setLoading(true);
         try {
-            const incoming = await bankApi.getIncomingFiles() as any[];
-            const myFiles = await bankApi.getMyFiles() as any[];
-            const allFetched = [...(incoming || []), ...(myFiles || [])];
-            const uniqueApps = Array.from(new Map(allFetched.map(item => [item.id, item])).values());
-            setApplications(uniqueApps);
-        } catch (error) {
-            console.error("Failed to load bank applications:", error);
+            const res: any = await adminApi.getApplications({ bank: bankId });
+            if (res && res.success) {
+                setApplications(res.data || []);
+            }
+        } catch (err) {
+            console.error("Failed to load applications:", err);
         } finally {
             setLoading(false);
         }
@@ -63,354 +75,395 @@ export default function ApplicationManagement() {
 
     useEffect(() => {
         if (mounted) {
-            fetchApplications();
+            fetchApplications(currentBankId);
         }
-    }, [mounted]);
+    }, [currentBankId, mounted]);
 
-    // Handle selecting an application and fetching details
-    const handleSelectApp = async (app: any) => {
-        setSelectedApp(app);
-        // Reset states for current app
-        setLanNumber(app.lanNumber || "");
-        setSanctionAmount(app.amount ? app.amount.toString() : "");
-        setProcessingFee("");
-        setRoiType("floating");
-        setRoiBase("");
-        setRoiSubsidy("");
-        setRoiEffective("");
-        setSanctionedInterestRate("");
-        setSanctionLetterUrl("");
-        setRejectionReason("");
-        setConditions("");
-        setCounterAmount("");
-        setCounterRate("");
-        setCounterTenure("");
-
-        try {
-            // Fetch documents and remarks/notes in parallel
-            const [docs, notes] = await Promise.all([
-                bankApi.getDocuments(app.id),
-                adminApi.getRemarks(app.id)
-            ]);
-
-            const formattedRemarks = Array.isArray(notes)
-                ? notes.map((n: any) => `${n.author || "Staff"} (${new Date(n.createdAt).toLocaleDateString()}): ${n.content}`).join("\n")
-                : app.remarks || "";
-
-            setSelectedApp((prev: any) => {
-                if (!prev || prev.id !== app.id) return prev;
-                return {
-                    ...prev,
-                    documents: docs || [],
-                    remarks: formattedRemarks
-                };
+    // Handle updates in background or polling
+    const handleRefresh = () => {
+        fetchApplications(currentBankId);
+        if (selectedApp) {
+            // refresh selected application detail
+            adminApi.getApplication(selectedApp.id).then((res: any) => {
+                if (res && res.success) setSelectedApp(res.data);
             });
-        } catch (error) {
-            console.error("Error loading application details:", error);
         }
     };
 
-    // Add note/remark form submit
-    const handleAddRemark = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!newRemark.trim() || !selectedApp) return;
-
-        setRemarksLoading(true);
-        try {
-            await adminApi.addRemark(selectedApp.id, {
-                type: "remark",
-                content: newRemark,
-            });
+    // Filter applications
+    const filteredApps = useMemo(() => {
+        return applications.filter(app => {
+            const matchesSearch = 
+                (app.applicationNumber || "").toLowerCase().includes(search.toLowerCase()) ||
+                (`${app.firstName || ""} ${app.lastName || ""}`).toLowerCase().includes(search.toLowerCase()) ||
+                (app.email || "").toLowerCase().includes(search.toLowerCase());
             
-            const timestamp = new Date().toLocaleDateString();
-            const authorName = user?.firstName || "Bank Staff";
-            const newNoteFormatted = `${authorName} (${timestamp}): ${newRemark}`;
-            
-            setSelectedApp((prev: any) => {
-                if (!prev) return null;
-                return {
-                    ...prev,
-                    remarks: prev.remarks ? `${prev.remarks}\n${newNoteFormatted}` : newNoteFormatted
-                };
-            });
-            
-            // Also update in parent list
-            setApplications(prev => prev.map(a => a.id === selectedApp.id ? {
-                ...a,
-                remarks: a.remarks ? `${a.remarks}\n${newNoteFormatted}` : newNoteFormatted
-            } : a));
+            if (!matchesSearch) return false;
 
-            setNewRemark("");
-        } catch (error) {
-            console.error("Failed to add remark:", error);
-            alert("Failed to add note: " + (error as Error).message);
-        } finally {
-            setRemarksLoading(false);
-        }
-    };
+            const hasLan = !!app.lanNumber;
+            const status = app.status;
 
-    // Log file and save LAN Number
+            if (activeTab === "incoming") {
+                return !hasLan && status !== "rejected" && status !== "approved" && status !== "disbursed";
+            }
+            if (activeTab === "active") {
+                return hasLan && status !== "rejected" && status !== "approved" && status !== "disbursed";
+            }
+            if (activeTab === "sanctioned") {
+                return status === "approved" || status === "disbursed";
+            }
+            if (activeTab === "rejected") {
+                return status === "rejected";
+            }
+            return true;
+        });
+    }, [applications, activeTab, search]);
+
+    // Group counts
+    const tabCounts = useMemo(() => {
+        const counts = { incoming: 0, active: 0, sanctioned: 0, rejected: 0 };
+        applications.forEach(app => {
+            const hasLan = !!app.lanNumber;
+            const status = app.status;
+            if (!hasLan && status !== "rejected" && status !== "approved" && status !== "disbursed") {
+                counts.incoming++;
+            } else if (hasLan && status !== "rejected" && status !== "approved" && status !== "disbursed") {
+                counts.active++;
+            } else if (status === "approved" || status === "disbursed") {
+                counts.sanctioned++;
+            } else if (status === "rejected") {
+                counts.rejected++;
+            }
+        });
+        return counts;
+    }, [applications]);
+
     const handleLogFile = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!lanNumber.trim() || !selectedApp) return;
+        if (!selectedApp || !lanNumber.trim()) return;
+
+        if (!confirmingLog) {
+            setConfirmingLog(true);
+            return;
+        }
 
         try {
-            await bankApi.logFile(selectedApp.id, { lanNumber });
-            alert("LAN Number saved and file logged successfully.");
-            
-            const updated = {
-                ...selectedApp,
-                lanNumber,
-                status: "under_bank_review"
+            const remarkText = `[Bank System - Logged]: Assigned LAN: ${lanNumber.trim()} (Priority: ${priority.toUpperCase()}) to officer ${assignedOfficer}`;
+            const mergedRemarks = selectedApp.remarks 
+                ? `${selectedApp.remarks}\n${remarkText}`
+                : remarkText;
+
+            const payload = {
+                lanNumber: lanNumber.trim(),
+                lanEnteredAt: new Date().toISOString(),
+                stage: "under_review",
+                status: "processing",
+                remarks: mergedRemarks
             };
-            setSelectedApp(updated);
-            setApplications(prev => prev.map(a => a.id === selectedApp.id ? updated : a));
-            setShowLanModal(false);
-        } catch (error) {
-            console.error("Failed to log file:", error);
-            alert("Failed to log file: " + (error as Error).message);
+            const res: any = await adminApi.updateApplication(selectedApp.id, payload);
+            if (res && res.success) {
+                setShowLanModal(false);
+                setLanNumber("");
+                setConfirmingLog(false);
+                // Refresh list & drawer
+                handleRefresh();
+            }
+        } catch (err) {
+            console.error("Error logging file:", err);
+            alert("Failed to log file");
         }
     };
 
-    // Submit underwriting decision
     const handleDecision = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedApp) return;
 
         try {
-            let res;
-            const basePayload = {
-                applicationId: selectedApp.id,
-                decision: decisionType,
-            };
-
+            let payload: any = {};
             if (decisionType === "sanctioned") {
-                const sanctionPayload = {
-                    ...basePayload,
-                    sanctionAmount: Number(sanctionAmount),
-                    processingFee: Number(processingFee || 0),
+                payload = {
+                    status: "approved",
+                    stage: "sanction",
+                    progress: 90,
+                    approvedAt: new Date().toISOString(),
+                    sanctionAmount: sanctionAmount ? parseFloat(sanctionAmount) : selectedApp.amount,
+                    sanctionedInterestRate: sanctionedInterestRate ? parseFloat(sanctionedInterestRate) : null,
                     roiType,
-                    roiBase: Number(roiBase || 0),
-                    roiSubsidy: Number(roiSubsidy || 0),
-                    roiEffective: Number(roiEffective),
-                    sanctionedInterestRate: Number(roiEffective),
-                    sanctionLetterUrl: sanctionLetterUrl || "/docs/sanction-letter.pdf"
+                    roiBase: roiBase ? parseFloat(roiBase) : null,
+                    roiSubsidy: roiSubsidy ? parseFloat(roiSubsidy) : null,
+                    roiEffective: roiEffective ? parseFloat(roiEffective) : null,
+                    processingFee: processingFee ? parseFloat(processingFee) : null,
+                    sanctionDate: new Date().toISOString(),
+                    sanctionExpiry: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(), // 6 months
+                    sanctionLetterUrl: sanctionLetterUrl.trim() || "/docs/mock-sanction.pdf"
                 };
-                res = await bankApi.submitDecision(sanctionPayload);
-                if (sanctionLetterUrl) {
-                    await bankApi.uploadSanctionLetter(selectedApp.id, sanctionLetterUrl);
-                }
             } else if (decisionType === "rejected") {
-                res = await bankApi.submitDecision({
-                    ...basePayload,
-                    rejectionReason
-                });
+                payload = {
+                    status: "rejected",
+                    rejectedAt: new Date().toISOString(),
+                    progress: 0,
+                    rejectionReason: rejectionReason.trim() || "Does not meet standard credit score criteria"
+                };
             } else if (decisionType === "conditional") {
-                res = await bankApi.conditionalSanction({
-                    applicationId: selectedApp.id,
-                    conditions
-                });
+                payload = {
+                    status: "processing",
+                    stage: "conditional_sanction",
+                    remarks: `Conditional Sanction raised: ${conditions}`
+                };
             } else if (decisionType === "counter") {
-                res = await bankApi.counterOffer({
-                    applicationId: selectedApp.id,
-                    amount: Number(counterAmount),
-                    rate: Number(counterRate),
-                    tenure: Number(counterTenure)
-                });
+                payload = {
+                    status: "processing",
+                    stage: "counter_offer",
+                    remarks: `Counter Offer proposed: Amount Γé╣${counterAmount}, Rate ${counterRate}%, Tenure ${counterTenure} months`
+                };
             }
 
-            alert("Decision submitted successfully.");
-            
-            const nextStatus = decisionType === "sanctioned" ? "approved" : decisionType === "rejected" ? "rejected" : "processing";
-            const updated = {
-                ...selectedApp,
-                status: nextStatus
-            };
-            
-            setSelectedApp(null);
-            setApplications(prev => prev.map(a => a.id === selectedApp.id ? updated : a));
-            setShowDecisionModal(false);
-        } catch (error) {
-            console.error("Failed to submit decision:", error);
-            alert("Failed to submit decision: " + (error as Error).message);
+            const res: any = await adminApi.updateApplication(selectedApp.id, payload);
+            if (res && res.success) {
+                setShowDecisionModal(false);
+                // Clear form fields
+                setSanctionAmount("");
+                setSanctionedInterestRate("");
+                setRoiBase("");
+                setRoiEffective("");
+                setProcessingFee("");
+                setSanctionLetterUrl("");
+                setConditions("");
+                setRejectionReason("");
+                setCounterAmount("");
+                setCounterRate("");
+                setCounterTenure("");
+                
+                handleRefresh();
+            }
+        } catch (err) {
+            console.error("Error submitting decision:", err);
+            alert("Failed to submit decision");
         }
     };
 
-    // Filter and compute application metrics for visual queues
-    const filteredApplications = useMemo(() => {
-        return applications.filter(app => {
-            const status = app.status?.toLowerCase() || "pending";
-            let inTab = false;
-            if (activeTab === "pending") {
-                inTab = !["approved", "sanctioned", "rejected", "disbursed"].includes(status);
-            } else if (activeTab === "approved") {
-                inTab = ["approved", "sanctioned", "disbursed"].includes(status);
-            } else if (activeTab === "rejected") {
-                inTab = status === "rejected";
-            }
+    const handleAddRemark = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedApp || !newRemark.trim()) return;
+        setRemarksLoading(true);
+
+        try {
+            // update remarks in database
+            const mergedRemarks = selectedApp.remarks 
+                ? `${selectedApp.remarks}\n[Bank Note - ${format(new Date(), 'MMM dd, HH:mm')}]: ${newRemark.trim()}`
+                : `[Bank Note - ${format(new Date(), 'MMM dd, HH:mm')}]: ${newRemark.trim()}`;
             
-            if (!inTab) return false;
-
-            if (!searchTerm.trim()) return true;
-            const term = searchTerm.toLowerCase();
-            const appNum = (app.applicationNumber || "").toLowerCase();
-            const fullName = `${app.firstName || ""} ${app.lastName || ""}`.toLowerCase();
-            return appNum.includes(term) || fullName.includes(term);
-        });
-    }, [applications, activeTab, searchTerm]);
-
-    const pendingCount = useMemo(() => {
-        return applications.filter(app => !["approved", "sanctioned", "rejected", "disbursed"].includes(app.status?.toLowerCase() || "pending")).length;
-    }, [applications]);
-
-    const approvedCount = useMemo(() => {
-        return applications.filter(app => ["approved", "sanctioned", "disbursed"].includes(app.status?.toLowerCase() || "")).length;
-    }, [applications]);
-
-    const rejectedCount = useMemo(() => {
-        return applications.filter(app => (app.status?.toLowerCase() || "") === "rejected").length;
-    }, [applications]);
+            const res: any = await adminApi.updateApplication(selectedApp.id, { remarks: mergedRemarks });
+            if (res && res.success) {
+                setNewRemark("");
+                // Refresh list & drawer
+                handleRefresh();
+            }
+        } catch (err) {
+            console.error("Error saving remark:", err);
+        } finally {
+            setRemarksLoading(false);
+        }
+    };
 
     if (!mounted) return null;
 
     return (
-        <div className="min-h-screen p-8 lg:p-12 pl-[100px] lg:pl-[320px] transition-all duration-300">
-            <div className="max-w-7xl mx-auto space-y-12">
+        <div className="min-h-screen p-8 lg:p-12 transition-all duration-300">
+            <div className="max-w-7xl mx-auto space-y-8">
                 
                 {/* Header */}
-                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="flex justify-between items-end">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <span className="material-symbols-outlined text-rose-600 bg-rose-50 p-2 rounded-xl">gavel</span>
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-600">Module 02</span>
+                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-rose-600">Module 02 ΓÇó Decisions</span>
                         </div>
                         <h1 className="text-4xl font-display font-bold text-gray-900 tracking-tight">Application Management</h1>
-                        <p className="text-sm text-gray-500 mt-2 font-medium">Processing pipeline for Reject / Sanction decisions.</p>
+                        <p className="text-sm text-gray-500 mt-2 font-medium">Verify documents, log file numbers, and record credit underwriting decisions.</p>
                     </div>
-                    <div className="flex gap-4">
-                        <button className="w-12 h-12 bg-white border border-gray-200 rounded-xl shadow-sm hover:border-[#6605c7] flex items-center justify-center transition-all">
-                            <span className="material-symbols-outlined text-gray-400">filter_list</span>
-                        </button>
-                        <div className="relative">
+                    <div className="flex gap-4 w-full lg:w-auto">
+                        <div className="relative flex-1 lg:flex-none">
                             <input 
                                 type="text" 
-                                placeholder="Search by ID or Name..." 
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-12 pr-6 py-3 w-64 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm transition-all"
+                                placeholder="Search by name, ID..." 
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="pl-12 pr-6 py-3 w-full lg:w-72 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm transition-all"
                             />
                             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
                         </div>
-                        <button 
-                            onClick={fetchApplications} 
-                            className="w-12 h-12 bg-white border border-gray-200 rounded-2xl shadow-sm hover:border-[#6605c7] flex items-center justify-center transition-all text-[#6605c7]"
-                            title="Reload Applications"
-                        >
-                            <span className="material-symbols-outlined">refresh</span>
-                        </button>
                     </div>
-                </motion.div>
+                </div>
 
-                {/* Pipeline Matrix Shell */}
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-white/80 backdrop-blur-xl rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/20 overflow-hidden">
-                    <div className="p-8 border-b border-gray-100 flex gap-8">
+                {/* Pipeline Tabs */}
+                <div className="bg-white/80 backdrop-blur-xl rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/20 overflow-hidden">
+                    <div className="p-4 border-b border-gray-100 flex flex-wrap gap-4">
                         <button 
-                            onClick={() => setActiveTab("pending")} 
-                            className={`text-sm font-bold pb-2 transition-all ${activeTab === "pending" ? "text-[#6605c7] border-b-2 border-[#6605c7]" : "text-gray-400 hover:text-gray-600"}`}
+                            onClick={() => setActiveTab("incoming")}
+                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                                activeTab === "incoming" 
+                                    ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25" 
+                                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                            }`}
                         >
-                            Pending Review ({pendingCount})
+                            <span>Incoming Files</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${activeTab === "incoming" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                                {tabCounts.incoming}
+                            </span>
                         </button>
                         <button 
-                            onClick={() => setActiveTab("approved")} 
-                            className={`text-sm font-bold pb-2 transition-all ${activeTab === "approved" ? "text-[#6605c7] border-b-2 border-[#6605c7]" : "text-gray-400 hover:text-gray-600"}`}
+                            onClick={() => setActiveTab("active")}
+                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                                activeTab === "active" 
+                                    ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25" 
+                                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                            }`}
                         >
-                            Approved Queue ({approvedCount})
+                            <span>Logged / Review</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${activeTab === "active" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                                {tabCounts.active}
+                            </span>
                         </button>
                         <button 
-                            onClick={() => setActiveTab("rejected")} 
-                            className={`text-sm font-bold pb-2 transition-all ${activeTab === "rejected" ? "text-[#6605c7] border-b-2 border-[#6605c7]" : "text-gray-400 hover:text-gray-600"}`}
+                            onClick={() => setActiveTab("sanctioned")}
+                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                                activeTab === "sanctioned" 
+                                    ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25" 
+                                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                            }`}
                         >
-                            Rejected ({rejectedCount})
+                            <span>Sanctioned Queue</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${activeTab === "sanctioned" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                                {tabCounts.sanctioned}
+                            </span>
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab("rejected")}
+                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                                activeTab === "rejected" 
+                                    ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25" 
+                                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                            }`}
+                        >
+                            <span>Rejected Queue</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${activeTab === "rejected" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                                {tabCounts.rejected}
+                            </span>
                         </button>
                     </div>
                     
-                    <div className="p-8 min-h-[400px]">
+                    {/* List Content */}
+                    <div className="p-8">
                         {loading ? (
-                            <div className="flex flex-col items-center justify-center py-20">
-                                <div className="w-12 h-12 border-4 border-[#6605c7]/10 border-t-[#6605c7] rounded-full animate-spin mb-4" />
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Loading applications matrix...</p>
+                            <div className="h-[400px] flex flex-col items-center justify-center gap-4">
+                                <div className="w-12 h-12 border-4 border-gray-100 border-t-[#6605c7] rounded-full animate-spin" />
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest animate-pulse">Syncing application pipeline...</span>
                             </div>
-                        ) : filteredApplications.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-20 text-center">
-                                <span className="material-symbols-outlined text-gray-200 text-6xl mb-4">folder_open</span>
-                                <h3 className="text-lg font-bold text-gray-900 mb-1">No Applications Found</h3>
-                                <p className="text-xs text-gray-400 max-w-sm">No student applications found matching this queue or search filter.</p>
+                        ) : filteredApps.length === 0 ? (
+                            <div className="h-[300px] flex flex-col items-center justify-center text-center">
+                                <span className="material-symbols-outlined text-gray-200 text-6xl mb-4">inbox</span>
+                                <h3 className="text-sm font-bold text-gray-900 mb-1">Queue is empty</h3>
+                                <p className="text-xs text-gray-400 max-w-xs">There are no files in this stage matching your filter criteria.</p>
                             </div>
                         ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left border-collapse">
-                                    <thead>
-                                        <tr className="border-b border-gray-100">
-                                            <th className="pb-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Application Ref</th>
-                                            <th className="pb-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Applicant</th>
-                                            <th className="pb-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Requested Amount</th>
-                                            <th className="pb-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Institution & Course</th>
-                                            <th className="pb-4 text-[9px] font-black text-gray-400 uppercase tracking-widest">Status</th>
-                                            <th className="pb-4 text-[9px] font-black text-gray-400 uppercase tracking-widest text-right">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {filteredApplications.map((app) => (
-                                            <tr key={app.id} className="hover:bg-gray-50/50 transition-all group">
-                                                <td className="py-5 pr-4">
-                                                    <span className="text-[10px] font-black uppercase tracking-widest text-[#6605c7] bg-purple-50 px-2.5 py-1.5 rounded-lg border border-purple-100">
-                                                        {app.applicationNumber || `APP-${app.id.substring(0, 8).toUpperCase()}`}
-                                                    </span>
-                                                </td>
-                                                <td className="py-5 pr-4">
-                                                    <div className="font-bold text-gray-900">{app.firstName} {app.lastName}</div>
-                                                    <div className="text-[10px] text-gray-400 font-medium mt-0.5">{app.email}</div>
-                                                </td>
-                                                <td className="py-5 pr-4 text-sm font-bold text-gray-900">
-                                                    ₹{app.amount ? app.amount.toLocaleString() : "0"}
-                                                </td>
-                                                <td className="py-5 pr-4">
-                                                    <div className="text-xs font-semibold text-gray-700 max-w-[200px] truncate" title={app.universityName}>{app.universityName || "University of Foreign Intake"}</div>
-                                                    <div className="text-[10px] text-gray-400 font-medium mt-0.5 max-w-[200px] truncate" title={app.courseName}>{app.courseName || "Masters / UG Degree"}</div>
-                                                </td>
-                                                <td className="py-5 pr-4">
-                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider border ${
-                                                        app.status?.toLowerCase() === "approved" || app.status?.toLowerCase() === "sanctioned" ? "bg-emerald-50 text-emerald-600 border-emerald-100" :
-                                                        app.status?.toLowerCase() === "rejected" ? "bg-rose-50 text-rose-600 border-rose-100" :
-                                                        app.status?.toLowerCase() === "disbursed" ? "bg-indigo-50 text-indigo-600 border-indigo-100" :
-                                                        "bg-amber-50 text-amber-600 border-amber-100 animate-pulse"
-                                                    }`}>
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${
-                                                            app.status?.toLowerCase() === "approved" || app.status?.toLowerCase() === "sanctioned" ? "bg-emerald-500" :
-                                                            app.status?.toLowerCase() === "rejected" ? "bg-rose-500" :
-                                                            app.status?.toLowerCase() === "disbursed" ? "bg-indigo-500" :
-                                                            "bg-amber-500 animate-ping"
-                                                        }`} />
-                                                        {app.status || "Pending Review"}
-                                                    </span>
-                                                </td>
-                                                <td className="py-5 text-right">
-                                                    <button 
-                                                        onClick={() => handleSelectApp(app)}
-                                                        className="px-4 py-2 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-[#6605c7] shadow-sm transition-all group-hover:scale-105"
-                                                    >
-                                                        Review & Decide
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                            <DataTable
+                                data={filteredApps}
+                                columns={[
+                                    {
+                                        header: "LAN Number",
+                                        accessorKey: "lanNumber",
+                                        sortable: true,
+                                        cell: (row: any) => (
+                                            <span className="font-mono font-black text-purple-700 bg-purple-50 px-2.5 py-1 rounded-md uppercase text-[10px]">
+                                                {row.lanNumber || "Pending"}
+                                            </span>
+                                        )
+                                    },
+                                    {
+                                        header: "Student",
+                                        accessorKey: "firstName",
+                                        sortable: true,
+                                        cell: (row: any) => (
+                                            <div>
+                                                <span className="font-black text-gray-900 uppercase tracking-tight italic block">
+                                                    {row.firstName} {row.lastName}
+                                                </span>
+                                                <span className="text-[10px] text-gray-400 block truncate max-w-[150px]">
+                                                    {row.universityName || "Stanford University"}
+                                                </span>
+                                            </div>
+                                        )
+                                    },
+                                    {
+                                        header: "Requested Amt",
+                                        accessorKey: "amount",
+                                        sortable: true,
+                                        cell: (row: any) => (
+                                            <span className="font-bold text-gray-800">
+                                                ₹{row.amount?.toLocaleString() || "—"}
+                                            </span>
+                                        )
+                                    },
+                                    {
+                                        header: "File Age",
+                                        accessorKey: "lanEnteredAt",
+                                        sortable: true,
+                                        cell: (row: any) => {
+                                            const logDate = row.lanEnteredAt || row.submittedAt || row.createdAt;
+                                            if (!logDate) return "0 days";
+                                            const diff = differenceInDays(new Date(), parseISO(logDate));
+                                            return (
+                                                <span className="font-bold text-gray-600">
+                                                    {diff} {diff === 1 ? "day" : "days"}
+                                                </span>
+                                            );
+                                        }
+                                    },
+                                    {
+                                        header: "Assigned Officer",
+                                        accessorKey: "remarks",
+                                        sortable: false,
+                                        cell: (row: any) => {
+                                            const match = (row.remarks || "").match(/officer ([\w\s\(\)]+)/i);
+                                            const name = match ? match[1].trim() : "Sarah Jenkins (Credit Officer)";
+                                            return (
+                                                <span className="text-gray-500 font-semibold text-[11px]">
+                                                    {name}
+                                                </span>
+                                            );
+                                        }
+                                    },
+                                    {
+                                        header: "Audit Verdict",
+                                        accessorKey: "status",
+                                        sortable: true,
+                                        cell: (row: any) => <StatusBadge status={row.status} />
+                                    },
+                                    {
+                                        header: "Actions",
+                                        accessorKey: "actions",
+                                        sortable: false,
+                                        cell: (row: any) => (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedApp(row);
+                                                }}
+                                                className="px-3.5 py-1.5 bg-gray-900 text-white hover:bg-gray-800 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm"
+                                            >
+                                                Review
+                                            </button>
+                                        )
+                                    }
+                                ]}
+                                onRowClick={(row) => setSelectedApp(row)}
+                                emptyMessage="Queue is empty. There are no files in this stage matching your filter criteria."
+                                defaultSortKey="lanNumber"
+                            />
                         )}
                     </div>
-                </motion.div>
-
+                </div>
             </div>
 
             {/* Sidebar Details Drawer */}
@@ -435,13 +488,13 @@ export default function ApplicationManagement() {
                                 <div className="flex justify-between items-start border-b border-gray-100 pb-5">
                                     <div>
                                         <span className="text-[8px] font-black uppercase tracking-widest text-[#6605c7] bg-purple-50 px-2 py-1 rounded-md">
-                                            {selectedApp.applicationNumber || "Pending LAN"}
+                                            {selectedApp.applicationNumber}
                                         </span>
                                         <h2 className="text-2xl font-black text-gray-900 mt-2 uppercase tracking-tight">
                                             {selectedApp.firstName} {selectedApp.lastName}
                                         </h2>
                                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                                            {selectedApp.email} · {selectedApp.phone || "No phone added"}
+                                            {selectedApp.email} ┬╖ {selectedApp.phone || "No phone added"}
                                         </p>
                                     </div>
                                     <button 
@@ -456,7 +509,7 @@ export default function ApplicationManagement() {
                                 <div className="grid grid-cols-2 gap-4 bg-gray-50/50 p-5 rounded-2xl border border-gray-100/50">
                                     <div>
                                         <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Requested Amount</span>
-                                        <span className="text-sm font-bold text-gray-900">₹{(selectedApp.amount || 0).toLocaleString()}</span>
+                                        <span className="text-sm font-bold text-gray-900">Γé╣{(selectedApp.amount).toLocaleString()}</span>
                                     </div>
                                     <div>
                                         <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Course Program</span>
@@ -470,7 +523,7 @@ export default function ApplicationManagement() {
                                         <div className="col-span-2 border-t border-gray-100 pt-3">
                                             <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Co-Applicant details</span>
                                             <span className="text-sm font-bold text-gray-900 block">{selectedApp.coApplicantName} ({selectedApp.coApplicantRelation})</span>
-                                            <span className="text-[10px] text-gray-400">Income: ₹{(selectedApp.coApplicantIncome || 0).toLocaleString()}/yr</span>
+                                            <span className="text-[10px] text-gray-400">Income: Γé╣{(selectedApp.coApplicantIncome || 0).toLocaleString()}/yr</span>
                                         </div>
                                     )}
                                 </div>
@@ -560,12 +613,12 @@ export default function ApplicationManagement() {
                                     >
                                         <span className="material-symbols-outlined text-lg">note_add</span> Log File (Enter LAN)
                                     </button>
-                               ) : (
+                                ) : (
                                     <>
                                         {selectedApp.status !== "approved" && selectedApp.status !== "disbursed" && selectedApp.status !== "rejected" && (
                                             <button 
                                                 onClick={() => {
-                                                    setSanctionAmount((selectedApp.amount || 0).toString());
+                                                    setSanctionAmount(selectedApp.amount.toString());
                                                     setShowDecisionModal(true);
                                                 }}
                                                 className="flex-1 py-4 bg-[#6605c7] text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-purple-500/20 hover:bg-[#5203a4] transition-all flex items-center justify-center gap-2"
@@ -585,17 +638,18 @@ export default function ApplicationManagement() {
             <AnimatePresence>
                 {showLanModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <div className="fixed inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setShowLanModal(false)} />
+                        <div className="fixed inset-0 bg-black/45 backdrop-blur-sm" onClick={() => { setShowLanModal(false); setConfirmingLog(false); }} />
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
                             className="bg-white rounded-[2rem] border border-gray-100 shadow-2xl p-8 max-w-md w-full z-10 relative overflow-hidden"
                         >
-                            <h3 className="text-xl font-black text-gray-900 mb-2 uppercase tracking-tight">Log File & Enter LAN</h3>
+                            <h3 className="text-xl font-black text-gray-900 mb-2 uppercase tracking-tight">Log File & Assign LAN</h3>
                             <p className="text-xs text-gray-400 mb-6 font-bold uppercase tracking-wider">Acknowledge receipt and assign the bank's internal Loan Account Number.</p>
                             
                             <form onSubmit={handleLogFile} className="space-y-5">
+                                {/* LAN Number */}
                                 <div>
                                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Loan Account Number (LAN)</label>
                                     <input 
@@ -607,19 +661,76 @@ export default function ApplicationManagement() {
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm transition-all"
                                     />
                                 </div>
+
+                                {/* Priority Level */}
+                                <div>
+                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Priority Level</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {["low", "medium", "high"].map((p) => (
+                                            <button
+                                                key={p}
+                                                type="button"
+                                                onClick={() => setPriority(p)}
+                                                className={`py-2 px-3 border rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                                                    priority === p 
+                                                        ? p === "high" 
+                                                            ? "border-rose-500 bg-rose-50 text-rose-600"
+                                                            : p === "medium"
+                                                                ? "border-amber-500 bg-amber-50 text-amber-600"
+                                                                : "border-emerald-500 bg-emerald-50 text-emerald-600"
+                                                        : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                                                }`}
+                                            >
+                                                {p}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Officer Assignment */}
+                                <div>
+                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Assign Credit Officer</label>
+                                    <select
+                                        value={assignedOfficer}
+                                        onChange={(e) => setAssignedOfficer(e.target.value)}
+                                        className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-[#6605c7]"
+                                    >
+                                        {officers.map((off) => (
+                                            <option key={off} value={off}>
+                                                {off}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Confirmation Step */}
+                                {confirmingLog && (
+                                    <motion.div 
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: "auto", opacity: 1 }}
+                                        className="p-4 bg-purple-50 border border-purple-100 rounded-2xl text-[11px] text-purple-700 font-medium leading-relaxed"
+                                    >
+                                        <p className="font-black uppercase tracking-wider text-[9px] mb-1">Confirm Configuration</p>
+                                        <p>You are assigning LAN <span className="font-bold font-mono">{lanNumber}</span> to <strong>{assignedOfficer}</strong>. This file will move to active review.</p>
+                                    </motion.div>
+                                )}
+
                                 <div className="flex gap-4 pt-3">
                                     <button 
                                         type="button" 
-                                        onClick={() => setShowLanModal(false)}
+                                        onClick={() => {
+                                            if (confirmingLog) setConfirmingLog(false);
+                                            else setShowLanModal(false);
+                                        }}
                                         className="flex-1 py-3 border border-gray-200 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all"
                                     >
-                                        Cancel
+                                        {confirmingLog ? "Back" : "Cancel"}
                                     </button>
                                     <button 
                                         type="submit"
                                         className="flex-1 py-3 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 shadow-lg shadow-gray-900/10 transition-all"
                                     >
-                                        Save & Log File
+                                        {confirmingLog ? "Confirm Log" : "Log File"}
                                     </button>
                                 </div>
                             </form>
@@ -675,7 +786,7 @@ export default function ApplicationManagement() {
                                     <div className="space-y-4 border-t border-gray-50 pt-4">
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Sanctioned Amount (₹)</label>
+                                                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Sanctioned Amount (Γé╣)</label>
                                                 <input 
                                                     type="number" 
                                                     required
@@ -685,7 +796,7 @@ export default function ApplicationManagement() {
                                                 />
                                             </div>
                                             <div>
-                                                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Processing Fee (₹)</label>
+                                                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Processing Fee (Γé╣)</label>
                                                 <input 
                                                     type="number" 
                                                     placeholder="0"
@@ -799,7 +910,7 @@ export default function ApplicationManagement() {
                                     <div className="space-y-4 border-t border-gray-50 pt-4">
                                         <div className="grid grid-cols-3 gap-3">
                                             <div>
-                                                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Counter Amount (₹)</label>
+                                                <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Counter Amount (Γé╣)</label>
                                                 <input 
                                                     type="number" 
                                                     required

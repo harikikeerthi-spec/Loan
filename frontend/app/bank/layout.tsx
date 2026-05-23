@@ -5,13 +5,14 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { adminApi } from "@/lib/api";
 
 // --- Components ---
 
-const NavItem = ({ icon, label, path, active, collapsed }: any) => (
+const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => (
     <Link
         href={path}
-        className={`flex items-center gap-3 py-2 px-3 rounded-xl transition-all relative group overflow-hidden ${
+        className={`flex items-center justify-between py-2 px-3 rounded-xl transition-all relative group overflow-hidden ${
             active ? "text-white" : "text-gray-400 hover:text-gray-800"
         }`}
         style={active ? {
@@ -19,19 +20,29 @@ const NavItem = ({ icon, label, path, active, collapsed }: any) => (
             boxShadow: '0 4px 14px rgba(102, 5, 199, 0.22)'
         } : undefined}
     >
-        {/* Hover background */}
-        {!active && (
-            <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
-                style={{ backgroundColor: 'rgba(102, 5, 199, 0.06)' }} />
-        )}
+        <div className="flex items-center gap-3 min-w-0">
+            {/* Hover background */}
+            {!active && (
+                <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{ backgroundColor: 'rgba(102, 5, 199, 0.06)' }} />
+            )}
 
-        <span className={`material-symbols-outlined text-[18px] relative z-10 transition-transform duration-300 ${active ? "scale-110" : "group-hover:scale-105"}`}>
-            {icon}
-        </span>
+            <span className={`material-symbols-outlined text-[18px] relative z-10 transition-transform duration-300 ${active ? "scale-110" : "group-hover:scale-105"}`}>
+                {icon}
+            </span>
 
-        {!collapsed && (
-            <span className="text-[9.5px] font-black uppercase tracking-[0.18em] relative z-10 italic whitespace-nowrap">
-                {label}
+            {!collapsed && (
+                <span className="text-[9.5px] font-black uppercase tracking-[0.18em] relative z-10 italic whitespace-nowrap truncate">
+                    {label}
+                </span>
+            )}
+        </div>
+
+        {badge && !collapsed && (
+            <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold relative z-10 shrink-0 ${
+                active ? "bg-white text-[#6605c7]" : "bg-[#6605c7] text-white"
+            }`}>
+                {badge}
             </span>
         )}
     </Link>
@@ -43,6 +54,11 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
     const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+
+    // Sidebar badge counts
+    const [incomingCount, setIncomingCount] = useState(0);
+    const [loggedCount, setLoggedCount] = useState(0);
+    const [chatCount, setChatCount] = useState(2); // Mock unread chat messages
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -58,6 +74,32 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
 
     const [bankName, setBankName] = useState("SBI");
     const [branchName, setBranchName] = useState("Hyderabad Branch");
+
+    // Fetch counts for badges
+    useEffect(() => {
+        if (!isLoading && user && (isBank || isAdmin)) {
+            const savedBank = sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank") || "idfc";
+            adminApi.getApplications({ bank: savedBank })
+                .then((res: any) => {
+                    if (res && res.success && Array.isArray(res.data)) {
+                        let incoming = 0;
+                        let logged = 0;
+                        res.data.forEach((app: any) => {
+                            const hasLan = !!app.lanNumber;
+                            const status = app.status;
+                            if (!hasLan && status !== "rejected" && status !== "approved" && status !== "disbursed") {
+                                incoming++;
+                            } else if (hasLan && status !== "rejected" && status !== "approved" && status !== "disbursed") {
+                                logged++;
+                            }
+                        });
+                        setIncomingCount(incoming);
+                        setLoggedCount(logged);
+                    }
+                })
+                .catch(err => console.error("Failed to load badge stats in sidebar:", err));
+        }
+    }, [user, isLoading, isBank, isAdmin, pathname]);
 
     useEffect(() => {
         if (typeof window !== "undefined") {
@@ -78,17 +120,19 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
     }, [user]);
 
     const navItems = [
-        { icon: "download", label: "Incoming Files", path: "/bank/dashboard" },
-        { icon: "assignment", label: "My Files (Logged)", path: "/bank/applications" },
-        { icon: "description", label: "Documents", path: "/bank/documents" },
-        { icon: "help", label: "Queries", path: "/bank/applications?tab=queries" },
-        { icon: "gavel", label: "Decisions", path: "/bank/applications?tab=decisions" },
-        { icon: "payments", label: "Disbursement Confirm", path: "/bank/disbursements" },
-        { icon: "forum", label: "Chat with Staff", path: "/bank/communication" },
-        { icon: "monitoring", label: "Analytics & Reports", path: "/bank/analytics" },
-        { icon: "database", label: "Export / API", path: "/bank/analytics?tab=export" },
-        { icon: "extension", label: "Integrations", path: "/bank/integrations" },
-        { icon: "settings", label: "Settings & Products", path: "/bank/settings" },
+        { icon: "dashboard", label: "Overview Dashboard", path: "/bank/dashboard" },
+        { icon: "download", label: "Incoming Queue (F1)", path: "/bank/incoming", badge: incomingCount },
+        { icon: "assignment", label: "My Files (Logged)", path: "/bank/applications", badge: loggedCount },
+        { icon: "folder_shared", label: "Document Vault (F2)", path: "/bank/documents" },
+        { icon: "gavel", label: "Decisions Hub", path: "/bank/decisions" },
+        { icon: "payments", label: "Disbursement Board", path: "/bank/disbursements" },
+        { icon: "forum", label: "Secure Chat Stream", path: "/bank/chat", badge: chatCount },
+        { icon: "assignment_add", label: "Task Matrix", path: "/bank/tasks" },
+        { icon: "monitoring", label: "Analytics & SLA", path: "/bank/analytics" },
+        { icon: "extension", label: "System Integrations", path: "/bank/integrations" },
+        { icon: "lan", label: "Branch Matrix", path: "/bank/branches" },
+        { icon: "shopping_bag", label: "Active Products", path: "/bank/products" },
+        { icon: "settings", label: "Settings & Profile", path: "/bank/settings" },
     ];
 
     if (pathname === '/bank/login') {
