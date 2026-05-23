@@ -146,7 +146,7 @@ function StaffLoginContent() {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     disabled={step === "otp" || loading}
-                                    placeholder="staff@vidhyaloans.com"
+                                    placeholder="staff@vidyaloans.com"
                                     className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-100 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#1d4ed8]/5 focus:bg-white transition-all disabled:opacity-60 disabled:cursor-not-allowed font-medium"
                                     required
                                 />

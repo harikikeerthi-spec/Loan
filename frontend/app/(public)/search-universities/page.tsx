@@ -122,7 +122,7 @@ export default function SearchUniversitiesPage() {
               <h2 className="text-2xl font-black text-gray-900 tracking-tight">
                 {loading ? 'Finding Best Matches...' : `Found ${results.length} Institutions`}
               </h2>
-              <p className="text-sm text-gray-400 font-bold uppercase tracking-widest mt-1">Verified by GradRight & VidhyaLoan</p>
+              <p className="text-sm text-gray-400 font-bold uppercase tracking-widest mt-1">Verified by GradRight & VidyaLoan</p>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-gray-500 mr-2">Sort by:</span>
@@ -164,7 +164,7 @@ export default function SearchUniversitiesPage() {
           </div>
         )}
 
-        {/* Features / Why VidhyaLoan? */}
+        {/* Features / Why VidyaLoan? */}
         {!results.length && (
           <div className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8">
             {[

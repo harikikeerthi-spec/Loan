@@ -54,15 +54,15 @@ export default function Navbar() {
                 <div className="flex items-center gap-8 lg:gap-12">
                     <Link href="/" className="flex items-center gap-2 group cursor-pointer relative z-10">
                         <Image
-                            src="/images/vidhyaloans-logo-transparent.png"
-                            alt="VidhyaLoans Logo"
+                            src="/images/vidyaloans-logo-transparent.png"
+                            alt="VidyaLoans Logo"
                             width={40}
                             height={40}
                             className="w-10 h-10 object-contain drop-shadow-sm"
                             priority
                         />
                         <span className="font-bold text-2xl tracking-tight font-display transition-colors duration-500 text-[#1a1626]">
-                            VidhyaLoans
+                            VidyaLoans
                         </span>
                     </Link>
 

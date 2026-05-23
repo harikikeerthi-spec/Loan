@@ -215,7 +215,7 @@ export class DigilockerController {
         <div id="consent-view">
             <div style="text-align:center; margin-bottom: 20px;">
                 <p style="font-size: 13px; color: #666;">You are providing consent to share your data with</p>
-                <h2 style="font-size: 18px; color: #1a3a6b;">VidhyaLoan</h2>
+                <h2 style="font-size: 18px; color: #1a3a6b;">VidyaLoan</h2>
             </div>
             <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin-bottom: 20px; font-size: 13px; color: #444;">
                 <p style="margin-bottom: 10px;"><b>Data requested:</b></p>

@@ -8,8 +8,8 @@ import ReferralTracker from "@/components/ReferralTracker";
 
 export const metadata: Metadata = {
   title: {
-    default: "Vidhya Loans - Fund Your Dream Education Abroad",
-    template: "%s | Vidhya Loans",
+    default: "Vidya Loans - Fund Your Dream Education Abroad",
+    template: "%s | Vidya Loans",
   },
   description:
     "Compare education loans from our curated network of top lending partners. Get the best rates, quick approvals, and expert guidance — all in one place.",
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     "overseas education",
   ],
   openGraph: {
-    title: "Vidhya Loans - Fund Your Dream Education Abroad",
+    title: "Vidya Loans - Fund Your Dream Education Abroad",
     description:
       "Compare education loans from our curated network of top lending partners. Get the best rates, quick approvals, and expert guidance.",
     type: "website",

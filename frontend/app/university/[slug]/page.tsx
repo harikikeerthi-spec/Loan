@@ -16,8 +16,8 @@ export async function generateMetadata({ params }: Props) {
     const u = universities[slug];
     if (!u) return {};
     return {
-        title: `${u.name} – Rankings & Education Loan | VidhyaLoan`,
-        description: `Explore ${u.shortName}'s rankings, programs, and apply for a VidhyaLoan education loan today.`,
+        title: `${u.name} – Rankings & Education Loan | VidyaLoan`,
+        description: `Explore ${u.shortName}'s rankings, programs, and apply for a VidyaLoan education loan today.`,
     };
 }
 

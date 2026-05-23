@@ -283,14 +283,14 @@ export class UsersController {
             try {
                 await this.emailService.sendMail(
                     newUser.email,
-                    `Welcome to VidhyaLoan - Your ${body.role} Account`,
+                    `Welcome to VidyaLoan - Your ${body.role} Account`,
                     `<div style="font-family: sans-serif; padding: 20px;">
                         <h2>Welcome to the Matrix, ${body.firstName}!</h2>
                         <p>Your account as an <strong>${body.role}</strong> has been created by the administrator.</p>
                         <p>You can now log in using your email: <strong>${body.email}</strong></p>
                         <p>Proceed to the dashboard to complete your profile.</p>
                     </div>`,
-                    `Welcome to VidhyaLoan! Your ${body.role} account has been created.`
+                    `Welcome to VidyaLoan! Your ${body.role} account has been created.`
                 );
             } catch (emailErr) {
                 console.warn('Email sending failed (non-blocking):', emailErr?.message);

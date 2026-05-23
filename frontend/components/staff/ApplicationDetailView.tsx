@@ -405,7 +405,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const appUpdatedAt = application.updatedAt || application.updated_at || appCreatedAt;
 
   // Find the index of the last completed stage
-  const completedThresholds = [10, 25, 40, 60, 75, 90, 95, 100];
+  const completedThresholds = [10, 25, 40, 50, 75, 90, 95, 100];
   const lastCompletedIdx = completedThresholds.reduce((acc, threshold, idx) => progress >= threshold ? idx : acc, -1);
 
   const getStepStatus = (completed: boolean, active?: boolean) => {
@@ -413,24 +413,85 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     return completed ? "COMPLETED" : "PENDING";
   };
 
-  // All completed steps show a timestamp; the most recent one uses updatedAt, others use createdAt as baseline
+  // All completed steps show a timestamp; we look up status history or use fallbacks
   const getStageTimestamp = (stageIdx: number, completed: boolean, active?: boolean): string | undefined => {
     if (!completed && !active) return undefined;
-    // First step (APPLICATION CREATED) should use the user's registration time (the time in the user directory registered column)
-    if (stageIdx === 0) {
-      return application.student?.registeredAtIndia || application.registeredAtIndia || application.student?.createdAt || application.student?.created_at || application.user?.createdAt || application.user?.created_at || appCreatedAt;
+    
+    // Attempt to search application.statusHistory first
+    const history = application.statusHistory || [];
+    if (history.length > 0) {
+      // Helper to find the earliest createdAt timestamp for any matching status
+      const findHistoryTime = (statuses: string[]) => {
+        const matches = history
+          .filter((h: any) => statuses.includes(String(h.toStatus || h.to_status || "").toLowerCase()))
+          .sort((a: any, b: any) => {
+            const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
+            const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
+            return timeA - timeB;
+          });
+        if (matches.length > 0) {
+          return matches[0].createdAt || matches[0].created_at;
+        }
+        return undefined;
+      };
+
+      let statusHistoryTime: string | undefined = undefined;
+      switch (stageIdx) {
+        case 0:
+          statusHistoryTime = findHistoryTime(['pending']);
+          break;
+        case 1:
+          statusHistoryTime = findHistoryTime(['docs_received', 'docs_uploaded']);
+          break;
+        case 2:
+          statusHistoryTime = findHistoryTime(['staff_verified']);
+          break;
+        case 3:
+          statusHistoryTime = findHistoryTime(['submitted_to_bank', 'file_logged']);
+          break;
+        case 4:
+          statusHistoryTime = findHistoryTime(['under_bank_review', 'query_raised']);
+          break;
+        case 5:
+          statusHistoryTime = findHistoryTime(['approved', 'sanctioned', 'conditional_sanction', 'counter_offer']);
+          break;
+        case 6:
+          statusHistoryTime = findHistoryTime(['sanctioned', 'approved']);
+          break;
+        case 7:
+          statusHistoryTime = findHistoryTime(['disbursement_confirmed', 'closed']);
+          break;
+      }
+      
+      if (statusHistoryTime) {
+        return statusHistoryTime;
+      }
     }
-    // Active or last completed step uses updatedAt
-    if (active || stageIdx === lastCompletedIdx) return appUpdatedAt || appCreatedAt;
-    // intermediate completed steps use baseline
-    return appCreatedAt;
+
+    // Fallbacks if history lookup doesn't yield a timestamp:
+    // Every completed stage should show a date and time.
+    const createdDate = application.student?.registeredAtIndia || application.registeredAtIndia || application.student?.createdAt || application.student?.created_at || application.user?.createdAt || application.user?.created_at || application.createdAt || application.created_at;
+    const submittedDate = application.submittedAt || application.submitted_at || createdDate;
+    const verifiedDate = application.updatedAt || application.updated_at || submittedDate;
+
+    switch (stageIdx) {
+      case 0:
+        return createdDate;
+      case 1:
+        return submittedDate;
+      case 2:
+        return verifiedDate;
+      default:
+        // For other completed steps, use the application's updatedAt time
+        return application.updatedAt || application.updated_at || appCreatedAt;
+    }
   };
 
   const stages = [
     { label: "APPLICATION CREATED", icon: "bolt", date: getStepStatus(progress >= 10), completed: progress >= 10, timestamp: getStageTimestamp(0, progress >= 10) },
     { label: "APPLICATION SUBMITTED", icon: "send", date: getStepStatus(progress >= 25), completed: progress >= 25, timestamp: getStageTimestamp(1, progress >= 25) },
     { label: "DOCUMENTS VERIFICATION", icon: "verified", date: getStepStatus(progress >= 40), completed: progress >= 40, timestamp: getStageTimestamp(2, progress >= 40) },
-    { label: "SUBMIT TO BANK", icon: "account_balance", date: getStepStatus(progress >= 60), completed: progress >= 60, timestamp: getStageTimestamp(3, progress >= 60) },
+    { label: "SUBMIT TO BANK", icon: "account_balance", date: getStepStatus(progress >= 50), completed: progress >= 50, timestamp: getStageTimestamp(3, progress >= 50) },
     { label: "CREDIT CHECK", icon: "credit_score", date: getStepStatus(progress >= 75), completed: progress >= 75, timestamp: getStageTimestamp(4, progress >= 75) },
     { label: getBankStepLabel(), icon: "rate_review", date: getStepStatus(progress >= 90, progress >= 75 && progress < 90), completed: progress >= 90, active: progress >= 75 && progress < 90, timestamp: getStageTimestamp(5, progress >= 90, progress >= 75 && progress < 90) },
     { label: "SANCTION", icon: "assignment_turned_in", date: getStepStatus(progress >= 95, progress >= 90 && progress < 95), completed: progress >= 95, active: progress >= 90 && progress < 95, timestamp: getStageTimestamp(6, progress >= 95, progress >= 90 && progress < 95) },

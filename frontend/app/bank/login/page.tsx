@@ -293,8 +293,8 @@ function BankLoginContent() {
                                 className="flex items-center gap-2.5 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl border border-purple-200/50 shadow-md shadow-purple-500/5"
                             >
                                 <img
-                                    src="/vidhyaloan_logo.png"
-                                    alt="Vidhyaloan Logo"
+                                    src="/vidyaloan_logo.png"
+                                    alt="Vidyaloan Logo"
                                     className="w-7 h-7 object-contain"
                                 />
                                 <span className="text-gray-300 text-base font-light">×</span>
@@ -309,12 +309,12 @@ function BankLoginContent() {
                         ) : (
                             <Link href="/" className="inline-flex items-center gap-2 group">
                                 <img
-                                    src="/vidhyaloan_logo.png"
-                                    alt="Vidhyaloan Logo"
+                                    src="/vidyaloan_logo.png"
+                                    alt="Vidyaloan Logo"
                                     className="w-10 h-10 object-contain group-hover:scale-105 transition-transform"
                                 />
                                 <span className="font-bold text-2xl font-display text-gray-900 tracking-tight">
-                                    Vidhyaloan Staff
+                                    Vidyaloan Staff
                                 </span>
                             </Link>
                         )}

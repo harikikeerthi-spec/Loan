@@ -160,7 +160,7 @@ export default function ConnectedPage() {
                             <span className="text-xl font-black tracking-tighter text-white font-display leading-none">
                                 connect<span className="text-[#F7C600]">ED</span>
                             </span>
-                            <span className="text-[8px] font-black uppercase tracking-[0.3em] text-[#F7C600] mt-1 group-hover/logo:text-white transition-colors">Back to VidhyaLoans</span>
+                            <span className="text-[8px] font-black uppercase tracking-[0.3em] text-[#F7C600] mt-1 group-hover/logo:text-white transition-colors">Back to VidyaLoans</span>
                         </div>
                     </Link>
 
@@ -421,7 +421,7 @@ export default function ConnectedPage() {
                                 <span className="text-lg font-black tracking-tighter text-black font-display uppercase leading-none">
                                     connect<span className="text-gray-300">ED</span>
                                 </span>
-                                <span className="text-[8px] font-black uppercase tracking-[0.2em] text-[#F7C600]">Return to VidhyaLoans</span>
+                                <span className="text-[8px] font-black uppercase tracking-[0.2em] text-[#F7C600]">Return to VidyaLoans</span>
                             </div>
                         </Link>
 
@@ -435,7 +435,7 @@ export default function ConnectedPage() {
 
                         <div className="text-center space-y-4">
                             <p className="text-black/20 text-[10px] uppercase font-black tracking-[0.3em]">
-                                A Subsidiary of VidhyaLoans Educational Services Pvt Ltd
+                                A Subsidiary of VidyaLoans Educational Services Pvt Ltd
                             </p>
                             <p className="text-black/50 text-[9px] font-bold uppercase tracking-[0.3em]">
                                 &copy; {new Date().getFullYear()} All Rights Reserved. Stay Hungry.

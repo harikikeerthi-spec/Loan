@@ -249,11 +249,11 @@ function LoginContent() {
                 <div className="text-center mb-8">
                     <Link href="/" className="inline-flex items-center gap-2 mb-6 group">
                         <img 
-                            src="/vidhyaloan_logo.png" 
-                            alt="Vidhyaloan Logo" 
+                            src="/vidyaloan_logo.png" 
+                            alt="Vidyaloan Logo" 
                             className="w-10 h-10 object-contain group-hover:scale-105 transition-transform" 
                         />
-                        <span className="font-bold text-2xl font-display text-gray-900 tracking-tight">Vidhyaloan</span>
+                        <span className="font-bold text-2xl font-display text-gray-900 tracking-tight">Vidyaloan</span>
                     </Link>
                     <h1 className="text-2xl font-bold text-gray-900 font-display mb-1.5 tracking-tight">
                         {step === "email" ? "Welcome Back" : "Check Your Email"}

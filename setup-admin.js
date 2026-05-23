@@ -59,7 +59,7 @@ function printHeader() {
     console.clear();
     log('\n╔════════════════════════════════════════╗', 'bright');
     log('║      Admin Account Setup Tool         ║', 'bright');
-    log('║      VidhyaLoan Administration        ║', 'bright');
+    log('║      VidyaLoan Administration        ║', 'bright');
     log('╚════════════════════════════════════════╝\n', 'bright');
 }
 

@@ -34,8 +34,8 @@ export class OpenRouterService {
                 headers: {
                     'Authorization': `Bearer ${this.apiKey}`,
                     'Content-Type': 'application/json',
-                    'HTTP-Referer': 'https://vidhyaloan.com', // Optional, for OpenRouter rankings
-                    'X-Title': 'VidhyaLoan', // Optional, for OpenRouter rankings
+                    'HTTP-Referer': 'https://vidyaloan.com', // Optional, for OpenRouter rankings
+                    'X-Title': 'VidyaLoan', // Optional, for OpenRouter rankings
                 },
                 body: JSON.stringify(requestBody),
             });
@@ -79,8 +79,8 @@ export class OpenRouterService {
                 headers: {
                     'Authorization': `Bearer ${this.apiKey}`,
                     'Content-Type': 'application/json',
-                    'HTTP-Referer': 'https://vidhyaloan.com',
-                    'X-Title': 'VidhyaLoan',
+                    'HTTP-Referer': 'https://vidyaloan.com',
+                    'X-Title': 'VidyaLoan',
                 },
                 body: JSON.stringify({
                     model: model,
@@ -234,8 +234,8 @@ export class OpenRouterService {
                     headers: {
                         'Authorization': `Bearer ${this.apiKey}`,
                         'Content-Type': 'application/json',
-                        'HTTP-Referer': 'https://vidhyaloan.com',
-                        'X-Title': 'VidhyaLoan',
+                        'HTTP-Referer': 'https://vidyaloan.com',
+                        'X-Title': 'VidyaLoan',
                     },
                     body: JSON.stringify(requestBody),
                 });

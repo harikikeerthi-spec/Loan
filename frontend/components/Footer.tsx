@@ -16,13 +16,13 @@ export default function Footer() {
                     <div className="lg:col-span-3">
                         <Link href="/" className="flex items-center gap-2 mb-6 group">
                             <Image
-                                src="/images/vidhyaloans-logo-transparent.png"
-                                alt="VidhyaLoans Logo"
+                                src="/images/vidyaloans-logo-transparent.png"
+                                alt="VidyaLoans Logo"
                                 width={40}
                                 height={40}
                                 className="w-10 h-10 object-contain"
                             />
-                            <span className="text-xl font-bold font-display tracking-tight text-white">VidhyaLoans</span>
+                            <span className="text-xl font-bold font-display tracking-tight text-white">VidyaLoans</span>
                         </Link>
                         <p className="text-gray-400 text-[13px] leading-relaxed mb-8 max-w-xs font-normal">
                             Empowering students with transparent, flexible, and accessible education financing solutions worldwide.
@@ -38,9 +38,9 @@ export default function Footer() {
 
                         {/* Contact */}
                         <div className="space-y-2.5">
-                            <a href="mailto:support@vidhyaloan.in" className="flex items-center gap-2.5 text-gray-400 hover:text-white text-[13px] transition-colors group">
+                            <a href="mailto:support@vidyaloan.in" className="flex items-center gap-2.5 text-gray-400 hover:text-white text-[13px] transition-colors group">
                                 <span className="material-symbols-outlined text-base text-gray-500 group-hover:text-[#6605c7] transition-colors">mail</span>
-                                support@Vidhyaloan.in
+                                support@Vidyaloan.in
                             </a>
                             <a href="tel:+919240209000" className="flex items-center gap-2.5 text-gray-400 hover:text-white text-[13px] transition-colors group">
                                 <span className="material-symbols-outlined text-base text-gray-500 group-hover:text-[#6605c7] transition-colors">call</span>
@@ -49,9 +49,9 @@ export default function Footer() {
                         </div>
                     </div>
 
-                    {/* About VidhyaLoan */}
+                    {/* About VidyaLoan */}
                     <div className="lg:col-span-2">
-                        <h4 className="text-[11px] font-bold uppercase tracking-[0.1em] text-white mb-6">About VidhyaLoan</h4>
+                        <h4 className="text-[11px] font-bold uppercase tracking-[0.1em] text-white mb-6">About VidyaLoan</h4>
                         <ul className="space-y-3 text-[13px]">
                             <FooterLink href="/about-us" label="Our Story" />
                             <FooterLink href="/how-it-works" label="How It Works" />
@@ -113,7 +113,7 @@ export default function Footer() {
                 <div className="pt-8 border-t border-white/[0.06]">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                         <p className="text-[11px] text-gray-500 order-3 md:order-1 font-normal opacity-80">
-                            &copy; 2026 VidhyaLoan Inc. All rights reserved.
+                            &copy; 2026 VidyaLoan Inc. All rights reserved.
                         </p>
 
                         {/* Made in India */}

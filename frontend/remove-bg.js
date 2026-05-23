@@ -2,7 +2,7 @@ const { Jimp } = require('jimp');
 const path = require('path');
 
 async function processLogo() {
-    const imagePath = path.join(__dirname, 'public/images/vidhyaloans-logo.jpeg');
+    const imagePath = path.join(__dirname, 'public/images/vidyaloans-logo.jpeg');
 
     // Create normal transparent logo (for Navbar)
     console.log('Processing normal logo...');
@@ -23,7 +23,7 @@ async function processLogo() {
         }
     });
 
-    const outPath1 = path.join(__dirname, 'public/images/vidhyaloans-logo-transparent.png');
+    const outPath1 = path.join(__dirname, 'public/images/vidyaloans-logo-transparent.png');
     await img1.write(outPath1);
     console.log('Saved:', outPath1);
 
@@ -48,7 +48,7 @@ async function processLogo() {
         }
     });
 
-    const outPath2 = path.join(__dirname, 'public/images/vidhyaloans-logo-white.png');
+    const outPath2 = path.join(__dirname, 'public/images/vidyaloans-logo-white.png');
     await img2.write(outPath2);
     console.log('Saved:', outPath2);
 }

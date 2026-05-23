@@ -5,13 +5,13 @@ async function main() {
     console.log('Seeding more blogs...');
 
     let author = await prisma.user.findFirst({
-        where: { email: 'expert@vidhyaloans.com' }
+        where: { email: 'expert@vidyaloans.com' }
     });
 
     if (!author) {
         author = await prisma.user.create({
             data: {
-                email: 'expert@vidhyaloans.com',
+                email: 'expert@vidyaloans.com',
                 firstName: 'Vidhya',
                 lastName: 'Expert',
                 mobile: '+919876543210',

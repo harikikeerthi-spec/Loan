@@ -243,7 +243,7 @@ export class BankDashboardController {
     @Param('queryId') queryId: string,
     @Body() body: any
   ) {
-    return this.dashboardService.resolveQuery(queryId, body, req.user);
+    return this.dashboardService.resolveQuery(queryId, req.user);
   }
 
   // ==================== CONSENT & REFERRAL ====================

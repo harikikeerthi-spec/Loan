@@ -1,4 +1,4 @@
-// Global TypeScript types for the Vidhya Loans application
+// Global TypeScript types for the Vidya Loans application
 
 export interface User {
     id: string;

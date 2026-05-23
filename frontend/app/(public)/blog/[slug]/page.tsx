@@ -84,7 +84,7 @@ export default function BlogPostPage() {
                     </div>
                     <div>
                         <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-400">Written by</p>
-                        <p className="text-gray-900 font-black text-[13px]">{blog.authorName || blog.author || "VidhyaLoan Team"}</p>
+                        <p className="text-gray-900 font-black text-[13px]">{blog.authorName || blog.author || "VidyaLoan Team"}</p>
                     </div>
                     <div className="ml-auto text-right">
                         <p className="text-[9px] font-black uppercase tracking-[0.3em] text-gray-400">Published</p>

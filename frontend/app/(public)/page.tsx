@@ -9,7 +9,7 @@ import { lenders, features } from "../../data/home";
 import { fetchTopGoogleReviews } from "../../lib/googleReviews";
 
 export const metadata: Metadata = {
-    title: "Vidhya Loans - Fund Your Dream Education Abroad",
+    title: "Vidya Loans - Fund Your Dream Education Abroad",
     description:
         "Compare education loans from 50+ banks & NBFCs. Get the best rates, quick approvals, and expert guidance — all in one place.",
 };
@@ -948,7 +948,7 @@ export default async function HomePage() {
                                         </h2>
 
                                         <p className="text-white/90 text-[15px] mb-8 max-w-lg leading-relaxed font-medium">
-                                            Know someone planning to study abroad? Refer them to VidhyaLoan and earn rewards for every successful loan disbursement. Plus, unlock ₹10,000 bonus when you hit 5 referrals!
+                                            Know someone planning to study abroad? Refer them to VidyaLoan and earn rewards for every successful loan disbursement. Plus, unlock ₹10,000 bonus when you hit 5 referrals!
                                         </p>
 
                                         <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">

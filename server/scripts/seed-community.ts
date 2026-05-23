@@ -180,7 +180,7 @@ async function seedCommunityData() {
                 bank: 'HDFC Bank',
                 interestRate: '7.5%',
                 story:
-                    'My journey to securing an education loan was challenging but rewarding. VidhyaLoan\'s mentorship program connected me with an alumni who guided me to prepare all documents and negotiate better interest rates. Now pursuing my dream at Oxford!',
+                    'My journey to securing an education loan was challenging but rewarding. VidyaLoan\'s mentorship program connected me with an alumni who guided me to prepare all documents and negotiate better interest rates. Now pursuing my dream at Oxford!',
                 tips: 'Start early, prepare all documents in advance, and don\'t hesitate to negotiate rates.',
                 isApproved: true,
                 isFeatured: true,

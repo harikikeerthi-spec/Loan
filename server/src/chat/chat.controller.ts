@@ -32,7 +32,7 @@ export class ChatController {
     return {
       success: true,
       conversation,
-      whatsappUrl: `https://wa.me/${process.env.TWILIO_WHATSAPP_NUMBER || '+14155238886'}?text=Hi Vidhyaloan team, I am ${user.firstName} and I would like to connect with a mentor.`
+      whatsappUrl: `https://wa.me/${process.env.TWILIO_WHATSAPP_NUMBER || '+14155238886'}?text=Hi Vidyaloan team, I am ${user.firstName} and I would like to connect with a mentor.`
     };
   }
 

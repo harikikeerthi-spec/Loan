@@ -16,7 +16,7 @@ export class EmailService {
     const port = this.configService.get<number>('EMAIL_PORT') || 587;
     const user = this.configService.get<string>('EMAIL_USER');
     const pass = this.configService.get<string>('EMAIL_PASS');
-    const from = this.configService.get<string>('EMAIL_FROM') || `"VidhyaLoan" <${user}>`;
+    const from = this.configService.get<string>('EMAIL_FROM') || `"VidyaLoan" <${user}>`;
 
     this.transporter = nodemailer.createTransport({
       host,
@@ -43,7 +43,7 @@ export class EmailService {
       const htmlContent = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(135deg, #6605c7 0%, #5504a6 100%); padding: 40px; border-radius: 16px; color: white; text-align: center; margin-bottom: 30px;">
-            <h1 style="margin: 0; font-size: 28px; font-weight: bold;">VidhyaLoan</h1>
+            <h1 style="margin: 0; font-size: 28px; font-weight: bold;">VidyaLoan</h1>
             <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">New Message in Your Application</p>
           </div>
 
@@ -85,10 +85,10 @@ export class EmailService {
 
           <div style="border-top: 1px solid #e0e0e0; padding-top: 20px; text-align: center; color: #999; font-size: 12px;">
             <p style="margin: 0 0 10px 0;">
-              You received this email because you have an active loan application with VidhyaLoan.
+              You received this email because you have an active loan application with VidyaLoan.
             </p>
             <p style="margin: 0;">
-              © ${new Date().getFullYear()} VidhyaLoan. All rights reserved.
+              © ${new Date().getFullYear()} VidyaLoan. All rights reserved.
             </p>
           </div>
         </div>
@@ -124,7 +124,7 @@ export class EmailService {
       const htmlContent = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(135deg, #6605c7 0%, #5504a6 100%); padding: 40px; border-radius: 16px; color: white; text-align: center; margin-bottom: 30px;">
-            <h1 style="margin: 0; font-size: 28px; font-weight: bold;">VidhyaLoan</h1>
+            <h1 style="margin: 0; font-size: 28px; font-weight: bold;">VidyaLoan</h1>
             <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">Document Shared with You</p>
           </div>
 
@@ -160,7 +160,7 @@ export class EmailService {
           </div>
 
           <div style="border-top: 1px solid #e0e0e0; padding-top: 20px; text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
-            <p style="margin: 0;">© ${new Date().getFullYear()} VidhyaLoan. All rights reserved.</p>
+            <p style="margin: 0;">© ${new Date().getFullYear()} VidyaLoan. All rights reserved.</p>
           </div>
         </div>
       `;

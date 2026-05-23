@@ -3,10 +3,10 @@
 import React, { useState } from "react";
 
 /**
- * VidhyaLoan Admin Features Panel
+ * VidyaLoan Admin Features Panel
  * Includes features specific to education loan platform
  */
-const VidhyaLoanAdminFeatures = () => {
+const VidyaLoanAdminFeatures = () => {
     const [activeFeature, setActiveFeature] = useState<"batch_process" | "eligibility" | "portfolio" | "mentor_mgmt" | "compliance">("batch_process");
     const [selectedAppliances, setSelectedAppliances] = useState<string[]>([]);
 
@@ -110,7 +110,7 @@ const VidhyaLoanAdminFeatures = () => {
                             <span className="material-symbols-outlined text-green-600">verified_user</span>
                             Eligibility Assessment
                         </h3>
-                        <p className="text-sm text-slate-600">Verify education loan eligibility based on VidhyaLoan criteria</p>
+                        <p className="text-sm text-slate-600">Verify education loan eligibility based on VidyaLoan criteria</p>
                     </div>
 
                     <div className="space-y-3">
@@ -156,7 +156,7 @@ const VidhyaLoanAdminFeatures = () => {
                     </div>
 
                     <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                        <p className="text-sm font-bold text-green-900">✓ Applicant is ELIGIBLE for VidhyaLoan education loan</p>
+                        <p className="text-sm font-bold text-green-900">✓ Applicant is ELIGIBLE for VidyaLoan education loan</p>
                         <p className="text-xs text-green-700 mt-1">Recommended loan amount: ₹25,00,000 | Maximum tenure: 15 years</p>
                     </div>
                 </div>
@@ -353,4 +353,4 @@ const VidhyaLoanAdminFeatures = () => {
     );
 };
 
-export default VidhyaLoanAdminFeatures;
+export default VidyaLoanAdminFeatures;

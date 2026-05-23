@@ -22,7 +22,7 @@ export default function WhatsAppWidget() {
 
     const openWhatsApp = () => {
         const phoneNumber = process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER || '+14155238886';
-        const message = encodeURIComponent("Hi VidhyaLoan team! I'm interested in an education loan and would like to speak with a mentor.");
+        const message = encodeURIComponent("Hi VidyaLoan team! I'm interested in an education loan and would like to speak with a mentor.");
         window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
     };
 

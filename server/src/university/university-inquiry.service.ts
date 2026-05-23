@@ -66,7 +66,7 @@ export class UniversityInquiryService {
     const userHtml = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
         <div style="background: linear-gradient(135deg, #6605c7 0%, #8b5cf6 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 24px;">
-          <h1 style="color: white; margin: 0; font-size: 24px;">Vidhya Loan</h1>
+          <h1 style="color: white; margin: 0; font-size: 24px;">Vidya Loan</h1>
         </div>
         <div style="padding: 0 10px;">
           <h2 style="color: #111827; margin-bottom: 16px;">We've received your request!</h2>
@@ -96,7 +96,7 @@ export class UniversityInquiryService {
 
     try {
       await this.emailService.sendMail(data.email, `Inquiry Received: ${data.universityName}`, userHtml);
-      await this.emailService.sendMail(process.env.ADMIN_EMAIL || 'admin@vidhyaloan.com', `NEW LEAD: ${data.name} - ${typeLabel}`, adminHtml);
+      await this.emailService.sendMail(process.env.ADMIN_EMAIL || 'admin@vidyaloan.com', `NEW LEAD: ${data.name} - ${typeLabel}`, adminHtml);
     } catch (e) {
       console.error('Error sending lead emails', e);
     }

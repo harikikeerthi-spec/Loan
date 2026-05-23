@@ -2734,7 +2734,7 @@ export default function StaffDashboardPage() {
                 {/* Logo Area */}
                 <div className="flex flex-col items-center gap-1.5 px-2 mb-6 mt-2 flex-shrink-0">
                     <img
-                        src="/images/vidhyaloans-logo-transparent.png"
+                        src="/images/vidyaloans-logo-transparent.png"
                         alt="VidyaLoans"
                         className="w-10 h-10 object-contain drop-shadow-md"
                     />

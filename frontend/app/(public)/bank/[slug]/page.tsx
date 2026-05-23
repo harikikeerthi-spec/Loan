@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: Props) {
     const bank = banks[slug];
     if (!bank) return { title: "Bank Not Found" };
     return {
-        title: `${bank.name} Education Loan - VidhyaLoan`,
+        title: `${bank.name} Education Loan - VidyaLoan`,
         description: bank.description,
     };
 }
@@ -41,8 +41,8 @@ export default async function BankPage({ params }: Props) {
         { q: `What is the maximum loan amount from ${bank.name}?`, a: `${bank.name} offers education loans up to ${bank.maxLoan} for study abroad programs. The exact amount depends on your course, university, and profile.` },
         { q: `What is the interest rate for ${bank.name} education loan?`, a: `Interest rates start from ${bank.interestRate} p.a. The final rate depends on your profile, collateral, and loan amount.` },
         { q: `Is collateral required for ${bank.name} education loan?`, a: `Both secured and unsecured loan options are available. Unsecured loans are available for select universities and courses.` },
-        { q: `How long does ${bank.name} take to process education loans?`, a: `Through VidhyaLoan, the typical processing time is ${bank.approvalTime}. Direct applications may take longer.` },
-        { q: `Can I get pre-visa disbursement from ${bank.name}?`, a: `Yes, ${bank.name} offers pre-visa disbursement for eligible applicants through VidhyaLoan's facilitation.` }
+        { q: `How long does ${bank.name} take to process education loans?`, a: `Through VidyaLoan, the typical processing time is ${bank.approvalTime}. Direct applications may take longer.` },
+        { q: `Can I get pre-visa disbursement from ${bank.name}?`, a: `Yes, ${bank.name} offers pre-visa disbursement for eligible applicants through VidyaLoan's facilitation.` }
     ];
 
     return (
@@ -285,12 +285,12 @@ export default async function BankPage({ params }: Props) {
                     </div>
                 </section>
 
-                {/* The VidhyaLoan Effect - Comparison Table */}
+                {/* The VidyaLoan Effect - Comparison Table */}
                 <section className="mb-20">
                     <div className="text-center mb-12">
                         <span className="text-[#6605c7] font-bold text-xs tracking-[0.2em] uppercase mb-3 block">Why Apply Through Us</span>
-                        <h2 className="text-4xl font-bold font-display text-gray-900">The VidhyaLoan Effect</h2>
-                        <p className="text-gray-500 mt-4 max-w-2xl mx-auto">See why thousands of students choose to apply through VidhyaLoan</p>
+                        <h2 className="text-4xl font-bold font-display text-gray-900">The VidyaLoan Effect</h2>
+                        <p className="text-gray-500 mt-4 max-w-2xl mx-auto">See why thousands of students choose to apply through VidyaLoan</p>
                     </div>
                     <div className="bg-white/80 backdrop-blur-xl border border-gray-100 rounded-3xl overflow-hidden shadow-lg">
                         <table className="w-full">
@@ -300,7 +300,7 @@ export default async function BankPage({ params }: Props) {
                                     <th className="text-center p-6">
                                         <div className="inline-flex items-center gap-2 px-4 py-2 bg-[#6605c7] text-white rounded-full text-sm font-bold">
                                             <span className="material-symbols-outlined text-lg">verified</span>
-                                            With VidhyaLoan
+                                            With VidyaLoan
                                         </div>
                                     </th>
                                     <th className="text-center p-6 text-gray-500 font-medium text-sm">Direct Application</th>
@@ -434,7 +434,7 @@ export default async function BankPage({ params }: Props) {
                         <div className="relative z-10">
                             <h2 className="text-4xl md:text-5xl font-bold font-display mb-6">Ready to Study Abroad?</h2>
                             <p className="text-xl opacity-90 mb-10 max-w-2xl mx-auto leading-relaxed">
-                                Start your journey today. Apply through VidhyaLoan for faster processing and best rates with {bank.name}.
+                                Start your journey today. Apply through VidyaLoan for faster processing and best rates with {bank.name}.
                             </p>
                             <div className="flex flex-wrap gap-6 justify-center mb-10">
                                 <Link href="/apply-loan" className="px-12 py-5 bg-white text-gray-900 rounded-xl font-bold text-base hover:shadow-2xl hover:scale-105 active:scale-95 transition-all uppercase tracking-wider">

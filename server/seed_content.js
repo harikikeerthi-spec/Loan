@@ -7,13 +7,13 @@ async function main() {
     // 1. Get or create a sample user to act as the author
     // Let's create an "Expert Advisor" user
     let author = await prisma.user.findFirst({
-        where: { email: 'expert@vidhyaloans.com' }
+        where: { email: 'expert@vidyaloans.com' }
     });
 
     if (!author) {
         author = await prisma.user.create({
             data: {
-                email: 'expert@vidhyaloans.com',
+                email: 'expert@vidyaloans.com',
                 firstName: 'Vidhya',
                 lastName: 'Expert',
                 mobile: '+919876543210',

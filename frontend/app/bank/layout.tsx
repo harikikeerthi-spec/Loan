@@ -200,7 +200,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                 className="flex flex-col min-w-0"
                             >
                                 <span className="text-lg font-black text-gray-900 leading-none italic tracking-tight">
-                                    Vidhya<span style={{ color: '#6605c7' }}>Bank</span>
+                                    Vidya<span style={{ color: '#6605c7' }}>Bank</span>
                                 </span>
                                 <span className="text-[8px] font-black uppercase tracking-[0.3em] mt-1 opacity-50 italic"
                                     style={{ color: '#6605c7' }}>

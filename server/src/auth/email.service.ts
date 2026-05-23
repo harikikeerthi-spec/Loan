@@ -21,14 +21,14 @@ export class EmailService {
   async sendOtp(email: string, otp: string) {
     const timestamp = new Date().toLocaleTimeString();
     const mailOptions = {
-      from: process.env.EMAIL_FROM || '"VidhyaLoan" <noreply@vidhyaloan.com>',
+      from: process.env.EMAIL_FROM || '"VidyaLoan" <noreply@vidyaloan.com>',
       to: email,
-      subject: `Your VidhyaLoan OTP Verification Code [${timestamp}]`,
+      subject: `Your VidyaLoan OTP Verification Code [${timestamp}]`,
       text: `Your OTP is: ${otp}. This code expires in 5 minutes.`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #6605c7 0%, #8b5cf6 100%); padding: 30px; border-radius: 10px; text-align: center;">
-            <h1 style="color: white; margin: 0;">VidhyaLoan</h1>
+            <h1 style="color: white; margin: 0;">VidyaLoan</h1>
           </div>
           <div style="background: #f7f5f8; padding: 30px; border-radius: 0 0 10px 10px;">
             <h2 style="color: #333;">Your Verification Code</h2>
@@ -68,18 +68,18 @@ export class EmailService {
     const docListHtml = documentTypes.map(doc => `<li>${doc.replace(/_/g, ' ').toUpperCase()}</li>`).join('');
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || '"Vidhya Loan" <noreply@vidhyaloan.com>',
+      from: process.env.EMAIL_FROM || '"Vidya Loan" <noreply@vidyaloan.com>',
       to: email,
       subject: `Action Required: DigiLocker Document Consent Request [${timestamp}]`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
           <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 24px;">
-            <h1 style="color: white; margin: 0; font-size: 24px;">Vidhya Loan</h1>
+            <h1 style="color: white; margin: 0; font-size: 24px;">Vidya Loan</h1>
           </div>
           
           <div style="padding: 0 10px;">
             <h2 style="color: #111827; margin-bottom: 16px;">Document Verification Request</h2>
-            <p style="color: #4b5563; font-size: 16px; line-height: 1.5;">You have requested to sync the following documents from your DigiLocker account to Vidhya Loan:</p>
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.5;">You have requested to sync the following documents from your DigiLocker account to Vidya Loan:</p>
             
             <ul style="color: #4b5563; font-size: 14px; background: #f9fafb; padding: 20px 40px; border-radius: 8px; margin: 20px 0;">
               ${docListHtml}
@@ -119,7 +119,7 @@ export class EmailService {
 
   async sendMail(to: string, subject: string, html: string, text?: string, replyTo?: string) {
     const mailOptions = {
-      from: process.env.EMAIL_FROM || '"Vidhya Loan" <noreply@vidhyaloan.com>',
+      from: process.env.EMAIL_FROM || '"Vidya Loan" <noreply@vidyaloan.com>',
       to: to,
       replyTo: replyTo,
       subject: subject,
@@ -141,24 +141,24 @@ export class EmailService {
 
   /**
    * Send a welcome / thank-you email to a brand-new user after their first login.
-   * Introduces Vidhyaloan and guides them toward applying for a loan.
+   * Introduces Vidyaloan and guides them toward applying for a loan.
    */
   async sendWelcomeEmail(email: string, firstName?: string) {
     const name = firstName ? firstName : 'there';
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
     const mailOptions = {
-      from: process.env.EMAIL_FROM || '"Vidhyaloan" <noreply@vidhyaloan.com>',
+      from: process.env.EMAIL_FROM || '"Vidyaloan" <noreply@vidyaloan.com>',
       to: email,
-      subject: '🎉 Welcome to Vidhyaloan – Your Education Loan Journey Starts Here!',
-      text: `Hi ${name},\n\nThank you for joining Vidhyaloan! We're thrilled to have you on board.\n\nVidhyaloan helps students like you get fast and easy education loans with minimal paperwork. Here's how to get started:\n\n1. Complete your profile\n2. Upload your documents digitally via DigiLocker\n3. Choose your preferred bank\n4. Track your application in real time\n\nStart your application now: ${frontendUrl}\n\nWarm regards,\nThe Vidhyaloan Team`,
+      subject: '🎉 Welcome to Vidyaloan – Your Education Loan Journey Starts Here!',
+      text: `Hi ${name},\n\nThank you for joining Vidyaloan! We're thrilled to have you on board.\n\nVidyaloan helps students like you get fast and easy education loans with minimal paperwork. Here's how to get started:\n\n1. Complete your profile\n2. Upload your documents digitally via DigiLocker\n3. Choose your preferred bank\n4. Track your application in real time\n\nStart your application now: ${frontendUrl}\n\nWarm regards,\nThe Vidyaloan Team`,
       html: `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Welcome to Vidhyaloan</title>
+  <title>Welcome to Vidyaloan</title>
 </head>
 <body style="margin:0;padding:0;background-color:#f0f4ff;font-family:'Segoe UI',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f4ff;padding:40px 0;">
@@ -169,7 +169,7 @@ export class EmailService {
           <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg,#1a1a6e 0%,#3a3acc 60%,#6366f1 100%);border-radius:16px 16px 0 0;padding:40px 40px 32px;text-align:center;">
-              <h1 style="color:#ffffff;margin:0;font-size:30px;font-weight:800;letter-spacing:-0.5px;">Vidhyaloan</h1>
+              <h1 style="color:#ffffff;margin:0;font-size:30px;font-weight:800;letter-spacing:-0.5px;">Vidyaloan</h1>
               <p style="color:#c7d2fe;margin:6px 0 0;font-size:14px;letter-spacing:1px;">EDUCATION LOAN PLATFORM</p>
             </td>
           </tr>
@@ -179,7 +179,7 @@ export class EmailService {
             <td style="background:linear-gradient(135deg,#4338ca 0%,#6366f1 100%);padding:30px 40px;text-align:center;">
               <p style="margin:0;font-size:36px;">🎉</p>
               <h2 style="color:#ffffff;margin:12px 0 8px;font-size:24px;font-weight:700;">Welcome, ${name}!</h2>
-              <p style="color:#e0e7ff;margin:0;font-size:15px;line-height:1.6;">Thank you for joining Vidhyaloan. Your education dream just got a powerful ally!</p>
+              <p style="color:#e0e7ff;margin:0;font-size:15px;line-height:1.6;">Thank you for joining Vidyaloan. Your education dream just got a powerful ally!</p>
             </td>
           </tr>
 
@@ -188,7 +188,7 @@ export class EmailService {
             <td style="background:#ffffff;padding:40px;border-radius:0 0 16px 16px;">
 
               <!-- Thank You Message -->
-              <p style="color:#374151;font-size:16px;line-height:1.7;margin:0 0 24px;">We're genuinely excited to have you with us. Vidhyaloan was built with one mission — to make education loan applications <strong>fast, simple, and stress-free</strong> for every student in India.</p>
+              <p style="color:#374151;font-size:16px;line-height:1.7;margin:0 0 24px;">We're genuinely excited to have you with us. Vidyaloan was built with one mission — to make education loan applications <strong>fast, simple, and stress-free</strong> for every student in India.</p>
 
               <!-- Divider -->
               <hr style="border:none;border-top:1px solid #e5e7eb;margin:0 0 28px;" />
@@ -265,7 +265,7 @@ export class EmailService {
 
               <!-- Key Benefits -->
               <div style="background:#f5f3ff;border-left:4px solid #6366f1;border-radius:8px;padding:20px 24px;margin:28px 0;">
-                <h4 style="color:#1e1b4b;margin:0 0 12px;font-size:15px;font-weight:700;">✨ Why Students Love Vidhyaloan</h4>
+                <h4 style="color:#1e1b4b;margin:0 0 12px;font-size:15px;font-weight:700;">✨ Why Students Love Vidyaloan</h4>
                 <table width="100%" cellpadding="0" cellspacing="0">
                   <tr>
                     <td width="50%" style="padding:4px 0;color:#4c1d95;font-size:13px;">✅ 100% Online Application</td>
@@ -291,7 +291,7 @@ export class EmailService {
 
               <!-- Footer Note -->
               <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
-              <p style="color:#9ca3af;font-size:12px;text-align:center;line-height:1.6;margin:0;">If you have any questions, just reply to this email — we're always here to help!<br/>© ${new Date().getFullYear()} Vidhyaloan. All rights reserved.</p>
+              <p style="color:#9ca3af;font-size:12px;text-align:center;line-height:1.6;margin:0;">If you have any questions, just reply to this email — we're always here to help!<br/>© ${new Date().getFullYear()} Vidyaloan. All rights reserved.</p>
 
             </td>
           </tr>

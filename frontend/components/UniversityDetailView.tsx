@@ -740,7 +740,7 @@ export default function UniversityDetailView({ university: initialUni, onApply, 
                                         <div className="w-10 h-10 bg-[#6605c7] rounded-xl flex items-center justify-center text-white">
                                             <span className="material-symbols-outlined">verified</span>
                                         </div>
-                                        <div className="text-lg font-black text-gray-900">VidhyaLoans Insights</div>
+                                        <div className="text-lg font-black text-gray-900">VidyaLoans Insights</div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="p-4 bg-purple-50 rounded-2xl">
@@ -754,7 +754,7 @@ export default function UniversityDetailView({ university: initialUni, onApply, 
                                     </div>
                                 </div>
                                 <div className="bg-gray-900 p-8 rounded-[2.5rem] text-white flex flex-col justify-between">
-                                    <h3 className="text-xl font-display font-bold mb-4" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>VidhyaLoan Advantage</h3>
+                                    <h3 className="text-xl font-display font-bold mb-4" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>VidyaLoan Advantage</h3>
                                     <Link href={`/apply-loan?university=${encodeURIComponent(u.name)}&country=${encodeURIComponent(u.country)}`} className="block w-full py-5 bg-white text-gray-900 font-black rounded-2xl text-center shadow-xl hover:-translate-y-1 transition-all">Get Funding Now</Link>
                                     {u.loanInfo && (
                                         <div className="mt-6 text-sm text-gray-100">
@@ -784,7 +784,7 @@ export default function UniversityDetailView({ university: initialUni, onApply, 
                                     <p className="text-white/60 text-sm font-medium mb-10 leading-relaxed">
                                         Matched funding available for programs at {u.name}.
                                     </p>
-                                    <Link href={`/apply-loan?university=${encodeURIComponent(u.name)}&country=${encodeURIComponent(u.country)}`} className="block w-full py-4 bg-white text-[#6605c7] font-bold rounded-2xl text-center shadow-xl hover:-translate-y-1 transition-all text-sm">Apply with VidhyaLoans</Link>
+                                    <Link href={`/apply-loan?university=${encodeURIComponent(u.name)}&country=${encodeURIComponent(u.country)}`} className="block w-full py-4 bg-white text-[#6605c7] font-bold rounded-2xl text-center shadow-xl hover:-translate-y-1 transition-all text-sm">Apply with VidyaLoans</Link>
                                 </div>
                             </div>
 

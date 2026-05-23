@@ -125,8 +125,8 @@ async function testVisionApi() {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
-          'HTTP-Referer': 'https://vidhyaloan.com',
-          'X-Title': 'VidhyaLoan',
+          'HTTP-Referer': 'https://vidyaloan.com',
+          'X-Title': 'VidyaLoan',
           'Content-Length': Buffer.byteLength(JSON.stringify(requestBody))
         }
       };

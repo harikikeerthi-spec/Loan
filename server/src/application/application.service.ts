@@ -876,7 +876,7 @@ export class ApplicationService {
         icon: 'verified',
         color: 'bg-emerald-50 text-emerald-700 border-emerald-100',
         actorName: 'System',
-        actorEmail: 'system@vidhyaloan.in',
+        actorEmail: 'system@vidyaloan.in',
         createdAt: new Date().toISOString()
       });
 
@@ -981,7 +981,7 @@ export class ApplicationService {
       const emailHtml = `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #334155; background-color: #f8fafc;">
           <div style="background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%); padding: 40px; border-radius: 24px 24px 0 0; text-align: center; color: white;">
-            <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">Vidhyaloan</h1>
+            <h1 style="margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">Vidyaloan</h1>
             <p style="margin: 10px 0 0; font-size: 14px; opacity: 0.8; text-transform: uppercase; letter-spacing: 2px;">Application Details Shared</p>
           </div>
           
@@ -1028,21 +1028,21 @@ export class ApplicationService {
 
             <div style="border-top: 1px solid #e2e8f0; padding-top: 24px; margin-top: 24px;">
               <p style="font-size: 12px; color: #94a3b8; text-align: center; line-height: 1.6;">
-                This information was shared by ${adminName} from the Vidhyaloan Staff Dashboard.<br>
+                This information was shared by ${adminName} from the Vidyaloan Staff Dashboard.<br>
                 If you have any questions, please contact our support team.
               </p>
             </div>
           </div>
           
           <div style="padding: 24px; text-align: center; font-size: 11px; color: #94a3b8;">
-            © ${new Date().getFullYear()} Vidhyaloan. All rights reserved.
+            © ${new Date().getFullYear()} Vidyaloan. All rights reserved.
           </div>
         </div>
       `;
 
       await this.emailService.sendMail(
         userEmail,
-        `Application Details: ${application.applicationNumber} - Vidhyaloan`,
+        `Application Details: ${application.applicationNumber} - Vidyaloan`,
         emailHtml
       );
 

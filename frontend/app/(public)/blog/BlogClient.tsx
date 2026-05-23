@@ -147,7 +147,7 @@ export default function BlogClient() {
                                             </div>
                                             <div>
                                                 <p className="font-bold uppercase text-[9px] tracking-widest text-gray-400">Written by</p>
-                                                <p className="text-gray-700 font-bold text-[12px]">{filtered[0].authorName || filtered[0].author || "VidhyaLoan Team"}</p>
+                                                <p className="text-gray-700 font-bold text-[12px]">{filtered[0].authorName || filtered[0].author || "VidyaLoan Team"}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -184,7 +184,7 @@ export default function BlogClient() {
                                                 <div className="w-7 h-7 bg-gray-50 rounded-xl flex items-center justify-center font-bold text-[10px] text-gray-500 border border-gray-100">
                                                     {(blog.authorName || blog.author || "V")[0] || "V"}
                                                 </div>
-                                                <span className="text-[11px] font-bold text-gray-600">{blog.authorName || blog.author || "VidhyaLoan"}</span>
+                                                <span className="text-[11px] font-bold text-gray-600">{blog.authorName || blog.author || "VidyaLoan"}</span>
                                             </div>
                                             <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                                                 {new Date(blog.createdAt).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}

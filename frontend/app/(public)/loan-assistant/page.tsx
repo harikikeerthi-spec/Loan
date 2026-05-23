@@ -1,7 +1,7 @@
 import LoanAssistantFlow from "@/components/LoanAssistantFlow";
 
 export const metadata = {
-  title: "Loan Assistant - Guidance & EMI Calculator | Vidhya Loans",
+  title: "Loan Assistant - Guidance & EMI Calculator | Vidya Loans",
   description: "Get guided assistance for education loan eligibility, product recommendations, EMI calculations, and document requirements.",
 };
 

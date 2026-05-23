@@ -77,7 +77,7 @@ export default function ReferralPage() {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const referralLink = `${typeof window !== 'undefined' ? window.location.origin : 'https://vidhyaloan.com'}/signup?ref=${referralCode}`;
+    const referralLink = `${typeof window !== 'undefined' ? window.location.origin : 'https://vidyaloan.com'}/signup?ref=${referralCode}`;
 
     // Show login prompt if not authenticated
     if (!isAuthenticated && !loading) {
@@ -164,8 +164,8 @@ export default function ReferralPage() {
                                     onClick={() => {
                                         if (navigator.share) {
                                             navigator.share({
-                                                title: 'Join VidhyaLoan & Earn ₹3,000!',
-                                                text: `Use my referral code ${referralCode} to sign up on VidhyaLoan and get started with your education loan.`,
+                                                title: 'Join VidyaLoan & Earn ₹3,000!',
+                                                text: `Use my referral code ${referralCode} to sign up on VidyaLoan and get started with your education loan.`,
                                                 url: referralLink,
                                             }).catch(() => copyToClipboard(referralLink));
                                         } else {
@@ -379,7 +379,7 @@ export default function ReferralPage() {
                         />
                         <FAQItem
                             question="When do I receive my referral bonus?"
-                            answer="Your bonus is credited to your VidhyaLoan wallet within 7 working days of each milestone (sanction and disbursement)."
+                            answer="Your bonus is credited to your VidyaLoan wallet within 7 working days of each milestone (sanction and disbursement)."
                         />
                         <FAQItem
                             question="Is there a limit to how many people I can refer?"

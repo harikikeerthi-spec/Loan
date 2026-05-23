@@ -524,8 +524,8 @@ export class DocumentVerificationService {
                         headers: {
                             'Authorization': `Bearer ${apiKey}`,
                             'Content-Type': 'application/json',
-                            'HTTP-Referer': 'https://vidhyaloan.com',
-                            'X-Title': 'VidhyaLoan',
+                            'HTTP-Referer': 'https://vidyaloan.com',
+                            'X-Title': 'VidyaLoan',
                         },
                         body: JSON.stringify({
                             model,

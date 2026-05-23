@@ -3,8 +3,8 @@ import Link from "next/link";
 import Image from "next/image";
 
 export const metadata: Metadata = {
-    title: "About Us - Vidhya Loans",
-    description: "Learn about VidhyaLoan's mission to make education financing simple, transparent, and accessible for every student.",
+    title: "About Us - Vidya Loans",
+    description: "Learn about VidyaLoan's mission to make education financing simple, transparent, and accessible for every student.",
 };
 
 const team = [
@@ -32,7 +32,7 @@ export default function AboutPage() {
                         Changing How India Finances <span className="italic">Education</span>
                     </h1>
                     <p className="text-[18px] text-purple-100 max-w-2xl mx-auto">
-                        Founded in 2023, VidhyaLoan was born from the frustration of navigating complex education loan systems. We're on a mission to make quality education accessible to every ambitious student.
+                        Founded in 2023, VidyaLoan was born from the frustration of navigating complex education loan systems. We're on a mission to make quality education accessible to every ambitious student.
                     </p>
                 </div>
             </section>
@@ -129,7 +129,7 @@ export default function AboutPage() {
             {/* CTA */}
             <section className="py-16 px-6 text-center">
                 <div className="max-w-2xl mx-auto">
-                    <h2 className="text-3xl font-bold font-display mb-4">Join the VidhyaLoan Community</h2>
+                    <h2 className="text-3xl font-bold font-display mb-4">Join the VidyaLoan Community</h2>
                     <p className="text-[13px] text-gray-500 mb-8">Start your education loan journey today with 10,000+ students who've already taken the leap.</p>
                     <Link href="/apply-loan" className="inline-block px-10 py-4 bg-[#6605c7] text-white text-[11px] font-bold uppercase tracking-widest rounded-xl hover:-translate-y-1 transition-all shadow-lg shadow-[#6605c7]/20">
                         Get Started Free

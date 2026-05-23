@@ -46,9 +46,9 @@ export default function AuthGate({ children, contentLabel = "this content" }: Au
                                 <div className="w-24 h-24 rounded-3xl flex items-center justify-center shadow-2xl" style={{ background: "linear-gradient(135deg, #6605c7 0%, #a855f7 100%)" }}>
                                     <span className="material-symbols-outlined text-white text-5xl" style={{ fontVariationSettings: '"FILL" 1' }}>lock</span>
                                 </div>
-                                {/* Vidhyaloan badge */}
+                                {/* Vidyaloan badge */}
                                 <div className="absolute -top-2 -right-2 bg-white rounded-full px-2 py-1 shadow-lg border border-purple-100 flex items-center gap-1">
-                                    <span className="text-[10px] font-black text-[#6605c7]">VidhyaLoan</span>
+                                    <span className="text-[10px] font-black text-[#6605c7]">VidyaLoan</span>
                                 </div>
                             </div>
 
@@ -60,7 +60,7 @@ export default function AuthGate({ children, contentLabel = "this content" }: Au
                                 </span>
                             </h2>
                             <p className="text-gray-500 text-sm leading-relaxed mb-8 max-w-xs mx-auto">
-                                Create a free VidhyaLoan account to access university details, compare education loans, and get AI-matched to the best lenders.
+                                Create a free VidyaLoan account to access university details, compare education loans, and get AI-matched to the best lenders.
                             </p>
 
                             {/* Perks list */}
@@ -88,7 +88,7 @@ export default function AuthGate({ children, contentLabel = "this content" }: Au
                                     style={{ background: "linear-gradient(135deg, #6605c7 0%, #a855f7 100%)" }}
                                 >
                                     <span className="material-symbols-outlined text-base" style={{ fontVariationSettings: '"FILL" 1' }}>login</span>
-                                    Login to VidhyaLoan
+                                    Login to VidyaLoan
                                 </Link>
                                 <Link
                                     href={`${loginHref}&signup=true`}
@@ -100,7 +100,7 @@ export default function AuthGate({ children, contentLabel = "this content" }: Au
                             </div>
 
                             <p className="text-gray-400 text-xs mt-5">
-                                By signing up, you agree to VidhyaLoan&apos;s{" "}
+                                By signing up, you agree to VidyaLoan&apos;s{" "}
                                 <Link href="/terms" className="text-[#6605c7] hover:underline">Terms</Link>
                                 {" "}&amp;{" "}
                                 <Link href="/privacy" className="text-[#6605c7] hover:underline">Privacy Policy</Link>.

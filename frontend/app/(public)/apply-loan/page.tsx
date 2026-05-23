@@ -590,7 +590,7 @@ export default function ApplyLoanPage() {
                         <div className="w-1.5 h-1.5 bg-gray-300 rounded-full hidden md:block" />
                         <div className="flex items-center gap-2">
                             <span className="material-symbols-outlined text-sm text-blue-500">verified</span>
-                            VidhyaLoan Assurance
+                            VidyaLoan Assurance
                         </div>
                     </div>
                 </div>

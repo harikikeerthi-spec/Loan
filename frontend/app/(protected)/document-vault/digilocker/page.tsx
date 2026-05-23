@@ -154,7 +154,7 @@ function DigilockerIntegrationContent() {
                                 </div>
 
                                 <p className="text-white/80 text-[15px] leading-relaxed mb-10 max-w-2xl font-medium">
-                                    No more scanning or manual uploads. Connect your DigiLocker to VidhyaLoan
+                                    No more scanning or manual uploads. Connect your DigiLocker to VidyaLoan
                                     to instantly verify your KYC documents, academic marksheets, and more using your Aadhaar-linked mobile.
                                 </p>
 
@@ -243,7 +243,7 @@ function DigilockerIntegrationContent() {
                                     Military-Grade Encryption
                                 </h4>
                                 <p className="text-[11px] text-gray-400 leading-relaxed font-medium">
-                                    Your DigiLocker data is encrypted with AES-256 and never stored as plain text. VidhyaLoan only facilitates the verification process.
+                                    Your DigiLocker data is encrypted with AES-256 and never stored as plain text. VidyaLoan only facilitates the verification process.
                                 </p>
                             </div>
                         </div>

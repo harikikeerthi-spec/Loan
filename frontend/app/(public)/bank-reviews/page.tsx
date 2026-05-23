@@ -1,7 +1,7 @@
 import { banks } from "@/lib/bankData";
 
 export const metadata = {
-    title: "Partner Banks & Reviews - VidhyaLoan",
+    title: "Partner Banks & Reviews - VidyaLoan",
     description: "Compare education loan offers from top global banks. Check reviews, interest rates, and funding limits.",
 };
 

@@ -223,18 +223,18 @@ export class OnboardingService {
       const staffName = staffUser.firstName && staffUser.lastName ? `${staffUser.firstName} ${staffUser.lastName}` : (staffUser.firstName || staffUser.email || 'Your Coordinator');
       const staffEmail = staffUser.email;
       
-      const subject = `📋 Complete your VidhyaLoan Onboarding Profile – Shared by ${staffName}`;
+      const subject = `📋 Complete your VidyaLoan Onboarding Profile – Shared by ${staffName}`;
       const html = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; background-color: #ffffff;">
           <div style="background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 24px;">
-            <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 800;">VidhyaLoan</h1>
+            <h1 style="color: white; margin: 0; font-size: 26px; font-weight: 800;">VidyaLoan</h1>
             <p style="color: #e0e7ff; margin: 5px 0 0; font-size: 14px; letter-spacing: 0.5px;">SECURE ONBOARDING PORTAL</p>
           </div>
           
           <div style="padding: 0 10px;">
             <h2 style="color: #111827; margin-bottom: 16px; font-size: 20px; font-weight: 700;">Hello ${studentName},</h2>
             <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">
-              Your dedicated academic loan coordinator, <strong>${staffName}</strong> (<a href="mailto:${staffEmail}" style="color: #4f46e5; text-decoration: none;">${staffEmail}</a>), has initiated your VidhyaLoan profile onboarding!
+              Your dedicated academic loan coordinator, <strong>${staffName}</strong> (<a href="mailto:${staffEmail}" style="color: #4f46e5; text-decoration: none;">${staffEmail}</a>), has initiated your VidyaLoan profile onboarding!
             </p>
             
             <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 24px;">
@@ -262,7 +262,7 @@ export class OnboardingService {
             
             <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
               <p style="color: #9ca3af; font-size: 12px; text-align: center; line-height: 1.5;">
-                This is a secure communication from VidhyaLoan.<br>
+                This is a secure communication from VidyaLoan.<br>
                 For security reasons, please do not share your unique onboarding link with anyone else.
               </p>
             </div>
@@ -270,7 +270,7 @@ export class OnboardingService {
         </div>
       `;
       
-      const text = `Hello ${studentName},\n\nYour academic loan coordinator, ${staffName} (${staffEmail}), has initiated your VidhyaLoan onboarding!\n\nTo complete your profile and proceed with your education loan application, please click the secure link below:\n\n${shareUrl}\n\nIf you have any questions, you can contact ${staffName} directly at ${staffEmail}.\n\nWarm regards,\nThe Vidhyaloan Team`;
+      const text = `Hello ${studentName},\n\nYour academic loan coordinator, ${staffName} (${staffEmail}), has initiated your VidyaLoan onboarding!\n\nTo complete your profile and proceed with your education loan application, please click the secure link below:\n\n${shareUrl}\n\nIf you have any questions, you can contact ${staffName} directly at ${staffEmail}.\n\nWarm regards,\nThe Vidyaloan Team`;
       
       await this.emailService.sendMail(studentEmail, subject, html, text, staffEmail);
       return { success: true, message: 'Onboarding link shared successfully via email.' };

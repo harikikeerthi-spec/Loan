@@ -175,7 +175,7 @@ export const universities: Record<string, UniversityData> = {
             avgLoanAmount: "₹60 - 1 Cr",
             collateralFree: true,
             fastTrack: true,
-            notes: "Stanford MS admits get priority processing from most Indian NBFCs. VidhyaLoan partners can get same-day pre-approval.",
+            notes: "Stanford MS admits get priority processing from most Indian NBFCs. VidyaLoan partners can get same-day pre-approval.",
         },
         pros: [
             "Located in Silicon Valley — internship & job hub",

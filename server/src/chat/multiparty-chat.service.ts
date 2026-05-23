@@ -205,8 +205,8 @@ export class MultiPartyChatService {
       // Create system message about document share
       await this.saveMultiPartyMessage({
         conversationId: data.conversationId,
-        senderEmail: 'system@vidhyaloan.com',
-        senderName: 'VidhyaLoan System',
+        senderEmail: 'system@vidyaloan.com',
+        senderName: 'VidyaLoan System',
         senderRole: 'system',
         content: `📄 Document shared: ${data.documentName}`,
         messageType: 'document_share',
@@ -272,8 +272,8 @@ export class MultiPartyChatService {
       // Create system message
       await this.saveMultiPartyMessage({
         conversationId: data.conversationId,
-        senderEmail: 'system@vidhyaloan.com',
-        senderName: 'VidhyaLoan System',
+        senderEmail: 'system@vidyaloan.com',
+        senderName: 'VidyaLoan System',
         senderRole: 'system',
         content: `✅ ${data.fullName} (${data.role}) joined the conversation`,
         messageType: 'participant_joined',

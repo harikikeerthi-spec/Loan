@@ -80,7 +80,7 @@ export class AdminApplicationService {
 
     /**
      * Assign mentor and counselor to application
-     * Vidhyaloan specific - ensures student gets proper guidance
+     * Vidyaloan specific - ensures student gets proper guidance
      */
     async assignMentorCounselor(assignment: MentorAssignment) {
         try {
@@ -232,7 +232,7 @@ export class AdminApplicationService {
 
     /**
      * Get eligibility assessment for an application
-     * Checks all VidhyaLoan eligibility criteria
+     * Checks all VidyaLoan eligibility criteria
      */
     async checkEligibility(appId: string) {
         try {
