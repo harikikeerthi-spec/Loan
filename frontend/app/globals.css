@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200..800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 @import "tailwindcss";
 
@@ -15,8 +15,8 @@
   --color-danger: #ef4444;
   --color-info: #3b82f6;
   --background-light: #f7f5f8;
-  --font-display: 'DM Sans', sans-serif;
-  --font-sans: 'DM Sans', sans-serif;
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-sans: 'Plus Jakarta Sans', sans-serif;
   --transition-base: 0.3s ease-in-out;
 }
 
@@ -26,7 +26,7 @@ html {
 }
 
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   min-height: 100vh;
   background-color: white;
 }
@@ -38,13 +38,20 @@ h4,
 h5,
 h6,
 .font-display {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
-/* Force DM Sans font universally, maintaining material icons */
-body, h1, h2, h3, h4, h5, h6, p, span, div, a, button, input, select, textarea, label {
+/* Global font — Plus Jakarta Sans for all dashboards */
+body, h1, h2, h3, h4, h5, h6, p, a, button, input, select, textarea, label {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Bank portal font override — DM Sans scoped to bank layout only */
+.bank-portal, .bank-portal h1, .bank-portal h2, .bank-portal h3,
+.bank-portal h4, .bank-portal h5, .bank-portal h6, .bank-portal p,
+.bank-portal span, .bank-portal div, .bank-portal a, .bank-portal button,
+.bank-portal input, .bank-portal select, .bank-portal textarea, .bank-portal label {
   font-family: 'DM Sans', sans-serif !important;
-  font-style: normal !important;
 }
 
 .material-symbols-outlined {

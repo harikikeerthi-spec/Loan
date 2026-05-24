@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -159,7 +159,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
     const sidebarWidth = collapsed ? 80 : 280;
 
     return (
-        <div className="min-h-screen flex overflow-hidden" style={{
+        <div className="bank-portal min-h-screen flex overflow-hidden" style={{
             background: `
                 radial-gradient(ellipse 80% 60% at 0% 0%, rgba(102, 5, 199, 0.12) 0%, transparent 60%),
                 radial-gradient(ellipse 60% 50% at 100% 0%, rgba(139, 36, 229, 0.08) 0%, transparent 55%),
