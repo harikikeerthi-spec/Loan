@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -56,6 +56,23 @@ export default function ApplyLoanPage() {
             const params = new URLSearchParams(window.location.search);
             const uni = params.get("university");
             const country = params.get("country");
+            const bankParam = params.get("bank");
+
+            let selectedBank = "";
+            if (bankParam) {
+                const normBank = bankParam.toLowerCase().trim();
+                if (normBank === "credila" || normBank === "hdfc") {
+                    selectedBank = "hdfc";
+                } else if (normBank === "idfc") {
+                    selectedBank = "idfc";
+                } else if (normBank === "auxilo") {
+                    selectedBank = "auxilo";
+                } else if (normBank === "avanse") {
+                    selectedBank = "avanse";
+                } else if (normBank === "poonawalla") {
+                    selectedBank = "poonawalla";
+                }
+            }
 
             // Look for saved application data in sessionStorage
             const savedData = sessionStorage.getItem("pending_loan_application");
@@ -70,11 +87,12 @@ export default function ApplyLoanPage() {
                 }
             }
 
-            if (uni || country || (user && !profileLoaded)) {
+            if (uni || country || selectedBank || (user && !profileLoaded)) {
                 setFormData((prev) => ({
                     ...prev,
                     university: prev.university || uni || "",
                     country: prev.country || country || "",
+                    bank: selectedBank || prev.bank || "",
                     firstName: prev.firstName || user?.firstName || "",
                     lastName: prev.lastName || user?.lastName || "",
                     email: prev.email || user?.email || "",

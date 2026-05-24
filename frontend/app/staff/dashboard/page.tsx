@@ -65,7 +65,7 @@ const StatCard = ({ label, value, icon, color, trend, loading, hint, badge, ...p
 
             {/* Middle row: Large primary number */}
             <div className="mt-1 mb-3 relative z-10 flex items-center gap-3">
-                <div className={`text-4xl font-extrabold tracking-tight ${colorScheme.valueText}`}>
+                <div className={`staff-dashboard-number text-[42px] font-bold tracking-normal leading-none ${colorScheme.valueText}`}>
                     {loading ? <span className="h-10 bg-slate-100 animate-pulse rounded block w-20" /> : value ?? "—"}
                 </div>
                 {badge && !loading && (
@@ -2733,7 +2733,7 @@ export default function StaffDashboardPage() {
     };
 
     return (
-        <div className="h-screen overflow-hidden flex bg-white text-slate-900 font-sans text-sm">
+        <div className="staff-dashboard-shell h-screen overflow-hidden flex bg-white text-slate-900 font-sans text-sm">
             {/* Mobile overlay */}
             {sidebarOpen && (
                 <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />

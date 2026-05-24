@@ -1,4 +1,4 @@
-﻿import { banks } from "@/lib/bankData";
+import { banks } from "@/lib/bankData";
 
 export const metadata = {
     title: "Partner Banks & Reviews - VidyaLoan",
@@ -55,7 +55,7 @@ export default function BankReviewsPage() {
                         </div>
 
                         <div className="space-y-3">
-                            <a href="/apply-loan" className="block w-full py-4 bg-[#1a1626] text-white text-center rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-[#6605c7] transition-all">
+                            <a href={`/apply-loan?bank=${bank.slug}`} className="block w-full py-4 bg-[#1a1626] text-white text-center rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-[#6605c7] transition-all">
                                 Apply Now
                             </a>
                             <a href={`/bank/${bank.slug}`} className="block w-full py-4 border border-gray-100 text-[#1a1626] text-center rounded-2xl font-bold text-xs uppercase tracking-widest hover:bg-gray-50 transition-all">

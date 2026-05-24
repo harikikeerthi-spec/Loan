@@ -37,7 +37,13 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
     try {
       const res = await documentApi.upload(userId, selectedType, file) as any;
       if (res.success) {
-        setResult(res.data.ocrResult || res.data.verification);
+        // Normalize: ocrResult uses extractedFields; map it to extracted_data for uniform access
+        const raw = res.data.ocrResult || res.data.verification || {};
+        const normalizedResult = {
+          ...raw,
+          extracted_data: raw.extracted_data || raw.extractedFields || {},
+        };
+        setResult(normalizedResult);
         onRefresh();
       }
     } catch (err) {
@@ -54,6 +60,10 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
     { id: 'pan', name: 'PAN Card', icon: 'badge', color: 'emerald' },
     { id: 'passport', name: 'Passport', icon: 'public', color: 'blue' },
   ];
+
+  // Get the Aadhaar number from extracted data (masked by backend, e.g. "XXXX XXXX 1234")
+  const extractedAadhaarNumber = result?.extracted_data?.aadhaar_number || result?.extracted_data?.aadhaarNumber || null;
+  const isAadhaarUpload = selectedType === 'aadhaar';
 
   const handleAutoFill = async () => {
     const rawExtracted =
@@ -269,6 +279,30 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
         </div>
       </div>
 
+      {/* Aadhaar Auto-Save Banner — shown after successful Aadhaar upload with extracted number */}
+      <AnimatePresence>
+        {isAadhaarUpload && extractedAadhaarNumber && result?.isValid !== false && (
+          <motion.div
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            className="flex items-center gap-4 bg-emerald-50 border border-emerald-200 rounded-2xl px-6 py-4 shadow-sm"
+          >
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+              <span className="material-symbols-outlined text-emerald-600 text-[22px]">fingerprint</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] font-black text-emerald-700 uppercase tracking-widest mb-0.5">Aadhaar Number Auto-Saved to Profile</p>
+              <p className="text-[18px] font-black text-emerald-900 tracking-widest font-mono">{extractedAadhaarNumber}</p>
+            </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 rounded-full border border-emerald-200">
+              <span className="material-symbols-outlined text-emerald-600 text-[16px]">check_circle</span>
+              <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Saved</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="grid grid-cols-12 gap-8">
         {/* Upload & Preview Area */}
         <div className="col-span-7">
@@ -324,6 +358,11 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
                 <div>
                   <h3 className="text-[22px] font-bold text-[#0d1b2a]">Upload {selectedType.toUpperCase()} Card</h3>
                   <p className="text-slate-500 max-w-xs mx-auto mt-2">Drag and drop your document here or click to browse files</p>
+                  {isAadhaarUpload && (
+                    <p className="text-[11px] font-bold text-indigo-500 mt-3 uppercase tracking-widest">
+                      ✦ Aadhaar number will be auto-saved to profile
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-4">
                   <div className="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
@@ -351,9 +390,9 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
                     </div>
                   )}
                   <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
-                    result.is_valid && !result.fraud_detected ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' : 'bg-rose-500/20 border-rose-500/40 text-rose-400'
+                    result.isValid && !result.fraud_detected ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' : 'bg-rose-500/20 border-rose-500/40 text-rose-400'
                   }`}>
-                    {result.is_valid ? 'Verified' : 'Validation Error'}
+                    {result.isValid ? 'Verified' : 'Validation Error'}
                   </div>
                 </div>
               )}
@@ -362,16 +401,30 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
             {result ? (
               <div className="flex-1 flex flex-col">
                 <div className="space-y-6 flex-1 overflow-y-auto pr-2 max-h-[400px]">
-                  {result.extracted_data && Object.entries(result.extracted_data).map(([key, value]: [string, any]) => (
-                    <div key={key} className="space-y-1 group">
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{key.replace(/_/g, ' ')}</p>
-                      <div className="flex items-center justify-between">
-                        <p className="text-[16px] font-bold text-white group-hover:text-indigo-400 transition-colors">{String(value)}</p>
-                        <span className="material-symbols-outlined text-slate-700 text-[18px]">check_circle</span>
+                  {result.extracted_data && Object.entries(result.extracted_data).map(([key, value]: [string, any]) => {
+                    const isAadhaarField = key === 'aadhaar_number' || key === 'aadhaarNumber';
+                    return (
+                      <div key={key} className={`space-y-1 group ${isAadhaarField ? 'p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20' : ''}`}>
+                        <div className="flex items-center gap-2">
+                          <p className={`text-[10px] font-black uppercase tracking-[0.2em] ${isAadhaarField ? 'text-emerald-400' : 'text-slate-500'}`}>
+                            {key.replace(/_/g, ' ')}
+                          </p>
+                          {isAadhaarField && (
+                            <span className="px-1.5 py-0.5 rounded text-[8px] font-black bg-emerald-500/20 text-emerald-400 uppercase tracking-widest border border-emerald-500/30">
+                              Auto-Saved
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <p className={`font-bold group-hover:text-indigo-400 transition-colors ${isAadhaarField ? 'text-[18px] text-emerald-300 font-mono tracking-widest' : 'text-[16px] text-white'}`}>
+                            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                          </p>
+                          <span className="material-symbols-outlined text-slate-700 text-[18px]">check_circle</span>
+                        </div>
+                        <div className="h-px bg-slate-800 w-full mt-2" />
                       </div>
-                      <div className="h-px bg-slate-800 w-full mt-2" />
-                    </div>
-                  ))}
+                    );
+                  })}
                   
                   {result.missing_fields?.length > 0 && (
                     <div className="mt-8 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20">
@@ -409,7 +462,7 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
                 <div className="mt-8 pt-8 border-t border-slate-800 flex gap-4">
                   <button 
                     onClick={handleAutoFill}
-                    disabled={processing || !result.is_valid || result.fraud_detected}
+                    disabled={processing || result.isValid === false || result.fraud_detected}
                     className="flex-1 py-4 bg-white text-[#0d1b2a] rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all disabled:opacity-50"
                   >
                     {processing ? 'Syncing...' : 'Auto-Fill Profile'}
@@ -438,7 +491,7 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
             >
               <div className="flex items-center gap-6">
                 <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex flex-col items-center justify-center">
-                  <p className="text-[18px] font-black text-indigo-600 leading-none">{result.confidence_score || 0}%</p>
+                  <p className="text-[18px] font-black text-indigo-600 leading-none">{result.confidence || 0}%</p>
                   <p className="text-[8px] font-black text-indigo-400 uppercase mt-1">Accuracy</p>
                 </div>
                 <div className="flex-1">
@@ -446,14 +499,14 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
                   <div className="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
-                      animate={{ width: `${result.confidence_score || 0}%` }}
-                      className={`h-full ${(result.confidence_score || 0) > 85 ? 'bg-emerald-500' : (result.confidence_score || 0) > 60 ? 'bg-amber-500' : 'bg-rose-500'}`}
+                      animate={{ width: `${result.confidence || 0}%` }}
+                      className={`h-full ${(result.confidence || 0) > 85 ? 'bg-emerald-500' : (result.confidence || 0) > 60 ? 'bg-amber-500' : 'bg-rose-500'}`}
                     />
                   </div>
                 </div>
               </div>
               
-              {(result.confidence_score || 0) < 80 && (
+              {(result.confidence || 0) < 80 && (
                 <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 flex items-start gap-3">
                   <span className="material-symbols-outlined text-amber-600 text-[20px]">error_outline</span>
                   <div>

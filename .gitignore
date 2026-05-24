@@ -58,3 +58,8 @@ uploads/
 coverage/
 .nyc_output/
 
+# Windows reserved device names (cannot be indexed by Git on Windows)
+nul
+con
+prn
+aux

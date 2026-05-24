@@ -79,7 +79,7 @@ export default function CompareLoansPage() {
                             </div>
 
                             <div className="flex gap-2">
-                                <a href="/apply-loan" className="flex-1 py-2.5 bg-[#6605c7] text-white rounded-lg font-bold uppercase tracking-widest text-[10px] hover:bg-[#5504a6] transition-all text-center flex items-center justify-center">Apply Now</a>
+                                <a href={`/apply-loan?bank=${loan.id}`} className="flex-1 py-2.5 bg-[#6605c7] text-white rounded-lg font-bold uppercase tracking-widest text-[10px] hover:bg-[#5504a6] transition-all text-center flex items-center justify-center">Apply Now</a>
                                 <button
                                     onClick={() => toggleLoan(loan.id)}
                                     className={`px-4 py-2.5 rounded-lg font-bold uppercase tracking-widest text-[10px] transition-all border ${selected.includes(loan.id) ? "bg-[#6605c7] text-white border-[#6605c7]" : "border-gray-100 text-gray-600 hover:bg-gray-50"}`}
@@ -162,7 +162,7 @@ export default function CompareLoansPage() {
                                         <td className="py-8"></td>
                                         {selectedData.map(loan => (
                                             <td key={loan.id} className="py-8 px-4">
-                                                <a href="/apply-loan" className="w-full py-2.5 bg-[#6605c7] text-white rounded-lg font-bold uppercase tracking-widest text-[10px] hover:bg-[#5504a6] transition-all shadow-lg text-center inline-block">Apply Now</a>
+                                                <a href={`/apply-loan?bank=${loan.id}`} className="w-full py-2.5 bg-[#6605c7] text-white rounded-lg font-bold uppercase tracking-widest text-[10px] hover:bg-[#5504a6] transition-all shadow-lg text-center inline-block">Apply Now</a>
                                             </td>
                                         ))}
                                     </tr>

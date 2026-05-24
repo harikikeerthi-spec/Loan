@@ -1,4 +1,4 @@
-﻿
+
 import { banks } from "@/lib/bankData";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -119,7 +119,7 @@ export default async function BankPage({ params }: Props) {
 
                                 {/* CTA Buttons */}
                                 <div className="flex flex-wrap gap-4">
-                                    <Link href="/apply-loan" className="px-8 py-4 rounded-xl font-bold text-white shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-sm uppercase tracking-wider flex items-center gap-2" style={{ background: bank.gradient }}>
+                                    <Link href={`/apply-loan?bank=${bank.slug}`} className="px-8 py-4 rounded-xl font-bold text-white shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-sm uppercase tracking-wider flex items-center gap-2" style={{ background: bank.gradient }}>
                                         <span className="material-symbols-outlined">send</span>
                                         Apply Now
                                     </Link>
@@ -437,7 +437,7 @@ export default async function BankPage({ params }: Props) {
                                 Start your journey today. Apply through VidyaLoan for faster processing and best rates with {bank.name}.
                             </p>
                             <div className="flex flex-wrap gap-6 justify-center mb-10">
-                                <Link href="/apply-loan" className="px-12 py-5 bg-white text-gray-900 rounded-xl font-bold text-base hover:shadow-2xl hover:scale-105 active:scale-95 transition-all uppercase tracking-wider">
+                                <Link href={`/apply-loan?bank=${bank.slug}`} className="px-12 py-5 bg-white text-gray-900 rounded-xl font-bold text-base hover:shadow-2xl hover:scale-105 active:scale-95 transition-all uppercase tracking-wider">
                                     Start Application
                                 </Link>
                                 <Link href="/loan-eligibility" className="px-12 py-5 bg-white/20 backdrop-blur-md border border-white/40 text-white rounded-xl font-bold text-base hover:bg-white/30 transition-all uppercase tracking-wider">
