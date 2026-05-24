@@ -280,52 +280,53 @@ export function normalizeOcrFieldsForAutofill(
     if (!raw || typeof raw !== 'object') return {};
 
     const d = docType.toLowerCase();
+    const isAadhaar = d.includes('aadhaar') || d.includes('aadhar') || d.includes('national_id');
     const out: Record<string, unknown> = {};
 
-    const resolvedName = extractFullNameFromOcrRaw(
+    const resolvedName = isAadhaar ? undefined : extractFullNameFromOcrRaw(
         {
             ...raw,
             raw_text_summary: raw.raw_text_summary ?? raw.rawOcrText ?? raw.raw_text,
         },
         docType,
     );
-    if (resolvedName) out.full_name = resolvedName;
 
-    const dobRaw = pick(
-        raw.dob as string,
-        raw.date_of_birth as string,
-        raw.dateOfBirth as string,
-        raw.birth_date as string,
-        raw.year_of_birth as string,
-        raw.yob as string,
-    );
-    if (dobRaw) {
-        const parsed = parseOcrDateForInput(dobRaw);
-        out.dob = parsed || dobRaw;
+    if (!isAadhaar) {
+        if (resolvedName) out.full_name = resolvedName;
+
+        const dobRaw = pick(
+            raw.dob as string,
+            raw.date_of_birth as string,
+            raw.dateOfBirth as string,
+            raw.birth_date as string,
+            raw.year_of_birth as string,
+            raw.yob as string,
+        );
+        if (dobRaw) {
+            const parsed = parseOcrDateForInput(dobRaw);
+            out.dob = parsed || dobRaw;
+        }
+
+        const gender = normalizeGenderForForm(
+            pick(raw.gender as string, raw.sex as string),
+        );
+        if (gender) out.gender = gender;
     }
 
-    const gender = normalizeGenderForForm(
-        pick(raw.gender as string, raw.sex as string),
-    );
-    if (gender) out.gender = gender;
-
-    if (d.includes('aadhaar') || d.includes('aadhar') || d.includes('national_id')) {
+    if (isAadhaar) {
         const aadhaar = pick(
             raw.aadhaar_number as string,
             raw.aadhaarNumber as string,
+            raw.aadhar_number as string,
+            raw.aadharNumber as string,
+            raw.national_id as string,
+            raw.nationalId as string,
+            raw.national_id_number as string,
             raw.document_number as string,
+            raw.aadhaar as string,
+            raw.aadhar as string,
         );
         if (aadhaar) out.aadhaar_number = aadhaar;
-
-        if (raw.address && typeof raw.address === 'object') {
-            out.address = raw.address;
-        } else {
-            const addr = pick(raw.address as string, raw.address_formatted as string);
-            if (addr) out.address = addr;
-        }
-
-        const pin = pick(raw.pin_code as string, raw.pincode as string);
-        if (pin) out.pin_code = pin;
     } else if (d.includes('pan')) {
         const pan = pick(raw.pan_number as string, raw.panNumber as string, raw.document_number as string);
         if (pan) out.pan_number = pan.toUpperCase();

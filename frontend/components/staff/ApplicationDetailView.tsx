@@ -1,4 +1,4 @@
-﻿/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from "react";
 import { format } from "date-fns";
 import { documentApi, staffProfileApi } from "@/lib/api";
@@ -12,6 +12,7 @@ import {
 interface ApplicationDetailViewProps {
   application: any;
   onBack: () => void;
+  onAadhaarSaved?: (aadhaarNumber: string) => void;
 }
 
 type OcrSummaryDoc = {
@@ -68,6 +69,7 @@ const formatStepLabel = (label: string) => {
 const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   application,
   onBack,
+  onAadhaarSaved,
 }) => {
   const [activeTab, setActiveTab] = useState("requirements");
   const [activeSidebarMenu, setActiveSidebarMenu] = useState("application_details");
@@ -981,6 +983,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                         userId={userId}
                         application={application}
                         onRefresh={fetchDocuments}
+                        onAadhaarSaved={onAadhaarSaved}
                       />
                     )}
 

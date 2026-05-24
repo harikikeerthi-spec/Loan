@@ -297,6 +297,9 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                             <ApplicationDetailView 
                                 application={selectedApplication}
                                 onBack={() => setSelectedApplication(null)}
+                                onAadhaarSaved={(aadhaarNumber) => {
+                                    setUserData((prev: any) => ({ ...prev, aadhaarNumber }));
+                                }}
                             />
                         )}
                     </>

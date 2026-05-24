@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
@@ -7408,6 +7408,13 @@ export default function StaffDashboardPage() {
                 <ApplicationDetailView
                     application={selectedApp}
                     onBack={() => setSelectedApp(null)}
+                    onAadhaarSaved={(aadhaarNumber) => {
+                        const appUserId = selectedApp.userId || selectedApp.applicantId;
+                        const onboardUserId = createdUser?.id || createdUser?.uid || createdUser?._id;
+                        if (appUserId && appUserId === onboardUserId) {
+                            setNewStudent(prev => ({ ...prev, aadhaarNumber }));
+                        }
+                    }}
                 />
             )
             }

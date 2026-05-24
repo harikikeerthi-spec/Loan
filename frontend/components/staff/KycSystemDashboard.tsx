@@ -8,9 +8,10 @@ interface KycSystemDashboardProps {
   userId: string;
   application: any;
   onRefresh: () => void;
+  onAadhaarSaved?: (aadhaarNumber: string) => void;
 }
 
-const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, application, onRefresh }) => {
+const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, application, onRefresh, onAadhaarSaved }) => {
   const [uploading, setUploading] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ url: string; type: string } | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -44,6 +45,25 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
           extracted_data: raw.extracted_data || raw.extractedFields || {},
         };
         setResult(normalizedResult);
+
+        // Auto-save Aadhaar number immediately on verified upload — no button click needed
+        if (selectedType === 'aadhaar' && normalizedResult.isValid !== false && !normalizedResult.fraud_detected) {
+          const extractedData = normalizedResult.extracted_data;
+          const aadhaarNum = extractedData?.aadhaar_number || extractedData?.aadhaarNumber || null;
+          if (aadhaarNum) {
+            const cleanNum = String(aadhaarNum).replace(/\s/g, '');
+            try {
+              const saveRes = await documentApi.updateProfile(userId, { aadhaarNumber: cleanNum }) as any;
+              if (saveRes.success) {
+                // Notify parent (e.g. staff dashboard profile form) so the field auto-populates
+                onAadhaarSaved?.(cleanNum);
+              }
+            } catch (saveErr) {
+              console.error('[KYC] Aadhaar auto-save failed:', saveErr);
+            }
+          }
+        }
+
         onRefresh();
       }
     } catch (err) {
@@ -72,6 +92,41 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
       result?.details?.extractedFields;
     if (!result || !rawExtracted) return;
 
+    // Guard: Aadhaar uploads must be verified as a valid Aadhaar card before saving anything
+    if (isAadhaarUpload) {
+      if (result.isValid === false || result.fraud_detected) {
+        alert('Cannot save: This document failed Aadhaar verification.');
+        return;
+      }
+      // For Aadhaar: ONLY save the Aadhaar number — no name, DOB, gender, or address
+      const extracted = normalizeOcrFieldsForAutofill(
+        rawExtracted as Record<string, unknown>,
+        selectedType,
+      );
+      const aadhaarNumber = extracted.aadhaar_number as string | undefined;
+      if (!aadhaarNumber) {
+        alert('Aadhaar number could not be extracted from this document.');
+        return;
+      }
+      setProcessing(true);
+      try {
+        const res = await documentApi.updateProfile(userId, { aadhaarNumber }) as any;
+        if (res.success) {
+          alert('Aadhaar number saved to profile successfully!');
+          // Notify parent so the profile form field updates immediately
+          onAadhaarSaved?.(aadhaarNumber);
+          onRefresh();
+        }
+      } catch (err) {
+        console.error('Aadhaar save failed:', err);
+        alert('Failed to save Aadhaar number to profile.');
+      } finally {
+        setProcessing(false);
+      }
+      return;
+    }
+
+    // For PAN / Passport: full autofill (name, dob, gender, doc number, address)
     const extracted = normalizeOcrFieldsForAutofill(
       rawExtracted as Record<string, unknown>,
       selectedType,
@@ -85,7 +140,6 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
         'dob': 'dob',
         'date_of_birth': 'dob',
         'pan_number': 'panNumber',
-        'aadhaar_number': 'aadhaarNumber',
         'passport_number': 'passportNumber',
         'father_name': 'fatherName',
         'gender': 'gender',
@@ -360,7 +414,7 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
                   <p className="text-slate-500 max-w-xs mx-auto mt-2">Drag and drop your document here or click to browse files</p>
                   {isAadhaarUpload && (
                     <p className="text-[11px] font-bold text-indigo-500 mt-3 uppercase tracking-widest">
-                      ✦ Aadhaar number will be auto-saved to profile
+                      ✦ Only Aadhaar number will be saved — name &amp; details are not auto-filled
                     </p>
                   )}
                 </div>
@@ -465,7 +519,11 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
                     disabled={processing || result.isValid === false || result.fraud_detected}
                     className="flex-1 py-4 bg-white text-[#0d1b2a] rounded-2xl text-[12px] font-black uppercase tracking-widest hover:bg-slate-200 transition-all disabled:opacity-50"
                   >
-                    {processing ? 'Syncing...' : 'Auto-Fill Profile'}
+                    {processing
+                      ? 'Syncing...'
+                      : isAadhaarUpload
+                      ? 'Save Aadhaar Number'
+                      : 'Auto-Fill Profile'}
                   </button>
                   <button className="w-14 h-14 border border-slate-800 rounded-2xl flex items-center justify-center hover:bg-slate-800 transition-all">
                     <span className="material-symbols-outlined">download</span>
