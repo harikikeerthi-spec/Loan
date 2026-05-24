@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
@@ -92,13 +92,7 @@ interface AdminStatsResponse {
     data?: any;
 }
 
-const SUPPORTED_BANKS = [
-    { id: "auxilo",     name: "Auxilo Finserve",    logo: "/banks/auxilo.png" },
-    { id: "avanse",     name: "Avanse Financial",   logo: "/banks/avanse.png" },
-    { id: "credila",    name: "HDFC Credila",        logo: "/banks/credila.png" },
-    { id: "idfc",       name: "IDFC FIRST Bank",    logo: "/banks/idfc.png" },
-    { id: "poonawalla", name: "Poonawalla Fincorp", logo: "/banks/poonawalla.jpg" },
-];
+
 
 // --- Page ---
 
@@ -112,8 +106,11 @@ export default function BankDashboard() {
     const [showChat, setShowChat] = useState(false);
     const [mounted, setMounted] = useState(false);
 
-    const [currentBankId, setCurrentBankId] = useState<string>("idfc");
-    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [currentBankId] = useState<string>(
+        typeof window !== 'undefined'
+            ? (sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank") || "idfc")
+            : "idfc"
+    );
 
     const fetchAllData = async (bankId: string) => {
         try {
@@ -145,15 +142,8 @@ export default function BankDashboard() {
 
     useEffect(() => {
         setMounted(true);
-        if (typeof window !== 'undefined') {
-            const saved = sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank");
-            if (saved && saved !== currentBankId) {
-                setCurrentBankId(saved);
-                return;
-            }
-        }
         fetchAllData(currentBankId);
-    }, [currentBankId]);
+    }, []);
 
     // Derived Charts Data
     const statusDistribution = useMemo(() => {
@@ -303,57 +293,6 @@ export default function BankDashboard() {
                 </div>
                 
                 <div className="flex flex-wrap gap-4 items-center relative">
-                    {/* Premium Bank Selector Dropdown */}
-                    <div className="relative">
-                        <motion.button
-                            whileHover={{ y: -2 }}
-                            onClick={() => setDropdownOpen(!dropdownOpen)}
-                            className="px-5 py-4 rounded-[1.5rem] bg-white/80 border border-[#6605c7]/15 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#6605c7] hover:bg-white hover:border-[#6605c7]/35 transition-all shadow-sm group select-none relative z-50"
-                        >
-                            <span className="material-symbols-outlined text-lg shrink-0">account_balance</span>
-                            <span>{SUPPORTED_BANKS.find(b => b.id === currentBankId)?.name || "Select Institution"}</span>
-                            <span className="material-symbols-outlined text-base transition-transform duration-200" style={{ transform: dropdownOpen ? 'rotate(180deg)' : 'rotate(0)' }}>expand_more</span>
-                        </motion.button>
-
-                        {dropdownOpen && (
-                            <>
-                                <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="absolute right-0 mt-2 z-50 w-64 bg-white/95 backdrop-blur-xl border border-[#6605c7]/12 rounded-2xl p-2 shadow-2xl shadow-purple-950/10 flex flex-col gap-1"
-                                >
-                                    <div className="px-3 py-1.5 border-b border-gray-100 mb-1">
-                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Select Partner Bank</span>
-                                    </div>
-                                    {SUPPORTED_BANKS.map((b) => (
-                                        <button
-                                            key={b.id}
-                                            onClick={() => {
-                                                setCurrentBankId(b.id);
-                                                sessionStorage.setItem("selectedBank", b.id);
-                                                localStorage.setItem("selectedBank", b.id);
-                                                setDropdownOpen(false);
-                                            }}
-                                            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${
-                                                currentBankId === b.id
-                                                    ? 'bg-[#6605c7]/10 text-[#6605c7] font-black'
-                                                    : 'text-gray-600 hover:bg-[#6605c7]/5 font-bold'
-                                            }`}
-                                        >
-                                            <div className="w-6 h-6 rounded-lg border border-gray-100 bg-white flex items-center justify-center overflow-hidden p-0.5 shrink-0">
-                                                <img src={b.logo} alt={b.name} className="w-full h-full object-contain" />
-                                            </div>
-                                            <span className="text-[9px] uppercase tracking-wider flex-1 truncate">{b.name}</span>
-                                            {currentBankId === b.id && (
-                                                <span className="material-symbols-outlined text-sm text-[#6605c7]">check_circle</span>
-                                            )}
-                                        </button>
-                                    ))}
-                                </motion.div>
-                            </>
-                        )}
-                    </div>
 
                     <motion.button 
                         whileHover={{ y: -2 }}
