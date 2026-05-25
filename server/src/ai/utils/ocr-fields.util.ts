@@ -633,7 +633,13 @@ export function canonicalizeOcrFields(
             if (nat.includes('indian') || nat === 'ind') out.issue_country = 'India';
         }
 
-        const addr = raw.address ?? raw.residential_address ?? raw.address_formatted;
+        const addr = raw.address ??
+            raw.residential_address ??
+            raw.residentialAddress ??
+            raw.address_formatted ??
+            raw.permanentAddress ??
+            raw.permanent_address ??
+            raw.permanentAddressFormatted;
         if (addr) out.address = typeof addr === 'object' ? addr : String(addr).trim();
     } else if (kind === 'marksheet_10' || kind === 'marksheet_12' || kind === 'marksheet_ug' || kind === 'marksheet_pg') {
         const level = academicLevelFromKind(kind)!;

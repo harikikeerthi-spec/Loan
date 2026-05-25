@@ -271,26 +271,42 @@ const KycSystemDashboard: React.FC<KycSystemDashboardProps> = ({ userId, applica
           return resObj;
         };
 
-        const parsed = parseAddressDetails(String(addressVal));
-        const explicitPin = extracted.pin_code || extracted.pincode || extracted.zip;
-        const finalPincode = explicitPin || parsed.pincode;
+        if (typeof addressVal === 'object' && addressVal !== null) {
+          const a = addressVal as Record<string, unknown>;
+          const address1 = String(a.address1 || a.line1 || [a.house_details, a.area].filter(Boolean).join(', ') || '').trim();
+          const address2 = String(a.address2 || a.line2 || a.landmark || '').trim();
+          const city = String(a.city || '').trim();
+          const state = String(a.state || '').trim();
+          const country = String(a.country || 'India').trim();
+          const pincode = String(a.pincode || a.pin_code || '').trim();
 
-        updates.permanentAddress = {
-          address1: addressVal,
-          city: parsed.city,
-          state: parsed.state,
-          country: parsed.country,
-          pincode: finalPincode
-        };
-        updates.mailingAddress = {
-          address1: addressVal,
-          city: parsed.city,
-          state: parsed.state,
-          country: parsed.country,
-          pincode: finalPincode
-        };
-        if (finalPincode) {
-          updates.pincode = finalPincode;
+          updates.permanentAddress = { address1, address2, city, state, country, pincode };
+          updates.mailingAddress = { address1, address2, city, state, country, pincode };
+          if (pincode) {
+            updates.pincode = pincode;
+          }
+        } else {
+          const parsed = parseAddressDetails(String(addressVal));
+          const explicitPin = extracted.pin_code || extracted.pincode || extracted.zip;
+          const finalPincode = explicitPin || parsed.pincode;
+
+          updates.permanentAddress = {
+            address1: String(addressVal),
+            city: parsed.city,
+            state: parsed.state,
+            country: parsed.country,
+            pincode: finalPincode
+          };
+          updates.mailingAddress = {
+            address1: String(addressVal),
+            city: parsed.city,
+            state: parsed.state,
+            country: parsed.country,
+            pincode: finalPincode
+          };
+          if (finalPincode) {
+            updates.pincode = finalPincode;
+          }
         }
       }
 

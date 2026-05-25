@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
@@ -9,7 +9,6 @@ import { adminApi, authApi, documentApi, onboardingApi, staffProfileApi, referen
 import { HttpApiPaths } from "@/lib/http-api-paths";
 import { normalizeOcrFieldsForAutofill, normalizeGenderForForm, normalizeCountryName, parseOcrDateForInput } from "@/lib/ocr-fields";
 import { examYearToEndDate, inferStartDate } from "@/lib/academic-ocr";
-import { type PanDocumentValidation } from "@/lib/pan-validation";
 import { format } from "date-fns";
 import ChatInterface from "@/components/Chat/ChatInterface";
 import ApplicantsSection from "@/components/staff/ApplicantsSection";
@@ -1643,6 +1642,25 @@ export default function StaffDashboardPage() {
                             View Scan
                         </button>
                     )}
+                    {isUploaded && (
+                        <button
+                            type="button"
+                            onClick={async () => {
+                                const uploadKey = `${docType}-applicant`;
+                                const ocrRes = ocrResults[uploadKey] || doc?.ocrResult?.extractedFields || doc?.verificationMetadata?.details?.extractedFields || doc?.verificationMetadata?.details?.extracted_data;
+                                if (ocrRes && Object.keys(ocrRes).length > 0) {
+                                    const res = await autoFillFromOcr(docType, ocrRes);
+                                    alert(res.message);
+                                } else {
+                                    alert("No OCR data available for this document yet. Try re-uploading.");
+                                }
+                            }}
+                            className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm hover:shadow"
+                        >
+                            <span className="material-symbols-outlined text-[16px]">magic_button</span>
+                            Autofill Profile
+                        </button>
+                    )}
                     <button
                         type="button"
                         onClick={() => {
@@ -1771,7 +1789,9 @@ export default function StaffDashboardPage() {
         docType: string,
         extractedFields: any,
     ): Promise<{ filled: boolean; message: string }> => {
-        const normalized = normalizeOcrFieldsForAutofill(extractedFields || {}, docType);
+        const normalized = extractedFields && (extractedFields._isNormalized || extractedFields.board || extractedFields.institution || extractedFields.passport_number)
+            ? extractedFields
+            : normalizeOcrFieldsForAutofill(extractedFields || {}, docType);
         if (!normalized || Object.keys(normalized).length === 0) {
             return {
                 filled: false,
@@ -2412,22 +2432,28 @@ export default function StaffDashboardPage() {
                 }
 
                 const rawExtracted = res.data?.ocrResult?.extractedFields || res.data?.verification?.details?.extractedFields;
-                const panValidation = res.data?.ocrResult?.document_validation as PanDocumentValidation | undefined;
+                const documentValidation = res.data?.ocrResult?.document_validation || res.data?.verification?.details?.document_validation;
+                const ocrIssues = res.data?.ocrResult?.ocr_issues || res.data?.verification?.details?.ocr_issues;
                 if (rawExtracted && Object.keys(rawExtracted).length > 0) {
                     const extractedFields = normalizeOcrFieldsForAutofill(rawExtracted, docType);
+                    if (extractedFields) {
+                        (extractedFields as any)._isNormalized = true;
+                    }
                     setOcrResults(prev => ({
                         ...prev,
                         [uploadKey]: {
                             ...extractedFields,
-                            ...(panValidation ? { document_validation: panValidation } : {}),
+                            ...(documentValidation ? { document_validation: documentValidation } : {}),
+                            ...(Array.isArray(ocrIssues) && ocrIssues.length ? { ocr_issues: ocrIssues } : {}),
                         },
                     }));
                     setShowOcrReview(prev => ({ ...prev, [uploadKey]: true }));
-                    console.log('📄 [OCR RESULTS CAPTURED]', { docType, extractedFields, panValidation });
+                    console.log('📄 [OCR RESULTS CAPTURED]', { docType, extractedFields, documentValidation, ocrIssues });
 
-                    // Auto-trigger autofill for identity documents (Aadhaar, PAN, Passport)
+                    // Auto-trigger autofill for supported identity and academic documents.
                     const isIdentityDoc = /aadhaar|aadhar|national_id|pan|passport/.test(docType);
-                    if (isIdentityDoc) {
+                    const isAcademicDoc = /marksheet|ug_|pg_|degree|transcript/.test(docType);
+                    if (isIdentityDoc || isAcademicDoc) {
                         try {
                             const autofillResult = await autoFillFromOcr(docType, extractedFields);
                             console.log('🪄 [AUTO-AUTOFILL TRIGGERED]', { docType, result: autofillResult });
@@ -2801,7 +2827,7 @@ export default function StaffDashboardPage() {
                     {/* Left: Breadcrumb + Title */}
                     <div className="flex flex-col justify-center">
                         <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none mb-0.5">VIdyaLoans</p>
-                        <h1 className="text-[15px] font-semibold text-slate-800 leading-tight">
+                        <h1 className="text-[18px] font-semibold text-slate-800 leading-tight">
                             {sectionTitles[activeSection] || activeSection}
                         </h1>
                     </div>
@@ -2849,7 +2875,7 @@ export default function StaffDashboardPage() {
                     </div>
                 </header>
 
-                <div className={`flex-1 overflow-y-auto custom-scrollbar ${(activeSection.startsWith('chat_') || activeSection === 'onboarding') ? 'p-0' : 'p-6 space-y-5'} bg-[#f8fafc]`}>
+                <div className={`staff-dashboard-body flex-1 overflow-y-auto custom-scrollbar ${(activeSection.startsWith('chat_') || activeSection === 'onboarding') ? 'p-0' : 'p-6 space-y-5'} bg-[#f8fafc]`}>
                     {activeSection === "chat_customer" && <ChatInterface role="staff" initialUser={autoStartUser} />}
 
 
@@ -3631,10 +3657,10 @@ export default function StaffDashboardPage() {
                                                             <motion.div initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.08 }}>
                                                                 <h4 className="text-sm font-bold text-slate-800 tracking-tight flex items-center gap-2">
                                                                     Autofill Academic Qualifications with AI OCR
-                                                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[9px] font-black uppercase tracking-wider">Manual apply</span>
+                                                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-[9px] font-black uppercase tracking-wider">Auto apply</span>
                                                                 </h4>
                                                                 <p className="text-xs text-slate-500 font-medium mt-0.5">
-                                                                    Upload marksheets to extract academic data, then use Autofill in Document Vault to populate qualification fields.
+                                                                    Upload marksheets to verify OCR and automatically populate academic qualification fields.
                                                                 </p>
                                                             </motion.div>
                                                         </div>
@@ -3725,6 +3751,14 @@ export default function StaffDashboardPage() {
                                                         return /marksheet|ug_|pg_/.test(docType);
                                                     }).map(([key, fields]: [string, Record<string, unknown>]) => {
                                                         const [docType] = key.split('-');
+                                                        const documentValidation = fields.document_validation && typeof fields.document_validation === 'object'
+                                                            ? fields.document_validation as Record<string, unknown>
+                                                            : null;
+                                                        const validationEntries = Object.entries(documentValidation || {})
+                                                            .filter(([, value]) => value === true || value === false);
+                                                        const ocrIssues = Array.isArray(fields.ocr_issues)
+                                                            ? fields.ocr_issues.map(issue => String(issue)).filter(Boolean)
+                                                            : [];
                                                         return (
                                                             <div key={key} className="bg-gradient-to-r from-emerald-50 via-teal-50/50 to-transparent border-2 border-emerald-200 rounded-3xl p-6 shadow-lg shadow-emerald-100/50 space-y-4">
                                                                 <div className="flex items-center justify-between">
@@ -3749,9 +3783,43 @@ export default function StaffDashboardPage() {
                                                                         {showOcrReview[key] ? '▼ Hide' : '▶ Show'} Details
                                                                     </button>
                                                                 </div>
+                                                                {(validationEntries.length > 0 || ocrIssues.length > 0) && (
+                                                                    <div className="bg-white/85 border border-emerald-100 rounded-2xl p-4 space-y-3">
+                                                                        {validationEntries.length > 0 && (
+                                                                            <div>
+                                                                                <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600 mb-2">OCR Validation Notes</p>
+                                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                                                                    {validationEntries.map(([label, value]) => (
+                                                                                        <div key={label} className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                                                                                            <span className={`material-symbols-outlined text-[16px] ${value ? 'text-emerald-600' : 'text-amber-600'}`}>
+                                                                                                {value ? 'check_circle' : 'info'}
+                                                                                            </span>
+                                                                                            <span>{label.replace(/_/g, ' ')}</span>
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                        {ocrIssues.length > 0 && (
+                                                                            <div>
+                                                                                <p className="text-[9px] font-black uppercase tracking-widest text-amber-600 mb-2">OCR Issues Detected</p>
+                                                                                <ul className="space-y-1">
+                                                                                    {ocrIssues.map((issue, idx) => (
+                                                                                        <li key={`${issue}-${idx}`} className="text-xs font-medium text-slate-600 flex gap-2">
+                                                                                            <span className="text-amber-500">-</span>
+                                                                                            <span>{issue}</span>
+                                                                                        </li>
+                                                                                    ))}
+                                                                                </ul>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
                                                                 {showOcrReview[key] !== false && (
                                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
-                                                                        {Object.entries(fields || {}).map(([k, v]) => (
+                                                                        {Object.entries(fields || {})
+                                                                            .filter(([k, v]) => k !== 'document_validation' && k !== 'ocr_issues' && (typeof v !== 'object' || v == null))
+                                                                            .map(([k, v]) => (
                                                                             v != null && String(v).trim() !== '' && (
                                                                                 <div key={k} className="bg-white/80 rounded-xl px-4 py-2 border border-emerald-100">
                                                                                     <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">{k.replace(/_/g, ' ')}</p>
@@ -6767,7 +6835,7 @@ export default function StaffDashboardPage() {
                                                 </div>
                                                 <span className={`text-[11px] font-['Playfair_Display',serif] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${c.bg} ${c.color}`}>{c.tag}</span>
                                             </div>
-                                            <p className="text-[28px] font-bold text-slate-900 leading-none mb-1">{loading ? <span className="block w-8 h-6 bg-slate-100 animate-pulse rounded" /> : c.value}</p>
+                                            <p className="text-[32px] font-bold text-slate-900 leading-none mb-1">{loading ? <span className="block w-8 h-6 bg-slate-100 animate-pulse rounded" /> : c.value}</p>
                                             <p className="text-[12px] font-['Playfair_Display',serif] font-bold text-slate-500 uppercase tracking-widest">{c.label}</p>
                                         </button>
                                     ))}
@@ -6785,7 +6853,7 @@ export default function StaffDashboardPage() {
                                                 </div>
                                                 <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${c.bg} ${c.color}`}>{c.tag}</span>
                                             </div>
-                                            <p className="text-[24px] font-bold text-slate-900 leading-none mb-1">{loading ? <span className="block w-8 h-6 bg-slate-100 animate-pulse rounded" /> : c.value}</p>
+                                            <p className="text-[28px] font-bold text-slate-900 leading-none mb-1">{loading ? <span className="block w-8 h-6 bg-slate-100 animate-pulse rounded" /> : c.value}</p>
                                             <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">{c.label}</p>
                                         </div>
                                     ))}
@@ -6803,7 +6871,7 @@ export default function StaffDashboardPage() {
                                                 </div>
                                                 <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${c.bg} ${c.color}`}>{c.tag}</span>
                                             </div>
-                                            <p className="text-[24px] font-bold text-slate-900 leading-none mb-1">{loading ? <span className="block w-8 h-6 bg-slate-100 animate-pulse rounded" /> : c.value}</p>
+                                            <p className="text-[28px] font-bold text-slate-900 leading-none mb-1">{loading ? <span className="block w-8 h-6 bg-slate-100 animate-pulse rounded" /> : c.value}</p>
                                             <p className="text-[10px] font-medium text-slate-500 uppercase tracking-wide">{c.label}</p>
                                         </div>
                                     ))}
@@ -6870,7 +6938,7 @@ export default function StaffDashboardPage() {
                                                     {activeSection === "blogs" && (
                                                         <>
                                                             <td className="px-5 py-4">
-                                                                <p className="text-[14px] font-bold text-slate-900 tracking-tight leading-tight mb-1">{item.title}</p>
+                                                                <p className="text-[15px] font-bold text-slate-900 tracking-tight leading-tight mb-1">{item.title}</p>
                                                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                                                                     <span className="material-symbols-outlined text-[12px]">edit</span>
                                                                     Writer: {item.authorName}
@@ -6938,7 +7006,7 @@ export default function StaffDashboardPage() {
                                                                             )}
                                                                         </div>
                                                                         <div className="min-w-0">
-                                                                            <p className="text-[15px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] leading-tight truncate">{item.firstName || item.student?.firstName || '—'} {item.lastName || item.student?.lastName || ''}</p>
+                                                                            <p className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] leading-tight truncate">{item.firstName || item.student?.firstName || '—'} {item.lastName || item.student?.lastName || ''}</p>
                                                                             <p className="text-[9px] text-slate-600 font-black mt-1 uppercase tracking-widest">APP-{(item.id || item._id || 'UNKNOWN').slice(-6)}</p>
                                                                         </div>
                                                                     </div>
@@ -6955,11 +7023,11 @@ export default function StaffDashboardPage() {
                                                                     </p>
                                                                 </td>
                                                                 <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
-                                                                    <p className="text-[15px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] truncate max-w-[180px]">{item.universityName || item.college || '—'}</p>
+                                                                    <p className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] truncate max-w-[180px]">{item.universityName || item.college || '—'}</p>
                                                                     <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mt-1">COLLEGE/UNIVERSITY</p>
                                                                 </td>
                                                                 <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
-                                                                    <p className="text-[15px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] truncate max-w-[120px]">{item.courseName || item.program || item.courseLevel || '—'}</p>
+                                                                    <p className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] truncate max-w-[120px]">{item.courseName || item.program || item.courseLevel || '—'}</p>
                                                                 </td>
                                                                 <td className="px-6 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors min-w-[240px] w-[260px]">
                                                                     <div className="flex items-center min-h-[60px]">
@@ -7081,7 +7149,7 @@ export default function StaffDashboardPage() {
                                                                             })()}
                                                                         </div>
                                                                         <div className="min-w-0">
-                                                                            <p className="text-[15px] font-bold text-[#0d1b2a] leading-tight">
+                                                                            <p className="text-[16px] font-bold text-[#0d1b2a] leading-tight">
                                                                                 {item.firstName || '—'} {item.lastName || ''}
                                                                             </p>
                                                                             <p className="text-[12px] text-slate-900 font-bold font-mono mt-1">

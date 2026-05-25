@@ -659,7 +659,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   ];
 
   return (
-    <div className="fixed inset-y-0 right-0 left-[56px] z-[40] flex flex-col bg-[#F8FAFC] overflow-hidden animate-in fade-in duration-500" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
+    <div className="staff-dashboard-body fixed inset-y-0 right-0 left-[56px] z-[40] flex flex-col bg-[#F8FAFC] overflow-hidden animate-in fade-in duration-500" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
       {/* Background Ambient Glows */}
       <div className="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] bg-indigo-50/50 blur-[120px] rounded-full -z-10" />
       <div className="absolute bottom-[-10%] left-[-5%] w-[30%] h-[40%] bg-emerald-50/50 blur-[100px] rounded-full -z-10" />

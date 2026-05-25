@@ -212,7 +212,7 @@ export class UsersService {
     return data;
   }
 
-  async updateExtractedDetails(userId: string, details: any) {
+  async updateExtractedDetails(userId: string, details: any, docType?: string) {
     try {
       console.log(`[UsersService.updateExtractedDetails] Updating details for user: ${userId}`);
       
@@ -309,6 +309,123 @@ export class UsersService {
       const genderVal = details.gender;
       if (genderVal) {
         compareAndSet(currentUser.gender, genderVal, 'gender');
+      }
+
+      // Map and persist academic qualifications from document OCR if docType is an academic document
+      if (docType) {
+        const cleanDocType = docType.toLowerCase().replace(/[_\s-]/g, '_');
+        const isGrade10 = cleanDocType.includes('marksheet_10') || cleanDocType.includes('10th') || cleanDocType.includes('ssc') || cleanDocType.includes('grade_10') || cleanDocType.includes('grade10');
+        const isGrade12 = cleanDocType.includes('marksheet_12') || cleanDocType.includes('12th') || cleanDocType.includes('hsc') || cleanDocType.includes('intermediate') || cleanDocType.includes('grade_12') || cleanDocType.includes('grade12');
+        const isUndergrad = cleanDocType.includes('undergraduate') || cleanDocType.includes('under_grad') || cleanDocType.includes('bachelor') || ['marksheet_ug', 'ug_degree', 'ug_transcript'].some(x => cleanDocType.includes(x));
+        const isPostgrad = cleanDocType.includes('postgraduate') || cleanDocType.includes('post_grad') || cleanDocType.includes('master') || ['marksheet_pg', 'pg_degree', 'pg_transcript'].some(x => cleanDocType.includes(x));
+
+        if (isGrade10 || isGrade12 || isUndergrad || isPostgrad) {
+          let academicObj: any = {};
+          if (currentUser.academic) {
+            if (typeof currentUser.academic === 'string') {
+              try {
+                academicObj = JSON.parse(currentUser.academic);
+              } catch (e) {
+                academicObj = {};
+              }
+            } else if (typeof currentUser.academic === 'object') {
+              academicObj = currentUser.academic;
+            }
+          }
+          if (!academicObj) academicObj = {};
+          if (!academicObj.grade10) academicObj.grade10 = {};
+          if (!academicObj.grade12) academicObj.grade12 = {};
+          if (!academicObj.undergrad) academicObj.undergrad = {};
+          if (!academicObj.postgrad) academicObj.postgrad = {};
+
+          const country = details.country || details.country_of_study || '';
+          const state = details.state || details.state_of_study || '';
+          const city = details.city || details.city_of_study || '';
+          const board = details.board || details.board_name || '';
+          const institution = details.institution || details.institution_name || details.school_name || details.college_name || '';
+          const university = details.university || details.university_name || (isUndergrad || isPostgrad ? institution : '');
+          const qualification = details.qualification || details.degree || details.program_name || details.course_name || '';
+          const grading = details.grading || details.grading_system || '';
+          const score = details.score || details.percentage || details.overall_percentage || details.overall_gpa || details.cgpa || '';
+          const language = details.language || details.medium_of_instruction || 'English';
+
+          let endDate = details.end_date || details.examination_month_year || details.exam_month_year || details.exam_period || details.year_of_passing || '';
+          if (endDate && !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+            endDate = this.parseDate(endDate) || endDate;
+          }
+
+          let startDate = details.start_date || '';
+          if (startDate && !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+            startDate = this.parseDate(startDate) || startDate;
+          }
+
+          if (isGrade10 || isGrade12) {
+            const key = isGrade10 ? 'grade10' : 'grade12';
+            const prev = academicObj[key] || {};
+            academicObj[key] = {
+              ...prev,
+              country: country || prev.country || 'India',
+              state: state || prev.state || '',
+              board: board || prev.board || '',
+              institution: institution || prev.institution || '',
+              city: city || prev.city || '',
+              grading: grading || prev.grading || '',
+              score: score || prev.score || '',
+              language: language || prev.language || 'English',
+              startDate: startDate || prev.startDate || '',
+              endDate: endDate || prev.endDate || '',
+            };
+
+            const hl = academicObj.highestLevel;
+            const minLevel = isGrade12 ? 'Grade 12' : 'Grade 10';
+            const shouldRaiseLevel = !hl || (isGrade12 && hl === 'Grade 10');
+            if (shouldRaiseLevel) {
+              academicObj.highestLevel = minLevel;
+            }
+          } else if (isUndergrad) {
+            const prev = academicObj.undergrad || {};
+            academicObj.undergrad = {
+              ...prev,
+              country: country || prev.country || 'India',
+              state: state || prev.state || '',
+              university: university || prev.university || '',
+              qualification: qualification || prev.qualification || '',
+              city: city || prev.city || '',
+              grading: grading || prev.grading || '',
+              score: score || prev.score || '',
+              language: language || prev.language || 'English',
+              startDate: startDate || prev.startDate || '',
+              endDate: endDate || prev.endDate || '',
+            };
+            academicObj.highestLevel = 'Undergraduate';
+          } else if (isPostgrad) {
+            const prev = academicObj.postgrad || {};
+            academicObj.postgrad = {
+              ...prev,
+              country: country || prev.country || 'India',
+              state: state || prev.state || '',
+              university: university || prev.university || '',
+              qualification: qualification || prev.qualification || '',
+              city: city || prev.city || '',
+              grading: grading || prev.grading || '',
+              percentage: score || prev.percentage || '',
+              language: language || prev.language || 'English',
+              startDate: startDate || prev.startDate || '',
+              endDate: endDate || prev.endDate || '',
+            };
+            academicObj.highestLevel = 'Postgraduate';
+          }
+
+          academicObj.countryOfEducation = country || academicObj.countryOfEducation || 'India';
+          
+          const currentAcademicStr = typeof currentUser.academic === 'string'
+            ? currentUser.academic
+            : JSON.stringify(currentUser.academic || {});
+          const newAcademicStr = JSON.stringify(academicObj);
+          if (!currentUser.academic || currentAcademicStr !== newAcademicStr) {
+            payload.academic = newAcademicStr;
+          }
+        }
       }
 
       if (Object.keys(payload).length === 0) {

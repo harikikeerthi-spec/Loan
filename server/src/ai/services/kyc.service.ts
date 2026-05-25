@@ -30,6 +30,15 @@ export interface AadhaarDocumentValidation {
     dob_and_gender_fields_present: boolean;
 }
 
+export interface AcademicDocumentValidation {
+    official_board_formatting_present?: boolean;
+    seal_or_signature_area_present?: boolean;
+    barcode_present?: boolean;
+    certificate_number_present?: boolean;
+    ssc_grade_format_consistent?: boolean;
+    subject_table_present?: boolean;
+}
+
 export interface KycExtractionResult {
     document_type: 'aadhaar' | 'pan' | 'passport' | 'unknown';
     confidence_score: number;
@@ -37,8 +46,9 @@ export interface KycExtractionResult {
     fraud_detected?: boolean;
     fraud_reason?: string;
     extracted_data: any;
-    document_validation?: AadhaarDocumentValidation | PanDocumentValidation;
+    document_validation?: AadhaarDocumentValidation | PanDocumentValidation | AcademicDocumentValidation;
     missing_fields?: string[];
+    ocr_issues?: string[];
     raw_text_summary?: string;
     error?: string;
 }
@@ -292,7 +302,9 @@ export class KycService {
                 "fraud_detected": boolean,
                 "fraud_reason": "string if any",
                 "extracted_data": { ...extracted fields... },
+                "document_validation": { ...visible document validation booleans if requested... },
                 "missing_fields": ["field1", "field2"],
+                "ocr_issues": ["minor OCR artifact notes, if any"],
                 "raw_text_summary": "short verbatim snippet from the document"
             }
         `;
@@ -368,6 +380,15 @@ export class KycService {
                 - overall_percentage: The overall percentage obtained. If not written, leave null.
                 - cgpa: The overall CGPA/GPA secured if CBSE/grade-based (e.g., 9.2).
                 - roll_number: The candidate's roll number, registration number, or hall ticket number.
+                - certificate_number: Certificate serial number if visible.
+                - barcode_number: Barcode number or printed barcode text if visible.
+
+                document_validation (advisory booleans based only on visible evidence):
+                { "official_board_formatting_present", "seal_or_signature_area_present",
+                  "barcode_present", "certificate_number_present",
+                  "ssc_grade_format_consistent", "subject_table_present" }
+
+                ocr_issues: short array of harmless OCR artifacts if present, e.g. misspelled words, accent/spacing artifacts, subject-name formatting issues. Do not treat these as tampering by themselves.
                 
                 is_valid: true if it is a Grade 10 marksheet/certificate.
             `,
@@ -386,8 +407,65 @@ export class KycService {
                 - overall_percentage: The overall percentage obtained. If not written, leave null.
                 - cgpa: The overall CGPA/GPA secured if grade-based.
                 - roll_number: The candidate's roll number, registration number, or hall ticket number.
+                - certificate_number: Certificate serial number if visible.
+                - barcode_number: Barcode number or printed barcode text if visible.
+
+                document_validation (advisory booleans based only on visible evidence):
+                { "official_board_formatting_present", "seal_or_signature_area_present",
+                  "barcode_present", "certificate_number_present",
+                  "ssc_grade_format_consistent", "subject_table_present" }
+
+                ocr_issues: short array of harmless OCR artifacts if present, e.g. misspelled words, accent/spacing artifacts, subject-name formatting issues. Do not treat these as tampering by themselves.
                 
                 is_valid: true if it is a Grade 12 or equivalent marksheet/certificate.
+            `,
+            marksheet_ug: `
+                extracted_data fields (use exactly these keys):
+                - full_name: The candidate's full name as printed on the degree or transcript.
+                - university: The name of the awarding university or institute (e.g. "Jawaharlal Nehru Technological University", "Delhi University").
+                - institution_name: The name of the college or campus where the candidate studied (if separate from university).
+                - qualification: The degree name or program (e.g., "Bachelor of Technology", "B.Tech", "Bachelor of Science", "B.Sc").
+                - program_name: The branch, major, or specialized field (e.g., "Computer Science and Engineering", "Mechanical Engineering", "Physics").
+                - city: The city of study. If not explicitly listed, extract it from the college's address, name, or stamp.
+                - state: The state of study (e.g. "Andhra Pradesh", "Telangana", "Maharashtra", "Delhi").
+                - country: e.g. "India".
+                - examination_month_year: The month and year the examination was held, or passing/issue date (e.g., "MAY 2021").
+                - grading_system: The grading system used (e.g. "CGPA" or "Percentage").
+                - total_marks_secured: The total number of marks or grand total secured by the candidate.
+                - total_marks_maximum: The maximum possible grand total marks.
+                - overall_percentage: The overall percentage obtained. If not written, leave null.
+                - cgpa: The overall CGPA/GPA secured (e.g., 8.75).
+                - roll_number: The candidate's roll number, registration number, or seat number.
+                - certificate_number: Certificate serial number or degree number if visible.
+                - barcode_number: Barcode number or printed barcode text if visible.
+
+                ocr_issues: short array of harmless OCR artifacts if present.
+                
+                is_valid: true if it is an Undergraduate degree certificate, marksheet, or transcript.
+            `,
+            marksheet_pg: `
+                extracted_data fields (use exactly these keys):
+                - full_name: The candidate's full name as printed on the degree or transcript.
+                - university: The name of the awarding university or institute (e.g. "Indian Institute of Technology", "Anna University").
+                - institution_name: The name of the postgraduate college or department where the candidate studied.
+                - qualification: The postgraduate degree name or program (e.g., "Master of Technology", "M.Tech", "Master of Business Administration", "MBA", "M.Sc").
+                - program_name: The branch, major, or specialized field (e.g., "Data Science", "Marketing", "Organic Chemistry").
+                - city: The city of study. If not explicitly listed, extract it from the college's address, name, or stamp.
+                - state: The state of study (e.g. "Andhra Pradesh", "Telangana", "Maharashtra", "Delhi").
+                - country: e.g. "India".
+                - examination_month_year: The month and year the examination was held, or passing/issue date (e.g., "JULY 2023").
+                - grading_system: The grading system used (e.g. "CGPA" or "Percentage").
+                - total_marks_secured: The total number of marks or grand total secured by the candidate.
+                - total_marks_maximum: The maximum possible grand total marks.
+                - overall_percentage: The overall percentage obtained. If not written, leave null.
+                - cgpa: The overall CGPA/GPA secured.
+                - roll_number: The candidate's roll number, registration number, or enrollment number.
+                - certificate_number: Certificate serial number or degree number if visible.
+                - barcode_number: Barcode number or printed barcode text if visible.
+
+                ocr_issues: short array of harmless OCR artifacts if present.
+                
+                is_valid: true if it is a Postgraduate degree certificate, marksheet, or transcript.
             `
         };
 
@@ -403,6 +481,10 @@ export class KycService {
             targetType = 'marksheet_10';
         } else if (normalizedType.includes('marksheet_12') || normalizedType.includes('12th') || normalizedType.includes('hsc') || normalizedType.includes('intermediate') || normalizedType.includes('grade12') || normalizedType.includes('grade_12')) {
             targetType = 'marksheet_12';
+        } else if (normalizedType.includes('marksheet_ug') || normalizedType.includes('ug_degree') || normalizedType.includes('ug_transcript') || normalizedType.includes('undergrad') || normalizedType.includes('undergraduate')) {
+            targetType = 'marksheet_ug';
+        } else if (normalizedType.includes('marksheet_pg') || normalizedType.includes('pg_degree') || normalizedType.includes('pg_transcript') || normalizedType.includes('postgrad') || normalizedType.includes('postgraduate')) {
+            targetType = 'marksheet_pg';
         }
 
         return baseInstructions + (typeSpecific[targetType] || 'Extract all visible fields and verify integrity.');
@@ -470,6 +552,7 @@ export class KycService {
                 extracted_data: extracted,
                 document_validation: documentValidation,
                 missing_fields: parsed.missing_fields || [],
+                ocr_issues: parsed.ocr_issues || rawExtracted.ocr_issues || [],
                 raw_text_summary: parsed.raw_text_summary,
                 error: validationError,
             };

@@ -25,6 +25,15 @@ export interface AadhaarDocumentValidation {
     dob_and_gender_fields_present: boolean;
 }
 
+export interface AcademicDocumentValidation {
+    official_board_formatting_present?: boolean;
+    seal_or_signature_area_present?: boolean;
+    barcode_present?: boolean;
+    certificate_number_present?: boolean;
+    ssc_grade_format_consistent?: boolean;
+    subject_table_present?: boolean;
+}
+
 export interface OcrVerificationResult {
     isValid: boolean;
     confidence: number; // 0-100
@@ -49,7 +58,8 @@ export interface OcrVerificationResult {
         admissionYear?: string;
         [key: string]: string | AadhaarStructuredAddress | undefined;
     };
-    document_validation?: AadhaarDocumentValidation | PanDocumentValidation;
+    document_validation?: AadhaarDocumentValidation | PanDocumentValidation | AcademicDocumentValidation;
+    ocr_issues?: string[];
     verification_flags?: {
         is_expired: boolean;
         name_match_score: number;
@@ -232,6 +242,16 @@ function getDocumentValidationSchema(normalizedType: string): string {
     "dob_and_gender_fields_present": boolean
   }`;
     }
+    if (normalizedType === 'marksheet_10' || normalizedType === 'marksheet_12') {
+        return `{
+    "official_board_formatting_present": boolean,
+    "seal_or_signature_area_present": boolean,
+    "barcode_present": boolean,
+    "certificate_number_present": boolean,
+    "ssc_grade_format_consistent": boolean,
+    "subject_table_present": boolean
+  }`;
+    }
     return '{}';
 }
 
@@ -377,8 +397,9 @@ Return ONLY a valid JSON object with the following structure:
     "is_expired": "boolean",
     "name_match_score": "number (0-100, compare to: '${studentProfile?.firstName || ''} ${studentProfile?.lastName || ''}')"
   },
-  "reason": "explanation of results",
-  "rawOcrText": "verbatim text snippet"
+    "reason": "explanation of results",
+    "ocr_issues": ["minor OCR artifact notes, if any"],
+    "rawOcrText": "verbatim text snippet"
 }
 
 IMPORTANT:
@@ -631,6 +652,7 @@ export class DocumentVerificationService {
                 docType,
                 extractedFields: extracted,
                 document_validation: documentValidation,
+                ocr_issues: parsed.ocr_issues || rawExtracted.ocr_issues || [],
                 verification_flags: parsed.verification_flags,
                 reason: validationReason || (isValid ? 'Document verified successfully' : 'Document verification failed'),
                 rawOcrText: parsed.rawOcrText,

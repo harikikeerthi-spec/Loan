@@ -50,12 +50,15 @@ body, h1, h2, h3, h4, h5, h6, p, a, button, input, select, textarea, label {
 /* Bank portal font override — DM Sans scoped to bank layout only */
 .bank-portal, .bank-portal h1, .bank-portal h2, .bank-portal h3,
 .bank-portal h4, .bank-portal h5, .bank-portal h6, .bank-portal p,
-.bank-portal span, .bank-portal div, .bank-portal a, .bank-portal button,
+.bank-portal span:not(.material-symbols-outlined), .bank-portal div:not(.material-symbols-outlined), .bank-portal a, .bank-portal button,
 .bank-portal input, .bank-portal select, .bank-portal textarea, .bank-portal label {
   font-family: 'DM Sans', sans-serif !important;
 }
 
-.material-symbols-outlined {
+.material-symbols-outlined,
+.bank-portal .material-symbols-outlined,
+.bank-portal span.material-symbols-outlined,
+.bank-portal div.material-symbols-outlined {
   font-family: 'Material Symbols Outlined' !important;
 }
 
@@ -787,4 +790,69 @@ input[type="range"]::-moz-range-thumb {
 input[type="range"]::-moz-range-thumb:hover {
   transform: scale(1.25);
   box-shadow: 0 0 0 6px rgba(102, 5, 199, 0.12), 0 4px 16px rgba(102, 5, 199, 0.5);
+}
+
+/* Premium typography adjustments for Staff Dashboard content readability */
+.staff-dashboard-body .text-\[10px\],
+.staff-dashboard-body .text-\[11px\] {
+  font-size: 12px !important;
+}
+
+.staff-dashboard-body .text-\[12px\] {
+  font-size: 13.5px !important;
+}
+
+.staff-dashboard-body .text-\[13px\] {
+  font-size: 14.5px !important;
+}
+
+.staff-dashboard-body .text-xs {
+  font-size: 13px !important;
+}
+
+.staff-dashboard-body .text-sm {
+  font-size: 15px !important;
+}
+
+.staff-dashboard-body .text-base {
+  font-size: 17px !important;
+}
+
+.staff-dashboard-body .text-lg {
+  font-size: 20px !important;
+}
+
+.staff-dashboard-body .text-xl {
+  font-size: 22px !important;
+}
+
+.staff-dashboard-body .text-2xl {
+  font-size: 26px !important;
+}
+
+.staff-dashboard-body .text-3xl {
+  font-size: 32px !important;
+}
+
+/* Ensure inputs, labels, and helper texts are scaled appropriately */
+.staff-dashboard-body label {
+  font-size: 12.5px !important;
+}
+
+.staff-dashboard-body input,
+.staff-dashboard-body select,
+.staff-dashboard-body textarea {
+  font-size: 15px !important;
+}
+
+.staff-dashboard-body button {
+  font-size: 14px !important;
+}
+
+.staff-dashboard-body table th {
+  font-size: 12px !important;
+}
+
+.staff-dashboard-body table td {
+  font-size: 14px !important;
 }

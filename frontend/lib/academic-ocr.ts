@@ -13,6 +13,43 @@ const INDIAN_STATES = [
     'Puducherry', 'Chandigarh', 'Ladakh',
 ];
 
+export function normalizeStateName(stateStr?: string): string {
+    if (!stateStr) return '';
+    const clean = String(stateStr).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    
+    // Check for common abbreviations
+    if (clean === 'ap' || clean === 'andhra') return 'Andhra Pradesh';
+    if (clean === 'ts' || clean === 'tel') return 'Telangana';
+    if (clean === 'mh' || clean === 'maha') return 'Maharashtra';
+    if (clean === 'up') return 'Uttar Pradesh';
+    if (clean === 'mp') return 'Madhya Pradesh';
+    if (clean === 'dl') return 'Delhi';
+    if (clean === 'wb') return 'West Bengal';
+    if (clean === 'tn') return 'Tamil Nadu';
+    if (clean === 'ka') return 'Karnataka';
+    if (clean === 'kl') return 'Kerala';
+    if (clean === 'gj') return 'Gujarat';
+    if (clean === 'hr') return 'Haryana';
+    if (clean === 'pb') return 'Punjab';
+    if (clean === 'rj') return 'Rajasthan';
+    if (clean === 'or' || clean === 'od') return 'Odisha';
+    
+    // Find closest match in INDIAN_STATES
+    for (const s of INDIAN_STATES) {
+        const sClean = s.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (clean.includes(sClean) || sClean.includes(clean)) {
+            return s;
+        }
+    }
+    
+    // Fallback: title case the original string
+    return String(stateStr)
+        .trim()
+        .split(/\s+/)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+}
+
 export type AcademicLevel = 'grade10' | 'grade12' | 'undergrad' | 'postgrad';
 
 function inferStateFromText(...parts: (string | undefined)[]): string | undefined {
@@ -129,7 +166,10 @@ export function canonicalizeAcademicFields(
         raw.college_name;
     if (institution) out.institution = String(institution).trim();
 
-    const university = raw.university_name || raw.university;
+    const university =
+        raw.university_name ||
+        raw.university ||
+        (level !== 'grade10' && level !== 'grade12' ? institution : undefined);
     if (university) out.university = String(university).trim();
 
     const qualification = raw.qualification || raw.degree || raw.program_name || raw.course_name;
@@ -147,7 +187,7 @@ export function canonicalizeAcademicFields(
         raw.state ||
         raw.state_of_study ||
         inferStateFromText(board as string, institution as string, raw.country as string);
-    if (state) out.state = String(state).trim();
+    if (state) out.state = normalizeStateName(state as string);
 
     const country = raw.country || raw.country_of_study || (state ? 'India' : undefined);
     if (country) out.country = String(country).trim();
@@ -183,31 +223,34 @@ export function canonicalizeAcademicFields(
         score as string | number,
     );
 
-    if (level === 'grade10' || level === 'grade12') {
-        let converted = false;
-
-        if (marksSecured != null && marksSecured !== '') {
-            const pctFromMarks = percentageFromTotalMarks(
-                marksSecured as string | number,
-                marksMaximum as string | number,
-            );
-            if (pctFromMarks) {
-                score = pctFromMarks;
-                grading = 'Percentage';
-                converted = true;
-            }
+    let converted = false;
+    if (marksSecured != null && marksSecured !== '') {
+        const pctFromMarks = percentageFromTotalMarks(
+            marksSecured as string | number,
+            marksMaximum as string | number,
+        );
+        if (pctFromMarks) {
+            score = pctFromMarks;
+            grading = 'Percentage';
+            converted = true;
         }
+    }
 
-        // Keep GPA/CGPA as printed on SSC (do not force-convert to percentage)
-        if (!converted && hasGpa) {
-            const gpaVal = raw.overall_gpa ?? raw.gpa ?? raw.cgpa;
-            score = String(gpaVal);
-            grading = 'CGPA';
-        } else if (!converted && score) {
-            const scoreNum = parseFloat(String(score).replace(/[^\d.]/g, ''));
-            if (!isNaN(scoreNum) && scoreNum > 10 && scoreNum <= 100) {
-                grading = 'Percentage';
-            }
+    // Convert CGPA/GPA to Percentage!
+    if (!converted && (hasGpa || grading === 'CGPA')) {
+        const gpaVal = raw.overall_gpa ?? raw.gpa ?? raw.cgpa ?? score;
+        const parsedGpa = parseFloat(String(gpaVal).replace(/[^\d.]/g, ''));
+        if (!isNaN(parsedGpa) && parsedGpa <= 10 && parsedGpa > 0) {
+            score = String(Math.round(parsedGpa * 9.5 * 10) / 10);
+            grading = 'Percentage';
+            converted = true;
+        }
+    }
+
+    if (!converted && score) {
+        const scoreNum = parseFloat(String(score).replace(/[^\d.]/g, ''));
+        if (!isNaN(scoreNum) && scoreNum > 10 && scoreNum <= 100) {
+            grading = 'Percentage';
         }
     }
 
@@ -229,6 +272,15 @@ export function canonicalizeAcademicFields(
 
     if (raw.father_name) out.father_name = String(raw.father_name).trim();
     if (raw.dob || raw.date_of_birth) out.dob = String(raw.dob || raw.date_of_birth).trim();
+
+    const rollNumber = raw.roll_number || raw.registration_number || raw.registered_number;
+    if (rollNumber) out.roll_number = String(rollNumber).trim();
+
+    const certificateNumber = raw.certificate_number || raw.certificate_no || raw.serial_number;
+    if (certificateNumber) out.certificate_number = String(certificateNumber).trim();
+
+    const barcodeNumber = raw.barcode_number || raw.barcode || raw.bar_code;
+    if (barcodeNumber) out.barcode_number = String(barcodeNumber).trim();
 
     return out;
 }

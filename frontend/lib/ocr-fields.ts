@@ -431,7 +431,13 @@ export function normalizeOcrFieldsForAutofill(
         const gender = normalizeGenderForForm(pick(raw.gender as string, raw.sex as string));
         if (gender) out.gender = gender;
 
-        const addr = raw.address ?? raw.residential_address ?? raw.address_formatted;
+        const addr = raw.address ??
+            raw.residential_address ??
+            raw.residentialAddress ??
+            raw.address_formatted ??
+            raw.permanentAddress ??
+            raw.permanent_address ??
+            raw.permanentAddressFormatted;
         if (addr) out.address = addr;
     } else {
         const academicLevel = academicLevelFromDocType(docType);

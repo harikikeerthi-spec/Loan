@@ -148,6 +148,8 @@ export class DocumentController {
         details: {
           message: 'Document verified by AI OCR pre-storage.',
           extractedFields: kycResult.extracted_data,
+          document_validation: kycResult.document_validation,
+          ocr_issues: kycResult.ocr_issues,
         },
       };
 
@@ -158,7 +160,7 @@ export class DocumentController {
         await this.usersService.updateExtractedDetails(userId, {
           documentVerified: true,
           ...maskSensitiveIds(kycResult.extracted_data, docType),
-        });
+        }, docType);
       }
 
       // ── 4. Save record in database ───────────────────────────────────────
@@ -190,6 +192,7 @@ export class DocumentController {
             confidence: kycResult.confidence_score,
             extractedFields: kycResult.extracted_data,
             document_validation: kycResult.document_validation,
+            ocr_issues: kycResult.ocr_issues,
             reason: 'Verified',
           },
         },
@@ -259,6 +262,8 @@ export class DocumentController {
           ? 'Document re-verified by AI OCR.'
           : kycResult.error || 'Verification failed',
         extractedFields: kycResult.extracted_data,
+        document_validation: kycResult.document_validation,
+        ocr_issues: kycResult.ocr_issues,
       },
     };
 
@@ -277,7 +282,7 @@ export class DocumentController {
       await this.usersService.updateExtractedDetails(userId, {
         documentVerified: true,
         ...maskSensitiveIds(kycResult.extracted_data, docType),
-      });
+      }, docType);
     }
 
     return {
@@ -295,6 +300,8 @@ export class DocumentController {
           isValid: kycResult.is_valid,
           confidence: kycResult.confidence_score,
           extractedFields: kycResult.extracted_data,
+          document_validation: kycResult.document_validation,
+          ocr_issues: kycResult.ocr_issues,
         },
       },
     };
