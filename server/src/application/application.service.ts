@@ -164,6 +164,23 @@ export class ApplicationService {
     await this.createStatusHistory(application.id, { toStatus: application.status, toStage: application.stage, notes: 'Application created', isAutomatic: true });
     await this.initializeRequiredDocuments(application.id, application.userId, data.loanType);
 
+    // Emit live dashboard activity event for new application creation!
+    try {
+      const name = `${application.firstName || ''} ${application.lastName || ''}`.trim() || application.email || 'Student';
+      const targetUni = application.universityName || 'Target University';
+      this.eventEmitter.emit('dashboard.activity', {
+        type: 'application',
+        msg: `Student ${name} submitted a new Loan Application #${application.applicationNumber} for ${targetUni}.`,
+        icon: 'assignment',
+        color: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+        actorName: name,
+        actorEmail: application.email,
+        createdAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error('Failed to emit activity event for application creation:', e);
+    }
+
     return { success: true, data: application, message: 'Application created successfully' };
   }
 
@@ -181,6 +198,23 @@ export class ApplicationService {
 
     if (error) throw error;
     await this.createStatusHistory(applicationId, { fromStatus: 'draft', toStatus: 'submitted', notes: 'Application submitted for review', isAutomatic: true });
+
+    // Emit live dashboard activity event for application submission!
+    try {
+      const name = `${application.firstName || ''} ${application.lastName || ''}`.trim() || application.email || 'Student';
+      this.eventEmitter.emit('dashboard.activity', {
+        type: 'application',
+        msg: `Student ${name} submitted Application #${application.applicationNumber || application.id.slice(-4)} for review.`,
+        icon: 'rocket_launch',
+        color: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+        actorName: name,
+        actorEmail: application.email,
+        createdAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error('Failed to emit activity event for application submission:', e);
+    }
+
     return { success: true, data: updated, message: 'Application submitted successfully' };
   }
 

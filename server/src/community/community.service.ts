@@ -480,7 +480,7 @@ export class CommunityService {
 
     const { data: post, error } = await this.db
       .from('ForumPost')
-      .insert({ title: data.title, content: data.content, excerpt: data.excerpt || null, category: data.category || 'General', tags: data.tags || [], authorId: userId, isMentorOnly: data.isMentorOnly || false })
+      .insert({ title: data.title, content: data.content, category: data.category || 'General', tags: data.tags || [], authorId: userId, isMentorOnly: data.isMentorOnly || false })
       .select('*, author:User!authorId(firstName, lastName, role, id)')
       .single();
 

@@ -410,7 +410,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
       const hr = get('hour');
       const min = get('minute');
 
-      return `${monthStr} ${day} ${year}, ${hr}:${min} `;
+      return `${monthStr} ${day} ${year}, ${hr}:${min} +5:30`;
     } catch {
       return "";
     }
@@ -785,15 +785,33 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                     <div className="space-y-6 flex-1 min-w-0">
                       <div>
                         <div className="flex flex-wrap items-center gap-3 mb-2">
-                          <p className="text-[11px] font-['Playfair_Display',serif] font-black text-slate-400 uppercase tracking-[0.25em]">UNIVERSITY OF {(application.universityName || application.college || "TORONTO").toUpperCase()}</p>
+                          <p 
+                            onClick={() => setActiveSidebarMenu("student")}
+                            className="text-[11px] font-['Playfair_Display',serif] font-black text-slate-400 uppercase tracking-[0.25em] cursor-pointer hover:text-emerald-600 hover:underline transition-all"
+                            title="Click to view Student Profile"
+                          >
+                            UNIVERSITY OF {(application.universityName || application.college || "TORONTO").toUpperCase()}
+                          </p>
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black border tracking-widest uppercase shadow-sm ${['PENDING', 'UNDER REVIEW', 'IN PROGRESS'].includes(status)
                             ? 'bg-amber-50 text-amber-600 border-amber-100/50'
                             : 'bg-emerald-50 text-emerald-600 border-emerald-100/50'
                             }`}>{status}</span>
                         </div>
                         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                          <h3 className="text-[30px] font-black text-slate-900 tracking-tight leading-tight">{application.firstName || application.student?.firstName || "Abhi"} {application.lastName || application.student?.lastName || "Y"}</h3>
-                          <p className="text-[18px] font-bold text-emerald-600/90">{application.courseName || application.program || "MS/M.Tech"}</p>
+                          <h3 
+                            onClick={() => setActiveSidebarMenu("student")}
+                            className="text-[30px] font-black text-slate-900 tracking-tight leading-tight cursor-pointer hover:text-emerald-600 hover:underline transition-all"
+                            title="Click to view Student Profile"
+                          >
+                            {application.firstName || application.student?.firstName || "Abhi"} {application.lastName || application.student?.lastName || "Y"}
+                          </h3>
+                          <p 
+                            onClick={() => setActiveSidebarMenu("student")}
+                            className="text-[18px] font-bold text-emerald-600/90 cursor-pointer hover:text-emerald-500 hover:underline transition-all"
+                            title="Click to view Student Profile"
+                          >
+                            {application.courseName || application.program || "MS/M.Tech"}
+                          </p>
                         </div>
                       </div>
 
@@ -801,7 +819,13 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                       <div className="grid grid-cols-2 gap-4 max-w-xl bg-slate-50/60 p-5 rounded-3xl border border-slate-100/80">
                         <div className="space-y-0.5">
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">STUDENT IDENTIFIER</p>
-                          <p className="text-[12px] font-bold text-slate-700 font-mono truncate" title={studentId}>{studentId10}</p>
+                          <p 
+                            onClick={() => setActiveSidebarMenu("student")}
+                            className="text-[12px] font-bold text-slate-700 font-mono truncate cursor-pointer hover:text-emerald-600 hover:underline transition-all" 
+                            title="Click to view Student Profile"
+                          >
+                            {studentId10}
+                          </p>
                         </div>
                         <div className="space-y-0.5">
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">APPLICATION ID</p>
@@ -809,7 +833,13 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                         </div>
                         <div className="space-y-0.5 col-span-2 sm:col-span-1">
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">UNIVERSITY</p>
-                          <p className="text-[12px] font-bold text-slate-700 truncate">{(application.universityName || application.college || "TORONTO").toUpperCase()}</p>
+                          <p 
+                            onClick={() => setActiveSidebarMenu("student")}
+                            className="text-[12px] font-bold text-slate-700 truncate cursor-pointer hover:text-emerald-600 hover:underline transition-all"
+                            title="Click to view Student Profile"
+                          >
+                            {(application.universityName || application.college || "TORONTO").toUpperCase()}
+                          </p>
                         </div>
                         <div className="space-y-0.5 col-span-2 sm:col-span-1">
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">COURSE CATEGORY</p>

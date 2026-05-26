@@ -235,6 +235,13 @@ export default function StaffDashboardPage() {
     const { user, logout } = useAuth();
     const [activeSection, setActiveSection] = useState(() => getDashboardSection(searchParams.get("section")));
     const [loading, setLoading] = useState(true);
+    const [nowTime, setNowTime] = useState<Date>(new Date());
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            setNowTime(new Date());
+        }, 1000);
+        return () => clearInterval(intervalId);
+    }, []);
     const [stats, setStats] = useState<any>({});
     const [data, setData] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
@@ -449,6 +456,43 @@ export default function StaffDashboardPage() {
         const utcDate = new Date(dateStr);
         // Add IST offset to UTC time
         return new Date(utcDate.getTime() + IST_OFFSET);
+    };
+
+    // Formats a date exactly into India Standard Time (+5:30) with timezone label
+    const formatIST = (dateVal: any, includeTime: boolean = true): string => {
+        if (!dateVal) return "—";
+        try {
+            const d = new Date(dateVal);
+            if (isNaN(d.getTime())) return "—";
+
+            const parts = new Intl.DateTimeFormat("en-US", {
+                timeZone: "Asia/Kolkata",
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                hour: includeTime ? "2-digit" : undefined,
+                minute: includeTime ? "2-digit" : undefined,
+                second: includeTime ? "2-digit" : undefined,
+                hour12: false
+            }).formatToParts(d);
+
+            const getPart = (type: string) => parts.find(p => p.type === type)?.value || "";
+
+            const month = getPart("month");
+            const day = getPart("day");
+            const year = getPart("year");
+
+            if (includeTime) {
+                const hour = getPart("hour");
+                const minute = getPart("minute");
+                const second = getPart("second");
+                return `${month} ${day}, ${year} • ${hour}:${minute}:${second}`;
+            } else {
+                return `${month} ${day}, ${year} `;
+            }
+        } catch {
+            return "—";
+        }
     };
 
     const formatRelativeTime = (dateStr: string) => {
@@ -773,7 +817,7 @@ export default function StaffDashboardPage() {
     const [shareName, setShareName] = useState("");
     const [shareMessage, setShareMessage] = useState("");
     const [isSharing, setIsSharing] = useState(false);
-    const [shareResult, setShareResult] = useState<{ url: string; expires: string } | null>(null);
+    const [shareResult, setShareResult] = useState<{ url: string; expires: string; applicationId?: string; applicationNumber?: string } | null>(null);
     const [availableBanks, setAvailableBanks] = useState<any[]>([]);
     const [bankUsers, setBankUsers] = useState<any[]>([]);
 
@@ -1536,20 +1580,28 @@ export default function StaffDashboardPage() {
             });
 
             if (res.success || res.url) {
-                setShareResult({
-                    url: res.url || `${window.location.origin}/share/${res.shareId || 'test'}`,
-                    expires: res.expiresAt || new Date(Date.now() + IST_OFFSET + 30 * 24 * 60 * 60 * 1000).toISOString()
-                });
+                const shareUrl = res.url || `${window.location.origin}/share/${res.shareId || 'test'}`;
+                const shareExpires = res.expiresAt || new Date(Date.now() + IST_OFFSET + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+                let targetAppId = "";
+                let targetAppNumber = "";
+
+                // Try to find an existing application first
+                try {
+                    const appsRes: any = await adminApi.getApplications({ userId: studentId });
+                    const applications = appsRes?.data || [];
+                    const activeApp = applications.find((app: any) => app.userId === studentId || app.email === (createdUser?.email || newStudent?.email));
+                    if (activeApp) {
+                        targetAppId = activeApp.id;
+                        targetAppNumber = activeApp.applicationNumber;
+                    }
+                } catch (findErr) {
+                    console.warn("Failed to find existing application", findErr);
+                }
 
                 // Update application status and progress if sharing to bank
                 if (shareTarget === 'bank' && shareName) {
                     try {
-                        const appsRes: any = await adminApi.getApplications({ userId: studentId });
-                        const applications = appsRes?.data || [];
-                        let activeApp = applications.find((app: any) => app.userId === studentId || app.email === (createdUser?.email || newStudent?.email));
-
-                        let targetAppId = activeApp?.id;
-
                         if (!targetAppId) {
                             const studentEmail = createdUser?.email || newStudent?.email;
                             const amountVal = createdUser?.loanAmount || (newStudent as any)?.loanAmount || "1500000";
@@ -1575,13 +1627,15 @@ export default function StaffDashboardPage() {
                                 programFocus: newStudent.courseName
                             });
 
-                            if (newAppRes?.success && newAppRes?.application?.id) {
-                                targetAppId = newAppRes.application.id;
+                            const createdApp = newAppRes?.application || newAppRes;
+                            if (createdApp?.id) {
+                                targetAppId = createdApp.id;
+                                targetAppNumber = createdApp.applicationNumber;
                             }
-                        } else if (!activeApp?.universityName || !activeApp?.courseName) {
+                        } else {
                             await adminApi.updateApplication(targetAppId, {
-                                universityName: activeApp?.universityName || newStudent.targetUniversity,
-                                courseName: activeApp?.courseName || newStudent.courseName
+                                universityName: newStudent.targetUniversity,
+                                courseName: newStudent.courseName
                             });
                         }
 
@@ -1600,6 +1654,13 @@ export default function StaffDashboardPage() {
                         console.warn("Failed to update application status after sharing", updateError);
                     }
                 }
+
+                setShareResult({
+                    url: shareUrl,
+                    expires: shareExpires,
+                    applicationId: targetAppId || undefined,
+                    applicationNumber: targetAppNumber || undefined
+                });
 
                 addActivity("share", `Shared profile with ${shareName || shareEmail}`, "send", "text-indigo-600 bg-indigo-50");
             } else {
@@ -2341,7 +2402,7 @@ export default function StaffDashboardPage() {
                 );
                 const university = String(extractedFields.university || extractedFields.university_name || institution || '');
                 const qualification = String(extractedFields.qualification || extractedFields.degree || extractedFields.program_name || extractedFields.course_name || '');
-                
+
                 let grading = String(extractedFields.grading || extractedFields.grading_system || '');
                 if (grading.toLowerCase().includes('cgpa') || grading.toLowerCase().includes('gpa')) {
                     grading = 'CGPA';
@@ -6189,13 +6250,13 @@ export default function StaffDashboardPage() {
                                                                     >
                                                                         🏦 Bank
                                                                     </button>
-                                                                    <button
+                                                                    {/* <button
                                                                         type="button"
                                                                         onClick={() => { setShareTarget('student'); setShareName(`${newStudent.firstName} ${newStudent.lastName}`); setShareEmail(newStudent.email); }}
                                                                         className={`flex-1 py-3 px-4 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${shareTarget === 'student' ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}
                                                                     >
                                                                         🎓 Student
-                                                                    </button>
+                                                                    </button> */}
                                                                 </div>
                                                             </div>
 
@@ -6237,7 +6298,7 @@ export default function StaffDashboardPage() {
                                                             disabled={isSharing || !shareEmail || (shareTarget === 'bank' && !shareName)}
                                                             className="w-full py-5 bg-indigo-600 text-white rounded-[24px] font-black text-[12px] uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 shadow-xl shadow-indigo-600/20 disabled:opacity-50"
                                                         >
-                                                            {isSharing ? 'Sharing with Bank...' : 'Share Complete Profile'}
+                                                            {isSharing ? (shareTarget === 'student' ? 'Sharing with Student...' : 'Sharing with Bank...') : (shareTarget === 'student' ? 'Share with Student' : 'Share Complete Profile')}
                                                             {!isSharing && <span className="material-symbols-outlined text-[20px]">send</span>}
                                                         </button>
                                                     </div>
@@ -6271,32 +6332,65 @@ export default function StaffDashboardPage() {
                                                 </div>
                                             ) : (
                                                 <div className="bg-white p-12 rounded-[40px] border border-slate-100 shadow-2xl text-center space-y-8 animate-in zoom-in-95 duration-500">
-                                                    <div className="w-24 h-24 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/30">
-                                                        <span className="material-symbols-outlined text-[48px]">check</span>
+                                                    <div className="w-24 h-24 bg-gradient-to-tr from-emerald-400 to-emerald-600 text-white rounded-[32px] flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/20 rotate-6 hover:rotate-0 transition-all duration-300">
+                                                        <span className="material-symbols-outlined text-[48px]">check_circle</span>
                                                     </div>
                                                     <div>
-                                                        <h4 className="text-2xl font-black text-slate-900 mb-2">Access Link Generated</h4>
-                                                        <p className="text-slate-500 text-sm font-medium">The secure portal link is ready for distribution.</p>
+                                                        <h4 className="text-2xl font-black text-slate-900 tracking-tight mb-2">Verification Complete</h4>
+                                                        <p className="text-slate-500 text-sm font-medium">The secure application has been successfully generated.</p>
                                                     </div>
 
-                                                    <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex items-center gap-4 relative group">
-                                                        <input readOnly value={shareResult.url} className="flex-1 bg-transparent border-none text-[13px] font-bold text-indigo-600 focus:ring-0 truncate" />
-                                                        <button onClick={() => { navigator.clipboard.writeText(shareResult.url); alert("Link copied to clipboard!"); }} className="p-3 bg-white text-slate-600 rounded-xl hover:text-indigo-600 hover:shadow-md transition-all shadow-sm">
-                                                            <span className="material-symbols-outlined text-[20px]">content_copy</span>
-                                                        </button>
-                                                    </div>
-
-                                                    <div className="flex flex-col items-center gap-6 pt-4">
-                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Expires on: {new Date(shareResult.expires).toLocaleDateString()}</p>
-
-                                                        <div className="flex gap-4 w-full max-w-sm">
-                                                            <button onClick={() => setShareResult(null)} className="flex-1 py-4 border border-slate-200 text-slate-600 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all">
-                                                                Share Again
-                                                            </button>
-                                                            <button onClick={resetOnboardModal} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-slate-900/20">
-                                                                Close Workflow
-                                                            </button>
+                                                    {/* Clean & Premium Application ID Card */}
+                                                    <div className="max-w-sm mx-auto bg-gradient-to-br from-indigo-50/60 via-indigo-50/20 to-slate-50 border border-indigo-100 p-6 rounded-3xl shadow-sm space-y-4">
+                                                        <div className="flex flex-col items-center">
+                                                            <span className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-1.5 flex items-center gap-1">
+                                                                <span className="material-symbols-outlined text-[14px]">assignment</span>
+                                                                Loan Application ID
+                                                            </span>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-xl font-black text-slate-900 font-mono tracking-tight bg-white px-4 py-2 border border-slate-100 rounded-2xl shadow-sm">
+                                                                    {shareResult.applicationNumber || shareResult.applicationId || "PENDING"}
+                                                                </span>
+                                                                {(shareResult.applicationNumber || shareResult.applicationId) && (
+                                                                    <button 
+                                                                        onClick={() => { 
+                                                                            navigator.clipboard.writeText(shareResult.applicationNumber || shareResult.applicationId || ""); 
+                                                                            alert("Application ID copied!"); 
+                                                                        }} 
+                                                                        className="p-3 bg-white text-indigo-600 rounded-2xl hover:text-indigo-700 hover:shadow-md hover:bg-slate-50 transition-all border border-indigo-100 shadow-sm"
+                                                                        title="Copy Application ID"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-[18px] block">content_copy</span>
+                                                                    </button>
+                                                                )}
+                                                            </div>
                                                         </div>
+                                                    </div>
+
+                                                    {/* Neat Access Link Distribution Section */}
+                                                    <div className="max-w-sm mx-auto space-y-3">
+                                                        <button 
+                                                            onClick={() => { 
+                                                                navigator.clipboard.writeText(shareResult.url); 
+                                                                alert("Portal access link copied!"); 
+                                                            }} 
+                                                            className="w-full py-4 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:shadow-lg hover:shadow-indigo-500/25 transition-all flex items-center justify-center gap-2"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[18px]">share_windows</span>
+                                                            Copy Secure Access Link
+                                                        </button>
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em]">
+                                                            Expires on: {new Date(shareResult.expires).toLocaleDateString()}
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="pt-4 border-t border-slate-100 flex gap-4 w-full max-w-sm mx-auto">
+                                                        <button onClick={() => setShareResult(null)} className="flex-1 py-4 border border-slate-200 text-slate-600 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all">
+                                                            Share Again
+                                                        </button>
+                                                        <button onClick={resetOnboardModal} className="flex-1 py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-slate-900/20">
+                                                            Close Workflow
+                                                        </button>
                                                     </div>
                                                 </div>
                                             )}
@@ -7143,17 +7237,39 @@ export default function StaffDashboardPage() {
                                                             <>
                                                                 <td className="sticky left-0 z-10 bg-white px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
                                                                     <div className="flex items-center gap-4">
-                                                                        <div className="relative shrink-0">
-                                                                            <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center font-medium text-[13px] text-slate-600">
+                                                                        <div
+                                                                            onClick={() => {
+                                                                                const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
+                                                                                if (uid) window.open(`/staff/users/${uid}`, '_blank');
+                                                                            }}
+                                                                            className="relative shrink-0 cursor-pointer group/avatar hover:scale-105 transition-all"
+                                                                            title="Click to view Student Profile"
+                                                                        >
+                                                                            <div className="w-10 h-10 rounded-full bg-white border border-slate-200 group-hover/avatar:border-indigo-400 group-hover/avatar:text-indigo-600 flex items-center justify-center font-medium text-[13px] text-slate-600 transition-all">
                                                                                 {initials}
                                                                             </div>
                                                                             {isOnline && (
-                                                                                <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full animate-pulse shadow-sm shadow-emerald-500/30" title="Online now" />
+                                                                                <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full animate-pulse shadow-sm shadow-emerald-500/30" />
                                                                             )}
                                                                         </div>
                                                                         <div className="min-w-0">
-                                                                            <p className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] leading-tight truncate">{item.firstName || item.student?.firstName || '—'} {item.lastName || item.student?.lastName || ''}</p>
-                                                                            <p className="text-[9px] text-slate-600 font-black mt-1 uppercase tracking-widest">APP-{(item.id || item._id || 'UNKNOWN').slice(-6)}</p>
+                                                                            <p
+                                                                                onClick={() => {
+                                                                                    const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
+                                                                                    if (uid) window.open(`/staff/users/${uid}`, '_blank');
+                                                                                }}
+                                                                                className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] leading-tight truncate cursor-pointer hover:text-indigo-600 hover:underline transition-all"
+                                                                                title="Click to view Student Profile"
+                                                                            >
+                                                                                {item.firstName || item.student?.firstName || '—'} {item.lastName || item.student?.lastName || ''}
+                                                                            </p>
+                                                                            <p
+                                                                                onClick={() => setSelectedApp(item)}
+                                                                                className="text-[9px] text-slate-500 hover:text-indigo-600 hover:underline cursor-pointer transition-all font-black mt-1 uppercase tracking-widest inline-block"
+                                                                                title="Click to view Application Details"
+                                                                            >
+                                                                                APP-{(item.id || item._id || 'UNKNOWN').slice(-6)}
+                                                                            </p>
                                                                         </div>
                                                                     </div>
                                                                 </td>
@@ -7219,8 +7335,8 @@ export default function StaffDashboardPage() {
                                                                             {item.status || 'DRAFT'}
                                                                         </span>
                                                                         <div className="text-[12px] text-slate-500 font-medium">
-                                                                            <p>Submitted: {item.submittedAt ? format(convertToIST(item.submittedAt), "MMM d, yyyy") : '—'}</p>
-                                                                            <p>Now: {format(new Date(), "MMM d, yyyy • HH:mm:ss")}</p>
+                                                                            <p>Submitted: {item.submittedAt ? formatIST(item.submittedAt) : '—'}</p>
+                                                                            <p>Now: {formatIST(nowTime)}</p>
                                                                         </div>
                                                                     </div>
                                                                 </td>
@@ -7244,6 +7360,17 @@ export default function StaffDashboardPage() {
                                                                                         <span className="material-symbols-outlined text-[18px] text-indigo-500">visibility</span>
                                                                                         View Application
                                                                                     </button>
+                                                                                    {/* <button
+                                                                                        onClick={() => {
+                                                                                            const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
+                                                                                            if (uid) window.open(`/staff/users/${uid}`, '_blank');
+                                                                                            setActiveMenuId(null);
+                                                                                        }}
+                                                                                        className="w-full flex items-center gap-4 px-5 py-3 text-[12px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-colors"
+                                                                                    >
+                                                                                        <span className="material-symbols-outlined text-[18px] text-indigo-500">account_circle</span>
+                                                                                        View Profile
+                                                                                    </button> */}
                                                                                     <button
                                                                                         onClick={() => { setSearchQuery(item.email || item.student?.email); setActiveMenuId(null); }}
                                                                                         className="w-full flex items-center gap-4 px-5 py-3 text-[12px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-colors"

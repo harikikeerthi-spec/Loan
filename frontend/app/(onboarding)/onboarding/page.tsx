@@ -609,19 +609,19 @@ const steps: any[] = [
     // ════════════════════════════════════════════════════════════
     //  CONTACT INFO – Fetch and lock phone/DOB
     // ════════════════════════════════════════════════════════════
-    {
-        id: 'contact_info',
-        q: "Let's confirm your contact information",
-        type: 'contact_info',
-        flows: ['loan', 'plan', 'compare']
-    },
+    // {
+    //     id: 'contact_info',
+    //     q: "Let's confirm your contact information",
+    //     type: 'contact_info',
+    //     flows: ['loan', 'plan', 'compare']
+    // },
 
-    {
-        id: 'document_upload',
-        q: "Let's verify your documents using AI. Please upload a document (Passport, Aadhaar, Admission Letter, or Bank Statement)",
-        type: 'document_upload',
-        flows: ['loan', 'plan', 'compare']
-    },
+    // {
+    //     id: 'document_upload',
+    //     q: "Let's verify your documents using AI. Please upload a document (Passport, Aadhaar, Admission Letter, or Bank Statement)",
+    //     type: 'document_upload',
+    //     flows: ['loan', 'plan', 'compare']
+    // },
 
     // ════════════════════════════════════════════════════════════
     //  SHARED – AI analysis (runs for whichever flow the user chose)
@@ -719,19 +719,19 @@ export default function OnboardingPage() {
     // Fetch existing user data (phone and DOB) when component mounts
     useEffect(() => {
         if (!user?.id || contactInfoFetched) return;
-        
+
         const fetchContactInfo = async () => {
             try {
                 setLoadingContactInfo(true);
                 // Get user dashboard data to fetch phone and DOB
                 const dashboardData: any = await authApi.getDashboardData(user.id);
-                
+
                 if (dashboardData?.user) {
                     const userData = dashboardData.user;
                     // Handle both camelCase and snake_case
                     const phone = userData.phoneNumber || userData.phone_number || userData.phone;
                     const dob = userData.dateOfBirth || userData.date_of_birth || userData.dob;
-                    
+
                     if (phone) {
                         setPhoneNumber(phone);
                         setPhoneNumberLocked(true);
@@ -1785,7 +1785,7 @@ export default function OnboardingPage() {
 
         if (step.type === 'contact_info') {
             const allFilled = phoneNumber && dateOfBirth;
-            
+
             return (
                 <div style={{ marginTop: 10 }}>
                     {loadingContactInfo ? (

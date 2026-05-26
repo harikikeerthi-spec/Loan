@@ -207,7 +207,7 @@ function ProfileList({ onSelect, onlineEmails = [] }: { onSelect: (p: any) => vo
                   return (
                     <tr key={p.id} className="group hover:bg-slate-50/80 border-b border-slate-100 transition-all shadow-[4px_0_12px_rgba(0,0,0,0.02)]">
                       <td className="px-6 py-5">
-                        <div className="flex items-center gap-4 cursor-pointer group/profile">
+                        <div onClick={() => onSelect(p)} className="flex items-center gap-4 cursor-pointer group/profile">
                           <div className="relative">
                             <div className="w-11 h-11 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center font-black text-indigo-600 text-[13px] shadow-sm group-hover/profile:scale-110 transition-transform duration-300">
                               {p.linkedUser?.firstName?.[0]}{p.linkedUser?.lastName?.[0]}
@@ -217,7 +217,7 @@ function ProfileList({ onSelect, onlineEmails = [] }: { onSelect: (p: any) => vo
                             )}
                           </div>
                         <div className="min-w-0">
-                          <p className="text-[14px] font-bold text-slate-900 tracking-tight truncate group-hover/profile:text-indigo-600 transition-colors font-display">
+                          <p className="text-[14px] font-bold text-slate-900 tracking-tight truncate group-hover/profile:text-indigo-600 group-hover/profile:underline transition-colors font-display">
                             {p.linkedUser?.firstName} {p.linkedUser?.lastName}
                           </p>
                           <div className="flex items-center gap-1 mt-0.5">

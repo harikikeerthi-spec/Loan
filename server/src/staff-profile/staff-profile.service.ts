@@ -9,6 +9,7 @@ import { UsersService } from '../users/users.service';
 import { AuditLogService } from '../auth/audit-log.service';
 import { S3Service } from '../document/s3.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { EmailService } from '../auth/email.service';
 
 @Injectable()
 export class StaffProfileService {
@@ -22,6 +23,7 @@ export class StaffProfileService {
     private auditLog: AuditLogService,
     private s3Service: S3Service,
     private eventEmitter: EventEmitter2,
+    private emailService: EmailService,
   ) {}
 
   // ─── Create a staff-portal profile linked to a website user ───────────────
@@ -818,280 +820,412 @@ export class StaffProfileService {
       throw new BadRequestException(`Failed to create StaffProfileShare: ${shareErr.message}`);
     }
 
-    // 4. Fetch or create the active LoanApplication for the student
+    // 4. Handle recipient types: skip application creation if sharing with student, instead email summary
     const { data: studentUser } = await this.db
       .from('User')
       .select('*')
       .eq('id', studentId)
       .maybeSingle();
 
-    let { data: application, error: appErr } = await this.db
-      .from('LoanApplication')
-      .select('*')
-      .eq('userId', studentId)
-      .maybeSingle();
+    const isRecipientStudent = body.recipientType?.toLowerCase() === 'student';
 
-    const authorName = staffUser 
-      ? `${staffUser.firstName || ''} ${staffUser.lastName || ''}`.trim() || staffUser.email || 'Staff' 
-      : 'Staff';
+    if (isRecipientStudent) {
+      const studentEmail = studentUser?.email || body.recipientEmail;
+      const personal = body.studentDetails?.personal || body.studentDetails || {};
+      const academic = body.studentDetails?.academic || {};
+      const coApplicant = body.studentDetails?.coApplicant || {};
+      const address = body.studentDetails?.address?.mailing || body.studentDetails?.mailingAddress || {};
 
-    if (!application) {
-      const mappedDetails = this.mapOnboardingToApplication(body.studentDetails);
-      const appNumber = `VL-${Date.now()}`;
-      const insertApp = {
-        id: 'la-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
-        userId: studentId,
-        bank: body.recipientName || 'Credila',
-        loanType: 'Education Loan',
-        amount: body.studentDetails?.loanAmount ? parseFloat(body.studentDetails.loanAmount) : 1500000,
-        status: 'pending',
-        stage: 'Pre-login',
-        progress: 10,
-        date: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        applicationNumber: appNumber,
-        priorityLevel: 'medium',
-        ...mappedDetails,
-        firstName: mappedDetails.firstName || studentUser?.firstName || 'Student',
-        lastName: mappedDetails.lastName || studentUser?.lastName || 'Applicant',
-        email: mappedDetails.email || studentUser?.email || null,
-        phone: mappedDetails.phone || studentUser?.mobile || studentUser?.phone || null,
+      const formatCurrency = (val: any) => {
+        if (!val) return '—';
+        const num = parseFloat(String(val).replace(/[^0-9.]/g, ''));
+        if (isNaN(num)) return '₹' + val;
+        return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(num);
       };
 
-      const { data: newApp, error: createAppErr } = await this.db
-        .from('LoanApplication')
-        .insert(insertApp)
-        .select()
-        .single();
+      const studentName = body.recipientName || `${personal.firstName || ''} ${personal.lastName || ''}`.trim() || studentUser?.firstName || 'Student';
+      const shareUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/share/${token}`;
 
-      if (createAppErr) {
-        console.error('[StaffProfileService.shareProfile] Failed to create LoanApplication:', createAppErr);
-        throw new BadRequestException(`Failed to create LoanApplication: ${createAppErr.message}`);
-      }
-      application = newApp;
+      const subject = `🎓 Your Complete VidyaLoans Onboarding Profile Details`;
+      const html = `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 650px; margin: 0 auto; padding: 0; border: 1px solid #e2e8f0; border-radius: 16px; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+          <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 35px 30px; text-align: center; color: white;">
+            <span style="font-size: 40px; margin-bottom: 10px; display: inline-block;">🎓</span>
+            <h1 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">VidyaLoans Onboarding Dossier</h1>
+            <p style="margin: 5px 0 0; font-size: 14px; color: #d1fae5; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">Verified Onboarding Summary</p>
+          </div>
+          
+          <div style="padding: 30px; background-color: #ffffff;">
+            <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 24px;">
+              Dear <strong>${studentName}</strong>,
+            </p>
+            <p style="color: #475569; font-size: 15px; line-height: 1.6; margin: 0 0 24px;">
+              Your onboarding process is complete! Below is the complete dossier of details registered in your profile. You can access your verified portfolio and all academic/KYC documents securely using the link below.
+            </p>
 
-      // Log initial pending status history
-      await this.db.from('ApplicationStatusHistory').insert({
-        id: 'ash-' + Date.now() + '-pending',
-        applicationId: application.id,
-        fromStatus: null,
-        toStatus: 'pending',
-        fromStage: null,
-        toStage: 'Pre-login',
-        changedBy: staffUser?.id || staffUser?.uid || 'system',
-        changedByName: authorName,
-        changeReason: 'Initial setup',
-        notes: 'Loan application initialized in system.',
-        isAutomatic: true,
-        createdAt: new Date().toISOString()
-      });
+            <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background-color: #f8fafc; margin-bottom: 24px;">
+              <h3 style="color: #059669; font-size: 15px; font-weight: 700; margin: 0 0 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;">📂 Study & Loan Information</h3>
+              <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600; width: 45%;">Target University:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${body.studentDetails?.targetUniversity || body.studentDetails?.university || '—'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Course Name:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${body.studentDetails?.courseName || '—'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Requested Loan Amount:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700; font-size: 16px;">${formatCurrency(body.studentDetails?.loanAmount)}</td>
+                </tr>
+              </table>
+            </div>
+
+            <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background-color: #f8fafc; margin-bottom: 24px;">
+              <h3 style="color: #059669; font-size: 15px; font-weight: 700; margin: 0 0 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;">👤 Personal & Contact Info</h3>
+              <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600; width: 45%;">Full Name:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${studentName}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Email Address:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${studentEmail}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Mobile Number:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${personal.mobile || personal.phone || studentUser?.mobile || studentUser?.phone || '—'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Date of Birth:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${personal.dob || '—'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Pan Card Status:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${personal.pan || 'Provided'}</td>
+                </tr>
+              </table>
+            </div>
+
+            <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background-color: #f8fafc; margin-bottom: 24px;">
+              <h3 style="color: #059669; font-size: 15px; font-weight: 700; margin: 0 0 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;">👥 Co-Applicant Details</h3>
+              <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600; width: 45%;">Name:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${coApplicant.firstName || coApplicant.name ? `${coApplicant.firstName || coApplicant.name} ${coApplicant.lastName || ''}`.trim() : '—'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Relation to Applicant:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${coApplicant.relationship || '—'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Employment Type:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${coApplicant.employmentType || '—'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Monthly Income:</td>
+                  <td style="padding: 6px 0; color: #1e293b; font-weight: 700;">${formatCurrency(coApplicant.monthlyIncome)}</td>
+                </tr>
+              </table>
+            </div>
+
+            <div style="border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background-color: #f8fafc; margin-bottom: 24px;">
+              <h3 style="color: #059669; font-size: 15px; font-weight: 700; margin: 0 0 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em;">📍 Mailing Address</h3>
+              <p style="color: #1e293b; font-size: 14px; margin: 0; font-weight: 700; line-height: 1.4;">
+                ${address.address1 || '—'}<br>
+                ${address.city || ''}${address.city && address.state ? ', ' : ''}${address.state || ''} ${address.pincode || ''}<br>
+                ${address.country || ''}
+              </p>
+            </div>
+
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${shareUrl}" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+                📂 View Onboarding Portfolio
+              </a>
+            </div>
+
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 30px; text-align: center;">
+              <p style="color: #94a3b8; font-size: 12px; margin: 0;">
+                If you did not request this email, please contact support@vidyaloans.com.<br>
+                © ${new Date().getFullYear()} VidyaLoans. All rights reserved.
+              </p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      await this.emailService.sendMail(studentEmail, subject, html);
     } else {
-      // If application already exists, update it with onboarding details!
-      const mappedDetails = this.mapOnboardingToApplication(body.studentDetails);
-      const { data: updatedApp, error: updateAppErr } = await this.db
+      let { data: application, error: appErr } = await this.db
         .from('LoanApplication')
-        .update({
-          bank: body.recipientName || application.bank,
-          updatedAt: new Date().toISOString(),
-          ...mappedDetails,
-          firstName: mappedDetails.firstName || application.firstName || studentUser?.firstName || 'Student',
-          lastName: mappedDetails.lastName || application.lastName || studentUser?.lastName || 'Applicant',
-          email: mappedDetails.email || application.email || studentUser?.email || null,
-          phone: mappedDetails.phone || application.phone || studentUser?.mobile || studentUser?.phone || null,
-        })
-        .eq('id', application.id)
-        .select()
-        .single();
-      
-      if (!updateAppErr && updatedApp) {
-        application = updatedApp;
-      } else if (updateAppErr) {
-        console.error('[StaffProfileService.shareProfile] Failed to update existing LoanApplication with onboarding details:', updateAppErr);
-      }
-    }
-
-    // 5. Execute state machine progression to submitted_to_bank
-    if (body.recipientType?.toLowerCase() === 'bank') {
-      const currentStatus = application.status?.toLowerCase() || 'pending';
-      const steps: Array<{
-        from: string;
-        to: string;
-        stage: string;
-        progress: number;
-        reason: string;
-        notes: string;
-      }> = [];
-
-      if (currentStatus === 'pending') {
-        steps.push({
-          from: 'pending',
-          to: 'docs_received',
-          stage: 'Pre-login',
-          progress: 25,
-          reason: 'Documents verified',
-          notes: 'VidyaLoans staff has received and verified all submitted academic, financial, and PII documents.'
-        });
-        steps.push({
-          from: 'docs_received',
-          to: 'staff_verified',
-          stage: 'Pre-login',
-          progress: 40,
-          reason: 'Staff verification completed',
-          notes: 'VidyaLoans staff has completed the validation checks and marked the profile as verified.'
-        });
-        steps.push({
-          from: 'staff_verified',
-          to: 'submitted_to_bank',
-          stage: 'Submitted',
-          progress: 50,
-          reason: 'Submitted to Bank',
-          notes: `Application bundle shared and submitted directly to partner bank ${body.recipientName}.`
-        });
-      } else if (currentStatus === 'docs_received') {
-        steps.push({
-          from: 'docs_received',
-          to: 'staff_verified',
-          stage: 'Pre-login',
-          progress: 40,
-          reason: 'Staff verification completed',
-          notes: 'VidyaLoans staff has completed the validation checks and marked the profile as verified.'
-        });
-        steps.push({
-          from: 'staff_verified',
-          to: 'submitted_to_bank',
-          stage: 'Submitted',
-          progress: 50,
-          reason: 'Submitted to Bank',
-          notes: `Application bundle shared and submitted directly to partner bank ${body.recipientName}.`
-        });
-      } else if (currentStatus === 'staff_verified') {
-        steps.push({
-          from: 'staff_verified',
-          to: 'submitted_to_bank',
-          stage: 'Submitted',
-          progress: 50,
-          reason: 'Submitted to Bank',
-          notes: `Application bundle shared and submitted directly to partner bank ${body.recipientName}.`
-        });
-      } else {
-        steps.push({
-          from: currentStatus,
-          to: 'submitted_to_bank',
-          stage: 'Submitted',
-          progress: 50,
-          reason: 'Resubmitted to Bank',
-          notes: `Application shared again with partner bank ${body.recipientName}.`
-        });
-      }
-
-      // Transition sequentially through state changes
-      for (let i = 0; i < steps.length; i++) {
-        const step = steps[i];
-        
-        await this.db
-          .from('LoanApplication')
-          .update({
-            status: step.to,
-            stage: step.stage,
-            progress: step.progress,
-            bank: body.recipientName,
-            updatedAt: new Date().toISOString()
-          })
-          .eq('id', application.id);
-
-        await this.db.from('ApplicationStatusHistory').insert({
-          id: `ash-${Date.now()}-${step.to}`,
-          applicationId: application.id,
-          fromStatus: step.from,
-          toStatus: step.to,
-          fromStage: i === 0 ? application.stage : steps[i - 1].stage,
-          toStage: step.stage,
-          changedBy: staffUser?.id || staffUser?.uid || 'system',
-          changedByName: authorName,
-          changeReason: step.reason,
-          notes: step.notes,
-          isAutomatic: false,
-          createdAt: new Date().toISOString()
-        });
-
-        await this.db.from('ApplicationNote').insert({
-          id: `note-${Date.now()}-${step.to}`,
-          applicationId: application.id,
-          authorId: staffUser?.id || staffUser?.uid || 'system',
-          authorName: authorName,
-          content: `${step.reason}: ${step.notes}`,
-          type: 'status_change',
-          isInternal: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
-      }
-
-      // Add user note if supplied
-      if (body.message) {
-        await this.db.from('ApplicationNote').insert({
-          id: `note-msg-${Date.now()}`,
-          applicationId: application.id,
-          authorId: staffUser?.id || staffUser?.uid || 'system',
-          authorName: authorName,
-          content: `Staff note: ${body.message}`,
-          type: 'general',
-          isInternal: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
-      }
-
-      // Update staff profile bank status to SENT
-      await this.db
-        .from('StaffProfile')
-        .update({
-          bankStatus: 'SENT',
-          updatedAt: new Date().toISOString()
-        })
-        .eq('id', profile.id);
-
-      // 6. Notify partner bank representative via in-app alert
-      let bankUserId = null;
-      const { data: matchedBankUser } = await this.db
-        .from('User')
-        .select('id')
-        .eq('email', body.recipientEmail)
+        .select('*')
+        .eq('userId', studentId)
         .maybeSingle();
 
-      if (matchedBankUser) {
-        bankUserId = matchedBankUser.id;
+      const authorName = staffUser 
+        ? `${staffUser.firstName || ''} ${staffUser.lastName || ''}`.trim() || staffUser.email || 'Staff' 
+        : 'Staff';
+
+      if (!application) {
+        const mappedDetails = this.mapOnboardingToApplication(body.studentDetails);
+        const appNumber = `VL-${Date.now()}`;
+        const insertApp = {
+          id: 'la-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+          userId: studentId,
+          bank: body.recipientName || 'Credila',
+          loanType: 'Education Loan',
+          amount: body.studentDetails?.loanAmount ? parseFloat(body.studentDetails.loanAmount) : 1500000,
+          status: 'pending',
+          stage: 'Pre-login',
+          progress: 10,
+          date: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          applicationNumber: appNumber,
+          priorityLevel: 'medium',
+          ...mappedDetails,
+          firstName: mappedDetails.firstName || studentUser?.firstName || 'Student',
+          lastName: mappedDetails.lastName || studentUser?.lastName || 'Applicant',
+          email: mappedDetails.email || studentUser?.email || null,
+          phone: mappedDetails.phone || studentUser?.mobile || studentUser?.phone || null,
+        };
+
+        const { data: newApp, error: createAppErr } = await this.db
+          .from('LoanApplication')
+          .insert(insertApp)
+          .select()
+          .single();
+
+        if (createAppErr) {
+          console.error('[StaffProfileService.shareProfile] Failed to create LoanApplication:', createAppErr);
+          throw new BadRequestException(`Failed to create LoanApplication: ${createAppErr.message}`);
+        }
+        application = newApp;
+
+        // Log initial pending status history
+        await this.db.from('ApplicationStatusHistory').insert({
+          id: 'ash-' + Date.now() + '-pending',
+          applicationId: application.id,
+          fromStatus: null,
+          toStatus: 'pending',
+          fromStage: null,
+          toStage: 'Pre-login',
+          changedBy: staffUser?.id || staffUser?.uid || 'system',
+          changedByName: authorName,
+          changeReason: 'Initial setup',
+          notes: 'Loan application initialized in system.',
+          isAutomatic: true,
+          createdAt: new Date().toISOString()
+        });
       } else {
-        const { data: bankUsers } = await this.db
-          .from('User')
-          .select('id')
-          .eq('role', 'bank')
-          .limit(1);
-        if (bankUsers && bankUsers.length > 0) {
-          bankUserId = bankUsers[0].id;
+        // If application already exists, update it with onboarding details!
+        const mappedDetails = this.mapOnboardingToApplication(body.studentDetails);
+        const { data: updatedApp, error: updateAppErr } = await this.db
+          .from('LoanApplication')
+          .update({
+            bank: body.recipientName || application.bank,
+            updatedAt: new Date().toISOString(),
+            ...mappedDetails,
+            firstName: mappedDetails.firstName || application.firstName || studentUser?.firstName || 'Student',
+            lastName: mappedDetails.lastName || application.lastName || studentUser?.lastName || 'Applicant',
+            email: mappedDetails.email || application.email || studentUser?.email || null,
+            phone: mappedDetails.phone || application.phone || studentUser?.mobile || studentUser?.phone || null,
+          })
+          .eq('id', application.id)
+          .select()
+          .single();
+        
+        if (!updateAppErr && updatedApp) {
+          application = updatedApp;
+        } else if (updateAppErr) {
+          console.error('[StaffProfileService.shareProfile] Failed to update existing LoanApplication with onboarding details:', updateAppErr);
         }
       }
 
-      if (bankUserId) {
-        const notifId = 'notif-' + Date.now();
-        await this.db
-          .from('Notification')
-          .insert({
-            id: notifId,
-            userId: bankUserId,
-            title: `📬 New Application Shared: ${application.applicationNumber || 'VL-' + Date.now()}`,
-            body: `Student profile ${studentUser?.firstName || 'Student'} ${studentUser?.lastName || ''} has been fully verified and shared with ${body.recipientName} bank representative.`,
-            type: 'incoming_file',
-            isRead: false,
-            timestamp: new Date().toISOString()
+      // 5. Execute state machine progression to submitted_to_bank
+      if (body.recipientType?.toLowerCase() === 'bank') {
+        const currentStatus = application.status?.toLowerCase() || 'pending';
+        const steps: Array<{
+          from: string;
+          to: string;
+          stage: string;
+          progress: number;
+          reason: string;
+          notes: string;
+        }> = [];
+
+        if (currentStatus === 'pending') {
+          steps.push({
+            from: 'pending',
+            to: 'docs_received',
+            stage: 'Pre-login',
+            progress: 25,
+            reason: 'Documents verified',
+            notes: 'VidyaLoans staff has received and verified all submitted academic, financial, and PII documents.'
           });
+          steps.push({
+            from: 'docs_received',
+            to: 'staff_verified',
+            stage: 'Pre-login',
+            progress: 40,
+            reason: 'Staff verification completed',
+            notes: 'VidyaLoans staff has completed the validation checks and marked the profile as verified.'
+          });
+          steps.push({
+            from: 'staff_verified',
+            to: 'submitted_to_bank',
+            stage: 'Submitted',
+            progress: 50,
+            reason: 'Submitted to Bank',
+            notes: `Application bundle shared and submitted directly to partner bank ${body.recipientName}.`
+          });
+        } else if (currentStatus === 'docs_received') {
+          steps.push({
+            from: 'docs_received',
+            to: 'staff_verified',
+            stage: 'Pre-login',
+            progress: 40,
+            reason: 'Staff verification completed',
+            notes: 'VidyaLoans staff has completed the validation checks and marked the profile as verified.'
+          });
+          steps.push({
+            from: 'staff_verified',
+            to: 'submitted_to_bank',
+            stage: 'Submitted',
+            progress: 50,
+            reason: 'Submitted to Bank',
+            notes: `Application bundle shared and submitted directly to partner bank ${body.recipientName}.`
+          });
+        } else if (currentStatus === 'staff_verified') {
+          steps.push({
+            from: 'staff_verified',
+            to: 'submitted_to_bank',
+            stage: 'Submitted',
+            progress: 50,
+            reason: 'Submitted to Bank',
+            notes: `Application bundle shared and submitted directly to partner bank ${body.recipientName}.`
+          });
+        } else {
+          steps.push({
+            from: currentStatus,
+            to: 'submitted_to_bank',
+            stage: 'Submitted',
+            progress: 50,
+            reason: 'Resubmitted to Bank',
+            notes: `Application shared again with partner bank ${body.recipientName}.`
+          });
+        }
+
+        // Transition sequentially through state changes
+        for (let i = 0; i < steps.length; i++) {
+          const step = steps[i];
+          
+          await this.db
+            .from('LoanApplication')
+            .update({
+              status: step.to,
+              stage: step.stage,
+              progress: step.progress,
+              bank: body.recipientName,
+              updatedAt: new Date().toISOString()
+            })
+            .eq('id', application.id);
+
+          await this.db.from('ApplicationStatusHistory').insert({
+            id: `ash-${Date.now()}-${step.to}`,
+            applicationId: application.id,
+            fromStatus: step.from,
+            toStatus: step.to,
+            fromStage: i === 0 ? application.stage : steps[i - 1].stage,
+            toStage: step.stage,
+            changedBy: staffUser?.id || staffUser?.uid || 'system',
+            changedByName: authorName,
+            changeReason: step.reason,
+            notes: step.notes,
+            isAutomatic: false,
+            createdAt: new Date().toISOString()
+          });
+
+          await this.db.from('ApplicationNote').insert({
+            id: `note-${Date.now()}-${step.to}`,
+            applicationId: application.id,
+            authorId: staffUser?.id || staffUser?.uid || 'system',
+            authorName: authorName,
+            content: `${step.reason}: ${step.notes}`,
+            type: 'status_change',
+            isInternal: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+
+        // Add user note if supplied
+        if (body.message) {
+          await this.db.from('ApplicationNote').insert({
+            id: `note-msg-${Date.now()}`,
+            applicationId: application.id,
+            authorId: staffUser?.id || staffUser?.uid || 'system',
+            authorName: authorName,
+            content: `Staff note: ${body.message}`,
+            type: 'general',
+            isInternal: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        }
+
+        // Update staff profile bank status to SENT
+        await this.db
+          .from('StaffProfile')
+          .update({
+            bankStatus: 'SENT',
+            updatedAt: new Date().toISOString()
+          })
+          .eq('id', profile.id);
+
+        // 6. Notify partner bank representative via in-app alert
+        let bankUserId = null;
+        const { data: matchedBankUser } = await this.db
+          .from('User')
+          .select('id')
+          .eq('email', body.recipientEmail)
+          .maybeSingle();
+
+        if (matchedBankUser) {
+          bankUserId = matchedBankUser.id;
+        } else {
+          const { data: bankUsers } = await this.db
+            .from('User')
+            .select('id')
+            .eq('role', 'bank')
+            .limit(1);
+          if (bankUsers && bankUsers.length > 0) {
+            bankUserId = bankUsers[0].id;
+          }
+        }
+
+        if (bankUserId) {
+          const notifId = 'notif-' + Date.now();
+          await this.db
+            .from('Notification')
+            .insert({
+              id: notifId,
+              userId: bankUserId,
+              title: `📬 New Application Shared: ${application.applicationNumber || 'VL-' + Date.now()}`,
+              body: `Student profile ${studentUser?.firstName || 'Student'} ${studentUser?.lastName || ''} has been fully verified and shared with ${body.recipientName} bank representative.`,
+              type: 'incoming_file',
+              isRead: false,
+              timestamp: new Date().toISOString()
+            });
+        }
       }
     }
 
     // 7. Log and emit dashboard activity log
     await this.logDashboardActivity(staffUser, {
       type: 'share',
-      msg: `Shared profile for ${studentUser?.firstName || 'Student'} ${studentUser?.lastName || ''} with ${body.recipientName}`,
+      msg: isRecipientStudent
+        ? `Shared onboarding dossier directly with student (${studentUser?.email || body.recipientEmail})`
+        : `Shared profile for ${studentUser?.firstName || 'Student'} ${studentUser?.lastName || ''} with ${body.recipientName}`,
       icon: 'send',
       color: 'text-indigo-600 bg-indigo-50'
     });

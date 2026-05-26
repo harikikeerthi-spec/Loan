@@ -174,34 +174,34 @@ export default function ProfilePage() {
                                     ].map((item: any) => {
                                         const { key, label, type, placeholder, pattern, isLocked } = item;
                                         return (
-                                        <div key={key}>
-                                            {type === "datepicker" ? (
-                                                <DatePicker
-                                                    label={label}
-                                                    value={form.dateOfBirth}
-                                                    onChange={(val) => setForm(p => ({ ...p, dateOfBirth: val }))}
-                                                    placeholder="DD-MM-YYYY"
-                                                    disabled={isLocked}
-                                                />
-                                            ) : (
-                                                <>
-                                                    <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 block mb-2">{label}</label>
-                                                    <input
-                                                        type={type}
-                                                        placeholder={placeholder}
-                                                        pattern={pattern}
-                                                        value={form[key as keyof typeof form]}
-                                                        onChange={(e) => {
-                                                            const val = key === 'phoneNumber' ? formatPhone(e.target.value) : e.target.value;
-                                                            setForm((p) => ({ ...p, [key]: val }));
-                                                        }}
-                                                        readOnly={isLocked}
-                                                        maxLength={key === 'phoneNumber' ? 10 : undefined}
-                                                        className={`w-full px-4 py-2.5 border ${key === 'phoneNumber' && form.phoneNumber && !isPhoneValid(form.phoneNumber) ? 'border-rose-300 focus:border-rose-500' : 'border-gray-200 focus:border-[#6605c7]'} rounded-lg bg-gray-50/50 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all ${isLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                            <div key={key}>
+                                                {type === "datepicker" ? (
+                                                    <DatePicker
+                                                        label={label}
+                                                        value={form.dateOfBirth}
+                                                        onChange={(val) => setForm(p => ({ ...p, dateOfBirth: val }))}
+                                                        placeholder="DD-MM-YYYY"
+                                                        disabled={isLocked}
                                                     />
-                                                </>
-                                            )}
-                                        </div>
+                                                ) : (
+                                                    <>
+                                                        <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 block mb-2">{label}</label>
+                                                        <input
+                                                            type={type}
+                                                            placeholder={placeholder}
+                                                            pattern={pattern}
+                                                            value={form[key as keyof typeof form]}
+                                                            onChange={(e) => {
+                                                                const val = key === 'phoneNumber' ? formatPhone(e.target.value) : e.target.value;
+                                                                setForm((p) => ({ ...p, [key]: val }));
+                                                            }}
+                                                            readOnly={isLocked}
+                                                            maxLength={key === 'phoneNumber' ? 10 : undefined}
+                                                            className={`w-full px-4 py-2.5 border ${key === 'phoneNumber' && form.phoneNumber && !isPhoneValid(form.phoneNumber) ? 'border-rose-300 focus:border-rose-500' : 'border-gray-200 focus:border-[#6605c7]'} rounded-lg bg-gray-50/50 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all ${isLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                                        />
+                                                    </>
+                                                )}
+                                            </div>
                                         );
                                     })}
                                     <div className="flex gap-3 pt-4">

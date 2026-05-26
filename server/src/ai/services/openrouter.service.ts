@@ -6,7 +6,7 @@ export class OpenRouterService {
     private readonly apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
     private readonly apiKey = process.env.OPENROUTER_API_KEY;
 
-    async chat(prompt: string, model: string = 'anthropic/claude-sonnet-4.6'): Promise<string> {
+    async chat(prompt: string, model: string = 'meta-llama/llama-3.3-8b-instruct:free'): Promise<string> {
         if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') {
             console.warn('OPENROUTER_API_KEY is not set. Using mock response or failing.');
             throw new Error('OPENROUTER_API_KEY is not configured in environment variables.');
@@ -68,7 +68,7 @@ export class OpenRouterService {
         }
     }
 
-    async getJson<T>(prompt: string, model: string = 'anthropic/claude-sonnet-4.6'): Promise<T> {
+    async getJson<T>(prompt: string, model: string = 'meta-llama/llama-3.3-8b-instruct:free'): Promise<T> {
         const jsonPrompt = `${prompt}\n\nIMPORTANT: Respond ONLY with valid JSON. Do not include markdown formatting.`;
         if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') throw new Error('OPENROUTER_API_KEY is not configured');
 
@@ -183,21 +183,19 @@ export class OpenRouterService {
         return (res.universities || res.courses || []) as any[];
     }
 
-    async chatWithVision(prompt: string, imageUrl: string, model: string = 'anthropic/claude-sonnet-4.6'): Promise<string> {
+    async chatWithVision(prompt: string, imageUrl: string, model: string = 'google/gemma-3-27b-it:free'): Promise<string> {
         if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') {
             throw new Error('OPENROUTER_API_KEY is not configured');
         }
 
         const modelsToTry = Array.from(new Set([
             model,
-            'anthropic/claude-sonnet-4.6',
-            'openai/gpt-4o',
-            'openai/gpt-4o-mini',
-            'anthropic/claude-3.7-sonnet',
-            'google/gemini-2.5-flash-preview',
-            'google/gemini-2.0-flash-001',
-            'anthropic/claude-haiku-4.5',
-            'google/gemini-3-flash-preview',
+            'google/gemma-3-27b-it:free',
+            'meta-llama/llama-3.2-11b-vision-instruct:free',
+            'mistralai/mistral-small-3.1-24b-instruct:free',
+            'qwen/qwen2.5-vl-72b-instruct:free',
+            'google/gemma-3-12b-it:free',
+            'meta-llama/llama-3.3-8b-instruct:free',
         ]));
 
         let lastError: Error | null = null;
