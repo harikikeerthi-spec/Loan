@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import ChatInterface from "@/components/Chat/ChatInterface";
 import { motion } from "framer-motion";
@@ -26,8 +26,8 @@ export default function BankChatPage() {
                 </div>
             </div>
 
-            <div className="flex-1 bg-white/50 backdrop-blur-xl rounded-[3rem] border border-white/20 shadow-2xl shadow-indigo-500/5 overflow-hidden">
-                <ChatInterface role="bank" />
+            <div className="flex-1 bg-white/50 backdrop-blur-xl rounded-[3rem] border border-white/20 shadow-2xl shadow-indigo-500/5 overflow-hidden flex flex-col">
+                <ChatInterface role="bank" className="flex h-full w-full overflow-hidden bg-white/95 text-gray-900 animate-fade-in" />
             </div>
         </div>
     );

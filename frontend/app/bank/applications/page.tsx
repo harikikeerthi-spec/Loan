@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -514,6 +514,18 @@ export default function ApplicationManagement() {
                                     <div>
                                         <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Course Program</span>
                                         <span className="text-sm font-bold text-gray-900 truncate block">{selectedApp.courseName || "Masters / UG Degree"}</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">User ID</span>
+                                        <span className="text-sm font-bold text-gray-900 font-mono" title={selectedApp.userId || selectedApp.studentId}>
+                                            {(selectedApp.userId || selectedApp.studentId || "—").replace(/-/g, "").slice(0, 10).toUpperCase()}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Application ID</span>
+                                        <span className="text-sm font-bold text-gray-900 font-mono" title={selectedApp.id}>
+                                            APP{(selectedApp.id || "—").replace(/-/g, "").slice(-10).toUpperCase()}
+                                        </span>
                                     </div>
                                     <div className="col-span-2">
                                         <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Academic Institution</span>

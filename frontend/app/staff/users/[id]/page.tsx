@@ -120,8 +120,8 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                 {userData.firstName || "—"} {userData.lastName || ""}
                             </h1>
                             <div className="flex items-center gap-3 mt-2">
-                                <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">
-                                    ID: {userId.slice(0, 8).toUpperCase()}
+                                <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wider" title={userId}>
+                                    ID: {userId.replace(/-/g, "").slice(0, 10).toUpperCase()}
                                 </span>
                                 <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${
                                     userData.role?.includes("admin")
@@ -253,8 +253,8 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                         <tbody className="divide-y divide-slate-50">
                                             {userApplications.map((app, idx) => (
                                                 <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                                    <td className="px-6 py-4 text-[12px] font-bold text-slate-900">
-                                                        #{app.applicationNumber?.toString().slice(0, 8) || app.id?.slice(0, 8).toUpperCase()}
+                                                    <td className="px-6 py-4 text-[12px] font-bold text-slate-900" title={app.id}>
+                                                        {app.applicationNumber || `APP${app.id?.replace(/-/g, "").slice(-10).toUpperCase()}`}
                                                     </td>
                                                     <td className="px-6 py-4 text-[12px] font-semibold text-slate-700">{app.bank || "—"}</td>
                                                     <td className="px-6 py-4 text-[12px] font-semibold text-slate-700">{app.loanType || "—"}</td>

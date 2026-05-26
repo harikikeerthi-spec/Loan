@@ -103,7 +103,6 @@ export default function BankDashboard() {
     const [portfolio, setPortfolio] = useState<any>(null);
     const [compliance, setCompliance] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-    const [showChat, setShowChat] = useState(false);
     const [mounted, setMounted] = useState(false);
 
     const [currentBankId] = useState<string>(
@@ -241,38 +240,6 @@ export default function BankDashboard() {
     return (
         <div className="p-5 lg:p-8 space-y-6 animate-fade-in relative z-10">
             {/* Header / Greet Section */}
-            <AnimatePresence>
-                {showChat && (
-                    <motion.div 
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        className="fixed inset-0 bg-white z-[100] overflow-hidden flex flex-col"
-                    >
-                        <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-white/80 backdrop-blur-xl">
-                            <div className="flex items-center gap-5">
-                                <div className="w-12 h-12 rounded-2xl bg-[#6605c7] text-white flex items-center justify-center shadow-lg shadow-purple-500/20">
-                                    <span className="material-symbols-outlined text-2xl">chat_bubble</span>
-                                </div>
-                                <div>
-                                    <h2 className="text-3xl font-black text-gray-900 tracking-tight">Active Transmissions</h2>
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mt-1">Encrypted WhatsApp Protocol Alpha-9</p>
-                                </div>
-                            </div>
-                            <button 
-                                onClick={() => setShowChat(false)} 
-                                className="w-12 h-12 rounded-2xl bg-gray-50 text-gray-400 hover:text-rose-500 hover:bg-rose-50 transition-all flex items-center justify-center group"
-                            >
-                                <span className="material-symbols-outlined group-hover:rotate-90 transition-transform duration-500">close</span>
-                            </button>
-                        </div>
-                        <div className="flex-1 overflow-hidden">
-                            <ChatInterface role="bank" />
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
                 <div className="space-y-4">
                     <motion.div 
@@ -567,7 +534,7 @@ export default function BankDashboard() {
                     <div className="glass-card p-5 rounded-2xl relative overflow-hidden group">
                         <h3 className="text-sm font-black font-display text-gray-900 mb-4 tracking-tight relative z-10">Direct Commands</h3>
                         <div className="grid grid-cols-1 gap-2.5 relative z-10">
-                            <QuickAction icon="chat_bubble" label="Initialize Chat" sublabel="WhatsApp Secure Channel" onClick={() => setShowChat(true)} />
+                            <QuickAction icon="chat_bubble" label="Initialize Chat" sublabel="WhatsApp Secure Channel" onClick={() => router.push('/bank/chat')} />
                             <QuickAction icon="assignment_add" label="Distribute Tasks" sublabel="Task Allocation Matrix" onClick={() => router.push('/bank/tasks')} />
                             <QuickAction icon="verified" label="Validate Assets" sublabel="Compliance Review" iconColor="text-emerald-500" bgColor="bg-emerald-500/5" onClick={() => router.push('/bank/applications')} />
                         </div>

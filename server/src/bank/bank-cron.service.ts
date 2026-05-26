@@ -14,8 +14,9 @@ export class BankCronService {
   }
 
   /**
-   * Daily Cron task running at midnight to check for expired sanctions (>30 days).
+   * Daily Cron task running at midnight to check for expired sanctions (> 30 days).
    * Maps to: '0 0 * * *'
+   * Task 18 — F11: auto-lapse at 30 days
    */
   async checkSanctionExpiries(): Promise<void> {
     console.log('[Cron: ExpiryCheck] Scanning for inactive sanctions older than 30 days...');
@@ -24,11 +25,11 @@ export class BankCronService {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      // Find applications in sanction stage that haven't been advanced
+      // Find applications in sanction stage that haven't been advanced in 30+ days
       const { data: activeSanctions, error } = await this.db
         .from('LoanApplication')
-        .select('id, applicationNumber, status, bank, amount, firstName, lastName')
-        .in('status', ['approved', 'sanctioned', 'conditional_sanction', 'counter_offer'])
+        .select('id, applicationNumber, status, bank, amount, firstName, lastName, updatedAt')
+        .in('status', ['approved', 'sanctioned', 'conditional_sanction', 'partial_sanction', 'counter_offer'])
         .lt('updatedAt', thirtyDaysAgo.toISOString());
 
       if (error) throw error;
@@ -41,12 +42,16 @@ export class BankCronService {
       console.log(`[Cron: ExpiryCheck] Detected ${activeSanctions.length} expired sanctions. Transitioning to EXPIRED...`);
 
       for (const app of activeSanctions) {
+        const ageDays = Math.floor(
+          (Date.now() - new Date(app.updatedAt).getTime()) / (1000 * 60 * 60 * 24)
+        );
+
         // Transition application status to EXPIRED
         await this.db
           .from('LoanApplication')
           .update({
             status: 'expired',
-            remarks: 'Lapsed automatically: Sanction letter expired (30-day timeline exceeded).',
+            remarks: `Auto-lapsed: Sanction validity of 30 days exceeded (${ageDays} days elapsed).`,
             updatedAt: new Date().toISOString()
           })
           .eq('id', app.id);
@@ -58,24 +63,79 @@ export class BankCronService {
           toStatus: 'expired',
           changedBy: 'system_cron',
           changedByName: 'VidyaLoans Cron Engine',
-          changeReason: 'Sanction 30-day validity elapsed without disbursement.',
+          changeReason: `Sanction 30-day validity elapsed (${ageDays} days). Auto-lapsed.`,
           isAutomatic: true,
           createdAt: new Date().toISOString()
         });
 
-        // Insert in queries to notify staff
+        // Notify staff via query
         await this.db.from('queries').insert({
           applicationId: app.id,
           authorName: 'SLA Expiry Monitor',
-          content: `Alert: Sanction for student ${app.firstName} ${app.lastName} (${app.applicationNumber}) has lapsed. Re-verification required.`,
+          content: `🚨 EXPIRED: Sanction for ${app.firstName} ${app.lastName} (${app.applicationNumber || app.id}) has auto-lapsed after ${ageDays} days. Re-verification required.`,
           status: 'open',
           createdAt: new Date().toISOString()
         });
 
-        console.log(`[Cron: ExpiryCheck] Successfully marked App ${app.applicationNumber} as EXPIRED.`);
+        console.log(`[Cron: ExpiryCheck] Auto-lapsed App ${app.applicationNumber || app.id} (${ageDays} days old).`);
       }
     } catch (err) {
       console.error('[Cron: ExpiryCheck] Error running cron:', err.message);
+    }
+  }
+
+  /**
+   * Daily Cron task: 7-day advance warning before sanction expires.
+   * Maps to: '0 8 * * *' (runs at 8am daily)
+   * Task 18 — F11: 30d+7d warnings
+   */
+  async checkSanctionExpiryWarnings(): Promise<void> {
+    console.log('[Cron: ExpiryWarning] Scanning for sanctions expiring within 7 days...');
+
+    try {
+      // Find sanctions that are 23-29 days old (7 days before the 30-day lapse)
+      const twentyThreeDaysAgo = new Date();
+      twentyThreeDaysAgo.setDate(twentyThreeDaysAgo.getDate() - 23);
+      const twentyNineDaysAgo = new Date();
+      twentyNineDaysAgo.setDate(twentyNineDaysAgo.getDate() - 29);
+
+      const { data: nearExpiryApps, error } = await this.db
+        .from('LoanApplication')
+        .select('id, applicationNumber, status, bank, amount, firstName, lastName, updatedAt')
+        .in('status', ['approved', 'sanctioned', 'conditional_sanction', 'partial_sanction', 'counter_offer'])
+        .lt('updatedAt', twentyThreeDaysAgo.toISOString())
+        .gte('updatedAt', twentyNineDaysAgo.toISOString());
+
+      if (error) throw error;
+
+      if (!nearExpiryApps || nearExpiryApps.length === 0) {
+        console.log('[Cron: ExpiryWarning] No sanctions nearing expiry.');
+        return;
+      }
+
+      console.log(`[Cron: ExpiryWarning] ${nearExpiryApps.length} sanction(s) expiring within 7 days.`);
+
+      for (const app of nearExpiryApps) {
+        const ageDays = Math.floor(
+          (Date.now() - new Date(app.updatedAt).getTime()) / (1000 * 60 * 60 * 24)
+        );
+        const daysRemaining = 30 - ageDays;
+
+        // Insert DB notification for staff
+        await this.db.from('Notification').insert({
+          userId: 'system',
+          title: `⚠️ Sanction Expiry Warning: ${app.firstName} ${app.lastName}`,
+          message: `Sanction for ${app.firstName} ${app.lastName} (${app.applicationNumber || app.id}, ₹${app.amount?.toLocaleString('en-IN') || 'N/A'}) at ${app.bank} will auto-lapse in ${daysRemaining} day(s). Please initiate disbursement.`,
+          type: 'sanction_expiry_warning',
+          isRead: false,
+          metadata: { applicationId: app.id, daysRemaining, ageDays },
+          createdAt: new Date().toISOString()
+        });
+
+        console.log(`[Cron: ExpiryWarning] Warning sent for App ${app.applicationNumber || app.id} — ${daysRemaining} day(s) remaining.`);
+      }
+    } catch (err) {
+      console.error('[Cron: ExpiryWarning] Error running warning cron:', err.message);
     }
   }
 

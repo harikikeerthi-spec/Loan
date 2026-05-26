@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { randomInt } from 'crypto';
 import { extractFullNameFromOcrRaw } from '../ai/utils/ocr-fields.util';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -105,6 +106,23 @@ export class UsersService {
     return data;
   }
 
+  private generateUserId(): string {
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const firstPart = Array.from({ length: 4 }, () => letters[randomInt(letters.length)]).join('');
+    const secondPart = String(randomInt(0, 1_000_000)).padStart(6, '0');
+    return `${firstPart}${secondPart}`;
+  }
+
+  private async createUniqueUserId(): Promise<string> {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const id = this.generateUserId();
+      const existing = await this.findById(id);
+      if (!existing) return id;
+    }
+
+    throw new Error('Unable to generate a unique user ID');
+  }
+
   async create(data: {
     email: string;
     firstName?: string;
@@ -118,10 +136,12 @@ export class UsersService {
     const dobDate = this.parseDate(data.dateOfBirth);
     const now = new Date();
     const registeredAtIndia = this.convertToIndiaTime(now);
+    const id = await this.createUniqueUserId();
 
     const { data: user, error } = await this.db
       .from('User')
       .insert({
+        id,
         email: data.email,
         firstName: data.firstName || null,
         lastName: data.lastName || null,

@@ -28,6 +28,7 @@ interface Application {
     bank: string;
     date?: string;
     stage?: string;
+    applicationNumber?: string;
 }
 
 export default function ProgressTracker({
@@ -152,7 +153,7 @@ export default function ProgressTracker({
                     <div className="text-[10px] font-black uppercase tracking-widest text-[#6605c7]/60 mb-1">Current Status</div>
                     <h4 className="font-bold text-gray-900 text-[14px]">{currentStage?.label.replace('<br>', ' ')}</h4>
                     <p className="text-gray-500 text-[13px] mt-1 leading-relaxed">
-                        Your {application.bank} application is currently in the <strong>{currentStage?.label.replace('<br>', ' ')}</strong> stage.
+                        Your {application.bank} application {application.applicationNumber ? `(#${application.applicationNumber})` : ""} is currently in the <strong>{currentStage?.label.replace('<br>', ' ')}</strong> stage.
                         Estimated completion: <span className="text-gray-900 font-bold">
                             {(() => {
                                 const appDate = application.date ? new Date(application.date) : new Date();
@@ -161,6 +162,11 @@ export default function ProgressTracker({
                                 return est.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
                             })()}
                         </span>
+                        {application.id && (
+                            <span className="block text-[11px] text-gray-400 font-mono mt-1.5" title={`Original Application ID: ${application.id}`}>
+                                APP ID: APP{application.id.replace(/-/g, "").slice(-10).toUpperCase()}
+                            </span>
+                        )}
                     </p>
                 </div>
             </div>

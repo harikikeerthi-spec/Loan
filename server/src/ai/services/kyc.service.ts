@@ -207,6 +207,19 @@ export class KycService {
      * Check document text content for expected keywords based on document type.
      */
     async validateDocumentKeywords(buffer: Buffer, docType: string, isPdf: boolean, isImage: boolean): Promise<{ is_valid: boolean; error?: string }> {
+        const normalizedType = String(docType || '').toLowerCase();
+        const isIdentityDoc = normalizedType.includes('pan') || 
+                              normalizedType.includes('aadhar') || 
+                              normalizedType.includes('aadhaar') || 
+                              normalizedType.includes('national_id') || 
+                              normalizedType.includes('passport');
+
+        if (!isIdentityDoc) {
+            // Other academic or support files are allowed by default without keyword checks.
+            // Bypassing local OCR/Tesseract to save CPU/Memory and avoid offline CDN initialization issues.
+            return { is_valid: true };
+        }
+
         let text = '';
         try {
             if (isImage) {
@@ -221,8 +234,6 @@ export class KycService {
         const clean = text.toLowerCase();
         let matches = false;
         let expectedLabel = '';
-
-        const normalizedType = String(docType || '').toLowerCase();
 
         if (normalizedType.includes('pan')) {
             expectedLabel = 'PAN Card';
@@ -604,10 +615,15 @@ export class KycService {
      * Tesseract fallback for basic OCR
      */
     async fallbackOcr(buffer: Buffer): Promise<string> {
-        const worker = await createWorker('eng');
-        const { data: { text } } = await worker.recognize(buffer);
-        await worker.terminate();
-        return text;
+        try {
+            const worker = await createWorker('eng');
+            const { data: { text } } = await worker.recognize(buffer);
+            await worker.terminate();
+            return text;
+        } catch (err: any) {
+            console.error('[KycService] Tesseract fallback OCR worker initialization or recognition failed:', err?.message || err);
+            return '';
+        }
     }
 
     /**

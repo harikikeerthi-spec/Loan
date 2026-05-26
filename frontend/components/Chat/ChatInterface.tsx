@@ -31,9 +31,10 @@ interface ChatInterfaceProps {
     role: 'staff' | 'bank' | 'agent'; // What dashboard is this embedded in
     initialUser?: any;
     portalTitle?: string;
+    className?: string;
 }
 
-export default function ChatInterface({ role, initialUser, portalTitle }: ChatInterfaceProps) {
+export default function ChatInterface({ role, initialUser, portalTitle, className }: ChatInterfaceProps) {
     const { token, user } = useAuth();
     const [socket, setSocket] = useState<Socket | null>(null);
     const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -236,7 +237,7 @@ export default function ChatInterface({ role, initialUser, portalTitle }: ChatIn
     );
 
     return (
-        <div className="flex h-[800px] border border-gray-200 rounded-[2.5rem] overflow-hidden bg-white shadow-[0_24px_80px_rgba(17,24,39,0.08)] mt-6 animate-fade-in text-gray-900">
+        <div className={className || "flex h-[800px] border border-gray-200 rounded-[2.5rem] overflow-hidden bg-white shadow-[0_24px_80px_rgba(17,24,39,0.08)] mt-6 animate-fade-in text-gray-900"}>
 
             {/* Sidebar: Conversations & Users */}
             <div className="w-80 border-r border-gray-200 bg-[#fbfbfd] flex flex-col">

@@ -47,6 +47,7 @@ interface ChatConnectResponse {
 
 export default function DashboardPage() {
     const { user } = useAuth();
+    const userId10 = (user?.id || "").replace(/-/g, "").slice(0, 10).toUpperCase();
     const [data, setData] = useState<DashboardData>({});
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("overview");
@@ -287,6 +288,11 @@ export default function DashboardPage() {
                                                             <div className="min-w-0 flex-1">
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="font-bold text-[13px] text-gray-900 truncate">{app.bank}</span>
+                                                                    {app.applicationNumber && (
+                                                                        <span className="text-[10px] text-gray-400 font-semibold bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100/50">
+                                                                            #{app.applicationNumber}
+                                                                        </span>
+                                                                    )}
                                                                     <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${sc}`}>
                                                                         {app.status}
                                                                     </span>
@@ -295,6 +301,7 @@ export default function DashboardPage() {
                                                                     <span className="font-semibold text-gray-700">₹{app.amount?.toLocaleString("en-IN")}</span>
                                                                     {app.universityName && <span>• {app.universityName}</span>}
                                                                     {app.country && <span>• {app.country}</span>}
+                                                                    {app.id && <span className="font-mono text-[10px] text-gray-400" title={`Original Application ID: ${app.id}`}>• APP ID: APP{app.id.replace(/-/g, "").slice(-10).toUpperCase()}</span>}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -415,6 +422,11 @@ export default function DashboardPage() {
                                                     <div className="min-w-0 flex-1">
                                                         <div className="flex items-center gap-2 mb-1">
                                                             <h3 className="font-bold text-[15px] text-gray-900 truncate">{app.bank}</h3>
+                                                            {app.applicationNumber && (
+                                                                <span className="text-[11px] text-gray-400 font-semibold bg-gray-50 px-2 py-0.5 rounded border border-gray-100">
+                                                                    #{app.applicationNumber}
+                                                                </span>
+                                                            )}
                                                             <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${sc.bg} ${sc.text}`}>
                                                                 {app.status}
                                                             </span>
@@ -432,6 +444,11 @@ export default function DashboardPage() {
                                                                 <span className="flex items-center gap-1">
                                                                     <span className="material-symbols-outlined text-[14px]">public</span>
                                                                     {app.country}
+                                                                </span>
+                                                            )}
+                                                            {app.id && (
+                                                                <span className="flex items-center gap-1 font-mono text-[10px] text-gray-400" title={`Original Application ID: ${app.id}`}>
+                                                                    • APP ID: APP{app.id.replace(/-/g, "").slice(-10).toUpperCase()}
                                                                 </span>
                                                             )}
                                                         </div>
@@ -488,6 +505,7 @@ export default function DashboardPage() {
                             </div>
                             <div className="grid grid-cols-2 gap-x-8 gap-y-6">
                                 {[
+                                    { label: "User ID", value: userId10 || "—" },
                                     { label: "First Name", value: user?.firstName || "—" },
                                     { label: "Last Name", value: user?.lastName || "—" },
                                     { label: "Email", value: user?.email || "—" },

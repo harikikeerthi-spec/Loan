@@ -13,6 +13,27 @@ const INDIAN_STATES = [
     'Puducherry', 'Chandigarh', 'Ladakh',
 ];
 
+const BOARD_TO_STATE_MAP: Record<string, string> = {
+    'board of secondary education andhra pradesh': 'Andhra Pradesh',
+    'board of intermediate education andhra pradesh': 'Andhra Pradesh',
+    'bseap': 'Andhra Pradesh',
+    'bieap': 'Andhra Pradesh',
+    'board of secondary education telangana': 'Telangana',
+    'board of intermediate education telangana': 'Telangana',
+    'bset': 'Telangana',
+    'maharashtra state board': 'Maharashtra',
+    'karnataka secondary education': 'Karnataka',
+    'board of secondary education rajasthan': 'Rajasthan',
+    'up board': 'Uttar Pradesh',
+    'uttar pradesh board': 'Uttar Pradesh',
+    'madhyamik shiksha parishad': 'Uttar Pradesh',
+    'west bengal board': 'West Bengal',
+    'bihar school examination board': 'Bihar',
+    'gujarat secondary': 'Gujarat',
+    'punjab school education board': 'Punjab',
+    'haryana board': 'Haryana',
+};
+
 export function normalizeStateName(stateStr?: string): string {
     if (!stateStr) return '';
     const clean = String(stateStr).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -189,7 +210,38 @@ export function canonicalizeAcademicFields(
         inferStateFromText(board as string, institution as string, raw.country as string);
     if (state) out.state = normalizeStateName(state as string);
 
-    const country = raw.country || raw.country_of_study || (state ? 'India' : undefined);
+    // Auto-fill state based on Board of Secondary Education mapping
+    if (out.board) {
+        const cleanBoard = String(out.board).toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+        for (const [key, stateName] of Object.entries(BOARD_TO_STATE_MAP)) {
+            if (cleanBoard.includes(key) || key.includes(cleanBoard)) {
+                out.state = stateName;
+                break;
+            }
+        }
+    }
+
+    // High-precision school and city extraction from marksheet text
+    const rawText = raw.raw_text_summary || raw.rawOcrText || raw.raw_text || raw.rawText || '';
+    if (rawText) {
+        const belongingMatch = String(rawText).match(/belonging\s+to\s+([^,.\n]+),\s*([^,.\n]+)(?:,\s*([^,.\n]+))?/i);
+        if (belongingMatch) {
+            const extractedSchool = belongingMatch[1].trim();
+            const extractedCity = belongingMatch[2].trim();
+            
+            if (extractedSchool && !extractedSchool.toLowerCase().includes('roll')) {
+                out.institution = extractedSchool;
+                if (level !== 'grade10' && level !== 'grade12') {
+                    out.university = extractedSchool;
+                }
+            }
+            if (extractedCity) {
+                out.city = extractedCity;
+            }
+        }
+    }
+
+    const country = raw.country || raw.country_of_study || (out.state ? 'India' : undefined);
     if (country) out.country = String(country).trim();
 
     const language = raw.medium_of_instruction || raw.language || raw.medium;

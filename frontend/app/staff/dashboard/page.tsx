@@ -1,14 +1,15 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { io } from "socket.io-client";
 import { adminApi, authApi, documentApi, onboardingApi, staffProfileApi, referenceApi, applicationApi } from "@/lib/api";
 import { HttpApiPaths } from "@/lib/http-api-paths";
 import { normalizeOcrFieldsForAutofill, normalizeGenderForForm, normalizeCountryName, parseOcrDateForInput } from "@/lib/ocr-fields";
-import { examYearToEndDate, inferStartDate } from "@/lib/academic-ocr";
+import { examYearToEndDate, inferStartDate, normalizeStateName } from "@/lib/academic-ocr";
 import { format } from "date-fns";
 import ChatInterface from "@/components/Chat/ChatInterface";
 import ApplicantsSection from "@/components/staff/ApplicantsSection";
@@ -26,6 +27,30 @@ import ActivityLogWidget from "@/components/staff/ActivityLogWidget";
 import ShareProfileToBankModal from "@/components/staff/ShareProfileToBankModal";
 
 // --- Components ---
+
+const DASHBOARD_SECTIONS = [
+    "overview",
+    "applicants",
+    "applications",
+    "tasks",
+    "performance",
+    "users",
+    "blogs",
+    "community",
+    "communications",
+    "chat_customer",
+    "activities",
+    "my_profile",
+    "onboarding",
+] as const;
+
+const getDashboardSection = (section: string | null) =>
+    DASHBOARD_SECTIONS.includes(section as any) ? section as typeof DASHBOARD_SECTIONS[number] : "overview";
+
+const getDashboardPage = (page: string | null) => {
+    const parsed = Number(page);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+};
 
 const StatCard = ({ label, value, icon, color, trend, loading, hint, badge, ...props }: any) => {
     // Generate styling based on the color string to keep the UI clean
@@ -145,6 +170,20 @@ const TableHeader = ({ children }: { children: React.ReactNode }) => (
     </thead>
 );
 
+function safeParseJson(val: any, fallback: any) {
+    if (!val) return fallback;
+    if (typeof val === 'object') return val;
+    if (typeof val === 'string') {
+        try {
+            return JSON.parse(val);
+        } catch (e) {
+            console.error("Failed to parse JSON string:", val, e);
+            return fallback;
+        }
+    }
+    return fallback;
+}
+
 /** Fresh applicant profile — KYC/personal fields empty until student enters or uploads documents. */
 function createEmptyNewStudent() {
     return {
@@ -190,8 +229,11 @@ function createEmptyNewStudent() {
 }
 
 export default function StaffDashboardPage() {
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { user, logout } = useAuth();
-    const [activeSection, setActiveSection] = useState("overview");
+    const [activeSection, setActiveSection] = useState(() => getDashboardSection(searchParams.get("section")));
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<any>({});
     const [data, setData] = useState<any[]>([]);
@@ -664,11 +706,48 @@ export default function StaffDashboardPage() {
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [userRoleFilter, setUserRoleFilter] = useState("all");
 
-    const [currentPage, setCurrentPage] = useState(1);
+    const [currentPage, setCurrentPage] = useState(() => getDashboardPage(searchParams.get("page")));
     const [itemsPerPage] = useState(30);
+    const applicationsPerPage = 20;
     const [totalItems, setTotalItems] = useState(0);
     const [userSectionStats, setUserSectionStats] = useState<any>(null);
     const [countries, setCountries] = useState<any[]>([]);
+
+    const buildDashboardUrl = useCallback((section: string, page: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        const safeSection = getDashboardSection(section);
+
+        if (safeSection === "overview") params.delete("section");
+        else params.set("section", safeSection);
+
+        if (page <= 1) params.delete("page");
+        else params.set("page", String(page));
+
+        const query = params.toString();
+        return query ? `${pathname}?${query}` : pathname;
+    }, [pathname, searchParams]);
+
+    const navigateToSection = useCallback((section: string) => {
+        const safeSection = getDashboardSection(section);
+        setActiveSection(safeSection);
+        setCurrentPage(1);
+        router.push(buildDashboardUrl(safeSection, 1), { scroll: false });
+    }, [buildDashboardUrl, router]);
+
+    const navigateToPage = useCallback((page: number) => {
+        const nextPage = Math.max(1, page);
+        setCurrentPage(nextPage);
+        router.push(buildDashboardUrl(activeSection, nextPage), { scroll: false });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, [activeSection, buildDashboardUrl, router]);
+
+    useEffect(() => {
+        const nextSection = getDashboardSection(searchParams.get("section"));
+        const nextPage = getDashboardPage(searchParams.get("page"));
+
+        setActiveSection(prev => prev === nextSection ? prev : nextSection);
+        setCurrentPage(prev => prev === nextPage ? prev : nextPage);
+    }, [searchParams]);
 
     useEffect(() => {
         const fetchCountries = async () => {
@@ -796,10 +875,21 @@ export default function StaffDashboardPage() {
                 res = await adminApi.getBlogs({ limit: '100' });
                 setData(Array.isArray(res) ? res : (res.data || []));
             } else if (activeSection === "applications") {
-                const params: any = {};
+                const offset = (currentPage - 1) * applicationsPerPage;
+                const params: any = {
+                    limit: String(applicationsPerPage),
+                    offset: String(offset),
+                };
                 if (filterStatus !== "all") params.status = filterStatus;
+                if (searchQuery) params.search = searchQuery;
                 res = await adminApi.getApplications(params);
-                setData(Array.isArray(res) ? res : (res.data || []));
+                if (res && res.data) {
+                    setData(res.data);
+                    setTotalItems(res.pagination?.total ?? res.total ?? res.data.length);
+                } else {
+                    setData(Array.isArray(res) ? res : []);
+                    setTotalItems(Array.isArray(res) ? res.length : 0);
+                }
             } else if (activeSection === "community") {
                 res = await adminApi.getForumPosts(50);
                 setData(Array.isArray(res) ? res : (res.data || []));
@@ -831,12 +921,16 @@ export default function StaffDashboardPage() {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [activeSection, filterStatus, searchQuery, userRoleFilter]);
+        if (searchParams.get("page")) {
+            router.replace(buildDashboardUrl(activeSection, 1), { scroll: false });
+        }
+    }, [filterStatus, searchQuery, userRoleFilter]);
 
     useEffect(() => {
         if (activeSection === "overview") loadOverview();
         else loadData();
     }, [activeSection, loadOverview, loadData]);
+
 
     // Pre-calculate stats for different sections to avoid complex IIFEs in JSX
     const userStatsData = activeSection === 'users' ? (() => {
@@ -984,12 +1078,12 @@ export default function StaffDashboardPage() {
 
     const startOnboarding = () => {
         resetOnboardState();
-        setActiveSection('onboarding');
+        navigateToSection('onboarding');
     };
 
     const resetOnboardModal = () => {
         resetOnboardState();
-        setActiveSection('overview');
+        navigateToSection('overview');
     };
 
     const handleCheckEmailAndLink = async (e: React.FormEvent) => {
@@ -1055,14 +1149,14 @@ export default function StaffDashboardPage() {
                 ...s.permanentAddress,
                 address1: fullUser.permanentAddress
             } : s.permanentAddress,
-            mailingAddress: fullUser.mailingAddress || (fullUser.permanentAddress ? {
+            mailingAddress: safeParseJson(fullUser.mailingAddress, null) || (fullUser.permanentAddress ? {
                 ...s.mailingAddress,
                 address1: fullUser.permanentAddress
             } : s.mailingAddress),
-            passport: fullUser.passport || s.passport,
-            nationality: fullUser.nationality || s.nationality,
-            emergencyContact: fullUser.emergencyContact || s.emergencyContact,
-            academic: fullUser.academic || {
+            passport: safeParseJson(fullUser.passport, s.passport),
+            nationality: safeParseJson(fullUser.nationality, s.nationality),
+            emergencyContact: safeParseJson(fullUser.emergencyContact, s.emergencyContact),
+            academic: safeParseJson(fullUser.academic, null) || {
                 ...s.academic,
                 highestLevel: fullUser.bachelorsDegree || "",
                 countryOfEducation: fullUser.studyDestination || "",
@@ -1072,10 +1166,10 @@ export default function StaffDashboardPage() {
                     score: fullUser.gpa ? String(fullUser.gpa) : "",
                 }
             },
-            workExperience: fullUser.workExperience || (fullUser.workExp ? [
+            workExperience: safeParseJson(fullUser.workExperience, null) || (fullUser.workExp ? [
                 { employer: "Previous Employer", role: "Professional", country: "India", startDate: "", endDate: "", current: false }
             ] : s.workExperience),
-            tests: fullUser.tests || {
+            tests: safeParseJson(fullUser.tests, null) || {
                 ...s.tests,
                 ielts: fullUser.englishTest?.toLowerCase() === 'ielts' ? String(fullUser.englishScore || "") : "",
                 toefl: fullUser.englishTest?.toLowerCase() === 'toefl' ? String(fullUser.englishScore || "") : "",
@@ -1083,11 +1177,11 @@ export default function StaffDashboardPage() {
                 gre: fullUser.entranceTest?.toLowerCase() === 'gre' ? String(fullUser.entranceScore || "") : "",
                 gmat: fullUser.entranceTest?.toLowerCase() === 'gmat' ? String(fullUser.entranceScore || "") : "",
             },
-            family: fullUser.family || {
+            family: safeParseJson(fullUser.family, null) || {
                 ...s.family,
                 fatherName: fullUser.fatherName || "",
             },
-            coApplicant: fullUser.coApplicant || s.coApplicant,
+            coApplicant: safeParseJson(fullUser.coApplicant, s.coApplicant),
             loanAmount: fullUser.loanAmount || "",
             targetUniversity: fullUser.targetUniversity || "",
             studyDestination: fullUser.studyDestination || "",
@@ -1379,7 +1473,7 @@ export default function StaffDashboardPage() {
         }
 
         const lowercaseSelected = selectedName.toLowerCase().trim();
-        
+
         // 1. Dynamic check in loaded bankUsers
         const matched = bankUsers.find((u: any) => {
             const firstName = (u.firstName || "").toLowerCase().trim();
@@ -2227,29 +2321,47 @@ export default function StaffDashboardPage() {
                     if (parsedDob) compareAndSet(updated.dob, parsedDob, (v) => { updated.dob = v; });
                 }
 
-                const country = extractedFields.country
-                    ? normalizeCountryName(String(extractedFields.country))
-                    : extractedFields.state
+                const country = extractedFields.country || extractedFields.country_of_study
+                    ? normalizeCountryName(String(extractedFields.country || extractedFields.country_of_study))
+                    : (extractedFields.state || extractedFields.state_of_study)
                         ? 'India'
                         : '';
-                const state = String(extractedFields.state || '');
-                const city = String(extractedFields.city || '');
-                const board = String(extractedFields.board || '');
-                const institution = String(extractedFields.institution || '');
-                const university = String(extractedFields.university || institution || '');
-                const qualification = String(extractedFields.qualification || '');
-                const grading = String(extractedFields.grading || '');
-                const score = String(extractedFields.score || '');
-                const language = String(extractedFields.language || '');
+                let state = String(extractedFields.state || extractedFields.state_of_study || '');
+                if (state) {
+                    state = normalizeStateName(state);
+                }
+                const city = String(extractedFields.city || extractedFields.city_of_study || '');
+                const board = String(extractedFields.board || extractedFields.board_name || extractedFields.examining_body || '');
+                const institution = String(
+                    extractedFields.institution ||
+                    extractedFields.institution_name ||
+                    extractedFields.school_name ||
+                    extractedFields.college_name ||
+                    ''
+                );
+                const university = String(extractedFields.university || extractedFields.university_name || institution || '');
+                const qualification = String(extractedFields.qualification || extractedFields.degree || extractedFields.program_name || extractedFields.course_name || '');
+                
+                let grading = String(extractedFields.grading || extractedFields.grading_system || '');
+                if (grading.toLowerCase().includes('cgpa') || grading.toLowerCase().includes('gpa')) {
+                    grading = 'CGPA';
+                } else if (grading.toLowerCase().includes('percent') || grading.toLowerCase().includes('%')) {
+                    grading = 'Percentage';
+                } else {
+                    grading = '';
+                }
 
-                let endDate = extractedFields.end_date
-                    ? parseOcrDate(String(extractedFields.end_date))
-                    : examYearToEndDate(String(extractedFields.exam_period || extractedFields.year_of_passing || ''));
+                const score = String(extractedFields.score || extractedFields.percentage || extractedFields.overall_percentage || extractedFields.overall_gpa || extractedFields.cgpa || '');
+                const language = String(extractedFields.language || extractedFields.medium_of_instruction || extractedFields.medium || '');
+
+                let endDate = extractedFields.end_date || extractedFields.endDate
+                    ? parseOcrDate(String(extractedFields.end_date || extractedFields.endDate))
+                    : examYearToEndDate(String(extractedFields.exam_period || extractedFields.year_of_passing || extractedFields.examination_month_year || extractedFields.exam_month_year || ''));
                 if (endDate && !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
                     endDate = parseOcrDate(endDate) || endDate;
                 }
-                let startDate = extractedFields.start_date
-                    ? parseOcrDate(String(extractedFields.start_date))
+                let startDate = extractedFields.start_date || extractedFields.startDate
+                    ? parseOcrDate(String(extractedFields.start_date || extractedFields.startDate))
                     : endDate
                         ? inferStartDate(
                             endDate,
@@ -2260,18 +2372,22 @@ export default function StaffDashboardPage() {
                     startDate = parseOcrDate(startDate) || startDate;
                 }
 
+                const academicObj = typeof updated.academic === 'string'
+                    ? safeParseJson(updated.academic, createEmptyNewStudent().academic)
+                    : (updated.academic || createEmptyNewStudent().academic);
+
                 if (isGrade10 || isGrade12) {
                     const key = isGrade10 ? 'grade10' : 'grade12';
-                    const prev = updated.academic[key];
-                    const hl = updated.academic.highestLevel;
+                    const prev = academicObj[key] || createEmptyNewStudent().academic[key];
+                    const hl = academicObj.highestLevel;
                     const minLevel = isGrade12 ? 'Grade 12' : 'Grade 10';
                     const shouldRaiseLevel =
                         !hl ||
                         (isGrade12 && hl === 'Grade 10');
                     updated.academic = {
-                        ...updated.academic,
+                        ...academicObj,
                         ...(shouldRaiseLevel ? { highestLevel: minLevel } : {}),
-                        countryOfEducation: country || updated.academic.countryOfEducation || 'India',
+                        countryOfEducation: country || academicObj.countryOfEducation || 'India',
                         [key]: {
                             ...prev,
                             country: country || prev.country || 'India',
@@ -2288,10 +2404,10 @@ export default function StaffDashboardPage() {
                     };
                 }
                 if (isUndergrad) {
-                    const prev = updated.academic.undergrad;
+                    const prev = academicObj.undergrad || createEmptyNewStudent().academic.undergrad;
                     updated.academic = {
-                        ...updated.academic,
-                        countryOfEducation: country || updated.academic.countryOfEducation || 'India',
+                        ...academicObj,
+                        countryOfEducation: country || academicObj.countryOfEducation || 'India',
                         undergrad: {
                             ...prev,
                             country: country || prev.country || 'India',
@@ -2308,10 +2424,10 @@ export default function StaffDashboardPage() {
                     };
                 }
                 if (isPostgrad) {
-                    const prev = updated.academic.postgrad;
+                    const prev = academicObj.postgrad || createEmptyNewStudent().academic.postgrad;
                     updated.academic = {
-                        ...updated.academic,
-                        countryOfEducation: country || updated.academic.countryOfEducation || 'India',
+                        ...academicObj,
+                        countryOfEducation: country || academicObj.countryOfEducation || 'India',
                         postgrad: {
                             ...prev,
                             country: country || prev.country || 'India',
@@ -2614,11 +2730,41 @@ export default function StaffDashboardPage() {
         return true;
     });
 
-    // Client-side pagination for applications (30 per page)
-    const appsTotalItems = activeSection === 'applications' ? filteredData.length : totalItems;
+    // Server-side pagination for applications (20 per page)
+    const activePageSize = activeSection === 'applications' ? applicationsPerPage : itemsPerPage;
+    const appsTotalItems = activeSection === 'applications' ? totalItems : totalItems;
+
     const pagedData = activeSection === 'applications'
-        ? filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+        ? filteredData
         : filteredData;
+
+    const totalPages = activeSection === 'applications'
+        ? Math.max(1, Math.ceil(appsTotalItems / applicationsPerPage))
+        : Math.max(1, Math.ceil(totalItems / activePageSize));
+
+    const showingStart = activeSection === 'applications'
+        ? (appsTotalItems > 0 ? (currentPage - 1) * applicationsPerPage + 1 : 0)
+        : ((currentPage - 1) * itemsPerPage + 1);
+
+    const showingEnd = activeSection === 'applications'
+        ? Math.min(currentPage * applicationsPerPage, appsTotalItems)
+        : Math.min(currentPage * itemsPerPage, totalItems);
+
+
+    // Auto-advance to next page when all applications on the current page are completed
+    useEffect(() => {
+        if (activeSection === 'applications' && pagedData.length > 0 && !loading) {
+            const allCompleted = pagedData.every((item: any) => {
+                const statusKey = (item.status || 'draft').toLowerCase();
+                return ['approved', 'rejected', 'disbursed', 'cancelled', 'verified'].includes(statusKey);
+            });
+            if (allCompleted) {
+                if (currentPage < totalPages) {
+                    navigateToPage(currentPage + 1);
+                }
+            }
+        }
+    }, [pagedData, activeSection, currentPage, totalPages, loading, navigateToPage]);
 
     const statusColors: Record<string, string> = {
         pending: "bg-amber-100 text-amber-700 border-amber-200",
@@ -2793,7 +2939,7 @@ export default function StaffDashboardPage() {
                     {navItems.map(item => (
                         <NavItem key={item.section} {...item} active={activeSection} expanded={sidebarOpen} onClick={(s: string) => {
                             if (s === 'chat_customer') setAutoStartUser(null);
-                            setActiveSection(s);
+                            navigateToSection(s);
                             setSidebarOpen(false);
                         }} />
                     ))}
@@ -2802,7 +2948,7 @@ export default function StaffDashboardPage() {
                 {/* Avatar + Sign-out at bottom */}
                 <div className="px-3 mt-2 flex-shrink-0">
                     <div className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-800/60 transition-colors cursor-pointer group/profile border border-transparent hover:border-slate-700/50">
-                        <div onClick={() => { setActiveSection('my_profile'); setSidebarOpen(false); }} className="flex items-center gap-3 flex-1 min-w-0" title="View Profile">
+                        <div onClick={() => { navigateToSection('my_profile'); setSidebarOpen(false); }} className="flex items-center gap-3 flex-1 min-w-0" title="View Profile">
                             <img
                                 src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.email}`}
                                 alt="Avatar"
@@ -3820,13 +3966,13 @@ export default function StaffDashboardPage() {
                                                                         {Object.entries(fields || {})
                                                                             .filter(([k, v]) => k !== 'document_validation' && k !== 'ocr_issues' && (typeof v !== 'object' || v == null))
                                                                             .map(([k, v]) => (
-                                                                            v != null && String(v).trim() !== '' && (
-                                                                                <div key={k} className="bg-white/80 rounded-xl px-4 py-2 border border-emerald-100">
-                                                                                    <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">{k.replace(/_/g, ' ')}</p>
-                                                                                    <p className="text-sm font-semibold text-slate-800 truncate">{String(v)}</p>
-                                                                                </div>
-                                                                            )
-                                                                        ))}
+                                                                                v != null && String(v).trim() !== '' && (
+                                                                                    <div key={k} className="bg-white/80 rounded-xl px-4 py-2 border border-emerald-100">
+                                                                                        <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600">{k.replace(/_/g, ' ')}</p>
+                                                                                        <p className="text-sm font-semibold text-slate-800 truncate">{String(v)}</p>
+                                                                                    </div>
+                                                                                )
+                                                                            ))}
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -6313,7 +6459,7 @@ export default function StaffDashboardPage() {
                                     loading={loading}
                                     hint="3 joined today"
                                     footerAction="View List ➔"
-                                    onFooterActionClick={(e: any) => { e.stopPropagation(); setActiveSection('applicants'); }}
+                                    onFooterActionClick={(e: any) => { e.stopPropagation(); navigateToSection('applicants'); }}
                                 />
                             </div>
 
@@ -6370,7 +6516,7 @@ export default function StaffDashboardPage() {
                                     <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
                                         <div className="flex items-center justify-between mb-3">
                                             <h3 className="text-[11px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] uppercase tracking-wider">Recent Activity</h3>
-                                            <button onClick={() => setActiveSection('activities')} className="text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:underline">View All</button>
+                                            <button onClick={() => navigateToSection('activities')} className="text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:underline">View All</button>
                                         </div>
                                         <div className="space-y-2.5">
                                             {recentActivity.length === 0 ? (
@@ -6399,12 +6545,12 @@ export default function StaffDashboardPage() {
                                         </div>
                                     </div>
                                     <div className="space-y-1.5">
-                                        <button onClick={() => { setActiveSection('chat_customer'); setAutoStartUser(null); }} className="w-full text-left p-3 rounded border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all flex items-center gap-3 bg-white shadow-sm">
+                                        <button onClick={() => { navigateToSection('chat_customer'); setAutoStartUser(null); }} className="w-full text-left p-3 rounded border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all flex items-center gap-3 bg-white shadow-sm">
                                             <span className="material-symbols-outlined text-indigo-500 text-[18px]">forum</span>
                                             <span className="text-[12px] font-medium text-slate-800">Support Chat</span>
                                             <span className="material-symbols-outlined text-slate-300 ml-auto text-[14px]">arrow_forward_ios</span>
                                         </button>
-                                        <button onClick={() => setActiveSection('applicants')} className="w-full text-left p-3 rounded border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30 transition-all flex items-center gap-3 bg-white shadow-sm">
+                                        <button onClick={() => navigateToSection('applicants')} className="w-full text-left p-3 rounded border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30 transition-all flex items-center gap-3 bg-white shadow-sm">
                                             <span className="material-symbols-outlined text-emerald-500 text-[18px]">manage_accounts</span>
                                             <span className="text-[12px] font-medium text-slate-800">Applicant Profiles</span>
                                             <span className="material-symbols-outlined text-slate-300 ml-auto text-[14px]">arrow_forward_ios</span>
@@ -6550,7 +6696,7 @@ export default function StaffDashboardPage() {
                                 {activitiesTotal > activitiesLimit && (
                                     <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
                                         <div className="flex flex-col">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Navigation Console</p>
+                                            {/* <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Navigation Console</p> */}
                                             <p className="text-[11px] font-bold text-slate-700">
                                                 Page <span className="text-indigo-600">{activitiesPage}</span> of {Math.ceil(activitiesTotal / activitiesLimit)}
                                                 <span className="mx-2 text-slate-300">|</span>
@@ -7012,7 +7158,7 @@ export default function StaffDashboardPage() {
                                                                     </div>
                                                                 </td>
                                                                 <td className="sticky left-[250px] z-10 bg-white px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
-                                                                    <p className="text-[12px] font-mono font-bold text-slate-900 truncate">{item.userId || item.user_id || item.student?.id || item.student?._id || '—'}</p>
+                                                                    <p className="text-[12px] font-mono font-bold text-slate-900 truncate">{String(item.userId || item.user_id || item.student?.id || item.student?._id || '—').slice(0, 10).toUpperCase()}</p>
                                                                     <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1">User ID</p>
                                                                 </td>
                                                                 <td className="sticky left-[420px] z-10 bg-white px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
@@ -7153,7 +7299,7 @@ export default function StaffDashboardPage() {
                                                                                 {item.firstName || '—'} {item.lastName || ''}
                                                                             </p>
                                                                             <p className="text-[12px] text-slate-900 font-bold font-mono mt-1">
-                                                                                ID: {(item.id || item._id || '').slice(0, 12)}
+                                                                                ID: {(item.id || item._id || '').slice(0, 10).toUpperCase()}
                                                                             </p>
                                                                         </div>
                                                                     </div>
@@ -7252,7 +7398,7 @@ export default function StaffDashboardPage() {
                                                                             <span className="material-symbols-outlined text-[16px]">account_circle</span>
                                                                         </button>
                                                                         <button
-                                                                            onClick={() => { setAutoStartUser(item); setActiveSection("chat_customer"); }}
+                                                                            onClick={() => { setAutoStartUser(item); navigateToSection("chat_customer"); }}
                                                                             className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 flex items-center justify-center transition-all shadow-sm"
                                                                             title="Direct Message"
                                                                         >
@@ -7321,16 +7467,16 @@ export default function StaffDashboardPage() {
                                         </tbody>
                                     </table>
                                 </div>
-                                {((activeSection === 'users' && totalItems > itemsPerPage) || (activeSection === 'applications' && appsTotalItems > itemsPerPage)) && (
+                                {((activeSection === 'users' && totalItems > itemsPerPage) || activeSection === 'applications') && (
                                     <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
                                         <div className="flex flex-col">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Navigation Console</p>
+                                            {/* <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Navigation Console</p> */}
                                             <p className="text-[11px] font-bold text-slate-700">
-                                                Page <span className="text-indigo-600">{currentPage}</span> of {Math.ceil((activeSection === 'applications' ? appsTotalItems : totalItems) / itemsPerPage)}
+                                                Page <span className="text-indigo-600">{currentPage}</span> of {totalPages}
                                                 <span className="mx-2 text-slate-300">|</span>
                                                 Total Records: <span className="text-slate-900">{activeSection === 'applications' ? appsTotalItems : totalItems}</span>
                                                 {activeSection === 'applications' && (
-                                                    <span className="ml-2 text-slate-400"> &bull; Showing {Math.min((currentPage - 1) * itemsPerPage + 1, appsTotalItems)}&ndash;{Math.min(currentPage * itemsPerPage, appsTotalItems)}</span>
+                                                    <span className="ml-2 text-slate-400"> &bull; Showing {showingStart}&ndash;{showingEnd}</span>
                                                 )}
                                             </p>
                                         </div>
@@ -7338,17 +7484,16 @@ export default function StaffDashboardPage() {
                                             <button
                                                 disabled={currentPage === 1 || loading}
                                                 onClick={() => {
-                                                    setCurrentPage(prev => Math.max(1, prev - 1));
-                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                    navigateToPage(currentPage - 1);
                                                 }}
-                                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-sm"
+                                                className="w-10 h-10 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
+                                                title="Previous page"
+                                                aria-label="Previous page"
                                             >
-                                                <span className="material-symbols-outlined text-[16px]">chevron_left</span>
-                                                Previous
+                                                <span className="material-symbols-outlined text-[20px]">arrow_back</span>
                                             </button>
                                             <div className="flex items-center gap-1 mx-2">
                                                 {(() => {
-                                                    const totalPages = Math.ceil((activeSection === 'applications' ? appsTotalItems : totalItems) / itemsPerPage);
                                                     const pages: number[] = [];
                                                     if (totalPages <= 7) { for (let i = 1; i <= totalPages; i++) pages.push(i); }
                                                     else {
@@ -7363,7 +7508,7 @@ export default function StaffDashboardPage() {
                                                     ) : (
                                                         <button
                                                             key={pageNum}
-                                                            onClick={() => { setCurrentPage(pageNum); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                                                            onClick={() => navigateToPage(pageNum)}
                                                             className={`w-8 h-8 rounded-lg text-[10px] font-black transition-all ${currentPage === pageNum ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' : 'bg-white border border-slate-200 text-slate-400 hover:border-slate-300 hover:text-slate-600'}`}
                                                         >
                                                             {pageNum}
@@ -7372,15 +7517,15 @@ export default function StaffDashboardPage() {
                                                 })()}
                                             </div>
                                             <button
-                                                disabled={currentPage >= Math.ceil((activeSection === 'applications' ? appsTotalItems : totalItems) / itemsPerPage) || loading}
+                                                disabled={currentPage >= totalPages || loading}
                                                 onClick={() => {
-                                                    setCurrentPage(prev => prev + 1);
-                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                    navigateToPage(currentPage + 1);
                                                 }}
-                                                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2 shadow-sm"
+                                                className="w-10 h-10 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center shadow-sm"
+                                                title="Next page"
+                                                aria-label="Next page"
                                             >
-                                                Next
-                                                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                                                <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
                                             </button>
                                         </div>
                                     </div>

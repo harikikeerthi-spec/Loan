@@ -46,7 +46,7 @@ export default function UserProfileEdit({ params }: { params: { id: string } }) 
                             </h1>
                             <div className="flex items-center gap-3 mt-1.5">
                                 <span className="bg-slate-100 text-slate-600 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider border border-slate-200">
-                                    Student ID: {userId.slice(0,8).toUpperCase()}
+                                    Student ID: {userId.slice(0, 10).toUpperCase()}
                                 </span>
                                 <span className="bg-amber-50 text-amber-600 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider border border-amber-200 flex items-center gap-1">
                                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>

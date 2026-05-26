@@ -3,12 +3,16 @@ import {
   Get,
   Post,
   Put,
+  Patch,
+  Delete,
   Body,
   Param,
   Query,
   Request,
   UseGuards,
-  UseInterceptors
+  UseInterceptors,
+  HttpCode,
+  HttpStatus
 } from '@nestjs/common';
 import { StaffGuard } from '../auth/staff.guard';
 import { BankRbacInterceptor } from './bank-rbac.middleware';
@@ -199,6 +203,41 @@ export class BankDashboardController {
     return this.dashboardService.updateSanction(applicationId, body, req.user);
   }
 
+  // ==================== DECISION (Task 12 & 13 — F4) ====================
+
+  /**
+   * POST /bank/dashboard/files/:id/decision
+   * 4 decision types: APPROVED, REJECTED, CONDITIONAL_SANCTION, COUNTER_OFFER, PARTIAL_SANCTION
+   * Per-type validation, auto status transition, full audit.
+   */
+  @Post('files/:id/decision')
+  async recordDecision(
+    @Request() req,
+    @Param('id') fileId: string,
+    @Body() body: any
+  ) {
+    return this.dashboardService.recordBankDecision(fileId, body, req.user);
+  }
+
+  /** GET allowed transitions for an application (drives frontend action buttons) */
+  @Get('applications/:applicationId/allowed-transitions')
+  async getAllowedTransitions(
+    @Request() req,
+    @Param('applicationId') applicationId: string
+  ) {
+    return this.dashboardService.getAllowedTransitionsForApp(applicationId, req.user);
+  }
+
+  /** POST transition status directly (for admin/super_admin overrides) */
+  @Post('applications/:applicationId/transition')
+  async transitionStatus(
+    @Request() req,
+    @Param('applicationId') applicationId: string,
+    @Body() body: { targetStatus: string; reason?: string }
+  ) {
+    return this.dashboardService.transitionApplicationStatus(applicationId, body.targetStatus, req.user, body.reason);
+  }
+
   @Post('applications/:applicationId/decision')
   async recordBankDecision(
     @Request() req,
@@ -356,6 +395,86 @@ export class BankDashboardController {
   @Get('applications/:applicationId/audit-logs')
   async getAuditLogs(@Param('applicationId') applicationId: string) {
     return this.dashboardService.getAuditLogs(applicationId);
+  }
+
+  // ==================== INTERNAL NOTES (F32) ====================
+
+  /** POST /bank/dashboard/files/:id/notes — add internal note (same-bank only) */
+  @Post('files/:id/notes')
+  async addNote(
+    @Request() req,
+    @Param('id') fileId: string,
+    @Body() body: { content: string; isPinned?: boolean }
+  ) {
+    return this.dashboardService.addNote(fileId, body, req.user);
+  }
+
+  /** GET /bank/dashboard/files/:id/notes — list notes (same-bank only) */
+  @Get('files/:id/notes')
+  async getNotes(
+    @Request() req,
+    @Param('id') fileId: string
+  ) {
+    return this.dashboardService.getNotes(fileId, req.user);
+  }
+
+  /** PUT /bank/dashboard/files/:id/notes/:noteId — update own note */
+  @Put('files/:id/notes/:noteId')
+  async updateNote(
+    @Request() req,
+    @Param('noteId') noteId: string,
+    @Body() body: { content: string }
+  ) {
+    return this.dashboardService.updateNote(noteId, body.content, req.user);
+  }
+
+  /** DELETE /bank/dashboard/files/:id/notes/:noteId — delete own note */
+  @Delete('files/:id/notes/:noteId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteNote(
+    @Request() req,
+    @Param('noteId') noteId: string
+  ) {
+    await this.dashboardService.deleteNote(noteId, req.user);
+  }
+
+  // ==================== FILE TAGS (F43) ====================
+
+  /** GET /bank/dashboard/tags — pre-built tag library */
+  @Get('tags')
+  getTagLibrary() {
+    return { tags: this.dashboardService.getTagLibrary() };
+  }
+
+  /** POST /bank/dashboard/files/:id/tags — add a tag to a file */
+  @Post('files/:id/tags')
+  async addTag(
+    @Request() req,
+    @Param('id') fileId: string,
+    @Body() body: { tag: string }
+  ) {
+    return this.dashboardService.addTag(fileId, body.tag, req.user);
+  }
+
+  /** DELETE /bank/dashboard/files/:id/tags/:tag — remove a tag */
+  @Delete('files/:id/tags/:tag')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async removeTag(
+    @Request() req,
+    @Param('id') fileId: string,
+    @Param('tag') tag: string
+  ) {
+    await this.dashboardService.removeTag(fileId, tag, req.user);
+  }
+
+  /** GET /bank/dashboard/files?tag=PRIORITY — list files filtered by tag */
+  @Get('files/by-tag/:tag')
+  async getFilesByTag(
+    @Request() req,
+    @Param('tag') tag: string
+  ) {
+    const bankId = this.resolveBankIdOrAll(req);
+    return this.dashboardService.getFilesByTag(tag, bankId);
   }
 
   // ==================== HELPER ====================

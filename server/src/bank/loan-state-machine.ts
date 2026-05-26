@@ -11,6 +11,7 @@ export type LoanStatus =
   | 'approved'
   | 'sanctioned'
   | 'conditional_sanction'
+  | 'partial_sanction'
   | 'counter_offer'
   | 'rejected'
   | 'disbursement_confirmed'
@@ -77,16 +78,26 @@ export class LoanStateMachine {
     },
     {
       from: ['under_bank_review', 'file_logged', 'query_raised'],
+      to: 'partial_sanction',
+      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
+    },
+    {
+      from: ['under_bank_review', 'file_logged', 'query_raised'],
       to: 'counter_offer',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
     {
-      from: ['under_bank_review', 'file_logged', 'query_raised', 'conditional_sanction', 'counter_offer'],
+      from: ['conditional_sanction', 'partial_sanction', 'counter_offer'],
+      to: 'sanctioned',
+      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
+    },
+    {
+      from: ['under_bank_review', 'file_logged', 'query_raised', 'conditional_sanction', 'partial_sanction', 'counter_offer'],
       to: 'rejected',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
     {
-      from: ['approved', 'sanctioned', 'conditional_sanction', 'counter_offer'],
+      from: ['approved', 'sanctioned', 'conditional_sanction', 'partial_sanction', 'counter_offer'],
       to: 'disbursement_confirmed',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
@@ -96,7 +107,7 @@ export class LoanStateMachine {
       allowedRoles: ['admin', 'super_admin', 'staff']
     },
     {
-      from: ['approved', 'sanctioned', 'conditional_sanction', 'counter_offer', 'under_bank_review', 'file_logged'],
+      from: ['approved', 'sanctioned', 'conditional_sanction', 'partial_sanction', 'counter_offer', 'under_bank_review', 'file_logged'],
       to: 'expired',
       allowedRoles: ['system', 'admin', 'super_admin']
     }
@@ -157,6 +168,7 @@ export class LoanStateMachine {
       case 'under_bank_review': return 70;
       case 'query_raised': return 75;
       case 'conditional_sanction': return 80;
+      case 'partial_sanction': return 80;
       case 'counter_offer': return 80;
       case 'approved': return 85;
       case 'sanctioned': return 90;
@@ -174,8 +186,33 @@ export class LoanStateMachine {
     if (['pending', 'docs_received'].includes(s)) return 'Pre-login';
     if (['staff_verified', 'submitted_to_bank'].includes(s)) return 'Submitted';
     if (['file_logged', 'under_bank_review', 'query_raised'].includes(s)) return 'Verification';
-    if (['conditional_sanction', 'counter_offer', 'approved', 'sanctioned'].includes(s)) return 'Sanctioned';
+    if (['conditional_sanction', 'partial_sanction', 'counter_offer', 'approved', 'sanctioned'].includes(s)) return 'Sanctioned';
     if (['disbursement_confirmed', 'closed'].includes(s)) return 'Disbursed';
     return 'Pre-login';
+  }
+
+  /**
+   * Returns all valid next statuses for a given current status and role.
+   * Useful for driving frontend action buttons.
+   */
+  static getAllowedTransitions(currentStatus: string, userRole: string): LoanStatus[] {
+    const fromStatus = (currentStatus?.toLowerCase() || 'pending') as LoanStatus;
+    const role = userRole?.toLowerCase();
+    const isSuperAdminOrSystem = role === 'super_admin' || role === 'system';
+
+    return this.transitions
+      .filter(t => t.from.includes(fromStatus))
+      .filter(t => isSuperAdminOrSystem || t.allowedRoles.some(
+        r => r.toLowerCase() === role || (r === 'partner_bank' && role === 'bank')
+      ))
+      .map(t => t.to);
+  }
+
+  /**
+   * Returns true if the status is terminal (no further transitions allowed).
+   */
+  static isTerminalState(status: string): boolean {
+    const s = status?.toLowerCase() as LoanStatus;
+    return ['closed', 'rejected', 'expired'].includes(s);
   }
 }

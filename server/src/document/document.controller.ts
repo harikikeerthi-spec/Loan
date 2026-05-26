@@ -246,11 +246,36 @@ export class DocumentController {
       ? 'application/pdf'
       : 'image/jpeg';
 
-    const kycResult = await this.kycService.processDocument(
-      fileBuffer,
-      mimetype,
-      docType,
-    );
+    let kycResult: any;
+    try {
+      kycResult = await this.kycService.processDocument(
+        fileBuffer,
+        mimetype,
+        docType,
+      );
+    } catch (aiError: any) {
+      console.error(`[OCR-REVERIFY] KYC Service threw an error: ${aiError.message || aiError}. Running local keyword check fallback...`);
+      const isImage = mimetype.startsWith('image/');
+      const isPdf = mimetype === 'application/pdf';
+      const integrityCheck = await this.kycService.validateDocumentKeywords(fileBuffer, docType, isPdf, isImage);
+      
+      if (!integrityCheck.is_valid) {
+        console.warn(`[OCR-REVERIFY] Rejecting invalid ${docType} on KYC service exception. Error: ${integrityCheck.error}`);
+        throw new BadRequestException(
+          `Document verification failed: The document was not recognized as a valid ${docType.toUpperCase().replace(/_/g, ' ')}. ` +
+          `Details: ${integrityCheck.error}. Please check your document.`
+        );
+      }
+
+      // Graceful fallback for external service failures when document is valid
+      kycResult = {
+        document_type: docType,
+        confidence_score: 50,
+        is_valid: true,
+        extracted_data: {},
+        error: `AI verification service temporarily offline: ${aiError.message || 'Unknown error'}`
+      };
+    }
 
     const newStatus = kycResult.is_valid ? 'uploaded' : 'rejected';
     const verificationResult = {

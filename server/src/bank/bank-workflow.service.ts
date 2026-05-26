@@ -476,7 +476,7 @@ export class BankWorkflowService {
       roiBase: number;
       roiEffective: number;
       tenure: number;
-      conditions: string[];
+      conditions: (string | { text: string; deadline?: string })[];
       decisionNotes?: string;
     },
     decidedBy: string,
@@ -488,6 +488,14 @@ export class BankWorkflowService {
         `Cannot conditionally sanction from ${submission.workflowStatus} status`,
       );
     }
+
+    // Normalize conditions to structured objects with per-item status + deadline
+    const structuredConditions = sanctionDetails.conditions.map((c, idx) => {
+      if (typeof c === 'string') {
+        return { index: idx, text: c, status: 'PENDING', deadline: null };
+      }
+      return { index: idx, text: c.text, status: 'PENDING', deadline: c.deadline || null };
+    });
 
     const { data: updated, error } = await this.db.client
       .from('BankSubmission')
@@ -503,7 +511,7 @@ export class BankWorkflowService {
         roiBase: sanctionDetails.roiBase,
         roiEffective: sanctionDetails.roiEffective,
         tenure: sanctionDetails.tenure,
-        conditions: sanctionDetails.conditions,
+        conditions: structuredConditions,
         sanctionDate: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       })
@@ -519,7 +527,7 @@ export class BankWorkflowService {
       submission.workflowStatus,
       'CONDITIONAL_SANCTION',
       decidedBy,
-      `Conditional sanction for ₹${sanctionDetails.sanctionAmount}`,
+      `Conditional sanction for ₹${sanctionDetails.sanctionAmount} with ${structuredConditions.length} condition(s)`,
     );
 
     await this.db.client
@@ -530,9 +538,239 @@ export class BankWorkflowService {
     this.eventEmitter.emit('bank.application.conditional_sanctioned', {
       submissionId,
       applicationId: submission.applicationId,
+      conditionCount: structuredConditions.length,
     });
 
     return { success: true, data: updated };
+  }
+
+  /**
+   * Update individual condition status (PENDING -> MET | WAIVED)
+   * Task 17 — F8
+   */
+  async updateConditionStatus(
+    submissionId: string,
+    conditionIndex: number,
+    status: 'PENDING' | 'MET' | 'WAIVED',
+    updatedBy: string,
+  ) {
+    const VALID_CONDITION_STATUSES = ['PENDING', 'MET', 'WAIVED'];
+    if (!VALID_CONDITION_STATUSES.includes(status)) {
+      throw new BadRequestException(`Invalid condition status "${status}". Allowed: ${VALID_CONDITION_STATUSES.join(', ')}`);
+    }
+
+    const submission = await this.getSubmission(submissionId);
+    if (submission.workflowStatus !== 'CONDITIONAL_SANCTION') {
+      throw new BadRequestException('Submission is not in CONDITIONAL_SANCTION status.');
+    }
+
+    const conditions: any[] = submission.conditions || [];
+    const condIdx = conditions.findIndex((c: any) => c.index === conditionIndex);
+    if (condIdx === -1) {
+      throw new NotFoundException(`Condition at index ${conditionIndex} not found.`);
+    }
+
+    conditions[condIdx] = { ...conditions[condIdx], status, updatedAt: new Date().toISOString() };
+
+    const { data: updated, error } = await this.db.client
+      .from('BankSubmission')
+      .update({ conditions, updatedAt: new Date().toISOString() })
+      .eq('id', submissionId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // If all conditions are MET or WAIVED, log event
+    const allMet = conditions.every((c: any) => c.status === 'MET' || c.status === 'WAIVED');
+    if (allMet) {
+      this.eventEmitter.emit('bank.conditions.all_met', { submissionId, applicationId: submission.applicationId });
+    }
+
+    return { success: true, data: updated, allConditionsMet: allMet };
+  }
+
+  /**
+   * Accept a counter offer (transitions to SANCTIONED).
+   * Task 17 — F10
+   */
+  async acceptCounterOffer(submissionId: string, acceptedBy: string) {
+    const submission = await this.getSubmission(submissionId);
+
+    if (submission.workflowStatus !== 'COUNTER_OFFER') {
+      throw new BadRequestException('Submission is not in COUNTER_OFFER status.');
+    }
+
+    const { data: updated, error } = await this.db.client
+      .from('BankSubmission')
+      .update({
+        workflowStatus: 'SANCTIONED',
+        currentStage: 'SANCTIONED',
+        decisionStatus: 'SANCTIONED',
+        counterOfferAcceptedAt: new Date().toISOString(),
+        counterOfferAcceptedBy: acceptedBy,
+        updatedAt: new Date().toISOString(),
+      })
+      .eq('id', submissionId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await this.recordWorkflowHistory(
+      submissionId,
+      submission.applicationId,
+      'COUNTER_OFFER',
+      'SANCTIONED',
+      acceptedBy,
+      'Counter offer accepted by applicant/co-applicant',
+    );
+
+    await this.db.client
+      .from('LoanApplication')
+      .update({ bankWorkflowStatus: 'SANCTIONED', status: 'sanctioned' })
+      .eq('id', submission.applicationId);
+
+    this.eventEmitter.emit('bank.counter_offer.accepted', {
+      submissionId,
+      applicationId: submission.applicationId,
+    });
+
+    return { success: true, data: updated };
+  }
+
+  /**
+   * Reject a counter offer (transitions to REJECTED).
+   * Task 17 — F10
+   */
+  async rejectCounterOffer(submissionId: string, reason: string, rejectedBy: string) {
+    const submission = await this.getSubmission(submissionId);
+
+    if (submission.workflowStatus !== 'COUNTER_OFFER') {
+      throw new BadRequestException('Submission is not in COUNTER_OFFER status.');
+    }
+
+    const { data: updated, error } = await this.db.client
+      .from('BankSubmission')
+      .update({
+        workflowStatus: 'REJECTED',
+        currentStage: 'REJECTED',
+        decisionStatus: 'REJECTED',
+        rejectionReason: reason,
+        rejectionCategory: 'COUNTER_OFFER_REJECTED',
+        decisionMadeAt: new Date().toISOString(),
+        decisionMadeBy: rejectedBy,
+        updatedAt: new Date().toISOString(),
+      })
+      .eq('id', submissionId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await this.recordWorkflowHistory(
+      submissionId,
+      submission.applicationId,
+      'COUNTER_OFFER',
+      'REJECTED',
+      rejectedBy,
+      `Counter offer rejected: ${reason}`,
+    );
+
+    await this.db.client
+      .from('LoanApplication')
+      .update({ bankWorkflowStatus: 'REJECTED', status: 'rejected' })
+      .eq('id', submission.applicationId);
+
+    return { success: true, data: updated };
+  }
+
+  /**
+   * Partial Sanction — Task 18 (F9)
+   * Calculates shortfall, transitions to PARTIAL_SANCTION, notifies staff.
+   */
+  async partialSanctionApplication(
+    submissionId: string,
+    details: {
+      approvedAmount: number;
+      requestedAmount: number;
+      roiType: string;
+      roiBase: number;
+      roiEffective: number;
+      tenure: number;
+      decisionNotes?: string;
+    },
+    decidedBy: string,
+  ) {
+    const submission = await this.getSubmission(submissionId);
+
+    if (!this.isValidTransition(submission.workflowStatus, 'CONDITIONAL_SANCTION')) {
+      // PARTIAL_SANCTION uses same valid-from states as CONDITIONAL_SANCTION
+      throw new BadRequestException(
+        `Cannot issue partial sanction from ${submission.workflowStatus} status`,
+      );
+    }
+
+    const shortfallAmount = Math.max(0, details.requestedAmount - details.approvedAmount);
+    const now = new Date().toISOString();
+
+    const { data: updated, error } = await this.db.client
+      .from('BankSubmission')
+      .update({
+        workflowStatus: 'CONDITIONAL_SANCTION',
+        currentStage: 'CONDITIONAL_SANCTION',
+        decisionStatus: 'PARTIAL_SANCTION',
+        decisionMadeAt: now,
+        decisionMadeBy: decidedBy,
+        decisionNotes: details.decisionNotes,
+        sanctionAmount: details.approvedAmount,
+        roiType: details.roiType,
+        roiBase: details.roiBase,
+        roiEffective: details.roiEffective,
+        tenure: details.tenure,
+        conditions: [{ text: `Partial sanction: Shortfall of ₹${shortfallAmount} to be arranged separately.`, status: 'PENDING', deadline: null }],
+        sanctionDate: now,
+        updatedAt: now,
+      })
+      .eq('id', submissionId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await this.recordWorkflowHistory(
+      submissionId,
+      submission.applicationId,
+      submission.workflowStatus,
+      'PARTIAL_SANCTION',
+      decidedBy,
+      `Partial sanction: Approved ₹${details.approvedAmount} of ₹${details.requestedAmount} requested (shortfall ₹${shortfallAmount})`,
+    );
+
+    await this.db.client
+      .from('LoanApplication')
+      .update({ bankWorkflowStatus: 'CONDITIONAL_SANCTION', status: 'partial_sanction' })
+      .eq('id', submission.applicationId);
+
+    // Route-to-bank notification: create staff query about shortfall
+    await this.db.client.from('BankQuery').insert({
+      applicationId: submission.applicationId,
+      raisedBy: decidedBy,
+      queryType: 'PARTIAL_SANCTION_SHORTFALL',
+      description: `Partial sanction issued by ${decidedBy}. Approved: ₹${details.approvedAmount}, Requested: ₹${details.requestedAmount}, Shortfall: ₹${shortfallAmount}. Staff action required to arrange the remaining amount or explore alternate financing.`,
+      requiredDocs: [],
+      status: 'OPEN',
+      raisedAt: now,
+    });
+
+    this.eventEmitter.emit('bank.application.partial_sanctioned', {
+      submissionId,
+      applicationId: submission.applicationId,
+      approvedAmount: details.approvedAmount,
+      shortfallAmount,
+    });
+
+    return { success: true, data: updated, shortfallAmount };
   }
 
   /**

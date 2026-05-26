@@ -1,5 +1,26 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { LoanStateMachine } from './loan-state-machine';
+
+// ==================== CONSTANTS ====================
+
+export const DECISION_TYPES = ['APPROVED', 'REJECTED', 'CONDITIONAL_SANCTION', 'COUNTER_OFFER', 'PARTIAL_SANCTION'] as const;
+export type DecisionType = typeof DECISION_TYPES[number];
+
+export const REJECTION_CATEGORIES = ['CIBIL', 'INCOME', 'DOCS', 'FRAUD', 'POLICY', 'TECHNICAL', 'OTHER'] as const;
+export type RejectionCategory = typeof REJECTION_CATEGORIES[number];
+
+export const ROI_TYPES = ['FIXED', 'FLOATING', 'SUBSIDY'] as const;
+export type RoiType = typeof ROI_TYPES[number];
+
+export const FEE_MODES = ['ONLINE', 'CHEQUE', 'DD', 'WAIVER'] as const;
+export type FeeMode = typeof FEE_MODES[number];
+
+export const PREDEFINED_TAGS = [
+  'PRIORITY', 'URGENT', 'QUERY_PENDING', 'DOCS_MISSING', 'HIGH_VALUE',
+  'SUBSIDY_CASE', 'COLLATERAL', 'CO_APPLICANT', 'RESUBMISSION', 'ESCALATED',
+  'SBI_SCHEME', 'VIDYA_LAKSHMI', 'ABROAD_STUDY', 'DOMESTIC_STUDY', 'FOLLOW_UP'
+] as const;
 
 @Injectable()
 export class BankDashboardService {
@@ -151,13 +172,31 @@ export class BankDashboardService {
   // ==================== ROI & PROCESSING FEE ====================
 
   async setROI(applicationId: string, roiData: any, bankUser: any): Promise<any> {
+    // Validate ROI type enum
+    const roiType = (roiData.roiType || '').toUpperCase();
+    if (!ROI_TYPES.includes(roiType as RoiType)) {
+      throw new BadRequestException(`Invalid roiType "${roiType}". Must be one of: ${ROI_TYPES.join(', ')}`);
+    }
+
+    // Validate rate ranges
+    const roiBase = Number(roiData.roiBase);
+    if (isNaN(roiBase) || roiBase < 0 || roiBase > 30) {
+      throw new BadRequestException('roiBase must be a number between 0 and 30 (%).');
+    }
+
+    // Compute effective ROI
+    const roiSubsidy = Number(roiData.roiSubsidy || 0);
+    const roiEffective = roiType === 'SUBSIDY'
+      ? Math.max(0, roiBase - roiSubsidy)
+      : (roiData.roiEffective != null ? Number(roiData.roiEffective) : roiBase);
+
     const { data: updated, error } = await this.db
       .from('LoanApplication')
       .update({
-        roiType: roiData.roiType,
-        roiBase: roiData.roiBase,
-        roiEffective: roiData.roiEffective,
-        roiSubsidy: roiData.roiSubsidy,
+        roiType,
+        roiBase,
+        roiEffective,
+        roiSubsidy: roiType === 'SUBSIDY' ? roiSubsidy : null,
         updatedAt: new Date().toISOString()
       })
       .eq('id', applicationId)
@@ -172,15 +211,63 @@ export class BankDashboardService {
       action: 'ROI_SET',
       performedBy: bankUser.email,
       role: bankUser.role,
-      details: roiData
+      details: { roiType, roiBase, roiEffective, roiSubsidy }
     });
 
     return updated;
   }
 
   async setProcessingFee(applicationId: string, feeData: any, bankUser: any): Promise<any> {
-    const gstAmount = feeData.feeAmount * 0.18; // 18% GST
-    const totalAmount = feeData.feeAmount + gstAmount;
+    // Validate mode enum
+    const mode = (feeData.mode || '').toUpperCase() as FeeMode;
+    if (!FEE_MODES.includes(mode)) {
+      throw new BadRequestException(`Invalid fee mode "${mode}". Must be one of: ${FEE_MODES.join(', ')}`);
+    }
+
+    // Waiver path — skip GST calculation
+    if (mode === 'WAIVER') {
+      if (!feeData.waiverReason) {
+        throw new BadRequestException('waiverReason is required when mode is WAIVER.');
+      }
+      const { data, error } = await this.db
+        .from('ProcessingFee')
+        .upsert(
+          {
+            applicationId,
+            lanNumber: feeData.lanNumber,
+            feeAmount: 0,
+            gstAmount: 0,
+            totalAmount: 0,
+            mode,
+            status: 'WAIVED',
+            waivedBy: bankUser.email,
+            waiverReason: feeData.waiverReason,
+            createdAt: new Date().toISOString()
+          },
+          { onConflict: 'applicationId' }
+        )
+        .select()
+        .single();
+      if (error) throw error;
+
+      await this.logAudit({
+        entityType: 'DOCUMENT',
+        entityId: applicationId,
+        action: 'PROCESSING_FEE_WAIVED',
+        performedBy: bankUser.email,
+        role: bankUser.role,
+        details: { waiverReason: feeData.waiverReason }
+      });
+      return data;
+    }
+
+    // Normal path with 18% GST
+    const feeAmount = Number(feeData.feeAmount);
+    if (isNaN(feeAmount) || feeAmount < 0) {
+      throw new BadRequestException('feeAmount must be a non-negative number.');
+    }
+    const gstAmount = parseFloat((feeAmount * 0.18).toFixed(2));
+    const totalAmount = parseFloat((feeAmount + gstAmount).toFixed(2));
 
     const { data, error } = await this.db
       .from('ProcessingFee')
@@ -188,9 +275,10 @@ export class BankDashboardService {
         {
           applicationId,
           lanNumber: feeData.lanNumber,
-          feeAmount: feeData.feeAmount,
+          feeAmount,
           gstAmount,
           totalAmount,
+          mode,
           status: 'PENDING',
           createdAt: new Date().toISOString()
         },
@@ -207,7 +295,7 @@ export class BankDashboardService {
       action: 'PROCESSING_FEE_SET',
       performedBy: bankUser.email,
       role: bankUser.role,
-      details: { feeAmount: feeData.feeAmount, gstAmount, totalAmount }
+      details: { feeAmount, gstAmount, totalAmount, mode }
     });
 
     return data;
@@ -463,54 +551,87 @@ export class BankDashboardService {
   }
 
   async getPipelineAnalytics(bankId: string): Promise<any> {
-    const stages = ['submitted', 'file_logged', 'under_bank_review', 'sanctioned', 'disbursed', 'rejected'];
+    // Kanban columns: grouped by pipeline stage with counts and totals
+    const KANBAN_COLUMNS: { id: string; label: string; statuses: string[] }[] = [
+      { id: 'pre_login',    label: 'Pre-Login',    statuses: ['pending', 'docs_received'] },
+      { id: 'submitted',   label: 'Submitted',    statuses: ['staff_verified', 'submitted_to_bank'] },
+      { id: 'verification',label: 'Verification', statuses: ['file_logged', 'under_bank_review', 'query_raised'] },
+      { id: 'sanctioned',  label: 'Sanctioned',   statuses: ['approved', 'conditional_sanction', 'partial_sanction', 'counter_offer', 'sanctioned'] },
+      { id: 'disbursed',   label: 'Disbursed',    statuses: ['disbursement_confirmed', 'closed'] },
+      { id: 'rejected',    label: 'Rejected',     statuses: ['rejected', 'expired'] },
+    ];
 
     const { data, error } = await this.db
       .from('LoanApplication')
-      .select('status, amount')
+      .select('id, status, amount, firstName, lastName, lanNumber, bank, createdAt, updatedAt')
       .eq('bank', bankId);
 
     if (error) throw error;
+    const apps = data || [];
 
-    const pipeline = stages.map(stage => {
-      const stageData = data.filter(app => app.status === stage);
+    const columns = KANBAN_COLUMNS.map(col => {
+      const colApps = apps.filter(a => col.statuses.includes((a.status || '').toLowerCase()));
       return {
-        stage,
-        count: stageData.length,
-        totalAmount: stageData.reduce((sum: number, app: any) => sum + (app.amount || 0), 0)
+        id: col.id,
+        label: col.label,
+        count: colApps.length,
+        totalAmount: colApps.reduce((s: number, a: any) => s + (a.amount || 0), 0),
+        applications: colApps.slice(0, 20).map((a: any) => ({
+          id: a.id,
+          name: `${a.firstName || ''} ${a.lastName || ''}`.trim(),
+          amount: a.amount,
+          status: a.status,
+          lanNumber: a.lanNumber,
+          updatedAt: a.updatedAt,
+        }))
       };
     });
 
-    return pipeline;
+    return {
+      bankId,
+      totalApplications: apps.length,
+      totalAmount: apps.reduce((s: number, a: any) => s + (a.amount || 0), 0),
+      columns
+    };
   }
 
   async getAgingReport(bankId: string): Promise<any> {
     const { data: applications, error } = await this.db
       .from('LoanApplication')
-      .select('id, createdAt, status')
-      .eq('bank', bankId);
+      .select('id, createdAt, status, firstName, lastName, amount, lanNumber')
+      .eq('bank', bankId)
+      .not('status', 'in', '("closed","rejected","expired","disbursement_confirmed")');
 
     if (error) throw error;
 
     const now = new Date();
-    const ageGroups = {
-      '0-7_days': 0,
-      '8-30_days': 0,
-      '31-60_days': 0,
-      '60+_days': 0
+    // Task-spec buckets: 0-3d, 4-7d, 8-14d, 15+d
+    const buckets: Record<string, { count: number; applications: any[] }> = {
+      '0-3d':  { count: 0, applications: [] },
+      '4-7d':  { count: 0, applications: [] },
+      '8-14d': { count: 0, applications: [] },
+      '15+d':  { count: 0, applications: [] },
     };
 
-    applications.forEach(app => {
+    (applications || []).forEach(app => {
       const created = new Date(app.createdAt);
       const ageDays = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+      const entry = {
+        id: app.id,
+        name: `${app.firstName || ''} ${app.lastName || ''}`.trim(),
+        amount: app.amount,
+        status: app.status,
+        lanNumber: app.lanNumber,
+        ageDays
+      };
 
-      if (ageDays <= 7) ageGroups['0-7_days']++;
-      else if (ageDays <= 30) ageGroups['8-30_days']++;
-      else if (ageDays <= 60) ageGroups['31-60_days']++;
-      else ageGroups['60+_days']++;
+      if (ageDays <= 3)       { buckets['0-3d'].count++;  buckets['0-3d'].applications.push(entry); }
+      else if (ageDays <= 7)  { buckets['4-7d'].count++;  buckets['4-7d'].applications.push(entry); }
+      else if (ageDays <= 14) { buckets['8-14d'].count++; buckets['8-14d'].applications.push(entry); }
+      else                    { buckets['15+d'].count++;  buckets['15+d'].applications.push(entry); }
     });
 
-    return ageGroups;
+    return { bankId, buckets };
   }
 
   async getSLAMetrics(bankId: string): Promise<any> {
@@ -1369,39 +1490,206 @@ export class BankDashboardService {
   }
 
   async recordBankDecision(applicationId: string, decisionData: any, bankUser: any): Promise<any> {
+    // ---- Task 12 & 13: 4-type validation ----
+    const decision = (decisionData.decision || '').toUpperCase() as DecisionType;
+    if (!DECISION_TYPES.includes(decision)) {
+      throw new BadRequestException(
+        `Invalid decision type "${decision}". Allowed: ${DECISION_TYPES.join(', ')}`
+      );
+    }
+
+    // Per-type required field validation
+    if (decision === 'REJECTED') {
+      if (!decisionData.rejectionReason || !decisionData.rejectionCategory) {
+        throw new BadRequestException('rejectionReason and rejectionCategory are required for REJECTED decisions.');
+      }
+      const cat = (decisionData.rejectionCategory || '').toUpperCase() as RejectionCategory;
+      if (!REJECTION_CATEGORIES.includes(cat)) {
+        throw new BadRequestException(`Invalid rejectionCategory "${cat}". Allowed: ${REJECTION_CATEGORIES.join(', ')}`);
+      }
+    }
+    if (decision === 'APPROVED') {
+      if (!decisionData.sanctionAmount || decisionData.sanctionAmount <= 0) {
+        throw new BadRequestException('sanctionAmount (> 0) is required for APPROVED decisions.');
+      }
+    }
+    if (decision === 'CONDITIONAL_SANCTION') {
+      if (!Array.isArray(decisionData.conditions) || decisionData.conditions.length === 0) {
+        throw new BadRequestException('conditions[] array is required for CONDITIONAL_SANCTION decisions.');
+      }
+      if (!decisionData.sanctionAmount || decisionData.sanctionAmount <= 0) {
+        throw new BadRequestException('sanctionAmount (> 0) is required for CONDITIONAL_SANCTION decisions.');
+      }
+    }
+    if (decision === 'COUNTER_OFFER') {
+      if (!decisionData.counterOfferTerms) {
+        throw new BadRequestException('counterOfferTerms (JSON object) is required for COUNTER_OFFER decisions.');
+      }
+    }
+    if (decision === 'PARTIAL_SANCTION') {
+      if (!decisionData.sanctionAmount || decisionData.sanctionAmount <= 0) {
+        throw new BadRequestException('sanctionAmount (> 0) is required for PARTIAL_SANCTION decisions.');
+      }
+      if (!decisionData.requestedAmount || decisionData.requestedAmount <= 0) {
+        throw new BadRequestException('requestedAmount (> 0) is required for PARTIAL_SANCTION decisions.');
+      }
+    }
+
+    // Fetch current application status for state machine validation
+    const { data: currentApp, error: fetchError } = await this.db
+      .from('LoanApplication')
+      .select('status')
+      .eq('id', applicationId)
+      .single();
+    if (fetchError || !currentApp) throw new NotFoundException(`Application ${applicationId} not found`);
+
+    // Determine target status from decision type
+    const decisionStatusMap: Record<DecisionType, string> = {
+      APPROVED:              'sanctioned',
+      REJECTED:              'rejected',
+      CONDITIONAL_SANCTION:  'conditional_sanction',
+      COUNTER_OFFER:         'counter_offer',
+      PARTIAL_SANCTION:      'partial_sanction',
+    };
+    const targetStatus = decisionStatusMap[decision];
+
+    // Validate transition via state machine
+    LoanStateMachine.validateTransition(currentApp.status, targetStatus, bankUser.role);
+
+    // Normalise conditions to per-item objects for CONDITIONAL_SANCTION
+    let conditions = decisionData.conditions || null;
+    if (decision === 'CONDITIONAL_SANCTION' && Array.isArray(conditions)) {
+      conditions = conditions.map((c: any) =>
+        typeof c === 'string'
+          ? { text: c, status: 'PENDING', deadline: decisionData.conditionDeadline || null }
+          : { text: c.text || c, status: c.status || 'PENDING', deadline: c.deadline || null }
+      );
+    }
+
+    const now = new Date().toISOString();
+    const shortfall = decision === 'PARTIAL_SANCTION'
+      ? (Number(decisionData.requestedAmount) - Number(decisionData.sanctionAmount))
+      : null;
+
     const { data, error } = await this.db
       .from('BankDecision')
       .insert({
         applicationId,
-        decision: decisionData.decision, // APPROVED, REJECTED, CONDITIONAL
-        remarks: decisionData.remarks,
-        rejectionReason: decisionData.rejectionReason,
-        conditions: decisionData.conditions,
+        bankId: bankUser.bankId || null,
+        decision,
+        sanctionAmount: decisionData.sanctionAmount || null,
+        requestedAmount: decisionData.requestedAmount || null,
+        shortfallAmount: shortfall,
+        roiType: decisionData.roiType || null,
+        interestRate: decisionData.interestRate || null,
+        conditions,
+        counterOfferTerms: decisionData.counterOfferTerms || null,
+        rejectionReason: decisionData.rejectionReason || null,
+        rejectionCategory: decisionData.rejectionCategory ? (decisionData.rejectionCategory as string).toUpperCase() : null,
+        sanctionLetterUrl: decisionData.sanctionLetterUrl || null,
+        remarks: decisionData.remarks || null,
         decidedBy: bankUser.email,
-        decidedAt: new Date().toISOString()
+        decidedAt: now,
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    // Update application status based on decision
-    const newStatus = decisionData.decision === 'APPROVED' ? 'under_bank_review' : 'rejected';
+    // Auto status transition via state machine (already validated above)
     await this.db
       .from('LoanApplication')
-      .update({ status: newStatus })
+      .update({ status: targetStatus, updatedAt: now })
       .eq('id', applicationId);
+
+    // For partial sanction — notify staff about shortfall
+    if (decision === 'PARTIAL_SANCTION' && shortfall !== null && shortfall > 0) {
+      await this.db.from('BankQuery').insert({
+        applicationId,
+        raisedBy: bankUser.email,
+        queryType: 'PARTIAL_SANCTION_SHORTFALL',
+        description: `Partial sanction issued. Approved: ₹${decisionData.sanctionAmount}, Requested: ₹${decisionData.requestedAmount}, Shortfall: ₹${shortfall}. Staff action required.`,
+        requiredDocs: [],
+        status: 'OPEN',
+        raisedAt: now,
+      });
+    }
 
     await this.logAudit({
       entityType: 'LOAN',
       entityId: applicationId,
-      action: 'BANK_DECISION_RECORDED',
+      action: `BANK_DECISION_${decision}`,
       performedBy: bankUser.email,
       role: bankUser.role,
-      details: { decision: decisionData.decision }
+      details: {
+        decision,
+        targetStatus,
+        sanctionAmount: decisionData.sanctionAmount,
+        rejectionCategory: decisionData.rejectionCategory,
+        shortfallAmount: shortfall,
+      }
     });
 
-    return data;
+    return { ...data, targetStatus };
+  }
+
+  /**
+   * Centralized state transition method — validates and applies a status change.
+   * All status mutations should go through here.
+   */
+  async transitionApplicationStatus(
+    applicationId: string,
+    targetStatus: string,
+    bankUser: any,
+    reason?: string
+  ): Promise<any> {
+    const { data: currentApp, error } = await this.db
+      .from('LoanApplication')
+      .select('status, id')
+      .eq('id', applicationId)
+      .single();
+    if (error || !currentApp) throw new NotFoundException(`Application ${applicationId} not found`);
+
+    LoanStateMachine.validateTransition(currentApp.status, targetStatus, bankUser.role);
+
+    const now = new Date().toISOString();
+    const { data: updated, error: updateError } = await this.db
+      .from('LoanApplication')
+      .update({ status: targetStatus, updatedAt: now })
+      .eq('id', applicationId)
+      .select()
+      .single();
+    if (updateError) throw updateError;
+
+    await this.logAudit({
+      entityType: 'LOAN',
+      entityId: applicationId,
+      action: 'STATUS_TRANSITIONED',
+      performedBy: bankUser.email,
+      role: bankUser.role,
+      details: { fromStatus: currentApp.status, toStatus: targetStatus, reason }
+    });
+
+    return updated;
+  }
+
+  /**
+   * Returns allowed next transitions for a given application (used by frontend action buttons).
+   */
+  async getAllowedTransitionsForApp(applicationId: string, bankUser: any): Promise<any> {
+    const { data: app, error } = await this.db
+      .from('LoanApplication')
+      .select('status')
+      .eq('id', applicationId)
+      .single();
+    if (error || !app) throw new NotFoundException(`Application ${applicationId} not found`);
+
+    const allowed = LoanStateMachine.getAllowedTransitions(app.status, bankUser.role);
+    return {
+      currentStatus: app.status,
+      allowedTransitions: allowed,
+      isTerminal: LoanStateMachine.isTerminalState(app.status)
+    };
   }
 
   // ==================== QUERIES - ENHANCED ====================
@@ -1521,5 +1809,234 @@ export class BankDashboardService {
     });
 
     return updated;
+  }
+
+  // ==================== INTERNAL NOTES (F32) ====================
+
+  /**
+   * Add an internal bank note to a file. Restricted to same bankId.
+   * Notes are stored in the BankFileNote table (falls back to BankQuery-style storage).
+   */
+  async addNote(fileId: string, noteData: any, bankUser: any): Promise<any> {
+    const bankId = bankUser.bankId || bankUser.firstName?.toLowerCase() || 'unknown';
+    const now = new Date().toISOString();
+
+    // Resolve to applicationId
+    const appId = await this.resolveApplicationId(fileId);
+
+    const { data, error } = await this.db
+      .from('BankFileNote')
+      .insert({
+        applicationId: appId,
+        bankId,
+        content: noteData.content,
+        isPinned: noteData.isPinned || false,
+        createdBy: bankUser.email,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await this.logAudit({
+      entityType: 'FILE',
+      entityId: appId,
+      action: 'NOTE_ADDED',
+      performedBy: bankUser.email,
+      role: bankUser.role,
+      details: { noteId: data.id }
+    });
+
+    return data;
+  }
+
+  /**
+   * Get internal notes for a file, restricted to same bankId.
+   */
+  async getNotes(fileId: string, bankUser: any): Promise<any[]> {
+    const bankId = bankUser.bankId || bankUser.firstName?.toLowerCase() || 'unknown';
+    const appId = await this.resolveApplicationId(fileId);
+
+    const { data, error } = await this.db
+      .from('BankFileNote')
+      .select('*')
+      .eq('applicationId', appId)
+      .eq('bankId', bankId)
+      .order('isPinned', { ascending: false })
+      .order('createdAt', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  }
+
+  /**
+   * Update a note (author-only).
+   */
+  async updateNote(noteId: string, content: string, bankUser: any): Promise<any> {
+    const { data: existing, error: fetchErr } = await this.db
+      .from('BankFileNote')
+      .select('createdBy, bankId')
+      .eq('id', noteId)
+      .single();
+
+    if (fetchErr || !existing) throw new NotFoundException(`Note ${noteId} not found`);
+    if (existing.createdBy !== bankUser.email && bankUser.role !== 'super_admin') {
+      throw new BadRequestException('You can only edit your own notes.');
+    }
+
+    const { data, error } = await this.db
+      .from('BankFileNote')
+      .update({ content, updatedAt: new Date().toISOString() })
+      .eq('id', noteId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Delete a note (author-only or super_admin).
+   */
+  async deleteNote(noteId: string, bankUser: any): Promise<void> {
+    const { data: existing, error: fetchErr } = await this.db
+      .from('BankFileNote')
+      .select('createdBy')
+      .eq('id', noteId)
+      .single();
+
+    if (fetchErr || !existing) throw new NotFoundException(`Note ${noteId} not found`);
+    if (existing.createdBy !== bankUser.email && bankUser.role !== 'super_admin') {
+      throw new BadRequestException('You can only delete your own notes.');
+    }
+
+    const { error } = await this.db.from('BankFileNote').delete().eq('id', noteId);
+    if (error) throw error;
+  }
+
+  // ==================== FILE TAGS (F43) ====================
+
+  /** Pre-built tag library */
+  getTagLibrary(): string[] {
+    return [...PREDEFINED_TAGS];
+  }
+
+  /**
+   * Add a tag to a FileEntry's tags array.
+   */
+  async addTag(fileId: string, tag: string, bankUser: any): Promise<any> {
+    const normalizedTag = tag.toUpperCase().replace(/\s+/g, '_');
+    const { data: entry, error: fetchErr } = await this.db
+      .from('FileEntry')
+      .select('id, tags, bankId')
+      .eq('id', fileId)
+      .maybeSingle();
+
+    if (fetchErr || !entry) throw new NotFoundException(`File ${fileId} not found`);
+
+    const existingTags: string[] = entry.tags || [];
+    if (existingTags.includes(normalizedTag)) {
+      return { id: entry.id, tags: existingTags }; // idempotent
+    }
+
+    const updatedTags = [...existingTags, normalizedTag];
+    const { data, error } = await this.db
+      .from('FileEntry')
+      .update({ tags: updatedTags, updatedAt: new Date().toISOString() })
+      .eq('id', fileId)
+      .select('id, tags')
+      .single();
+
+    if (error) throw error;
+
+    await this.logAudit({
+      entityType: 'FILE',
+      entityId: fileId,
+      action: 'TAG_ADDED',
+      performedBy: bankUser.email,
+      role: bankUser.role,
+      details: { tag: normalizedTag }
+    });
+
+    return data;
+  }
+
+  /**
+   * Remove a tag from a FileEntry's tags array.
+   */
+  async removeTag(fileId: string, tag: string, bankUser: any): Promise<any> {
+    const normalizedTag = tag.toUpperCase().replace(/\s+/g, '_');
+    const { data: entry, error: fetchErr } = await this.db
+      .from('FileEntry')
+      .select('id, tags')
+      .eq('id', fileId)
+      .maybeSingle();
+
+    if (fetchErr || !entry) throw new NotFoundException(`File ${fileId} not found`);
+
+    const updatedTags = (entry.tags || []).filter((t: string) => t !== normalizedTag);
+    const { data, error } = await this.db
+      .from('FileEntry')
+      .update({ tags: updatedTags, updatedAt: new Date().toISOString() })
+      .eq('id', fileId)
+      .select('id, tags')
+      .single();
+
+    if (error) throw error;
+
+    await this.logAudit({
+      entityType: 'FILE',
+      entityId: fileId,
+      action: 'TAG_REMOVED',
+      performedBy: bankUser.email,
+      role: bankUser.role,
+      details: { tag: normalizedTag }
+    });
+
+    return data;
+  }
+
+  /**
+   * List files filtered by a specific tag.
+   */
+  async getFilesByTag(tag: string, bankId: string | null): Promise<any[]> {
+    const normalizedTag = tag.toUpperCase().replace(/\s+/g, '_');
+    let query = this.db
+      .from('FileEntry')
+      .select('*, LoanApplication(id, firstName, lastName, amount, status, lanNumber)')
+      .contains('tags', [normalizedTag]);
+
+    if (bankId) query = query.eq('bankId', bankId);
+
+    const { data, error } = await query.order('createdAt', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  }
+
+  // ==================== PRIVATE HELPERS ====================
+
+  /**
+   * Resolves a fileId or applicationId to a LoanApplication.id.
+   */
+  private async resolveApplicationId(id: string): Promise<string> {
+    // Try FileEntry first
+    const { data: fe } = await this.db
+      .from('FileEntry')
+      .select('applicationId')
+      .eq('id', id)
+      .maybeSingle();
+    if (fe?.applicationId) return fe.applicationId;
+
+    // Try as applicationId directly
+    const { data: app } = await this.db
+      .from('LoanApplication')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
+    if (app) return app.id;
+
+    throw new NotFoundException(`Application/File ${id} not found`);
   }
 }

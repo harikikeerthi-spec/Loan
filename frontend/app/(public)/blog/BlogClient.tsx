@@ -116,38 +116,41 @@ export default function BlogClient() {
                     <div className="space-y-12">
                         {/* Featured Post */}
                         {page === 1 && activeCategory === "All" && !search && filtered[0] && (
-                            <Link href={`/blog/${filtered[0].slug}`} className="group block bg-white rounded-xl overflow-hidden border border-gray-100 hover:border-[#6605c7]/[0.1] hover:shadow-xl transition-all duration-300">
+                            <Link href={`/blog/${filtered[0].slug}`} className="group block bg-white rounded-[32px] overflow-hidden border border-slate-100 hover:border-purple-500/10 hover:shadow-2xl transition-all duration-500 shadow-sm">
                                 <div className="grid md:grid-cols-2 gap-0">
-                                    <div className="aspect-[16/10] md:aspect-auto relative overflow-hidden bg-gray-100">
+                                    <div className="aspect-[16/10] md:aspect-auto relative overflow-hidden bg-slate-950">
                                         <Image
                                             src={normalizeSrc(filtered[0].featuredImage || filtered[0].coverImage)}
                                             alt={filtered[0].title}
                                             fill
-                                            className="object-cover group-hover:scale-105 transition-transform duration-700"
+                                            className="object-cover group-hover:scale-105 transition-transform duration-1000 filter brightness-95 group-hover:brightness-90"
                                         />
-                                        <div className="absolute top-6 left-6">
-                                            <span className="bg-[#6605c7] text-white px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-lg">Featured Article</span>
+                                        <div className="absolute top-6 left-6 z-10">
+                                            <span className="bg-[#6605c7] text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] shadow-lg shadow-purple-500/20 border border-purple-400/20 flex items-center gap-1.5">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                                Featured Article
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className="p-10 md:p-12 flex flex-col justify-center">
-                                        <div className="flex items-center gap-3 text-[11px] font-bold text-[#6605c7] uppercase tracking-widest mb-4">
-                                            <span>{filtered[0].category || "Education"}</span>
-                                            <span className="w-1 h-1 bg-gray-300 rounded-full" />
-                                            <span>{new Date(filtered[0].createdAt).toLocaleDateString("en-IN", { month: "long", day: "numeric", year: "numeric" })}</span>
+                                    <div className="p-10 md:p-14 flex flex-col justify-center bg-gradient-to-br from-white to-slate-50/50">
+                                        <div className="flex items-center gap-3 text-[11px] font-extrabold text-[#6605c7] uppercase tracking-widest mb-5">
+                                            <span className="px-2.5 py-1 bg-purple-50 border border-purple-100 rounded-lg">{filtered[0].category || "Education"}</span>
+                                            <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                            <span className="text-slate-400">{new Date(filtered[0].createdAt).toLocaleDateString("en-IN", { month: "long", day: "numeric", year: "numeric" })}</span>
                                         </div>
-                                        <h2 className="text-2xl md:text-3xl font-bold mb-4 group-hover:text-[#6605c7] transition-colors leading-tight text-gray-900">
+                                        <h2 className="text-2xl md:text-3xl font-extrabold mb-5 group-hover:text-[#6605c7] transition-colors duration-300 leading-snug text-gray-900 tracking-tight">
                                             {filtered[0].title}
                                         </h2>
-                                        <p className="text-gray-500 text-[13px] line-clamp-3 mb-8 leading-relaxed">
+                                        <p className="text-gray-500 text-[13.5px] line-clamp-3 mb-8 leading-relaxed">
                                             {filtered[0].excerpt}
                                         </p>
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-[#6605c7]/[0.05] rounded-xl flex items-center justify-center font-bold text-[#6605c7] text-sm">
+                                        <div className="flex items-center gap-3.5 pt-6 border-t border-slate-100">
+                                            <div className="w-11 h-11 bg-gradient-to-br from-[#6605c7]/10 to-purple-100 rounded-2xl flex items-center justify-center font-bold text-[#6605c7] text-base border border-purple-100 shadow-sm">
                                                 {(filtered[0].authorName || filtered[0].author || "V")[0] || "V"}
                                             </div>
                                             <div>
-                                                <p className="font-bold uppercase text-[9px] tracking-widest text-gray-400">Written by</p>
-                                                <p className="text-gray-700 font-bold text-[12px]">{filtered[0].authorName || filtered[0].author || "VidyaLoan Team"}</p>
+                                                <p className="font-extrabold uppercase text-[9px] tracking-widest text-slate-400">Written by</p>
+                                                <p className="text-slate-700 font-extrabold text-[13px]">{filtered[0].authorName || filtered[0].author || "VidyaLoan Team"}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -158,37 +161,52 @@ export default function BlogClient() {
                         {/* Standard Grid */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {filtered.slice((page === 1 && activeCategory === "All" && !search) ? 1 : 0).map((blog) => (
-                                <Link key={blog.id} href={`/blog/${blog.slug}`} className="group bg-white rounded-xl overflow-hidden border border-gray-100 hover:border-[#6605c7]/[0.1] hover:shadow-lg transition-all duration-300">
-                                    <div className="aspect-[16/10] relative overflow-hidden bg-gray-100">
+                                <Link key={blog.id} href={`/blog/${blog.slug}`} className="group relative block h-[420px] rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-500 border border-slate-100 hover:border-purple-500/20 bg-slate-950">
+                                    {/* Cover Image Background */}
+                                    <div className="absolute inset-0 z-0">
                                         <Image
                                             src={normalizeSrc(blog.featuredImage || blog.coverImage, `https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=600&q=60`)}
                                             alt={blog.title}
                                             fill
-                                            className="object-cover group-hover:scale-105 transition-transform duration-700"
+                                            className="object-cover transition-all duration-700 scale-100 group-hover:scale-105 filter brightness-[0.8] group-hover:brightness-[0.35] group-hover:blur-[0.5px]"
                                         />
-                                        {blog.category && (
-                                            <div className="absolute top-4 left-4">
-                                                <span className="bg-white/90 backdrop-blur-md text-gray-900 px-3 py-1 rounded-xl text-[9px] font-bold uppercase tracking-widest border border-gray-100/50">{blog.category}</span>
-                                            </div>
-                                        )}
                                     </div>
-                                    <div className="p-6">
-                                        <h2 className="text-[15px] font-bold line-clamp-2 mb-3 group-hover:text-[#6605c7] transition-colors leading-snug text-gray-900">
+
+                                    {/* Float Category Badge */}
+                                    {blog.category && (
+                                        <div className="absolute top-5 left-5 z-20">
+                                            <span className="bg-white/95 backdrop-blur-md text-gray-900 px-3 py-1.5 rounded-xl text-[9px] font-extrabold uppercase tracking-widest border border-gray-100/50 shadow-sm transition-all duration-300 group-hover:bg-[#6605c7] group-hover:text-white group-hover:border-[#6605c7]">
+                                                {blog.category}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Text Content Overlay */}
+                                    <div className="absolute inset-0 z-10 flex flex-col justify-end p-6 bg-gradient-to-t from-slate-950 via-slate-950/45 to-transparent">
+                                        {/* Title (Always visible) */}
+                                        <h2 className="text-[17px] font-extrabold text-white leading-snug mb-2 group-hover:text-purple-300 transition-colors duration-300 drop-shadow-md">
                                             {blog.title}
                                         </h2>
-                                        <p className="text-gray-500 text-[13px] line-clamp-2 mb-6 leading-relaxed">
-                                            {blog.excerpt}
-                                        </p>
-                                        <div className="flex items-center justify-between pt-5 border-t border-gray-50">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-7 h-7 bg-gray-50 rounded-xl flex items-center justify-center font-bold text-[10px] text-gray-500 border border-gray-100">
-                                                    {(blog.authorName || blog.author || "V")[0] || "V"}
+
+                                        {/* Hover Reveal Area */}
+                                        <div className="max-h-0 opacity-0 overflow-hidden group-hover:max-h-[160px] group-hover:opacity-100 transition-all duration-500 ease-in-out">
+                                            <p className="text-slate-300 text-[12.5px] leading-relaxed mb-5 line-clamp-3">
+                                                {blog.excerpt}
+                                            </p>
+                                            <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="w-8 h-8 bg-white/10 rounded-xl flex items-center justify-center font-bold text-[11px] text-white border border-white/10">
+                                                        {(blog.authorName || blog.author || "V")[0] || "V"}
+                                                    </div>
+                                                    <span className="text-[11.5px] font-bold text-slate-200">
+                                                        {blog.authorName || blog.author || "VidyaLoan"}
+                                                    </span>
                                                 </div>
-                                                <span className="text-[11px] font-bold text-gray-600">{blog.authorName || blog.author || "VidyaLoan"}</span>
+                                                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                                                    <span className="material-symbols-outlined text-[12px]">calendar_today</span>
+                                                    {new Date(blog.createdAt).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
+                                                </span>
                                             </div>
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                                                {new Date(blog.createdAt).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}
-                                            </span>
                                         </div>
                                     </div>
                                 </Link>

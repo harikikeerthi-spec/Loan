@@ -78,6 +78,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const status = (application.status || "APPROVED").toUpperCase();
   const appId = `APP${(application.id || application._id || "MO2V2P4UQZEU").slice(-10).toUpperCase()}`;
   const studentId = (application.studentId || "482C9247-D456-4BF7-AF41-1AA98B4C9A06").toUpperCase();
+  const studentId10 = (application.studentId || "482C9247-D456-4BF7-AF41-1AA98B4C9A06").replace(/-/g, "").slice(0, 10).toUpperCase();
 
   const [messages, setMessages] = useState([
     { id: 1, sender: "staff", text: `Hello ${application.firstName || "Applicant"}, we noticed that your 10th standard marksheet is slightly blurred. Could you please upload a clearer scan?`, time: "10:45 AM", type: "chat" },
@@ -800,7 +801,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                       <div className="grid grid-cols-2 gap-4 max-w-xl bg-slate-50/60 p-5 rounded-3xl border border-slate-100/80">
                         <div className="space-y-0.5">
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">STUDENT IDENTIFIER</p>
-                          <p className="text-[12px] font-bold text-slate-700 font-mono truncate">{studentId}</p>
+                          <p className="text-[12px] font-bold text-slate-700 font-mono truncate" title={studentId}>{studentId10}</p>
                         </div>
                         <div className="space-y-0.5">
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">APPLICATION ID</p>

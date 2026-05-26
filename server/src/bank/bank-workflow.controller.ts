@@ -292,6 +292,113 @@ export class BankWorkflowController {
   }
 
   /**
+   * Update individual condition status
+   * PUT /api/bank/workflow/:submissionId/conditions/:index
+   * Task 17 — F8: per-condition status (PENDING | MET | WAIVED)
+   */
+  @Put(':submissionId/conditions/:index')
+  async updateConditionStatus(
+    @Param('submissionId') submissionId: string,
+    @Param('index') index: string,
+    @Body() body: { status: 'PENDING' | 'MET' | 'WAIVED'; updatedBy: string },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.updateConditionStatus(
+        submissionId,
+        parseInt(index, 10),
+        body.status,
+        body.updatedBy,
+      );
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * Accept a counter offer
+   * POST /api/bank/workflow/:submissionId/counter-offer/accept
+   * Task 17 — F10
+   */
+  @Post(':submissionId/counter-offer/accept')
+  async acceptCounterOffer(
+    @Param('submissionId') submissionId: string,
+    @Body() body: { acceptedBy: string },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.acceptCounterOffer(submissionId, body.acceptedBy);
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * Reject a counter offer
+   * POST /api/bank/workflow/:submissionId/counter-offer/reject
+   * Task 17 — F10
+   */
+  @Post(':submissionId/counter-offer/reject')
+  async rejectCounterOffer(
+    @Param('submissionId') submissionId: string,
+    @Body() body: { reason: string; rejectedBy: string },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.rejectCounterOffer(
+        submissionId,
+        body.reason,
+        body.rejectedBy,
+      );
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
+   * Partial sanction
+   * POST /api/bank/workflow/:submissionId/partial-sanction
+   * Task 18 — F9: shortfall calc, route-to-bank
+   */
+  @Post(':submissionId/partial-sanction')
+  async partialSanctionApplication(
+    @Param('submissionId') submissionId: string,
+    @Body() body: {
+      approvedAmount: number;
+      requestedAmount: number;
+      roiType: string;
+      roiBase: number;
+      roiEffective: number;
+      tenure: number;
+      decisionNotes?: string;
+      decidedBy: string;
+    },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.partialSanctionApplication(
+        submissionId,
+        {
+          approvedAmount: body.approvedAmount,
+          requestedAmount: body.requestedAmount,
+          roiType: body.roiType,
+          roiBase: body.roiBase,
+          roiEffective: body.roiEffective,
+          tenure: body.tenure,
+          decisionNotes: body.decisionNotes,
+        },
+        body.decidedBy,
+      );
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({ success: false, message: error.message });
+    }
+  }
+
+  /**
    * Reject application
    * POST /api/bank/workflow/:submissionId/reject
    */

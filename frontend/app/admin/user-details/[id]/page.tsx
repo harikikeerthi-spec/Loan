@@ -109,7 +109,7 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
                             </h1>
                             <div className="flex items-center gap-3 mt-2">
                                 <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">
-                                    ID: {userId.slice(0, 8).toUpperCase()}
+                                    ID: {userId.slice(0, 10).toUpperCase()}
                                 </span>
                                 <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${
                                     userData.role?.includes("admin")
