@@ -123,6 +123,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
         { icon: "dashboard", label: "Overview Dashboard", path: "/bank/dashboard" },
         { icon: "download", label: "Incoming Queue (F1)", path: "/bank/incoming", badge: incomingCount },
         { icon: "assignment", label: "My Files (Logged)", path: "/bank/applications", badge: loggedCount },
+        { icon: "view_kanban", label: "Kanban Files Board", path: "/bank/kanban" },
         { icon: "folder_shared", label: "Document Vault (F2)", path: "/bank/documents" },
         { icon: "gavel", label: "Decisions Hub", path: "/bank/decisions" },
         { icon: "payments", label: "Disbursement Board", path: "/bank/disbursements" },
