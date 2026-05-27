@@ -144,7 +144,9 @@ export default function KanbanBoardPage() {
                 // Adjust status and LAN automatically based on column placement
                 if (targetStage === "incoming") {
                     status = "pending";
-                    lanNumber = null;
+                    if (!app.lanNumber) {
+                        lanNumber = null;
+                    }
                 } else if (targetStage === "logged") {
                     status = "processing";
                     if (!lanNumber) {

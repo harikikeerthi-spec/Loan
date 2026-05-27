@@ -142,6 +142,11 @@ export default function ApplicationManagement() {
         e.preventDefault();
         if (!selectedApp || !lanNumber.trim()) return;
 
+        if (selectedApp.lanNumber) {
+            alert("LAN number has already been assigned and cannot be changed.");
+            return;
+        }
+
         if (!confirmingLog) {
             setConfirmingLog(true);
             return;

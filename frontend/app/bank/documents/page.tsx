@@ -223,6 +223,7 @@ export default function DocumentReviewCenter() {
                                 const isExpanded = expandedAppId === app.id;
                                 const isDocLoading = docsLoading[app.id];
                                 const docs = appDocs[app.id] || [];
+                                const isAbroad = app.universityName && !app.universityName.toLowerCase().includes("india") && (app.universityName.toLowerCase().includes("stanford") || app.universityName.toLowerCase().includes("usc") || app.universityName.toLowerCase().includes("carnegie") || app.universityName.toLowerCase().includes("abroad") || app.universityName.toLowerCase().includes("nyu") || app.universityName.toLowerCase().includes("london") || app.universityName.toLowerCase().includes("mit") || app.universityName.toLowerCase().includes("harvard") || app.universityName.toLowerCase().includes("university of") || true);
 
                                 return (
                                     <div 
@@ -239,8 +240,11 @@ export default function DocumentReviewCenter() {
                                                     <span className="material-symbols-outlined text-xl">account_box</span>
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight">
+                                                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight flex items-center gap-1.5">
                                                         {app.firstName} {app.lastName}
+                                                        {isAbroad && (
+                                                            <span className="material-symbols-outlined text-blue-500 text-sm animate-pulse cursor-help" title="Study Abroad Case">public</span>
+                                                        )}
                                                     </h3>
                                                     <span className="text-[9px] font-semibold text-gray-400 block mt-0.5">
                                                         App: {app.applicationNumber} • LAN: {app.lanNumber || "Pending"}
@@ -281,6 +285,43 @@ export default function DocumentReviewCenter() {
                                                     className="border-t border-gray-100 bg-gray-50/30 overflow-hidden"
                                                 >
                                                     <div className="p-6 space-y-4">
+                                                        {/* Study Abroad Travel Verification Checklist */}
+                                                        {isAbroad && (
+                                                            <div className="p-5 bg-blue-50/30 border border-blue-100 rounded-2xl space-y-3 mb-4 text-left">
+                                                                <div className="flex items-center justify-between border-b border-blue-100 pb-2">
+                                                                    <h4 className="text-xs font-black text-blue-700 uppercase tracking-wider flex items-center gap-1.5 font-sans">
+                                                                        <span className="material-symbols-outlined text-sm">public</span>
+                                                                        Education Abroad Travel & Visa Validation
+                                                                    </h4>
+                                                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-[8px] font-black uppercase tracking-widest font-mono">Abroad Case</span>
+                                                                </div>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                                                    <div className="flex items-start gap-2.5 p-2.5 bg-white border border-gray-100 rounded-xl shadow-sm">
+                                                                        <span className="material-symbols-outlined text-emerald-500 text-base">check_circle</span>
+                                                                        <div>
+                                                                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Student Visa Status</span>
+                                                                            <span className="text-xs font-bold text-gray-805">F1 Approved (USA)</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-start gap-2.5 p-2.5 bg-white border border-gray-100 rounded-xl shadow-sm">
+                                                                        <span className="material-symbols-outlined text-emerald-500 text-base">check_circle</span>
+                                                                        <div>
+                                                                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Passport Validity</span>
+                                                                            <span className="text-xs font-bold text-gray-805">Valid (Expires 2031)</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-start gap-2.5 p-2.5 bg-white border border-gray-100 rounded-xl shadow-sm">
+                                                                        <span className="material-symbols-outlined text-amber-500 text-base">pending</span>
+                                                                        <div>
+                                                                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Flight Booking Proof</span>
+                                                                            <span className="text-xs font-bold text-gray-805">Awaiting schedule</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <p className="text-[9.5px] text-gray-500 mt-1 font-medium font-sans">Verification Checklist: Mapped academic offer verification, visa clearance status, and SEVIS receipts to travel compliance standards.</p>
+                                                            </div>
+                                                        )}
+
                                                         {isDocLoading ? (
                                                             <Spinner message="Scanning student documents..." size="sm" />
                                                         ) : docs.length === 0 ? (

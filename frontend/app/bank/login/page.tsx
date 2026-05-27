@@ -165,6 +165,27 @@ function BankLoginContent() {
     const [resendDisabled, setResendDisabled] = useState(false);
     const [countdown, setCountdown] = useState(0);
 
+    // Dynamic bank resolver based on email input
+    const getBankFromEmail = (emailStr: string): string | null => {
+        const lowerEmail = emailStr.toLowerCase().trim();
+        if (lowerEmail.includes("auxilo")) return "auxilo";
+        if (lowerEmail.includes("avanse")) return "avanse";
+        if (lowerEmail.includes("credila") || lowerEmail.includes("hdfc")) return "credila";
+        if (lowerEmail.includes("idfc")) return "idfc";
+        if (lowerEmail.includes("poonawalla")) return "poonawalla";
+        
+        // Fallbacks for seed test users
+        if (lowerEmail === "shannukalneedi@gmail.com") return "idfc";
+        if (lowerEmail === "keerthichinnu0728@gmail.com") return "credila";
+        
+        return null;
+    };
+
+    useEffect(() => {
+        const bankId = getBankFromEmail(email);
+        setSelectedBank(bankId);
+    }, [email]);
+
     // Forgot password states
     const [showForgotModal, setShowForgotModal] = useState(false);
     const [forgotEmail, setForgotEmail] = useState("");
@@ -199,12 +220,13 @@ function BankLoginContent() {
     }, [countdown]);
 
     const sendOtp = async () => {
-        if (!selectedBank) { setError("Please select your bank first"); return; }
         if (!email.trim()) { setError("Please enter your email"); return; }
+        const bankId = getBankFromEmail(email) || "idfc"; // Fallback to idfc
         setLoading(true);
         setError("");
         try {
-            sessionStorage.setItem("selectedBank", selectedBank);
+            sessionStorage.setItem("selectedBank", bankId);
+            localStorage.setItem("selectedBank", bankId);
             await authApi.sendOtp(email.trim()) as { success: boolean };
             setStep("otp");
             setResendDisabled(true);
@@ -248,6 +270,11 @@ function BankLoginContent() {
         try {
             const data = await authApi.verifyOtp(email.trim(), code) as any;
             if (data.refresh_token) localStorage.setItem("refreshToken", data.refresh_token);
+            
+            const bankId = getBankFromEmail(email.trim()) || "idfc";
+            sessionStorage.setItem("selectedBank", bankId);
+            localStorage.setItem("selectedBank", bankId);
+            
             login(data.access_token, {
                 id: data.userId,
                 email: email.trim(),
@@ -322,9 +349,9 @@ function BankLoginContent() {
                     <h1 className="text-2xl font-bold text-gray-900 font-display mb-1.5 tracking-tight">
                         {step === "form" ? "Banker Access" : "Verify Authorization"}
                     </h1>
-                    <p className="text-gray-500 text-[13px]">
+                    <p className="text-gray-550 text-[13px]">
                         {step === "form"
-                            ? "Select your bank and enter your corporate email"
+                            ? "Enter your corporate email address to access your dashboard"
                             : `Secure OTP sent to ${email}`}
                     </p>
                 </div>
@@ -344,13 +371,7 @@ function BankLoginContent() {
                     {step === "form" && (
                         <div className="space-y-5">
 
-                            {/* Bank dropdown */}
-                            <div>
-                                <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">
-                                    Select Your Bank
-                                </label>
-                                <BankDropdown selected={selectedBank} onChange={setSelectedBank} />
-                            </div>
+
 
                             {/* Email */}
                             <div>

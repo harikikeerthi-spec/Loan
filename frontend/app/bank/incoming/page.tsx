@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -126,6 +126,11 @@ export default function IncomingQueuePage() {
     const handleSaveLogFile = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedApp || !lanNumber.trim()) return;
+
+        if (selectedApp.lanNumber) {
+            alert("LAN number has already been assigned and cannot be changed.");
+            return;
+        }
 
         if (!confirmingLog) {
             setConfirmingLog(true);

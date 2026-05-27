@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -75,6 +75,31 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
     const [bankName, setBankName] = useState("SBI");
     const [branchName, setBranchName] = useState("Hyderabad Branch");
 
+    // --- F16 Notifications & F30 Global Search States ---
+    const [globalSearch, setGlobalSearch] = useState("");
+    const [showSearchPop, setShowSearchPop] = useState(false);
+    const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+    const [notifications, setNotifications] = useState([
+        { id: 1, title: "SLA Warning", text: "LAN-IDFC-89210 (Rahul Sen) has exceeded 48h underwriting window!", type: "warning", time: "12m ago", read: false },
+        { id: 2, title: "Document Uploaded", text: "Student Sneha Reddy uploaded visa approval records.", type: "info", time: "1h ago", read: false },
+        { id: 3, title: "Query Refined", text: "Re-verification file uploaded for LAN-SBI-10492.", type: "query", time: "3h ago", read: false }
+    ]);
+
+    const searchMockResults = useMemo(() => {
+        if (!globalSearch.trim()) return [];
+        const items = [
+            { name: "Rahul Sen", lan: "LAN-IDFC-89210", amount: "₹12,00,000", institution: "Stanford University" },
+            { name: "Sneha Reddy", lan: "LAN-SBI-44810", amount: "₹18,50,000", institution: "USC Study Abroad" },
+            { name: "Amit Kumar", lan: "LAN-IDFC-29104", amount: "₹8,00,000", institution: "New York University" },
+            { name: "Priya Nair", lan: "LAN-SBI-10492", amount: "₹24,00,000", institution: "Carnegie Mellon" }
+        ];
+        return items.filter(i => 
+            i.name.toLowerCase().includes(globalSearch.toLowerCase()) ||
+            i.lan.toLowerCase().includes(globalSearch.toLowerCase()) ||
+            i.institution.toLowerCase().includes(globalSearch.toLowerCase())
+        );
+    }, [globalSearch]);
+
     // Fetch counts for badges
     useEffect(() => {
         if (!isLoading && user && (isBank || isAdmin)) {
@@ -121,12 +146,13 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
 
     const navItems = [
         { icon: "dashboard", label: "Overview Dashboard", path: "/bank/dashboard" },
-        { icon: "download", label: "Incoming Queue (F1)", path: "/bank/incoming", badge: incomingCount },
+        { icon: "download", label: "Incoming Queue", path: "/bank/incoming", badge: incomingCount },
         { icon: "assignment", label: "My Files (Logged)", path: "/bank/applications", badge: loggedCount },
         { icon: "view_kanban", label: "Kanban Files Board", path: "/bank/kanban" },
-        { icon: "folder_shared", label: "Document Vault (F2)", path: "/bank/documents" },
+        { icon: "folder_shared", label: "Document Vault", path: "/bank/documents" },
         { icon: "gavel", label: "Decisions Hub", path: "/bank/decisions" },
         { icon: "payments", label: "Disbursement Board", path: "/bank/disbursements" },
+        { icon: "receipt_long", label: "Processing Fees", path: "/bank/fees" },
         { icon: "forum", label: "Secure Chat Stream", path: "/bank/chat", badge: chatCount },
         { icon: "assignment_add", label: "Task Matrix", path: "/bank/tasks" },
         { icon: "monitoring", label: "Analytics & SLA", path: "/bank/analytics" },
@@ -158,6 +184,17 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
     if (!user || (!isBank && !isAdmin)) return null;
 
     const sidebarWidth = collapsed ? 80 : 280;
+
+
+    const unreadCount = notifications.filter(n => !n.read).length;
+
+    const markAllRead = () => {
+        setNotifications(notifications.map(n => ({ ...n, read: true })));
+    };
+
+    const clearNotification = (id: number) => {
+        setNotifications(notifications.filter(n => n.id !== id));
+    };
 
     return (
         <div className="bank-portal min-h-screen flex overflow-hidden" style={{
@@ -226,9 +263,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
 
                 {/* Footer Section */}
                 <div className="mt-auto px-3 pb-4 space-y-2">
-                    {/* Collapse + Sign Out side by side */}
                     <div className="flex gap-1.5">
-                        {/* Collapse */}
                         <button
                             onClick={() => setCollapsed(!collapsed)}
                             title="Collapse"
@@ -242,7 +277,6 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                             {!collapsed && <span className="text-[11px] font-semibold tracking-wide" style={{ fontFamily: '"DM Sans", sans-serif' }}>Collapse</span>}
                         </button>
 
-                        {/* Sign Out */}
                         <button
                             onClick={async () => {
                                 await logout();
@@ -260,7 +294,6 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                         </button>
                     </div>
 
-                    {/* User Card */}
                     <div
                         className="flex items-center gap-2.5 p-2.5 rounded-xl border"
                         style={{
@@ -298,28 +331,154 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
 
             {/* Main Content */}
             <main
-                className="flex-1 min-h-screen relative transition-all duration-300"
-                style={{ marginLeft: sidebarWidth }}
+                className="flex-1 min-h-screen relative transition-all duration-300 flex flex-col pt-20"
+                style={{ paddingLeft: sidebarWidth }}
             >
-                {/* Sticky Header on Scroll */}
+                {/* Persistent Top Header (F16 Notification Center & F30 Global Search) */}
                 <header
-                    className={`fixed top-0 right-0 z-40 transition-all duration-500 ${scrolled ? 'h-16' : 'h-0 pointer-events-none'}`}
-                    style={{
-                        left: sidebarWidth,
-                        background: scrolled ? 'rgba(255,255,255,0.85)' : 'transparent',
-                        backdropFilter: scrolled ? 'blur(16px)' : 'none',
-                        borderBottom: scrolled ? '1px solid rgba(102,5,199,0.06)' : 'none',
-                    }}
+                    className="fixed top-0 right-0 z-40 h-[72px] flex items-center justify-between px-8 border-b bg-white/70 backdrop-blur-md border-purple-50 shadow-sm"
+                    style={{ left: sidebarWidth }}
                 >
-                    {scrolled && (
-                        <div className="h-full flex items-center justify-between px-10">
-                            <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-gray-900" style={{ fontFamily: '"DM Sans", sans-serif' }}>Terminal Active</h2>
-                            <div className="flex items-center gap-3">
-                                <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: '#6605c7' }} />
-                                <span className="text-[10px] font-bold uppercase tracking-[0.15em]" style={{ color: '#6605c7', fontFamily: '"DM Sans", sans-serif' }}>Live Protocol</span>
-                            </div>
+                    {/* F30 Global Search Bar */}
+                    <div className="relative w-full max-w-md">
+                        <input
+                            type="text"
+                            placeholder="Global Search: Student name, LAN, university..."
+                            value={globalSearch}
+                            onChange={(e) => {
+                                setGlobalSearch(e.target.value);
+                                setShowSearchPop(true);
+                            }}
+                            onFocus={() => setShowSearchPop(true)}
+                            className="w-full pl-10 pr-4 py-2.5 bg-[#fbfbff] border border-purple-50 rounded-2xl text-xs font-semibold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
+                        />
+                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
+
+                        {/* Search Results Popover */}
+                        <AnimatePresence>
+                            {showSearchPop && globalSearch.trim() && (
+                                <>
+                                    <div className="fixed inset-0 z-40" onClick={() => setShowSearchPop(false)} />
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, y: 10 }}
+                                        className="absolute top-12 left-0 right-0 z-50 bg-white border border-purple-50 rounded-2xl shadow-xl p-4 max-h-80 overflow-y-auto space-y-2.5"
+                                    >
+                                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-1.5">
+                                            Search Results ({searchMockResults.length})
+                                        </p>
+                                        {searchMockResults.length === 0 ? (
+                                            <p className="text-[10px] text-gray-400 py-2 text-center">No concurrent application records match.</p>
+                                        ) : (
+                                            searchMockResults.map(res => (
+                                                <div
+                                                    key={res.lan}
+                                                    onClick={() => {
+                                                        setShowSearchPop(false);
+                                                        setGlobalSearch("");
+                                                        router.push("/bank/decisions");
+                                                    }}
+                                                    className="flex justify-between items-center p-2.5 rounded-xl hover:bg-purple-50/50 cursor-pointer border border-transparent hover:border-purple-100 transition-all"
+                                                >
+                                                    <div>
+                                                        <span className="text-[11.5px] font-black text-gray-800 block uppercase">{res.name}</span>
+                                                        <span className="text-[9px] text-gray-400 font-bold block mt-0.5">{res.institution}</span>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="text-[10px] font-black text-[#6605c7] block font-mono">{res.amount}</span>
+                                                        <span className="text-[8px] font-bold text-gray-400 uppercase font-mono block mt-0.5">{res.lan}</span>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </motion.div>
+                                </>
+                            )}
+                        </AnimatePresence>
+                    </div>
+
+                    {/* F16 Notification Center & System Ticker */}
+                    <div className="flex items-center gap-6">
+                        {/* Live Protocol tag */}
+                        <div className="hidden sm:flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-[9.5px] font-black text-emerald-600 uppercase tracking-widest">Active Node</span>
                         </div>
-                    )}
+
+                        {/* Bell Notification Trigger */}
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowNotifDropdown(!showNotifDropdown)}
+                                className="w-10 h-10 rounded-xl bg-[#fbfbff] border border-purple-50 hover:bg-purple-50/40 text-gray-500 hover:text-[#6605c7] flex items-center justify-center relative transition-all"
+                            >
+                                <span className="material-symbols-outlined text-lg">notifications</span>
+                                {unreadCount > 0 && (
+                                    <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-500 text-white font-black text-[9px] flex items-center justify-center shadow-md animate-bounce">
+                                        {unreadCount}
+                                    </span>
+                                )}
+                            </button>
+
+                            {/* Notifications Dropdown (F16 Center) */}
+                            <AnimatePresence>
+                                {showNotifDropdown && (
+                                    <>
+                                        <div className="fixed inset-0 z-40" onClick={() => setShowNotifDropdown(false)} />
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                            className="absolute right-0 top-12 z-50 w-80 bg-white/95 backdrop-blur-xl border border-purple-50 rounded-3xl shadow-2xl p-5 space-y-4"
+                                        >
+                                            <div className="flex justify-between items-center border-b border-gray-100 pb-2.5">
+                                                <h3 className="text-xs font-black text-gray-800 uppercase tracking-wide">
+                                                    Notifications Center
+                                                </h3>
+                                                {unreadCount > 0 && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={markAllRead}
+                                                        className="text-[9px] font-black text-[#6605c7] uppercase tracking-wider hover:underline"
+                                                    >
+                                                        Mark all read
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                                                {notifications.length === 0 ? (
+                                                    <p className="text-[10px] text-gray-400 py-8 text-center uppercase tracking-wider font-bold">Clear queue</p>
+                                                ) : (
+                                                    notifications.map(notif => (
+                                                        <div
+                                                            key={notif.id}
+                                                            className={`p-3 border rounded-2xl relative transition-all ${
+                                                                notif.read ? "bg-white border-gray-100" : "bg-purple-50/20 border-purple-100"
+                                                            }`}
+                                                        >
+                                                            <div className="flex justify-between items-start">
+                                                                <span className="text-[9.5px] font-black uppercase text-gray-800">{notif.title}</span>
+                                                                <span className="text-[8px] font-bold text-gray-400">{notif.time}</span>
+                                                            </div>
+                                                            <p className="text-[10.5px] text-gray-500 mt-1 leading-relaxed">{notif.text}</p>
+                                                            
+                                                            <button
+                                                                onClick={() => clearNotification(notif.id)}
+                                                                className="absolute top-2 right-2 text-gray-300 hover:text-rose-500"
+                                                            >
+                                                                <span className="material-symbols-outlined text-xs">close</span>
+                                                            </button>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    </>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    </div>
                 </header>
 
                 <div className="relative">

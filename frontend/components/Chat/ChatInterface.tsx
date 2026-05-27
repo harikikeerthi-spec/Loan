@@ -446,6 +446,24 @@ export default function ChatInterface({ role, initialUser, portalTitle, classNam
 
                         {/* Input Panel */}
                         <div className="p-8 bg-white border-t border-gray-200">
+                            {/* F42 Message Presets */}
+                            <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-1.5 scroll-smooth">
+                                {[
+                                    { label: "Missing Marks", text: "Hello! We have reviewed your initial dossier but require the original 10th and 12th standard marksheets. Please upload them in the Document Vault." },
+                                    { label: "Processing Fee", text: "Dear applicant, processing fees of ₹17,700 (including 18% GST) are due to advance sanctioning. Kindly deposit upfront or select deduction." },
+                                    { label: "Co-Applicant KYC", text: "Hello! To proceed with duplicate checks, please upload your co-applicant's verified Aadhaar and PAN documents." },
+                                    { label: "Clarification Memo", text: "Dear applicant, a credit audit query has been raised on your files. Kindly check the Queries Tab and submit responses." }
+                                ].map((preset, idx) => (
+                                    <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => setInputText(preset.text)}
+                                        className="px-3.5 py-2 bg-purple-50 hover:bg-[#6605c7] border border-purple-100/50 hover:border-[#6605c7] text-[#6605c7] hover:text-white text-[9.5px] font-black uppercase tracking-wider rounded-xl transition-all shrink-0 shadow-sm"
+                                    >
+                                        {preset.label}
+                                    </button>
+                                ))}
+                            </div>
                             <form onSubmit={handleSendMessage} className="flex gap-6 items-center">
                                 <button type="button" className="w-14 h-14 bg-white hover:bg-gray-50 rounded-2xl flex items-center justify-center text-gray-500 transition-all border border-gray-200 shadow-sm">
                                     <span className="material-symbols-outlined font-black">add</span>

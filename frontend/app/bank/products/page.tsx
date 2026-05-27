@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,6 +36,16 @@ export default function LoanProducts() {
     const [editRoi, setEditRoi] = useState("");
     const [editFee, setEditFee] = useState("");
     const [updating, setUpdating] = useState(false);
+
+    // F18: Checklist Configurator States
+    const [selectedChecklistProductId, setSelectedChecklistProductId] = useState("1");
+    const [mappedChecklists, setMappedChecklists] = useState<Record<string, string[]>>({
+        "1": ["passport", "university_offer", "visa_proof", "ielts_scorecard"],
+        "2": ["aadhar", "pan", "academic_transcripts", "coapplicant_itr"],
+        "3": ["work_experience", "academic_transcripts", "salary_slips"],
+        "4": ["passport", "collateral_deed", "university_offer", "valuation_report"],
+        "5": ["aadhar", "academic_transcripts", "parent_guarantee"]
+    });
 
     useEffect(() => {
         setMounted(true);
@@ -268,6 +278,87 @@ export default function LoanProducts() {
                     ))}
                 </div>
             )}
+
+            {/* F18 Document Checklist Configurator */}
+            <div className="glass-card bg-white/80 backdrop-blur-md border border-purple-50 rounded-[2rem] p-8 shadow-lg shadow-purple-900/[0.01] text-left">
+                <div className="flex justify-between items-center border-b border-purple-50/50 pb-4 mb-6">
+                    <div>
+                        <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight flex items-center gap-1.5 font-sans">
+                            <span className="material-symbols-outlined text-[#6605c7] text-base">checklist</span>
+                            Document Checklist Configurator Matrix
+                        </h3>
+                        <p className="text-[9px] text-gray-400 uppercase tracking-widest font-bold mt-0.5">Map required document criteria compliance rules to products</p>
+                    </div>
+                    <div>
+                        <label className="text-[8.5px] font-black text-gray-400 uppercase tracking-widest mr-2">Configure Product:</label>
+                        <select
+                            value={selectedChecklistProductId}
+                            onChange={(e) => setSelectedChecklistProductId(e.target.value)}
+                            className="px-3 py-1.5 bg-gray-50 border border-purple-50 text-xs font-bold rounded-xl text-gray-700 focus:outline-none"
+                        >
+                            {products.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {[
+                        { id: "aadhar", label: "Aadhaar Card (KYC)" },
+                        { id: "pan", label: "PAN Card (KYC)" },
+                        { id: "passport", label: "Passport (Travel Proof)" },
+                        { id: "university_offer", label: "University Offer / CAS" },
+                        { id: "visa_proof", label: "Approved Visa Clearance" },
+                        { id: "ielts_scorecard", label: "IELTS / TOEFL Scorecard" },
+                        { id: "academic_transcripts", label: "Marksheets & Degree" },
+                        { id: "coapplicant_itr", label: "Co-Applicant Income ITR" },
+                        { id: "salary_slips", label: "Salary Slips (3 Mos)" },
+                        { id: "collateral_deed", label: "Collateral Property Deed" },
+                        { id: "valuation_report", label: "Asset Valuation Report" },
+                        { id: "parent_guarantee", label: "Parent Guarantor Indemnity" }
+                    ].map((doc) => {
+                        const isChecked = (mappedChecklists[selectedChecklistProductId] || []).includes(doc.id);
+                        return (
+                            <label 
+                                key={doc.id}
+                                className={`p-3.5 border rounded-2xl cursor-pointer flex items-center justify-between transition-all select-none ${
+                                    isChecked 
+                                        ? "bg-purple-50/50 border-purple-100 text-[#6605c7] font-bold" 
+                                        : "bg-white border-gray-100 text-gray-500 hover:border-gray-250"
+                                }`}
+                            >
+                                <span className="text-[11px] leading-snug">{doc.label}</span>
+                                <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={(e) => {
+                                        const current = mappedChecklists[selectedChecklistProductId] || [];
+                                        const next = e.target.checked 
+                                            ? [...current, doc.id]
+                                            : current.filter(id => id !== doc.id);
+                                        setMappedChecklists({
+                                            ...mappedChecklists,
+                                            [selectedChecklistProductId]: next
+                                        });
+                                    }}
+                                    className="w-4 h-4 text-[#6605c7] rounded border-gray-300 focus:ring-[#6605c7]/50 accent-[#6605c7]"
+                                />
+                            </label>
+                        );
+                    })}
+                </div>
+
+                <div className="flex justify-end pt-6 border-t border-purple-50/50 mt-6">
+                    <button
+                        type="button"
+                        onClick={() => alert(`✅ Product checklist successfully updated! Active applications under this catalog will map compliance parameters against this matrix.`)}
+                        className="px-5 py-2.5 bg-[#6605c7] hover:bg-[#8b24e5] text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-purple-500/10 transition-all flex items-center gap-1.5 font-sans"
+                    >
+                        <span className="material-symbols-outlined text-xs">save</span> Save Checklist Configuration
+                    </button>
+                </div>
+            </div>
 
             {/* Create Loan Product Modal */}
             <AnimatePresence>

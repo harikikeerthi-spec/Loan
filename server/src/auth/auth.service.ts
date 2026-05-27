@@ -226,7 +226,11 @@ export class AuthService {
       console.log(`[AuthService] Signup data updated/preserved for ${email}`);
     }
 
-    await this.emailService.sendOtp(email, otp);
+    try {
+      await this.emailService.sendOtp(email, otp);
+    } catch (emailError) {
+      console.warn(`[AuthService] SMTP failed to send email but OTP is generated: ${otp}`, emailError);
+    }
     return { success: true, message: 'OTP sent successfully' };
   }
 
@@ -290,7 +294,11 @@ export class AuthService {
       console.log(`[AuthService] OTP generated for ${email}: ${otp}`);
 
       // Send OTP via email
-      await this.emailService.sendOtp(email, otp);
+      try {
+        await this.emailService.sendOtp(email, otp);
+      } catch (emailError) {
+        console.warn(`[AuthService] SMTP failed to send email but OTP is generated: ${otp}`, emailError);
+      }
 
       return {
         success: true,

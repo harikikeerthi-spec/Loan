@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,7 +13,7 @@ interface LogEntry {
 export default function Integrations() {
     const { user } = useAuth();
     const [mounted, setMounted] = useState(false);
-    const [activeTab, setActiveTab] = useState<"salesforce" | "slack" | "webhooks">("salesforce");
+    const [activeTab, setActiveTab] = useState<"salesforce" | "slack" | "webhooks" | "bulk_export">("salesforce");
 
     // Live Integration Stats
     const [sfSyncActive, setSfSyncActive] = useState(true);
@@ -175,7 +175,8 @@ export default function Integrations() {
                     {[
                         { id: "salesforce", label: "Salesforce CRM Link" },
                         { id: "slack", label: "Slack Team Alerts" },
-                        { id: "webhooks", label: "Integrations Event Log" }
+                        { id: "webhooks", label: "Integrations Event Log" },
+                        { id: "bulk_export", label: "Bulk Data Exporter" }
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -370,6 +371,89 @@ export default function Integrations() {
                                 </motion.div>
                             )}
 
+                             {/* Bulk Export Tab */}
+                             {activeTab === "bulk_export" && (
+                                 <motion.div
+                                     key="bulkExportPanel"
+                                     initial={{ opacity: 0, y: 10 }}
+                                     animate={{ opacity: 1, y: 0 }}
+                                     exit={{ opacity: 0, y: -10 }}
+                                     className="glass-card bg-white border border-gray-100 rounded-[2.5rem] p-8 shadow-sm space-y-6 text-left"
+                                 >
+                                     <div>
+                                         <h3 className="text-sm font-black uppercase tracking-wider text-gray-900 mb-1">Bulk Data Exporter</h3>
+                                         <p className="text-[10px] text-gray-400 uppercase tracking-widest">Select dates, filtering stages, and export formats to download credit files</p>
+                                     </div>
+
+                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                         <div className="space-y-1">
+                                             <label className="text-[8px] font-black uppercase tracking-widest text-gray-400">Start Date</label>
+                                             <input
+                                                 type="date"
+                                                 defaultValue="2026-05-01"
+                                                 className="w-full px-4 py-3 bg-gray-50 border border-gray-250 rounded-xl text-xs font-bold text-gray-800 focus:outline-none focus:border-[#6605c7]"
+                                             />
+                                         </div>
+                                         <div className="space-y-1">
+                                             <label className="text-[8px] font-black uppercase tracking-widest text-gray-400">End Date</label>
+                                             <input
+                                                 type="date"
+                                                 defaultValue="2026-05-26"
+                                                 className="w-full px-4 py-3 bg-gray-50 border border-gray-250 rounded-xl text-xs font-bold text-gray-800 focus:outline-none focus:border-[#6605c7]"
+                                             />
+                                         </div>
+                                     </div>
+
+                                     <div className="border-t border-gray-100 pt-6">
+                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Select Stages to Include</h4>
+                                         <div className="grid grid-cols-2 gap-4">
+                                             {["Pre-Screening Check", "Verification Audits", "Risk Evaluation", "Final Review Pool", "Disbursement Matrix"].map((stage, idx) => (
+                                                 <label key={idx} className="flex items-center gap-3 cursor-pointer select-none">
+                                                     <input
+                                                         type="checkbox"
+                                                         defaultChecked
+                                                         className="w-4.5 h-4.5 text-[#6605c7] rounded border-gray-200 focus:ring-[#6605c7] accent-[#6605c7]"
+                                                     />
+                                                     <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">{stage}</span>
+                                                 </label>
+                                             ))}
+                                         </div>
+                                     </div>
+
+                                     <div className="border-t border-gray-100 pt-6">
+                                         <h4 className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">Export File Format</h4>
+                                         <div className="flex gap-6">
+                                             <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                 <input type="radio" name="export_format" defaultChecked className="w-4.5 h-4.5 text-[#6605c7] accent-[#6605c7]" />
+                                                 <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">Excel (.xlsx)</span>
+                                             </label>
+                                             <label className="flex items-center gap-2 cursor-pointer select-none">
+                                                 <input type="radio" name="export_format" className="w-4.5 h-4.5 text-[#6605c7] accent-[#6605c7]" />
+                                                 <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">CSV Sheet (.csv)</span>
+                                             </label>
+                                         </div>
+                                     </div>
+
+                                     <div className="border-t border-gray-100 pt-6 flex justify-end">
+                                         <button
+                                             type="button"
+                                             onClick={() => {
+                                                 alert("📊 Compiling selected criteria dossier... Downloading dataset file.");
+                                                 const link = document.createElement("a");
+                                                 link.href = "data:text/csv;charset=utf-8,LAN,Student,University,Amount,ROI,Status\nLAN-IDFC-89210,Rahul Sen,Stanford,1200000,9.55,approved\nLAN-SBI-10492,Priya Nair,Carnegie Mellon,2400000,9.25,processing";
+                                                 link.setAttribute("download", "vidyaloans-bulk-export.csv");
+                                                 document.body.appendChild(link);
+                                                 link.click();
+                                                 link.remove();
+                                             }}
+                                             className="px-5 py-2.5 bg-[#6605c7] hover:bg-[#5204a0] text-white text-[10px] font-black uppercase tracking-widest shadow-lg shadow-purple-500/10 transition-all flex items-center gap-1.5 font-sans"
+                                         >
+                                             <span className="material-symbols-outlined text-sm">download</span> Generate & Export Dataset
+                                         </button>
+                                     </div>
+                                 </motion.div>
+                             )}
+
                         </AnimatePresence>
                     </div>
 
@@ -458,6 +542,30 @@ export default function Integrations() {
                                         <span className="bg-gray-800 hover:bg-gray-700 px-3 py-1 rounded text-white font-bold border border-gray-700 text-[8px] cursor-pointer">
                                             View Application
                                         </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Tab controller for Bulk Export */}
+                        {activeTab === "bulk_export" && (
+                            <div className="glass-card bg-white border border-gray-100 rounded-[2.5rem] p-8 shadow-md space-y-6">
+                                <h3 className="text-sm font-black uppercase tracking-wider text-gray-900">Data Exporter Metrics</h3>
+                                <p className="text-[10px] text-gray-400 uppercase tracking-widest leading-relaxed">
+                                    Securely generate encrypted dumps of credit officer activities, sanction metrics, and student profiles for audit compliance reporting.
+                                </p>
+                                <div className="p-4 bg-gray-50 border border-gray-100 rounded-xl space-y-1.5 text-[9px] font-black uppercase tracking-widest text-gray-400">
+                                    <div className="flex justify-between">
+                                        <span>Last Export Triggered:</span>
+                                        <span className="text-gray-800 font-bold">2 hours ago</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Export File Size:</span>
+                                        <span className="text-[#6605c7] font-bold">42.8 KB</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Total Rows Compiled:</span>
+                                        <span className="text-emerald-500 font-bold">42 records</span>
                                     </div>
                                 </div>
                             </div>

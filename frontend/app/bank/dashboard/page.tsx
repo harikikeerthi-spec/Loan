@@ -211,6 +211,35 @@ export default function BankDashboard() {
         };
     }, [portfolio]);
 
+    const funnelStats = useMemo(() => {
+        if (!stats?.statusStats) {
+            return [
+                { stage: "Pre-Screening", count: 12, pct: 100, color: "bg-blue-500" },
+                { stage: "Verification", count: 10, pct: 83, color: "bg-purple-500" },
+                { stage: "Risk Evaluation", count: 8, pct: 66, color: "bg-indigo-500" },
+                { stage: "Final Review", count: 5, pct: 41, color: "bg-[#6605c7]" },
+                { stage: "Disbursed / Payout", count: 4, pct: 33, color: "bg-emerald-500" }
+            ];
+        }
+
+        const s = stats.statusStats;
+        const preScreening = (s.pending || 0) + (s.submitted || 0) + (s.processing || 0) + (s.approved || 0) + (s.disbursed || 0) + (s.under_bank_review || 0);
+        const verification = (s.processing || 0) + (s.approved || 0) + (s.disbursed || 0) + (s.under_bank_review || 0);
+        const riskEvaluation = (s.under_bank_review || 0) + (s.approved || 0) + (s.disbursed || 0);
+        const finalReview = (s.approved || 0) + (s.disbursed || 0);
+        const disbursed = s.disbursed || 0;
+
+        const max = preScreening || 1;
+
+        return [
+            { stage: "Pre-Screening", count: preScreening, pct: 100, color: "bg-blue-500" },
+            { stage: "Verification", count: verification, pct: Math.round((verification / max) * 100), color: "bg-purple-500" },
+            { stage: "Risk Evaluation", count: riskEvaluation, pct: Math.round((riskEvaluation / max) * 100), color: "bg-indigo-500" },
+            { stage: "Final Review", count: finalReview, pct: Math.round((finalReview / max) * 100), color: "bg-[#6605c7]" },
+            { stage: "Disbursed / Payout", count: disbursed, pct: Math.round((disbursed / max) * 100), color: "bg-emerald-500" }
+        ];
+    }, [stats]);
+
     const statusColors: Record<string, string> = {
         pending: "bg-amber-50 text-amber-600 border-amber-100 shadow-[0_0_8px_rgba(245,158,11,0.1)]",
         processing: "bg-blue-50 text-blue-600 border-blue-100 shadow-[0_0_8px_rgba(59,130,246,0.1)]",
@@ -435,6 +464,48 @@ export default function BankDashboard() {
                     </div>
                 </motion.div>
             </div>
+
+            {/* Pipeline Funnel Section */}
+            <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.65 }}
+                className="glass-card p-8 rounded-3xl border-[#6605c7]/10 bg-white/70 shadow-xl shadow-purple-900/[0.02] text-left"
+            >
+                <div className="flex items-center gap-3 mb-6">
+                    <div className="w-9 h-9 rounded-xl bg-[#6605c7]/5 flex items-center justify-center text-[#6605c7]">
+                        <span className="material-symbols-outlined text-lg">filter_alt</span>
+                    </div>
+                    <div>
+                        <h3 className="text-base font-black font-display text-gray-900 tracking-tight">Underwriting Pipeline Funnel</h3>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.25em] mt-0.5">Workflow conversion metrics across core phases</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                    {funnelStats.map((item, idx) => (
+                        <div key={idx} className="relative p-4.5 bg-gray-50/50 hover:bg-white border border-gray-150 rounded-2xl transition-all group flex flex-col justify-between">
+                            <div className="space-y-1">
+                                <div className="flex justify-between items-center text-[9px] font-black uppercase text-gray-450 tracking-wider">
+                                    <span>Phase 0{idx + 1}</span>
+                                    <span className="font-mono text-[#6605c7]">{item.pct}%</span>
+                                </div>
+                                <h4 className="text-xs font-black text-gray-800 uppercase tracking-tight truncate mt-1">{item.stage}</h4>
+                            </div>
+                            
+                            <div className="mt-4.5 space-y-2">
+                                <div className="flex justify-between items-end text-xs font-black text-gray-900">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">caseload</span>
+                                    <span className="font-mono text-sm">{item.count} files</span>
+                                </div>
+                                <div className="w-full bg-gray-200/70 h-2.5 rounded-full overflow-hidden">
+                                    <div className={`${item.color} h-full rounded-full transition-all duration-1000 group-hover:scale-y-110`} style={{ width: `${item.pct}%` }} />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </motion.div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 {/* Recent Transmission Sync */}

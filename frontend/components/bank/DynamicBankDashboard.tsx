@@ -155,6 +155,10 @@ export default function DynamicBankDashboard() {
         alert("Please enter a valid LAN number.");
         return;
       }
+      if (selectedFile.lanNumber) {
+        alert("LAN number has already been assigned and cannot be changed.");
+        return;
+      }
       setIsSubmittingLan(true);
       try {
         await bankApi.logFile(selectedFile.id, { lanNumber: lanInput.trim() });
