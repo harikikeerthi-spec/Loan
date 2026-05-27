@@ -164,7 +164,7 @@ export default function DashboardPage() {
                             </p>
                         </div>
                         <div className="flex flex-wrap gap-3">
-                            <button 
+                            <button
                                 onClick={async () => {
                                     try {
                                         const res = await chatApi.connect() as ChatConnectResponse;
@@ -187,9 +187,47 @@ export default function DashboardPage() {
                                 <span className="material-symbols-outlined text-sm">sensors</span>
                                 Simulate Chat
                             </Link>
-                            <Link href="/apply-loan" className="px-5 py-2.5 bg-[#6605c7] text-white text-xs font-bold rounded-lg hover:bg-[#5504a8] transition-all shadow-sm">
-                                Apply for Loan
-                            </Link>
+                            {/* 3D Profile Pill Toggle Button & Apply Now Button Group */}
+                            <div className="flex items-center gap-4 bg-white/40 backdrop-blur-md p-1.5 rounded-full border border-purple-500/10 shadow-[0_8px_32px_rgba(102,5,199,0.08)] shrink-0 select-none">
+                                {/* Profile Pill Toggle Button (On/Off Switch) */}
+                                {/* <button 
+                                    onClick={() => {
+                                        if (activeTab === "profile") {
+                                            setActiveTab("overview");
+                                            window.location.hash = "overview";
+                                        } else {
+                                            setActiveTab("profile");
+                                            window.location.hash = "profile";
+                                        }
+                                    }}
+                                    className={`relative flex items-center gap-2.5 px-4 py-2 rounded-full border transition-all duration-150 ease-out select-none group cursor-pointer ${
+                                        activeTab === "profile"
+                                            ? "bg-[#f4ebff] border-[#6605c7]/30 shadow-inner translate-y-0.5 scale-[0.98]"
+                                            : "bg-white border-gray-200 shadow-[0_4px_0_#cbd5e1] translate-y-0 hover:-translate-y-1 hover:shadow-[0_5px_0_#cbd5e1] hover:border-[#6605c7]/20 active:translate-y-0.5 active:shadow-none"
+                                    }`}
+                                >
+                                    <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center font-bold text-xs shadow-md transition-all duration-300 ${
+                                        activeTab === "profile"
+                                            ? "bg-gradient-to-tr from-[#6605c7] to-[#8b24e5] scale-110 shadow-purple-500/30"
+                                            : "bg-gradient-to-tr from-[#6605c7] via-[#a855f7] to-[#fbbf24] shadow-purple-500/10 group-hover:rotate-12 group-hover:scale-110"
+                                    }`}>
+                                        {(user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || "U")}{(user?.lastName?.[0] || "")}
+                                    </div>
+                                    <span className={`text-xs font-extrabold tracking-tight transition-colors duration-150 ${
+                                        activeTab === "profile" ? "text-[#6605c7]" : "text-gray-800"
+                                    }`}>
+                                        {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.firstName || "User"}
+                                    </span>
+                                </button> */}
+
+                                {/* 3D Apply Now Button */}
+                                <Link
+                                    href="/apply-loan"
+                                    className="relative px-5 py-2.5 bg-gradient-to-r from-[#7c3aed] via-[#a855f7] to-[#f43f5e] text-white text-[11px] font-extrabold uppercase tracking-widest rounded-full shadow-[0_4px_0_#4c1d95] hover:shadow-[0_8px_20px_rgba(124,58,237,0.35),0_6px_0_#4c1d95] border-t border-white/20 translate-y-0 hover:-translate-y-1 hover:brightness-105 active:translate-y-0.5 active:shadow-none transition-all duration-150 ease-out cursor-pointer select-none"
+                                >
+                                    APPLY NOW
+                                </Link>
+                            </div>
                             <Link href="/onboarding" className="px-5 py-2.5 bg-white text-gray-700 border border-gray-200 text-xs font-bold rounded-lg hover:bg-gray-50 transition-all">
                                 View Roadmap
                             </Link>

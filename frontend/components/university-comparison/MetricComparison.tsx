@@ -26,53 +26,59 @@ interface MetricComparisonProps {
 
 const detailedMetrics = [
   {
-    title: "Cost Analysis",
+    title: "Financial Profile & Cost Analysis",
     metrics: [
       {
-        label: "Annual Tuition",
+        label: "Annual Program Tuition",
         key: "tuition",
         unit: "$",
+        inverse: true, // Lower is better
         format: (val?: number) => (val ? val.toLocaleString() : "N/A"),
       },
       {
         label: "Scholarships Available",
         key: "scholarships",
         unit: "$",
+        inverse: false,
         format: (val?: number) =>
           val ? (val / 1000000).toFixed(1) + "M" : "N/A",
       },
     ],
   },
   {
-    title: "Academic Profile",
+    title: "Academic Intake & Prestige",
     metrics: [
       {
         label: "World Rank",
         key: "rank",
         unit: "#",
+        inverse: true, // Lower number is better rank
         format: (val?: number) => (val ? val.toString() : "N/A"),
       },
       {
         label: "Acceptance Rate",
         key: "accept",
         unit: "%",
+        inverse: false,
         format: (val?: number) => (val ? val.toString() : "N/A"),
       },
     ],
   },
   {
-    title: "Career Outcomes",
+    title: "Career Prospects & Employability",
     metrics: [
       {
-        label: "Avg Starting Salary",
+        label: "Average Starting Graduate Salary",
         key: "avgjobSalary",
         unit: "$",
+        inverse: false,
         format: (val?: number) => (val ? (val / 1000).toFixed(0) + "k" : "N/A"),
       },
       {
-        label: "Employment Rate",
+        label: "Employment Success Rate",
         key: "employment",
         unit: "%",
+        inverse: false,
         format: (val?: number) => (val ? val.toString() : "N/A"),
       },
     ],
@@ -82,10 +88,13 @@ const detailedMetrics = [
 export default function MetricComparison({
   universities,
 }: MetricComparisonProps) {
-  const getMaxValue = (key: string) => {
-    return Math.max(
-      ...universities.map((u) => (u[key as keyof University] as number) || 0)
-    );
+  const getExtremeValue = (key: string, inverse: boolean) => {
+    const values = universities.map((u) => (u[key as keyof University] as number) || 0);
+    return inverse ? Math.min(...values) : Math.max(...values);
+  };
+
+  const getAbsoluteMax = (key: string) => {
+    return Math.max(...universities.map((u) => (u[key as keyof University] as number) || 0));
   };
 
   const getPercentage = (value?: number, max?: number) => {
@@ -98,93 +107,119 @@ export default function MetricComparison({
       {detailedMetrics.map((section) => (
         <div
           key={section.title}
-          className="bg-white rounded-xl shadow-lg p-6 space-y-6"
+          className="bg-white/70 backdrop-blur-xl border border-white p-8 rounded-[2.5rem] shadow-[0_20px_50px_-15px_rgba(102,5,199,0.1)] space-y-8"
         >
-          <h3 className="text-xl font-bold text-gray-900">{section.title}</h3>
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-6 bg-[#6605c7] rounded-full" />
+            <h3 className="text-lg font-black text-gray-900 leading-tight">
+              {section.title}
+            </h3>
+          </div>
 
-          {section.metrics.map((metric) => {
-            const maxValue = getMaxValue(metric.key);
-            return (
-              <div key={metric.key} className="space-y-4">
-                <p className="text-sm font-semibold text-gray-700">
-                  {metric.label}
-                </p>
+          <div className="space-y-8">
+            {section.metrics.map((metric) => {
+              const extremeValue = getExtremeValue(metric.key, metric.inverse);
+              const absMax = getAbsoluteMax(metric.key);
 
-                <div className="space-y-3">
-                  {universities.map((uni) => {
-                    const value = uni[metric.key as keyof University] as
-                      | number
-                      | undefined;
-                    const percentage = getPercentage(value, maxValue);
-                    const isMaxValue = value === maxValue;
+              return (
+                <div key={metric.key} className="space-y-4">
+                  <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                    {metric.label}
+                  </p>
 
-                    return (
-                      <div key={uni.id}>
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="text-sm font-medium text-gray-900">
-                            {uni.name}
-                          </span>
-                          <span
-                            className={`text-sm font-bold ${
-                              isMaxValue
-                                ? "text-green-600"
-                                : "text-gray-600"
-                            }`}
-                          >
-                            {metric.format(value)} {metric.unit}
-                          </span>
+                  <div className="space-y-4">
+                    {universities.map((uni) => {
+                      const value = uni[metric.key as keyof University] as number | undefined;
+                      const percentage = getPercentage(value, absMax);
+                      const isChampion = value === extremeValue;
+
+                      return (
+                        <div key={uni.id} className="group">
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-xs font-bold text-gray-800 flex items-center gap-2">
+                              {uni.name}
+                              {isChampion && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded bg-emerald-50 border border-emerald-100 text-emerald-600 text-[9px] font-black uppercase tracking-wider">
+                                  🏆 Best Option
+                                </span>
+                              )}
+                            </span>
+                            <span
+                              className={`text-xs font-black ${
+                                isChampion ? "text-emerald-600" : "text-gray-500"
+                              }`}
+                            >
+                              {metric.format(value)} {metric.unit}
+                            </span>
+                          </div>
+                          
+                          {/* Progress bar tracks */}
+                          <div className="w-full bg-gray-100 rounded-xl h-3 overflow-hidden shadow-inner border border-gray-50">
+                            <div
+                              className={`h-full rounded-xl transition-all duration-500 bg-gradient-to-r ${
+                                isChampion
+                                  ? "from-emerald-400 to-emerald-600 shadow-md shadow-emerald-500/20"
+                                  : "from-purple-400 to-[#6605c7] opacity-80"
+                              }`}
+                              style={{ width: `${percentage}%` }}
+                            />
+                          </div>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all ${
-                              isMaxValue
-                                ? "bg-green-500"
-                                : "bg-purple-500"
-                            }`}
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       ))}
 
-      {/* Top Recruiters Section */}
-      <div className="bg-white rounded-xl shadow-lg p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-6">Top Recruiters</h3>
+      {/* Recruiter Matrix Glass Card */}
+      <div className="bg-white/70 backdrop-blur-xl border border-white p-8 rounded-[2.5rem] shadow-[0_20px_50px_-15px_rgba(102,5,199,0.1)]">
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-1.5 h-6 bg-[#6605c7] rounded-full" />
+          <h3 className="text-lg font-black text-gray-900 leading-tight">
+            Corporate & Recruiting Matrix
+          </h3>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {universities.map((uni) => (
-            <div key={uni.id} className="border border-gray-200 rounded-lg p-4">
-              <p className="font-semibold text-gray-900 mb-3">{uni.name}</p>
-              {uni.topRecruiters && uni.topRecruiters.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {uni.topRecruiters.map((recruiter, idx) => (
-                    <span
-                      key={idx}
-                      className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium"
-                    >
-                      {recruiter}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-600">No recruiters listed</p>
-              )}
+            <div
+              key={uni.id}
+              className="bg-white/60 p-6 rounded-2xl border border-white/80 shadow-sm flex flex-col justify-between"
+            >
+              <div>
+                <h4 className="font-black text-gray-900 text-sm mb-1">{uni.name}</h4>
+                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-4">
+                  Top corporate recruiting pipeline
+                </p>
+
+                {uni.topRecruiters && uni.topRecruiters.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {uni.topRecruiters.map((recruiter, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-block px-3 py-1.5 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-100 text-[#6605c7] rounded-xl text-[11px] font-bold"
+                      >
+                        💼 {recruiter}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 italic">No direct hiring partner list disclosed.</p>
+                )}
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Export and Save */}
+      {/* Primary Export Actions */}
       <div className="flex gap-3 justify-end">
-        <button className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium">
-          📊 Export Detailed Report
+        <button className="px-6 py-3.5 bg-gradient-to-r from-[#6605c7] to-[#8b24e5] text-white rounded-2xl hover:opacity-90 transition-all font-black text-[11px] uppercase tracking-widest cursor-pointer shadow-md shadow-[#6605c7]/20">
+          📊 Export Granular Analysis Report
         </button>
       </div>
     </div>

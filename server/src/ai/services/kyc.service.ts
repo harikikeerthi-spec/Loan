@@ -70,7 +70,7 @@ export class KycService {
                 .sharpen()
                 .toBuffer();
         } catch (error) {
-            console.warn('[KycService] Preprocessing failed, using original buffer:', error.message);
+            console.warn('[KycService] Preprocessing failed, using original buffer:', error instanceof Error ? error.message : String(error));
             return buffer;
         }
     }
@@ -182,7 +182,7 @@ export class KycService {
                 },
                 docType,
             );
-            this.logAudit(docType, 95, true, `Vision API failure fallback: ${error.message}`);
+            this.logAudit(docType, 95, integrityCheck.is_valid, `Vision API failure fallback: ${error.message}`);
 
             const lowerType = String(docType || '').toLowerCase();
             const needsName =
@@ -190,7 +190,14 @@ export class KycService {
                 lowerType.includes('aadhar') ||
                 lowerType.includes('national_id') ||
                 (lowerType.includes('pan') && !lowerType.includes('company'));
-            const isValid = !needsName || !!dynamicData.full_name;
+            
+            const isValid = integrityCheck.is_valid && (!needsName || !!dynamicData.full_name);
+            let errorMsg: string | undefined = undefined;
+            if (!integrityCheck.is_valid) {
+                errorMsg = integrityCheck.error || `The uploaded document was not recognized as a valid ${docType.toUpperCase().replace(/_/g, ' ')}.`;
+            } else if (!isValid) {
+                errorMsg = 'Could not read the name from the document image. Try a clearer scan or re-upload.';
+            }
 
             return {
                 document_type: docType as any,
@@ -198,7 +205,7 @@ export class KycService {
                 is_valid: isValid,
                 extracted_data: dynamicData,
                 raw_text_summary: text.slice(0, 500) || `Verification service fallback: ${error.message}`,
-                error: isValid ? undefined : 'Could not read the name from the document image. Try a clearer scan or re-upload.',
+                error: errorMsg,
             };
         }
     }
@@ -237,29 +244,47 @@ export class KycService {
 
         if (normalizedType.includes('pan')) {
             expectedLabel = 'PAN Card';
-            matches = clean.includes('income tax') ||
+            const hasPanKeywords = clean.includes('income tax') ||
                 clean.includes('permanent account') ||
                 clean.includes('pan card') ||
                 clean.includes('govt. of india') ||
                 clean.includes('tax department') ||
                 /([a-z]){5}([0-9]){4}([a-z]){1}/i.test(clean);
+            
+            // Exclude if it is clearly an Aadhaar or Passport
+            const isAadhaar = clean.includes('unique identification') || clean.includes('aadhaar') || clean.includes('uidai') || /\b\d{4}\s?\d{4}\s?\d{4}\b/.test(clean);
+            const isPassport = clean.includes('passport') || clean.includes('p<ind') || clean.includes('mrz');
+            
+            matches = hasPanKeywords && !isAadhaar && !isPassport;
         } else if (normalizedType.includes('aadhar') || normalizedType.includes('aadhaar') || normalizedType.includes('national_id')) {
             expectedLabel = 'Aadhaar Card';
-            matches = clean.includes('unique identification') ||
+            const hasAadhaarKeywords = clean.includes('unique identification') ||
                 clean.includes('government of india') ||
                 clean.includes('aadhaar') ||
                 clean.includes('uidai') ||
                 clean.includes('enrollment') ||
-                clean.includes('male') ||
-                clean.includes('female') ||
+                clean.includes('enrolment') ||
                 /\b\d{4}\s?\d{4}\s?\d{4}\b/.test(clean);
+            
+            // Exclude if it is clearly a passport or PAN card
+            const isPassport = clean.includes('passport') || clean.includes('p<ind') || clean.includes('mrz');
+            const isPan = clean.includes('income tax') || clean.includes('permanent account') || /([a-z]){5}([0-9]){4}([a-z]){1}/i.test(clean);
+            
+            // Strict Aadhaar validation: must have Aadhaar keywords and must NOT have other document keywords
+            matches = hasAadhaarKeywords && !isPassport && !isPan;
         } else if (normalizedType.includes('passport')) {
             expectedLabel = 'Passport';
-            matches = clean.includes('passport') ||
+            const hasPassportKeywords = clean.includes('passport') ||
                 clean.includes('republic of india') ||
                 clean.includes('p<ind') ||
                 clean.includes('nationality') ||
                 clean.includes('mrz');
+            
+            // Exclude if it is clearly an Aadhaar or PAN card
+            const isAadhaar = clean.includes('unique identification') || clean.includes('aadhaar') || clean.includes('uidai') || /\b\d{4}\s?\d{4}\s?\d{4}\b/.test(clean);
+            const isPan = clean.includes('income tax') || clean.includes('permanent account') || /([a-z]){5}([0-9]){4}([a-z]){1}/i.test(clean);
+            
+            matches = hasPassportKeywords && !isAadhaar && !isPan;
         } else {
             // Other academic or support files are allowed by default
             return { is_valid: true };
@@ -267,12 +292,50 @@ export class KycService {
 
         if (!matches) {
             // For PDFs, if the raw binary is a valid PDF structure, let it pass to allow manual review
+            // BUT ONLY IF it does not clearly contain keywords of a DIFFERENT document type!
             if (isPdf && (clean.includes('%pdf') || clean.includes('pdf-'))) {
+                if (normalizedType.includes('aadhar') || normalizedType.includes('aadhaar') || normalizedType.includes('national_id')) {
+                    const isPassport = clean.includes('passport') || clean.includes('p<ind') || clean.includes('mrz');
+                    const isPan = clean.includes('income tax') || clean.includes('permanent account') || /([a-z]){5}([0-9]){4}([a-z]){1}/i.test(clean);
+                    if (isPassport || isPan) {
+                        return {
+                            is_valid: false,
+                            error: `Document type rejection: The uploaded PDF contains keywords indicating it is a ${isPassport ? 'Passport' : 'PAN Card'}, not an Aadhaar Card. Only Aadhaar cards should be uploaded for Aadhaar verification. Please upload the correct Aadhaar document.`
+                        };
+                    }
+                    // Even if other PDF is uploaded without clear keywords of other doc types
+                    return {
+                        is_valid: false,
+                        error: `Document verification failed: The uploaded PDF does not contain necessary Aadhaar document keywords. Only official Aadhaar cards should be uploaded for this field.`
+                    };
+                }
+                if (normalizedType.includes('passport')) {
+                    const isAadhaar = clean.includes('unique identification') || clean.includes('aadhaar') || clean.includes('uidai') || /\b\d{4}\s?\d{4}\s?\d{4}\b/.test(clean);
+                    const isPan = clean.includes('income tax') || clean.includes('permanent account') || /([a-z]){5}([0-9]){4}([a-z]){1}/i.test(clean);
+                    if (isAadhaar || isPan) {
+                        return {
+                            is_valid: false,
+                            error: `Document mismatch in PDF. The uploaded PDF contains keywords indicating it is an ${isAadhaar ? 'Aadhaar Card' : 'PAN Card'} instead of a Passport.`
+                        };
+                    }
+                }
+                if (normalizedType.includes('pan')) {
+                    const isAadhaar = clean.includes('unique identification') || clean.includes('aadhaar') || clean.includes('uidai') || /\b\d{4}\s?\d{4}\s?\d{4}\b/.test(clean);
+                    const isPassport = clean.includes('passport') || clean.includes('p<ind') || clean.includes('mrz');
+                    if (isAadhaar || isPassport) {
+                        return {
+                            is_valid: false,
+                            error: `Document mismatch in PDF. The uploaded PDF contains keywords indicating it is a ${isAadhaar ? 'Aadhaar Card' : 'Passport'} instead of a PAN Card.`
+                        };
+                    }
+                }
                 return { is_valid: true };
             }
             return {
                 is_valid: false,
-                error: `Document integrity check failed. The uploaded file does not contain necessary security keywords or patterns for a valid Indian ${expectedLabel}.`
+                error: expectedLabel === 'Aadhaar Card' 
+                    ? `Document verification failed: The uploaded file does not appear to be a valid Aadhaar card. Only official Aadhaar documents issued by UIDAI should be uploaded for this field.`
+                    : `Document integrity check failed. The uploaded file does not contain necessary security keywords or patterns for a valid Indian ${expectedLabel}.`
             };
         }
 
@@ -303,11 +366,23 @@ export class KycService {
             - Do NOT output duplicate aliases (e.g. use "dob" only, never both "dob" and "date_of_birth").
             - Do NOT output both a string address and a structured address object — use one format only.
             - If a field is missing or unreadable, omit it or use null. Never use placeholder names like "Resident Name".
-            - is_valid should be true when the document is the correct type and core identity fields are readable.
+            
+            ⚠️  DOCUMENT TYPE VERIFICATION (CRITICAL):
+            - You MUST verify if the uploaded document matches the expected type: ${docType.toUpperCase()}
+            - BEFORE extracting any data, FIRST check for markers of DIFFERENT document types
+            - If you detect markers of a DIFFERENT document type, you MUST:
+              1. Set is_valid to FALSE
+              2. Set confidence_score to 0
+              3. Set document_type to the actual detected type (not the expected type)
+              4. Set fraud_detected to true
+              5. Set fraud_reason to 'WRONG_DOCUMENT_TYPE_UPLOADED'
+              6. Do NOT extract any fields
+            - DO NOT try to force-fit data from the wrong document type
+            - is_valid should ONLY be true when the document is the CORRECT type and core identity fields are readable
 
             Return ONLY a JSON object. No markdown, no explanation.
             JSON structure: {
-                "document_type": "${docType.toUpperCase()}",
+                "document_type": "The actual detected document type, e.g. AADHAAR, PAN, PASSPORT, MARKSHEET_10, MARKSHEET_12, MARKSHEET_UG, MARKSHEET_PG, or UNKNOWN",
                 "confidence_score": 0-100,
                 "is_valid": boolean,
                 "fraud_detected": boolean,
@@ -322,6 +397,26 @@ export class KycService {
 
         const typeSpecific = {
             aadhaar: `
+                EXPECTED DOCUMENT TYPE: AADHAAR CARD (India's unique identity document issued by UIDAI)
+
+                ⚠️  REJECT IMMEDIATELY IF YOU DETECT:
+                - "PASSPORT" keyword anywhere
+                - "P<" or "MRZ" (Machine Readable Zone - Passport marker)
+                - "REPUBLIC OF INDIA" in header with "PASSPORT" 
+                - "TRAVEL DOCUMENT"
+                - "PASSPORT OFFICE"
+                - "DATE OF ISSUE" + "DATE OF EXPIRY" (Passport structure)
+                - Passport biodata page layout
+                
+                If ANY of the above detected: Set is_valid=false, fraud_reason='WRONG_DOCUMENT_TYPE_UPLOADED', document_type='PASSPORT', do NOT extract fields.
+
+                ACCEPT ONLY IF YOU DETECT:
+                - "UNIQUE IDENTIFICATION" or "UIDAI"
+                - "AADHAAR" text on card
+                - 12-digit number in format XXXX XXXX XXXX
+                - "GOVT. OF INDIA" + "MINISTRY OF ELECTRONICS AND INFORMATION TECHNOLOGY"
+                - Aadhaar-specific layout with name, DOB, gender, address sections
+
                 extracted_data fields (use exactly these keys — dob and gender are REQUIRED):
                 - full_name: ONLY the person's name printed on the card in the NAME field (e.g. "RAJESH KUMAR"). Do NOT include titles, prefixes, or labels. Extract ONLY the name text after the "Name:" label. Single name is okay.
                 - aadhaar_number: all 12 digits if visible, or masked XXXX XXXX 1234 if only last 4 shown
@@ -339,6 +434,24 @@ export class KycService {
                 is_valid: true when this is an Aadhaar card AND full_name, dob, and gender are readable.
             `,
             pan: `
+                EXPECTED DOCUMENT TYPE: PAN CARD (Permanent Account Number card issued by Income Tax Department)
+
+                ⚠️  REJECT IMMEDIATELY IF YOU DETECT:
+                - "PASSPORT" keyword anywhere
+                - "P<" or "MRZ" (Machine Readable Zone - Passport marker)
+                - "UNIQUE IDENTIFICATION" or "AADHAAR" or "UIDAI"
+                - "REPUBLIC OF INDIA" with "PASSPORT"
+                - "TRAVEL DOCUMENT"
+                
+                If ANY above detected: Set is_valid=false, fraud_reason='WRONG_DOCUMENT_TYPE_UPLOADED', detect actual type, do NOT extract fields.
+
+                ACCEPT ONLY IF YOU DETECT:
+                - "INCOME TAX DEPARTMENT" or "TAX DEPARTMENT"
+                - "PERMANENT ACCOUNT NUMBER" or "PAN"
+                - 10-character code (5 letters + 4 digits + 1 letter)
+                - "GOVT. OF INDIA"
+                - PAN card layout with name, father's name, DOB sections
+
                 extracted_data fields (use exactly these keys):
                 - full_name: name as printed on card
                 - father_name: father's name as printed
@@ -358,6 +471,22 @@ export class KycService {
                 AND all document_validation checks that apply are true.
             `,
             passport: `
+                EXPECTED DOCUMENT TYPE: PASSPORT (Travel document issued by Passport Office)
+
+                ⚠️  REJECT IMMEDIATELY IF YOU DETECT:
+                - "AADHAAR" or "UNIQUE IDENTIFICATION" or "UIDAI"
+                - "INCOME TAX" or "PERMANENT ACCOUNT" or "PAN CARD"
+                - "12-digit" Aadhaar number pattern without passport markers
+                
+                If ANY above detected: Set is_valid=false, fraud_reason='WRONG_DOCUMENT_TYPE_UPLOADED', detect actual type, do NOT extract fields.
+
+                ACCEPT ONLY IF YOU DETECT:
+                - "PASSPORT" text
+                - "REPUBLIC OF INDIA" with "PASSPORT" header
+                - "P<" or MRZ (Machine Readable Zone)
+                - Passport office/authority text
+                - Passport number in format (e.g., A12345678)
+
                 extracted_data fields (extract each ONCE, exactly as printed on the passport):
                 - passport_number
                 - full_name: full name as on biodata page (given names then surname, single line)
@@ -377,6 +506,20 @@ export class KycService {
                 is_valid: true when passport with readable name and passport_number.
             `,
             marksheet_10: `
+                EXPECTED DOCUMENT TYPE: GRADE 10 / SSC MARKSHEET/CERTIFICATE
+
+                ⚠️  REJECT IMMEDIATELY IF YOU DETECT:
+                - "PASSPORT", "AADHAAR", "UNIQUE IDENTIFICATION", "PAN CARD", "INCOME TAX"
+                - Document that is NOT an academic marksheet/certificate
+                
+                If ANY above detected: Set is_valid=false, fraud_reason='WRONG_DOCUMENT_TYPE_UPLOADED', detect actual type, do NOT extract fields.
+
+                ACCEPT ONLY IF YOU DETECT:
+                - Board name (e.g., "Central Board of Secondary Education", "Board of Secondary Education")
+                - Certificate/marksheet layout for Grade 10 / SSC
+                - Subject table or result marks
+                - Board seal/signature area
+
                 extracted_data fields (use exactly these keys):
                 - full_name: The candidate's full name as printed on the certificate.
                 - board_name: The name of the educational board (e.g. "Central Board of Secondary Education", "Board of Secondary Education, Andhra Pradesh").
@@ -404,6 +547,20 @@ export class KycService {
                 is_valid: true if it is a Grade 10 marksheet/certificate.
             `,
             marksheet_12: `
+                EXPECTED DOCUMENT TYPE: GRADE 12 / INTERMEDIATE / HSC MARKSHEET/CERTIFICATE
+
+                ⚠️  REJECT IMMEDIATELY IF YOU DETECT:
+                - "PASSPORT", "AADHAAR", "UNIQUE IDENTIFICATION", "PAN CARD", "INCOME TAX"
+                - Document that is NOT an academic marksheet/certificate
+                
+                If ANY above detected: Set is_valid=false, fraud_reason='WRONG_DOCUMENT_TYPE_UPLOADED', detect actual type, do NOT extract fields.
+
+                ACCEPT ONLY IF YOU DETECT:
+                - Board name (e.g., "Central Board of Secondary Education", "Board of Intermediate Education", "Maharashtra State Board")
+                - Certificate/marksheet layout for Grade 12 / Intermediate
+                - Subject table or result marks
+                - Board seal/signature area
+
                 extracted_data fields (use exactly these keys):
                 - full_name: The candidate's full name as printed on the certificate.
                 - board_name: The name of the educational board or council (e.g. "Board of Intermediate Education, Andhra Pradesh", "Central Board of Secondary Education", "Maharashtra State Board").
@@ -431,6 +588,21 @@ export class KycService {
                 is_valid: true if it is a Grade 12 or equivalent marksheet/certificate.
             `,
             marksheet_ug: `
+                EXPECTED DOCUMENT TYPE: UNDERGRADUATE DEGREE / MARKSHEET / TRANSCRIPT
+
+                ⚠️  REJECT IMMEDIATELY IF YOU DETECT:
+                - "PASSPORT", "AADHAAR", "UNIQUE IDENTIFICATION", "PAN CARD", "INCOME TAX"
+                - Document that is NOT an academic degree/marksheet/transcript
+                
+                If ANY above detected: Set is_valid=false, fraud_reason='WRONG_DOCUMENT_TYPE_UPLOADED', detect actual type, do NOT extract fields.
+
+                ACCEPT ONLY IF YOU DETECT:
+                - University name (e.g., "Jawaharlal Nehru Technological University", "Delhi University")
+                - Degree name (e.g., "Bachelor of Technology", "B.Tech", "B.Sc")
+                - Program/branch name
+                - Marksheet or transcript layout
+                - University seal/signature area
+
                 extracted_data fields (use exactly these keys):
                 - full_name: The candidate's full name as printed on the degree or transcript.
                 - university: The name of the awarding university or institute (e.g. "Jawaharlal Nehru Technological University", "Delhi University").
@@ -455,6 +627,21 @@ export class KycService {
                 is_valid: true if it is an Undergraduate degree certificate, marksheet, or transcript.
             `,
             marksheet_pg: `
+                EXPECTED DOCUMENT TYPE: POSTGRADUATE DEGREE / MARKSHEET / TRANSCRIPT
+
+                ⚠️  REJECT IMMEDIATELY IF YOU DETECT:
+                - "PASSPORT", "AADHAAR", "UNIQUE IDENTIFICATION", "PAN CARD", "INCOME TAX"
+                - Document that is NOT an academic postgraduate degree/marksheet/transcript
+                
+                If ANY above detected: Set is_valid=false, fraud_reason='WRONG_DOCUMENT_TYPE_UPLOADED', detect actual type, do NOT extract fields.
+
+                ACCEPT ONLY IF YOU DETECT:
+                - University name (e.g., "Indian Institute of Technology", "Anna University")
+                - Postgraduate degree name (e.g., "Master of Technology", "M.Tech", "MBA", "M.Sc")
+                - Postgraduate program/branch name
+                - Marksheet or transcript layout
+                - University seal/signature area
+
                 extracted_data fields (use exactly these keys):
                 - full_name: The candidate's full name as printed on the degree or transcript.
                 - university: The name of the awarding university or institute (e.g. "Indian Institute of Technology", "Anna University").
@@ -536,22 +723,37 @@ export class KycService {
             let validationError: string | undefined;
             let documentValidation = parsed.document_validation;
 
-            if (isAadhaar) {
-                const aadhaarValidation = this.validateAadhaarDocument(parsed, extracted);
-                if (!aadhaarValidation.is_valid) {
-                    isValid = false;
-                    validationError = aadhaarValidation.error;
-                }
-            } else if (isPan) {
-                const panValidation = validatePanExtraction(extracted, parsed);
-                documentValidation = panValidation.document_validation;
-                if (!panValidation.is_valid) {
-                    isValid = false;
-                    validationError = panValidation.error;
-                }
-            } else if (!extracted.full_name && Object.keys(extracted).length === 0) {
+            // Check for fraud_reason indicating wrong document type
+            if (parsed.fraud_reason === 'WRONG_DOCUMENT_TYPE_UPLOADED') {
                 isValid = false;
-                validationError = 'No readable fields extracted from document';
+                validationError = `Document type mismatch: Expected a valid ${docType.toUpperCase().replace(/_/g, ' ')}, but the uploaded document appears to be a ${String(parsed.document_type || 'different document').toUpperCase()}. Please upload the correct document.`;
+            } else {
+                // Strict document type validation check
+                const expectedNorm = this.normalizeDocTypeForComparison(docType);
+                const detectedNorm = this.normalizeDocTypeForComparison(parsed.document_type || docType);
+
+                if (expectedNorm !== detectedNorm) {
+                    isValid = false;
+                    validationError = `Document type mismatch: Expected a valid ${docType.toUpperCase().replace(/_/g, ' ')}, but detected a ${String(parsed.document_type || 'different document type').toUpperCase()}. Please upload the correct document.`;
+                } else {
+                    if (isAadhaar) {
+                        const aadhaarValidation = this.validateAadhaarDocument(parsed, extracted);
+                        if (!aadhaarValidation.is_valid) {
+                            isValid = false;
+                            validationError = aadhaarValidation.error;
+                        }
+                    } else if (isPan) {
+                        const panValidation = validatePanExtraction(extracted, parsed);
+                        documentValidation = panValidation.document_validation;
+                        if (!panValidation.is_valid) {
+                            isValid = false;
+                            validationError = panValidation.error;
+                        }
+                    } else if (!extracted.full_name && Object.keys(extracted).length === 0) {
+                        isValid = false;
+                        validationError = 'No readable fields extracted from document';
+                    }
+                }
             }
 
             return {
@@ -577,6 +779,32 @@ export class KycService {
                 error: 'AI response was not valid JSON'
             };
         }
+    }
+
+    private normalizeDocTypeForComparison(type: string): string {
+        const t = String(type || '').toLowerCase();
+        if (t.includes('aadhaar') || t.includes('aadhar') || t.includes('national_id')) {
+            return 'aadhaar';
+        }
+        if (t.includes('pan')) {
+            return 'pan';
+        }
+        if (t.includes('passport')) {
+            return 'passport';
+        }
+        if (t.includes('marksheet_10') || t.includes('10th') || t.includes('ssc') || t.includes('grade10') || t.includes('grade_10')) {
+            return 'marksheet_10';
+        }
+        if (t.includes('marksheet_12') || t.includes('12th') || t.includes('hsc') || t.includes('intermediate') || t.includes('grade12') || t.includes('grade_12')) {
+            return 'marksheet_12';
+        }
+        if (t.includes('marksheet_ug') || t.includes('ug_degree') || t.includes('ug_transcript') || t.includes('undergrad') || t.includes('undergraduate')) {
+            return 'marksheet_ug';
+        }
+        if (t.includes('marksheet_pg') || t.includes('pg_degree') || t.includes('pg_transcript') || t.includes('postgrad') || t.includes('postgraduate')) {
+            return 'marksheet_pg';
+        }
+        return t;
     }
 
     private validateAadhaarDocument(

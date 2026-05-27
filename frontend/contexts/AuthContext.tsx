@@ -48,6 +48,7 @@ interface AuthContextType {
     isAdmin: boolean;
     isBank: boolean;
     isStaff: boolean;
+    isAgent: boolean;
     isLoading: boolean;
     login: (accessToken: string, userData?: Partial<AuthUser> & { refresh_token?: string }) => void;
     logout: () => Promise<void>;
@@ -321,10 +322,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
     const isBank = user?.role === 'bank' || user?.role === 'partner_bank';
     const isStaff = user?.role === 'staff' || isAdmin; // Admin can also be treated as staff
+    const isAgent = user?.role === 'agent' || user?.role === 'partner_agent' || isAdmin;
 
     return (
         <AuthContext.Provider
-            value={{ user, token, isAuthenticated, isAdmin, isBank, isStaff, isLoading, login, logout, refreshAuth, refreshUser }}
+            value={{ user, token, isAuthenticated, isAdmin, isBank, isStaff, isAgent, isLoading, login, logout, refreshAuth, refreshUser }}
         >
             {children}
         </AuthContext.Provider>

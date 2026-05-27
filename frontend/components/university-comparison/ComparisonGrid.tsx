@@ -28,7 +28,7 @@ const metrics = [
   {
     label: "World Rank",
     key: "rank",
-    format: (val?: number) => (val ? `#${val}` : "N/A"),
+    format: (val?: number) => (val ? `QS #${val}` : "N/A"),
   },
   {
     label: "Acceptance Rate",
@@ -62,109 +62,116 @@ export default function ComparisonGrid({
   universities,
 }: ComparisonGridProps) {
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-x-auto">
-      <table className="w-full">
-        <thead>
-          <tr className="border-b border-gray-200">
-            <th className="sticky left-0 px-6 py-4 text-left bg-gray-50 text-sm font-semibold text-gray-900 z-10">
-              Metric
-            </th>
-            {universities.map((uni) => (
-              <th
-                key={uni.id}
-                className="px-6 py-4 text-center bg-gradient-to-b from-purple-50 to-gray-50"
-              >
-                <div className="text-sm font-semibold text-gray-900">
-                  {uni.name}
-                </div>
-                <div className="text-xs text-gray-600">
-                  {uni.city}, {uni.country}
-                </div>
+    <div className="bg-white/70 backdrop-blur-xl border border-white p-6 rounded-[2.5rem] shadow-[0_20px_50px_-15px_rgba(102,5,199,0.1)] overflow-hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="border-b border-gray-100">
+              <th className="sticky left-0 px-6 py-5 text-left bg-[#fcfaff] text-xs font-black text-gray-400 uppercase tracking-widest z-10 rounded-tl-2xl">
+                Metric Comparison
               </th>
+              {universities.map((uni) => (
+                <th
+                  key={uni.id}
+                  className="px-6 py-5 text-center min-w-[200px]"
+                >
+                  <div className="text-sm font-black text-gray-900 leading-tight">
+                    {uni.name}
+                  </div>
+                  <div className="text-[10px] font-black text-[#6605c7] uppercase tracking-wider mt-1">
+                    {uni.city}, {uni.country}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100/50">
+            {metrics.map((metric) => (
+              <tr
+                key={metric.key}
+                className="hover:bg-white/40 transition-colors"
+              >
+                <td className="sticky left-0 px-6 py-4.5 text-xs font-bold text-gray-500 bg-[#fcfaff] border-r border-gray-50 z-10 whitespace-nowrap">
+                  {metric.label}
+                </td>
+                {universities.map((uni) => (
+                  <td
+                    key={uni.id}
+                    className="px-6 py-4.5 text-center text-sm font-bold text-gray-900"
+                  >
+                    {metric.format(
+                      uni[metric.key as keyof University] as number | undefined
+                    )}
+                  </td>
+                ))}
+              </tr>
             ))}
-          </tr>
-        </thead>
-        <tbody>
-          {metrics.map((metric, idx) => (
-            <tr
-              key={metric.key}
-              className={`border-b border-gray-200 ${
-                idx % 2 === 0 ? "bg-white" : "bg-gray-50"
-              }`}
-            >
-              <td className="sticky left-0 px-6 py-4 text-sm font-medium text-gray-900 bg-inherit z-10">
-                {metric.label}
+
+            {/* Top Recruiters Row */}
+            <tr className="hover:bg-white/40 transition-colors">
+              <td className="sticky left-0 px-6 py-5 text-xs font-bold text-gray-500 bg-[#fcfaff] border-r border-gray-50 z-10 whitespace-nowrap">
+                Top Recruiters
               </td>
               {universities.map((uni) => (
                 <td
                   key={uni.id}
-                  className="px-6 py-4 text-center text-sm text-gray-900"
+                  className="px-6 py-5 text-sm text-gray-700 text-center"
                 >
-                  {metric.format(
-                    uni[metric.key as keyof University] as number | undefined
+                  <div className="flex flex-wrap gap-1.5 justify-center max-w-[220px] mx-auto">
+                    {uni.topRecruiters && uni.topRecruiters.length > 0 ? (
+                      <>
+                        {uni.topRecruiters.slice(0, 3).map((recruiter, i) => (
+                          <span
+                            key={i}
+                            className="inline-block px-2.5 py-1 bg-[#6605c7]/5 border border-[#6605c7]/10 text-[#6605c7] rounded-lg text-[10px] font-bold"
+                          >
+                            {recruiter}
+                          </span>
+                        ))}
+                        {uni.topRecruiters.length > 3 && (
+                          <span className="inline-block px-2 py-1 text-gray-400 text-[10px] font-bold">
+                            +{uni.topRecruiters.length - 3} more
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-[11px] text-gray-400 italic">N/A</span>
+                    )}
+                  </div>
+                </td>
+              ))}
+            </tr>
+
+            {/* Loan Ready Row */}
+            <tr className="hover:bg-white/40 transition-colors">
+              <td className="sticky left-0 px-6 py-5 text-xs font-bold text-gray-500 bg-[#fcfaff] border-r border-gray-50 z-10 rounded-bl-2xl whitespace-nowrap">
+                Loan Direct Path
+              </td>
+              {universities.map((uni) => (
+                <td key={uni.id} className="px-6 py-5 text-center">
+                  {uni.loan ? (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-lg text-xs font-black uppercase tracking-wider">
+                      ✓ Instant Loan Match
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-50 border border-gray-200 text-gray-400 rounded-lg text-xs font-black uppercase tracking-wider">
+                      ✗ Check Eligibility
+                    </span>
                   )}
                 </td>
               ))}
             </tr>
-          ))}
+          </tbody>
+        </table>
+      </div>
 
-          {/* Top Recruiters Row */}
-          <tr className="border-b border-gray-200 bg-white">
-            <td className="sticky left-0 px-6 py-4 text-sm font-medium text-gray-900 bg-inherit z-10">
-              Top Recruiters
-            </td>
-            {universities.map((uni) => (
-              <td
-                key={uni.id}
-                className="px-6 py-4 text-sm text-gray-700 text-center"
-              >
-                <div className="flex flex-wrap gap-1 justify-center">
-                  {uni.topRecruiters?.[0] && (
-                    <>
-                      <span className="inline-block px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">
-                        {uni.topRecruiters[0]}
-                      </span>
-                      {uni.topRecruiters.length > 1 && (
-                        <span className="inline-block px-2 py-1 text-gray-600 text-xs">
-                          +{uni.topRecruiters.length - 1} more
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
-              </td>
-            ))}
-          </tr>
-
-          {/* Loan Ready Row */}
-          <tr className="bg-gray-50">
-            <td className="sticky left-0 px-6 py-4 text-sm font-medium text-gray-900 bg-inherit z-10">
-              Loan Ready
-            </td>
-            {universities.map((uni) => (
-              <td key={uni.id} className="px-6 py-4 text-center">
-                {uni.loan ? (
-                  <span className="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-                    ✓ Yes
-                  </span>
-                ) : (
-                  <span className="inline-block px-3 py-1 bg-gray-200 text-gray-700 rounded-full text-sm font-medium">
-                    ✗ No
-                  </span>
-                )}
-              </td>
-            ))}
-          </tr>
-        </tbody>
-      </table>
-
-      {/* Bottom Action */}
-      <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex gap-3">
-        <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium">
-          📊 Export as PDF
+      {/* Bottom Action Pane */}
+      <div className="border-t border-gray-100/60 mt-6 pt-6 flex flex-wrap gap-3 justify-end">
+        <button className="px-5 py-3 border border-[#6605c7]/20 text-[#6605c7] rounded-xl hover:bg-[#6605c7]/5 transition-all font-black text-[11px] uppercase tracking-widest cursor-pointer shadow-sm">
+          💾 Save Shortlist
         </button>
-        <button className="px-4 py-2 border border-purple-600 text-purple-600 rounded-lg hover:bg-purple-50 transition-colors font-medium">
-          💾 Save Comparison
+        <button className="px-5 py-3 bg-gradient-to-r from-[#6605c7] to-[#8b24e5] text-white rounded-xl hover:opacity-90 transition-all font-black text-[11px] uppercase tracking-widest cursor-pointer shadow-md shadow-[#6605c7]/20">
+          📊 Export comparison PDF
         </button>
       </div>
     </div>

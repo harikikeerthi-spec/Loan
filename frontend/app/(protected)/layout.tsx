@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
-    const { isAuthenticated, isLoading, isAdmin, isStaff, isBank } = useAuth();
+    const { isAuthenticated, isLoading, isAdmin, isStaff, isBank, user } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -29,8 +29,14 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
 
         if (isStaff) {
             router.replace("/staff/dashboard");
+            return;
         }
-    }, [isAuthenticated, isLoading, isAdmin, isStaff, isBank, router]);
+
+        if (user?.role === 'agent' || user?.role === 'partner_agent') {
+            router.replace("/agent");
+            return;
+        }
+    }, [isAuthenticated, isLoading, isAdmin, isStaff, isBank, user, router]);
 
     if (isLoading) {
         return (

@@ -8,13 +8,14 @@ import { HTTP_API_PREFIX, HttpApiPaths } from "./http-api-paths";
 
 const API_URL = HTTP_API_PREFIX;
 
-type Portal = "student" | "staff" | "admin" | "bank";
+type Portal = "student" | "staff" | "admin" | "bank" | "agent";
 
 function getPortalFromPathname(pathname?: string): Portal {
     if (!pathname) return "student";
     if (pathname.startsWith("/admin")) return "admin";
     if (pathname.startsWith("/staff")) return "staff";
     if (pathname.startsWith("/bank")) return "bank";
+    if (pathname.startsWith("/agent")) return "agent";
     return "student";
 }
 
@@ -46,7 +47,17 @@ function getStorageKeys(portal: Portal) {
             email: "bankUserEmail",
             userId: "bankUserId",
             user: "bankAuthUser",
-            loginPath: "/login",
+            loginPath: "/bank/login",
+        };
+    }
+    if (portal === "agent") {
+        return {
+            token: "agentAccessToken",
+            refreshToken: "agentRefreshToken",
+            email: "agentUserEmail",
+            userId: "agentUserId",
+            user: "agentAuthUser",
+            loginPath: "/agent/login",
         };
     }
     return {
@@ -60,7 +71,7 @@ function getStorageKeys(portal: Portal) {
 }
 
 function clearAllPortalAuthStorage() {
-    const portals: Portal[] = ["student", "staff", "admin", "bank"];
+    const portals: Portal[] = ["student", "staff", "admin", "bank", "agent"];
     for (const portal of portals) {
         const keys = getStorageKeys(portal);
         localStorage.removeItem(keys.token);

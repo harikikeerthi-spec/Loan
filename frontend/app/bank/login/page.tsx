@@ -269,6 +269,11 @@ function BankLoginContent() {
         setError("");
         try {
             const data = await authApi.verifyOtp(email.trim(), code) as any;
+            
+            if (data.role !== "bank" && data.role !== "partner_bank" && data.role !== "admin" && data.role !== "super_admin") {
+                throw new Error("Unauthorized role. You must be bank staff to access this portal.");
+            }
+
             if (data.refresh_token) localStorage.setItem("refreshToken", data.refresh_token);
             
             const bankId = getBankFromEmail(email.trim()) || "idfc";
@@ -282,11 +287,7 @@ function BankLoginContent() {
                 lastName: data.lastName,
                 role: data.role as any,
             });
-            if (data.role === "bank" || data.role === "partner_bank" || data.role === "admin") {
-                router.push("/bank/dashboard");
-            } else {
-                setError("Unauthorized role. You must be bank staff to access this portal.");
-            }
+            router.push("/bank/dashboard");
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : "Invalid OTP");
         } finally {

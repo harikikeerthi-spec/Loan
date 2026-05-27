@@ -159,6 +159,19 @@ export default function OCRDataComparisonModal({
           </button>
         </div>
 
+        {/* Document Type Validation Warning */}
+        {ocrData.document_type?.toLowerCase().includes('aadhaar') && (
+          <div className="mx-6 mt-6 px-4 py-3 bg-blue-50 border border-blue-200 rounded-xl flex items-start gap-3">
+            <span className="material-symbols-outlined text-blue-600 text-[20px] flex-shrink-0 mt-0.5">info</span>
+            <div>
+              <p className="text-sm font-bold text-blue-700 mb-1">Aadhaar Document Verification</p>
+              <p className="text-xs text-blue-600">
+                Only Aadhaar cards should be uploaded for this field. Other documents such as Passport, PAN Card, or other ID documents cannot be used for Aadhaar verification.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Content */}
         <div className="flex-1 overflow-y-auto flex gap-6 p-6">
           {/* Left: Document Image */}

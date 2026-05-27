@@ -634,6 +634,16 @@ export class CommunityController {
         return this.communityService.togglePinForumPost(id, body.isPinned);
     }
 
+    /**
+     * Search for similar/duplicate forum posts (pre-post duplicate check)
+     * GET /community/forum/search?q=my+question+title
+     * IMPORTANT: Must be declared BEFORE forum/:id to avoid being captured by the dynamic param route.
+     */
+    @Get('forum/search')
+    async searchForumPosts(@Query('q') q?: string) {
+        return this.communityService.searchSimilarPosts(q || '');
+    }
+
     @Get('forum/:id')
     async getForumPostById(@Param('id') id: string, @Request() req) {
         let userId: string | undefined;
@@ -708,14 +718,7 @@ export class CommunityController {
         return this.communityService.getForumPosts({ category, limit: 20, offset }, userId);
     }
 
-    /**
-     * Search for similar/duplicate forum posts (pre-post duplicate check)
-     * GET /community/forum/search?q=my+question+title
-     */
-    @Get('forum/search')
-    async searchForumPosts(@Query('q') q?: string) {
-        return this.communityService.searchSimilarPosts(q || '');
-    }
+
 
     /**
      * GET /community/hubs - list of available hub categories
