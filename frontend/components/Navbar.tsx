@@ -198,72 +198,87 @@ export default function Navbar() {
                 {/* Right side */}
                 <div className="flex items-center gap-4">
                     {!isAuthenticated ? (
-                        <Link
-                            href="/login"
-                            className="px-6 py-2.5 text-[11px] font-bold bg-white text-[#6605c7] border border-black/5 uppercase tracking-wider rounded-lg hover:bg-gray-50 transition-all shadow-sm cursor-pointer"
-                        >
-                            Login
-                        </Link>
-                    ) : (
-                        <div className="relative" ref={profileRef}>
-                            <button
-                                onClick={() => setProfileOpen((p) => !p)}
-                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full transition-all border border-[#E5E7EB] bg-white/80 shadow-sm hover:shadow-md`}
+                        <div className="flex items-center gap-3">
+                            <Link
+                                href="/login"
+                                className="px-5 py-2.5 text-[11px] font-bold bg-white text-[#6605c7] border border-gray-200 rounded-xl shadow-[0_4px_0_#e2e8f0] hover:-translate-y-0.5 hover:shadow-[0_5px_0_#cbd5e1] active:translate-y-0.5 active:shadow-none transition-all uppercase tracking-wider cursor-pointer"
                             >
-                                <div className="w-8 h-8 rounded-full bg-[#6605c7]/10 flex items-center justify-center overflow-hidden border border-[#6605c7]/20">
-                                    <Image
-                                        src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName || user?.email || 'U')}&background=6605c7&color=fff&size=80`}
-                                        alt="Avatar"
-                                        width={32}
-                                        height={32}
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
-                                <span className={`text-xs font-bold px-1 hidden md:block max-w-[150px] truncate transition-colors duration-500 text-[#1a1626]`}>
-                                    {displayName}
-                                </span>
-                            </button>
+                                Login
+                            </Link>
+                            <Link
+                                href="/apply-loan"
+                                className="hidden lg:flex items-center justify-center px-5 py-2.5 bg-gradient-to-r from-[#7c3aed] via-[#a855f7] to-[#f43f5e] text-white text-[11px] font-bold uppercase tracking-wider rounded-xl shadow-[0_4px_0_#4c1d95] hover:shadow-[0_8px_20px_rgba(124,58,237,0.35),0_6px_0_#4c1d95] border-t border-white/20 translate-y-0 hover:-translate-y-1 hover:brightness-105 active:translate-y-0.5 active:shadow-none transition-all duration-150 ease-out cursor-pointer"
+                            >
+                                Apply Now
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-3 bg-white/40 backdrop-blur-md p-1.5 rounded-full border border-purple-500/10 shadow-[0_8px_32px_rgba(102,5,199,0.08)] shrink-0 select-none">
+                            {/* 3D Profile Pill Button */}
+                            <div className="relative" ref={profileRef}>
+                                <button
+                                    onClick={() => setProfileOpen((p) => !p)}
+                                    className={`relative flex items-center gap-2.5 px-4 py-2 rounded-full border transition-all duration-150 ease-out select-none group cursor-pointer ${
+                                        profileOpen
+                                            ? "bg-[#f4ebff] border-[#6605c7]/30 shadow-inner translate-y-0.5 scale-[0.98]"
+                                            : "bg-white border-gray-200 shadow-[0_4px_0_#cbd5e1] translate-y-0 hover:-translate-y-1 hover:shadow-[0_5px_0_#cbd5e1] hover:border-[#6605c7]/20 active:translate-y-0.5 active:shadow-none"
+                                    }`}
+                                >
+                                    <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center font-bold text-xs shadow-md transition-all duration-300 ${
+                                        profileOpen
+                                            ? "bg-gradient-to-tr from-[#6605c7] to-[#8b24e5] scale-110 shadow-purple-500/30"
+                                            : "bg-gradient-to-tr from-[#6605c7] via-[#a855f7] to-[#fbbf24] shadow-purple-500/10 group-hover:rotate-12 group-hover:scale-110"
+                                    }`}>
+                                        {(user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || "U")}{(user?.lastName?.[0] || "")}
+                                    </div>
+                                    <span className={`text-xs font-extrabold tracking-tight transition-colors duration-150 ${
+                                        profileOpen ? "text-[#6605c7]" : "text-gray-800"
+                                    }`}>
+                                        {displayName && displayName.length > 15 ? `${displayName.substring(0, 12)}...` : displayName || "User"}
+                                    </span>
+                                </button>
 
-                            {profileOpen && (
-                                <div className="absolute top-14 right-0 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 w-64 overflow-hidden">
-                                    <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-primary/5 to-purple-500/5">
-                                        <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Logged in as</p>
-                                        <p className="text-sm font-bold text-gray-900 truncate">{user?.email}</p>
+                                {profileOpen && (
+                                    <div className="absolute top-16 right-0 bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 w-64 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-primary/5 to-purple-500/5">
+                                            <p className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-1">Logged in as</p>
+                                            <p className="text-sm font-bold text-gray-900 truncate">{user?.email}</p>
+                                        </div>
+                                        <div className="py-2">
+                                            <ProfileDropItem 
+                                                href={user?.role === 'bank' || user?.role === 'partner_bank' ? "/bank/dashboard" : "/dashboard"} 
+                                                icon="dashboard" 
+                                                label="Dashboard" 
+                                                iconClass="text-[#6605c7]" 
+                                            />
+                                            <ProfileDropItem href="/referral" icon="redeem" label="Refer & Earn" iconClass="text-pink-500" />
+                                            <ProfileDropItem href="/profile" icon="person" label="My Profile" iconClass="text-[#6605c7]" />
+                                            {!(user?.firstName && user?.lastName && user?.phoneNumber && user?.dateOfBirth) && (
+                                                <ProfileDropItem href="/user-details" icon="info" label="Complete Profile" iconClass="text-yellow-500" />
+                                            )}
+                                        </div>
+                                        <div className="border-t border-gray-200 p-2">
+                                            <button
+                                                onClick={handleLogout}
+                                                className="flex items-center justify-center gap-2 w-full px-4 py-2 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors uppercase tracking-wider"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">logout</span>
+                                                Sign Out
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="py-2">
-                                        <ProfileDropItem 
-                                            href={user?.role === 'bank' || user?.role === 'partner_bank' ? "/bank/dashboard" : "/dashboard"} 
-                                            icon="dashboard" 
-                                            label="Dashboard" 
-                                            iconClass="text-[#6605c7]" 
-                                        />
-                                        <ProfileDropItem href="/referral" icon="redeem" label="Refer & Earn" iconClass="text-pink-500" />
-                                        <ProfileDropItem href="/profile" icon="person" label="My Profile" iconClass="text-[#6605c7]" />
-                                        {!(user?.firstName && user?.lastName && user?.phoneNumber && user?.dateOfBirth) && (
-                                            <ProfileDropItem href="/user-details" icon="info" label="Complete Profile" iconClass="text-yellow-500" />
-                                        )}
-                                    </div>
-                                    <div className="border-t border-gray-200 p-2">
-                                        <button
-                                            onClick={handleLogout}
-                                            className="flex items-center justify-center gap-2 w-full px-4 py-2 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors uppercase tracking-wider"
-                                        >
-                                            <span className="material-symbols-outlined text-sm">logout</span>
-                                            Sign Out
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
+
+                            {/* 3D Apply Now Button */}
+                            <Link
+                                href="/apply-loan"
+                                className="relative px-5 py-2.5 bg-gradient-to-r from-[#7c3aed] via-[#a855f7] to-[#f43f5e] text-white text-[11px] font-extrabold uppercase tracking-widest rounded-full shadow-[0_4px_0_#4c1d95] hover:shadow-[0_8px_20px_rgba(124,58,237,0.35),0_6px_0_#4c1d95] border-t border-white/20 translate-y-0 hover:-translate-y-1 hover:brightness-105 active:translate-y-0.5 active:shadow-none transition-all duration-150 ease-out cursor-pointer select-none"
+                            >
+                                Apply Now
+                            </Link>
                         </div>
                     )}
-
-                    {/* Apply Now Button */}
-                    <Link
-                        href="/apply-loan"
-                        className="hidden lg:flex items-center justify-center px-5 py-2.5 bg-gradient-to-r from-primary to-purple-600 text-white text-[11px] font-bold uppercase tracking-wider rounded-lg hover:opacity-95 transition-all shadow-md hover:shadow-lg"
-                    >
-                        Apply Now
-                    </Link>
 
                     {/* Mobile hamburger */}
                     <button

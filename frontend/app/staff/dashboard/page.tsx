@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
@@ -1184,7 +1184,7 @@ export default function StaffDashboardPage() {
             firstName: fullUser.firstName || "",
             lastName: fullUser.lastName || "",
             email: fullUser.email || "",
-            mobile: fullUser.mobile || fullUser.phone || "",
+            mobile: fullUser.phoneNumber || fullUser.mobile || fullUser.phone || "",
             dob: parsedDob,
             gender: normalizeGenderForForm(fullUser.gender) || fullUser.gender || "",
             pan: fullUser.panNumber || "",
@@ -3822,10 +3822,22 @@ export default function StaffDashboardPage() {
                                                             </div>
                                                             <div>
                                                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Phone*</label>
-                                                                <div className="flex gap-2">
+                                                                <div className="flex gap-2 mb-2">
                                                                     <div className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm flex items-center gap-2">🇮🇳 +91</div>
                                                                     <input type="tel" value={newStudent.emergencyContact.phone} onChange={e => setNewStudent({ ...newStudent, emergencyContact: { ...newStudent.emergencyContact, phone: formatPhone(e.target.value) } })} onBlur={() => handleSaveProfile()} className={`flex-1 px-4 py-3 bg-slate-50 border ${newStudent.emergencyContact.phone && !isPhoneValid(newStudent.emergencyContact.phone) ? 'border-rose-300 focus:border-rose-500' : 'border-slate-200 focus:border-emerald-500'} rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all font-medium`} placeholder="Mobile Number" maxLength={10} />
                                                                 </div>
+                                                                {newStudent.emergencyContact.phone && !isPhoneValid(newStudent.emergencyContact.phone) && (
+                                                                    <div className="px-3 py-2 bg-rose-50 border border-rose-200 rounded-lg flex items-center gap-2">
+                                                                        <span className="material-symbols-outlined text-rose-600 text-sm">error</span>
+                                                                        <span className="text-rose-600 text-xs font-medium">
+                                                                            {newStudent.emergencyContact.phone.length < 10
+                                                                                ? "Phone number must be 10 digits"
+                                                                                : newStudent.emergencyContact.phone[0] < '6'
+                                                                                    ? "Phone number must start with 6, 7, 8, or 9"
+                                                                                    : "This phone number is not realistic"}
+                                                                        </span>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                             <div>
                                                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Email*</label>
@@ -3953,7 +3965,7 @@ export default function StaffDashboardPage() {
                                                         )}
                                                     </div>
 
-                                                    {Object.entries(ocrResults).filter(([key]) => {
+                                                    {/* {Object.entries(ocrResults).filter(([key]) => {
                                                         const [docType] = key.split('-');
                                                         return /marksheet|ug_|pg_/.test(docType);
                                                     }).map(([key, fields]: [string, Record<string, unknown>]) => {
@@ -4038,7 +4050,7 @@ export default function StaffDashboardPage() {
                                                                 )}
                                                             </div>
                                                         );
-                                                    })}
+                                                    })} */}
 
                                                     <section>
                                                         <div className="flex items-center gap-2 mb-6 text-emerald-600 font-bold text-sm">
@@ -6352,11 +6364,11 @@ export default function StaffDashboardPage() {
                                                                     {shareResult.applicationNumber || shareResult.applicationId || "PENDING"}
                                                                 </span>
                                                                 {(shareResult.applicationNumber || shareResult.applicationId) && (
-                                                                    <button 
-                                                                        onClick={() => { 
-                                                                            navigator.clipboard.writeText(shareResult.applicationNumber || shareResult.applicationId || ""); 
-                                                                            alert("Application ID copied!"); 
-                                                                        }} 
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            navigator.clipboard.writeText(shareResult.applicationNumber || shareResult.applicationId || "");
+                                                                            alert("Application ID copied!");
+                                                                        }}
                                                                         className="p-3 bg-white text-indigo-600 rounded-2xl hover:text-indigo-700 hover:shadow-md hover:bg-slate-50 transition-all border border-indigo-100 shadow-sm"
                                                                         title="Copy Application ID"
                                                                     >
@@ -6369,11 +6381,11 @@ export default function StaffDashboardPage() {
 
                                                     {/* Neat Access Link Distribution Section */}
                                                     <div className="max-w-sm mx-auto space-y-3">
-                                                        <button 
-                                                            onClick={() => { 
-                                                                navigator.clipboard.writeText(shareResult.url); 
-                                                                alert("Portal access link copied!"); 
-                                                            }} 
+                                                        <button
+                                                            onClick={() => {
+                                                                navigator.clipboard.writeText(shareResult.url);
+                                                                alert("Portal access link copied!");
+                                                            }}
                                                             className="w-full py-4 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:shadow-lg hover:shadow-indigo-500/25 transition-all flex items-center justify-center gap-2"
                                                         >
                                                             <span className="material-symbols-outlined text-[18px]">share_windows</span>
@@ -7258,14 +7270,14 @@ export default function StaffDashboardPage() {
                                                                                     const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
                                                                                     if (uid) window.open(`/staff/users/${uid}`, '_blank');
                                                                                 }}
-                                                                                className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] leading-tight truncate cursor-pointer hover:text-indigo-600 hover:underline transition-all"
+                                                                                className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#060708] leading-tight truncate cursor-pointer hover:text-slate-600 hover:underline transition-all"
                                                                                 title="Click to view Student Profile"
                                                                             >
                                                                                 {item.firstName || item.student?.firstName || '—'} {item.lastName || item.student?.lastName || ''}
                                                                             </p>
                                                                             <p
                                                                                 onClick={() => setSelectedApp(item)}
-                                                                                className="text-[9px] text-slate-500 hover:text-indigo-600 hover:underline cursor-pointer transition-all font-black mt-1 uppercase tracking-widest inline-block"
+                                                                                className="text-[9px] text-slate-500 hover:text-slate-600 hover:underline cursor-pointer transition-all font-black mt-1 uppercase tracking-widest inline-block"
                                                                                 title="Click to view Application Details"
                                                                             >
                                                                                 APP-{(item.id || item._id || 'UNKNOWN').slice(-6)}

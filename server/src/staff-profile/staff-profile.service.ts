@@ -102,7 +102,7 @@ export class StaffProfileService {
     let q = this.db
       .from('StaffProfile')
       .select(
-        `*, linkedUser:User!linkedUserId(id, firstName, lastName, email, mobile, role, createdAt)`,
+        `*, linkedUser:User!linkedUserId(id, firstName, lastName, email, mobile, phoneNumber, dateOfBirth, role, createdAt)`,
       )
       .order('createdAt', { ascending: false });
 
@@ -134,7 +134,7 @@ export class StaffProfileService {
     const { data, error } = await this.db
       .from('StaffProfile')
       .select(
-        `*, linkedUser:User!linkedUserId(id, firstName, lastName, email, mobile),
+        `*, linkedUser:User!linkedUserId(id, firstName, lastName, email, mobile, phoneNumber, dateOfBirth),
          documents:StaffProfileDocument(*)`,
       )
       .eq('id', profileId)
@@ -149,7 +149,7 @@ export class StaffProfileService {
     const { data, error } = await this.db
       .from('StaffProfile')
       .select(
-        `*, linkedUser:User!linkedUserId(id, firstName, lastName, email, mobile)`,
+        `*, linkedUser:User!linkedUserId(id, firstName, lastName, email, mobile, phoneNumber, dateOfBirth)`,
       )
       .eq('linkedUserId', linkedUserId)
       .maybeSingle();

@@ -53,7 +53,7 @@ function ProfileList({ onSelect, onlineEmails = [] }: { onSelect: (p: any) => vo
       setShowCreate(false);
       setForm({ linked_user_id: "", target_bank: "", loan_type: "", internal_notes: "" });
       setMsg("Profile created.");
-      
+
       // Log activity for profile creation
       const selectedUser = users.find(u => u.id === form.linked_user_id);
       if (selectedUser) {
@@ -64,7 +64,7 @@ function ProfileList({ onSelect, onlineEmails = [] }: { onSelect: (p: any) => vo
           color: 'text-emerald-600 bg-emerald-50'
         }).catch(console.error);
       }
-      
+
       load();
     } catch (err: any) { setMsg(err.message || "Failed"); }
     finally { setCreating(false); }
@@ -75,7 +75,7 @@ function ProfileList({ onSelect, onlineEmails = [] }: { onSelect: (p: any) => vo
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200/60 pb-6 mb-2">
         <div>
           <h2 className="text-[32px] font-black text-slate-900 tracking-tight flex items-center gap-3 font-display">
-             Applicant Profiles
+            Applicant Profiles
           </h2>
           <p className="text-[13px] font-medium text-slate-500 mt-2">
             Manage and audit intermediary application profiles.
@@ -130,10 +130,10 @@ function ProfileList({ onSelect, onlineEmails = [] }: { onSelect: (p: any) => vo
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-[2px]">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg animate-in zoom-in-95 duration-200 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-               <h3 className="text-lg font-semibold text-slate-900">Onboard Applicant</h3>
-               <button onClick={() => setShowCreate(false)} className="p-1.5 hover:bg-slate-200 rounded-full text-slate-400 transition-colors">
-                  <span className="material-symbols-outlined text-xl">close</span>
-               </button>
+              <h3 className="text-lg font-semibold text-slate-900">Onboard Applicant</h3>
+              <button onClick={() => setShowCreate(false)} className="p-1.5 hover:bg-slate-200 rounded-full text-slate-400 transition-colors">
+                <span className="material-symbols-outlined text-xl">close</span>
+              </button>
             </div>
             <form onSubmit={handleCreate} className="p-6 space-y-5">
               <div>
@@ -185,7 +185,7 @@ function ProfileList({ onSelect, onlineEmails = [] }: { onSelect: (p: any) => vo
       ) : profiles.length === 0 ? (
         <div className="text-center py-24 bg-slate-50/50 rounded-[40px] border-4 border-dashed border-slate-100">
           <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
-             <span className="material-symbols-outlined text-5xl text-slate-200">manage_accounts</span>
+            <span className="material-symbols-outlined text-5xl text-slate-200">manage_accounts</span>
           </div>
           <p className="text-[14px] font-black text-slate-400 uppercase tracking-widest">No applicant profiles found</p>
           <p className="text-[12px] text-slate-400 mt-2">Try adjusting your search or create a new profile.</p>
@@ -216,54 +216,55 @@ function ProfileList({ onSelect, onlineEmails = [] }: { onSelect: (p: any) => vo
                               <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full animate-pulse shadow-sm shadow-emerald-500/30" title="Online now" />
                             )}
                           </div>
-                        <div className="min-w-0">
-                          <p className="text-[14px] font-bold text-slate-900 tracking-tight truncate group-hover/profile:text-indigo-600 group-hover/profile:underline transition-colors font-display">
-                            {p.linkedUser?.firstName} {p.linkedUser?.lastName}
-                          </p>
-                          <div className="flex items-center gap-1 mt-0.5">
+                          <div className="min-w-0">
+                            <p className="text-[14px] font-bold text-slate-900 tracking-tight truncate group-hover/profile:text-slate-900 group-hover/profile:underline transition-colors font-display">
+                              {p.linkedUser?.firstName} {p.linkedUser?.lastName}
+                            </p>
+                            <div className="flex items-center gap-1 mt-0.5">
                               <span className="material-symbols-outlined text-[12px] text-emerald-500">verified_user</span>
                               <span className="text-[10px] font-semibold text-slate-500 truncate">{p.linkedUser?.email}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                       <p className="text-[13px] font-bold text-slate-700">{p.loanType || "General Loan"}</p>
-                       <p className="text-[10px] font-semibold text-slate-400 font-mono mt-0.5">FIN-AID</p>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center gap-2">
-                         <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center border border-sky-100">
-                             <span className="material-symbols-outlined text-sky-600 text-[16px]">account_balance</span>
-                         </div>
-                         <span className="text-[13px] font-bold text-slate-700">{p.targetBank || "Internal Pool"}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] inline-flex items-center gap-1.5 shadow-sm ${STATUS_COLORS[p.bankStatus] || "bg-slate-50 text-slate-600 border border-slate-200"}`}>
-                        <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70"></span>
-                        {p.bankStatus?.replace(/_/g, ' ') || 'Initiated'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5">
-                      <div className="flex flex-col gap-1">
+                      </td>
+                      <td className="px-6 py-5">
+                        <p className="text-[13px] font-bold text-slate-700">{p.loanType || "General Loan"}</p>
+                        <p className="text-[10px] font-semibold text-slate-400 font-mono mt-0.5">FIN-AID</p>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center border border-sky-100">
+                            <span className="material-symbols-outlined text-sky-600 text-[16px]">account_balance</span>
+                          </div>
+                          <span className="text-[13px] font-bold text-slate-700">{p.targetBank || "Internal Pool"}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] inline-flex items-center gap-1.5 shadow-sm ${STATUS_COLORS[p.bankStatus] || "bg-slate-50 text-slate-600 border border-slate-200"}`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70"></span>
+                          {p.bankStatus?.replace(/_/g, ' ') || 'Initiated'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-5">
+                        <div className="flex flex-col gap-1">
                           <p className="text-[12px] font-bold text-slate-800">
-                              {new Date(p.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                            {new Date(p.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                           </p>
                           <p className="text-[10px] font-semibold text-slate-400 flex items-center gap-1">
-                              <span className="material-symbols-outlined text-[12px]">schedule</span>
-                              {new Date(p.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                            <span className="material-symbols-outlined text-[12px]">schedule</span>
+                            {new Date(p.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                           </p>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5">
-                      <button onClick={() => onSelect(p)}
-                        className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 flex items-center justify-center transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5" title="Audit Application">
-                        <span className="material-symbols-outlined text-[20px]">folder_open</span>
-                      </button>
-                    </td>
-                  </tr>
-                ); })}
+                        </div>
+                      </td>
+                      <td className="px-6 py-5">
+                        <button onClick={() => onSelect(p)}
+                          className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 flex items-center justify-center transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5" title="Audit Application">
+                          <span className="material-symbols-outlined text-[20px]">folder_open</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -320,7 +321,7 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
     try {
       await staffProfileApi.updateDocumentStatus(profile.id, docId, status);
       setMsg(`✓ Status updated to "${status}" and synced to user profile.`);
-      
+
       // Log activity for document status update
       const doc = docs.find(d => d.id === docId);
       const activityType = status === 'approved' ? 'approved' : status === 'rejected' ? 'rejected' : 'update';
@@ -330,14 +331,14 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
         'rejected': 'text-rose-600 bg-rose-50',
         'update': 'text-blue-600 bg-blue-50'
       };
-      
+
       await staffProfileApi.logActivity({
         type: activityType,
         msg: `Updated ${doc?.docType?.replace(/_/g, ' ') || 'document'} status to ${status} for ${profile.linkedUser?.firstName} ${profile.linkedUser?.lastName}`,
         icon: icons[status] || 'event_note',
         color: colors[status] || 'text-slate-600 bg-slate-50'
       }).catch(console.error);
-      
+
       loadDocs();
     } catch (e: any) { setMsg("✗ " + e.message); }
   };
@@ -346,7 +347,7 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
     if (!confirm("Detach this document from the profile?")) return;
     const removedDoc = docs.find(d => d.id === docId);
     await staffProfileApi.removeDocument(profile.id, docId);
-    
+
     // Log activity for document removal
     if (removedDoc) {
       await staffProfileApi.logActivity({
@@ -356,7 +357,7 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
         color: 'text-rose-600 bg-rose-50'
       }).catch(console.error);
     }
-    
+
     loadDocs();
   };
 
@@ -375,7 +376,7 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
     try {
       await staffProfileApi.uploadDocument(profile.id, file, uploadDocType);
       setMsg("✓ Document uploaded successfully.");
-      
+
       // Log activity for document upload
       await staffProfileApi.logActivity({
         type: 'upload',
@@ -383,10 +384,10 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
         icon: 'cloud_upload',
         color: 'text-purple-600 bg-purple-50'
       }).catch(console.error);
-      
+
       loadDocs();
-    } catch (e: any) { 
-      setMsg("✗ Failed to upload: " + e.message); 
+    } catch (e: any) {
+      setMsg("✗ Failed to upload: " + e.message);
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -407,7 +408,7 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
       });
       setShareResult(res.data);
       setShowShare(false);
-      
+
       // Log activity for share with bank
       const docCount = shareForm.selectedDocs.length;
       await staffProfileApi.logActivity({
@@ -416,7 +417,7 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
         icon: 'share',
         color: 'text-indigo-600 bg-indigo-50'
       }).catch(console.error);
-      
+
       loadDocs();
     } catch (e: any) { setMsg("✗ " + e.message); }
     finally { setSharing(false); }
@@ -499,7 +500,7 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
             <span className="material-symbols-outlined text-lg">share</span>
             Share with Bank
           </button>
-          <button 
+          <button
             onClick={() => {
               // Log activity for complete profile share
               staffProfileApi.logActivity({
@@ -542,11 +543,11 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
             <h3 className="text-sm font-semibold text-slate-700">My Documents</h3>
           </div>
           <div className="flex gap-4 text-[11px] font-medium text-blue-600">
-             <button className="flex items-center gap-1 hover:underline"><span className="material-symbols-outlined text-sm">add</span> Expand all sections</button>
-             <button className="flex items-center gap-1 hover:underline"><span className="material-symbols-outlined text-sm">remove</span> Collapse all sections</button>
+            <button className="flex items-center gap-1 hover:underline"><span className="material-symbols-outlined text-sm">add</span> Expand all sections</button>
+            <button className="flex items-center gap-1 hover:underline"><span className="material-symbols-outlined text-sm">remove</span> Collapse all sections</button>
           </div>
         </div>
-        
+
         <div className="p-6 space-y-6">
           <p className="text-sm font-semibold text-slate-800">
             Accepted file types: DOCX, PDF, Image and Text <span className="font-normal text-slate-500">(MSG, PPT and XLS file types are not accepted for resume or cover letters)</span>
@@ -570,7 +571,7 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
                       <>
                         <div className="flex-1 bg-gradient-to-br from-slate-50 to-white flex flex-col items-center justify-center p-4 text-center">
                           <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm border border-indigo-100">
-                              <span className="material-symbols-outlined text-[28px] text-indigo-500">description</span>
+                            <span className="material-symbols-outlined text-[28px] text-indigo-500">description</span>
                           </div>
                           <p className="text-[12px] font-bold text-slate-900 line-clamp-2 px-2">{doc.originalFilename || doc.docType}</p>
                           <span className={`mt-3 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${STATUS_COLORS[doc.status] || "bg-slate-100"}`}>
@@ -578,36 +579,36 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
                           </span>
                         </div>
                         <div className="h-12 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-4">
-                           <button onClick={() => loadPreview(doc)} className="w-8 h-8 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center transition-all">
-                              <span className="material-symbols-outlined text-[18px]">visibility</span>
-                           </button>
-                           <div className="relative flex items-center">
-                             <select value={doc.status} onChange={e => updateStatus(doc.id, e.target.value)}
-                               className="bg-transparent text-[10px] font-black uppercase tracking-wider text-slate-600 hover:text-slate-900 focus:outline-none border-none p-1 cursor-pointer appearance-none pr-4">
-                                <option value="pending">PENDING</option>
-                                <option value="under_review">REVIEW</option>
-                                <option value="approved">APPROVE</option>
-                                <option value="rejected">REJECT</option>
-                             </select>
-                             <span className="material-symbols-outlined text-[14px] text-slate-400 absolute right-0 pointer-events-none">expand_more</span>
-                           </div>
-                           <button onClick={() => removeDoc(doc.id)} className="w-8 h-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-all">
-                              <span className="material-symbols-outlined text-[18px]">delete</span>
-                           </button>
+                          <button onClick={() => loadPreview(doc)} className="w-8 h-8 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center transition-all">
+                            <span className="material-symbols-outlined text-[18px]">visibility</span>
+                          </button>
+                          <div className="relative flex items-center">
+                            <select value={doc.status} onChange={e => updateStatus(doc.id, e.target.value)}
+                              className="bg-transparent text-[10px] font-black uppercase tracking-wider text-slate-600 hover:text-slate-900 focus:outline-none border-none p-1 cursor-pointer appearance-none pr-4">
+                              <option value="pending">PENDING</option>
+                              <option value="under_review">REVIEW</option>
+                              <option value="approved">APPROVE</option>
+                              <option value="rejected">REJECT</option>
+                            </select>
+                            <span className="material-symbols-outlined text-[14px] text-slate-400 absolute right-0 pointer-events-none">expand_more</span>
+                          </div>
+                          <button onClick={() => removeDoc(doc.id)} className="w-8 h-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-all">
+                            <span className="material-symbols-outlined text-[18px]">delete</span>
+                          </button>
                         </div>
                       </>
                     ) : (
-                      <button 
+                      <button
                         onClick={() => triggerUpload(type)}
                         disabled={uploading}
                         className="flex-1 bg-slate-50/50 flex flex-col items-center justify-center p-4 text-center border-2 border-dashed border-slate-200 m-2 rounded-xl hover:border-indigo-300 hover:bg-slate-100 transition-all group/slot"
                       >
                         <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3 group-hover/slot:bg-indigo-50 group-hover/slot:text-indigo-600 transition-colors">
-                           {uploading && uploadDocType === type ? (
-                             <div className="w-5 h-5 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-                           ) : (
-                             <span className="material-symbols-outlined text-[20px]">add</span>
-                           )}
+                          {uploading && uploadDocType === type ? (
+                            <div className="w-5 h-5 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+                          ) : (
+                            <span className="material-symbols-outlined text-[20px]">add</span>
+                          )}
                         </div>
                         <p className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">{uploading && uploadDocType === type ? 'Uploading...' : 'Click to Upload'}</p>
                       </button>
@@ -629,7 +630,7 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
                   <div className="relative aspect-[4/3] bg-white border border-slate-200 rounded-2xl overflow-hidden flex flex-col group hover:shadow-lg hover:-translate-y-1 hover:border-indigo-300 transition-all duration-300">
                     <div className="flex-1 bg-gradient-to-br from-slate-50 to-white flex flex-col items-center justify-center p-4 text-center">
                       <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-sm border border-indigo-100">
-                          <span className="material-symbols-outlined text-[28px] text-indigo-500">attachment</span>
+                        <span className="material-symbols-outlined text-[28px] text-indigo-500">attachment</span>
                       </div>
                       <p className="text-[12px] font-bold text-slate-900 line-clamp-2 px-2">{doc.originalFilename || doc.docType}</p>
                       <span className={`mt-3 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${STATUS_COLORS[doc.status] || "bg-slate-100"}`}>
@@ -637,21 +638,21 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
                       </span>
                     </div>
                     <div className="h-12 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-4">
-                        <button onClick={() => loadPreview(doc)} className="w-8 h-8 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center transition-all">
-                          <span className="material-symbols-outlined text-[18px]">visibility</span>
-                        </button>
-                        <div className="relative flex items-center">
-                          <select value={doc.status} onChange={e => updateStatus(doc.id, e.target.value)}
-                            className="bg-transparent text-[10px] font-black uppercase tracking-wider text-slate-600 hover:text-slate-900 focus:outline-none border-none p-1 cursor-pointer appearance-none pr-4">
-                            <option value="pending">PENDING</option>
-                            <option value="approved">APPROVE</option>
-                            <option value="rejected">REJECT</option>
-                          </select>
-                          <span className="material-symbols-outlined text-[14px] text-slate-400 absolute right-0 pointer-events-none">expand_more</span>
-                        </div>
-                        <button onClick={() => removeDoc(doc.id)} className="w-8 h-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-all">
-                          <span className="material-symbols-outlined text-[18px]">delete</span>
-                        </button>
+                      <button onClick={() => loadPreview(doc)} className="w-8 h-8 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center transition-all">
+                        <span className="material-symbols-outlined text-[18px]">visibility</span>
+                      </button>
+                      <div className="relative flex items-center">
+                        <select value={doc.status} onChange={e => updateStatus(doc.id, e.target.value)}
+                          className="bg-transparent text-[10px] font-black uppercase tracking-wider text-slate-600 hover:text-slate-900 focus:outline-none border-none p-1 cursor-pointer appearance-none pr-4">
+                          <option value="pending">PENDING</option>
+                          <option value="approved">APPROVE</option>
+                          <option value="rejected">REJECT</option>
+                        </select>
+                        <span className="material-symbols-outlined text-[14px] text-slate-400 absolute right-0 pointer-events-none">expand_more</span>
+                      </div>
+                      <button onClick={() => removeDoc(doc.id)} className="w-8 h-8 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 flex items-center justify-center transition-all">
+                        <span className="material-symbols-outlined text-[18px]">delete</span>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -659,19 +660,19 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
               {/* Add slot */}
               <div className="space-y-2">
                 <label className="text-[13px] font-semibold text-slate-700">Add a Document</label>
-                <button 
+                <button
                   onClick={() => triggerUpload('other')}
                   disabled={uploading}
                   className="w-full aspect-[4/3] border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center p-4 text-center hover:bg-slate-50 hover:border-indigo-300 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group disabled:opacity-50"
                 >
-                   <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors mb-3 shadow-sm border border-slate-200 group-hover:border-indigo-100">
-                      {uploading && uploadDocType === 'other' ? (
-                        <div className="w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-                      ) : (
-                        <span className="material-symbols-outlined text-[24px]">add</span>
-                      )}
-                   </div>
-                   <p className="text-[12px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-indigo-600 transition-colors">{uploading && uploadDocType === 'other' ? 'Uploading...' : 'Upload New'}</p>
+                  <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors mb-3 shadow-sm border border-slate-200 group-hover:border-indigo-100">
+                    {uploading && uploadDocType === 'other' ? (
+                      <div className="w-6 h-6 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+                    ) : (
+                      <span className="material-symbols-outlined text-[24px]">add</span>
+                    )}
+                  </div>
+                  <p className="text-[12px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-indigo-600 transition-colors">{uploading && uploadDocType === 'other' ? 'Uploading...' : 'Upload New'}</p>
                 </button>
               </div>
 
@@ -781,9 +782,9 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <a 
-                  href={previewUrl || '#'} 
-                  download 
+                <a
+                  href={previewUrl || '#'}
+                  download
                   className="px-4 py-2 border-2 border-slate-100 rounded-xl text-[11px] font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 transition-all flex items-center gap-2"
                 >
                   <span className="material-symbols-outlined text-[16px]">download</span>
@@ -794,7 +795,7 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
                 </button>
               </div>
             </div>
-            
+
             <div className="flex-1 bg-slate-100 relative overflow-hidden flex items-center justify-center">
               {previewLoading ? (
                 <div className="flex flex-col items-center gap-4">

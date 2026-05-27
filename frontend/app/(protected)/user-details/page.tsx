@@ -46,6 +46,13 @@ export default function UserDetailsPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user?.email) return;
+        
+        // Validate phone number
+        if (!form.phoneNumber || !isPhoneValid(form.phoneNumber)) {
+            setError("Please enter a valid phone number");
+            return;
+        }
+        
         setSaving(true);
         setError(null);
 
@@ -102,9 +109,10 @@ export default function UserDetailsPage() {
                                         type="text"
                                         placeholder="John"
                                         value={form.firstName}
-                                        onChange={(e) =>
-                                            setForm((p) => ({ ...p, firstName: e.target.value }))
-                                        }
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/[^A-Za-z]/g, "");
+                                            setForm((p) => ({ ...p, firstName: val }));
+                                        }}
                                         required
                                         maxLength={30}
                                         className="w-full px-4 py-3 bg-gray-50/50 border border-gray-100 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 transition-all"
@@ -118,9 +126,10 @@ export default function UserDetailsPage() {
                                         type="text"
                                         placeholder="Doe"
                                         value={form.lastName}
-                                        onChange={(e) =>
-                                            setForm((p) => ({ ...p, lastName: e.target.value }))
-                                        }
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/[^A-Za-z]/g, "");
+                                            setForm((p) => ({ ...p, lastName: val }));
+                                        }}
                                         required
                                         maxLength={30}
                                         className="w-full px-4 py-3 bg-gray-50/50 border border-gray-100 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 transition-all"
@@ -145,6 +154,18 @@ export default function UserDetailsPage() {
                                     inputMode="numeric"
                                     className={`w-full px-4 py-3 bg-gray-50/50 border ${form.phoneNumber && !isPhoneValid(form.phoneNumber) ? 'border-rose-300 focus:border-rose-500' : 'border-gray-100 focus:border-[#6605c7]'} rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 transition-all ${!!user?.phoneNumber ? 'opacity-60 cursor-not-allowed' : ''}`}
                                 />
+                                {form.phoneNumber && !isPhoneValid(form.phoneNumber) && (
+                                    <div className="px-3 py-2 bg-rose-50 border border-rose-200 rounded-lg flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-rose-600 text-sm">error</span>
+                                        <span className="text-rose-600 text-xs font-medium">
+                                            {form.phoneNumber.length < 10 
+                                                ? "Phone number must be 10 digits" 
+                                                : form.phoneNumber[0] < '6'
+                                                ? "Phone number must start with 6, 7, 8, or 9"
+                                                : "This phone number is not realistic"}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
 
                             <DatePicker
@@ -158,8 +179,8 @@ export default function UserDetailsPage() {
 
                             <button
                                 type="submit"
-                                disabled={saving}
-                                className="w-full py-3.5 bg-[#6605c7] text-white rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-[#5a04b1] active:scale-[0.98] transition-all disabled:opacity-60 shadow-lg shadow-[#6605c7]/20 mt-4"
+                                disabled={saving || !form.phoneNumber || !isPhoneValid(form.phoneNumber)}
+                                className="w-full py-3.5 bg-[#6605c7] text-white rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-[#5a04b1] active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-[#6605c7]/20 mt-4"
                             >
                                 {saving ? "Updating..." : "Complete Profile"}
                             </button>

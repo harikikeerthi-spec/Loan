@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function CompareUniversitiesPage() {
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-transparent">
       <UniversityComparisonFlow />
     </main>
   );

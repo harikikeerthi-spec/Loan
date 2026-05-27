@@ -110,7 +110,7 @@ export default async function HomePage() {
 
                             <div className="flex flex-col sm:flex-row gap-4 mb-10">
                                 <Link
-                                    href="/apply-loan"
+                                    href="/loan-eligibility"
                                     className="px-8 py-3.5 text-white font-bold rounded-xl text-center text-[13px] whitespace-nowrap transition-all hover:-translate-y-1 hover:shadow-2xl"
                                     style={{ background: 'linear-gradient(135deg, #6605c7, #8b24e5)', boxShadow: '0 8px 32px rgba(102,5,199,0.35)' }}
                                 >
