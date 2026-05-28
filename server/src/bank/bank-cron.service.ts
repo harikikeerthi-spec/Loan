@@ -223,4 +223,117 @@ export class BankCronService {
       console.error('[Cron: SalesforceSync] Error running Salesforce Sync Cron:', err.message);
     }
   }
+
+  /**
+   * SLA Query monitor (F6) - Hourly reminder and escalations
+   */
+  async checkQuerySlaTimers(): Promise<void> {
+    console.log('[Cron: QuerySLA] Scanning for pending queries SLA status...');
+    
+    try {
+      const { data: pendingQueries, error } = await this.db
+        .from('BankWorkflowQueryRequest')
+        .select('*')
+        .eq('status', 'PENDING');
+
+      if (error) throw error;
+      if (!pendingQueries || pendingQueries.length === 0) {
+        console.log('[Cron: QuerySLA] Zero pending queries detected.');
+        return;
+      }
+
+      const now = new Date();
+
+      for (const query of pendingQueries) {
+        const { data: submission, error: subError } = await this.db
+          .from('BankSubmission')
+          .select('isOnHold, slaPausedDurationMs, bankName')
+          .eq('id', query.submissionId)
+          .single();
+
+        if (subError || !submission) {
+          console.warn(`[Cron: QuerySLA] Submission not found for query ${query.id}`);
+          continue;
+        }
+
+        if (submission.isOnHold) {
+          console.log(`[Cron: QuerySLA] Query ${query.id} is paused (Submission ${query.submissionId} is ON HOLD). Skipping.`);
+          continue;
+        }
+
+        const raisedAt = new Date(query.raisedAt);
+        const pausedMs = parseInt(submission.slaPausedDurationMs || '0', 10);
+        const elapsedMs = now.getTime() - raisedAt.getTime() - pausedMs;
+        const elapsedHours = elapsedMs / 1000 / 60 / 60;
+
+        console.log(`[Cron: QuerySLA] Query ${query.id} elapsed: ${Math.round(elapsedHours)} hours.`);
+
+        if (elapsedHours >= 72) {
+          const { data: exists } = await this.db
+            .from('Notification')
+            .select('id')
+            .eq('type', 'query_sla_mgmt_escalate')
+            .eq('metadata->>queryId', query.id)
+            .maybeSingle();
+
+          if (!exists) {
+            await this.db.from('Notification').insert({
+              userId: 'system',
+              title: `🚨 Query SLA Management Escalation (72h)`,
+              message: `CRITICAL: Pending query of type "${query.queryType}" raised by ${submission.bankName} has exceeded 72 hours without response. Immediate management intervention required.`,
+              type: 'query_sla_mgmt_escalate',
+              isRead: false,
+              metadata: { queryId: query.id, submissionId: query.submissionId, elapsedHours },
+              createdAt: now.toISOString()
+            });
+            console.log(`[Cron: QuerySLA] Escalated query ${query.id} to Management.`);
+          }
+        }
+        else if (elapsedHours >= 48) {
+          const { data: exists } = await this.db
+            .from('Notification')
+            .select('id')
+            .eq('type', 'query_sla_admin_escalate')
+            .eq('metadata->>queryId', query.id)
+            .maybeSingle();
+
+          if (!exists) {
+            await this.db.from('Notification').insert({
+              userId: 'system',
+              title: `⚠️ Query SLA Admin Escalation (48h)`,
+              message: `WARNING: Pending query of type "${query.queryType}" raised by ${submission.bankName} has exceeded 48 hours. Escalated to administrator.`,
+              type: 'query_sla_admin_escalate',
+              isRead: false,
+              metadata: { queryId: query.id, submissionId: query.submissionId, elapsedHours },
+              createdAt: now.toISOString()
+            });
+            console.log(`[Cron: QuerySLA] Escalated query ${query.id} to Admin.`);
+          }
+        }
+        else if (elapsedHours >= 24) {
+          const { data: exists } = await this.db
+            .from('Notification')
+            .select('id')
+            .eq('type', 'query_sla_reminder')
+            .eq('metadata->>queryId', query.id)
+            .maybeSingle();
+
+          if (!exists) {
+            await this.db.from('Notification').insert({
+              userId: 'system',
+              title: `⏰ Query SLA Reminder (24h)`,
+              message: `Reminder: There is a pending query of type "${query.queryType}" raised by ${submission.bankName} that requires response.`,
+              type: 'query_sla_reminder',
+              isRead: false,
+              metadata: { queryId: query.id, submissionId: query.submissionId, elapsedHours },
+              createdAt: now.toISOString()
+            });
+            console.log(`[Cron: QuerySLA] Sent 24h reminder for query ${query.id}.`);
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error('[Cron: QuerySLA] Error running query SLA cron:', err.message);
+    }
+  }
 }

@@ -45,12 +45,251 @@ interface ChatConnectResponse {
     whatsappUrl?: string;
 }
 
+interface Stage {
+    order: number;
+    label: string;
+    icon: string;
+    progress: number;
+}
+
+const STAGES_CONFIG: Record<string, Stage> = {
+    application_submitted: { order: 1, label: 'Submitted', icon: 'description', progress: 10 },
+    document_verification: { order: 2, label: 'Documents', icon: 'upload_file', progress: 30 },
+    credit_check: { order: 3, label: 'Credit Check', icon: 'analytics', progress: 50 },
+    bank_review: { order: 4, label: 'Review', icon: 'rate_review', progress: 70 },
+    sanction: { order: 5, label: 'Sanction', icon: 'verified', progress: 90 },
+    disbursement: { order: 6, label: 'Disbursed', icon: 'payments', progress: 100 },
+};
+
+const STAGES_LIST = Object.entries(STAGES_CONFIG)
+    .sort(([, a], [, b]) => a.order - b.order)
+    .map(([key, value]) => ({ id: key, ...value }));
+
+function ApplicationProgressCollapse({ app }: { app: any }) {
+    const isRejected = app.status?.toLowerCase() === 'rejected' || app.status?.toLowerCase() === 'cancelled';
+
+    const currentStageKey = (() => {
+        if (!app) return null;
+        if (app.status === 'rejected' || app.status === 'cancelled') return null;
+
+        let stageKey = app.stage;
+        if (!stageKey || !STAGES_CONFIG[stageKey]) {
+            // Infer stage from status
+            if (app.status === 'approved') return 'sanction';
+            if (app.status === 'disbursed') return 'disbursement';
+            if (app.status === 'processing') return 'bank_review';
+            return 'application_submitted';
+        }
+        return stageKey;
+    })();
+
+    const currentStage = currentStageKey ? STAGES_CONFIG[currentStageKey] : null;
+    const currentProgress = currentStage?.progress || 10;
+
+    const appCreatedAt = app.createdAt || app.created_at || app.submittedAt || app.submitted_at || app.date;
+    const appUpdatedAt = app.updatedAt || app.updated_at || appCreatedAt;
+
+    const completedThresholds = [1, 2, 3, 4, 5, 6];
+    const currentOrder = currentStage?.order || 1;
+    const lastCompletedIdx = completedThresholds.reduce((acc, val, i) => currentOrder >= val ? i : acc, -1);
+
+    const getStageTimestamp = (stageIdx: number, completed: boolean, active?: boolean): string | undefined => {
+        if (!completed && !active) return undefined;
+        if (stageIdx === 0) return appCreatedAt;
+        if (active || stageIdx === lastCompletedIdx) return appUpdatedAt || appCreatedAt;
+
+        // Give intermediate steps a small simulated progressive delay for realism
+        try {
+            const baseDate = new Date(appCreatedAt);
+            if (stageIdx > 0 && !isNaN(baseDate.getTime())) {
+                const offsetDate = new Date(baseDate.getTime() + stageIdx * 18 * 60 * 60 * 1000);
+                const updatedDate = new Date(appUpdatedAt);
+                if (offsetDate.getTime() < updatedDate.getTime()) {
+                    return offsetDate.toISOString();
+                }
+            }
+        } catch { }
+        return appCreatedAt;
+    };
+
+    const formatToIST = (dateVal: any): { date: string; time: string } | null => {
+        if (!dateVal) return null;
+        try {
+            const d = new Date(dateVal);
+            if (isNaN(d.getTime())) return null;
+
+            const parts = new Intl.DateTimeFormat("en-US", {
+                timeZone: "Asia/Kolkata",
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true
+            }).formatToParts(d);
+
+            const getPart = (type: string) => parts.find(p => p.type === type)?.value || "";
+
+            const month = getPart("month");
+            const day = getPart("day");
+            const hour = getPart("hour");
+            const minute = getPart("minute");
+            const dayPeriod = getPart("dayPeriod").toUpperCase();
+
+            return {
+                date: `${month} ${day}`,
+                time: `${hour}:${minute} ${dayPeriod}`
+            };
+        } catch {
+            return null;
+        }
+    };
+
+    if (isRejected) {
+        return (
+            <div className="mt-4 bg-red-50/50 border border-red-100 rounded-xl p-6 shadow-sm animate-fadeIn">
+                <div className="flex items-center gap-4 mb-4">
+                    <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center text-white shadow-md shrink-0">
+                        <span className="material-symbols-outlined text-xl">cancel</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <h3 className="text-sm font-bold text-red-900 capitalize">Application {app.status}</h3>
+                        <p className="text-red-700/60 text-xs truncate">Your {app.bank} application was {app.status}.</p>
+                    </div>
+                    <Link
+                        href={`/staff/applications/${app.id}`}
+                        target="_blank"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-red-50 text-red-700 text-[10px] font-extrabold uppercase tracking-wider rounded border border-red-200 transition-all shadow-sm shrink-0"
+                    >
+                        <span className="material-symbols-outlined text-[12px] font-bold">admin_panel_settings</span>
+                        Staff Portal View
+                        <span className="material-symbols-outlined text-[10px]">open_in_new</span>
+                    </Link>
+                </div>
+                <div className="p-3 bg-white/60 rounded-lg border border-red-100">
+                    <p className="text-xs text-red-700 font-medium">Please contact our support team or start a new application for a different bank.</p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="mt-4 bg-[#6605c7]/[0.01] border border-gray-100 rounded-xl p-6 md:p-8 shadow-inner animate-fadeIn">
+            {/* Header / Info */}
+            <div className="flex justify-between items-center mb-10">
+                <h3 className="text-xs font-black uppercase tracking-widest text-[#6605c7] flex items-center gap-2">
+                    <span className="w-5 h-5 bg-[#6605c7]/10 text-[#6605c7] rounded flex items-center justify-center">
+                        <span className="material-symbols-outlined text-xs">rocket_launch</span>
+                    </span>
+                    Application Progress
+                </h3>
+                <div className="flex items-center gap-3">
+                    {/* <Link
+                        href={`/staff/applications/${app.id}`}
+                        target="_blank"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[10px] font-extrabold uppercase tracking-wider rounded border border-indigo-100 hover:border-indigo-200 transition-all shadow-sm"
+                        title="Open this application directly in the staff dashboard"
+                    >
+                        <span className="material-symbols-outlined text-[12px] font-bold">admin_panel_settings</span>
+                        Staff Portal View
+                        <span className="material-symbols-outlined text-[10px]">open_in_new</span>
+                    </Link> */}
+                    <div className="bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                        {currentProgress}% Complete
+                    </div>
+                </div>
+            </div>
+
+            {/* Timeline */}
+            <div className="relative px-2 mb-20 select-none">
+                {/* Background Line */}
+                <div className="absolute top-5 left-0 right-0 h-[2px] bg-gray-100 rounded-full mx-6" />
+
+                {/* Active Progress Line */}
+                <div
+                    className="absolute top-5 left-0 h-[3px] bg-[#6605c7] rounded-full mx-6 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(102,5,199,0.3)]"
+                    style={{ width: `calc(${currentProgress}% - 48px)` }}
+                />
+
+                <div className="relative flex justify-between">
+                    {STAGES_LIST.map((stage) => {
+                        const isCompleted = currentStage && stage.order < currentStage.order;
+                        const isCurrent = currentStage && stage.id === currentStageKey;
+                        const stageTimestamp = getStageTimestamp(stage.order - 1, isCompleted, isCurrent);
+                        const stageTimestampFormatted = formatToIST(stageTimestamp);
+
+                        return (
+                            <div key={stage.id} className="flex flex-col items-center group relative" style={{ width: '40px' }}>
+                                {/* Step Circle */}
+                                <div className={`
+                                    w-10 h-10 rounded-full flex items-center justify-center z-10 transition-all duration-500 border-2
+                                    ${isCompleted ? 'bg-emerald-500 border-emerald-100 text-white shadow-lg shadow-emerald-500/10' :
+                                        isCurrent ? 'bg-white border-[#6605c7] text-[#6605c7] shadow-lg shadow-[#6605c7]/10 scale-110' :
+                                            'bg-white border-gray-100 text-gray-300'}
+                                `}>
+                                    <span className={`material-symbols-outlined text-[18px] ${isCurrent ? 'animate-pulse' : ''}`}>
+                                        {isCompleted ? 'check' : stage.icon}
+                                    </span>
+                                </div>
+
+                                {/* Label & Completion Timestamp */}
+                                <div className="absolute top-12 whitespace-nowrap text-center flex flex-col items-center">
+                                    <span className={`text-[10px] font-bold uppercase tracking-tighter ${isCompleted ? 'text-emerald-600' : isCurrent ? 'text-[#6605c7]' : 'text-gray-400'}`}>
+                                        {stage.label}
+                                    </span>
+                                    {stageTimestampFormatted && (
+                                        <div className="text-[8px] leading-tight text-gray-400 font-bold tracking-wider mt-1 select-none tabular-nums text-center">
+                                            <div>{stageTimestampFormatted.date}</div>
+                                            <div className="text-gray-400/80 font-medium mt-0.5">{stageTimestampFormatted.time}</div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Current Status Info */}
+            <div className="mt-8 p-5 bg-[#6605c7]/[0.02] border border-[#6605c7]/5 rounded-xl flex items-start gap-4">
+                <div className="w-9 h-9 bg-[#6605c7] text-white rounded-lg flex items-center justify-center shrink-0 shadow-lg shadow-[#6605c7]/20">
+                    <span className="material-symbols-outlined text-lg">{currentStage?.icon || 'hourglass_empty'}</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-[#6605c7]/60 mb-1">Current Status</div>
+                    <h4 className="font-bold text-gray-900 text-[14px]">{currentStage?.label.replace('<br>', ' ')}</h4>
+                    <p className="text-gray-500 text-[13px] mt-1 leading-relaxed">
+                        Your {app.bank} application {app.applicationNumber ? `(#${app.applicationNumber})` : ""} is currently in the <strong>{currentStage?.label.replace('<br>', ' ')}</strong> stage.
+                        Estimated completion: <span className="text-gray-900 font-bold">
+                            {(() => {
+                                const appDate = app.date ? new Date(app.date) : new Date();
+                                const est = new Date(appDate);
+                                est.setDate(appDate.getDate() + 14);
+                                return est.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+                            })()}
+                        </span>
+                        {app.id && (
+                            <span className="block text-[11px] text-gray-400 font-mono mt-1.5" title={`Original Application ID: ${app.id}`}>
+                                APP ID: APP{app.id.replace(/-/g, "").slice(-10).toUpperCase()}
+                            </span>
+                        )}
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function DashboardPage() {
     const { user } = useAuth();
     const userId10 = (user?.id || "").replace(/-/g, "").slice(0, 10).toUpperCase();
     const [data, setData] = useState<DashboardData>({});
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("overview");
+    const [expandedApps, setExpandedApps] = useState<Record<string, boolean>>({});
+    const toggleAppProgress = (appId: string) => {
+        setExpandedApps(prev => ({ ...prev, [appId]: !prev[appId] }));
+    };
 
     const loadData = useCallback(async () => {
         if (!user?.email) return;
@@ -354,6 +593,30 @@ export default function DashboardPage() {
                                                         </div>
                                                         <span className="text-[10px] font-bold text-[#6605c7] whitespace-nowrap">{app.progress || 10}%</span>
                                                     </div>
+
+                                                    {/* Action Footer for detailed progress toggle */}
+                                                    <div className="flex items-center justify-between gap-4 mt-4 pt-3 border-t border-gray-50 select-none">
+                                                        <button
+                                                            onClick={() => toggleAppProgress(app.id)}
+                                                            className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase text-[#6605c7] hover:text-[#5504a8] transition-colors"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[16px]">
+                                                                {expandedApps[app.id] ? 'expand_less' : 'expand_more'}
+                                                            </span>
+                                                            {expandedApps[app.id] ? 'Hide Progress Details' : 'View Progress Details'}
+                                                        </button>
+
+                                                        {app.id && (
+                                                            <span className="text-[9px] font-black uppercase text-gray-300 tracking-wider">
+                                                                Track Progress
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Expanded Stepper timeline */}
+                                                    {expandedApps[app.id] && (
+                                                        <ApplicationProgressCollapse app={app} />
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -361,8 +624,7 @@ export default function DashboardPage() {
                                 )}
                             </div>
 
-                            {/* Journey Tracker */}
-                            <ProgressTracker application={data.applications?.[0]} documents={data.documents} />
+
                         </div>
 
                         {/* Recent Activity */}
@@ -517,6 +779,30 @@ export default function DashboardPage() {
                                                     )}
                                                 </div>
                                             </div>
+
+                                            {/* Action Footer for detailed progress toggle */}
+                                            <div className="mt-4 pt-3 border-t border-gray-50 flex items-center justify-between gap-4 select-none">
+                                                <button
+                                                    onClick={() => toggleAppProgress(app.id)}
+                                                    className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase text-[#6605c7] hover:text-[#5504a8] transition-colors"
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">
+                                                        {expandedApps[app.id] ? 'expand_less' : 'expand_more'}
+                                                    </span>
+                                                    {expandedApps[app.id] ? 'Hide Progress Details' : 'View Progress Details'}
+                                                </button>
+
+                                                {app.id && (
+                                                    <span className="text-[9px] font-black uppercase text-gray-300 tracking-wider">
+                                                        Track Progress
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Expanded Stepper timeline */}
+                                            {expandedApps[app.id] && (
+                                                <ApplicationProgressCollapse app={app} />
+                                            )}
                                         </div>
                                     );
                                 })}

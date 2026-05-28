@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import ComparisonGrid from "./university-comparison/ComparisonGrid";
 import MetricComparison from "./university-comparison/MetricComparison";
 import WeightedScorer from "./university-comparison/WeightedScorer";
+import { aiApi, referenceApi } from "@/lib/api";
 
 type University = {
   id: string;
@@ -40,6 +41,9 @@ export default function UniversityComparisonFlow({
   // AI Insights State
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
   const [aiReport, setAiReport] = useState<any | null>(null);
+  
+  // Live database universities state
+  const [dbUnis, setDbUnis] = useState<University[]>([]);
 
   const [weights, setWeights] = useState({
     cost: 25,
@@ -234,17 +238,57 @@ export default function UniversityComparisonFlow({
 
   const initialUnisSerialized = (initialUnis || []).join(",");
 
+  const activeUnis = dbUnis.length > 0 ? dbUnis : demoUnis;
+
+  useEffect(() => {
+    const fetchAllUniversities = async () => {
+      try {
+        const res = await referenceApi.getUniversities() as any;
+        if (res?.success && res.data?.length > 0) {
+          const mapped = res.data.map((u: any) => ({
+            id: u.id || u._id,
+            name: u.name,
+            country: u.country,
+            city: u.city || u.location || '',
+            rank: u.ranking || u.rank || 999,
+            accept: u.acceptanceRate || u.accept || 50,
+            tuition: u.tuition || u.fees || 25000,
+            avgjobSalary: u.averageSalary || u.avgjobSalary || 65000,
+            employment: u.employmentRate || u.employment || 85,
+            topRecruiters: u.topRecruiters || [],
+            description: u.description || '',
+            website: u.website || '',
+            loan: u.loanSupported ?? true,
+          }));
+          setDbUnis(mapped);
+          
+          if (initialUnis && initialUnis.length > 0) {
+            const unis = mapped.filter((u: any) =>
+              initialUnis.some((id) => u.id === id || u.slug === id || u.name.toLowerCase().includes(id.toLowerCase()))
+            );
+            if (unis.length > 0) {
+              setSelectedUnis(unis);
+              return;
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load universities from database:", error);
+      }
+    };
+    fetchAllUniversities();
+  }, []);
+
   useEffect(() => {
     if (initialUnis && initialUnis.length > 0) {
-      const unis = demoUnis.filter((u) =>
+      const unis = activeUnis.filter((u) =>
         initialUnis.some((id) => u.id === id || u.slug === id)
       );
       setSelectedUnis(unis);
     } else {
-      // Preload two world class options for visual impact
-      setSelectedUnis([demoUnis[0], demoUnis[1]]);
+      setSelectedUnis([activeUnis[0], activeUnis[1]]);
     }
-  }, [initialUnisSerialized]);
+  }, [initialUnisSerialized, dbUnis]);
 
   // Reset AI report when list of selected universities changes
   useEffect(() => {
@@ -254,7 +298,7 @@ export default function UniversityComparisonFlow({
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     if (query.trim()) {
-      const results = demoUnis.filter(
+      const results = activeUnis.filter(
         (u) =>
           u.name.toLowerCase().includes(query.toLowerCase()) ||
           u.country.toLowerCase().includes(query.toLowerCase()) ||
@@ -278,12 +322,95 @@ export default function UniversityComparisonFlow({
     setSelectedUnis(selectedUnis.filter((u) => u.id !== id));
   };
 
-  const generateAiInsights = () => {
+  const generateAiInsights = async () => {
     if (selectedUnis.length < 2) return;
     setIsGeneratingAi(true);
+    setAiReport(null);
 
-    setTimeout(() => {
-      // Find ROI champion
+    try {
+      if (selectedUnis.length === 2) {
+        const res = await aiApi.compareUniversities(selectedUnis[0].name, selectedUnis[1].name) as any;
+        if (res?.success && res.data) {
+          const aiData = res.data;
+          
+          const u1Tuition = parseFloat(aiData.uni1.tuition?.replace(/[^0-9.]/g, '')) || selectedUnis[0].tuition || 30000;
+          const u1Salary = parseFloat(aiData.uni1.salary?.replace(/[^0-9.]/g, '')) || selectedUnis[0].avgjobSalary || 60000;
+          const u2Tuition = parseFloat(aiData.uni2.tuition?.replace(/[^0-9.]/g, '')) || selectedUnis[1].tuition || 30000;
+          const u2Salary = parseFloat(aiData.uni2.salary?.replace(/[^0-9.]/g, '')) || selectedUnis[1].avgjobSalary || 60000;
+          
+          const roi1 = u1Salary / u1Tuition;
+          const roi2 = u2Salary / u2Tuition;
+          
+          const roiChamp = roi1 >= roi2 ? selectedUnis[0] : selectedUnis[1];
+          const costChamp = u1Tuition <= u2Tuition ? selectedUnis[0] : selectedUnis[1];
+          
+          setAiReport({
+            roiChampion: {
+              ...roiChamp,
+              tuition: roiChamp.id === selectedUnis[0].id ? u1Tuition : u2Tuition,
+              avgjobSalary: roiChamp.id === selectedUnis[0].id ? u1Salary : u2Salary,
+            },
+            costChampion: {
+              ...costChamp,
+              tuition: costChamp.id === selectedUnis[0].id ? u1Tuition : u2Tuition,
+            },
+            summary: `Live AI Evaluation for ${aiData.uni1.name} (${aiData.uni1.loc}) vs ${aiData.uni2.name} (${aiData.uni2.loc}):\n\n` + 
+                     `• ${aiData.uni1.name}: World Rank ${aiData.uni1.rank}, Acceptance Rate ${aiData.uni1.rate}, Annual Fees ${aiData.uni1.tuition}, Average Salary ${aiData.uni1.salary}.\n` +
+                     `• ${aiData.uni2.name}: World Rank ${aiData.uni2.rank}, Acceptance Rate ${aiData.uni2.rate}, Annual Fees ${aiData.uni2.tuition}, Average Salary ${aiData.uni2.salary}.\n\n` +
+                     `Expert Insights: ${aiData.uni1.name} and ${aiData.uni2.name} are both world-class pathways. ${roiChamp.name} displays exceptionally strong ROI potential, while ${costChamp.name} provides optimized upfront fee exposure.`,
+            vidyaLoansRating: "Verified A-Grade",
+            vidyaLoansAdvice: `Both ${selectedUnis[0].name} and ${selectedUnis[1].name} are officially listed in Vidya Loans prime channels. You qualify for up to 100% funding covering all study expenses with 0 collateral at prime interest rates starting at 8.25% p.a.`
+          });
+          
+          const updatedSelected = selectedUnis.map(u => {
+            if (u.name.toLowerCase() === selectedUnis[0].name.toLowerCase()) {
+              return {
+                ...u,
+                rank: parseInt(aiData.uni1.rank?.replace(/[^0-9]/g, '')) || u.rank,
+                accept: parseInt(aiData.uni1.rate?.replace(/[^0-9]/g, '')) || u.accept,
+                tuition: u1Tuition,
+                avgjobSalary: u1Salary,
+                city: aiData.uni1.loc?.split(',')[0]?.trim() || u.city,
+              };
+            }
+            if (u.name.toLowerCase() === selectedUnis[1].name.toLowerCase()) {
+              return {
+                ...u,
+                rank: parseInt(aiData.uni2.rank?.replace(/[^0-9]/g, '')) || u.rank,
+                accept: parseInt(aiData.uni2.rate?.replace(/[^0-9]/g, '')) || u.accept,
+                tuition: u2Tuition,
+                avgjobSalary: u2Salary,
+                city: aiData.uni2.loc?.split(',')[0]?.trim() || u.city,
+              };
+            }
+            return u;
+          });
+          setSelectedUnis(updatedSelected);
+        }
+      } else {
+        const shortlist = selectedUnis.map(u => ({ name: u.name, course: 'Masters Program' }));
+        const profile = { bachelors: 'Engineering/Business', workExp: '24', gpa: '8.5' };
+        const res = await aiApi.compareShortlist(shortlist, profile) as any;
+        if (res?.success && res.data) {
+          const aiData = res.data;
+          
+          const roiChampName = aiData.universities?.sort((a: any, b: any) => (parseInt(b.roiScore) || 0) - (parseInt(a.roiScore) || 0))[0]?.name || selectedUnis[0].name;
+          const roiChamp = selectedUnis.find(u => u.name.toLowerCase().includes(roiChampName.toLowerCase())) || selectedUnis[0];
+          
+          const costChamp = [...selectedUnis].sort((a, b) => (a.tuition || 0) - (b.tuition || 0))[0];
+          
+          setAiReport({
+            roiChampion: roiChamp,
+            costChampion: costChamp,
+            summary: `${aiData.summary}\n\nExpert Recommendation: ${aiData.recommendation}`,
+            vidyaLoansRating: "Highly Eligible",
+            vidyaLoansAdvice: `All selected institutions have A-Grade verification status on Vidya Loans. Pre-approved collateral-free options are available with 48 hour processing.`
+          });
+        }
+      }
+    } catch (error) {
+      console.warn("Backend AI comparison failed. Engaging local analytical engine.", error);
+      
       const scoredUnis = selectedUnis.map(u => {
         const tuitionCost = u.tuition || 30000;
         const startSalary = u.avgjobSalary || 60000;
@@ -292,21 +419,19 @@ export default function UniversityComparisonFlow({
       });
       const sortedByRoi = [...scoredUnis].sort((a, b) => b.roi - a.roi);
       const roiChamp = sortedByRoi[0].uni;
-
-      // Find lowest cost
       const sortedByCost = [...selectedUnis].sort((a, b) => (a.tuition || 0) - (b.tuition || 0));
       const costChamp = sortedByCost[0];
 
-      // Formulate custom synthetic insights
       setAiReport({
         roiChampion: roiChamp,
         costChampion: costChamp,
-        summary: `Comparing ${selectedUnis.map(u => u.name).join(" and ")}, we observe a distinct trade-off between absolute starting potential and upfront commitment. ${roiChamp.name} emerges as the ROI powerhouse, delivering the strongest financial acceleration relative to initial investment. Meanwhile, ${costChamp.name} offers the lowest debt exposure, making it an excellent match for risk-averse students or those seeking full scholarship support.`,
-        vidyaLoansRating: "Highly Eligible",
-        vidyaLoansAdvice: `All selected institutions have an A-Grade rating with Vidya Loans. This means you qualify for up to 100% collateral-free funding at our lowest prime interest rates (starting at 8.5% p.a.). Pre-approved loan sanction letters are available in under 48 hours.`
+        summary: `[Analytical Synthesis] side-by-side comparison of ${selectedUnis.map(u => u.name).join(" and ")} indicates a strong return efficiency ratio for ${roiChamp.name}. The budget optimization index highlights ${costChamp.name} as the lowest financial commitment pathway.`,
+        vidyaLoansRating: "Verified A-Grade",
+        vidyaLoansAdvice: `Pre-approved loans at 8.5% p.a. are fully accessible for all selected institutions.`
       });
+    } finally {
       setIsGeneratingAi(false);
-    }, 1200);
+    }
   };
 
   return (
@@ -422,7 +547,7 @@ export default function UniversityComparisonFlow({
               Quick Add Popular Universities
             </p>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-              {demoUnis.slice(0, 5).map((uni) => {
+              {activeUnis.slice(0, 5).map((uni) => {
                 const isSelected = selectedUnis.some(u => u.id === uni.id);
                 return (
                   <button

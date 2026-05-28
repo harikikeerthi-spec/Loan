@@ -70,7 +70,7 @@ export class EmailService {
     const mailOptions = {
       from: process.env.EMAIL_FROM || '"Vidya Loan" <noreply@vidyaloan.com>',
       to: email,
-      subject: `Action Required: DigiLocker Document Consent Request [${timestamp}]`,
+      subject: `Action Required: DigiLocker Document Consent Request `,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
           <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 24px;">

@@ -6,7 +6,7 @@ export class OpenRouterService {
     private readonly apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
     private readonly apiKey = process.env.OPENROUTER_API_KEY;
 
-    async chat(prompt: string, model: string = 'meta-llama/llama-3.3-8b-instruct:free'): Promise<string> {
+    async chat(prompt: string, model: string = 'openrouter/free'): Promise<string> {
         if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') {
             console.warn('OPENROUTER_API_KEY is not set. Using mock response or failing.');
             throw new Error('OPENROUTER_API_KEY is not configured in environment variables.');
@@ -68,7 +68,7 @@ export class OpenRouterService {
         }
     }
 
-    async getJson<T>(prompt: string, model: string = 'meta-llama/llama-3.3-8b-instruct:free'): Promise<T> {
+    async getJson<T>(prompt: string, model: string = 'openrouter/free'): Promise<T> {
         const jsonPrompt = `${prompt}\n\nIMPORTANT: Respond ONLY with valid JSON. Do not include markdown formatting.`;
         if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') throw new Error('OPENROUTER_API_KEY is not configured');
 
