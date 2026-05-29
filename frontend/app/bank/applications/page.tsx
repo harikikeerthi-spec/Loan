@@ -518,7 +518,7 @@ export default function ApplicationManagement() {
                                     <div>
                                         <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">User ID</span>
                                         <span className="text-sm font-bold text-gray-900 font-mono" title={selectedApp.userId || selectedApp.studentId}>
-                                            {(selectedApp.userId || selectedApp.studentId || "—").replace(/-/g, "").slice(0, 10).toUpperCase()}
+                                            {selectedApp.userId || selectedApp.studentId || "—"}
                                         </span>
                                     </div>
                                     <div>

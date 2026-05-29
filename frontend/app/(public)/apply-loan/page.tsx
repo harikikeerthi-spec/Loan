@@ -51,6 +51,7 @@ export default function ApplyLoanPage() {
         address: "",
         notes: "",
         admissionStatus: "waiting", // confirmed, conditional, waiting
+        intakeSeason: "",
     });
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
@@ -106,6 +107,7 @@ export default function ApplyLoanPage() {
                     email: prev.email || user?.email || "",
                     phone: prev.phone || user?.phoneNumber || "",
                     dateOfBirth: prev.dateOfBirth || user?.dateOfBirth || "",
+                    intakeSeason: prev.intakeSeason || user?.intakeSeason || "",
                 }));
                 if (user) setProfileLoaded(true);
             }
@@ -135,6 +137,7 @@ export default function ApplyLoanPage() {
         const cleanAnnualFee = formData.annualFee.replace(/,/g, "");
         if (!cleanAmount || Number(cleanAmount) <= 0) errors.amount = "Please enter a valid loan amount";
         if (!cleanAnnualFee || Number(cleanAnnualFee) <= 0) errors.annualFee = "Please enter annual tuition fee";
+        if (!formData.intakeSeason) errors.intakeSeason = "Please select target intake season";
         setStepErrors(errors);
         return Object.keys(errors).length === 0;
     };
@@ -202,6 +205,7 @@ export default function ApplyLoanPage() {
                         lastName: formData.lastName,
                         phoneNumber: formData.phone,
                         dateOfBirth: formData.dateOfBirth, // Custom DatePicker already returns DD-MM-YYYY
+                        intakeSeason: formData.intakeSeason,
                     });
                     await refreshUser();
                 } catch (err) {
@@ -401,6 +405,20 @@ export default function ApplyLoanPage() {
                                                 { value: "planning", label: "Planning Stage" }
                                             ]} error={stepErrors.admissionStatus} required />
                                     </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <SelectField label="Target Intake Season" icon="calendar_today" value={formData.intakeSeason} onChange={(v) => update("intakeSeason", v)}
+                                            options={(() => {
+                                                const cy = new Date().getFullYear();
+                                                return [
+                                                    { value: `Fall ${cy}`, label: `Fall ${cy}` },
+                                                    { value: `Spring ${cy + 1}`, label: `Spring ${cy + 1}` },
+                                                    { value: `Summer ${cy + 1}`, label: `Summer ${cy + 1}` },
+                                                    { value: `Fall ${cy + 1}`, label: `Fall ${cy + 1}` },
+                                                    { value: `Spring ${cy + 2}`, label: `Spring ${cy + 2}` }
+                                                ];
+                                            })()} error={stepErrors.intakeSeason} required />
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -505,6 +523,7 @@ export default function ApplyLoanPage() {
                                                 { label: "Annual Tuition", value: formData.annualFee ? `₹${Number(formData.annualFee.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
                                                 { label: "Destination", value: formData.country },
                                                 { label: "University", value: formData.university },
+                                                { label: "Target Intake", value: formData.intakeSeason },
                                             ].filter((f) => f.value).map((f) => (
                                                 <div key={f.label} className="flex justify-between items-center py-3 border-b border-gray-100/50 last:border-0">
                                                     <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">{f.label}</span>

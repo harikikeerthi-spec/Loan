@@ -268,11 +268,11 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
                                 return est.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
                             })()}
                         </span>
-                        {app.id && (
-                            <span className="block text-[11px] text-gray-400 font-mono mt-1.5" title={`Original Application ID: ${app.id}`}>
-                                APP ID: APP{app.id.replace(/-/g, "").slice(-10).toUpperCase()}
-                            </span>
-                        )}
+                            {app.id && (
+                                <span className="block text-[11px] text-gray-400 font-mono mt-1.5" title={`Application ID: ${app.id}`}>
+                                    App #: {app.applicationNumber || app.id}
+                                </span>
+                            )}
                     </p>
                 </div>
             </div>
@@ -282,7 +282,8 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
 
 export default function DashboardPage() {
     const { user } = useAuth();
-    const userId10 = (user?.id || "").replace(/-/g, "").slice(0, 10).toUpperCase();
+    // The new ID is already human-readable (e.g. VL-STU-2026-54097) — no mangling needed
+    const displayUserId = user?.id || "";
     const [data, setData] = useState<DashboardData>({});
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("overview");
@@ -586,7 +587,7 @@ export default function DashboardPage() {
                                                                     <span className="font-semibold text-gray-700">₹{app.amount?.toLocaleString("en-IN")}</span>
                                                                     {app.universityName && <span>• {app.universityName}</span>}
                                                                     {app.country && <span>• {app.country}</span>}
-                                                                    {app.id && <span className="font-mono text-[10px] text-gray-400" title={`Original Application ID: ${app.id}`}>• APP ID: APP{app.id.replace(/-/g, "").slice(-10).toUpperCase()}</span>}
+                                                                    {app.id && <span className="font-mono text-[10px] text-gray-400" title={`Application ID: ${app.id}`}>• App #: {app.applicationNumber || app.id}</span>}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -755,8 +756,8 @@ export default function DashboardPage() {
                                                                 </span>
                                                             )}
                                                             {app.id && (
-                                                                <span className="flex items-center gap-1 font-mono text-[10px] text-gray-400" title={`Original Application ID: ${app.id}`}>
-                                                                    • APP ID: APP{app.id.replace(/-/g, "").slice(-10).toUpperCase()}
+                                                                <span className="flex items-center gap-1 font-mono text-[10px] text-gray-400" title={`Application ID: ${app.id}`}>
+                                                                    • App #: {app.applicationNumber || app.id}
                                                                 </span>
                                                             )}
                                                         </div>
@@ -837,7 +838,7 @@ export default function DashboardPage() {
                             </div>
                             <div className="grid grid-cols-2 gap-x-8 gap-y-6">
                                 {[
-                                    { label: "User ID", value: userId10 || "—" },
+                                    { label: "User ID", value: displayUserId || "—" },
                                     { label: "First Name", value: user?.firstName || "—" },
                                     { label: "Last Name", value: user?.lastName || "—" },
                                     { label: "Email", value: user?.email || "—" },

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
@@ -450,7 +450,18 @@ export default function ConnectedPage() {
 
 // ─── Dynamic Cohort Application Form ─────────────────────────────────────────
 
-const INTAKE_OPTIONS = ["Fall 2025", "Spring 2026", "Fall 2026", "Fall 2027"];
+const INTAKE_OPTIONS = (() => {
+    const cy = new Date().getFullYear();
+    return [
+        `Fall ${cy}`,
+        `Spring ${cy + 1}`,
+        `Summer ${cy + 1}`,
+        `Fall ${cy + 1}`,
+        `Spring ${cy + 2}`,
+    ];
+})();
+const DEFAULT_TARGET_INTAKE = `Fall ${new Date().getFullYear()}`;
+
 const DESTINATION_OPTIONS = ["USA", "UK", "Canada", "Australia", "Germany", "Ireland", "Other"];
 
 function CohortApplicationForm() {
@@ -458,7 +469,7 @@ function CohortApplicationForm() {
         fullName: "",
         email: "",
         phone: "",
-        targetIntake: "Fall 2026",
+        targetIntake: DEFAULT_TARGET_INTAKE,
         destination: "",
         university: "",
         course: "",
@@ -535,7 +546,7 @@ function CohortApplicationForm() {
                     {form.targetIntake} Cohort · {form.destination || "Global"}
                 </div>
                 <button
-                    onClick={() => { setSubmitted(false); setForm({ fullName: "", email: "", phone: "", targetIntake: "Fall 2026", destination: "", university: "", course: "", message: "" }); }}
+                    onClick={() => { setSubmitted(false); setForm({ fullName: "", email: "", phone: "", targetIntake: DEFAULT_TARGET_INTAKE, destination: "", university: "", course: "", message: "" }); }}
                     className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white/60 transition-colors mt-2"
                 >
                     Submit another application

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import JourneyPath from "../../components/JourneyPath";
@@ -9,7 +9,7 @@ import { lenders, features } from "../../data/home";
 import { fetchTopGoogleReviews } from "../../lib/googleReviews";
 
 export const metadata: Metadata = {
-    title: "Vidya Loans - Fund Your Dream Education Abroad",
+    title: "Vidya Loans - Find Your Dream Education Abroad",
     description:
         "Compare education loans from 50+ banks & NBFCs. Get the best rates, quick approvals, and expert guidance — all in one place.",
 };
@@ -98,7 +98,7 @@ export default async function HomePage() {
                             </div>
 
                             <h1 className="text-4xl md:text-6xl font-bold font-display leading-[1.1] mb-6 text-[#1a1626] tracking-tight">
-                                Fund Your{' '}
+                                Find Your{' '}
                                 <span className="text-[#6605c7]">Dream</span>
                                 <br />
                                 Education Abroad

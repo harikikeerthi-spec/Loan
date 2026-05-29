@@ -322,7 +322,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                                     className="text-[14px] font-semibold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer transition-all inline-flex items-center gap-1"
                                                     title="Click to view Student Profile"
                                                 >
-                                                    {application.userId.slice(0, 10).toUpperCase()}
+                                                    {application.userId}
                                                     <span className="material-symbols-outlined text-[14px]">open_in_new</span>
                                                 </p>
                                             ) : (

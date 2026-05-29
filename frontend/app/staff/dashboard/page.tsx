@@ -4523,11 +4523,18 @@ export default function StaffDashboardPage() {
                                                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Target Intake Season*</label>
                                                                 <select value={newStudent.intakeSeason} onChange={e => setNewStudent({ ...newStudent, intakeSeason: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
                                                                     <option value="">Select Intake...</option>
-                                                                    <option value="Fall 2026">Fall 2026</option>
-                                                                    <option value="Spring 2026">Spring 2026</option>
-                                                                    <option value="Summer 2026">Summer 2026</option>
-                                                                    <option value="Fall 2027">Fall 2027</option>
-                                                                    <option value="Spring 2027">Spring 2027</option>
+                                                                    {(() => {
+                                                                        const cy = new Date().getFullYear();
+                                                                        return [
+                                                                            `Fall ${cy}`,
+                                                                            `Spring ${cy + 1}`,
+                                                                            `Summer ${cy + 1}`,
+                                                                            `Fall ${cy + 1}`,
+                                                                            `Spring ${cy + 2}`,
+                                                                        ].map(opt => (
+                                                                            <option key={opt} value={opt}>{opt}</option>
+                                                                        ));
+                                                                    })()}
                                                                 </select>
                                                             </div>
                                                             <div>
@@ -7278,23 +7285,23 @@ export default function StaffDashboardPage() {
                                                                                     const queryStr = params.toString();
                                                                                     if (uid) window.open(`/staff/users/${uid}${queryStr ? `?${queryStr}` : ''}`, '_blank');
                                                                                 }}
-                                                                                className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#060708] leading-tight truncate cursor-pointer hover:text-slate-600 hover:underline transition-all"
+                                                                                className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#060708] leading-tight truncate cursor-pointer hover:text-slate-600 transition-all"
                                                                                 title="Click to view Student Profile"
                                                                             >
                                                                                 {item.firstName || item.student?.firstName || '—'} {item.lastName || item.student?.lastName || ''}
                                                                             </p>
                                                                             <p
                                                                                 onClick={() => setSelectedApp(item)}
-                                                                                className="text-[9px] text-slate-500 hover:text-slate-600 hover:underline cursor-pointer transition-all font-black mt-1 uppercase tracking-widest inline-block"
+                                                                                className="text-[9px] text-slate-500 hover:text-slate-600 cursor-pointer transition-all font-black mt-1 uppercase tracking-widest inline-block"
                                                                                 title="Click to view Application Details"
                                                                             >
-                                                                                APP-{(item.id || item._id || 'UNKNOWN').slice(-6)}
+                                                                                {item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`}
                                                                             </p>
                                                                         </div>
                                                                     </div>
                                                                 </td>
                                                                 <td className="sticky left-[250px] z-10 bg-white px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
-                                                                    <p className="text-[12px] font-mono font-bold text-slate-900 truncate">{String(item.userId || item.user_id || item.student?.id || item.student?._id || '—').slice(0, 10).toUpperCase()}</p>
+                                                                    <p className="text-[12px] font-mono font-bold text-slate-900">{String(item.userId || item.user_id || item.student?.id || item.student?._id || '—')}</p>
                                                                     <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1">User ID</p>
                                                                 </td>
                                                                 <td className="sticky left-[420px] z-10 bg-white px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
@@ -7312,7 +7319,7 @@ export default function StaffDashboardPage() {
                                                                             <Link
                                                                                 href={`/university/${slug}`}
                                                                                 target="_blank"
-                                                                                className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#6605c7] hover:text-[#5504a7] hover:underline cursor-pointer transition-all block truncate max-w-[180px]"
+                                                                                className="text-[16px] font-['Playfair_Display',serif] font-bold text-black hover:text-slate-800 cursor-pointer transition-all block truncate max-w-[180px]"
                                                                                 title="Click to view University Details"
                                                                             >
                                                                                 {collegeName}
@@ -7461,7 +7468,7 @@ export default function StaffDashboardPage() {
                                                                                 {item.firstName || '—'} {item.lastName || ''}
                                                                             </p>
                                                                             <p className="text-[12px] text-slate-900 font-bold font-mono mt-1">
-                                                                                ID: {(item.id || item._id || '').slice(0, 10).toUpperCase()}
+                                                                                ID: {item.id || item._id || ''}
                                                                             </p>
                                                                         </div>
                                                                     </div>
@@ -7564,14 +7571,14 @@ export default function StaffDashboardPage() {
                                                                             className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 flex items-center justify-center transition-all shadow-sm"
                                                                             title="View Profile"
                                                                         >
-                                                                            <span className="material-symbols-outlined text-[16px]">account_circle</span>
+                                                                            <span className="material-symbols-outlined text-[16px]">visibility</span>
                                                                         </button>
                                                                         <button
                                                                             onClick={() => { setAutoStartUser(item); navigateToSection("chat_customer"); }}
                                                                             className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 flex items-center justify-center transition-all shadow-sm"
                                                                             title="Direct Message"
                                                                         >
-                                                                            <span className="material-symbols-outlined text-[16px]">chat</span>
+                                                                            <span className="material-symbols-outlined text-[16px]">chat_bubble</span>
                                                                         </button>
                                                                     </div>
                                                                 </td>

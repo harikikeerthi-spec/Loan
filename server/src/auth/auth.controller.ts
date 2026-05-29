@@ -304,10 +304,7 @@ export class AuthController {
       };
     } catch (error) {
       console.error('Create application error:', error);
-      return {
-        success: false,
-        message: 'Failed to create application',
-      };
+      throw error;
     }
   }
 

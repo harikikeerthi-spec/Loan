@@ -229,7 +229,7 @@ export default function ProfilePage() {
                                         </button>
                                         <button 
                                             onClick={handleSave} 
-                                            disabled={saving || (form.phoneNumber && !isPhoneValid(form.phoneNumber))} 
+                                            disabled={saving || !!(form.phoneNumber && !isPhoneValid(form.phoneNumber))} 
                                             className="flex-1 py-2.5 bg-[#6605c7] text-white text-xs font-bold rounded-lg disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-[#5504a8] transition-all shadow-sm"
                                         >
                                             {saving && <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>}
