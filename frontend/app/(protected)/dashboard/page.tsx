@@ -213,8 +213,8 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
 
                 <div className="relative flex justify-between">
                     {STAGES_LIST.map((stage) => {
-                        const isCompleted = currentStage && stage.order < currentStage.order;
-                        const isCurrent = currentStage && stage.id === currentStageKey;
+                        const isCompleted = !!(currentStage && stage.order < currentStage.order);
+                        const isCurrent = !!(currentStage && stage.id === currentStageKey);
                         const stageTimestamp = getStageTimestamp(stage.order - 1, isCompleted, isCurrent);
                         const stageTimestampFormatted = formatToIST(stageTimestamp);
 
@@ -386,12 +386,20 @@ export default function DashboardPage() {
                     </div>
                     <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                         <div>
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#6605c7]/10 text-[#6605c7] text-[10px] font-bold uppercase tracking-wider mb-4">
-                                <span className="relative flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-                                </span>
-                                Active Account
+                            <div className="flex flex-wrap items-center gap-2 mb-4">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#6605c7]/10 text-[#6605c7] text-[10px] font-bold uppercase tracking-wider">
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                                    </span>
+                                    Active Account
+                                </div>
+                                {user?.id && (
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#6605c7]/5 text-[#6605c7] text-[10px] font-bold uppercase tracking-wider border border-[#6605c7]/10 shadow-sm">
+                                        <span className="material-symbols-outlined text-[12px] text-[#6605c7]">fingerprint</span>
+                                        User ID: {user.id}
+                                    </div>
+                                )}
                             </div>
                             <h1 className="text-2xl md:text-3xl font-bold font-display text-gray-900 mb-2">
                                 Welcome back, {user?.firstName || user?.email?.split("@")[0]}! 👋

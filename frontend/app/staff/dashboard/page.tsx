@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
@@ -7252,7 +7252,11 @@ export default function StaffDashboardPage() {
                                                                         <div
                                                                             onClick={() => {
                                                                                 const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
-                                                                                if (uid) window.open(`/staff/users/${uid}`, '_blank');
+                                                                                const email = item.email || item.student?.email;
+                                                                                const params = new URLSearchParams();
+                                                                                if (email) params.append('email', email);
+                                                                                const queryStr = params.toString();
+                                                                                if (uid) window.open(`/staff/users/${uid}${queryStr ? `?${queryStr}` : ''}`, '_blank');
                                                                             }}
                                                                             className="relative shrink-0 cursor-pointer group/avatar hover:scale-105 transition-all"
                                                                             title="Click to view Student Profile"
@@ -7268,7 +7272,11 @@ export default function StaffDashboardPage() {
                                                                             <p
                                                                                 onClick={() => {
                                                                                     const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
-                                                                                    if (uid) window.open(`/staff/users/${uid}`, '_blank');
+                                                                                    const email = item.email || item.student?.email;
+                                                                                    const params = new URLSearchParams();
+                                                                                    if (email) params.append('email', email);
+                                                                                    const queryStr = params.toString();
+                                                                                    if (uid) window.open(`/staff/users/${uid}${queryStr ? `?${queryStr}` : ''}`, '_blank');
                                                                                 }}
                                                                                 className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#060708] leading-tight truncate cursor-pointer hover:text-slate-600 hover:underline transition-all"
                                                                                 title="Click to view Student Profile"
@@ -7297,7 +7305,22 @@ export default function StaffDashboardPage() {
                                                                     </p>
                                                                 </td>
                                                                 <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
-                                                                    <p className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] truncate max-w-[180px]">{item.universityName || item.college || '—'}</p>
+                                                                    {item.universityName || item.college ? (() => {
+                                                                        const collegeName = item.universityName || item.college;
+                                                                        const slug = collegeName.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                                                                        return (
+                                                                            <Link
+                                                                                href={`/university/${slug}`}
+                                                                                target="_blank"
+                                                                                className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#6605c7] hover:text-[#5504a7] hover:underline cursor-pointer transition-all block truncate max-w-[180px]"
+                                                                                title="Click to view University Details"
+                                                                            >
+                                                                                {collegeName}
+                                                                            </Link>
+                                                                        );
+                                                                    })() : (
+                                                                        <p className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] truncate max-w-[180px]">—</p>
+                                                                    )}
                                                                     <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mt-1">COLLEGE/UNIVERSITY</p>
                                                                 </td>
                                                                 <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
@@ -7530,7 +7553,14 @@ export default function StaffDashboardPage() {
                                                                 <td className="px-5 py-4">
                                                                     <div className="flex items-center justify-center gap-2">
                                                                         <button
-                                                                            onClick={() => window.open(`/staff/users/${item.id || item._id}`, '_blank')}
+                                                                            onClick={() => {
+                                                                                const uid = item.id || item._id;
+                                                                                const email = item.email;
+                                                                                const params = new URLSearchParams();
+                                                                                if (email) params.append('email', email);
+                                                                                const queryStr = params.toString();
+                                                                                window.open(`/staff/users/${uid}${queryStr ? `?${queryStr}` : ''}`, '_blank');
+                                                                            }}
                                                                             className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 flex items-center justify-center transition-all shadow-sm"
                                                                             title="View Profile"
                                                                         >

@@ -740,6 +740,10 @@ export const adminApi = {
         apiFetch(HttpApiPaths.admin.userByAdminId(id), {
             method: "DELETE",
         }),
+    getUserById: (id: string) =>
+        apiFetch(HttpApiPaths.admin.userByAdminId(id), {
+            method: "GET",
+        }),
 
     // Applications
     getApplications: (params?: Record<string, string>) =>

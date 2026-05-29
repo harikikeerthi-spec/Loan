@@ -26,6 +26,11 @@ export default async function UniversityPage({ params }: Props) {
     let u = universities[slug];
 
     if (!u) {
+        const simpleKey = slug.replace(/-university$/, '').replace(/-college$/, '');
+        u = universities[simpleKey];
+    }
+
+    if (!u) {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || (process.env.PORT ? `http://localhost:${process.env.PORT}` : 'http://localhost:3000');
         try {
             const universityName = slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');

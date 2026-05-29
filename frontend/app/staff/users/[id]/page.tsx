@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { adminApi, documentApi, staffProfileApi } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
@@ -12,6 +12,8 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
     const router = useRouter();
     const { user } = useAuth();
     const { id: userId } = use(params);
+    const searchParams = useSearchParams();
+    const emailParam = searchParams.get('email');
 
     const [loading, setLoading] = useState(true);
     const [userData, setUserData] = useState<any>(null);
@@ -25,17 +27,44 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
         const fetchUserDetails = async () => {
             setLoading(true);
             try {
-                // Fetch all users and find the one with matching ID
-                const usersRes = await adminApi.getUsers() as any;
-                const foundUser = usersRes.data?.find((u: any) => u.id === userId || u._id === userId);
-                
+                let foundUser = null;
+
+                // First, try to fetch user directly by ID from the admin endpoint
+                try {
+                    const directRes = await adminApi.getUserById(userId) as any;
+                    if (directRes && (directRes.data || directRes.id)) {
+                        foundUser = directRes.data || directRes;
+                    }
+                } catch (directFetchErr) {
+                    console.log("Direct user fetch by ID failed, falling back to search:", directFetchErr);
+                }
+
+                // If not found, try to fetch by email if provided
+                if (!foundUser && emailParam) {
+                    try {
+                        const emailRes = await adminApi.getUserProfile(emailParam) as any;
+                        if (emailRes && (emailRes.data || emailRes.id)) {
+                            foundUser = emailRes.data || emailRes;
+                        }
+                    } catch (emailFetchErr) {
+                        console.log("Email-based user fetch failed:", emailFetchErr);
+                    }
+                }
+
+                // If still not found, fetch all users and search
+                if (!foundUser) {
+                    const usersRes = await adminApi.getUsers() as any;
+                    foundUser = usersRes.data?.find((u: any) => u.id === userId || u._id === userId);
+                }
+
                 if (foundUser) {
                     setUserData(foundUser);
 
                     // Fetch user's applications
                     const appsRes = await adminApi.getApplications({}) as any;
-                    const userApps = appsRes.data?.filter((app: any) => 
-                        app.userId === userId || app.user_id === userId || app.applicantId === userId
+                    const userApps = appsRes.data?.filter((app: any) =>
+                        app.userId === userId || app.user_id === userId || app.applicantId === userId || app.linkedUserId === userId ||
+                        app.userId === foundUser.id || app.user_id === foundUser.id || app.applicantId === foundUser.id
                     ) || [];
                     setUserApplications(userApps);
 
@@ -65,7 +94,7 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
         };
 
         fetchUserDetails();
-    }, [userId]);
+    }, [userId, emailParam]);
 
     const handleBack = () => {
         router.back();
@@ -123,14 +152,13 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                 <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wider" title={userId}>
                                     ID: {userId.replace(/-/g, "").slice(0, 10).toUpperCase()}
                                 </span>
-                                <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${
-                                    userData.role?.includes("admin")
+                                <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${userData.role?.includes("admin")
                                         ? "bg-slate-900 text-white border-slate-900"
                                         : "bg-indigo-50 text-indigo-700 border-indigo-200"
-                                }`}>
+                                    }`}>
                                     {userData.role?.replace("_", " ") || "USER"}
                                 </span>
-                                { (userData.createdAt || userData.created_at) && (
+                                {(userData.createdAt || userData.created_at) && (
                                     <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
                                         Joined: {new Date(userData.createdAt || userData.created_at).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })} IST (GMT+5:30)
                                     </span>
@@ -150,11 +178,10 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
-                            className={`py-4 font-bold text-[13px] uppercase tracking-wide border-b-2 flex items-center gap-2 transition-colors ${
-                                activeTab === tab.id
+                            className={`py-4 font-bold text-[13px] uppercase tracking-wide border-b-2 flex items-center gap-2 transition-colors ${activeTab === tab.id
                                     ? "border-indigo-600 text-indigo-600"
                                     : "border-transparent text-slate-500 hover:text-slate-700"
-                            }`}
+                                }`}
                         >
                             <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
                             {tab.label}
@@ -259,15 +286,14 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                     <td className="px-6 py-4 text-[12px] font-semibold text-slate-700">{app.bank || "—"}</td>
                                                     <td className="px-6 py-4 text-[12px] font-semibold text-slate-700">{app.loanType || "—"}</td>
                                                     <td className="px-6 py-4">
-                                                        <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${
-                                                            app.status === "approved"
+                                                        <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${app.status === "approved"
                                                                 ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                                                                 : app.status === "rejected"
-                                                                ? "bg-rose-50 text-rose-700 border-rose-200"
-                                                                : app.status === "processing"
-                                                                ? "bg-indigo-50 text-indigo-700 border-indigo-200"
-                                                                : "bg-amber-50 text-amber-700 border-amber-200"
-                                                        }`}>
+                                                                    ? "bg-rose-50 text-rose-700 border-rose-200"
+                                                                    : app.status === "processing"
+                                                                        ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+                                                                        : "bg-amber-50 text-amber-700 border-amber-200"
+                                                            }`}>
                                                             {app.status || "Pending"}
                                                         </span>
                                                     </td>
@@ -294,7 +320,7 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
 
                         {/* Application Details Panel */}
                         {selectedApplication && (
-                            <ApplicationDetailView 
+                            <ApplicationDetailView
                                 application={selectedApplication}
                                 onBack={() => setSelectedApplication(null)}
                                 onAadhaarSaved={(aadhaarNumber) => {
@@ -319,13 +345,12 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                 <p className="text-[10px] font-medium text-slate-500 truncate">{doc.fileName || "No filename"}</p>
                                             </div>
                                             {/* Status badge */}
-                                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide border ${
-                                                doc.status === 'uploaded' || doc.status === 'verified'
+                                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide border ${doc.status === 'uploaded' || doc.status === 'verified'
                                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                                     : doc.status === 'rejected'
-                                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                                    : 'bg-amber-50 text-amber-700 border-amber-200'
-                                            }`}>
+                                                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                                                }`}>
                                                 {doc.status || 'pending'}
                                             </span>
                                         </div>

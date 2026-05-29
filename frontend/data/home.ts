@@ -1,9 +1,9 @@
 export const lenders = [
-    { name: "IDFC First Bank", badge: "Digital First", rate: "10.50% - 12.50%", time: "48 hours", fee: "1% + GST", logo: "/images/lenders/idfc-first-bank.jpg" },
-    { name: "HDFC Credila", badge: "Most Popular", rate: "10.75% - 12.50%", time: "5-7 days", fee: "1% of loan", logo: "/images/lenders/hdfc-credila.png" },
-    { name: "Auxilo Finserve", badge: "Fast Approval", rate: "11.25% - 13.50%", time: "3 days", fee: "1.5% + GST", logo: "/images/lenders/auxilo.png" },
-    { name: "Avanse Financial", badge: "High Limits", rate: "10.99% - 13.00%", time: "4 days", fee: "1% + GST", logo: "/images/lenders/avanse.jpg" },
-    { name: "Poonawalla Fincorp", badge: "Easy Process", rate: "11.50% - 14.50%", time: "3 days", fee: "1.5% + GST", logo: "/images/lenders/poonawalla.png" },
+    { name: "IDFC First Bank", slug: "idfc", badge: "Digital First", rate: "10.50% - 12.50%", time: "48 hours", fee: "1% + GST", logo: "/images/lenders/idfc-first-bank.jpg", link: "https://www.idfcfirstbank.com/personal/loans/education-loan" },
+    { name: "HDFC Credila", slug: "credila", badge: "Most Popular", rate: "10.75% - 12.50%", time: "5-7 days", fee: "1% of loan", logo: "/images/lenders/hdfc-credila.png", link: "" },
+    { name: "Auxilo Finserve", slug: "auxilo", badge: "Fast Approval", rate: "11.25% - 13.50%", time: "3 days", fee: "1.5% + GST", logo: "/images/lenders/auxilo.png", link: "" },
+    { name: "Avanse Financial", slug: "avanse", badge: "High Limits", rate: "10.99% - 13.00%", time: "4 days", fee: "1% + GST", logo: "/images/lenders/avanse.jpg", link: "" },
+    { name: "Poonawalla Fincorp", slug: "poonawalla", badge: "Easy Process", rate: "11.50% - 14.50%", time: "3 days", fee: "1.5% + GST", logo: "/images/lenders/poonawalla.png", link: "" },
 ];
 
 export const features = [

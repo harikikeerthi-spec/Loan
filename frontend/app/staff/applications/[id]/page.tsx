@@ -185,7 +185,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                 onClick={() => {
                                     if (application.userId) window.open(`/staff/users/${application.userId}`, '_blank');
                                 }}
-                                className="text-3xl font-black text-slate-900 tracking-tight cursor-pointer hover:text-slate-900 hover:underline transition-all inline-block"
+                                className="text-3xl font-black text-slate-900 tracking-tight cursor-pointer hover:text-indigo-600 hover:underline transition-all inline-block"
                                 style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}
                                 title="Click to view Student Profile"
                             >
@@ -319,7 +319,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                             {application.userId ? (
                                                 <p
                                                     onClick={() => window.open(`/staff/users/${application.userId}`, '_blank')}
-                                                    className="text-[14px] font-semibold text-slate-900 hover:text-slate-900 hover:underline cursor-pointer transition-all inline-flex items-center gap-1"
+                                                    className="text-[14px] font-semibold text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer transition-all inline-flex items-center gap-1"
                                                     title="Click to view Student Profile"
                                                 >
                                                     {application.userId.slice(0, 10).toUpperCase()}

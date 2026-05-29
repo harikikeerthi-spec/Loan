@@ -5,8 +5,14 @@ import { Injectable } from '@nestjs/common';
 export class OpenRouterService {
     private readonly apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
     private readonly apiKey = process.env.OPENROUTER_API_KEY;
+    private readonly REQUEST_TIMEOUT_MS = 30_000; // 30 seconds
 
-    async chat(prompt: string, model: string = 'openrouter/free'): Promise<string> {
+    /** Create an AbortSignal that auto-aborts after the configured timeout. */
+    private createTimeoutSignal(): AbortSignal {
+        return AbortSignal.timeout(this.REQUEST_TIMEOUT_MS);
+    }
+
+    async chat(prompt: string, model: string = 'google/gemma-3-12b-it:free'): Promise<string> {
         if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') {
             console.warn('OPENROUTER_API_KEY is not set. Using mock response or failing.');
             throw new Error('OPENROUTER_API_KEY is not configured in environment variables.');
@@ -34,10 +40,11 @@ export class OpenRouterService {
                 headers: {
                     'Authorization': `Bearer ${this.apiKey}`,
                     'Content-Type': 'application/json',
-                    'HTTP-Referer': 'https://vidyaloan.com', // Optional, for OpenRouter rankings
-                    'X-Title': 'VidyaLoan', // Optional, for OpenRouter rankings
+                    'HTTP-Referer': 'https://vidyaloan.com',
+                    'X-Title': 'VidyaLoan',
                 },
                 body: JSON.stringify(requestBody),
+                signal: this.createTimeoutSignal(),
             });
 
             if (!response.ok) {
@@ -53,8 +60,16 @@ export class OpenRouterService {
             const data = await response.json();
             return data.choices?.[0]?.message?.content || '';
         } catch (error) {
-            console.error('OpenRouter request failed:', error);
-            if (error.message.includes('429') || error.message.includes('rate_limit')) {
+            console.error('OpenRouter request failed:', error?.message || error);
+            // Handle timeout errors
+            if (error?.name === 'TimeoutError' || error?.name === 'AbortError' || error?.message?.includes('timed out')) {
+                console.warn('OpenRouter request timed out after', this.REQUEST_TIMEOUT_MS, 'ms');
+                if (prompt.includes('universities')) {
+                    return JSON.stringify({ universities: [] });
+                }
+                return "Our AI assistant is temporarily busy. Please try again in a few minutes.";
+            }
+            if (error?.message?.includes('429') || error?.message?.includes('rate_limit')) {
                 console.warn('Rate limit hit. Returning mock response for stability.');
                 if (prompt.includes('universities')) {
                     return JSON.stringify([{
@@ -68,7 +83,7 @@ export class OpenRouterService {
         }
     }
 
-    async getJson<T>(prompt: string, model: string = 'openrouter/free'): Promise<T> {
+    async getJson<T>(prompt: string, model: string = 'google/gemma-3-12b-it:free'): Promise<T> {
         const jsonPrompt = `${prompt}\n\nIMPORTANT: Respond ONLY with valid JSON. Do not include markdown formatting.`;
         if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') throw new Error('OPENROUTER_API_KEY is not configured');
 
@@ -88,6 +103,7 @@ export class OpenRouterService {
                     response_format: { type: "json_object" },
                     max_tokens: 2048,
                 }),
+                signal: this.createTimeoutSignal(),
             });
 
             if (response.ok) {
@@ -108,7 +124,14 @@ export class OpenRouterService {
                 }
             }
         } catch (error) {
-            console.error('OpenRouter getJson first attempt failed:', error);
+            console.error('OpenRouter getJson first attempt failed:', error?.message || error);
+            // On timeout or abort, return empty result immediately instead of retrying
+            if (error?.name === 'TimeoutError' || error?.name === 'AbortError' || error?.message?.includes('timed out')) {
+                console.warn('OpenRouter getJson timed out. Returning empty result.');
+                if (prompt.includes('universities')) return { universities: [] } as any;
+                if (prompt.includes('courses')) return { courses: [] } as any;
+                return {} as T;
+            }
             try {
                 content = await this.chat(jsonPrompt, model);
             } catch (e) {
@@ -180,7 +203,7 @@ export class OpenRouterService {
         }
 
         const res = await this.getJson<any>(prompt);
-        return (res.universities || res.courses || []) as any[];
+        return ((res && (res.universities || res.courses)) || []) as any[];
     }
 
     async chatWithVision(prompt: string, imageUrl: string, model: string = 'google/gemma-3-27b-it:free'): Promise<string> {
@@ -236,6 +259,7 @@ export class OpenRouterService {
                         'X-Title': 'VidyaLoan',
                     },
                     body: JSON.stringify(requestBody),
+                    signal: this.createTimeoutSignal(),
                 });
 
                 if (!response.ok) {

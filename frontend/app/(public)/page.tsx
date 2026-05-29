@@ -1,4 +1,4 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
 import JourneyPath from "../../components/JourneyPath";
@@ -583,32 +583,38 @@ export default async function HomePage() {
                             <table className="w-full text-left">
                                 <thead className="bg-gray-50/50 text-gray-900 border-b border-gray-100">
                                     <tr>
-                                        {["Lender", "Interest Rate", "Processing Time", "Processing Fee"].map((h) => (
-                                            <th key={h} className="p-6 text-[11px] font-black uppercase tracking-widest text-gray-400">{h}</th>
+                                        {["Lender", "Interest Rate", "Processing Time", "Processing Fee", ""].map((h) => (
+                                            <th key={h || 'action'} className="p-6 text-[11px] font-black uppercase tracking-widest text-gray-400">{h}</th>
                                         ))}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
                                     {lenders.map((l) => (
-                                        <tr key={l.name} className="hover:bg-gray-50/30 transition-colors">
+                                        <tr key={l.name} className="hover:bg-[#6605c7]/[0.03] transition-all duration-200 group">
                                             <td className="p-6">
-                                                <div className="flex items-center gap-4">
+                                                <Link href={`/bank/${l.slug}`} className="flex items-center gap-4">
                                                     <div className="flex items-center justify-center p-1.5 overflow-hidden transition-all duration-300 w-28 h-12">
                                                         <img
                                                             src={l.logo}
                                                             alt={l.name}
-                                                            className={`w-full h-full object-contain ${l.name.includes("Auxilo") ? "scale-175" : ""}`}
+                                                            className={`w-full h-full object-contain ${l.name.includes("Auxilo") ? "scale-195" : ""}`}
                                                         />
                                                     </div>
                                                     <div>
-                                                        <div className="font-bold text-gray-900 text-[13px]">{l.name}</div>
+                                                        <div className="font-bold text-gray-900 text-[13px] group-hover:text-[#6605c7] transition-colors">{l.name}</div>
                                                         {l.badge && <div className="text-[10px] text-green-600 font-bold uppercase tracking-tight">{l.badge}</div>}
                                                     </div>
-                                                </div>
+                                                </Link>
                                             </td>
                                             <td className="p-6 text-gray-600 text-[13px] font-bold">{l.rate}</td>
                                             <td className="p-6 text-gray-600 text-[13px] font-bold">{l.time}</td>
                                             <td className="p-6 text-gray-600 text-[13px] font-bold">{l.fee}</td>
+                                            <td className="p-6">
+                                                <Link href={`/bank/${l.slug}`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#6605c7]/5 text-[#6605c7] text-[11px] font-black uppercase tracking-wider hover:bg-[#6605c7] hover:text-white transition-all duration-200 group-hover:bg-[#6605c7] group-hover:text-white whitespace-nowrap">
+                                                    View Details
+                                                    <span className="material-symbols-outlined text-[14px] group-hover:translate-x-0.5 transition-transform" aria-hidden="true">arrow_forward</span>
+                                                </Link>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>

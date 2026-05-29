@@ -21,9 +21,9 @@ export class EmailService {
   async sendOtp(email: string, otp: string) {
     const timestamp = new Date().toLocaleTimeString();
     const mailOptions = {
-      from: process.env.EMAIL_FROM || '"VidyaLoan" <noreply@vidyaloan.com>',
+      from: process.env.EMAIL_FROM || '"VidyaLoan" <[EMAIL_ADDRESS]>',
       to: email,
-      subject: `Your VidyaLoan OTP Verification Code [${timestamp}]`,
+      subject: `Your VidyaLoan OTP Verification Code`,
       text: `Your OTP is: ${otp}. This code expires in 5 minutes.`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
