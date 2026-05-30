@@ -81,6 +81,8 @@ export class BankRbacInterceptor implements NestInterceptor {
     let role = user.role?.toUpperCase();
     if (role === 'BANK') {
       role = 'BANK_OFFICER';
+    } else if (['ADMIN', 'SUPER_ADMIN', 'STAFF', 'SUPERADMIN'].includes(role)) {
+      role = 'BANK_ADMIN';
     }
     const email = user.email;
     const method = request.method.toUpperCase();

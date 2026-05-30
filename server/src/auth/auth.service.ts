@@ -350,6 +350,17 @@ export class AuthService {
 
         // Fire-and-forget: send welcome email to new user (non-blocking)
         void this.emailService.sendWelcomeEmail(email, user.firstName ?? undefined);
+
+        // Emit candidate registered event for staff notifications
+        this.eventEmitter.emit('candidate.registered', {
+          userId: user.id,
+          email: user.email,
+          firstName: user.firstName || 'New Candidate',
+          lastName: user.lastName || '',
+          phoneNumber: user.phoneNumber,
+          dateOfBirth: user.dateOfBirth,
+          createdAt: new Date().toISOString()
+        });
       }
 
       // Check if user has complete details

@@ -95,9 +95,46 @@ export class ApplicationService {
     return null;
   }
 
+  private async validateApplicationConstraints(userId: string, currentAppId: string | null, bank: string, country: string, universityName: string) {
+    const { data: existingApps, error } = await this.db
+      .from('LoanApplication')
+      .select('id, bank, country, universityName, status')
+      .eq('userId', userId)
+      .neq('status', 'cancelled');
+
+    if (error) throw error;
+
+    // 1. Limit to 5 applications
+    if (!currentAppId && existingApps && existingApps.length >= 5) {
+      throw new BadRequestException('You cannot have more than 5 active/pending loan applications.');
+    }
+
+    // 2. Check duplicate details for the same bank
+    if (bank && country && universityName) {
+      const duplicate = existingApps?.find(app => {
+        if (currentAppId && app.id === currentAppId) return false;
+
+        const matchBank = app.bank && bank && app.bank.toLowerCase().trim() === bank.toLowerCase().trim();
+        const matchCountry = app.country && country && app.country.toLowerCase().trim() === country.toLowerCase().trim();
+        const matchUniversity = app.universityName && universityName && app.universityName.toLowerCase().trim() === universityName.toLowerCase().trim();
+
+        return matchBank && matchCountry && matchUniversity;
+      });
+
+      if (duplicate) {
+        throw new BadRequestException(`An active application to ${bank} for ${universityName} in ${country} already exists. To apply to the same bank, please use different details (e.g., country or university).`);
+      }
+    }
+  }
 
   async createApplication(userId: string, data: any) {
-    const applicationNumber = this.generateApplicationNumber(data.loanType);
+    const targetBank = data.bank;
+    const targetCountry = data.country;
+    const targetUniversity = data.universityName || data.university;
+
+    await this.validateApplicationConstraints(userId, null, targetBank, targetCountry, targetUniversity);
+
+    const applicationNumber = await this.generateApplicationNumber();
     const estimatedCompletionAt = new Date();
     estimatedCompletionAt.setDate(estimatedCompletionAt.getDate() + 14);
 
@@ -163,6 +200,24 @@ export class ApplicationService {
 
     await this.createStatusHistory(application.id, { toStatus: application.status, toStage: application.stage, notes: 'Application created', isAutomatic: true });
     await this.initializeRequiredDocuments(application.id, application.userId, data.loanType);
+
+    // Emit application created event for staff notifications
+    try {
+      const name = `${application.firstName || ''} ${application.lastName || ''}`.trim() || application.email || 'Student';
+      this.eventEmitter.emit('application.created', {
+        applicationId: application.id,
+        applicationNumber: application.applicationNumber,
+        userId: application.userId,
+        candidateName: name,
+        candidateEmail: application.email,
+        bank: application.bank,
+        loanAmount: application.amount,
+        loanType: data.loanType,
+        createdAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error('Failed to emit application.created event:', e);
+    }
 
     // Emit live dashboard activity event for new application creation!
     try {
@@ -266,6 +321,12 @@ export class ApplicationService {
     if (application.userId !== userId) throw new BadRequestException('Unauthorized to update this application');
     if (!['draft', 'documents_pending'].includes(application.status)) throw new BadRequestException('Application cannot be modified in current status');
 
+    const targetBank = data.bank !== undefined ? data.bank : application.bank;
+    const targetCountry = data.country !== undefined ? data.country : application.country;
+    const targetUniversity = (data.universityName || data.university) !== undefined ? (data.universityName || data.university) : application.universityName;
+
+    await this.validateApplicationConstraints(userId, applicationId, targetBank, targetCountry, targetUniversity);
+
     const updatePayload: any = {
       ...data,
       amount: data.amount ? parseFloat(data.amount) : undefined,
@@ -289,6 +350,14 @@ export class ApplicationService {
   }
 
   async adminUpdateApplication(applicationId: string, data: any) {
+    const application = await this.getApplicationById(applicationId);
+
+    const targetBank = data.bank !== undefined ? data.bank : application.bank;
+    const targetCountry = data.country !== undefined ? data.country : application.country;
+    const targetUniversity = (data.universityName || data.university) !== undefined ? (data.universityName || data.university) : application.universityName;
+
+    await this.validateApplicationConstraints(application.userId, applicationId, targetBank, targetCountry, targetUniversity);
+
     const updatePayload: any = { ...data };
 
     // Convert numeric fields if present
@@ -449,6 +518,24 @@ export class ApplicationService {
       document = updated;
     } catch (error) {
       console.error('Document verification process failed:', error);
+    }
+
+    // Emit document uploaded event for staff notifications
+    try {
+      const candidateName = `${application.firstName || ''} ${application.lastName || ''}`.trim() || application.email || 'Candidate';
+      this.eventEmitter.emit('document.uploaded', {
+        applicationId,
+        applicationNumber: application.applicationNumber,
+        userId: application.userId,
+        candidateName,
+        candidateEmail: application.email,
+        documentType: documentData.docType,
+        documentName: documentData.docName,
+        status: document.status,
+        createdAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error('Failed to emit document.uploaded event:', e);
     }
 
     return { success: true, data: document, message: 'Document uploaded successfully' };
@@ -922,9 +1009,39 @@ export class ApplicationService {
     }
   }
 
-  private generateApplicationNumber(loanType: string): string {
-    const prefix = ({ education: 'EDU', home: 'HME', personal: 'PRS', business: 'BUS', vehicle: 'VEH' })[loanType] || 'APP';
-    return `${prefix}${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+  private async generateApplicationNumber(): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = `VL-APP-${year}-`;
+    
+    try {
+      const { data, error } = await this.db
+        .from('LoanApplication')
+        .select('applicationNumber')
+        .like('applicationNumber', `${prefix}%`)
+        .order('applicationNumber', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[ApplicationService] Error fetching max application number:', error);
+      }
+
+      let nextSeq = 1;
+      if (data && data.applicationNumber) {
+        const parts = data.applicationNumber.split('-');
+        if (parts.length === 4) {
+          const currentSeq = parseInt(parts[3], 10);
+          if (!isNaN(currentSeq)) {
+            nextSeq = currentSeq + 1;
+          }
+        }
+      }
+      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+    } catch (err) {
+      console.error('[ApplicationService] Failed to generate sequential application number, falling back to random:', err);
+      const seq = String(Math.floor(Math.random() * 100_000)).padStart(5, '0');
+      return `${prefix}${seq}`;
+    }
   }
 
   private async createStatusHistory(applicationId: string, data: { fromStatus?: string; toStatus?: string; fromStage?: string; toStage?: string; changedBy?: string; changedByName?: string; changeReason?: string; notes?: string; isAutomatic?: boolean }) {

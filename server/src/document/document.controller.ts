@@ -10,6 +10,8 @@ import {
   Res,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
+  Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from '../users/users.service';
@@ -18,6 +20,7 @@ import { DocumentVerificationService } from '../ai/services/document-verificatio
 import { KycService } from '../ai/services/kyc.service';
 import { maskSensitiveIds } from '../ai/utils/ocr-fields.util';
 import { S3Service } from './s3.service';
+import { SupabaseService } from '../supabase/supabase.service';
 import { memoryStorage } from 'multer';
 import type { Response } from 'express';
 import * as crypto from 'crypto';
@@ -33,6 +36,7 @@ export class DocumentController {
     private docVerificationService: DocumentVerificationService,
     private kycService: KycService,
     private s3Service: S3Service,
+    private supabase: SupabaseService,
   ) {}
 
   // ─── Upload & store to S3 ────────────────────────────────────────────────
@@ -373,8 +377,29 @@ export class DocumentController {
   async viewDocument(
     @Param('userId') userId: string,
     @Param('docType') docType: string,
+    @Query('bankId') bankId: string,
     @Res() res: Response,
   ) {
+    if (bankId) {
+      const { data: consent } = await this.supabase.client
+        .from('StudentBankConsent')
+        .select('isGranted')
+        .eq('studentId', userId)
+        .eq('bankId', bankId)
+        .maybeSingle();
+
+      if (!consent || !consent.isGranted) {
+        throw new ForbiddenException('Access denied: Explicit student consent is required for this bank to view this document.');
+      }
+
+      await this.supabase.client.from('data_access_logs').insert({
+        accessedBy: bankId,
+        applicationId: userId,
+        action: `Viewed document type: ${docType}`,
+        accessedAt: new Date().toISOString(),
+      });
+    }
+
     const docs = await this.usersService.getUserDocuments(userId);
     const doc = docs.find((d) => d.docType === docType);
 
@@ -410,7 +435,28 @@ export class DocumentController {
   async getPresignedViewUrl(
     @Param('userId') userId: string,
     @Param('docType') docType: string,
+    @Query('bankId') bankId: string,
   ) {
+    if (bankId) {
+      const { data: consent } = await this.supabase.client
+        .from('StudentBankConsent')
+        .select('isGranted')
+        .eq('studentId', userId)
+        .eq('bankId', bankId)
+        .maybeSingle();
+
+      if (!consent || !consent.isGranted) {
+        throw new ForbiddenException('Access denied: Explicit student consent is required for this bank to view this document.');
+      }
+
+      await this.supabase.client.from('data_access_logs').insert({
+        accessedBy: bankId,
+        applicationId: userId,
+        action: `Generated preview link for document: ${docType}`,
+        accessedAt: new Date().toISOString(),
+      });
+    }
+
     const docs = await this.usersService.getUserDocuments(userId);
     const doc = docs.find((d) => d.docType === docType);
 

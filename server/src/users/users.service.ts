@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { randomInt } from 'crypto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { extractFullNameFromOcrRaw } from '../ai/utils/ocr-fields.util';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -9,7 +10,10 @@ export class UsersService {
     return this.supabase.getClient();
   }
 
-  constructor(private supabase: SupabaseService) { }
+  constructor(
+    private supabase: SupabaseService,
+    private eventEmitter: EventEmitter2
+  ) { }
 
   private parseDate(dateStr: string | null | undefined): string | null {
     if (!dateStr) return null;
@@ -106,20 +110,161 @@ export class UsersService {
     return data;
   }
 
-  private generateUserId(): string {
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const firstPart = Array.from({ length: 4 }, () => letters[randomInt(letters.length)]).join('');
-    const secondPart = String(randomInt(0, 1_000_000)).padStart(6, '0');
-    return `${firstPart}${secondPart}`;
+  /**
+   * Generate the next sequential student/user ID
+   * Returns format: VL-STU-{YEAR}-{5-digit sequential}
+   * Properly handles numeric sorting to find the highest sequential number
+   */
+  private async generateSequentialStudentId(): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = `VL-STU-${year}-`;
+
+    try {
+      // Fetch all student IDs for this year
+      const { data: allIds, error } = await this.db
+        .from('User')
+        .select('id')
+        .like('id', `${prefix}%`);
+
+      if (error) {
+        console.error('[UsersService] Error fetching student IDs:', error);
+      }
+
+      let nextSeq = 1;
+
+      if (allIds && allIds.length > 0) {
+        // Extract numeric suffixes and find the maximum
+        const numericIds = allIds
+          .map(u => {
+            const suffix = u.id.substring(prefix.length);
+            const num = parseInt(suffix, 10);
+            return isNaN(num) ? 0 : num;
+          })
+          .filter(n => n > 0);
+
+        if (numericIds.length > 0) {
+          nextSeq = Math.max(...numericIds) + 1;
+        }
+      }
+
+      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+    } catch (err) {
+      console.error('[UsersService] Failed to generate sequential student ID, falling back to random:', err);
+      const seq = String(Math.floor(Math.random() * 100_000)).padStart(5, '0');
+      return `${prefix}${seq}`;
+    }
   }
 
-  private async createUniqueUserId(): Promise<string> {
+  /**
+   * Generate sequential staff ID with format VL-SF-{3-digit}
+   * Fetches the highest existing staff ID and increments by 1
+   */
+  private async generateSequentialStaffId(): Promise<string> {
+    const prefix = 'VL-SF-';
+
+    try {
+      // Fetch all staff IDs
+      const { data: allIds, error } = await this.db
+        .from('User')
+        .select('staffId')
+        .not('staffId', 'is', null)
+        .like('staffId', `${prefix}%`);
+
+      if (error) {
+        console.error('[UsersService] Error fetching staff IDs:', error);
+      }
+
+      let nextSeq = 1;
+
+      if (allIds && allIds.length > 0) {
+        // Extract numeric suffixes and find the maximum
+        const numericIds = allIds
+          .map(u => {
+            if (!u.staffId) return 0;
+            const suffix = u.staffId.substring(prefix.length);
+            const num = parseInt(suffix, 10);
+            return isNaN(num) ? 0 : num;
+          })
+          .filter(n => n > 0);
+
+        if (numericIds.length > 0) {
+          nextSeq = Math.max(...numericIds) + 1;
+        }
+      }
+
+      return `${prefix}${String(nextSeq).padStart(3, '0')}`;
+    } catch (err) {
+      console.error('[UsersService] Failed to generate sequential staff ID, falling back to random:', err);
+      const seq = String(Math.floor(Math.random() * 1_000)).padStart(3, '0');
+      return `${prefix}${seq}`;
+    }
+  }
+
+  /**
+   * djb2 hash of an email → stable fixed-width numeric suffix.
+   * Same email always produces the same number.
+   * Used for agents and banks.
+   */
+  private emailToNum(email: string, digits: number): string {
+    let hash = 5381;
+    const lower = email.toLowerCase().trim();
+    for (let i = 0; i < lower.length; i++) {
+      hash = ((hash << 5) + hash + lower.charCodeAt(i)) >>> 0; // unsigned 32-bit
+    }
+    const max = Math.pow(10, digits);
+    return String(hash % max).padStart(digits, '0');
+  }
+
+  /**
+   * Generate a role-based user ID:
+   *  - student / user  →  VL-STU-{YEAR}-{5-digit sequential}
+   *  - staff           →  VL-SF-{3-digit sequential}
+   *  - agent           →  VL-AGT-{5-digit from email}
+   *  - bank            →  VL-BNK-{3-digit from email}
+   *
+   * Students/users get sequential IDs. Staff get sequential staff IDs. Agents/banks use email-derived hash.
+   */
+  private generateNonStudentUserId(role?: string, email?: string): string {
+    if (email) {
+      if (role === 'agent') return `VL-AGT-${this.emailToNum(email, 5)}`;
+      if (role === 'bank')  return `VL-BNK-${this.emailToNum(email, 3)}`;
+    }
+
+    // Fallback: random (no email supplied)
+    const seq5 = String(randomInt(0, 100_000)).padStart(5, '0');
+    if (role === 'agent') return `VL-AGT-${seq5}`;
+    if (role === 'bank')  return `VL-BNK-${String(randomInt(0, 1_000)).padStart(3, '0')}`;
+    return `VL-AGT-${seq5}`; // default fallback
+  }
+
+  private async createUniqueUserId(role?: string, email?: string): Promise<string> {
+    const effectiveRole = role || 'user';
+
+    // Students/users get sequential IDs
+    if (effectiveRole === 'user' || effectiveRole === 'student') {
+      return await this.generateSequentialStudentId();
+    }
+
+    // Staff get sequential staff IDs
+    if (effectiveRole === 'staff') {
+      return await this.generateSequentialStaffId();
+    }
+
+    // Agents and banks use email-derived approach
+    if (email) {
+      const id = this.generateNonStudentUserId(effectiveRole, email);
+      const existing = await this.findById(id);
+      if (!existing) return id;
+      // Hash collision – fall through to random
+      console.warn(`[UsersService] Hash collision for email ${email}, falling back to random ID`);
+    }
+
+    // Fallback: random IDs for agents/banks
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      const id = this.generateUserId();
+      const id = this.generateNonStudentUserId(effectiveRole);
       const existing = await this.findById(id);
       if (!existing) return id;
     }
-
     throw new Error('Unable to generate a unique user ID');
   }
 
@@ -136,7 +281,14 @@ export class UsersService {
     const dobDate = this.parseDate(data.dateOfBirth);
     const now = new Date();
     const registeredAtIndia = this.convertToIndiaTime(now);
-    const id = await this.createUniqueUserId();
+    const id = await this.createUniqueUserId(data.role, data.email);
+
+    // Generate staff ID if role is 'staff'
+    let staffId: string | null = null;
+    if (data.role === 'staff') {
+      staffId = await this.generateSequentialStaffId();
+      console.log(`[UsersService.create] Generated staff ID: ${staffId} for email: ${data.email}`);
+    }
 
     const { data: user, error } = await this.db
       .from('User')
@@ -151,6 +303,7 @@ export class UsersService {
         password: data.password || '',
         role: data.role || 'user',
         registeredAtIndia: registeredAtIndia,
+        staffId: staffId,
       })
       .select()
       .single();
@@ -160,7 +313,14 @@ export class UsersService {
       throw error;
     }
     
-    console.log('User created in DB:', { user, keys: Object.keys(user || {}), hasId: !!user?.id });
+    // Emit user.created event for Salesforce Lead sync
+    try {
+      this.eventEmitter.emit('user.created', user);
+    } catch (evtErr) {
+      console.error('[UsersService] Failed to emit user.created event:', evtErr.message);
+    }
+    
+    console.log('User created in DB:', { user, keys: Object.keys(user || {}), hasId: !!user?.id, staffId: user?.staffId });
     return user;
   }
 
@@ -502,15 +662,92 @@ export class UsersService {
   }
 
   async updateUserRole(email: string, role: 'admin' | 'user' | 'staff' | 'super_admin' | 'agent' | 'bank' | 'student') {
+    // If changing to staff role, generate a staff ID if not already present
+    let updatePayload: any = { role };
+    
+    if (role === 'staff') {
+      // Check if user already has a staff ID
+      const existingUser = await this.findOne(email);
+      if (existingUser && !existingUser.staffId) {
+        // Generate new staff ID only if they don't have one
+        updatePayload.staffId = await this.generateSequentialStaffId();
+        console.log(`[UsersService.updateUserRole] Generated staff ID for ${email}: ${updatePayload.staffId}`);
+      }
+    }
+
     const { data, error } = await this.db
       .from('User')
-      .update({ role })
+      .update(updatePayload)
       .eq('email', email)
       .select()
       .single();
 
     if (error) throw error;
     return data;
+  }
+
+  private async validateApplicationConstraints(userId: string, bank: string | null | undefined, country: string | null | undefined, universityName: string | null | undefined) {
+    const { data: existingApps, error } = await this.db
+      .from('LoanApplication')
+      .select('id, bank, country, universityName, status')
+      .eq('userId', userId)
+      .neq('status', 'cancelled');
+
+    if (error) throw error;
+
+    // 1. Limit to 5 applications
+    if (existingApps && existingApps.length >= 5) {
+      throw new BadRequestException('You cannot have more than 5 active/pending loan applications.');
+    }
+
+    // 2. Check duplicate details for the same bank
+    if (bank && country && universityName) {
+      const duplicate = existingApps?.find(app => {
+        const matchBank = app.bank && bank && app.bank.toLowerCase().trim() === bank.toLowerCase().trim();
+        const matchCountry = app.country && country && app.country.toLowerCase().trim() === country.toLowerCase().trim();
+        const matchUniversity = app.universityName && universityName && app.universityName.toLowerCase().trim() === universityName.toLowerCase().trim();
+        return matchBank && matchCountry && matchUniversity;
+      });
+
+      if (duplicate) {
+        throw new BadRequestException(`An active application to ${bank} for ${universityName} in ${country} already exists. To apply to the same bank, please use different details (e.g., country or university).`);
+      }
+    }
+  }
+
+  private async generateApplicationNumber(): Promise<string> {
+    const year = new Date().getFullYear();
+    const prefix = `VL-APP-${year}-`;
+    
+    try {
+      const { data, error } = await this.db
+        .from('LoanApplication')
+        .select('applicationNumber')
+        .like('applicationNumber', `${prefix}%`)
+        .order('applicationNumber', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[UsersService] Error fetching max application number:', error);
+      }
+
+      let nextSeq = 1;
+      if (data && data.applicationNumber) {
+        const parts = data.applicationNumber.split('-');
+        if (parts.length === 4) {
+          const currentSeq = parseInt(parts[3], 10);
+          if (!isNaN(currentSeq)) {
+            nextSeq = currentSeq + 1;
+          }
+        }
+      }
+      return `${prefix}${String(nextSeq).padStart(5, '0')}`;
+    } catch (err) {
+      console.error('[UsersService] Failed to generate sequential application number, falling back to random:', err);
+      const seq = String(Math.floor(Math.random() * 100_000)).padStart(5, '0');
+      return `${prefix}${seq}`;
+    }
   }
 
   // Loan Application Methods
@@ -543,17 +780,21 @@ export class UsersService {
       notes?: string;
     },
   ) {
+    const universityName = data.universityName || data.targetUniversity || data.university || null;
+    const country = data.country || null;
+    const bank = data.bank || null;
+
+    await this.validateApplicationConstraints(userId, bank, country, universityName);
+
     const now = new Date().toISOString();
     
-    // Generate application number
-    const prefix = ({ education: 'EDU', home: 'HME', personal: 'PRS', business: 'BUS', vehicle: 'VEH' })[data.loanType] || 'APP';
-    const applicationNumber = `${prefix}${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    // Generate application number: VL-APP-{YEAR}-{5-digit}
+    const applicationNumber = await this.generateApplicationNumber();
     
     // Calculate estimated completion (14 days from now)
     const estimatedCompletionAt = new Date();
     estimatedCompletionAt.setDate(estimatedCompletionAt.getDate() + 14);
     
-    const universityName = data.universityName || data.targetUniversity || data.university || null;
     const courseName = data.courseName || data.programFocus || data.program || data.courseType || null;
 
     const { data: application, error } = await this.db
@@ -592,6 +833,13 @@ export class UsersService {
       .single();
 
     if (error) throw error;
+
+    try {
+      this.eventEmitter.emit('application.created', application);
+    } catch (evtErr) {
+      console.error('[UsersService] Failed to emit application.created event:', evtErr.message);
+    }
+
     return application;
   }
 

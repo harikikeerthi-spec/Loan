@@ -331,6 +331,7 @@ export const authApi = {
         phoneNumber: string;
         dateOfBirth: string;
         passportNumber?: string;
+        intakeSeason?: string;
     }) =>
         fetch(HttpApiPaths.auth.updateDetails(), {
             method: "POST",
@@ -739,6 +740,10 @@ export const adminApi = {
     deleteUser: (id: string) =>
         apiFetch(HttpApiPaths.admin.userByAdminId(id), {
             method: "DELETE",
+        }),
+    getUserById: (id: string) =>
+        apiFetch(HttpApiPaths.admin.userByAdminId(id), {
+            method: "GET",
         }),
 
     // Applications

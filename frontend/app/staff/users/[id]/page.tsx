@@ -1,17 +1,73 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, use, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { adminApi, documentApi, staffProfileApi } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import ApplicationDetailView from "@/components/staff/ApplicationDetailView";
+import { motion, AnimatePresence } from "framer-motion";
+
+// Premium 3D Interactive Card Component
+function TiltCard({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+    const cardRef = useRef<HTMLDivElement>(null);
+    const [tilt, setTilt] = useState({ x: 0, y: 0 });
+    const [glare, setGlare] = useState({ x: 50, y: 50, opacity: 0 });
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!cardRef.current) return;
+        const rect = cardRef.current.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+        const mouseX = e.clientX - rect.left - width / 2;
+        const mouseY = e.clientY - rect.top - height / 2;
+
+        // Subtle 3D perspective rotation (max 5 degrees tilt)
+        const rX = -(mouseY / (height / 2)) * 5;
+        const rY = (mouseX / (width / 2)) * 5;
+        setTilt({ x: rX, y: rY });
+
+        // Glare coordinates
+        const glareX = ((e.clientX - rect.left) / width) * 100;
+        const glareY = ((e.clientY - rect.top) / height) * 100;
+        setGlare({ x: glareX, y: glareY, opacity: 0.15 });
+    };
+
+    const handleMouseLeave = () => {
+        setTilt({ x: 0, y: 0 });
+        setGlare(prev => ({ ...prev, opacity: 0 }));
+    };
+
+    return (
+        <div
+            ref={cardRef}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            style={{
+                transform: `perspective(1000px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale3d(1.01, 1.01, 1.01)`,
+                transition: "transform 0.15s cubic-bezier(0.25, 1, 0.5, 1)",
+            }}
+            className={`relative overflow-hidden transition-all duration-300 ${className}`}
+        >
+            {/* Ambient reflective glare */}
+            <div
+                className="absolute inset-0 pointer-events-none transition-opacity duration-300 z-10"
+                style={{
+                    background: `radial-gradient(circle 250px at ${glare.x}% ${glare.y}%, rgba(255, 255, 255, 0.5), transparent)`,
+                    opacity: glare.opacity,
+                }}
+            />
+            {children}
+        </div>
+    );
+}
 
 export default function StaffUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
     const { user } = useAuth();
     const { id: userId } = use(params);
+    const searchParams = useSearchParams();
+    const emailParam = searchParams.get('email');
 
     const [loading, setLoading] = useState(true);
     const [userData, setUserData] = useState<any>(null);
@@ -25,17 +81,44 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
         const fetchUserDetails = async () => {
             setLoading(true);
             try {
-                // Fetch all users and find the one with matching ID
-                const usersRes = await adminApi.getUsers() as any;
-                const foundUser = usersRes.data?.find((u: any) => u.id === userId || u._id === userId);
-                
+                let foundUser = null;
+
+                // First, try to fetch user directly by ID from the admin endpoint
+                try {
+                    const directRes = await adminApi.getUserById(userId) as any;
+                    if (directRes && (directRes.data || directRes.id)) {
+                        foundUser = directRes.data || directRes;
+                    }
+                } catch (directFetchErr) {
+                    console.log("Direct user fetch by ID failed, falling back to search:", directFetchErr);
+                }
+
+                // If not found, try to fetch by email if provided
+                if (!foundUser && emailParam) {
+                    try {
+                        const emailRes = await adminApi.getUserProfile(emailParam) as any;
+                        if (emailRes && (emailRes.data || emailRes.id)) {
+                            foundUser = emailRes.data || emailRes;
+                        }
+                    } catch (emailFetchErr) {
+                        console.log("Email-based user fetch failed:", emailFetchErr);
+                    }
+                }
+
+                // If still not found, fetch all users and search
+                if (!foundUser) {
+                    const usersRes = await adminApi.getUsers() as any;
+                    foundUser = usersRes.data?.find((u: any) => u.id === userId || u._id === userId);
+                }
+
                 if (foundUser) {
                     setUserData(foundUser);
 
                     // Fetch user's applications
                     const appsRes = await adminApi.getApplications({}) as any;
-                    const userApps = appsRes.data?.filter((app: any) => 
-                        app.userId === userId || app.user_id === userId || app.applicantId === userId
+                    const userApps = appsRes.data?.filter((app: any) =>
+                        app.userId === userId || app.user_id === userId || app.applicantId === userId || app.linkedUserId === userId ||
+                        app.userId === foundUser.id || app.user_id === foundUser.id || app.applicantId === foundUser.id
                     ) || [];
                     setUserApplications(userApps);
 
@@ -65,7 +148,7 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
         };
 
         fetchUserDetails();
-    }, [userId]);
+    }, [userId, emailParam]);
 
     const handleBack = () => {
         router.back();
@@ -73,10 +156,18 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-slate-50 font-sans text-slate-800 flex items-center justify-center">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-10 h-10 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin" />
-                    <p className="text-[11px] font-black tracking-widest text-slate-400 uppercase">Loading User Details...</p>
+            <div className="min-h-screen bg-[#FAF8FE] font-sans text-slate-800 flex items-center justify-center relative overflow-hidden">
+                {/* Background Blobs */}
+                <div className="absolute inset-0 pointer-events-none">
+                    <div className="absolute top-[30%] left-[30%] w-[300px] h-[300px] bg-[#6605c7]/5 rounded-full blur-[80px] animate-pulse" />
+                </div>
+                <div className="flex flex-col items-center gap-6 relative z-10">
+                    <div className="relative w-16 h-16">
+                        <div className="absolute inset-0 border-4 border-[#6605c7]/10 rounded-full" />
+                        <div className="absolute inset-0 border-4 border-transparent border-t-[#6605c7] border-r-purple-400 rounded-full animate-spin" />
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-[#6605c7]/5 rounded-full animate-ping" />
+                    </div>
+                    <p className="text-[10px] font-black tracking-[0.25em] text-[#6605c7] uppercase animate-pulse">Initializing Secure Vault...</p>
                 </div>
             </div>
         );
@@ -84,14 +175,18 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
 
     if (!userData) {
         return (
-            <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-                <div className="max-w-6xl mx-auto px-6 py-12 text-center">
-                    <p className="text-slate-500">User not found</p>
+            <div className="min-h-screen bg-[#FAF8FE] font-sans text-slate-800 flex items-center justify-center relative">
+                <div className="max-w-md w-full mx-6 p-8 rounded-2xl bg-white/70 border border-white/80 backdrop-blur-xl shadow-2xl text-center relative z-10">
+                    <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center mx-auto mb-6 text-rose-500">
+                        <span className="material-symbols-outlined text-[32px]">face_dissatisfied</span>
+                    </div>
+                    <h3 className="text-xl font-bold text-[#1a1626] mb-2">Subject Decryption Failed</h3>
+                    <p className="text-sm text-gray-500 mb-8">The requested user profile could not be located in the active directory node.</p>
                     <button
                         onClick={handleBack}
-                        className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700"
+                        className="w-full py-3 bg-gradient-to-r from-[#6605c7] to-[#8b24e5] text-white text-xs font-bold uppercase tracking-wider rounded-xl shadow-lg shadow-purple-500/20 hover:shadow-purple-500/35 transition-all duration-300 cursor-pointer"
                     >
-                        Go Back
+                        Return to Hub
                     </button>
                 </div>
             </div>
@@ -99,281 +194,365 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-            {/* Header */}
-            <div className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-                <div className="max-w-6xl mx-auto px-6 py-4">
-                    <button
-                        onClick={handleBack}
-                        className="flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 mb-4 transition-colors"
-                    >
-                        <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-                        Back to Dashboard
-                    </button>
+        <div className="min-h-screen bg-[#FAF8FE] font-sans text-slate-800 relative overflow-hidden pb-16">
+            
+            {/* Floating glowing color circles and tech-grid aligned with the homepage */}
+            <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-gradient-to-tr from-[#ede0ff]/50 to-[#f3eaff]/20 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-[#fed7aa]/25 to-[#fde8c8]/15 blur-[150px] animate-pulse" style={{ animationDuration: '12s' }} />
+                <div className="absolute top-[30%] right-[10%] w-[400px] h-[400px] rounded-full bg-[#fdf6ff]/40 blur-[100px] animate-pulse" style={{ animationDuration: '10s' }} />
+                <div className="absolute inset-0 opacity-[0.035]" style={{ backgroundImage: 'radial-gradient(circle, #6605c7 1.5px, transparent 1.5px)', backgroundSize: '32px 32px' }} />
+            </div>
 
-                    <div className="flex items-center gap-6">
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-black shadow-md border-4 border-white">
-                            {(userData.firstName?.[0] || "U").toUpperCase()}{(userData.lastName?.[0] || "").toUpperCase()}
+            {/* Main view container */}
+            <div className="max-w-6xl mx-auto px-6 pt-10 relative z-10">
+                
+                {/* Back button */}
+                <button
+                    onClick={handleBack}
+                    className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-[#6605c7] transition-all duration-300 group mb-8 cursor-pointer"
+                >
+                    <span className="material-symbols-outlined text-[16px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                    Back to Command Center
+                </button>
+
+                {/* Profile Header Block */}
+                <TiltCard className="p-8 rounded-2xl bg-white/60 border border-white/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(102,5,199,0.03)] relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-purple-300 via-[#6605c7]/50 to-orange-300" />
+                    
+                    <div className="flex flex-col md:flex-row items-center md:items-start gap-8 relative z-20">
+                        {/* 3D avatar container */}
+                        <div className="relative group">
+                            <div className="absolute -inset-1 bg-gradient-to-r from-[#6605c7] to-[#8b24e5] rounded-full blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
+                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#6605c7] to-[#8b24e5] flex items-center justify-center text-white text-3xl font-black shadow-lg border-4 border-white relative">
+                                {(userData.firstName?.[0] || "U").toUpperCase()}{(userData.lastName?.[0] || "").toUpperCase()}
+                            </div>
                         </div>
-                        <div className="flex-1">
-                            <h1 className="text-3xl font-black text-slate-900 tracking-tight" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
-                                {userData.firstName || "—"} {userData.lastName || ""}
-                            </h1>
-                            <div className="flex items-center gap-3 mt-2">
-                                <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wider" title={userId}>
-                                    ID: {userId.replace(/-/g, "").slice(0, 10).toUpperCase()}
-                                </span>
-                                <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${
-                                    userData.role?.includes("admin")
-                                        ? "bg-slate-900 text-white border-slate-900"
-                                        : "bg-indigo-50 text-indigo-700 border-indigo-200"
-                                }`}>
+
+                        {/* Title details */}
+                        <div className="flex-1 text-center md:text-left">
+                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
+                                <h1 className="text-3xl font-extrabold text-[#1a1626] tracking-tight uppercase" style={{ letterSpacing: '-0.02em' }}>
+                                    {userData.firstName || "—"} {userData.lastName || ""}
+                                </h1>
+                                <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#6605c7]/8 text-[#6605c7] border border-[#6605c7]/15 shadow-sm">
                                     {userData.role?.replace("_", " ") || "USER"}
                                 </span>
-                                { (userData.createdAt || userData.created_at) && (
-                                    <span className="text-[12px] font-bold text-slate-400 uppercase tracking-wider">
-                                        Joined: {new Date(userData.createdAt || userData.created_at).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })} IST (GMT+5:30)
-                                    </span>
+                            </div>
+                            
+                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 mt-5 text-xs font-semibold text-gray-500">
+                                <div className="flex items-center gap-1.5 font-mono">
+                                    <span className="material-symbols-outlined text-[16px] text-[#6605c7]">fingerprint</span>
+                                    <span className="text-[9px] text-gray-400 uppercase font-black">ID:</span>
+                                    <span className="text-[#1a1626] select-all" title={userId}>{userId}</span>
+                                </div>
+                                {(userData.createdAt || userData.created_at) && (
+                                    <div className="flex items-center gap-1.5 font-mono">
+                                        <span className="material-symbols-outlined text-[16px] text-purple-500">schedule</span>
+                                        <span className="text-[9px] text-gray-400 uppercase font-black">Registered:</span>
+                                        <span className="text-[#1a1626]">
+                                            {new Date(userData.createdAt || userData.created_at).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric' })}
+                                        </span>
+                                    </div>
                                 )}
                             </div>
                         </div>
                     </div>
-                </div>
+                </TiltCard>
 
                 {/* Tab Navigation */}
-                <div className="max-w-6xl mx-auto px-6 flex gap-8 border-t border-slate-200">
+                <div className="flex border-b border-gray-100 mt-10 gap-2 relative">
                     {[
-                        { id: "profile", label: "Profile Information", icon: "badge" },
-                        { id: "applications", label: "Applications", icon: "description", count: userApplications.length },
-                        { id: "documents", label: "Documents", icon: "folder", count: userDocuments.length },
-                    ].map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id as any)}
-                            className={`py-4 font-bold text-[13px] uppercase tracking-wide border-b-2 flex items-center gap-2 transition-colors ${
-                                activeTab === tab.id
-                                    ? "border-indigo-600 text-indigo-600"
-                                    : "border-transparent text-slate-500 hover:text-slate-700"
-                            }`}
-                        >
-                            <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
-                            {tab.label}
-                            {tab.count !== undefined && (
-                                <span className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
-                                    {tab.count}
-                                </span>
-                            )}
-                        </button>
-                    ))}
+                        { id: "profile", label: "Profile Dossier", icon: "badge" },
+                        { id: "applications", label: "Applications Node", icon: "description", count: userApplications.length },
+                        { id: "documents", label: "Secure Vault Documents", icon: "folder", count: userDocuments.length },
+                    ].map((tab) => {
+                        const isActive = activeTab === tab.id;
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id as any)}
+                                className={`pb-4 px-4 font-black text-[11px] uppercase tracking-wider relative flex items-center gap-2 transition-all duration-300 cursor-pointer ${isActive ? "text-[#6605c7]" : "text-gray-400 hover:text-gray-600"}`}
+                            >
+                                <span className={`material-symbols-outlined text-[18px] transition-transform duration-300 ${isActive ? "scale-110" : ""}`}>{tab.icon}</span>
+                                {tab.label}
+                                {tab.count !== undefined && (
+                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border transition-all duration-300 ${isActive ? "bg-[#6605c7]/8 text-[#6605c7] border-[#6605c7]/15" : "bg-gray-50 text-gray-400 border-transparent"}`}>
+                                        {tab.count}
+                                    </span>
+                                )}
+                                {isActive && (
+                                    <motion.div
+                                        layoutId="activeTabUnderline"
+                                        className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#6605c7] to-[#8b24e5] shadow-[0_1px_4px_rgba(102,5,199,0.2)]"
+                                    />
+                                )}
+                            </button>
+                        );
+                    })}
                 </div>
-            </div>
 
-            {/* Main Content */}
-            <div className="max-w-6xl mx-auto px-6 py-8">
-                {/* Profile Tab */}
-                {activeTab === "profile" && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Personal Information */}
-                        <div className="lg:col-span-2 space-y-6">
-                            <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm">
-                                <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
-                                    <span className="material-symbols-outlined">person</span>
-                                    Personal Information
-                                </h2>
-                                <div className="grid grid-cols-2 gap-6">
-                                    <div>
-                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">First Name</p>
-                                        <p className="text-[14px] font-semibold text-slate-900">{userData.firstName || "—"}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Last Name</p>
-                                        <p className="text-[14px] font-semibold text-slate-900">{userData.lastName || "—"}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Email</p>
-                                        <p className="text-[14px] font-semibold text-slate-900 lowercase">{userData.email || "—"}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Phone</p>
-                                        <p className="text-[14px] font-semibold text-slate-900">{userData.mobile || userData.phone || "—"}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Role</p>
-                                        <p className="text-[14px] font-semibold text-slate-900 capitalize">{userData.role || "—"}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Account Status</p>
-                                        <span className="px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                            Active
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-
-                        </div>
-
-                        {/* Quick Stats */}
-                        <div className="space-y-4">
-                            <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Applications</p>
-                                <p className="text-3xl font-black text-slate-900" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{userApplications.length}</p>
-                            </div>
-                            <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Documents</p>
-                                <p className="text-3xl font-black text-slate-900" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{userDocuments.length}</p>
-                            </div>
-                            <div className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                                <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Member Since</p>
-                                <p className="text-sm font-semibold text-slate-900">
-                                    {(userData.createdAt || userData.created_at) ? `${new Date(userData.createdAt || userData.created_at).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} IST (GMT+5:30)` : "—"}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Applications Tab */}
-                {activeTab === "applications" && (
-                    <>
-                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                            {userApplications.length > 0 ? (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-left">
-                                        <thead className="bg-slate-50 border-b border-slate-200">
-                                            <tr className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                                                <th className="px-6 py-3">Application ID</th>
-                                                <th className="px-6 py-3">Bank</th>
-                                                <th className="px-6 py-3">Loan Type</th>
-                                                <th className="px-6 py-3">Status</th>
-                                                <th className="px-6 py-3">Created Date</th>
-                                                <th className="px-6 py-3 text-right">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-50">
-                                            {userApplications.map((app, idx) => (
-                                                <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                                                    <td className="px-6 py-4 text-[12px] font-bold text-slate-900" title={app.id}>
-                                                        {app.applicationNumber || `APP${app.id?.replace(/-/g, "").slice(-10).toUpperCase()}`}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-[12px] font-semibold text-slate-700">{app.bank || "—"}</td>
-                                                    <td className="px-6 py-4 text-[12px] font-semibold text-slate-700">{app.loanType || "—"}</td>
-                                                    <td className="px-6 py-4">
-                                                        <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${
-                                                            app.status === "approved"
-                                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                                                : app.status === "rejected"
-                                                                ? "bg-rose-50 text-rose-700 border-rose-200"
-                                                                : app.status === "processing"
-                                                                ? "bg-indigo-50 text-indigo-700 border-indigo-200"
-                                                                : "bg-amber-50 text-amber-700 border-amber-200"
-                                                        }`}>
-                                                            {app.status || "Pending"}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-[12px] font-semibold text-slate-700">
-                                                        {formatDate(app.createdAt, "MMM d, yyyy")}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <button onClick={() => setSelectedApplication(app)} className="w-8 h-8 rounded bg-slate-100 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 flex items-center justify-center transition-all" title="View">
-                                                            <span className="material-symbols-outlined text-[16px]">visibility</span>
-                                                        </button>
-                                                    </td>
-                                                </tr>
+                {/* Dynamic Content Grid */}
+                <div className="mt-8">
+                    <AnimatePresence mode="wait">
+                        {/* Profile Tab */}
+                        {activeTab === "profile" && (
+                            <motion.div
+                                key="profile"
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -15 }}
+                                className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+                            >
+                                {/* Personal Information Glass-Card */}
+                                <div className="lg:col-span-2">
+                                    <div className="p-8 rounded-2xl bg-white/60 border border-white/80 backdrop-blur-xl shadow-lg relative overflow-hidden group">
+                                        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-[#6605c7]/10 via-[#6605c7]/30 to-[#6605c7]/10" />
+                                        
+                                        <h2 className="text-sm font-black uppercase tracking-widest text-[#6605c7] mb-8 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-[20px]">person</span>
+                                            Identity Configuration
+                                        </h2>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            {[
+                                                { label: "First Name", value: userData.firstName },
+                                                { label: "Last Name", value: userData.lastName },
+                                                { label: "Email Node", value: userData.email, lowercase: true },
+                                                { label: "Contact Phone", value: userData.mobile || userData.phone },
+                                                { label: "Access Privilege", value: userData.role, capitalize: true },
+                                            ].map((item, idx) => (
+                                                <div key={idx} className="relative p-4 rounded-xl bg-white/30 border border-white/50 hover:bg-white/50 hover:border-white/80 transition-all duration-300">
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">{item.label}</p>
+                                                    <p className={`text-[13px] font-semibold text-slate-800 ${item.lowercase ? "lowercase" : item.capitalize ? "capitalize" : ""}`}>
+                                                        {item.value || "—"}
+                                                    </p>
+                                                </div>
                                             ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : (
-                                <div className="py-16 text-center">
-                                    <span className="material-symbols-outlined text-[48px] text-slate-300 mx-auto block mb-4">inbox</span>
-                                    <p className="text-slate-500 font-semibold">No applications found for this user</p>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Application Details Panel */}
-                        {selectedApplication && (
-                            <ApplicationDetailView 
-                                application={selectedApplication}
-                                onBack={() => setSelectedApplication(null)}
-                                onAadhaarSaved={(aadhaarNumber) => {
-                                    setUserData((prev: any) => ({ ...prev, aadhaarNumber }));
-                                }}
-                            />
-                        )}
-                    </>
-                )}
-
-                {/* Documents Tab */}
-                {activeTab === "documents" && (
-                    <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-                        {userDocuments.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-                                {userDocuments.map((doc, idx) => (
-                                    <div key={idx} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                                        <div className="flex items-start gap-3 mb-3">
-                                            <span className="material-symbols-outlined text-[24px] text-slate-400">description</span>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-[12px] font-bold text-slate-900 truncate">{doc.docType || doc.type || "Document"}</p>
-                                                <p className="text-[10px] font-medium text-slate-500 truncate">{doc.fileName || "No filename"}</p>
+                                            <div className="relative p-4 rounded-xl bg-white/30 border border-white/50 hover:bg-white/50 hover:border-white/80 transition-all duration-300">
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1.5">Account Status</p>
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/8 text-emerald-600 border border-emerald-500/20">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                                                    Active
+                                                </span>
                                             </div>
-                                            {/* Status badge */}
-                                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide border ${
-                                                doc.status === 'uploaded' || doc.status === 'verified'
-                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                                    : doc.status === 'rejected'
-                                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                                    : 'bg-amber-50 text-amber-700 border-amber-200'
-                                            }`}>
-                                                {doc.status || 'pending'}
-                                            </span>
                                         </div>
-                                        {doc.uploadedAt && (
-                                            <p className="text-[10px] font-bold text-slate-400 mt-2 uppercase tracking-tight">
-                                                Uploaded: {formatDate(doc.uploadedAt, "MMM d, yyyy")}
-                                            </p>
-                                        )}
-                                        {/* View button — uses presigned S3 URL */}
-                                        {doc.filePath && (
-                                            <button
-                                                onClick={async () => {
-                                                    try {
-                                                        const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-                                                        const token = typeof window !== 'undefined'
-                                                            ? (localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken'))
-                                                            : null;
-                                                        const res = await fetch(`${API_URL}/documents/presigned-view/${userId}/${encodeURIComponent(doc.docType)}`, {
-                                                            headers: token ? { Authorization: `Bearer ${token}` } : {},
-                                                        });
-                                                        if (res.ok) {
-                                                            const data = await res.json();
-                                                            window.open(data.url, '_blank');
-                                                        } else {
-                                                            // Fallback: use view endpoint (redirect)
-                                                            window.open(`${API_URL}/documents/view/${userId}/${encodeURIComponent(doc.docType)}`, '_blank');
-                                                        }
-                                                    } catch (e) {
-                                                        console.error('Failed to open document:', e);
-                                                    }
-                                                }}
-                                                className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-[11px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded hover:bg-indigo-100 transition-colors"
-                                            >
-                                                <span className="material-symbols-outlined text-[14px]">visibility</span>
-                                                View Document
-                                            </button>
+                                    </div>
+                                </div>
+
+                                {/* Stats Panel */}
+                                <div className="space-y-4">
+                                    {[
+                                        { label: "Applications Node", val: userApplications.length, icon: "description", color: "from-[#6605c7]/10 to-[#6605c7]/5", border: "hover:border-[#6605c7]/30", text: "text-[#6605c7]" },
+                                        { label: "Stored Documents", val: userDocuments.length, icon: "folder", color: "from-[#8b24e5]/10 to-[#8b24e5]/5", border: "hover:border-[#8b24e5]/30", text: "text-[#8b24e5]" }
+                                    ].map((stat, i) => (
+                                        <TiltCard key={i} className="p-6 rounded-2xl bg-white/60 border border-white/80 shadow-md">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">{stat.label}</p>
+                                                    <p className="text-4xl font-extrabold text-[#1a1626]">{stat.val}</p>
+                                                </div>
+                                                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center border border-white/40`}>
+                                                    <span className={`material-symbols-outlined text-[24px] ${stat.text}`}>{stat.icon}</span>
+                                                </div>
+                                            </div>
+                                        </TiltCard>
+                                    ))}
+
+                                    <TiltCard className="p-6 rounded-2xl bg-white/60 border border-white/80 shadow-md">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Member Since</p>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center border border-white/40">
+                                                <span className="material-symbols-outlined text-[20px] text-gray-400">calendar_today</span>
+                                            </div>
+                                            <div>
+                                                <p className="text-[12px] font-bold text-[#1a1626]">
+                                                    {(userData.createdAt || userData.created_at) ? new Date(userData.createdAt || userData.created_at).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: '2-digit', year: 'numeric' }) : "—"}
+                                                </p>
+                                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider font-mono">Secure Access Node</p>
+                                            </div>
+                                        </div>
+                                    </TiltCard>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {/* Applications Tab */}
+                        {activeTab === "applications" && (
+                            <motion.div
+                                key="applications"
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -15 }}
+                                className="space-y-6"
+                            >
+                                {!selectedApplication ? (
+                                    <div className="bg-white/60 border border-white/80 backdrop-blur-xl rounded-2xl shadow-xl overflow-hidden">
+                                        {userApplications.length > 0 ? (
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-left border-collapse">
+                                                    <thead>
+                                                        <tr className="border-b border-gray-100 bg-white/20">
+                                                            {["Application ID", "Bank Node", "Loan Program", "Status", "Timestamp", "Action"].map((header, idx) => (
+                                                                <th key={idx} className="px-6 py-4 text-[9px] font-black uppercase tracking-widest text-gray-400">{header}</th>
+                                                            ))}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-gray-100">
+                                                        {userApplications.map((app, idx) => {
+                                                            const statusStyle = app.status === "approved"
+                                                                ? "bg-emerald-500/8 text-emerald-600 border-emerald-500/20"
+                                                                : app.status === "rejected"
+                                                                    ? "bg-rose-500/8 text-rose-600 border-rose-500/20"
+                                                                    : app.status === "processing"
+                                                                        ? "bg-indigo-500/8 text-indigo-600 border-indigo-500/20"
+                                                                        : "bg-amber-500/8 text-amber-600 border-amber-500/20";
+                                                            
+                                                            return (
+                                                                <tr key={idx} className="hover:bg-white/30 transition-colors duration-200">
+                                                                    <td className="px-6 py-4 text-xs font-mono font-bold text-[#6605c7]" title={app.id}>
+                                                                        {app.applicationNumber || `APP${app.id?.replace(/-/g, "").slice(-10).toUpperCase()}`}
+                                                                    </td>
+                                                                    <td className="px-6 py-4 text-xs font-semibold text-gray-700">{app.bank || "—"}</td>
+                                                                    <td className="px-6 py-4 text-xs font-semibold text-gray-700">{app.loanType || "—"}</td>
+                                                                    <td className="px-6 py-4">
+                                                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${statusStyle}`}>
+                                                                            <span className={`w-1 h-1 rounded-full ${app.status === "approved" ? "bg-emerald-500 animate-pulse" : app.status === "rejected" ? "bg-rose-500" : app.status === "processing" ? "bg-indigo-500 animate-pulse" : "bg-amber-500 animate-pulse"}`} />
+                                                                            {app.status || "Pending"}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td className="px-6 py-4 text-xs font-semibold text-gray-500">
+                                                                        {formatDate(app.createdAt, "MMM d, yyyy")}
+                                                                    </td>
+                                                                    <td className="px-6 py-4">
+                                                                        <button
+                                                                            onClick={() => setSelectedApplication(app)}
+                                                                            className="w-8 h-8 rounded-lg bg-white border border-gray-100 hover:bg-[#6605c7]/10 hover:border-[#6605c7]/20 text-gray-400 hover:text-[#6605c7] flex items-center justify-center transition-all duration-300 cursor-pointer shadow-sm"
+                                                                            title="View Details"
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-[16px]">visibility</span>
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        })}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        ) : (
+                                            <div className="py-16 text-center">
+                                                <span className="material-symbols-outlined text-[48px] text-slate-400 mx-auto block mb-4 animate-bounce" style={{ animationDuration: '3s' }}>inbox</span>
+                                                <p className="text-gray-500 font-semibold text-sm">No applications found in directory</p>
+                                            </div>
                                         )}
                                     </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="py-16 text-center">
-                                <span className="material-symbols-outlined text-[48px] text-slate-300 mx-auto block mb-4">folder_off</span>
-                                <p className="text-slate-500 font-semibold">No documents found for this user</p>
-                            </div>
+                                ) : (
+                                    <div className="rounded-2xl bg-white/70 border border-white/80 p-4">
+                                        <ApplicationDetailView
+                                            application={selectedApplication}
+                                            onBack={() => setSelectedApplication(null)}
+                                            onAadhaarSaved={(aadhaarNumber) => {
+                                                setUserData((prev: any) => ({ ...prev, aadhaarNumber }));
+                                            }}
+                                        />
+                                    </div>
+                                )}
+                            </motion.div>
                         )}
-                    </div>
-                )}
+
+                        {/* Documents Tab */}
+                        {activeTab === "documents" && (
+                            <motion.div
+                                key="documents"
+                                initial={{ opacity: 0, y: 15 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -15 }}
+                            >
+                                {userDocuments.length > 0 ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {userDocuments.map((doc, idx) => (
+                                            <TiltCard key={idx} className="border border-white/80 rounded-2xl p-6 bg-white/60 backdrop-blur-xl shadow-md hover:shadow-xl transition-all duration-300 relative group/doc">
+                                                {/* Bottom accent border matching status */}
+                                                <div className={`absolute bottom-0 left-0 right-0 h-[2.5px] rounded-b-2xl transition-all duration-300 opacity-60 group-hover/doc:opacity-100 ${doc.status === 'uploaded' || doc.status === 'verified'
+                                                        ? 'bg-emerald-500'
+                                                        : doc.status === 'rejected'
+                                                            ? 'bg-rose-500'
+                                                            : 'bg-amber-500'
+                                                    }`} />
+                                                
+                                                <div className="flex items-start gap-4 mb-4">
+                                                    <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 group-hover/doc:text-[#6605c7] group-hover/doc:bg-[#6605c7]/10 transition-colors duration-300">
+                                                        <span className="material-symbols-outlined text-[22px]">description</span>
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-[12px] font-black text-[#1a1626] uppercase tracking-wider truncate">{doc.docType || doc.type || "Document"}</p>
+                                                        <p className="text-[10px] font-bold text-gray-400 truncate mt-0.5">{doc.fileName || "No attachment"}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center justify-between border-t border-gray-100 pt-4 mt-4 text-[9px] font-bold text-gray-400 font-mono">
+                                                    <div>
+                                                        {doc.uploadedAt ? (
+                                                            <p className="uppercase tracking-wider">
+                                                                Uploaded: {formatDate(doc.uploadedAt, "MMM d, yyyy")}
+                                                            </p>
+                                                        ) : (
+                                                            <p className="uppercase tracking-wider">No timestamp</p>
+                                                        )}
+                                                    </div>
+                                                    <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${doc.status === 'uploaded' || doc.status === 'verified'
+                                                            ? 'bg-emerald-500/8 text-emerald-600 border-emerald-500/20'
+                                                            : doc.status === 'rejected'
+                                                                ? 'bg-rose-500/8 text-rose-600 border-rose-500/20'
+                                                                : 'bg-amber-500/8 text-[#d97706] border-amber-500/20'
+                                                        }`}>
+                                                        {doc.status || 'pending'}
+                                                    </span>
+                                                </div>
+
+                                                {/* Corrected path names avoiding 404 router mismatch */}
+                                                {doc.filePath && (
+                                                    <button
+                                                        onClick={async () => {
+                                                            try {
+                                                                const token = typeof window !== 'undefined'
+                                                                    ? (localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken'))
+                                                                    : null;
+                                                                
+                                                                // Use absolute /api route to ensure it's proxied to NestJS
+                                                                const res = await fetch(`/api/documents/presigned-view/${userId}/${encodeURIComponent(doc.docType)}`, {
+                                                                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                                                                });
+                                                                if (res.ok) {
+                                                                    const data = await res.json();
+                                                                    window.open(data.url, '_blank');
+                                                                } else {
+                                                                    // Direct streaming view backup route
+                                                                    window.open(`/api/documents/view/${userId}/${encodeURIComponent(doc.docType)}`, '_blank');
+                                                                }
+                                                            } catch (e) {
+                                                                console.error('Failed to open document:', e);
+                                                            }
+                                                        }}
+                                                        className="mt-5 w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-[#6605c7] to-[#8b24e5] hover:opacity-90 rounded-xl transition-all duration-300 cursor-pointer shadow-md shadow-[#6605c7]/15 hover:shadow-[#6605c7]/25"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[14px]">visibility</span>
+                                                        Stream Decrypted Doc
+                                                    </button>
+                                                )}
+                                            </TiltCard>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="py-16 text-center bg-white/20 border border-white/40 rounded-2xl">
+                                        <span className="material-symbols-outlined text-[48px] text-slate-400 mx-auto block mb-4 animate-pulse">folder_off</span>
+                                        <p className="text-gray-500 font-semibold text-sm">No files uploaded for this node</p>
+                                    </div>
+                                )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
         </div>
     );

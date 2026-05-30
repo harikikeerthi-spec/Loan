@@ -350,6 +350,99 @@ export class UsersController {
     }
 
     @UseGuards(AdminGuard)
+    @Get('admin/:id')
+    async getUserById(@Param('id') id: string) {
+        if (!id) {
+            return {
+                success: false,
+                message: 'User ID is required',
+            };
+        }
+        try {
+            const user = await this.usersService.findById(id);
+
+            if (!user) {
+                return {
+                    success: false,
+                    message: 'User not found',
+                };
+            }
+
+            // Format date of birth to DD-MM-YYYY if it exists
+            let formattedDOB = '';
+            if (user.dateOfBirth) {
+                const date = new Date(user.dateOfBirth);
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const year = date.getFullYear();
+                formattedDOB = `${day}-${month}-${year}`;
+            }
+
+            const safeJsonParse = (str: string) => {
+                if (!str) return null;
+                try {
+                    return typeof str === 'string' ? JSON.parse(str) : str;
+                } catch (e) {
+                    return null;
+                }
+            };
+
+            return {
+                success: true,
+                data: {
+                    id: user.id,
+                    email: user.email,
+                    firstName: user.firstName || '',
+                    lastName: user.lastName || '',
+                    phoneNumber: user.phoneNumber || '',
+                    dateOfBirth: formattedDOB,
+                    mobile: user.mobile,
+                    role: user.role,
+                    registeredAtIndia: user.registeredAtIndia || '',
+                    panNumber: user.panNumber || '',
+                    aadhaarNumber: user.aadhaarNumber || '',
+                    fatherName: user.fatherName || '',
+                    permanentAddress: user.permanentAddress || '',
+                    gender: user.gender || '',
+                    documentVerified: user.documentVerified || false,
+                    goal: user.goal || '',
+                    studyDestination: user.studyDestination || '',
+                    courseName: user.courseName || '',
+                    targetUniversity: user.targetUniversity || '',
+                    intakeSeason: user.intakeSeason || '',
+                    bachelorsDegree: user.bachelorsDegree || '',
+                    gpa: user.gpa || null,
+                    workExp: user.workExp || null,
+                    entranceTest: user.entranceTest || '',
+                    entranceScore: user.entranceScore || '',
+                    englishTest: user.englishTest || '',
+                    englishScore: user.englishScore || '',
+                    budget: user.budget || '',
+                    pincode: user.pincode || '',
+                    loanAmount: user.loanAmount || '',
+                    admitStatus: user.admitStatus || '',
+                    passport: safeJsonParse(user.passport),
+                    nationality: safeJsonParse(user.nationality),
+                    mailingAddress: safeJsonParse(user.mailingAddress),
+                    emergencyContact: safeJsonParse(user.emergencyContact),
+                    academic: safeJsonParse(user.academic),
+                    workExperience: safeJsonParse(user.workExperience),
+                    tests: safeJsonParse(user.tests),
+                    family: safeJsonParse(user.family),
+                    coApplicant: safeJsonParse(user.coApplicant),
+                },
+            };
+        } catch (error) {
+            console.error('Error fetching user details by ID:', error);
+            return {
+                success: false,
+                message: 'Failed to fetch user details',
+                error: error?.message,
+            };
+        }
+    }
+
+    @UseGuards(AdminGuard)
     @Delete('admin/:id')
     async deleteUser(@Param('id') id: string) {
         if (!id) {

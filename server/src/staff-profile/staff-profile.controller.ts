@@ -12,7 +12,9 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { StaffProfileService } from './staff-profile.service';
@@ -201,5 +203,71 @@ export class StaffProfileController {
       search,
     });
     return { success: true, data: result.items, total: result.total };
+  }
+
+  // ─── Today's Dashboard API (F29) ──────────────────────────────────────────
+  @Get('dashboard/today')
+  async getTodayDashboard(@Req() req: any) {
+    const data = await this.svc.getTodayDashboard(req.user);
+    return { success: true, data };
+  }
+
+  // ─── Dashboard Summary APIs (F13) ─────────────────────────────────────────
+  @Get('dashboard/summary')
+  async getDashboardSummary() {
+    const data = await this.svc.getDashboardSummary();
+    return { success: true, data };
+  }
+
+  // ─── Rejection Analytics API (F14) ────────────────────────────────────────
+  @Get('dashboard/rejections')
+  async getRejectionAnalytics(@Query('period') period?: string) {
+    const data = await this.svc.getRejectionAnalytics(period || 'all');
+    return { success: true, data };
+  }
+
+  // ─── SLA Tracker API (F15) ────────────────────────────────────────────────
+  @Get('dashboard/sla')
+  async getSlaTracker() {
+    const data = await this.svc.getSlaTracker();
+    return { success: true, data };
+  }
+
+  // ─── Global Search API (F30) ──────────────────────────────────────────────
+  @Get('dashboard/search')
+  async globalSearch(@Query('q') q?: string) {
+    const data = await this.svc.globalSearch(q || '');
+    return { success: true, data };
+  }
+
+  // ─── AI Underwriting & Education Abroad Detection (F47, F48) ──────────────
+  @Get('dashboard/predict/:id')
+  async getAiPredictionScore(@Param('id') id: string) {
+    const data = await this.svc.getAiPredictionScore(id);
+    return { success: true, data };
+  }
+
+  // ─── Deadline Calendar API (F44) ──────────────────────────────────────────
+  @Get('dashboard/calendar')
+  async getDeadlineCalendar() {
+    const data = await this.svc.getDeadlineCalendar();
+    return { success: true, data };
+  }
+
+  // ─── Bulk Export API (F28) ────────────────────────────────────────────────
+  @Get('export/applications')
+  async exportApplicationsCsv(@Res() res: any, @Query() query: any) {
+    const response = res as Response;
+    const csvContent = await this.svc.exportApplicationsCsv(query);
+    response.setHeader('Content-Type', 'text/csv');
+    response.setHeader('Content-Disposition', 'attachment; filename=applications-export.csv');
+    response.status(200).send(csvContent);
+  }
+
+  // ─── Multi-Branch API (F39) ───────────────────────────────────────────────
+  @Get('branches/analytics')
+  async getBranchAnalytics() {
+    const data = await this.svc.getBranchAnalytics();
+    return { success: true, data };
   }
 }

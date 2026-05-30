@@ -25,6 +25,7 @@ import {
 } from "@/lib/documentRequirements";
 import ActivityLogWidget from "@/components/staff/ActivityLogWidget";
 import ShareProfileToBankModal from "@/components/staff/ShareProfileToBankModal";
+import NotificationsPanel from "@/components/staff/NotificationsPanel";
 
 // --- Components ---
 
@@ -3051,15 +3052,16 @@ export default function StaffDashboardPage() {
                         />
                     </div>
 
-                    {/* Right: Bell + User + Logout */}
+                    {/* Right: Notifications + User + Logout */}
                     <div className="flex items-center gap-3">
                         <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded transition-all" onClick={() => setSidebarOpen(!sidebarOpen)}>
                             <span className="material-symbols-outlined text-[20px]">menu</span>
                         </button>
-                        <button className="relative p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all">
-                            <span className="material-symbols-outlined text-[20px]">notifications</span>
-                            {pendingCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 border border-white" />}
-                        </button>
+                        <NotificationsPanel 
+                            staffId={user?.id}
+                            maxDisplay={8}
+                            showUnreadBadge={true}
+                        />
                         <div className="h-5 w-px bg-slate-200" />
                         <div className="flex items-center gap-2">
                             <img
@@ -4523,11 +4525,18 @@ export default function StaffDashboardPage() {
                                                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block">Target Intake Season*</label>
                                                                 <select value={newStudent.intakeSeason} onChange={e => setNewStudent({ ...newStudent, intakeSeason: e.target.value })} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm appearance-none focus:outline-none focus:ring-2 focus:ring-emerald-500/20">
                                                                     <option value="">Select Intake...</option>
-                                                                    <option value="Fall 2026">Fall 2026</option>
-                                                                    <option value="Spring 2026">Spring 2026</option>
-                                                                    <option value="Summer 2026">Summer 2026</option>
-                                                                    <option value="Fall 2027">Fall 2027</option>
-                                                                    <option value="Spring 2027">Spring 2027</option>
+                                                                    {(() => {
+                                                                        const cy = new Date().getFullYear();
+                                                                        return [
+                                                                            `Fall ${cy}`,
+                                                                            `Spring ${cy + 1}`,
+                                                                            `Summer ${cy + 1}`,
+                                                                            `Fall ${cy + 1}`,
+                                                                            `Spring ${cy + 2}`,
+                                                                        ].map(opt => (
+                                                                            <option key={opt} value={opt}>{opt}</option>
+                                                                        ));
+                                                                    })()}
                                                                 </select>
                                                             </div>
                                                             <div>
@@ -7146,7 +7155,7 @@ export default function StaffDashboardPage() {
                                             {activeSection === "applications" && (
                                                 <>
                                                     <th className="sticky left-0 z-20 bg-slate-50 px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">APPLICANT PROFILE</span></th>
-                                                    <th className="sticky left-[250px] z-20 bg-slate-50 px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">USER ID</span></th>
+                                                    <th className="sticky left-[100px] z-20 bg-slate-50 px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">USER ID</span></th>
                                                     <th className="sticky left-[420px] z-20 bg-slate-50 px-5 py-5"><span className="flex items-center gap-1.5 text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest"><span className="material-symbols-outlined text-[14px]">mail</span> CONTACT</span></th>
                                                     <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">COLLEGE NAME</span></th>
                                                     <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">PROGRAM FOCUS</span></th>
@@ -7252,7 +7261,11 @@ export default function StaffDashboardPage() {
                                                                         <div
                                                                             onClick={() => {
                                                                                 const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
-                                                                                if (uid) window.open(`/staff/users/${uid}`, '_blank');
+                                                                                const email = item.email || item.student?.email;
+                                                                                const params = new URLSearchParams();
+                                                                                if (email) params.append('email', email);
+                                                                                const queryStr = params.toString();
+                                                                                if (uid) window.open(`/staff/users/${uid}${queryStr ? `?${queryStr}` : ''}`, '_blank');
                                                                             }}
                                                                             className="relative shrink-0 cursor-pointer group/avatar hover:scale-105 transition-all"
                                                                             title="Click to view Student Profile"
@@ -7268,25 +7281,29 @@ export default function StaffDashboardPage() {
                                                                             <p
                                                                                 onClick={() => {
                                                                                     const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
-                                                                                    if (uid) window.open(`/staff/users/${uid}`, '_blank');
+                                                                                    const email = item.email || item.student?.email;
+                                                                                    const params = new URLSearchParams();
+                                                                                    if (email) params.append('email', email);
+                                                                                    const queryStr = params.toString();
+                                                                                    if (uid) window.open(`/staff/users/${uid}${queryStr ? `?${queryStr}` : ''}`, '_blank');
                                                                                 }}
-                                                                                className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#060708] leading-tight truncate cursor-pointer hover:text-slate-600 hover:underline transition-all"
+                                                                                className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#060708] leading-tight truncate cursor-pointer hover:text-slate-600 transition-all"
                                                                                 title="Click to view Student Profile"
                                                                             >
                                                                                 {item.firstName || item.student?.firstName || '—'} {item.lastName || item.student?.lastName || ''}
                                                                             </p>
                                                                             <p
                                                                                 onClick={() => setSelectedApp(item)}
-                                                                                className="text-[9px] text-slate-500 hover:text-slate-600 hover:underline cursor-pointer transition-all font-black mt-1 uppercase tracking-widest inline-block"
+                                                                                className="text-[9px] text-slate-500 hover:text-slate-600 cursor-pointer transition-all font-black mt-1 uppercase tracking-widest inline-block"
                                                                                 title="Click to view Application Details"
                                                                             >
-                                                                                APP-{(item.id || item._id || 'UNKNOWN').slice(-6)}
+                                                                                {item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`}
                                                                             </p>
                                                                         </div>
                                                                     </div>
                                                                 </td>
                                                                 <td className="sticky left-[250px] z-10 bg-white px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
-                                                                    <p className="text-[12px] font-mono font-bold text-slate-900 truncate">{String(item.userId || item.user_id || item.student?.id || item.student?._id || '—').slice(0, 10).toUpperCase()}</p>
+                                                                    <p className="text-[12px] font-mono font-bold text-slate-900">{String(item.userId || item.user_id || item.student?.id || item.student?._id || '—')}</p>
                                                                     <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest mt-1">User ID</p>
                                                                 </td>
                                                                 <td className="sticky left-[420px] z-10 bg-white px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
@@ -7297,7 +7314,22 @@ export default function StaffDashboardPage() {
                                                                     </p>
                                                                 </td>
                                                                 <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
-                                                                    <p className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] truncate max-w-[180px]">{item.universityName || item.college || '—'}</p>
+                                                                    {item.universityName || item.college ? (() => {
+                                                                        const collegeName = item.universityName || item.college;
+                                                                        const slug = collegeName.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                                                                        return (
+                                                                            <Link
+                                                                                href={`/university/${slug}`}
+                                                                                target="_blank"
+                                                                                className="text-[16px] font-['Playfair_Display',serif] font-bold text-black hover:text-slate-800 cursor-pointer transition-all block truncate max-w-[180px]"
+                                                                                title="Click to view University Details"
+                                                                            >
+                                                                                {collegeName}
+                                                                            </Link>
+                                                                        );
+                                                                    })() : (
+                                                                        <p className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] truncate max-w-[180px]">—</p>
+                                                                    )}
                                                                     <p className="text-[8px] font-black text-slate-600 uppercase tracking-widest mt-1">COLLEGE/UNIVERSITY</p>
                                                                 </td>
                                                                 <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
@@ -7438,7 +7470,7 @@ export default function StaffDashboardPage() {
                                                                                 {item.firstName || '—'} {item.lastName || ''}
                                                                             </p>
                                                                             <p className="text-[12px] text-slate-900 font-bold font-mono mt-1">
-                                                                                ID: {(item.id || item._id || '').slice(0, 10).toUpperCase()}
+                                                                                ID: {item.id || item._id || ''}
                                                                             </p>
                                                                         </div>
                                                                     </div>
@@ -7530,18 +7562,25 @@ export default function StaffDashboardPage() {
                                                                 <td className="px-5 py-4">
                                                                     <div className="flex items-center justify-center gap-2">
                                                                         <button
-                                                                            onClick={() => window.open(`/staff/users/${item.id || item._id}`, '_blank')}
+                                                                            onClick={() => {
+                                                                                const uid = item.id || item._id;
+                                                                                const email = item.email;
+                                                                                const params = new URLSearchParams();
+                                                                                if (email) params.append('email', email);
+                                                                                const queryStr = params.toString();
+                                                                                window.open(`/staff/users/${uid}${queryStr ? `?${queryStr}` : ''}`, '_blank');
+                                                                            }}
                                                                             className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 flex items-center justify-center transition-all shadow-sm"
                                                                             title="View Profile"
                                                                         >
-                                                                            <span className="material-symbols-outlined text-[16px]">account_circle</span>
+                                                                            <span className="material-symbols-outlined text-[16px]">visibility</span>
                                                                         </button>
                                                                         <button
                                                                             onClick={() => { setAutoStartUser(item); navigateToSection("chat_customer"); }}
                                                                             className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 flex items-center justify-center transition-all shadow-sm"
                                                                             title="Direct Message"
                                                                         >
-                                                                            <span className="material-symbols-outlined text-[16px]">chat</span>
+                                                                            <span className="material-symbols-outlined text-[16px]">chat_bubble</span>
                                                                         </button>
                                                                     </div>
                                                                 </td>

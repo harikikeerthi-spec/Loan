@@ -19,6 +19,14 @@ const loanTypes = ["Undergraduate Abroad", "Postgraduate Abroad", "Doctoral/PhD 
 const courses = ["B.Tech/B.E.", "MBA/PGDM", "MS/M.Tech", "MBBS/Medicine", "Law", "Architecture", "Arts & Humanities", "Other"];
 const countries = ["USA", "UK", "Canada", "Australia", "Germany", "Ireland", "New Zealand", "Other"];
 
+const formatIndianCurrency = (val: string): string => {
+    const clean = val.replace(/\D/g, "");
+    if (!clean) return "";
+    const num = parseInt(clean, 10);
+    if (isNaN(num)) return "";
+    return new Intl.NumberFormat("en-IN").format(num);
+};
+
 export default function ApplyLoanPage() {
     const { isAuthenticated, user, refreshUser } = useAuth();
     const router = useRouter();
@@ -43,6 +51,7 @@ export default function ApplyLoanPage() {
         address: "",
         notes: "",
         admissionStatus: "waiting", // confirmed, conditional, waiting
+        intakeSeason: "",
     });
     const [submitting, setSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
@@ -98,6 +107,7 @@ export default function ApplyLoanPage() {
                     email: prev.email || user?.email || "",
                     phone: prev.phone || user?.phoneNumber || "",
                     dateOfBirth: prev.dateOfBirth || user?.dateOfBirth || "",
+                    intakeSeason: prev.intakeSeason || user?.intakeSeason || "",
                 }));
                 if (user) setProfileLoaded(true);
             }
@@ -123,8 +133,11 @@ export default function ApplyLoanPage() {
         if (!formData.courseType) errors.courseType = "Please select a course type";
         if (!formData.country) errors.country = "Please select a country";
         if (!formData.university.trim()) errors.university = "Please enter your university";
-        if (!formData.amount || Number(formData.amount) <= 0) errors.amount = "Please enter a valid loan amount";
-        if (!formData.annualFee || Number(formData.annualFee) <= 0) errors.annualFee = "Please enter annual tuition fee";
+        const cleanAmount = formData.amount.replace(/,/g, "");
+        const cleanAnnualFee = formData.annualFee.replace(/,/g, "");
+        if (!cleanAmount || Number(cleanAmount) <= 0) errors.amount = "Please enter a valid loan amount";
+        if (!cleanAnnualFee || Number(cleanAnnualFee) <= 0) errors.annualFee = "Please enter annual tuition fee";
+        if (!formData.intakeSeason) errors.intakeSeason = "Please select target intake season";
         setStepErrors(errors);
         return Object.keys(errors).length === 0;
     };
@@ -138,7 +151,8 @@ export default function ApplyLoanPage() {
         if (!formData.phone.trim()) errors.phone = "Phone number is required";
         else if (!/^[\d+\-\s()]{7,15}$/.test(formData.phone.trim())) errors.phone = "Please enter a valid phone number";
         if (!formData.coApplicant) errors.coApplicant = "Please select co-applicant type";
-        if (formData.coApplicant && formData.coApplicant !== "none" && (!formData.income || Number(formData.income) <= 0)) {
+        const cleanIncome = formData.income.replace(/,/g, "");
+        if (formData.coApplicant && formData.coApplicant !== "none" && (!cleanIncome || Number(cleanIncome) <= 0)) {
             errors.income = "Please enter co-applicant annual income";
         }
         if (!formData.collateral) errors.collateral = "Please select collateral availability";
@@ -169,14 +183,18 @@ export default function ApplyLoanPage() {
         try {
             const userId = user.id;
             const bankName = banks.find(b => b.id === formData.bank)?.name || formData.bank;
+            const cleanAmount = formData.amount.replace(/,/g, "");
+            const cleanAnnualFee = formData.annualFee.replace(/,/g, "");
+            const cleanLivingCost = formData.livingCost.replace(/,/g, "");
+            const cleanIncome = formData.income.replace(/,/g, "");
             await applicationApi.create({
                 ...formData,
                 userId,
                 bank: bankName,
-                amount: parseFloat(formData.amount),
-                annualFee: parseFloat(formData.annualFee) || undefined,
-                livingCost: parseFloat(formData.livingCost) || undefined,
-                income: parseFloat(formData.income) || undefined,
+                amount: parseFloat(cleanAmount),
+                annualFee: parseFloat(cleanAnnualFee) || undefined,
+                livingCost: parseFloat(cleanLivingCost) || undefined,
+                income: parseFloat(cleanIncome) || undefined,
             });
 
             // Sync personal details to main user profile if authenticated
@@ -187,6 +205,7 @@ export default function ApplyLoanPage() {
                         lastName: formData.lastName,
                         phoneNumber: formData.phone,
                         dateOfBirth: formData.dateOfBirth, // Custom DatePicker already returns DD-MM-YYYY
+                        intakeSeason: formData.intakeSeason,
                     });
                     await refreshUser();
                 } catch (err) {
@@ -372,12 +391,12 @@ export default function ApplyLoanPage() {
                                     <InputField label="Full University Name" icon="domain" value={formData.university} onChange={(v) => update("university", v)} placeholder="e.g. University of Toronto" error={stepErrors.university} />
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <InputField label="Annual Tuition Fee (₹)" icon="payments" value={formData.annualFee} onChange={(v) => update("annualFee", v)} placeholder="e.g. 25,00,000" type="number" error={stepErrors.annualFee} />
-                                        <InputField label="Loan Principal Amount (₹)" icon="savings" value={formData.amount} onChange={(v) => update("amount", v)} placeholder="e.g. 40,00,000" type="number" error={stepErrors.amount} />
+                                        <InputField label="Annual Tuition Fee (₹)" icon="payments" value={formData.annualFee} onChange={(v) => update("annualFee", formatIndianCurrency(v))} placeholder="e.g. 25,00,000" type="text" error={stepErrors.annualFee} />
+                                        <InputField label="Loan Principal Amount (₹)" icon="savings" value={formData.amount} onChange={(v) => update("amount", formatIndianCurrency(v))} placeholder="e.g. 40,00,000" type="text" error={stepErrors.amount} />
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <InputField label="Monthly Living Budget (₹)" icon="home_work" value={formData.livingCost} onChange={(v) => update("livingCost", v)} placeholder="e.g. 5,00,000" type="number" />
+                                        <InputField label="Monthly Living Budget (₹)" icon="home_work" value={formData.livingCost} onChange={(v) => update("livingCost", formatIndianCurrency(v))} placeholder="e.g. 5,00,000" type="text" />
                                         <SelectField label="Admission Status" icon="verified" value={formData.admissionStatus} onChange={(v) => update("admissionStatus", v)}
                                             options={[
                                                 { value: "confirmed", label: "Confirmed Admission" },
@@ -385,6 +404,20 @@ export default function ApplyLoanPage() {
                                                 { value: "waiting", label: "Awaiting Result" },
                                                 { value: "planning", label: "Planning Stage" }
                                             ]} error={stepErrors.admissionStatus} required />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        <SelectField label="Target Intake Season" icon="calendar_today" value={formData.intakeSeason} onChange={(v) => update("intakeSeason", v)}
+                                            options={(() => {
+                                                const cy = new Date().getFullYear();
+                                                return [
+                                                    { value: `Fall ${cy}`, label: `Fall ${cy}` },
+                                                    { value: `Spring ${cy + 1}`, label: `Spring ${cy + 1}` },
+                                                    { value: `Summer ${cy + 1}`, label: `Summer ${cy + 1}` },
+                                                    { value: `Fall ${cy + 1}`, label: `Fall ${cy + 1}` },
+                                                    { value: `Spring ${cy + 2}`, label: `Spring ${cy + 2}` }
+                                                ];
+                                            })()} error={stepErrors.intakeSeason} required />
                                     </div>
                                 </div>
                             </div>
@@ -434,7 +467,7 @@ export default function ApplyLoanPage() {
                                     <SelectField label="Co-Applicant Identity" icon="family_history" value={formData.coApplicant} onChange={(v) => update("coApplicant", v)}
                                         options={[{ value: "parent", label: "Parent" }, { value: "spouse", label: "Spouse" }, { value: "sibling", label: "Sibling" }, { value: "none", label: "None" }]} error={stepErrors.coApplicant} required />
                                     {formData.coApplicant && formData.coApplicant !== "none" && (
-                                        <InputField label="Co-Applicant Annual Income (₹)" icon="database" value={formData.income} onChange={(v) => update("income", v)} placeholder="e.g. 10,00,000" type="number" error={stepErrors.income} required />
+                                        <InputField label="Co-Applicant Annual Income (₹)" icon="database" value={formData.income} onChange={(v) => update("income", formatIndianCurrency(v))} placeholder="e.g. 10,00,000" type="text" error={stepErrors.income} required />
                                     )}
                                 </div>
 
@@ -486,10 +519,11 @@ export default function ApplyLoanPage() {
                                                 { label: "Partner Bank", value: banks.find((b) => b.id === formData.bank)?.name || formData.bank },
                                                 { label: "Loan Structure", value: formData.loanType },
                                                 { label: "Academic Goal", value: formData.courseType },
-                                                { label: "Principal", value: formData.amount ? `₹${Number(formData.amount).toLocaleString("en-IN")}` : "" },
-                                                { label: "Annual Tuition", value: formData.annualFee ? `₹${Number(formData.annualFee).toLocaleString("en-IN")}` : "" },
+                                                { label: "Principal", value: formData.amount ? `₹${Number(formData.amount.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
+                                                { label: "Annual Tuition", value: formData.annualFee ? `₹${Number(formData.annualFee.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
                                                 { label: "Destination", value: formData.country },
                                                 { label: "University", value: formData.university },
+                                                { label: "Target Intake", value: formData.intakeSeason },
                                             ].filter((f) => f.value).map((f) => (
                                                 <div key={f.label} className="flex justify-between items-center py-3 border-b border-gray-100/50 last:border-0">
                                                     <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">{f.label}</span>
@@ -514,7 +548,7 @@ export default function ApplyLoanPage() {
                                                 { label: "Mobile Line", value: formData.phone },
                                                 { label: "Birth Record", value: formData.dateOfBirth ? new Date(formData.dateOfBirth).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : "" },
                                                 { label: "Co-Applicant", value: formData.coApplicant === "none" ? "None" : formData.coApplicant ? formData.coApplicant.charAt(0).toUpperCase() + formData.coApplicant.slice(1) : "" },
-                                                { label: "Secondary Income", value: formData.income && formData.coApplicant !== "none" ? `₹${Number(formData.income).toLocaleString("en-IN")}` : "" },
+                                                { label: "Secondary Income", value: formData.income && formData.coApplicant !== "none" ? `₹${Number(formData.income.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
                                                 { label: "Collateral", value: formData.collateral.split(':')[0] },
                                             ].filter((f) => f.value).map((f) => (
                                                 <div key={f.label} className="flex justify-between items-center py-3 border-b border-gray-100/50 last:border-0">

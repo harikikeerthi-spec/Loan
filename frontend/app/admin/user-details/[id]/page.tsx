@@ -109,7 +109,7 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
                             </h1>
                             <div className="flex items-center gap-3 mt-2">
                                 <span className="text-[12px] font-bold text-slate-500 uppercase tracking-wider">
-                                    ID: {userId.slice(0, 10).toUpperCase()}
+                                    ID: {userId}
                                 </span>
                                 <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${
                                     userData.role?.includes("admin")
@@ -282,7 +282,7 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
                                             {userApplications.map((app, idx) => (
                                                 <tr key={idx} className="hover:bg-slate-50 transition-colors">
                                                     <td className="px-6 py-4 text-[12px] font-bold text-slate-900">
-                                                        #{app.applicationNumber?.toString().slice(0, 8) || app.id?.slice(0, 8).toUpperCase()}
+                                                        {app.applicationNumber || app.id?.slice(0, 8).toUpperCase()}
                                                     </td>
                                                     <td className="px-6 py-4 text-[12px] font-semibold text-slate-700">{app.bank || "—"}</td>
                                                     <td className="px-6 py-4 text-[12px] font-semibold text-slate-700">{app.loanType || "—"}</td>
@@ -343,7 +343,7 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
                                         <div className="border-b border-slate-200 pb-6">
                                             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-2">Application ID</p>
                                             <p className="text-[16px] font-black text-slate-900">
-                                                #{selectedApplication.applicationNumber?.toString().slice(0, 8) || selectedApplication.id?.slice(0, 8).toUpperCase()}
+                                                {selectedApplication.applicationNumber || selectedApplication.id?.slice(0, 8).toUpperCase()}
                                             </p>
                                         </div>
 

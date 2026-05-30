@@ -111,6 +111,7 @@ export class ChatService {
       const { data, error } = await query;
       
       if (error) {
+          this.logger.error('Failed to get conversations', error);
           throw new HttpException('Db Error', HttpStatus.INTERNAL_SERVER_ERROR);
       }
       
@@ -123,18 +124,29 @@ export class ChatService {
       }));
   }
 
-  async getMessages(conversationId: string) {
-    const { data, error } = await this.db
+  async getMessages(conversationId: string, limit?: number, offset?: number) {
+    let query = this.db
       .from('Message')
       .select('*')
-      .eq('conversationId', conversationId)
-      .order('createdAt', { ascending: true });
+      .eq('conversationId', conversationId);
 
-    if (error) {
-      throw new HttpException('Db Error', HttpStatus.INTERNAL_SERVER_ERROR);
+    if (limit !== undefined && offset !== undefined) {
+      query = query.order('createdAt', { ascending: false }).range(offset, offset + limit - 1);
+      const { data, error } = await query;
+      if (error) {
+        this.logger.error(`Failed to get messages: ${error.message}`);
+        throw new HttpException('Db Error', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+      return data.reverse();
+    } else {
+      query = query.order('createdAt', { ascending: true });
+      const { data, error } = await query;
+      if (error) {
+        this.logger.error(`Failed to get messages: ${error.message}`);
+        throw new HttpException('Db Error', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+      return data;
     }
-
-    return data;
   }
 
   async getMessagesByPhone(phone: string) {
@@ -151,5 +163,24 @@ export class ChatService {
     if (!conv) return [];
 
     return this.getMessages(conv.id);
+  }
+
+  async sendMessageHttp(data: {
+    conversationId: string;
+    senderType: string;
+    senderId: string;
+    content: string;
+    messageType?: string;
+  }) {
+    const msg = await this.saveMessage({
+      conversationId: data.conversationId,
+      senderType: data.senderType,
+      senderId: data.senderId,
+      receiverType: 'customer',
+      content: data.content,
+      messageType: data.messageType || 'text',
+      status: 'sent'
+    });
+    return msg;
   }
 }

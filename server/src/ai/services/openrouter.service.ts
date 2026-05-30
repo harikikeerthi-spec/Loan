@@ -5,8 +5,29 @@ import { Injectable } from '@nestjs/common';
 export class OpenRouterService {
     private readonly apiUrl = 'https://openrouter.ai/api/v1/chat/completions';
     private readonly apiKey = process.env.OPENROUTER_API_KEY;
+    private readonly REQUEST_TIMEOUT_MS = 30_000; // 30 seconds
+    
+    // Fallback models to try if primary model fails (in order of preference)
+    private readonly FALLBACK_MODELS = [
+        'openai/gpt-4o-mini',
+        'meta-llama/llama-3.3-70b-instruct:free',
+        'meta-llama/llama-2-13b-chat:free',
+        'mistralai/mistral-7b-instruct:free',
+    ];
+    
+    private readonly VISION_FALLBACK_MODELS = [
+        'openai/gpt-4o-mini',
+        'meta-llama/llama-3.2-11b-vision-instruct:free',
+        'meta-llama/llama-3.3-70b-instruct:free',
+        'google/gemma-2-9b-it:free',
+    ];
 
-    async chat(prompt: string, model: string = 'meta-llama/llama-3.3-8b-instruct:free'): Promise<string> {
+    /** Create an AbortSignal that auto-aborts after the configured timeout. */
+    private createTimeoutSignal(): AbortSignal {
+        return AbortSignal.timeout(this.REQUEST_TIMEOUT_MS);
+    }
+
+    async chat(prompt: string, model: string = 'openai/gpt-4o-mini'): Promise<string> {
         if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') {
             console.warn('OPENROUTER_API_KEY is not set. Using mock response or failing.');
             throw new Error('OPENROUTER_API_KEY is not configured in environment variables.');
@@ -34,10 +55,11 @@ export class OpenRouterService {
                 headers: {
                     'Authorization': `Bearer ${this.apiKey}`,
                     'Content-Type': 'application/json',
-                    'HTTP-Referer': 'https://vidyaloan.com', // Optional, for OpenRouter rankings
-                    'X-Title': 'VidyaLoan', // Optional, for OpenRouter rankings
+                    'HTTP-Referer': 'https://vidyaloan.com',
+                    'X-Title': 'VidyaLoan',
                 },
                 body: JSON.stringify(requestBody),
+                signal: this.createTimeoutSignal(),
             });
 
             if (!response.ok) {
@@ -53,8 +75,16 @@ export class OpenRouterService {
             const data = await response.json();
             return data.choices?.[0]?.message?.content || '';
         } catch (error) {
-            console.error('OpenRouter request failed:', error);
-            if (error.message.includes('429') || error.message.includes('rate_limit')) {
+            console.error('OpenRouter request failed:', error?.message || error);
+            // Handle timeout errors
+            if (error?.name === 'TimeoutError' || error?.name === 'AbortError' || error?.message?.includes('timed out')) {
+                console.warn('OpenRouter request timed out after', this.REQUEST_TIMEOUT_MS, 'ms');
+                if (prompt.includes('universities')) {
+                    return JSON.stringify({ universities: [] });
+                }
+                return "Our AI assistant is temporarily busy. Please try again in a few minutes.";
+            }
+            if (error?.message?.includes('429') || error?.message?.includes('rate_limit')) {
                 console.warn('Rate limit hit. Returning mock response for stability.');
                 if (prompt.includes('universities')) {
                     return JSON.stringify([{
@@ -68,52 +98,80 @@ export class OpenRouterService {
         }
     }
 
-    async getJson<T>(prompt: string, model: string = 'meta-llama/llama-3.3-8b-instruct:free'): Promise<T> {
+    async getJson<T>(prompt: string, model: string = 'openai/gpt-4o-mini'): Promise<T> {
         const jsonPrompt = `${prompt}\n\nIMPORTANT: Respond ONLY with valid JSON. Do not include markdown formatting.`;
         if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') throw new Error('OPENROUTER_API_KEY is not configured');
 
+        // Build list of models to try
+        const modelsToTry = [model, ...this.FALLBACK_MODELS].filter((m, i, a) => a.indexOf(m) === i); // Remove duplicates
+        let lastError: Error | null = null;
         let content = '';
-        try {
-            const response = await fetch(this.apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.apiKey}`,
-                    'Content-Type': 'application/json',
-                    'HTTP-Referer': 'https://vidyaloan.com',
-                    'X-Title': 'VidyaLoan',
-                },
-                body: JSON.stringify({
-                    model: model,
-                    messages: [{ role: 'user', content: jsonPrompt }],
-                    response_format: { type: "json_object" },
-                    max_tokens: 2048,
-                }),
-            });
 
-            if (response.ok) {
-                const data = await response.json();
-                content = data.choices?.[0]?.message?.content || '';
-            } else {
-                const errorBody = await response.text();
-                if (response.status === 400 && errorBody.includes('json_validate_failed')) {
-                    console.warn('Native JSON mode failed. Retrying with standard mode...');
-                    content = await this.chat(jsonPrompt, model);
-                } else if (response.status === 429 || errorBody.includes('rate_limit')) {
-                    if (prompt.includes('universities')) {
-                        return { universities: [{ name: "University of Munich (Mock)", loc: "Munich, Germany", country: "Germany", rank: 54, tuition: 0, accept: 15, website: "https://lmu.de", slug: "lmu" }] } as any;
-                    }
-                    throw new Error(`Rate limit hit: ${errorBody}`);
-                } else {
-                    throw new Error(`OpenRouter JSON API error: ${response.statusText} - ${errorBody}`);
-                }
-            }
-        } catch (error) {
-            console.error('OpenRouter getJson first attempt failed:', error);
+        for (const currentModel of modelsToTry) {
             try {
-                content = await this.chat(jsonPrompt, model);
-            } catch (e) {
-                throw error;
+                const response = await fetch(this.apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${this.apiKey}`,
+                        'Content-Type': 'application/json',
+                        'HTTP-Referer': 'https://vidyaloan.com',
+                        'X-Title': 'VidyaLoan',
+                    },
+                    body: JSON.stringify({
+                        model: currentModel,
+                        messages: [{ role: 'user', content: jsonPrompt }],
+                        response_format: { type: "json_object" },
+                        max_tokens: 2048,
+                    }),
+                    signal: this.createTimeoutSignal(),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    content = data.choices?.[0]?.message?.content || '';
+                    if (content) {
+                        console.log(`[getJson] Successfully used model: ${currentModel}`);
+                        break; // Successfully got content, exit loop
+                    }
+                } else {
+                    const errorBody = await response.text();
+                    if (response.status === 404 && (errorBody.includes('No endpoints found') || errorBody.includes('does not exist'))) {
+                        console.warn(`Model ${currentModel} not found (404). Trying fallback model...`);
+                        lastError = new Error(`Model not found: ${currentModel}`);
+                        continue; // Try next model
+                    } else if (response.status === 400 && errorBody.includes('json_validate_failed')) {
+                        console.warn(`Model ${currentModel}: Native JSON mode failed. Retrying with standard mode...`);
+                        content = await this.chat(jsonPrompt, currentModel);
+                        if (content) break;
+                    } else if (response.status === 429 || errorBody.includes('rate_limit')) {
+                        console.warn(`Model ${currentModel}: Rate limited. Trying fallback...`);
+                        lastError = new Error(`Rate limit hit for ${currentModel}`);
+                        continue;
+                    } else {
+                        console.warn(`Model ${currentModel} failed with status ${response.status}. Trying fallback...`);
+                        lastError = new Error(`OpenRouter error: ${response.statusText}`);
+                        continue;
+                    }
+                }
+            } catch (error) {
+                console.warn(`[getJson] Model ${currentModel} attempt failed:`, error?.message || error);
+                lastError = error as Error;
+                
+                // On timeout/abort, skip to next model
+                if (error?.name === 'TimeoutError' || error?.name === 'AbortError' || error?.message?.includes('timed out')) {
+                    continue;
+                }
+                // For other errors, also continue to next model
+                continue;
             }
+        }
+
+        if (!content && lastError) {
+            console.error('All getJson models failed. Returning empty result.');
+            // Return empty result for specific request types
+            if (prompt.includes('universities')) return { universities: [] } as any;
+            if (prompt.includes('courses')) return { courses: [] } as any;
+            return {} as T;
         }
 
         try {
@@ -180,22 +238,17 @@ export class OpenRouterService {
         }
 
         const res = await this.getJson<any>(prompt);
-        return (res.universities || res.courses || []) as any[];
+        return ((res && (res.universities || res.courses)) || []) as any[];
     }
 
-    async chatWithVision(prompt: string, imageUrl: string, model: string = 'google/gemma-3-27b-it:free'): Promise<string> {
+    async chatWithVision(prompt: string, imageUrl: string, model: string = 'openai/gpt-4o-mini'): Promise<string> {
         if (!this.apiKey || this.apiKey === 'your_openrouter_api_key_here') {
             throw new Error('OPENROUTER_API_KEY is not configured');
         }
 
         const modelsToTry = Array.from(new Set([
             model,
-            'google/gemma-3-27b-it:free',
-            'meta-llama/llama-3.2-11b-vision-instruct:free',
-            'mistralai/mistral-small-3.1-24b-instruct:free',
-            'qwen/qwen2.5-vl-72b-instruct:free',
-            'google/gemma-3-12b-it:free',
-            'meta-llama/llama-3.3-8b-instruct:free',
+            ...this.VISION_FALLBACK_MODELS,
         ]));
 
         let lastError: Error | null = null;
@@ -236,11 +289,17 @@ export class OpenRouterService {
                         'X-Title': 'VidyaLoan',
                     },
                     body: JSON.stringify(requestBody),
+                    signal: this.createTimeoutSignal(),
                 });
 
                 if (!response.ok) {
-                    const error = await response.text();
-                    throw new Error(`OpenRouter Vision API error: ${response.status} - ${error}`);
+                    const errorBody = await response.text();
+                    if (response.status === 404 && (errorBody.includes('No endpoints found') || errorBody.includes('does not exist'))) {
+                        console.warn(`[OpenRouter Vision] Model ${currentModel} not found (404). Trying next model...`);
+                        lastError = new Error(`Model not found: ${currentModel}`);
+                        continue;
+                    }
+                    throw new Error(`OpenRouter Vision API error: ${response.status} - ${errorBody}`);
                 }
 
                 const data = await response.json();
@@ -252,6 +311,8 @@ export class OpenRouterService {
             } catch (err: any) {
                 console.warn(`[OpenRouter Vision] Model ${currentModel} failed: ${err.message || err}`);
                 lastError = err;
+                // Continue to next model on error
+                continue;
             }
         }
         throw lastError || new Error('All vision endpoints failed to respond.');

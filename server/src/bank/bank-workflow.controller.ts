@@ -108,7 +108,7 @@ export class BankWorkflowController {
   }
 
   /**
-   * Raise query
+   * Raise query with checklist, attachments, and threaded replies (F6)
    * POST /api/bank/workflow/:submissionId/query
    */
   @Post(':submissionId/query')
@@ -119,6 +119,8 @@ export class BankWorkflowController {
       queryDescription: string;
       raisedBy: string;
       dueDate?: string;
+      docsChecklist?: any[];
+      attachments?: any[];
     },
     @Res() res: Response,
   ) {
@@ -129,6 +131,8 @@ export class BankWorkflowController {
         body.queryDescription,
         body.raisedBy,
         body.dueDate ? new Date(body.dueDate) : undefined,
+        body.docsChecklist || [],
+        body.attachments || [],
       );
       return res.status(201).json(result);
     } catch (error: any) {
@@ -140,7 +144,7 @@ export class BankWorkflowController {
   }
 
   /**
-   * Respond to query
+   * Respond to query with checklist updates and attachments (F6)
    * POST /api/bank/workflow/query/:queryId/respond
    */
   @Post('query/:queryId/respond')
@@ -149,6 +153,8 @@ export class BankWorkflowController {
     @Body() body: {
       response: string;
       respondedBy: string;
+      attachments?: any[];
+      docsChecklist?: any[];
     },
     @Res() res: Response,
   ) {
@@ -157,6 +163,8 @@ export class BankWorkflowController {
         queryId,
         body.response,
         body.respondedBy,
+        body.attachments || [],
+        body.docsChecklist || [],
       );
       return res.status(200).json(result);
     } catch (error: any) {
@@ -608,6 +616,530 @@ export class BankWorkflowController {
     try {
       const result = await this.workflowService.getBankWorkflowAnalytics(bankId);
       return res.status(200).json({ success: true, data: result });
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Add message to query thread without status change (F6)
+   * POST /api/bank/workflow/query/:queryId/message
+   */
+  @Post('query/:queryId/message')
+  async addQueryMessage(
+    @Param('queryId') queryId: string,
+    @Body() body: {
+      message: string;
+      sender: string;
+      attachments?: any[];
+    },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.addQueryMessage(
+        queryId,
+        body.message,
+        body.sender,
+        body.attachments || [],
+      );
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Create Query Template (F42)
+   * POST /api/bank/workflow/templates
+   */
+  @Post('templates')
+  async createQueryTemplate(
+    @Body() body: {
+      bankId: string;
+      templateName: string;
+      queryType: string;
+      queryDescription: string;
+      docsChecklist?: any[];
+    },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.createQueryTemplate(body);
+      return res.status(201).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Get Query Templates per bank (F42)
+   * GET /api/bank/workflow/templates/bank/:bankId
+   */
+  @Get('templates/bank/:bankId')
+  async getQueryTemplatesByBank(
+    @Param('bankId') bankId: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.getQueryTemplatesByBank(bankId);
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Update Query Template (F42)
+   * PUT /api/bank/workflow/templates/:templateId
+   */
+  @Put('templates/:templateId')
+  async updateQueryTemplate(
+    @Param('templateId') templateId: string,
+    @Body() body: {
+      templateName?: string;
+      queryType?: string;
+      queryDescription?: string;
+      docsChecklist?: any[];
+    },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.updateQueryTemplate(templateId, body);
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Delete Query Template (F42)
+   * DELETE /api/bank/workflow/templates/:templateId
+   */
+  @Post('templates/:templateId/delete')
+  async deleteQueryTemplate(
+    @Param('templateId') templateId: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.deleteQueryTemplate(templateId);
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Put submission on Hold (F33)
+   * POST /api/bank/workflow/:submissionId/hold
+   */
+  @Post(':submissionId/hold')
+  async setSubmissionHold(
+    @Param('submissionId') submissionId: string,
+    @Body() body: { reason: string; changedBy: string },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.setSubmissionHold(
+        submissionId,
+        body.reason,
+        body.changedBy,
+      );
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Resume submission hold (F33)
+   * POST /api/bank/workflow/:submissionId/resume
+   */
+  @Post(':submissionId/resume')
+  async resumeSubmissionHold(
+    @Param('submissionId') submissionId: string,
+    @Body() body: { changedBy: string },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.resumeSubmissionHold(
+        submissionId,
+        body.changedBy,
+      );
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Bulk transfer submissions reassignment (F34)
+   * POST /api/bank/workflow/transfer
+   */
+  @Post('transfer')
+  async bulkTransferSubmissions(
+    @Body() body: {
+      submissionIds: string[];
+      officerId: string;
+      officerName: string;
+      changedBy: string;
+    },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.bulkTransferSubmissions(
+        body.submissionIds,
+        body.officerId,
+        body.officerName,
+        body.changedBy,
+      );
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Update processing fee status (PAID/WAIVED/REFUNDED)
+   * PUT /api/bank/workflow/:submissionId/fee-status
+   */
+  @Put(':submissionId/fee-status')
+  async updateFeeStatus(
+    @Param('submissionId') submissionId: string,
+    @Body() body: {
+      status: 'PAID' | 'WAIVED' | 'REFUNDED';
+      paymentRef?: string;
+      changedBy?: string;
+    },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.updateFeeStatus(
+        submissionId,
+        body.status,
+        body.paymentRef,
+        body.changedBy,
+      );
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Add a new disbursement tranche (F7)
+   * POST /api/bank/workflow/:submissionId/tranches
+   */
+  @Post(':submissionId/tranches')
+  async scheduleDisbursementTranche(
+    @Param('submissionId') submissionId: string,
+    @Body() body: {
+      amount: number;
+      dueDate: string;
+      remarks?: string;
+    },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.scheduleDisbursementTranche(
+        submissionId,
+        body.amount,
+        new Date(body.dueDate),
+        body.remarks,
+      );
+      return res.status(201).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Confirm specific tranche (F7)
+   * POST /api/bank/workflow/:submissionId/tranches/:trancheNumber/confirm
+   */
+  @Post(':submissionId/tranches/:trancheNumber/confirm')
+  async confirmDisbursementTranche(
+    @Param('submissionId') submissionId: string,
+    @Param('trancheNumber') trancheNumber: string,
+    @Body() body: {
+      referenceNo: string;
+      confirmedBy: string;
+    },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.confirmDisbursementTranche(
+        submissionId,
+        parseInt(trancheNumber, 10),
+        body.referenceNo,
+        body.confirmedBy,
+      );
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Get tranches summary (F7)
+   * GET /api/bank/workflow/:submissionId/tranches
+   */
+  @Get(':submissionId/tranches')
+  async getTranchesSummary(
+    @Param('submissionId') submissionId: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.getTranchesSummary(submissionId);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Amend sanction terms with full audit diff storage (F35)
+   * POST /api/bank/workflow/:submissionId/amend
+   */
+  @Post(':submissionId/amend')
+  async amendSanctionTerms(
+    @Param('submissionId') submissionId: string,
+    @Body() body: {
+      newTerms: {
+        sanctionAmount?: number;
+        roiEffective?: number;
+        tenure?: number;
+      };
+      reason: string;
+      effectiveDate: string;
+      amendedBy: string;
+    },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.amendSanctionTerms(
+        submissionId,
+        body.newTerms,
+        body.reason,
+        new Date(body.effectiveDate),
+        body.amendedBy,
+      );
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Request cancellation (F36)
+   * POST /api/bank/workflow/:submissionId/cancel-request
+   */
+  @Post(':submissionId/cancel-request')
+  async requestCancellation(
+    @Param('submissionId') submissionId: string,
+    @Body() body: { reason: string; requestedBy: string },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.requestCancellation(
+        submissionId,
+        body.reason,
+        body.requestedBy,
+      );
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Confirm cancellation with dynamic stage refund (F36)
+   * POST /api/bank/workflow/:submissionId/cancel-confirm
+   */
+  @Post(':submissionId/cancel-confirm')
+  async confirmCancellation(
+    @Param('submissionId') submissionId: string,
+    @Body() body: { confirmedBy: string },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.confirmCancellation(
+        submissionId,
+        body.confirmedBy,
+      );
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Submit 4-dimensional quality ratings (F12)
+   * POST /api/bank/workflow/:submissionId/rate
+   */
+  @Post(':submissionId/rate')
+  async submitQualityRating(
+    @Param('submissionId') submissionId: string,
+    @Body() body: {
+      ratings: {
+        documentation: number;
+        credit: number;
+        profile: number;
+        communication: number;
+      };
+      comments: string;
+      ratedBy: string;
+    },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.submitQualityRating(
+        submissionId,
+        body.ratings,
+        body.comments,
+        body.ratedBy,
+      );
+      return res.status(200).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Get Cross-Bank historical risk audit (F22)
+   * GET /api/bank/workflow/:submissionId/cross-bank-history
+   */
+  @Get(':submissionId/cross-bank-history')
+  async getCrossBankHistory(
+    @Param('submissionId') submissionId: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.getCrossBankHistory(submissionId);
+      return res.status(200).json({ success: true, data: result });
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Student Consent Record Grant (F23)
+   * POST /api/bank/workflow/consent
+   */
+  @Post('consent')
+  async grantStudentConsent(
+    @Body() body: {
+      studentId: string;
+      bankId: string;
+      isGranted: boolean;
+      ipAddress?: string;
+      userAgent?: string;
+    },
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.grantStudentConsent(
+        body.studentId,
+        body.bankId,
+        body.isGranted,
+        body.ipAddress,
+        body.userAgent,
+      );
+      return res.status(201).json(result);
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Verify Student Consent status (F23)
+   * GET /api/bank/workflow/consent/verify
+   */
+  @Get('consent/verify')
+  async verifyStudentConsent(
+    @Query('studentId') studentId: string,
+    @Query('bankId') bankId: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const isGranted = await this.workflowService.verifyStudentConsent(studentId, bankId);
+      return res.status(200).json({ success: true, isGranted });
+    } catch (error: any) {
+      return res.status(error.status || 400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+  }
+
+  /**
+   * Funnel pipeline count analytics
+   * GET /api/bank/workflow/funnel/analytics
+   */
+  @Get('funnel/analytics')
+  async getPipelineFunnelAnalytics(
+    @Query('bankId') bankId: string,
+    @Res() res: Response,
+  ) {
+    try {
+      const result = await this.workflowService.getPipelineFunnelAnalytics(bankId);
+      return res.status(200).json(result);
     } catch (error: any) {
       return res.status(error.status || 400).json({
         success: false,

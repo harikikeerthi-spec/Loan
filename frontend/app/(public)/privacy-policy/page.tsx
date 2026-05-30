@@ -38,7 +38,7 @@ export default function PrivacyPolicyPage() {
 
     return (
         <div className="min-h-screen relative text-gray-900 overflow-hidden" style={{ background: 'linear-gradient(135deg, #ede0ff 0%, #f3eaff 25%, #fdf6ff 55%, #fef3e8 80%, #fde8c8 100%)' }}>
-            
+
             {/* Elegant Background Decorators from Home Page */}
             <div className="absolute inset-0 pointer-events-none z-0">
                 <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full blur-[120px] opacity-50" style={{ background: 'radial-gradient(circle, #d8b4fe, transparent)' }} />
@@ -65,7 +65,7 @@ export default function PrivacyPolicyPage() {
             {/* Main Content Layout */}
             <section className="py-20 px-6 relative z-10 max-w-7xl mx-auto">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
-                    
+
                     {/* Left Sticky Sidebar Navigation */}
                     <div className="lg:col-span-4">
                         <div className="sticky top-28 bg-white/60 backdrop-blur-xl border border-white/80 rounded-3xl p-8 shadow-xl">
@@ -77,18 +77,17 @@ export default function PrivacyPolicyPage() {
                                     <li key={sec.id}>
                                         <a
                                             href={`#${sec.id}`}
-                                            className={`text-[13px] font-semibold transition-all duration-200 block border-l-2 pl-4 ${
-                                                activeSection === sec.id
-                                                    ? "text-[#6605c7] border-[#6605c7] font-bold"
-                                                    : "text-gray-400 border-transparent hover:text-gray-800 hover:border-gray-300"
-                                            }`}
+                                            className={`text-[13px] font-semibold transition-all duration-200 block border-l-2 pl-4 ${activeSection === sec.id
+                                                ? "text-[#6605c7] border-[#6605c7] font-bold"
+                                                : "text-gray-400 border-transparent hover:text-gray-800 hover:border-gray-300"
+                                                }`}
                                         >
                                             {sec.title}
                                         </a>
                                     </li>
                                 ))}
                             </ul>
-                            
+
                             <div className="mt-8 pt-6 border-t border-black/5">
                                 <p className="text-[11px] text-gray-500 leading-relaxed font-medium">
                                     Have immediate data privacy concerns? Email us at{" "}
@@ -102,7 +101,7 @@ export default function PrivacyPolicyPage() {
 
                     {/* Right Side Clauses Content */}
                     <div className="lg:col-span-8 space-y-16">
-                        
+
                         <div id="intro" className="scroll-mt-28">
                             <h2 className="text-2xl font-bold font-display text-gray-900 mb-6 flex items-center gap-3">
                                 <span className="w-1.5 h-6 bg-[#6605c7] rounded-full"></span>

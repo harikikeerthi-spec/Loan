@@ -112,7 +112,7 @@ export default function ActivityLogWidget({
       console.log("[ActivityLogWidget] WebSocket connected");
     });
 
-    socket.on("staff_activity", (newActivity: Activity) => {
+    socket.on("user_activity", (newActivity: Activity) => {
       console.log("[ActivityLogWidget] Received staff activity:", newActivity);
       const formatted = {
         ...newActivity,
