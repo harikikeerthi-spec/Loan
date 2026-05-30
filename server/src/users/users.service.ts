@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { randomInt } from 'crypto';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { extractFullNameFromOcrRaw } from '../ai/utils/ocr-fields.util';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -9,7 +10,10 @@ export class UsersService {
     return this.supabase.getClient();
   }
 
-  constructor(private supabase: SupabaseService) { }
+  constructor(
+    private supabase: SupabaseService,
+    private eventEmitter: EventEmitter2
+  ) { }
 
   private parseDate(dateStr: string | null | undefined): string | null {
     if (!dateStr) return null;
@@ -152,6 +156,51 @@ export class UsersService {
   }
 
   /**
+   * Generate sequential staff ID with format VL-SF-{3-digit}
+   * Fetches the highest existing staff ID and increments by 1
+   */
+  private async generateSequentialStaffId(): Promise<string> {
+    const prefix = 'VL-SF-';
+
+    try {
+      // Fetch all staff IDs
+      const { data: allIds, error } = await this.db
+        .from('User')
+        .select('staffId')
+        .not('staffId', 'is', null)
+        .like('staffId', `${prefix}%`);
+
+      if (error) {
+        console.error('[UsersService] Error fetching staff IDs:', error);
+      }
+
+      let nextSeq = 1;
+
+      if (allIds && allIds.length > 0) {
+        // Extract numeric suffixes and find the maximum
+        const numericIds = allIds
+          .map(u => {
+            if (!u.staffId) return 0;
+            const suffix = u.staffId.substring(prefix.length);
+            const num = parseInt(suffix, 10);
+            return isNaN(num) ? 0 : num;
+          })
+          .filter(n => n > 0);
+
+        if (numericIds.length > 0) {
+          nextSeq = Math.max(...numericIds) + 1;
+        }
+      }
+
+      return `${prefix}${String(nextSeq).padStart(3, '0')}`;
+    } catch (err) {
+      console.error('[UsersService] Failed to generate sequential staff ID, falling back to random:', err);
+      const seq = String(Math.floor(Math.random() * 1_000)).padStart(3, '0');
+      return `${prefix}${seq}`;
+    }
+  }
+
+  /**
    * djb2 hash of an email → stable fixed-width numeric suffix.
    * Same email always produces the same number.
    * Used for agents and banks.
@@ -169,10 +218,11 @@ export class UsersService {
   /**
    * Generate a role-based user ID:
    *  - student / user  →  VL-STU-{YEAR}-{5-digit sequential}
+   *  - staff           →  VL-SF-{3-digit sequential}
    *  - agent           →  VL-AGT-{5-digit from email}
    *  - bank            →  VL-BNK-{3-digit from email}
    *
-   * Students/users get sequential IDs. Agents/banks use email-derived hash.
+   * Students/users get sequential IDs. Staff get sequential staff IDs. Agents/banks use email-derived hash.
    */
   private generateNonStudentUserId(role?: string, email?: string): string {
     if (email) {
@@ -193,6 +243,11 @@ export class UsersService {
     // Students/users get sequential IDs
     if (effectiveRole === 'user' || effectiveRole === 'student') {
       return await this.generateSequentialStudentId();
+    }
+
+    // Staff get sequential staff IDs
+    if (effectiveRole === 'staff') {
+      return await this.generateSequentialStaffId();
     }
 
     // Agents and banks use email-derived approach
@@ -228,6 +283,13 @@ export class UsersService {
     const registeredAtIndia = this.convertToIndiaTime(now);
     const id = await this.createUniqueUserId(data.role, data.email);
 
+    // Generate staff ID if role is 'staff'
+    let staffId: string | null = null;
+    if (data.role === 'staff') {
+      staffId = await this.generateSequentialStaffId();
+      console.log(`[UsersService.create] Generated staff ID: ${staffId} for email: ${data.email}`);
+    }
+
     const { data: user, error } = await this.db
       .from('User')
       .insert({
@@ -241,6 +303,7 @@ export class UsersService {
         password: data.password || '',
         role: data.role || 'user',
         registeredAtIndia: registeredAtIndia,
+        staffId: staffId,
       })
       .select()
       .single();
@@ -250,7 +313,14 @@ export class UsersService {
       throw error;
     }
     
-    console.log('User created in DB:', { user, keys: Object.keys(user || {}), hasId: !!user?.id });
+    // Emit user.created event for Salesforce Lead sync
+    try {
+      this.eventEmitter.emit('user.created', user);
+    } catch (evtErr) {
+      console.error('[UsersService] Failed to emit user.created event:', evtErr.message);
+    }
+    
+    console.log('User created in DB:', { user, keys: Object.keys(user || {}), hasId: !!user?.id, staffId: user?.staffId });
     return user;
   }
 
@@ -592,9 +662,22 @@ export class UsersService {
   }
 
   async updateUserRole(email: string, role: 'admin' | 'user' | 'staff' | 'super_admin' | 'agent' | 'bank' | 'student') {
+    // If changing to staff role, generate a staff ID if not already present
+    let updatePayload: any = { role };
+    
+    if (role === 'staff') {
+      // Check if user already has a staff ID
+      const existingUser = await this.findOne(email);
+      if (existingUser && !existingUser.staffId) {
+        // Generate new staff ID only if they don't have one
+        updatePayload.staffId = await this.generateSequentialStaffId();
+        console.log(`[UsersService.updateUserRole] Generated staff ID for ${email}: ${updatePayload.staffId}`);
+      }
+    }
+
     const { data, error } = await this.db
       .from('User')
-      .update({ role })
+      .update(updatePayload)
       .eq('email', email)
       .select()
       .single();
@@ -750,6 +833,13 @@ export class UsersService {
       .single();
 
     if (error) throw error;
+
+    try {
+      this.eventEmitter.emit('application.created', application);
+    } catch (evtErr) {
+      console.error('[UsersService] Failed to emit application.created event:', evtErr.message);
+    }
+
     return application;
   }
 

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
@@ -25,6 +25,7 @@ import {
 } from "@/lib/documentRequirements";
 import ActivityLogWidget from "@/components/staff/ActivityLogWidget";
 import ShareProfileToBankModal from "@/components/staff/ShareProfileToBankModal";
+import NotificationsPanel from "@/components/staff/NotificationsPanel";
 
 // --- Components ---
 
@@ -3051,15 +3052,16 @@ export default function StaffDashboardPage() {
                         />
                     </div>
 
-                    {/* Right: Bell + User + Logout */}
+                    {/* Right: Notifications + User + Logout */}
                     <div className="flex items-center gap-3">
                         <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded transition-all" onClick={() => setSidebarOpen(!sidebarOpen)}>
                             <span className="material-symbols-outlined text-[20px]">menu</span>
                         </button>
-                        <button className="relative p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all">
-                            <span className="material-symbols-outlined text-[20px]">notifications</span>
-                            {pendingCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-rose-500 border border-white" />}
-                        </button>
+                        <NotificationsPanel 
+                            staffId={user?.id}
+                            maxDisplay={8}
+                            showUnreadBadge={true}
+                        />
                         <div className="h-5 w-px bg-slate-200" />
                         <div className="flex items-center gap-2">
                             <img
@@ -7153,7 +7155,7 @@ export default function StaffDashboardPage() {
                                             {activeSection === "applications" && (
                                                 <>
                                                     <th className="sticky left-0 z-20 bg-slate-50 px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">APPLICANT PROFILE</span></th>
-                                                    <th className="sticky left-[250px] z-20 bg-slate-50 px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">USER ID</span></th>
+                                                    <th className="sticky left-[100px] z-20 bg-slate-50 px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">USER ID</span></th>
                                                     <th className="sticky left-[420px] z-20 bg-slate-50 px-5 py-5"><span className="flex items-center gap-1.5 text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest"><span className="material-symbols-outlined text-[14px]">mail</span> CONTACT</span></th>
                                                     <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">COLLEGE NAME</span></th>
                                                     <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">PROGRAM FOCUS</span></th>

@@ -1,12 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { SalesforceService } from './salesforce.service';
+import { BankSchemesService } from './bank-schemes.service';
+import { EmailService } from '../auth/email.service';
 
 @Injectable()
 export class BankCronService {
   constructor(
     private readonly supabase: SupabaseService,
-    private readonly salesforce: SalesforceService
+    private readonly salesforce: SalesforceService,
+    private readonly schemesService: BankSchemesService,
+    private readonly emailService: EmailService
   ) {}
 
   private get db() {
@@ -334,6 +338,114 @@ export class BankCronService {
       }
     } catch (err: any) {
       console.error('[Cron: QuerySLA] Error running query SLA cron:', err.message);
+    }
+  }
+
+  /**
+   * Daily Cron checking validity ranges of active bank schemes and deactivating them.
+   */
+  async checkSchemeExpiries(): Promise<void> {
+    console.log('[Cron: SchemesExpiryCheck] Running bank schemes validity checker...');
+    try {
+      const expiredCount = await this.schemesService.expireExpiredSchemes();
+      console.log(`[Cron: SchemesExpiryCheck] Schemes check finished. Expired count: ${expiredCount}`);
+    } catch (e) {
+      console.error('[Cron: SchemesExpiryCheck] Schemes expiry checker failed:', e.message);
+    }
+  }
+
+  /**
+   * Daily Cron: sends pipeline summary email.
+   */
+  async sendDailySummaryReport(): Promise<void> {
+    console.log('[Cron: DailySummary] Compiling daily pipeline MIS summary...');
+    try {
+      const { data: apps } = await this.db.from('LoanApplication').select('id, amount, status');
+      const total = apps ? apps.length : 0;
+      const sanctioned = apps ? apps.filter((a: any) => a.status === 'sanctioned').length : 0;
+      const rejected = apps ? apps.filter((a: any) => a.status === 'rejected').length : 0;
+      const pending = total - sanctioned - rejected;
+
+      const pipelineVal = apps ? apps.reduce((sum: number, a: any) => sum + (Number(a.amount) || 0), 0) : 0;
+
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px;">
+          <h2>📊 VidyaLoans Daily Pipeline MIS Summary</h2>
+          <p>Here is your automated daily update on the application pipelines:</p>
+          <table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%;">
+            <tr style="background-color: #f2f2f2;"><th>Metric</th><th>Count / Value</th></tr>
+            <tr><td>Total Applications</td><td><b>${total}</b></td></tr>
+            <tr><td>Active Pipeline Value</td><td><b>₹${pipelineVal.toLocaleString('en-IN')}</b></td></tr>
+            <tr><td>Sanctioned Loans</td><td style="color: green;"><b>${sanctioned}</b></td></tr>
+            <tr><td>Rejected Loans</td><td style="color: red;"><b>${rejected}</b></td></tr>
+            <tr><td>Pending Decision</td><td style="color: orange;"><b>${pending}</b></td></tr>
+          </table>
+          <p>Please visit the admin dashboard for detailed lists and query resolution queues.</p>
+        </div>
+      `;
+
+      await this.emailService.sendMail('harikikeerthi@gmail.com', '📊 VidyaLoans Daily Summary Report', html);
+      console.log('[Cron: DailySummary] Daily summary report sent successfully!');
+    } catch (e) {
+      console.error('[Cron: DailySummary] Cron failed:', e.message);
+    }
+  }
+
+  /**
+   * Weekly Cron: sends pipeline summary email.
+   */
+  async sendWeeklyPipelineReport(): Promise<void> {
+    console.log('[Cron: WeeklyPipeline] Compiling weekly pipeline summary...');
+    try {
+      const { data: apps } = await this.db.from('LoanApplication').select('id, amount, status, bank');
+      const total = apps ? apps.length : 0;
+      const pipelineVal = apps ? apps.reduce((sum: number, a: any) => sum + (Number(a.amount) || 0), 0) : 0;
+
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px;">
+          <h2>📅 VidyaLoans Weekly Pipeline MIS Summary</h2>
+          <p>Here is your weekly update on active pipeline value and distribution:</p>
+          <ul>
+            <li>Total Applications: <b>${total}</b></li>
+            <li>Weekly Active Pipeline: <b>₹${pipelineVal.toLocaleString('en-IN')}</b></li>
+          </ul>
+          <p>Track RM targets and branch SLA progress on the portal.</p>
+        </div>
+      `;
+
+      await this.emailService.sendMail('harikikeerthi@gmail.com', '📅 VidyaLoans Weekly Summary Report', html);
+      console.log('[Cron: WeeklyPipeline] Weekly pipeline report sent successfully!');
+    } catch (e) {
+      console.error('[Cron: WeeklyPipeline] Cron failed:', e.message);
+    }
+  }
+
+  /**
+   * Monthly Cron: sends pipeline summary email.
+   */
+  async sendMonthlyMisReport(): Promise<void> {
+    console.log('[Cron: MonthlyMIS] Compiling monthly MIS summary...');
+    try {
+      const { data: apps } = await this.db.from('LoanApplication').select('id, amount, status');
+      const total = apps ? apps.length : 0;
+      const pipelineVal = apps ? apps.reduce((sum: number, a: any) => sum + (Number(a.amount) || 0), 0) : 0;
+
+      const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; padding: 20px;">
+          <h2>🏢 VidyaLoans Monthly MIS Summary</h2>
+          <p>Here is your monthly executive snapshot:</p>
+          <ul>
+            <li>Total Applications Managed: <b>${total}</b></li>
+            <li>Gross Pipeline Volume: <b>₹${pipelineVal.toLocaleString('en-IN')}</b></li>
+          </ul>
+          <p>All targets and operational parameters are fully synchronized with the CRM.</p>
+        </div>
+      `;
+
+      await this.emailService.sendMail('harikikeerthi@gmail.com', '🏢 VidyaLoans Monthly MIS Executive Snapshot', html);
+      console.log('[Cron: MonthlyMIS] Monthly MIS report sent successfully!');
+    } catch (e) {
+      console.error('[Cron: MonthlyMIS] Cron failed:', e.message);
     }
   }
 }

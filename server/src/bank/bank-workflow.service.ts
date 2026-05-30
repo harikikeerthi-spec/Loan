@@ -1442,6 +1442,19 @@ export class BankWorkflowService {
       `Submission placed on hold. Reason: ${reason}`,
     );
 
+    // Trigger F16 notification
+    const notifData = {
+      id: 'notif-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      userId: 'staff',
+      title: `⏸️ Application On Hold: App ${submission.applicationId}`,
+      body: `Application has been placed on hold by ${changedBy}. Reason: ${reason}`,
+      type: 'hold',
+      isRead: false,
+      timestamp: new Date().toISOString()
+    };
+    await this.db.client.from('Notification').insert(notifData);
+    this.eventEmitter.emit('notification.created', notifData);
+
     return { success: true, data: updated };
   }
 
@@ -1484,6 +1497,19 @@ export class BankWorkflowService {
       `Submission hold resumed. Paused duration: ${Math.round(holdDurationMs / 1000 / 60)} minutes.`,
     );
 
+    // Trigger F16 notification
+    const notifData = {
+      id: 'notif-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      userId: 'staff',
+      title: `▶️ Application Resumed: App ${submission.applicationId}`,
+      body: `Application hold has been resumed by ${changedBy}.`,
+      type: 'hold',
+      isRead: false,
+      timestamp: new Date().toISOString()
+    };
+    await this.db.client.from('Notification').insert(notifData);
+    this.eventEmitter.emit('notification.created', notifData);
+
     return { success: true, data: updated };
   }
 
@@ -1522,6 +1548,19 @@ export class BankWorkflowService {
         changedBy,
         `Assigned officer updated to: ${officerName}`,
       );
+
+      // Trigger F16 notification
+      const notifData = {
+        id: 'notif-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        userId: officerId,
+        title: `🔄 Application Assigned: App ${submission.applicationId}`,
+        body: `Application has been transferred and assigned to you by ${changedBy}.`,
+        type: 'transfer',
+        isRead: false,
+        timestamp: new Date().toISOString()
+      };
+      await this.db.client.from('Notification').insert(notifData);
+      this.eventEmitter.emit('notification.created', notifData);
 
       results.push(updated);
     }

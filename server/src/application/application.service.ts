@@ -201,6 +201,24 @@ export class ApplicationService {
     await this.createStatusHistory(application.id, { toStatus: application.status, toStage: application.stage, notes: 'Application created', isAutomatic: true });
     await this.initializeRequiredDocuments(application.id, application.userId, data.loanType);
 
+    // Emit application created event for staff notifications
+    try {
+      const name = `${application.firstName || ''} ${application.lastName || ''}`.trim() || application.email || 'Student';
+      this.eventEmitter.emit('application.created', {
+        applicationId: application.id,
+        applicationNumber: application.applicationNumber,
+        userId: application.userId,
+        candidateName: name,
+        candidateEmail: application.email,
+        bank: application.bank,
+        loanAmount: application.amount,
+        loanType: data.loanType,
+        createdAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error('Failed to emit application.created event:', e);
+    }
+
     // Emit live dashboard activity event for new application creation!
     try {
       const name = `${application.firstName || ''} ${application.lastName || ''}`.trim() || application.email || 'Student';
@@ -500,6 +518,24 @@ export class ApplicationService {
       document = updated;
     } catch (error) {
       console.error('Document verification process failed:', error);
+    }
+
+    // Emit document uploaded event for staff notifications
+    try {
+      const candidateName = `${application.firstName || ''} ${application.lastName || ''}`.trim() || application.email || 'Candidate';
+      this.eventEmitter.emit('document.uploaded', {
+        applicationId,
+        applicationNumber: application.applicationNumber,
+        userId: application.userId,
+        candidateName,
+        candidateEmail: application.email,
+        documentType: documentData.docType,
+        documentName: documentData.docName,
+        status: document.status,
+        createdAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error('Failed to emit document.uploaded event:', e);
     }
 
     return { success: true, data: document, message: 'Document uploaded successfully' };

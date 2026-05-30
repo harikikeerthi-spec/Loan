@@ -229,6 +229,11 @@ export class BankController {
     return this.bankService.updateProduct(id, body);
   }
 
+  @Delete('config/loan-products/:id')
+  async deleteLoanProduct(@Param('id') id: string) {
+    return this.bankService.deleteProduct(id);
+  }
+
   @Get('config/branches')
   async getBranches(@Request() req) {
     const bankName = this.resolveBankName(req);
@@ -238,6 +243,38 @@ export class BankController {
   @Post('config/branches')
   async createBranch(@Body() body: any) {
     return this.bankService.createBranch(body);
+  }
+
+  @Put('config/branches/:id')
+  async updateBranch(@Param('id') id: string, @Body() body: any) {
+    return this.bankService.updateBranch(id, body);
+  }
+
+  @Delete('config/branches/:id')
+  async deleteBranch(@Param('id') id: string) {
+    return this.bankService.deleteBranch(id);
+  }
+
+  @Get('config/checklists')
+  async getChecklists(@Request() req) {
+    const bankName = this.resolveBankName(req);
+    return this.bankService.getChecklists(bankName);
+  }
+
+  @Post('config/checklists')
+  async createChecklist(@Request() req, @Body() body: any) {
+    const bankName = this.resolveBankName(req) || body.bankName || 'SBI';
+    return this.bankService.createChecklist({ ...body, bankName });
+  }
+
+  @Put('config/checklists/:id')
+  async updateChecklist(@Param('id') id: string, @Body() body: any) {
+    return this.bankService.updateChecklist(id, body);
+  }
+
+  @Delete('config/checklists/:id')
+  async deleteChecklist(@Param('id') id: string) {
+    return this.bankService.deleteChecklist(id);
   }
 
   @Get('config/officers')

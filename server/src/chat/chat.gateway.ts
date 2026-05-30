@@ -68,6 +68,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.join('room_bank');
       }
 
+      // Join direct user room for personal notifications
+      const userId = payload.id || payload.uid || payload.sub;
+      if (userId) {
+        client.join(`user_${userId}`);
+      }
+
       // Track online presence if email is available
       if (payload.email) {
         this.onlineUsers.set(client.id, payload.email.toLowerCase());
@@ -111,6 +117,20 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     client.leave(`conv_${conversationId}`);
     return { status: 'left', conversationId };
+  }
+
+  @SubscribeMessage('typing')
+  handleTyping(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { conversationId: string, email: string, isTyping: boolean }
+  ) {
+    this.logger.log(`Typing event: User ${payload.email || client.data.user?.email} typing=${payload.isTyping} in Conv ${payload.conversationId}`);
+    this.server.to(`conv_${payload.conversationId}`).emit('typing_status', {
+      conversationId: payload.conversationId,
+      email: payload.email || client.data.user?.email || 'Unknown',
+      isTyping: payload.isTyping
+    });
+    return { success: true };
   }
 
   @SubscribeMessage('send_message')
@@ -207,6 +227,27 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  broadcastNewMessage(msg: any, senderRole: string) {
+    if (!this.server) {
+      this.logger.warn('WS server not initialized. Skipping HTTP message broadcast.');
+      return;
+    }
+    const convId = msg.conversationId;
+    this.server.to(`conv_${convId}`).emit('new_message', msg);
+    
+    if (senderRole === 'bank' || senderRole === 'partner_bank') {
+      this.server.to('room_bank').emit('conversation_updated', {
+        conversationId: convId,
+        lastMessage: msg
+      });
+    } else {
+      this.server.to('room_staff').emit('conversation_updated', {
+        conversationId: convId,
+        lastMessage: msg
+      });
+    }
+  }
+
   @OnEvent('user.login')
   handleUserLogin(payload: any) {
     this.logger.log(`Broadcasting login alert for ${payload.email} to staff`);
@@ -244,6 +285,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
     } else {
       this.logger.warn(`WS server not initialized. Skipping dashboard.activity broadcast.`);
+    }
+  }
+
+  @OnEvent('notification.created')
+  handleNotificationCreated(payload: any) {
+    this.logger.log(`Broadcasting notification alert: ${payload.title} to User ID: ${payload.userId}`);
+    if (this.server) {
+      if (payload.userId === 'staff' || payload.userId === 'system') {
+        this.server.to('room_staff').emit('notification_received', payload);
+      } else if (payload.userId === 'bank') {
+        this.server.to('room_bank').emit('notification_received', payload);
+      } else {
+        this.server.to(`user_${payload.userId}`).emit('notification_received', payload);
+      }
+    } else {
+      this.logger.warn(`WS server not initialized. Skipping notification broadcast.`);
     }
   }
 }

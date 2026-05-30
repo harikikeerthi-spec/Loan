@@ -24,7 +24,7 @@ export interface ActivityLogOptions {
 // Helper function to format relative time
 function formatRelativeTime(dateStr: string): string {
   if (!dateStr) return 'Just now';
-  
+
   try {
     const date = new Date(dateStr);
     const now = new Date();
@@ -34,7 +34,7 @@ function formatRelativeTime(dateStr: string): string {
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
     if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d ago`;
-    
+
     return date.toLocaleDateString('en-IN');
   } catch {
     return 'Recently';
@@ -69,12 +69,12 @@ export const useActivityLog = (options: ActivityLogOptions = {}) => {
       setError(null);
       const res: any = await staffProfileApi.getDashboardActivities(limit);
       const items: Activity[] = Array.isArray(res) ? res : (res?.data ?? []);
-      
+
       setActivities(items.map((a: Activity) => ({
         ...a,
         time: a.createdAt ? formatRelativeTime(a.createdAt) : 'Just now'
       })));
-      
+
       setLastUpdated(new Date());
       lastFetchRef.current = now;
     } catch (err: any) {
@@ -94,8 +94,8 @@ export const useActivityLog = (options: ActivityLogOptions = {}) => {
 
     const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (
       typeof window !== 'undefined' &&
-      !window.location.hostname.includes('localhost') &&
-      !window.location.hostname.includes('127.0.0.1')
+        !window.location.hostname.includes('localhost') &&
+        !window.location.hostname.includes('127.0.0.1')
         ? window.location.origin
         : 'http://localhost:5000'
     );
@@ -181,9 +181,9 @@ export const useActivityLog = (options: ActivityLogOptions = {}) => {
       createdAt: new Date().toISOString(),
       time: 'Just now'
     };
-    
+
     setActivities(prev => [newActivity, ...prev].slice(0, limit));
-    
+
     // Also log it on the backend asynchronously
     logActivity(type, msg, icon, color).catch(console.error);
   }, [limit, logActivity]);
