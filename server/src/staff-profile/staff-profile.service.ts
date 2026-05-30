@@ -1576,14 +1576,11 @@ export class StaffProfileService {
       exchangeRateBufferPercent: isForeign ? 1.5 : 0
     };
 
-    const studentRatingStars = score >= 85 ? 5 : score >= 70 ? 4 : score >= 55 ? 3 : score >= 40 ? 2 : 1;
-
     return {
       applicationId,
       predictionScore: score,
       riskLevel: score >= 80 ? 'LOW' : score >= 60 ? 'MEDIUM' : 'HIGH',
       approvedProbabilityPercent: score,
-      studentRatingStars,
       rulesRun,
       educationAbroad
     };
@@ -1657,104 +1654,6 @@ export class StaffProfileService {
     });
 
     return calendarEvents;
-  }
-
-  async exportApplicationsCsv(filters: any): Promise<string> {
-    let query = this.db.from('LoanApplication').select('*');
-    if (filters.status && filters.status !== 'all') {
-      query = query.eq('status', filters.status);
-    }
-    if (filters.bank && filters.bank !== 'all') {
-      query = query.ilike('bank', `%${filters.bank}%`);
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-
-    const apps = data || [];
-    
-    // Build CSV Headers
-    const headers = [
-      'Application Number',
-      'Student Name',
-      'Email',
-      'Phone',
-      'Bank',
-      'Loan Type',
-      'Amount',
-      'Status',
-      'Stage',
-      'Progress %',
-      'Submission Date'
-    ];
-
-    const rows = apps.map((a: any) => [
-      a.applicationNumber || a.id,
-      `"${a.firstName || ''} ${a.lastName || ''}"`,
-      a.email || '',
-      a.phone || '',
-      a.bank || '',
-      a.loanType || '',
-      a.amount || 0,
-      a.status || '',
-      a.stage || '',
-      a.progress || 0,
-      a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : ''
-    ]);
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(r => r.join(','))
-    ].join('\n');
-
-    return csvContent;
-  }
-
-  async getBranchAnalytics(): Promise<any[]> {
-    const { data: branches } = await this.db.from('BankBranch').select('*');
-    const { data: applications } = await this.db.from('LoanApplication').select('*');
-
-    const branchList = branches || [
-      { id: 'b1', branchName: 'M.G. Road Branch', branchCode: 'SBI-MG-01', city: 'Bangalore' },
-      { id: 'b2', branchName: 'Gachibowli Branch', branchCode: 'SBI-GB-02', city: 'Hyderabad' }
-    ];
-
-    const apps = applications || [];
-
-    return branchList.map((branch: any) => {
-      const branchApps = apps.filter((a: any) => {
-        if (a.applicationNumber && a.applicationNumber.includes(branch.branchCode)) return true;
-        return (a.id.charCodeAt(a.id.length - 1) % branchList.length) === branchList.indexOf(branch);
-      });
-
-      const totalCount = branchApps.length;
-      const sanctionedCount = branchApps.filter((a: any) => a.status === 'sanctioned').length;
-      const pipelineValue = branchApps.reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
-      
-      let totalTatDays = 0;
-      let tatCount = 0;
-      branchApps.forEach((a: any) => {
-        if (a.submittedAt && (a.approvedAt || a.rejectedAt)) {
-          const start = new Date(a.submittedAt).getTime();
-          const end = new Date(a.approvedAt || a.rejectedAt).getTime();
-          totalTatDays += (end - start) / (1000 * 60 * 60 * 24);
-          tatCount++;
-        }
-      });
-      const avgTatDays = tatCount > 0 ? parseFloat((totalTatDays / tatCount).toFixed(1)) : 4.2;
-
-      return {
-        branchId: branch.id,
-        branchName: branch.branchName,
-        branchCode: branch.branchCode,
-        city: branch.city,
-        totalApplications: totalCount,
-        sanctionedApplications: sanctionedCount,
-        pipelineValue,
-        avgTatDays,
-        complianceRatePercent: totalCount > 0 ? Math.round((sanctionedCount / totalCount) * 100) : 85
-      };
-    });
   }
 }
 

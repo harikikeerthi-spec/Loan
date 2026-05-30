@@ -3057,7 +3057,7 @@ export default function StaffDashboardPage() {
                         <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded transition-all" onClick={() => setSidebarOpen(!sidebarOpen)}>
                             <span className="material-symbols-outlined text-[20px]">menu</span>
                         </button>
-                        <NotificationsPanel 
+                        <NotificationsPanel
                             staffId={user?.id}
                             maxDisplay={8}
                             showUnreadBadge={true}
@@ -7155,7 +7155,7 @@ export default function StaffDashboardPage() {
                                             {activeSection === "applications" && (
                                                 <>
                                                     <th className="sticky left-0 z-20 bg-slate-50 px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">APPLICANT PROFILE</span></th>
-                                                    <th className="sticky left-[100px] z-20 bg-slate-50 px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">USER ID</span></th>
+                                                    <th className="sticky left-[250px] min-w-[200px] z-20 bg-slate-50 px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">USER ID</span></th>
                                                     <th className="sticky left-[420px] z-20 bg-slate-50 px-5 py-5"><span className="flex items-center gap-1.5 text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest"><span className="material-symbols-outlined text-[14px]">mail</span> CONTACT</span></th>
                                                     <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">COLLEGE NAME</span></th>
                                                     <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">PROGRAM FOCUS</span></th>

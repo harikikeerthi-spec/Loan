@@ -1,6 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { randomInt } from 'crypto';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { extractFullNameFromOcrRaw } from '../ai/utils/ocr-fields.util';
 import { SupabaseService } from '../supabase/supabase.service';
 
@@ -10,10 +9,7 @@ export class UsersService {
     return this.supabase.getClient();
   }
 
-  constructor(
-    private supabase: SupabaseService,
-    private eventEmitter: EventEmitter2
-  ) { }
+  constructor(private supabase: SupabaseService) { }
 
   private parseDate(dateStr: string | null | undefined): string | null {
     if (!dateStr) return null;
@@ -163,7 +159,8 @@ export class UsersService {
     const prefix = 'VL-SF-';
 
     try {
-      // Fetch all staff IDs
+      // Fetch all staff IDs — if staffId column doesn't exist in schema cache
+      // (PGRST204), fall through to the catch block and use a random ID
       const { data: allIds, error } = await this.db
         .from('User')
         .select('staffId')
@@ -171,6 +168,11 @@ export class UsersService {
         .like('staffId', `${prefix}%`);
 
       if (error) {
+        if (error.code === 'PGRST204') {
+          console.warn('[UsersService] staffId column not in schema cache — using random staff ID fallback');
+          const seq = String(Math.floor(Math.random() * 1_000)).padStart(3, '0');
+          return `${prefix}${seq}`;
+        }
         console.error('[UsersService] Error fetching staff IDs:', error);
       }
 
@@ -290,34 +292,34 @@ export class UsersService {
       console.log(`[UsersService.create] Generated staff ID: ${staffId} for email: ${data.email}`);
     }
 
+    // Build the insert payload — only include staffId for staff users to avoid
+    // PGRST204 ("staffId column not found in schema cache") for regular users
+    const insertPayload: any = {
+      id,
+      email: data.email,
+      firstName: data.firstName || null,
+      lastName: data.lastName || null,
+      phoneNumber: data.phoneNumber || null,
+      dateOfBirth: dobDate,
+      mobile: data.mobile || '',
+      password: data.password || '',
+      role: data.role || 'user',
+      registeredAtIndia: registeredAtIndia,
+    };
+
+    if (data.role === 'staff' && staffId) {
+      insertPayload.staffId = staffId;
+    }
+
     const { data: user, error } = await this.db
       .from('User')
-      .insert({
-        id,
-        email: data.email,
-        firstName: data.firstName || null,
-        lastName: data.lastName || null,
-        phoneNumber: data.phoneNumber || null,
-        dateOfBirth: dobDate,
-        mobile: data.mobile || '',
-        password: data.password || '',
-        role: data.role || 'user',
-        registeredAtIndia: registeredAtIndia,
-        staffId: staffId,
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
     if (error) {
       console.error('Supabase insert error:', error);
       throw error;
-    }
-    
-    // Emit user.created event for Salesforce Lead sync
-    try {
-      this.eventEmitter.emit('user.created', user);
-    } catch (evtErr) {
-      console.error('[UsersService] Failed to emit user.created event:', evtErr.message);
     }
     
     console.log('User created in DB:', { user, keys: Object.keys(user || {}), hasId: !!user?.id, staffId: user?.staffId });
@@ -682,7 +684,22 @@ export class UsersService {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // If staffId column isn't in schema cache, retry without it
+      if (error.code === 'PGRST204' && updatePayload.staffId) {
+        console.warn(`[UsersService.updateUserRole] staffId column not in schema cache — retrying without staffId`);
+        const { staffId: _removed, ...payloadWithoutStaffId } = updatePayload;
+        const { data: retryData, error: retryError } = await this.db
+          .from('User')
+          .update(payloadWithoutStaffId)
+          .eq('email', email)
+          .select()
+          .single();
+        if (retryError) throw retryError;
+        return retryData;
+      }
+      throw error;
+    }
     return data;
   }
 
@@ -833,13 +850,6 @@ export class UsersService {
       .single();
 
     if (error) throw error;
-
-    try {
-      this.eventEmitter.emit('application.created', application);
-    } catch (evtErr) {
-      console.error('[UsersService] Failed to emit application.created event:', evtErr.message);
-    }
-
     return application;
   }
 

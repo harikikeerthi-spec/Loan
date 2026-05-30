@@ -119,20 +119,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return { status: 'left', conversationId };
   }
 
-  @SubscribeMessage('typing')
-  handleTyping(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { conversationId: string, email: string, isTyping: boolean }
-  ) {
-    this.logger.log(`Typing event: User ${payload.email || client.data.user?.email} typing=${payload.isTyping} in Conv ${payload.conversationId}`);
-    this.server.to(`conv_${payload.conversationId}`).emit('typing_status', {
-      conversationId: payload.conversationId,
-      email: payload.email || client.data.user?.email || 'Unknown',
-      isTyping: payload.isTyping
-    });
-    return { success: true };
-  }
-
   @SubscribeMessage('send_message')
   async handleSendMessage(
     @ConnectedSocket() client: Socket,
@@ -224,27 +210,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (e) {
         this.logger.error('Simulator reply failed', e);
         return { success: false, error: e.message };
-    }
-  }
-
-  broadcastNewMessage(msg: any, senderRole: string) {
-    if (!this.server) {
-      this.logger.warn('WS server not initialized. Skipping HTTP message broadcast.');
-      return;
-    }
-    const convId = msg.conversationId;
-    this.server.to(`conv_${convId}`).emit('new_message', msg);
-    
-    if (senderRole === 'bank' || senderRole === 'partner_bank') {
-      this.server.to('room_bank').emit('conversation_updated', {
-        conversationId: convId,
-        lastMessage: msg
-      });
-    } else {
-      this.server.to('room_staff').emit('conversation_updated', {
-        conversationId: convId,
-        lastMessage: msg
-      });
     }
   }
 

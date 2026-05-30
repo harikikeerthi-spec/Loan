@@ -1,18 +1,11 @@
-import { Controller, Get, Param, UseGuards, Post, Req, Body, Query, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { Controller, Get, Param, UseGuards, Post, Req, Body, Query } from '@nestjs/common';
 import { ChatService } from './chat.service';
-import { ChatGateway } from './chat.gateway';
-import { S3Service } from '../document/s3.service';
 import { UserGuard } from '../auth/user.guard';
 
 @Controller('chat')
 @UseGuards(UserGuard)
 export class ChatController {
-  constructor(
-    private readonly chatService: ChatService,
-    private readonly chatGateway: ChatGateway,
-    private readonly s3Service: S3Service
-  ) {}
+  constructor(private readonly chatService: ChatService) {}
 
   @Get('conversations')
   async getConversations(@Req() req: any) {
@@ -20,82 +13,8 @@ export class ChatController {
   }
 
   @Get('messages/:conversationId')
-  async getMessages(
-    @Param('conversationId') conversationId: string,
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string
-  ) {
-    const lim = limit ? parseInt(limit, 10) : undefined;
-    const off = offset ? parseInt(offset, 10) : undefined;
-    return this.chatService.getMessages(conversationId, lim, off);
-  }
-
-  @Post('messages')
-  async sendMessage(
-    @Req() req: any,
-    @Body() body: { conversationId: string; content: string; messageType?: string }
-  ) {
-    const user = req.user;
-    const senderType = user.role || 'staff';
-    
-    if (!body.conversationId || !body.content) {
-      throw new BadRequestException('conversationId and content are required');
-    }
-
-    const msg = await this.chatService.sendMessageHttp({
-      conversationId: body.conversationId,
-      senderType,
-      senderId: user.email || user.id || user.sub,
-      content: body.content,
-      messageType: body.messageType || 'text'
-    });
-
-    // Broadcast new message via Socket.IO
-    this.chatGateway.broadcastNewMessage(msg, user.role);
-
-    return { success: true, data: msg };
-  }
-
-  @Post('messages/:conversationId/upload')
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(
-    @Param('conversationId') conversationId: string,
-    @Req() req: any,
-    @UploadedFile() file: Express.Multer.File
-  ) {
-    if (!file) {
-      throw new BadRequestException('No file uploaded');
-    }
-
-    const user = req.user;
-    const senderType = user.role || 'staff';
-    const userId = user.id || user.uid || user.sub || 'unknown';
-
-    // Generate S3 key
-    const s3Key = this.s3Service.buildKey(userId, 'chat-attachment', file.originalname);
-
-    // Upload to S3
-    await this.s3Service.upload(s3Key, file.buffer, file.mimetype);
-
-    // Generate presigned GET URL valid for 7 days
-    const fileUrl = await this.s3Service.getPresignedUrl(s3Key, 604800);
-
-    const isImage = file.mimetype.startsWith('image/');
-    const messageType = isImage ? 'image' : 'file';
-
-    // Save message with S3 URL
-    const msg = await this.chatService.sendMessageHttp({
-      conversationId,
-      senderType,
-      senderId: user.email || user.id || user.sub,
-      content: fileUrl,
-      messageType
-    });
-
-    // Broadcast new message via Socket.IO
-    this.chatGateway.broadcastNewMessage(msg, user.role);
-
-    return { success: true, data: msg };
+  async getMessages(@Param('conversationId') conversationId: string) {
+    return this.chatService.getMessages(conversationId);
   }
 
   @Post('connect')

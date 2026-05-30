@@ -12,9 +12,7 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
-  Res,
 } from '@nestjs/common';
-import { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { StaffProfileService } from './staff-profile.service';
@@ -251,23 +249,6 @@ export class StaffProfileController {
   @Get('dashboard/calendar')
   async getDeadlineCalendar() {
     const data = await this.svc.getDeadlineCalendar();
-    return { success: true, data };
-  }
-
-  // ─── Bulk Export API (F28) ────────────────────────────────────────────────
-  @Get('export/applications')
-  async exportApplicationsCsv(@Res() res: any, @Query() query: any) {
-    const response = res as Response;
-    const csvContent = await this.svc.exportApplicationsCsv(query);
-    response.setHeader('Content-Type', 'text/csv');
-    response.setHeader('Content-Disposition', 'attachment; filename=applications-export.csv');
-    response.status(200).send(csvContent);
-  }
-
-  // ─── Multi-Branch API (F39) ───────────────────────────────────────────────
-  @Get('branches/analytics')
-  async getBranchAnalytics() {
-    const data = await this.svc.getBranchAnalytics();
     return { success: true, data };
   }
 }

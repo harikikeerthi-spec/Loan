@@ -425,19 +425,6 @@ export class BankService {
     await this.db.from('Notification').insert(notifData);
     this.eventEmitter.emit('notification.created', notifData);
 
-    // Notify via Slack
-    try {
-      await this.slack.publishQueryNotification(
-        application?.bank || 'Bank Partner',
-        'Student',
-        application?.applicationNumber || applicationId,
-        content,
-        'raised'
-      );
-    } catch (slackErr) {
-      console.error('[BankService] Slack Query Alert failed:', slackErr.message);
-    }
-
     return {
       success: true,
       message: 'Query raised successfully',
@@ -799,79 +786,6 @@ export class BankService {
       .single();
     if (error) throw error;
     return { success: true, branch: data };
-  }
-
-  async updateBranch(branchId: string, branchData: any): Promise<any> {
-    const { data, error } = await this.db
-      .from('BankBranch')
-      .update(branchData)
-      .eq('id', branchId)
-      .select()
-      .single();
-    if (error) throw error;
-    return { success: true, branch: data };
-  }
-
-  async deleteBranch(branchId: string): Promise<any> {
-    const { error } = await this.db
-      .from('BankBranch')
-      .delete()
-      .eq('id', branchId);
-    if (error) throw error;
-    return { success: true };
-  }
-
-  async deleteProduct(productId: string): Promise<any> {
-    const { error } = await this.db
-      .from('BankProduct')
-      .delete()
-      .eq('id', productId);
-    if (error) throw error;
-    return { success: true };
-  }
-
-  async getChecklists(bankName: string): Promise<any[]> {
-    const { data, error } = await this.db
-      .from('BankDocumentChecklist')
-      .select('*')
-      .eq('bankName', bankName);
-    if (error) throw error;
-    return data || [];
-  }
-
-  async createChecklist(checklistData: any): Promise<any> {
-    const { data, error } = await this.db
-      .from('BankDocumentChecklist')
-      .insert({
-        bankName: checklistData.bankName,
-        productType: checklistData.productType,
-        requiredDocs: checklistData.requiredDocs || [],
-        isActive: checklistData.isActive !== undefined ? checklistData.isActive : true
-      })
-      .select()
-      .single();
-    if (error) throw error;
-    return { success: true, checklist: data };
-  }
-
-  async updateChecklist(id: string, checklistData: any): Promise<any> {
-    const { data, error } = await this.db
-      .from('BankDocumentChecklist')
-      .update(checklistData)
-      .eq('id', id)
-      .select()
-      .single();
-    if (error) throw error;
-    return { success: true, checklist: data };
-  }
-
-  async deleteChecklist(id: string): Promise<any> {
-    const { error } = await this.db
-      .from('BankDocumentChecklist')
-      .delete()
-      .eq('id', id);
-    if (error) throw error;
-    return { success: true };
   }
 
   async getOfficers(bankName: string): Promise<any[]> {
