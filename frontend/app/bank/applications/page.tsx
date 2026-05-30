@@ -672,7 +672,7 @@ export default function ApplicationManagement() {
                                     <input 
                                         type="text" 
                                         required
-                                        placeholder="e.g. LAN-IDFC-99281-22"
+                                        placeholder="e.g. LAN-BANK-0000000"
                                         value={lanNumber}
                                         onChange={(e) => setLanNumber(e.target.value)}
                                         className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm transition-all"

@@ -15,17 +15,16 @@ export default function ProcessingFeeTracker() {
 
     // Modal / Drawer state
     const [selectedApp, setSelectedApp] = useState<any | null>(null);
-    const [drawerMode, setDrawerMode] = useState<"payment" | "waiver" | "refund" | null>(null);
+    const [drawerMode, setDrawerMode] = useState<"payment" | "waiver" | null>(null);
     const [txnRef, setTxnRef] = useState("");
     const [paymentMode, setPaymentMode] = useState("online");
     const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
     const [waiverReason, setWaiverReason] = useState("");
-    const [refundReason, setRefundReason] = useState("");
     const [processing, setProcessing] = useState(false);
 
     // Mock initial fee states stored in state to simulate changes locally
     const [feeRecords, setFeeRecords] = useState<Record<string, {
-        status: "pending" | "paid" | "waived" | "refunded";
+        status: "pending" | "paid" | "waived";
         txnRef?: string;
         paymentMode?: string;
         paymentDate?: string;
@@ -82,17 +81,15 @@ export default function ProcessingFeeTracker() {
         let totalCollected = 0;
         let totalPending = 0;
         let totalWaived = 0;
-        let totalRefunded = 0;
 
         Object.values(feeRecords).forEach(rec => {
             const totalWithGst = Math.round(rec.amount * 1.18);
             if (rec.status === "paid") totalCollected += totalWithGst;
             else if (rec.status === "pending") totalPending += totalWithGst;
             else if (rec.status === "waived") totalWaived += totalWithGst;
-            else if (rec.status === "refunded") totalRefunded += totalWithGst;
         });
 
-        return { totalCollected, totalPending, totalWaived, totalRefunded };
+        return { totalCollected, totalPending, totalWaived };
     }, [feeRecords]);
 
     const filteredApps = useMemo(() => {
@@ -135,15 +132,6 @@ export default function ProcessingFeeTracker() {
                             actionReason: waiverReason
                         }
                     };
-                } else if (drawerMode === "refund") {
-                    return {
-                        ...prev,
-                        [selectedApp.id]: {
-                            ...current,
-                            status: "refunded",
-                            actionReason: refundReason
-                        }
-                    };
                 }
                 return prev;
             });
@@ -151,15 +139,13 @@ export default function ProcessingFeeTracker() {
             // Cleanup & Alert
             const alertText = 
                 drawerMode === "payment" ? `Fee Payment confirmed for LAN ${selectedApp.lanNumber || 'N/A'}` :
-                drawerMode === "waiver" ? `Fee Waived for application ${selectedApp.applicationNumber}` :
-                `Refund initiated for ${selectedApp.firstName} ${selectedApp.lastName}`;
+                `Fee Waived for application ${selectedApp.applicationNumber}`;
             
             alert(alertText);
             setDrawerMode(null);
             setSelectedApp(null);
             setTxnRef("");
             setWaiverReason("");
-            setRefundReason("");
             setProcessing(false);
         }, 600);
     };
@@ -171,7 +157,7 @@ export default function ProcessingFeeTracker() {
             {/* Page Header */}
             <PageHeader 
                 title="Processing Fee Tracker" 
-                description="Manage processing fee collection profiles, record merchant bank tokens, and evaluate file-level fee waivers or refunds."
+                description="Manage processing fee collection profiles, record merchant bank tokens, and evaluate file-level fee waivers."
                 moduleName="Module 05.1 • Fee Desk"
                 icon="receipt_long"
                 actionSlot={
@@ -189,7 +175,7 @@ export default function ProcessingFeeTracker() {
             />
 
             {/* Fee Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="glass-card bg-white/70 p-5 rounded-2xl border-purple-150 flex items-center justify-between">
                     <div>
                         <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Total Fees Collected</p>
@@ -215,15 +201,6 @@ export default function ProcessingFeeTracker() {
                     </div>
                     <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
                         <span className="material-symbols-outlined">percent</span>
-                    </div>
-                </div>
-                <div className="glass-card bg-white/70 p-5 rounded-2xl border-purple-150 flex items-center justify-between">
-                    <div>
-                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Reversed / Refunded</p>
-                        <p className="text-2xl font-black text-rose-600 mt-1 font-display">₹{stats.totalRefunded.toLocaleString()}</p>
-                    </div>
-                    <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
-                        <span className="material-symbols-outlined">assignment_return</span>
                     </div>
                 </div>
             </div>
@@ -274,9 +251,7 @@ export default function ProcessingFeeTracker() {
                                                         ? "bg-emerald-50 border-emerald-150 text-emerald-600" 
                                                         : rec.status === "waived"
                                                             ? "bg-purple-50 border-purple-150 text-purple-600"
-                                                            : rec.status === "refunded"
-                                                                ? "bg-rose-50 border-rose-150 text-rose-600"
-                                                                : "bg-amber-50 border-amber-150 text-amber-600 animate-pulse"
+                                                            : "bg-amber-50 border-amber-150 text-amber-600 animate-pulse"
                                                 }`}>
                                                     {rec.status}
                                                 </span>
@@ -288,7 +263,7 @@ export default function ProcessingFeeTracker() {
                                                         Date: {rec.paymentDate || "N/A"}
                                                     </span>
                                                 )}
-                                                {(rec.status === "waived" || rec.status === "refunded") && (
+                                                {rec.status === "waived" && (
                                                     <span className="text-[8.5px] font-semibold text-gray-400 block italic max-w-[150px] truncate" title={rec.actionReason}>
                                                         Note: {rec.actionReason || "Approved"}
                                                     </span>
@@ -321,18 +296,7 @@ export default function ProcessingFeeTracker() {
                                                             </button>
                                                         </>
                                                     )}
-                                                    {rec.status === "paid" && (
-                                                        <button
-                                                            onClick={() => {
-                                                                setSelectedApp(app);
-                                                                setDrawerMode("refund");
-                                                            }}
-                                                            className="px-3 py-1.5 border border-rose-200 text-rose-600 hover:bg-rose-50/40 text-[9.5px] font-black uppercase tracking-wider rounded-xl transition-all"
-                                                        >
-                                                            Refund
-                                                        </button>
-                                                    )}
-                                                    {(rec.status === "waived" || rec.status === "refunded") && (
+                                                    {(rec.status === "paid" || rec.status === "waived") && (
                                                         <span className="text-[9.5px] font-bold text-gray-400 italic">No further actions</span>
                                                     )}
                                                 </div>
@@ -462,49 +426,6 @@ export default function ProcessingFeeTracker() {
                                                 className="flex-1 py-3 bg-[#6605c7] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#5203a4] shadow-lg shadow-purple-500/10 transition-all font-sans"
                                             >
                                                 {processing ? "Processing..." : "Approve Waiver"}
-                                            </button>
-                                        </div>
-                                    </form>
-                                </>
-                            )}
-
-                            {drawerMode === "refund" && (
-                                <>
-                                    <h3 className="text-xl font-black text-rose-600 mb-2 uppercase tracking-tight flex items-center gap-1.5">
-                                        <span className="material-symbols-outlined">assignment_return</span>
-                                        Reverse / Refund Fee
-                                    </h3>
-                                    <p className="text-xs text-gray-400 mb-5 font-bold uppercase tracking-wider">
-                                        Reversing processing fees for {selectedApp.firstName} {selectedApp.lastName}
-                                    </p>
-
-                                    <form onSubmit={handleActionSubmit} className="space-y-4">
-                                        <div>
-                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Reason for Reversal / Refund</label>
-                                            <textarea 
-                                                required 
-                                                rows={3}
-                                                value={refundReason}
-                                                onChange={e => setRefundReason(e.target.value)}
-                                                placeholder="Provide cancellation details, duplicate file routing proof, or customer complaint audit details..."
-                                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold focus:outline-none focus:border-rose-500 text-gray-700"
-                                            />
-                                        </div>
-
-                                        <div className="flex gap-4 pt-3">
-                                            <button 
-                                                type="button" 
-                                                onClick={() => { setDrawerMode(null); setSelectedApp(null); }}
-                                                className="flex-1 py-3 border border-gray-200 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all font-sans"
-                                            >
-                                                Cancel
-                                            </button>
-                                            <button 
-                                                type="submit"
-                                                disabled={processing}
-                                                className="flex-1 py-3 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 shadow-lg shadow-rose-500/10 transition-all font-sans"
-                                            >
-                                                {processing ? "Processing..." : "Confirm Refund"}
                                             </button>
                                         </div>
                                     </form>

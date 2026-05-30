@@ -318,19 +318,20 @@ function BankLoginContent() {
                             <motion.div 
                                 initial={{ scale: 0.9, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
-                                className="flex items-center gap-2.5 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl border border-purple-200/50 shadow-md shadow-purple-500/5"
+                                className="flex items-center gap-5 bg-white/90 backdrop-blur-md px-6 py-2 rounded-2xl border border-purple-200/50 shadow-md shadow-purple-500/5"
                             >
                                 <img
                                     src="/vidyaloan_logo.png"
                                     alt="Vidyaloan Logo"
-                                    className="w-7 h-7 object-contain"
+                                    className="w-16 h-16 object-contain mix-blend-multiply"
+                                    style={{ transform: "scale(1.35)" }}
                                 />
-                                <span className="text-gray-300 text-base font-light">×</span>
-                                <div className="w-7 h-7 flex items-center justify-center overflow-hidden">
+                                <span className="text-gray-300 text-xl font-light leading-none select-none">×</span>
+                                <div className="h-10 flex items-center justify-center overflow-hidden">
                                     <img
                                         src={SUPPORTED_BANKS.find(b => b.id === selectedBank)?.logo}
                                         alt="Bank Logo"
-                                        className="w-full h-full object-contain"
+                                        className="h-10 w-auto max-w-[140px] object-contain"
                                     />
                                 </div>
                             </motion.div>
