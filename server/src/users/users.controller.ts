@@ -90,6 +90,7 @@ export class UsersController {
                 tests: safeJsonParse(user.tests),
                 family: safeJsonParse(user.family),
                 coApplicant: safeJsonParse(user.coApplicant),
+                createdAt: user.createdAt || user.created_at || '',
             },
         };
     }
@@ -430,6 +431,7 @@ export class UsersController {
                     tests: safeJsonParse(user.tests),
                     family: safeJsonParse(user.family),
                     coApplicant: safeJsonParse(user.coApplicant),
+                    createdAt: user.createdAt || user.created_at || '',
                 },
             };
         } catch (error) {

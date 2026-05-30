@@ -8,7 +8,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class AuthService {
-  private otps = new Map<string, string>();
+  private otps = new Map<string, { otp: string; expiresAt: number }>();
   private signupData = new Map<string, {
     firstName?: string;
     lastName?: string;
@@ -209,7 +209,7 @@ export class AuthService {
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    this.otps.set(email, otp);
+    this.otps.set(email, { otp, expiresAt: Date.now() + 60000 }); // Expires in 1 minute
     console.log(`[AuthService] New OTP generated for ${email}: ${otp}`);
 
     // Store signup data for registration - ONLY update if fields are provided
@@ -290,7 +290,7 @@ export class AuthService {
 
       // Generate OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      this.otps.set(email, otp);
+      this.otps.set(email, { otp, expiresAt: Date.now() + 60000 }); // Expires in 1 minute
       console.log(`[AuthService] OTP generated for ${email}: ${otp}`);
 
       // Send OTP via email
@@ -325,18 +325,27 @@ export class AuthService {
    */
   async verifyOtpUnified(email: string, otp: string) {
     // Verify OTP (with '123456' E2E master bypass for automated staff validation)
-    const storedOtp = this.otps.get(email);
-    if (otp !== '123456' && (!storedOtp || storedOtp !== otp)) {
-      return {
-        success: false,
-        message: 'Invalid or expired OTP. Please try again.'
-      };
+    const stored = this.otps.get(email);
+    
+    if (otp !== '123456') {
+      if (!stored || stored.otp !== otp) {
+        return {
+          success: false,
+          message: 'Invalid OTP. Please try again.'
+        };
+      }
+
+      if (Date.now() > stored.expiresAt) {
+        this.otps.delete(email);
+        return {
+          success: false,
+          message: 'OTP has expired. Please request a new OTP.'
+        };
+      }
     }
 
     // Invalidate OTP after verification
-    if (storedOtp === otp) {
-      this.otps.delete(email);
-    }
+    this.otps.delete(email);
 
     try {
       // Find or create user

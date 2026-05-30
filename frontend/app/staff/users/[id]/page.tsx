@@ -319,7 +319,7 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                 { label: "First Name", value: userData.firstName },
                                                 { label: "Last Name", value: userData.lastName },
                                                 { label: "Email Node", value: userData.email, lowercase: true },
-                                                { label: "Contact Phone", value: userData.mobile || userData.phone },
+                                                { label: "Contact Phone", value: userData.phoneNumber || userData.mobile || userData.phone },
                                                 { label: "Access Privilege", value: userData.role, capitalize: true },
                                             ].map((item, idx) => (
                                                 <div key={idx} className="relative p-4 rounded-xl bg-white/30 border border-white/50 hover:bg-white/50 hover:border-white/80 transition-all duration-300">

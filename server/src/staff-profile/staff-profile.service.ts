@@ -461,77 +461,15 @@ export class StaffProfileService {
     user: any,
     data: { type: string; msg: string; icon: string; color: string },
   ) {
-    const type = data?.type || 'info';
-    const msg = data?.msg || 'Activity logged';
-    const icon = data?.icon || 'event_note';
-    const color = data?.color || 'text-slate-600 bg-slate-50';
-
-    const actorName = user
-      ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Staff'
-      : 'System';
-
-    await this.auditLog.logAction(
-      `STAFF_ACTIVITY`,
-      'DASHBOARD',
-      type.toUpperCase(),
-      user || { id: 'system' },
-      {
-        msg,
-        icon,
-        color,
-        activityType: type,
-        actorName,
-        isDashboardActivity: true,
-      },
-    );
-
-    // Broadcast the activity log dynamically via NestJS event emitter to socket.io
-    this.eventEmitter.emit('dashboard.activity', {
-      type,
-      msg,
-      icon,
-      color,
-      actorName,
-      actorEmail: user?.email || null,
-      createdAt: new Date().toISOString()
-    });
+    // Activity logging disabled by request
+    return;
   }
 
   /**
    * Returns the N most recent dashboard activity entries (for the sidebar widget).
    */
   async getDashboardActivities(limit: number = 15) {
-    const { data, error } = await this.db
-      .from('AuditLog')
-      .select(
-        'id, action, entityId, initiatedBy, changes, createdAt, initiator:User!initiatedBy(firstName, lastName, email)',
-      )
-      .eq('action', 'STAFF_ACTIVITY')
-      .order('createdAt', { ascending: false })
-      .limit(limit);
-
-    if (error) {
-      console.error('[StaffProfileService.getDashboardActivities] Error:', error);
-      return [];
-    }
-
-    return (data || []).map((log: any) => {
-      const initObj = Array.isArray(log.initiator) ? log.initiator[0] : log.initiator;
-      return {
-        id: log.id,
-        type: log.changes?.activityType || 'info',
-        msg: log.changes?.msg || 'Activity recorded',
-        icon: log.changes?.icon || 'event_note',
-        color: log.changes?.color || 'text-slate-600 bg-slate-50',
-        actorName:
-          log.changes?.actorName ||
-          `${initObj?.firstName || ''} ${initObj?.lastName || ''}`.trim() ||
-          'Staff',
-        actorEmail: initObj?.email || null,
-        createdAt: log.createdAt,
-        time: log.createdAt, // Frontend formats this to relative string
-      };
-    });
+    return [];
   }
 
   /**
@@ -543,56 +481,7 @@ export class StaffProfileService {
     type?: string;
     search?: string;
   }) {
-    let query = this.db
-      .from('AuditLog')
-      .select(
-        'id, action, entityId, initiatedBy, changes, createdAt, initiator:User!initiatedBy(firstName, lastName, email)',
-        { count: 'exact' },
-      )
-      .eq('action', 'STAFF_ACTIVITY')
-      .order('createdAt', { ascending: false })
-      .range(opts.offset, opts.offset + opts.limit - 1);
-
-    if (opts.type && opts.type !== 'all') {
-      query = query.eq('changes->>activityType', opts.type);
-    }
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      console.error('[StaffProfileService.getAllDashboardActivities] Error:', error);
-      return { items: [], total: 0 };
-    }
-
-    let items = (data || []).map((log: any) => {
-      const initObj = Array.isArray(log.initiator) ? log.initiator[0] : log.initiator;
-      return {
-        id: log.id,
-        type: log.changes?.activityType || 'info',
-        msg: log.changes?.msg || 'Activity recorded',
-        icon: log.changes?.icon || 'event_note',
-        color: log.changes?.color || 'text-slate-600 bg-slate-50',
-        actorName:
-          log.changes?.actorName ||
-          `${initObj?.firstName || ''} ${initObj?.lastName || ''}`.trim() ||
-          'Staff',
-        actorEmail: initObj?.email || null,
-        createdAt: log.createdAt,
-      };
-    });
-
-    // In-memory search filter (Supabase free tier doesn't support full-text on jsonb easily)
-    if (opts.search) {
-      const s = opts.search.toLowerCase();
-      items = items.filter(
-        (a) =>
-          a.msg.toLowerCase().includes(s) ||
-          a.actorName.toLowerCase().includes(s) ||
-          a.type.toLowerCase().includes(s),
-      );
-    }
-
-    return { items, total: count || items.length };
+    return { items: [], total: 0 };
   }
 
   private parseDate(dateStr: string | null | undefined): string | null {

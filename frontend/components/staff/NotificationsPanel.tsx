@@ -90,12 +90,14 @@ const NotificationsPanel = ({
   };
 
   useEffect(() => {
-    // Initialize Socket.io connection
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    const token = localStorage.getItem("access_token");
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+    const token = localStorage.getItem("token");
 
-    socketRef.current = io(apiUrl, {
-      namespace: "/chat",
+    const socketUrl = apiUrl.endsWith("/api")
+      ? apiUrl.replace("/api", "/chat")
+      : `${apiUrl.replace(/\/$/, "")}/chat`;
+
+    socketRef.current = io(socketUrl, {
       auth: {
         token,
       },
