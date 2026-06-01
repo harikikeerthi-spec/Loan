@@ -1129,4 +1129,24 @@ export class UsersService {
     
     return { success: true };
   }
+
+  async updateUserStatus(userId: string, status: string, rejectionReason?: string) {
+    const { data, error } = await this.db
+      .from('User')
+      .update({
+        status,
+        rejectionReason: status === 'rejected' ? (rejectionReason || null) : null,
+        updatedAt: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error(`[UsersService.updateUserStatus] Error updating status for user ${userId}:`, error);
+      throw error;
+    }
+
+    return data;
+  }
 }

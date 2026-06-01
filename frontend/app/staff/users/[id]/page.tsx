@@ -77,6 +77,30 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
     const [activeTab, setActiveTab] = useState<"profile" | "applications" | "documents">("profile");
     const [selectedApplication, setSelectedApplication] = useState<any>(null);
 
+    const [actionLoading, setActionLoading] = useState(false);
+    const [showRejectForm, setShowRejectForm] = useState(false);
+    const [rejectionReason, setRejectionReason] = useState("");
+
+    const handleUpdateUserStatus = async (newStatus: "active" | "rejected") => {
+        setActionLoading(true);
+        try {
+            const res = await adminApi.updateUserStatus(userId, newStatus, newStatus === 'rejected' ? rejectionReason : undefined) as any;
+            if (res && res.success) {
+                setUserData((prev: any) => ({
+                    ...prev,
+                    status: newStatus,
+                    rejectionReason: newStatus === 'rejected' ? rejectionReason : ""
+                }));
+                setShowRejectForm(false);
+                setRejectionReason("");
+            }
+        } catch (err) {
+            console.error("Failed to update status:", err);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     useEffect(() => {
         const fetchUserDetails = async () => {
             setLoading(true);
@@ -330,12 +354,100 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                     </p>
                                                 </div>
                                             ))}
-                                            <div className="relative p-4 rounded-xl bg-white/30 border border-white/50 hover:bg-white/50 hover:border-white/80 transition-all duration-300">
-                                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1.5">Account Status</p>
-                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/8 text-emerald-600 border border-emerald-500/20">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                                                    Active
-                                                </span>
+                                            <div className="relative p-4 rounded-xl bg-white/30 border border-white/50 hover:bg-white/50 hover:border-white/80 transition-all duration-300 md:col-span-2">
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Profile Verification Status</p>
+                                                
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                    <div className="flex items-center gap-3">
+                                                        {userData.status === 'active' || userData.status === 'approved' ? (
+                                                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/8 text-emerald-600 border border-emerald-500/20 shadow-sm">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                                Profile Accepted
+                                                            </div>
+                                                        ) : userData.status === 'rejected' ? (
+                                                            <div className="flex flex-col gap-1">
+                                                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/8 text-rose-600 border border-rose-500/20 shadow-sm w-fit">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                                                    Profile Rejected
+                                                                </div>
+                                                                {userData.rejectionReason && (
+                                                                    <p className="text-xs text-rose-500 font-bold mt-1">
+                                                                        Reason: <span className="font-medium text-gray-600">{userData.rejectionReason}</span>
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/8 text-amber-600 border border-amber-500/20 shadow-sm">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                                                Pending Verification
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2">
+                                                        {userData.status !== 'active' && userData.status !== 'approved' && !showRejectForm && (
+                                                            <button
+                                                                onClick={() => handleUpdateUserStatus('active')}
+                                                                disabled={actionLoading}
+                                                                className="px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 rounded-lg shadow transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                                                Accept Profile
+                                                            </button>
+                                                        )}
+                                                        {userData.status !== 'rejected' && !showRejectForm && (
+                                                            <button
+                                                                onClick={() => setShowRejectForm(true)}
+                                                                disabled={actionLoading}
+                                                                className="px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-rose-500 to-red-600 hover:opacity-90 rounded-lg shadow transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[14px]">cancel</span>
+                                                                Reject Profile
+                                                            </button>
+                                                        )}
+                                                        {userData.status === 'rejected' && !showRejectForm && (
+                                                            <button
+                                                                onClick={() => handleUpdateUserStatus('active')}
+                                                                disabled={actionLoading}
+                                                                className="px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 rounded-lg shadow transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                                                Re-Accept Profile
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {showRejectForm && (
+                                                    <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col gap-3">
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Provide Rejection Reason</label>
+                                                        <textarea
+                                                            value={rejectionReason}
+                                                            onChange={(e) => setRejectionReason(e.target.value)}
+                                                            placeholder="Type why this profile was rejected (e.g. invalid document uploads, mismatched details, fake phone number)..."
+                                                            className="w-full p-3 bg-white/50 border border-gray-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 resize-none min-h-[70px] placeholder:text-gray-400 placeholder:font-medium"
+                                                        />
+                                                        <div className="flex justify-end gap-2 mt-1">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setShowRejectForm(false);
+                                                                    setRejectionReason("");
+                                                                }}
+                                                                disabled={actionLoading}
+                                                                className="px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-gray-500 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleUpdateUserStatus('rejected')}
+                                                                disabled={actionLoading || !rejectionReason.trim()}
+                                                                className="px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-rose-500 to-red-600 hover:opacity-90 rounded-lg shadow transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            >
+                                                                Confirm Rejection
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

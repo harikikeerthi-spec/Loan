@@ -165,6 +165,7 @@ export const HttpApiPaths = {
         sendEmail: () => `${HTTP_API_PREFIX}/users/admin/send-email`,
         usersCreate: () => `${HTTP_API_PREFIX}/users/admin/create`,
         usersUpdateDetails: () => `${HTTP_API_PREFIX}/users/admin/update-details`,
+        usersUpdateStatus: () => `${HTTP_API_PREFIX}/users/admin/update-status`,
         usersProfile: () => `${HTTP_API_PREFIX}/users/profile`,
         applicationNotes: (id: string) => `${HTTP_API_PREFIX}/applications/admin/${enc(id)}/notes`,
         documentVerify: (documentId: string) =>

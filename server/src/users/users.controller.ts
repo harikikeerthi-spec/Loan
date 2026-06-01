@@ -65,6 +65,8 @@ export class UsersController {
                 permanentAddress: user.permanentAddress || '',
                 gender: user.gender || '',
                 documentVerified: user.documentVerified || false,
+                status: user.status || 'pending',
+                rejectionReason: user.rejectionReason || '',
                 goal: user.goal || '',
                 studyDestination: user.studyDestination || '',
                 courseName: user.courseName || '',
@@ -351,6 +353,39 @@ export class UsersController {
     }
 
     @UseGuards(AdminGuard)
+    @Post('admin/update-status')
+    async adminUpdateUserStatus(
+        @Body() body: { 
+            userId: string; 
+            status: string; 
+            rejectionReason?: string 
+        }
+    ) {
+        if (!body || !body.userId || !body.status) {
+            return { success: false, message: 'User ID and status are required' };
+        }
+        
+        console.log(`[UsersController.adminUpdateUserStatus] Status change request for user ${body.userId} to ${body.status}`);
+        
+        const updated = await this.usersService.updateUserStatus(
+            body.userId,
+            body.status,
+            body.rejectionReason
+        );
+        
+        return { 
+            success: true, 
+            message: 'User status updated successfully', 
+            user: {
+                id: updated.id,
+                email: updated.email,
+                status: updated.status,
+                rejectionReason: updated.rejectionReason
+            } 
+        };
+    }
+
+    @UseGuards(AdminGuard)
     @Get('admin/:id')
     async getUserById(@Param('id') id: string) {
         if (!id) {
@@ -406,6 +441,8 @@ export class UsersController {
                     permanentAddress: user.permanentAddress || '',
                     gender: user.gender || '',
                     documentVerified: user.documentVerified || false,
+                    status: user.status || 'pending',
+                    rejectionReason: user.rejectionReason || '',
                     goal: user.goal || '',
                     studyDestination: user.studyDestination || '',
                     courseName: user.courseName || '',

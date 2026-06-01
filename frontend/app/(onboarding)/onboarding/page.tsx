@@ -1,4 +1,4 @@
-﻿
+
 
 "use client";
 import { useEffect, useRef, useState } from "react";
@@ -670,6 +670,7 @@ export default function OnboardingPage() {
 
     // Generic input state
     const [inputValue, setInputValue] = useState('');
+    const [customUniversityName, setCustomUniversityName] = useState('');
 
     // Loan slider state
     const [loanSliderValue, setLoanSliderValue] = useState(1400000);
@@ -1053,6 +1054,37 @@ export default function OnboardingPage() {
                 fetchLoanResults();
             }
             
+            if (goal === 'compare') {
+                const firstUniName = answers.compare_uni_search?.label || answers.target_university?.label;
+                if (firstUniName && shortlistedUniversities.length === 0) {
+                    const found = aiUniversities.find((u: any) => u.name.toLowerCase() === firstUniName.toLowerCase())
+                               || countryUniversities.find((u: any) => u.name.toLowerCase() === firstUniName.toLowerCase());
+                    
+                    if (found) {
+                        setShortlistedUniversities([found]);
+                    } else {
+                        const country = answers.country?.value || 'Canada';
+                        const customUni = {
+                            name: firstUniName,
+                            loc: country,
+                            country: country,
+                            rank: 150,
+                            accept: 35,
+                            min_gpa: 7.0,
+                            min_ielts: 6.5,
+                            min_toefl: 90,
+                            tuition: 30000,
+                            courses: [answers.course?.value || 'Masters Program'],
+                            loan: true,
+                            slug: firstUniName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                            website: '',
+                            description: 'First selected university',
+                        };
+                        setShortlistedUniversities([customUni]);
+                    }
+                }
+            }
+            
             setTimeout(() => {
                 setIsAiMatching(false);
             }, 3000);
@@ -1379,52 +1411,52 @@ export default function OnboardingPage() {
 
             const loanProducts = [
                 {
-                    id: 'bank-1',
-                    name: 'EduCredit Premium',
-                    bank: 'SBI Education Loan',
+                    id: 'hdfc',
+                    name: 'Credila Premium Study Loan',
+                    bank: 'HDFC Credila',
                     interestRate: baseRate + (coSignerType === 'Self-employed' ? 1 : 0),
                     processingFee: isStrongProfile ? 0 : 1000,
                     processingFeeWaiver: isStrongProfile ? true : false,
                     emi: Math.round((loanAmount * (baseRate / 100 + 0.085)) / 60),
                     tenureMonths: 60,
                     repaymentStartMonths: repaymentType === 'during_study' ? 3 : repaymentType === 'moratorium_6' ? 30 : repaymentType === 'moratorium_12' ? 36 : 24,
-                    approved: 'Usually within 7 days',
-                    maxAmount: 5000000,
+                    approved: 'Usually within 5 days',
+                    maxAmount: 15000000,
                     eligibility: 'Strong',
-                    features: ['Collateral not required for up to ₹4L', 'Flexible repayment options', 'Insurance coverage'],
-                    collateralRequired: loanAmount > 4000000,
+                    features: ['100% Finance for top universities', 'Flexible co-applicant options', 'Quick digital sanction'],
+                    collateralRequired: loanAmount > 7500000,
                 },
                 {
-                    id: 'bank-2',
-                    name: 'Global Education Finance',
-                    bank: 'ICICI Bank',
+                    id: 'idfc',
+                    name: 'IDFC EduFirst Loan',
+                    bank: 'IDFC First Bank',
                     interestRate: baseRate + 0.5 + (coSignerType === 'Self-employed' ? 1 : 0),
                     processingFee: 2000,
                     processingFeeWaiver: false,
                     emi: Math.round((loanAmount * (baseRate + 0.535 / 100 + 0.085)) / 60),
                     tenureMonths: 60,
                     repaymentStartMonths: repaymentType === 'during_study' ? 3 : repaymentType === 'moratorium_6' ? 30 : repaymentType === 'moratorium_12' ? 36 : 24,
-                    approved: 'Usually within 10 days',
-                    maxAmount: 7500000,
+                    approved: 'Usually within 7 days',
+                    maxAmount: 10000000,
                     eligibility: 'Good',
-                    features: ['Fast turnaround', 'Competitive rates', 'Transparent process'],
-                    collateralRequired: loanAmount > 5000000,
+                    features: ['Zero collateral up to ₹75L', 'Multi-city co-applicant allowed', 'Competitive interest rates'],
+                    collateralRequired: loanAmount > 7500000,
                 },
                 {
-                    id: 'bank-3',
-                    name: 'EdLoan Express',
-                    bank: 'HDFC Bank',
+                    id: 'avanse',
+                    name: 'Avanse Global Scholar',
+                    bank: 'Avanse Financial',
                     interestRate: baseRate + 1 + (coSignerType === 'Self-employed' ? 1 : 0),
                     processingFee: isStrongProfile ? 500 : 1500,
                     processingFeeWaiver: false,
                     emi: Math.round((loanAmount * (baseRate + 1 / 100 + 0.085)) / 60),
                     tenureMonths: 60,
                     repaymentStartMonths: repaymentType === 'during_study' ? 3 : repaymentType === 'moratorium_6' ? 30 : repaymentType === 'moratorium_12' ? 36 : 24,
-                    approved: 'Usually within 5 days',
-                    maxAmount: 6000000,
+                    approved: 'Usually within 3 days',
+                    maxAmount: 8000000,
                     eligibility: 'Moderate',
-                    features: ['Quick disbursement', 'Online application', 'Visa support'],
-                    collateralRequired: loanAmount > 4500000,
+                    features: ['Fast turnaround in 72 hours', 'Pre-admission sanction letter', 'Covers living expenses fully'],
+                    collateralRequired: loanAmount > 5000000,
                 },
             ].map(product => ({
                 ...product,
@@ -1551,6 +1583,50 @@ export default function OnboardingPage() {
 
     const removeFromShortlist = (universityName: string) => {
         setShortlistedUniversities(shortlistedUniversities.filter((u: any) => u.name !== universityName));
+    };
+
+    const handleAddCustomUniversity = () => {
+        if (!customUniversityName.trim()) return;
+        const name = customUniversityName.trim();
+        const country = answers.country?.value || 'Canada';
+        
+        const customUni = {
+            name,
+            loc: country,
+            country: country,
+            rank: 150,
+            accept: 35,
+            min_gpa: 7.0,
+            min_ielts: 6.5,
+            min_toefl: 90,
+            tuition: 30000,
+            courses: [answers.course?.value || 'Masters Program'],
+            loan: true,
+            slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+            website: '',
+            description: 'Custom added university',
+        };
+
+        if (shortlistedUniversities.some((u: any) => u.name.toLowerCase() === name.toLowerCase())) {
+            setToastData({
+                name: 'Already Added',
+                msg: `${name} is already in your shortlist.`,
+                time: 'now'
+            });
+            return;
+        }
+
+        if (shortlistedUniversities.length >= 5) {
+            setToastData({
+                name: 'Max Reached',
+                msg: 'You can compare up to 5 universities. Remove one to add another.',
+                time: 'now'
+            });
+            return;
+        }
+
+        setShortlistedUniversities([...shortlistedUniversities, customUni]);
+        setCustomUniversityName('');
     };
 
     const clearShortlist = () => {
@@ -1681,7 +1757,9 @@ export default function OnboardingPage() {
                                     boxShadow: idx === 0 ? '0 4px 14px rgba(16,185,129,0.3)' : 'none'
                                 }}
                                 onClick={() => {
-                                    router.push(`/apply-loan?bank=${loan.id}&amount=${loan.loanAmount}`);
+                                    const uni = answers.target_university?.label || answers.loan_university?.label || '';
+                                    const countryVal = answers.country?.value || answers.loan_country?.value || '';
+                                    router.push(`/apply-loan?bank=${loan.id}&amount=${loan.loanAmount}&university=${encodeURIComponent(uni)}&country=${encodeURIComponent(countryVal)}`);
                                 }}
                             >
                                 {idx === 0 ? '✨ Apply Now (Recommended)' : 'Apply for this loan'}
@@ -1816,6 +1894,54 @@ export default function OnboardingPage() {
                 <div style={{ marginBottom: 16, padding: 12, background: '#fffbeb', borderRadius: 12, border: '1px solid #fde68a' }}>
                     <div style={{ fontSize: 12, color: '#a16207', fontWeight: 700 }}>
                         💡 Select 3-5 universities from your matched results to compare and get AI evaluation
+                    </div>
+                </div>
+
+                {/* Manual University Addition */}
+                <div style={{ marginBottom: 16, padding: 16, background: '#f5f3ff', borderRadius: 16, border: '1px solid #ddd6fe' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 }}>
+                        Can't find your university? Add it manually:
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <input
+                            type="text"
+                            placeholder="e.g. McGill University"
+                            value={customUniversityName}
+                            onChange={(e) => setCustomUniversityName(e.target.value)}
+                            style={{
+                                flex: 1,
+                                padding: '10px 14px',
+                                border: '1.5px solid #e9d5ff',
+                                borderRadius: 12,
+                                fontSize: 13,
+                                outline: 'none',
+                                background: 'white',
+                                color: '#1a1a2e'
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAddCustomUniversity();
+                                }
+                            }}
+                        />
+                        <button
+                            onClick={handleAddCustomUniversity}
+                            style={{
+                                padding: '10px 20px',
+                                background: 'linear-gradient(135deg, #7c3aed, #6605c7)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: 12,
+                                fontSize: 13,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 10px rgba(102,5,199,0.15)',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            + Add
+                        </button>
                     </div>
                 </div>
 

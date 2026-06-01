@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { authApi, chatApi } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import ProgressTracker from "@/components/ProgressTracker";
+import UserActivityLog from "@/components/user/UserActivityLog";
 
 interface DashboardData {
     applicationCount?: number;
@@ -459,7 +460,7 @@ export default function DashboardPage() {
 
                 {/* Tabs */}
                 <div className="flex gap-1 mb-8 overflow-x-auto no-scrollbar border-b border-gray-100">
-                    {["overview", "applications", "documents", "profile"].map((tab) => (
+                    {["overview", "applications", "documents", "activity", "profile"].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -597,49 +598,7 @@ export default function DashboardPage() {
 
                         {/* Recent Activity */}
                         <div className="lg:col-span-1">
-                            <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-6">Recent Activity</h2>
-                            <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-100 overflow-hidden shadow-sm">
-                                {!data.activity?.length ? (
-                                    <div className="p-12 text-center">
-                                        <span className="material-symbols-outlined text-4xl text-gray-200 mb-2">history</span>
-                                        <p className="text-gray-400 text-[11px] font-bold uppercase">No recent activity</p>
-                                    </div>
-                                ) : (
-                                    data.activity.map((act, i) => (
-                                        <div key={i} className="p-5 hover:bg-gray-50 transition-colors">
-                                            <div className="flex gap-4">
-                                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${act.type === 'forum_post' ? 'bg-blue-100 text-blue-600' :
-                                                    act.type === 'forum_comment' ? 'bg-amber-100 text-amber-600' :
-                                                        act.type.includes('approved') ? 'bg-green-100 text-green-600' :
-                                                            act.type.includes('rejected') ? 'bg-red-100 text-red-600' :
-                                                                'bg-purple-100 text-[#6605c7]'
-                                                    }`}>
-                                                    <span className="material-symbols-outlined text-[18px]">
-                                                        {act.type === 'forum_post' ? 'forum' :
-                                                            act.type === 'forum_comment' ? 'chat_bubble' :
-                                                                act.type === 'upload' ? 'upload_file' :
-                                                                    act.type === 'application' ? 'description' : 'notifications'}
-                                                    </span>
-                                                </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="flex justify-between items-start mb-1">
-                                                        <div className="text-[13px] font-bold text-gray-900 truncate pr-2">{act.title}</div>
-                                                        <div className="text-[10px] text-gray-400 font-bold whitespace-nowrap">
-                                                            {new Date(act.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-[12px] text-gray-500 line-clamp-2 leading-relaxed">{act.description}</div>
-                                                    {act.link && (
-                                                        <a href={act.link} className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-[#6605c7] mt-3 hover:underline">
-                                                            View Details <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
-                                                        </a>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
+                            <UserActivityLog userId={user?.id} limit={10} refreshInterval={30000} variant="sidebar" />
                         </div>
                     </div>
                 )}
@@ -776,6 +735,21 @@ export default function DashboardPage() {
                                 })}
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Activity Tab */}
+                {activeTab === "activity" && (
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-900 mb-6">Activity Log</h2>
+                        <div className="bg-white rounded-xl border border-gray-100 p-8">
+                            <UserActivityLog 
+                                userId={user?.id} 
+                                limit={50} 
+                                refreshInterval={30000} 
+                                variant="page" 
+                            />
+                        </div>
                     </div>
                 )}
 

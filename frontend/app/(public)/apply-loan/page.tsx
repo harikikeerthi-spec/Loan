@@ -66,6 +66,7 @@ export default function ApplyLoanPage() {
             const uni = params.get("university");
             const country = params.get("country");
             const bankParam = params.get("bank");
+            const amountParam = params.get("amount");
 
             let selectedBank = "";
             if (bankParam) {
@@ -96,12 +97,13 @@ export default function ApplyLoanPage() {
                 }
             }
 
-            if (uni || country || selectedBank || (user && !profileLoaded)) {
+            if (uni || country || selectedBank || amountParam || (user && !profileLoaded)) {
                 setFormData((prev) => ({
                     ...prev,
                     university: prev.university || uni || "",
                     country: prev.country || country || "",
                     bank: selectedBank || prev.bank || "",
+                    amount: prev.amount || (amountParam ? formatIndianCurrency(amountParam) : ""),
                     firstName: prev.firstName || user?.firstName || "",
                     lastName: prev.lastName || user?.lastName || "",
                     email: prev.email || user?.email || "",
