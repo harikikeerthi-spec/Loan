@@ -152,11 +152,11 @@ export class UsersService {
   }
 
   /**
-   * Generate sequential staff ID with format VL-SF-{3-digit}
+   * Generate sequential staff ID with format VL-STF-{3-digit}
    * Fetches the highest existing staff ID and increments by 1
    */
   private async generateSequentialStaffId(): Promise<string> {
-    const prefix = 'VL-SF-';
+    const prefix = 'VL-STF-';
 
     try {
       // Fetch all staff IDs — if staffId column doesn't exist in schema cache
@@ -220,7 +220,7 @@ export class UsersService {
   /**
    * Generate a role-based user ID:
    *  - student / user  →  VL-STU-{YEAR}-{5-digit sequential}
-   *  - staff           →  VL-SF-{3-digit sequential}
+   *  - staff           →  VL-STF-{3-digit sequential}
    *  - agent           →  VL-AGT-{5-digit from email}
    *  - bank            →  VL-BNK-{3-digit from email}
    *

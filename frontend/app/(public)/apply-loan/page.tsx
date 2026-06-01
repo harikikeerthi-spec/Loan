@@ -150,6 +150,20 @@ export default function ApplyLoanPage() {
         else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = "Please enter a valid email";
         if (!formData.phone.trim()) errors.phone = "Phone number is required";
         else if (!/^[\d+\-\s()]{7,15}$/.test(formData.phone.trim())) errors.phone = "Please enter a valid phone number";
+
+        // Age validation: applicant must be 18–40 years old
+        if (!formData.dateOfBirth) {
+            errors.dateOfBirth = "Date of birth is required";
+        } else {
+            const [dd, mm, yyyy] = formData.dateOfBirth.split("-").map(Number);
+            const dob = new Date(yyyy, mm - 1, dd);
+            const today = new Date();
+            const ageMs = today.getTime() - dob.getTime();
+            const age = new Date(ageMs).getUTCFullYear() - 1970;
+            if (age < 18) errors.dateOfBirth = "You must be at least 18 years old to apply";
+            else if (age > 40) errors.dateOfBirth = "Applicants above 40 years are not eligible for this loan";
+        }
+
         if (!formData.coApplicant) errors.coApplicant = "Please select co-applicant type";
         const cleanIncome = formData.income.replace(/,/g, "");
         if (formData.coApplicant && formData.coApplicant !== "none" && (!cleanIncome || Number(cleanIncome) <= 0)) {
@@ -459,6 +473,8 @@ export default function ApplyLoanPage() {
                                         label="Date of Birth"
                                         value={formData.dateOfBirth}
                                         onChange={(v) => update("dateOfBirth", v)}
+                                        error={stepErrors.dateOfBirth}
+                                        required
                                     />
                                     <InputField label="Residential Address" icon="location_on" value={formData.address} onChange={(v) => update("address", v)} placeholder="City, State" />
                                 </div>

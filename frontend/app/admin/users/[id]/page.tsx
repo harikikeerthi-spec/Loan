@@ -29,7 +29,13 @@ export default function UserProfileEdit({ params }: { params: { id: string } }) 
         const fetchUserData = async () => {
             try {
                 setLoading(true);
-                const response = await fetch(`/api/admin/users/${userId}`);
+                // Get the admin token from localStorage
+                const token = typeof window !== 'undefined'
+                    ? (localStorage.getItem('adminAccessToken') || localStorage.getItem('staffAccessToken') || localStorage.getItem('accessToken') || '')
+                    : '';
+                const response = await fetch(`/api/admin/users/${userId}`, {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                });
                 if (!response.ok) {
                     throw new Error("Failed to fetch user data");
                 }
@@ -43,6 +49,7 @@ export default function UserProfileEdit({ params }: { params: { id: string } }) 
                     lastName: data.lastName || "",
                     email: data.email || "",
                     primaryContact: data.phoneNumber || "",
+                    dob: data.dateOfBirth || "",
                 }));
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Failed to load user data");
@@ -267,7 +274,11 @@ export default function UserProfileEdit({ params }: { params: { id: string } }) 
                                             </div>
                                             <div className="bg-slate-50 rounded-lg p-5 border border-slate-200">
                                                 <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Phone Number</p>
-                                                <p className="text-sm font-black text-slate-900">{userData?.phoneNumber || 'N/A'}</p>
+                                                <p className="text-sm font-black text-slate-900">{userData?.phoneNumber || <span className="text-slate-400 font-semibold">Not provided</span>}</p>
+                                            </div>
+                                            <div className="bg-slate-50 rounded-lg p-5 border border-slate-200">
+                                                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Date of Birth</p>
+                                                <p className="text-sm font-black text-slate-900">{userData?.dateOfBirth || <span className="text-slate-400 font-semibold">Not provided</span>}</p>
                                             </div>
                                         </div>
                                     </section>

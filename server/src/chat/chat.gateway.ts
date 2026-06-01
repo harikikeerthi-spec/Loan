@@ -62,9 +62,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.logger.log(`Client connected: ${client.id} (User: ${payload.email}, Role: ${payload.role})`);
       
       // Join general room based on role
-      if (payload.role === 'admin' || payload.role === 'staff') {
+      if (payload.role === 'admin' || payload.role === 'staff' || payload.role === 'super_admin') {
         client.join('room_staff');
-      } else if (payload.role === 'bank') {
+      } else if (payload.role === 'bank' || payload.role === 'partner_bank') {
         client.join('room_bank');
       }
 
@@ -93,6 +93,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.onlineUsers.delete(client.id);
       this.server.to('room_staff').emit('presence_update', Array.from(new Set(this.onlineUsers.values())));
     }
+  }
+
+  @SubscribeMessage('joinRoom')
+  handleJoinRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() room: string
+  ) {
+    // Only allow joining rooms the user's role is permitted to access
+    const user = client.data.user;
+    const isStaff = user?.role === 'admin' || user?.role === 'staff' || user?.role === 'super_admin';
+    const isBank = user?.role === 'bank' || user?.role === 'partner_bank';
+    if ((room === 'room_staff' && isStaff) || (room === 'room_bank' && isBank)) {
+      client.join(room);
+      this.logger.log(`Client ${client.id} explicitly joined ${room}`);
+    }
+    return { success: true };
   }
 
   @SubscribeMessage('request_presence')

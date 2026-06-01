@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { staffProfileApi } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 export interface Activity {
   id: string;
@@ -49,6 +50,7 @@ export const useActivityLog = (options: ActivityLogOptions = {}) => {
     enableWebSocket = true
   } = options;
 
+  const { token } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,10 +89,7 @@ export const useActivityLog = (options: ActivityLogOptions = {}) => {
 
   // Initialize WebSocket connection
   useEffect(() => {
-    if (!enableWebSocket) return;
-
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    if (!enableWebSocket || !token) return;
 
     const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (
       typeof window !== 'undefined' &&

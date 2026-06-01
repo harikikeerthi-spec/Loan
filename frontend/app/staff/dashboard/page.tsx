@@ -232,7 +232,7 @@ export default function StaffDashboardPage() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const { user, logout } = useAuth();
+    const { user, logout, token } = useAuth();
     const [activeSection, setActiveSection] = useState(() => getDashboardSection(searchParams.get("section")));
     const [loading, setLoading] = useState(true);
     const [nowTime, setNowTime] = useState<Date>(new Date());
@@ -324,7 +324,6 @@ export default function StaffDashboardPage() {
 
     // Initialize real-time WebSocket connection
     useEffect(() => {
-        const token = localStorage.getItem('token');
         if (!token) return;
 
         const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (

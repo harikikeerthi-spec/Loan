@@ -52,6 +52,26 @@ export default function UserDetailsPage() {
             setError("Please enter a valid phone number");
             return;
         }
+
+        // Validate date of birth (must be 18–40 years old)
+        if (!form.dateOfBirth) {
+            setError("Date of birth is required");
+            return;
+        } else {
+            const [dd, mm, yyyy] = form.dateOfBirth.split("-").map(Number);
+            const dob = new Date(yyyy, mm - 1, dd);
+            const today = new Date();
+            const ageMs = today.getTime() - dob.getTime();
+            const age = new Date(ageMs).getUTCFullYear() - 1970;
+            if (age < 18) {
+                setError("You must be at least 18 years old to apply for a loan");
+                return;
+            }
+            if (age > 40) {
+                setError("Applicants above 40 years are not eligible for this loan");
+                return;
+            }
+        }
         
         setSaving(true);
         setError(null);

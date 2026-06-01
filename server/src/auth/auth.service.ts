@@ -560,10 +560,11 @@ export class AuthService {
         user: {
           id: user.id,
           email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          phoneNumber: user.phoneNumber,
-          dateOfBirth: formattedDob,
+          firstName: user.firstName || '',
+          lastName: user.lastName || '',
+          phoneNumber: user.phoneNumber || '',
+          dateOfBirth: formattedDob || '',
+          role: user.role || 'user',
           createdAt: user.createdAt,
         }
       };

@@ -57,8 +57,20 @@ export default function DatePicker({ value, onChange, label, placeholder = "Sele
         "July", "August", "September", "October", "November", "December"
     ];
 
-    const currentYear = new Date().getFullYear();
-    const years = Array.from({ length: 100 }, (_, i) => currentYear - i);
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    // Loan eligibility: applicant must be 18–40 years old at the time of application
+    const MIN_AGE = 18;
+    const MAX_AGE = 40;
+    // Oldest valid birth date: exactly MAX_AGE years ago
+    const maxBirthDate = new Date(today.getFullYear() - MAX_AGE, today.getMonth(), today.getDate());
+    // Youngest valid birth date: exactly MIN_AGE years ago
+    const minBirthDate = new Date(today.getFullYear() - MIN_AGE, today.getMonth(), today.getDate());
+    // Year dropdown: only show years within the allowed birth-year window
+    const years = Array.from(
+        { length: MAX_AGE - MIN_AGE + 1 },
+        (_, i) => currentYear - MIN_AGE - i
+    );
 
     const isSelected = (day: number) => {
         if (!value) return false;
@@ -67,8 +79,13 @@ export default function DatePicker({ value, onChange, label, placeholder = "Sele
     };
 
     const isToday = (day: number) => {
-        const today = new Date();
         return today.getFullYear() === viewDate.getFullYear() && today.getMonth() === viewDate.getMonth() && today.getDate() === day;
+    };
+
+    /** Returns true when a given calendar day falls outside the 18–40 age window */
+    const isOutOfRange = (day: number): boolean => {
+        const d = new Date(viewDate.getFullYear(), viewDate.getMonth(), day);
+        return d > minBirthDate || d < maxBirthDate;
     };
 
     return (
@@ -154,41 +171,50 @@ export default function DatePicker({ value, onChange, label, placeholder = "Sele
                             {standardBlanks.map(i => (
                                 <div key={`blank-${i}`} className="h-9" />
                             ))}
-                            {days.map(day => (
-                                <button
-                                    key={day}
-                                    onClick={() => handleDateSelect(day)}
-                                    className={`h-9 flex items-center justify-center rounded-xl text-sm font-medium transition-all ${
-                                        isSelected(day)
-                                            ? "bg-[#6605c7] text-white shadow-lg shadow-[#6605c7]/20"
-                                            : isToday(day)
-                                            ? "text-[#6605c7] bg-[#6605c7]/5 font-bold"
-                                            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                                    }`}
-                                >
-                                    {day}
-                                </button>
-                            ))}
+                            {days.map(day => {
+                                const outOfRange = isOutOfRange(day);
+                                return (
+                                    <button
+                                        key={day}
+                                        onClick={() => !outOfRange && handleDateSelect(day)}
+                                        disabled={outOfRange}
+                                        title={outOfRange ? "Outside eligible age range (18–40 years)" : undefined}
+                                        className={`h-9 flex items-center justify-center rounded-xl text-sm font-medium transition-all ${
+                                            outOfRange
+                                                ? "text-gray-200 cursor-not-allowed"
+                                                : isSelected(day)
+                                                ? "bg-[#6605c7] text-white shadow-lg shadow-[#6605c7]/20"
+                                                : isToday(day)
+                                                ? "text-[#6605c7] bg-[#6605c7]/5 font-bold"
+                                                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                                        }`}
+                                    >
+                                        {day}
+                                    </button>
+                                );
+                            })}
                         </div>
 
-                        {/* Quick Selection Footer */}
-                        <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
-                            <button 
-                                onClick={() => {
-                                    const today = new Date();
-                                    setViewDate(today);
-                                    handleDateSelect(today.getDate());
-                                }}
-                                className="text-[10px] font-bold uppercase tracking-widest text-[#6605c7] hover:underline"
-                            >
-                                Today
-                            </button>
-                            <button 
-                                onClick={() => setIsOpen(false)}
-                                className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-600"
-                            >
-                                Close
-                            </button>
+                        {/* Age Eligibility Note */}
+                        <div className="mt-4 pt-4 border-t border-gray-50">
+                            <div className="flex items-center gap-1.5 mb-2">
+                                <span className="material-symbols-outlined text-amber-500 text-[14px]">info</span>
+                                <span className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">
+                                    Eligible age: 18 – 40 years
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-[9px] text-gray-400 font-medium">
+                                    Born {maxBirthDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })} –&nbsp;
+                                    {minBirthDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </span>
+                                <button 
+                                    onClick={() => setIsOpen(false)}
+                                    className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-600"
+                                >
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     </motion.div>
                 )}

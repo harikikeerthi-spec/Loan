@@ -268,11 +268,11 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
                                 return est.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
                             })()}
                         </span>
-                            {app.id && (
-                                <span className="block text-[11px] text-gray-400 font-mono mt-1.5" title={`Application ID: ${app.id}`}>
-                                    App #: {app.applicationNumber || app.id}
-                                </span>
-                            )}
+                        {app.id && (
+                            <span className="block text-[11px] text-gray-400 font-mono mt-1.5" title={`Application ID: ${app.id}`}>
+                                App #: {app.applicationNumber || app.id}
+                            </span>
+                        )}
                     </p>
                 </div>
             </div>
@@ -396,9 +396,9 @@ export default function DashboardPage() {
                                     Active Account
                                 </div>
                                 {user?.id && (
-                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#6605c7]/5 text-[#6605c7] text-[10px] font-bold uppercase tracking-wider border border-[#6605c7]/10 shadow-sm">
-                                        <span className="material-symbols-outlined text-[12px] text-[#6605c7]">fingerprint</span>
-                                        User ID: {user.id}
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-3 rounded-full bg-[#6605c7]/5 text-[#6605c7] text-[10px] font-bold uppercase tracking-wider border border-[#6605c7]/10 shadow-sm">
+                                        <span className="material-symbols-outlined text-[30px] text-[#6605c7]">fingerprint</span>
+                                        <span className="text-[13px]">User ID: {user.id}</span>
                                     </div>
                                 )}
                             </div>
@@ -431,51 +431,10 @@ export default function DashboardPage() {
                                 <span className="material-symbols-outlined text-sm">chat</span>
                                 Connect with Support
                             </button>
-                            <Link href="/whatsapp-simulator" className="px-5 py-2.5 bg-white text-[#6605c7] border border-[#6605c7]/20 text-xs font-bold rounded-lg hover:bg-[#6605c7]/5 transition-all flex items-center gap-2">
+                            {/* <Link href="/whatsapp-simulator" className="px-5 py-2.5 bg-white text-[#6605c7] border border-[#6605c7]/20 text-xs font-bold rounded-lg hover:bg-[#6605c7]/5 transition-all flex items-center gap-2">
                                 <span className="material-symbols-outlined text-sm">sensors</span>
                                 Simulate Chat
-                            </Link>
-                            {/* 3D Profile Pill Toggle Button & Apply Now Button Group */}
-                            <div className="flex items-center gap-4 bg-white/40 backdrop-blur-md p-1.5 rounded-full border border-purple-500/10 shadow-[0_8px_32px_rgba(102,5,199,0.08)] shrink-0 select-none">
-                                {/* Profile Pill Toggle Button (On/Off Switch) */}
-                                {/* <button 
-                                    onClick={() => {
-                                        if (activeTab === "profile") {
-                                            setActiveTab("overview");
-                                            window.location.hash = "overview";
-                                        } else {
-                                            setActiveTab("profile");
-                                            window.location.hash = "profile";
-                                        }
-                                    }}
-                                    className={`relative flex items-center gap-2.5 px-4 py-2 rounded-full border transition-all duration-150 ease-out select-none group cursor-pointer ${
-                                        activeTab === "profile"
-                                            ? "bg-[#f4ebff] border-[#6605c7]/30 shadow-inner translate-y-0.5 scale-[0.98]"
-                                            : "bg-white border-gray-200 shadow-[0_4px_0_#cbd5e1] translate-y-0 hover:-translate-y-1 hover:shadow-[0_5px_0_#cbd5e1] hover:border-[#6605c7]/20 active:translate-y-0.5 active:shadow-none"
-                                    }`}
-                                >
-                                    <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center font-bold text-xs shadow-md transition-all duration-300 ${
-                                        activeTab === "profile"
-                                            ? "bg-gradient-to-tr from-[#6605c7] to-[#8b24e5] scale-110 shadow-purple-500/30"
-                                            : "bg-gradient-to-tr from-[#6605c7] via-[#a855f7] to-[#fbbf24] shadow-purple-500/10 group-hover:rotate-12 group-hover:scale-110"
-                                    }`}>
-                                        {(user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || "U")}{(user?.lastName?.[0] || "")}
-                                    </div>
-                                    <span className={`text-xs font-extrabold tracking-tight transition-colors duration-150 ${
-                                        activeTab === "profile" ? "text-[#6605c7]" : "text-gray-800"
-                                    }`}>
-                                        {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.firstName || "User"}
-                                    </span>
-                                </button> */}
-
-                                {/* 3D Apply Now Button */}
-                                <Link
-                                    href="/apply-loan"
-                                    className="relative px-5 py-2.5 bg-gradient-to-r from-[#7c3aed] via-[#a855f7] to-[#f43f5e] text-white text-[11px] font-extrabold uppercase tracking-widest rounded-full shadow-[0_4px_0_#4c1d95] hover:shadow-[0_8px_20px_rgba(124,58,237,0.35),0_6px_0_#4c1d95] border-t border-white/20 translate-y-0 hover:-translate-y-1 hover:brightness-105 active:translate-y-0.5 active:shadow-none transition-all duration-150 ease-out cursor-pointer select-none"
-                                >
-                                    APPLY NOW
-                                </Link>
-                            </div>
+                            </Link> */}
                             <Link href="/onboarding" className="px-5 py-2.5 bg-white text-gray-700 border border-gray-200 text-xs font-bold rounded-lg hover:bg-gray-50 transition-all">
                                 View Roadmap
                             </Link>
@@ -575,7 +534,7 @@ export default function DashboardPage() {
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="font-bold text-[13px] text-gray-900 truncate">{app.bank}</span>
                                                                     {app.applicationNumber && (
-                                                                        <span className="text-[10px] text-gray-400 font-semibold bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100/50">
+                                                                        <span className="text-[13px] text-black-900 font-semibold bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100/50">
                                                                             #{app.applicationNumber}
                                                                         </span>
                                                                     )}
@@ -587,7 +546,7 @@ export default function DashboardPage() {
                                                                     <span className="font-semibold text-gray-700">₹{app.amount?.toLocaleString("en-IN")}</span>
                                                                     {app.universityName && <span>• {app.universityName}</span>}
                                                                     {app.country && <span>• {app.country}</span>}
-                                                                    {app.id && <span className="font-mono text-[10px] text-gray-400" title={`Application ID: ${app.id}`}>• App #: {app.applicationNumber || app.id}</span>}
+
                                                                 </div>
                                                             </div>
                                                         </div>

@@ -226,10 +226,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const freshUser = data?.user ?? data?.data ?? null;
             if (freshUser && (freshUser as AuthUser).email) {
                 setUser(prev => {
+                    // Merge, but only overwrite with non-empty values from the fresh fetch
+                    // to avoid wiping fields like phoneNumber/dateOfBirth with empty strings
+                    function mergeField<T>(fresh: T, existing: T): T {
+                        if (fresh !== undefined && fresh !== null && fresh !== '') return fresh;
+                        return existing;
+                    }
                     const updated: AuthUser = {
                         ...(prev as AuthUser),
-                        ...(freshUser as AuthUser),
-                        id: (freshUser as any).id || (freshUser as any)._id || prev?.id || localStorage.getItem(keys.userId) || ""
+                        id: mergeField((freshUser as any).id || (freshUser as any)._id, prev?.id) || localStorage.getItem(keys.userId) || '',
+                        email: mergeField(freshUser.email, prev?.email) || email,
+                        firstName: mergeField(freshUser.firstName, prev?.firstName),
+                        lastName: mergeField(freshUser.lastName, prev?.lastName),
+                        phoneNumber: mergeField(freshUser.phoneNumber, prev?.phoneNumber),
+                        dateOfBirth: mergeField(freshUser.dateOfBirth, prev?.dateOfBirth),
+                        role: mergeField(freshUser.role, prev?.role),
                     };
                     localStorage.setItem(keys.user, JSON.stringify(updated));
                     if (updated.id) localStorage.setItem(keys.userId, updated.id);

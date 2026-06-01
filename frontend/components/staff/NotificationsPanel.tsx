@@ -91,7 +91,11 @@ const NotificationsPanel = ({
 
   useEffect(() => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-    const token = localStorage.getItem("token");
+    // Use portal-specific token keys (staff portal uses "staffAccessToken")
+    const token =
+      localStorage.getItem("staffAccessToken") ||
+      localStorage.getItem("adminAccessToken") ||
+      localStorage.getItem("accessToken");
 
     const socketUrl = apiUrl.endsWith("/api")
       ? apiUrl.replace("/api", "/chat")
@@ -131,6 +135,32 @@ const NotificationsPanel = ({
       console.error("[NotificationsPanel] Socket error:", error);
     });
 
+    const fetchNotifications = async () => {
+      if (!token) return;
+      try {
+        const res = await fetch("/api/notifications", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.items)) {
+            setNotifications(data.items.slice(0, 50));
+            const unread = data.items.filter((n: any) => !n.isRead).length;
+            setUnreadCount(unread);
+          }
+        } else {
+          console.error("[NotificationsPanel] Failed to fetch notifications:", res.statusText);
+        }
+      } catch (err) {
+        console.error("[NotificationsPanel] Fetch error:", err);
+      }
+    };
+
+    fetchNotifications();
+
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
@@ -138,10 +168,56 @@ const NotificationsPanel = ({
     };
   }, []);
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = async (notification: Notification) => {
     onNotificationClick?.(notification);
-    // Mark as read
+
+    if (notification.isRead) return;
+
+    // Optimistic update
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n))
+    );
     setUnreadCount((prev) => Math.max(0, prev - 1));
+
+    try {
+      const token =
+        localStorage.getItem("staffAccessToken") ||
+        localStorage.getItem("adminAccessToken") ||
+        localStorage.getItem("accessToken");
+
+      await fetch(`/api/notifications/${notification.id}/mark-read`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+    } catch (err) {
+      console.error("[NotificationsPanel] Failed to mark read:", err);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    // Optimistic update
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    setUnreadCount(0);
+
+    try {
+      const token =
+        localStorage.getItem("staffAccessToken") ||
+        localStorage.getItem("adminAccessToken") ||
+        localStorage.getItem("accessToken");
+
+      await fetch("/api/notifications/mark-all-read", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+    } catch (err) {
+      console.error("[NotificationsPanel] Failed to mark all read:", err);
+    }
   };
 
   const displayedNotifications = notifications.slice(0, maxDisplay);
@@ -200,12 +276,25 @@ const NotificationsPanel = ({
                     <span className="material-symbols-outlined">notifications_active</span>
                     Real-time Notifications
                   </h3>
-                  {!isConnected && (
-                    <div className="flex items-center gap-1 px-2 py-1 bg-yellow-50 rounded text-[10px] text-yellow-700">
-                      <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse" />
-                      Offline
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMarkAllRead();
+                        }}
+                        className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
+                    {!isConnected && (
+                      <div className="flex items-center gap-1 px-2 py-1 bg-yellow-50 rounded text-[10px] text-yellow-700">
+                        <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse" />
+                        Offline
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

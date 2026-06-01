@@ -98,7 +98,7 @@ export default async function HomePage() {
                             </div>
 
                             <h1 className="text-4xl md:text-6xl font-bold font-display leading-[1.1] mb-6 text-[#1a1626] tracking-tight">
-                                Find Your{' '}
+                                FInsd Your{' '}
                                 <span className="text-[#6605c7]">Dream</span>
                                 <br />
                                 Education Abroad
