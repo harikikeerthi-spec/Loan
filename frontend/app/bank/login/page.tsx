@@ -515,23 +515,6 @@ function BankLoginContent() {
                                         </button>
                                     )}
                                 </div>
-                                {devOtp && (
-                                    <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-2xl text-amber-800 text-xs text-center font-medium animate-fade-in flex flex-col items-center gap-1">
-                                        <span className="font-bold uppercase tracking-wider text-[10px] text-amber-600">Development Mode Notice</span>
-                                        <span>Email sending bypassed. Use OTP:</span>
-                                        <button 
-                                            type="button" 
-                                            onClick={() => {
-                                                setOtp(devOtp.split(""));
-                                                setTimeout(() => otpRefs.current[5]?.focus(), 100);
-                                            }} 
-                                            className="mt-1 font-mono font-bold bg-amber-100 border border-amber-300 px-3 py-1 rounded text-amber-900 hover:bg-amber-200 transition-colors flex items-center gap-1.5 cursor-pointer"
-                                        >
-                                            <span className="material-symbols-outlined text-[14px]">edit_square</span>
-                                            {devOtp} (Autofill)
-                                        </button>
-                                    </div>
-                                )}
                             </div>
 
                             {error && (

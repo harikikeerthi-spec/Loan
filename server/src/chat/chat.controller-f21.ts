@@ -10,7 +10,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { UserGuard } from '../auth/user.guard';
 import { ChatService } from './chat.service';
 import {
   CreateChatRoomDto,
@@ -27,7 +27,7 @@ import {
  * Socket.IO events handled separately in ChatGateway
  */
 @Controller('chat')
-@UseGuards(JwtAuthGuard)
+@UseGuards(UserGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 

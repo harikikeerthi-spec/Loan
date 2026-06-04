@@ -8,7 +8,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { StaffGuard } from '../auth/staff.guard';
 
 /**
  * Integration Controllers - F26 (Slack) & F27 (Salesforce)
@@ -36,7 +36,7 @@ export class CreateSlackRuleDto {
 }
 
 @Controller('integration/slack')
-@UseGuards(JwtAuthGuard)
+@UseGuards(StaffGuard)
 export class SlackIntegrationController {
   /**
    * Receive Slack webhook events
@@ -148,7 +148,7 @@ export class SalesforceConfigDto {
 }
 
 @Controller('integration/salesforce')
-@UseGuards(JwtAuthGuard)
+@UseGuards(StaffGuard)
 export class SalesforceIntegrationController {
   /**
    * Authenticate with Salesforce
@@ -186,8 +186,8 @@ export class SalesforceIntegrationController {
    */
   @Post('sync')
   async triggerSalesforceSync(
-    @Query('objectType') objectType?: 'Contact' | 'Lead' | 'Opportunity',
     @Req() req,
+    @Query('objectType') objectType?: 'Contact' | 'Lead' | 'Opportunity',
   ): Promise<{
     synced: number;
     failed: number;

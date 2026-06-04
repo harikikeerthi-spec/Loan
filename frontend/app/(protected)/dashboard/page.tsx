@@ -7,7 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { authApi, chatApi } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import ProgressTracker from "@/components/ProgressTracker";
-import UserActivityLog from "@/components/user/UserActivityLog";
+import UserActivityLog from "@/components/User/UserActivityLog";
 
 interface DashboardData {
     applicationCount?: number;
