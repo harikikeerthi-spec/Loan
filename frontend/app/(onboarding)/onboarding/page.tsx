@@ -235,8 +235,8 @@ const ANSWER_ALIASES: Record<string, string> = {
     plan_target_uni: 'target_university', loan_university: 'target_university', compare_uni_search: 'target_university',
     plan_entrance_test: 'entrance_test', loan_entrance_test: 'entrance_test', compare_test: 'entrance_test',
     plan_entrance_score: 'entrance_score', loan_entrance_score: 'entrance_score', compare_test_score: 'entrance_score',
-    plan_english_test: 'english_test', compare_english_test: 'english_test',
-    plan_english_score: 'english_score', compare_english_score: 'english_score',
+    plan_english_test: 'english_test', loan_english_test: 'english_test', compare_english_test: 'english_test',
+    plan_english_score: 'english_score', loan_english_score: 'english_score', compare_english_score: 'english_score',
     plan_start_when: 'start_when', compare_intake: 'start_when',
     loan_pincode: 'pincode',
 };
@@ -431,12 +431,12 @@ const steps: any[] = [
     },
     {
         id: 'loan_entrance_test',
-        q: "Have you taken any standardised tests like GRE or GMAT?",
+        q: "Have you taken any standardised entrance exams like GRE or GMAT?",
         type: 'cards',
         cols: 3,
         options: [
-            { value: 'gre', label: 'GRE' }, { value: 'gmat', label: 'GMAT' },
-            { value: 'toefl', label: 'TOEFL' }, { value: 'ielts', label: 'IELTS' },
+            { value: 'gre', label: 'GRE' },
+            { value: 'gmat', label: 'GMAT' },
             { value: 'none', label: 'None' }
         ],
         flows: ['loan']
@@ -445,6 +445,26 @@ const steps: any[] = [
         id: 'loan_entrance_score',
         type: 'exam_score',
         skipIf: { key: 'loan_entrance_test', value: 'none' },
+        flows: ['loan']
+    },
+    {
+        id: 'loan_english_test',
+        q: "What about English proficiency — have you taken IELTS, TOEFL, or PTE?",
+        type: 'cards',
+        cols: 3,
+        options: [
+            { value: 'ielts', label: 'IELTS' },
+            { value: 'toefl', label: 'TOEFL' },
+            { value: 'pte', label: 'PTE' },
+            { value: 'duolingo', label: 'Duolingo' },
+            { value: 'none', label: 'None' }
+        ],
+        flows: ['loan']
+    },
+    {
+        id: 'loan_english_score',
+        type: 'english_score',
+        skipIf: { key: 'loan_english_test', value: 'none' },
         flows: ['loan']
     },
     {

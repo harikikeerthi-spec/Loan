@@ -988,6 +988,35 @@ export class UsersService {
     return { success: true };
   }
 
+  async updateDocumentStatus(docId: string, status: string, rejectionReason?: string) {
+    const payload: any = {
+      status,
+      updatedAt: new Date().toISOString(),
+    };
+    
+    if (status === 'verified') {
+      payload.verifiedAt = new Date().toISOString();
+    }
+    
+    if (status === 'rejected' && rejectionReason) {
+      payload.rejectionReason = rejectionReason;
+    }
+
+    const { data, error } = await this.db
+      .from('UserDocument')
+      .update(payload)
+      .eq('id', docId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error(`[UsersService.updateDocumentStatus] Error updating document ${docId}:`, error);
+      throw error;
+    }
+
+    return data;
+  }
+
   // Get user dashboard data with all applications, documents and full activity feed
   async getUserDashboardData(userId: string) {
     try {
