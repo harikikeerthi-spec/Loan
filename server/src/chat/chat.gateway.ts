@@ -62,9 +62,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.logger.log(`Client connected: ${client.id} (User: ${payload.email}, Role: ${payload.role})`);
       
       // Join general room based on role
-      if (payload.role === 'admin' || payload.role === 'staff') {
+      if (payload.role === 'admin' || payload.role === 'staff' || payload.role === 'super_admin') {
         client.join('room_staff');
-      } else if (payload.role === 'bank') {
+      } else if (payload.role === 'bank' || payload.role === 'partner_bank') {
         client.join('room_bank');
       }
 
@@ -95,6 +95,22 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @SubscribeMessage('joinRoom')
+  handleJoinRoom(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() room: string
+  ) {
+    // Only allow joining rooms the user's role is permitted to access
+    const user = client.data.user;
+    const isStaff = user?.role === 'admin' || user?.role === 'staff' || user?.role === 'super_admin';
+    const isBank = user?.role === 'bank' || user?.role === 'partner_bank';
+    if ((room === 'room_staff' && isStaff) || (room === 'room_bank' && isBank)) {
+      client.join(room);
+      this.logger.log(`Client ${client.id} explicitly joined ${room}`);
+    }
+    return { success: true };
+  }
+
   @SubscribeMessage('request_presence')
   handleRequestPresence(@ConnectedSocket() client: Socket) {
     client.emit('presence_update', Array.from(new Set(this.onlineUsers.values())));
@@ -117,20 +133,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     client.leave(`conv_${conversationId}`);
     return { status: 'left', conversationId };
-  }
-
-  @SubscribeMessage('typing')
-  handleTyping(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() payload: { conversationId: string, email: string, isTyping: boolean }
-  ) {
-    this.logger.log(`Typing event: User ${payload.email || client.data.user?.email} typing=${payload.isTyping} in Conv ${payload.conversationId}`);
-    this.server.to(`conv_${payload.conversationId}`).emit('typing_status', {
-      conversationId: payload.conversationId,
-      email: payload.email || client.data.user?.email || 'Unknown',
-      isTyping: payload.isTyping
-    });
-    return { success: true };
   }
 
   @SubscribeMessage('send_message')
@@ -224,27 +226,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (e) {
         this.logger.error('Simulator reply failed', e);
         return { success: false, error: e.message };
-    }
-  }
-
-  broadcastNewMessage(msg: any, senderRole: string) {
-    if (!this.server) {
-      this.logger.warn('WS server not initialized. Skipping HTTP message broadcast.');
-      return;
-    }
-    const convId = msg.conversationId;
-    this.server.to(`conv_${convId}`).emit('new_message', msg);
-    
-    if (senderRole === 'bank' || senderRole === 'partner_bank') {
-      this.server.to('room_bank').emit('conversation_updated', {
-        conversationId: convId,
-        lastMessage: msg
-      });
-    } else {
-      this.server.to('room_staff').emit('conversation_updated', {
-        conversationId: convId,
-        lastMessage: msg
-      });
     }
   }
 

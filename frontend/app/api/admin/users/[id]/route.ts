@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: userId } = await params;
+
+  // Accept token from Authorization header (localStorage-based portals) or cookie fallback
+  const authHeader = request.headers.get('Authorization') || '';
+  const cookieToken = request.cookies.get('adminAccessToken')?.value 
+    || request.cookies.get('token')?.value 
+    || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader : (cookieToken ? `Bearer ${cookieToken}` : '');
 
   try {
     // Fetch user data from backend
@@ -16,7 +23,7 @@ export async function GET(
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${request.cookies.get('token')?.value || ''}`,
+          ...(token ? { 'Authorization': token } : {}),
         },
       }
     );
@@ -47,4 +54,3 @@ export async function GET(
     );
   }
 }
-

@@ -34,6 +34,11 @@ export default function ProfilePage() {
         }
     }, [user]);
 
+    // Fetch latest user details on profile page mount
+    useEffect(() => {
+        refreshUser();
+    }, [refreshUser]);
+
     // Load saved universities from localStorage
     useEffect(() => {
         if (user?.id) {
@@ -176,8 +181,8 @@ export default function ProfilePage() {
                                     {[
                                         { key: "firstName", label: "First Name", type: "text" },
                                         { key: "lastName", label: "Last Name", type: "text" },
-                                        { key: "phoneNumber", label: "Phone Number", type: "text", isLocked: !!user?.phoneNumber },
-                                        { key: "dateOfBirth", label: "Date of Birth", type: "datepicker", isLocked: !!user?.dateOfBirth },
+                                        { key: "phoneNumber", label: "Phone Number", type: "text", isLocked: false },
+                                        { key: "dateOfBirth", label: "Date of Birth", type: "datepicker", isLocked: false },
                                     ].map((item: any) => {
                                         const { key, label, type, placeholder, pattern, isLocked } = item;
                                         return (

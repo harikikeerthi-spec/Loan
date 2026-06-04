@@ -835,6 +835,13 @@ export const adminApi = {
             method: "POST",
             body: JSON.stringify(data),
         }),
+
+    updateUserStatus: (userId: string, status: string, rejectionReason?: string) =>
+        apiFetch(HttpApiPaths.admin.usersUpdateStatus(), {
+            method: "POST",
+            body: JSON.stringify({ userId, status, rejectionReason }),
+        }),
+
     getUserProfile: (email: string) =>
         apiFetch(HttpApiPaths.admin.usersProfile(), {
             method: "POST",

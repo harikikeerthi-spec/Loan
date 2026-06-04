@@ -461,77 +461,15 @@ export class StaffProfileService {
     user: any,
     data: { type: string; msg: string; icon: string; color: string },
   ) {
-    const type = data?.type || 'info';
-    const msg = data?.msg || 'Activity logged';
-    const icon = data?.icon || 'event_note';
-    const color = data?.color || 'text-slate-600 bg-slate-50';
-
-    const actorName = user
-      ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Staff'
-      : 'System';
-
-    await this.auditLog.logAction(
-      `STAFF_ACTIVITY`,
-      'DASHBOARD',
-      type.toUpperCase(),
-      user || { id: 'system' },
-      {
-        msg,
-        icon,
-        color,
-        activityType: type,
-        actorName,
-        isDashboardActivity: true,
-      },
-    );
-
-    // Broadcast the activity log dynamically via NestJS event emitter to socket.io
-    this.eventEmitter.emit('dashboard.activity', {
-      type,
-      msg,
-      icon,
-      color,
-      actorName,
-      actorEmail: user?.email || null,
-      createdAt: new Date().toISOString()
-    });
+    // Activity logging disabled by request
+    return;
   }
 
   /**
    * Returns the N most recent dashboard activity entries (for the sidebar widget).
    */
   async getDashboardActivities(limit: number = 15) {
-    const { data, error } = await this.db
-      .from('AuditLog')
-      .select(
-        'id, action, entityId, initiatedBy, changes, createdAt, initiator:User!initiatedBy(firstName, lastName, email)',
-      )
-      .eq('action', 'STAFF_ACTIVITY')
-      .order('createdAt', { ascending: false })
-      .limit(limit);
-
-    if (error) {
-      console.error('[StaffProfileService.getDashboardActivities] Error:', error);
-      return [];
-    }
-
-    return (data || []).map((log: any) => {
-      const initObj = Array.isArray(log.initiator) ? log.initiator[0] : log.initiator;
-      return {
-        id: log.id,
-        type: log.changes?.activityType || 'info',
-        msg: log.changes?.msg || 'Activity recorded',
-        icon: log.changes?.icon || 'event_note',
-        color: log.changes?.color || 'text-slate-600 bg-slate-50',
-        actorName:
-          log.changes?.actorName ||
-          `${initObj?.firstName || ''} ${initObj?.lastName || ''}`.trim() ||
-          'Staff',
-        actorEmail: initObj?.email || null,
-        createdAt: log.createdAt,
-        time: log.createdAt, // Frontend formats this to relative string
-      };
-    });
+    return [];
   }
 
   /**
@@ -543,56 +481,7 @@ export class StaffProfileService {
     type?: string;
     search?: string;
   }) {
-    let query = this.db
-      .from('AuditLog')
-      .select(
-        'id, action, entityId, initiatedBy, changes, createdAt, initiator:User!initiatedBy(firstName, lastName, email)',
-        { count: 'exact' },
-      )
-      .eq('action', 'STAFF_ACTIVITY')
-      .order('createdAt', { ascending: false })
-      .range(opts.offset, opts.offset + opts.limit - 1);
-
-    if (opts.type && opts.type !== 'all') {
-      query = query.eq('changes->>activityType', opts.type);
-    }
-
-    const { data, error, count } = await query;
-
-    if (error) {
-      console.error('[StaffProfileService.getAllDashboardActivities] Error:', error);
-      return { items: [], total: 0 };
-    }
-
-    let items = (data || []).map((log: any) => {
-      const initObj = Array.isArray(log.initiator) ? log.initiator[0] : log.initiator;
-      return {
-        id: log.id,
-        type: log.changes?.activityType || 'info',
-        msg: log.changes?.msg || 'Activity recorded',
-        icon: log.changes?.icon || 'event_note',
-        color: log.changes?.color || 'text-slate-600 bg-slate-50',
-        actorName:
-          log.changes?.actorName ||
-          `${initObj?.firstName || ''} ${initObj?.lastName || ''}`.trim() ||
-          'Staff',
-        actorEmail: initObj?.email || null,
-        createdAt: log.createdAt,
-      };
-    });
-
-    // In-memory search filter (Supabase free tier doesn't support full-text on jsonb easily)
-    if (opts.search) {
-      const s = opts.search.toLowerCase();
-      items = items.filter(
-        (a) =>
-          a.msg.toLowerCase().includes(s) ||
-          a.actorName.toLowerCase().includes(s) ||
-          a.type.toLowerCase().includes(s),
-      );
-    }
-
-    return { items, total: count || items.length };
+    return { items: [], total: 0 };
   }
 
   private parseDate(dateStr: string | null | undefined): string | null {
@@ -1576,14 +1465,11 @@ export class StaffProfileService {
       exchangeRateBufferPercent: isForeign ? 1.5 : 0
     };
 
-    const studentRatingStars = score >= 85 ? 5 : score >= 70 ? 4 : score >= 55 ? 3 : score >= 40 ? 2 : 1;
-
     return {
       applicationId,
       predictionScore: score,
       riskLevel: score >= 80 ? 'LOW' : score >= 60 ? 'MEDIUM' : 'HIGH',
       approvedProbabilityPercent: score,
-      studentRatingStars,
       rulesRun,
       educationAbroad
     };
@@ -1657,104 +1543,6 @@ export class StaffProfileService {
     });
 
     return calendarEvents;
-  }
-
-  async exportApplicationsCsv(filters: any): Promise<string> {
-    let query = this.db.from('LoanApplication').select('*');
-    if (filters.status && filters.status !== 'all') {
-      query = query.eq('status', filters.status);
-    }
-    if (filters.bank && filters.bank !== 'all') {
-      query = query.ilike('bank', `%${filters.bank}%`);
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-
-    const apps = data || [];
-    
-    // Build CSV Headers
-    const headers = [
-      'Application Number',
-      'Student Name',
-      'Email',
-      'Phone',
-      'Bank',
-      'Loan Type',
-      'Amount',
-      'Status',
-      'Stage',
-      'Progress %',
-      'Submission Date'
-    ];
-
-    const rows = apps.map((a: any) => [
-      a.applicationNumber || a.id,
-      `"${a.firstName || ''} ${a.lastName || ''}"`,
-      a.email || '',
-      a.phone || '',
-      a.bank || '',
-      a.loanType || '',
-      a.amount || 0,
-      a.status || '',
-      a.stage || '',
-      a.progress || 0,
-      a.submittedAt ? new Date(a.submittedAt).toLocaleDateString() : ''
-    ]);
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(r => r.join(','))
-    ].join('\n');
-
-    return csvContent;
-  }
-
-  async getBranchAnalytics(): Promise<any[]> {
-    const { data: branches } = await this.db.from('BankBranch').select('*');
-    const { data: applications } = await this.db.from('LoanApplication').select('*');
-
-    const branchList = branches || [
-      { id: 'b1', branchName: 'M.G. Road Branch', branchCode: 'SBI-MG-01', city: 'Bangalore' },
-      { id: 'b2', branchName: 'Gachibowli Branch', branchCode: 'SBI-GB-02', city: 'Hyderabad' }
-    ];
-
-    const apps = applications || [];
-
-    return branchList.map((branch: any) => {
-      const branchApps = apps.filter((a: any) => {
-        if (a.applicationNumber && a.applicationNumber.includes(branch.branchCode)) return true;
-        return (a.id.charCodeAt(a.id.length - 1) % branchList.length) === branchList.indexOf(branch);
-      });
-
-      const totalCount = branchApps.length;
-      const sanctionedCount = branchApps.filter((a: any) => a.status === 'sanctioned').length;
-      const pipelineValue = branchApps.reduce((sum, a) => sum + (Number(a.amount) || 0), 0);
-      
-      let totalTatDays = 0;
-      let tatCount = 0;
-      branchApps.forEach((a: any) => {
-        if (a.submittedAt && (a.approvedAt || a.rejectedAt)) {
-          const start = new Date(a.submittedAt).getTime();
-          const end = new Date(a.approvedAt || a.rejectedAt).getTime();
-          totalTatDays += (end - start) / (1000 * 60 * 60 * 24);
-          tatCount++;
-        }
-      });
-      const avgTatDays = tatCount > 0 ? parseFloat((totalTatDays / tatCount).toFixed(1)) : 4.2;
-
-      return {
-        branchId: branch.id,
-        branchName: branch.branchName,
-        branchCode: branch.branchCode,
-        city: branch.city,
-        totalApplications: totalCount,
-        sanctionedApplications: sanctionedCount,
-        pipelineValue,
-        avgTatDays,
-        complianceRatePercent: totalCount > 0 ? Math.round((sanctionedCount / totalCount) * 100) : 85
-      };
-    });
   }
 }
 

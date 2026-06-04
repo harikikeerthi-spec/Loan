@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
@@ -40,7 +40,6 @@ const DASHBOARD_SECTIONS = [
     "community",
     "communications",
     "chat_customer",
-    "activities",
     "my_profile",
     "onboarding",
 ] as const;
@@ -233,7 +232,7 @@ export default function StaffDashboardPage() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const { user, logout } = useAuth();
+    const { user, logout, token } = useAuth();
     const [activeSection, setActiveSection] = useState(() => getDashboardSection(searchParams.get("section")));
     const [loading, setLoading] = useState(true);
     const [nowTime, setNowTime] = useState<Date>(new Date());
@@ -325,7 +324,6 @@ export default function StaffDashboardPage() {
 
     // Initialize real-time WebSocket connection
     useEffect(() => {
-        const token = localStorage.getItem('token');
         if (!token) return;
 
         const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (
@@ -357,17 +355,7 @@ export default function StaffDashboardPage() {
         });
 
         socketInstance.on('user_activity', (newActivity: any) => {
-            console.log('[StaffDashboard] Live activity received:', newActivity);
-            if (newActivity) {
-                const formatted = {
-                    ...newActivity,
-                    id: newActivity.id || Date.now(),
-                    time: "Just now",
-                    createdAt: newActivity.createdAt || new Date().toISOString()
-                };
-                setRecentActivity(prev => [formatted, ...prev].slice(0, 15));
-                setFullActivities(prev => [formatted, ...prev].slice(0, 50));
-            }
+            console.log('[StaffDashboard] Live activity received (ignored per request):', newActivity);
         });
 
         return () => {
@@ -375,78 +363,6 @@ export default function StaffDashboardPage() {
             socketInstance.disconnect();
         };
     }, []);
-
-    // Premium Aesthetic Activity Simulator (blended with real live events)
-    useEffect(() => {
-        const loggedInName = user
-            ? `${user.firstName || 'Staff'} ${user.lastName ? user.lastName[0] + '.' : ''}`.trim()
-            : 'Hariki K.';
-
-        const simulatorEvents = [
-            {
-                type: 'update',
-                msg: 'System auto-verified CIBIL score for Student #9012.',
-                icon: 'verified',
-                color: 'bg-emerald-50 text-emerald-700 border-emerald-100'
-            },
-            {
-                type: 'share',
-                msg: 'Staff shared Aadhaar Vault Bundle with ICICI Credit Ops.',
-                icon: 'share',
-                color: 'bg-indigo-50 text-indigo-700 border-indigo-100'
-            },
-            {
-                type: 'update',
-                msg: 'Student #1089 initiated Digilocker identity extraction.',
-                icon: 'fingerprint',
-                color: 'bg-blue-50 text-blue-700 border-blue-100'
-            },
-            {
-                type: 'upload',
-                msg: 'Student #4052 uploaded signed loan agreement.pdf.',
-                icon: 'cloud_upload',
-                color: 'bg-teal-50 text-teal-700 border-teal-100'
-            },
-            {
-                type: 'approved',
-                msg: `Staff member ${loggedInName} moved Application #1021 to Approved.`,
-                icon: 'task_alt',
-                color: 'bg-emerald-50 text-emerald-700 border-emerald-100'
-            },
-            {
-                type: 'update',
-                msg: 'System triggered automatic Experian Credit Bureau audit.',
-                icon: 'security_update_good',
-                color: 'bg-emerald-50 text-emerald-700 border-emerald-100'
-            },
-            {
-                type: 'new',
-                msg: 'New student registration completed for Keerthi S.',
-                icon: 'person_add',
-                color: 'bg-emerald-50 text-emerald-700 border-emerald-100'
-            },
-            {
-                type: 'rejected',
-                msg: `Staff member ${loggedInName} rejected Application #3041.`,
-                icon: 'delete',
-                color: 'bg-rose-50 text-rose-700 border-rose-100'
-            }
-        ];
-
-        const interval = setInterval(() => {
-            const randomEvent = simulatorEvents[Math.floor(Math.random() * simulatorEvents.length)];
-            const formatted = {
-                ...randomEvent,
-                id: Date.now(),
-                time: "Just now",
-                createdAt: new Date().toISOString()
-            };
-            setRecentActivity(prev => [formatted, ...prev].slice(0, 15));
-            setFullActivities(prev => [formatted, ...prev].slice(0, 50));
-        }, 40000); // Trigger every 40 seconds to keep the terminal alive and dynamic
-
-        return () => clearInterval(interval);
-    }, [user]);
 
     // IST Timezone offset: +5:30 (19800000 milliseconds)
     const IST_OFFSET = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
@@ -546,120 +462,8 @@ export default function StaffDashboardPage() {
     const activitiesLimit = 15;
 
     const getMockActivities = useCallback(() => {
-        const loggedInName = user
-            ? `${user.firstName || 'Staff'} ${user.lastName ? user.lastName[0] + '.' : ''}`.trim()
-            : 'Hariki K.';
-
-        const seedItems = [
-            {
-                id: 'seed-1',
-                type: 'upload',
-                msg: 'Uploaded PASSPORT_SCAN for Rajesh Kumar',
-                icon: 'cloud_upload',
-                color: 'bg-purple-50 text-purple-600 border-purple-100',
-                actorName: loggedInName,
-                createdAt: new Date(Date.now() - 5 * 60 * 1000).toISOString() // 5m ago
-            },
-            {
-                id: 'seed-2',
-                type: 'share',
-                msg: 'Shared 3 document(s) with ICICI Bank (ops@icici.com)',
-                icon: 'share',
-                color: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-                actorName: loggedInName,
-                createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString() // 15m ago
-            },
-            {
-                id: 'seed-3',
-                type: 'new',
-                msg: 'Created new applicant profile for Priya Singh',
-                icon: 'person_add',
-                color: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-                actorName: loggedInName,
-                createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString() // 30m ago
-            },
-            {
-                id: 'seed-4',
-                type: 'approved',
-                msg: 'Application #1021 status updated to Approved',
-                icon: 'task_alt',
-                color: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-                actorName: loggedInName,
-                createdAt: new Date(Date.now() - 1 * 3600 * 1000).toISOString() // 1h ago
-            },
-            {
-                id: 'seed-5',
-                type: 'upload',
-                msg: 'Uploaded PAN_CARD_SCAN for Arjun Patel',
-                icon: 'cloud_upload',
-                color: 'bg-purple-50 text-purple-600 border-purple-100',
-                actorName: loggedInName,
-                createdAt: new Date(Date.now() - 2.5 * 3600 * 1000).toISOString() // 2.5h ago
-            },
-            {
-                id: 'seed-6',
-                type: 'rejected',
-                msg: 'Removed AADHAAR_CARD for Meera Sharma',
-                icon: 'delete',
-                color: 'bg-rose-50 text-rose-600 border-rose-100',
-                actorName: loggedInName,
-                createdAt: new Date(Date.now() - 4 * 3600 * 1000).toISOString() // 4h ago
-            },
-            {
-                id: 'seed-7',
-                type: 'update',
-                msg: 'Application #3041 status updated to Rejected',
-                icon: 'close',
-                color: 'bg-rose-50 text-rose-600 border-rose-100',
-                actorName: loggedInName,
-                createdAt: new Date(Date.now() - 6 * 3600 * 1000).toISOString() // 6h ago
-            },
-            {
-                id: 'seed-8',
-                type: 'share',
-                msg: 'Shared 5 document(s) with HDFC Bank (support@hdfc.com)',
-                icon: 'share',
-                color: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-                actorName: loggedInName,
-                createdAt: new Date(Date.now() - 1 * 86400 * 1000).toISOString() // 1d ago
-            },
-            {
-                id: 'seed-9',
-                type: 'new',
-                msg: 'Created new applicant profile for Vikram Desai',
-                icon: 'person_add',
-                color: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-                actorName: loggedInName,
-                createdAt: new Date(Date.now() - 1.5 * 86400 * 1000).toISOString() // 1.5d ago
-            },
-            {
-                id: 'seed-10',
-                type: 'upload',
-                msg: 'Uploaded INCOME_PROOF_DOCUMENT for Nisha Gupta',
-                icon: 'cloud_upload',
-                color: 'bg-purple-50 text-purple-600 border-purple-100',
-                actorName: loggedInName,
-                createdAt: new Date(Date.now() - 2 * 86400 * 1000).toISOString() // 2d ago
-            }
-        ];
-
-        // Dynamically filter seeds based on UI filter selection
-        let filtered = seedItems;
-        if (activitiesFilter && activitiesFilter !== 'all') {
-            filtered = filtered.filter(item => item.type === activitiesFilter);
-        }
-
-        // Dynamically search seeds based on search query
-        if (activitiesSearch) {
-            const searchStr = activitiesSearch.toLowerCase();
-            filtered = filtered.filter(item =>
-                item.msg.toLowerCase().includes(searchStr) ||
-                item.actorName.toLowerCase().includes(searchStr)
-            );
-        }
-
-        return filtered;
-    }, [user, activitiesFilter, activitiesSearch]);
+        return [];
+    }, []);
 
     useEffect(() => {
         const loadActivities = async () => {
@@ -722,7 +526,7 @@ export default function StaffDashboardPage() {
     };
 
     useEffect(() => {
-        if (activeSection === 'activities') {
+        if ((activeSection as any) === 'activities') {
             loadFullActivities();
         }
     }, [activeSection, activitiesPage, activitiesFilter, activitiesSearch]);
@@ -2857,7 +2661,6 @@ export default function StaffDashboardPage() {
         my_profile: 'My Profile',
         chat_customer: 'Support Chat',
         onboarding: 'Applicant Onboarding',
-        activities: 'Platform Audit Trail',
     };
 
     const navItems = [
@@ -2871,7 +2674,6 @@ export default function StaffDashboardPage() {
         { section: "community", icon: "groups", label: "Engagement Hub", badge: 0 },
         { section: "communications", icon: "mail", label: "Outreach Center", badge: 0 },
         { section: "chat_customer", icon: "support_agent", label: "Support Chat", badge: 0 },
-        { section: "activities", icon: "history", label: "Activity Log", badge: 0 },
         { section: "my_profile", icon: "badge", label: "My Profile", badge: 0 },
     ];
 
@@ -3057,7 +2859,7 @@ export default function StaffDashboardPage() {
                         <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded transition-all" onClick={() => setSidebarOpen(!sidebarOpen)}>
                             <span className="material-symbols-outlined text-[20px]">menu</span>
                         </button>
-                        <NotificationsPanel 
+                        <NotificationsPanel
                             staffId={user?.id}
                             maxDisplay={8}
                             showUnreadBadge={true}
@@ -6628,37 +6430,6 @@ export default function StaffDashboardPage() {
 
                                 {/* Activity Feed + Quick Actions */}
                                 <div className="space-y-4">
-                                    <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <h3 className="text-[11px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] uppercase tracking-wider">Recent Activity</h3>
-                                            <button onClick={() => navigateToSection('activities')} className="text-[9px] font-black text-indigo-600 uppercase tracking-widest hover:underline">View All</button>
-                                        </div>
-                                        <div className="space-y-2.5">
-                                            {recentActivity.length === 0 ? (
-                                                <div className="py-6 text-center">
-                                                    <span className="material-symbols-outlined text-3xl text-slate-200 mb-2 block">history</span>
-                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">No activity yet</p>
-                                                    <p className="text-[10px] text-slate-300 mt-0.5">Actions will appear here as you work</p>
-                                                </div>
-                                            ) : recentActivity.map(a => (
-                                                <div key={a.id} className="flex items-start gap-2.5">
-                                                    <div className={`w-7 h-7 rounded flex items-center justify-center shrink-0 ${a.color}`}>
-                                                        <span className="material-symbols-outlined text-[14px]">{a.icon}</span>
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-[11px] font-medium text-slate-800 leading-snug">{a.msg}</p>
-                                                        <p className="text-[10px] text-slate-400 mt-0.5">{a.time}</p>
-                                                        {(a.createdAt || a.rawTime) && (
-                                                            <p className="text-[9px] text-slate-300 mt-0.5 flex items-center gap-1">
-                                                                <span className="material-symbols-outlined text-[10px]">schedule</span>
-                                                                {formatAbsoluteDateTime(a.createdAt || a.rawTime)}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
                                     <div className="space-y-1.5">
                                         <button onClick={() => { navigateToSection('chat_customer'); setAutoStartUser(null); }} className="w-full text-left p-3 rounded border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all flex items-center gap-3 bg-white shadow-sm">
                                             <span className="material-symbols-outlined text-indigo-500 text-[18px]">forum</span>
@@ -6676,7 +6447,7 @@ export default function StaffDashboardPage() {
                         </div>
                     )}
 
-                    {activeSection === "activities" && (
+                    {(activeSection as any) === "activities" && (
                         <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in pb-12">
                             {/* Header Panel */}
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -7155,7 +6926,7 @@ export default function StaffDashboardPage() {
                                             {activeSection === "applications" && (
                                                 <>
                                                     <th className="sticky left-0 z-20 bg-slate-50 px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">APPLICANT PROFILE</span></th>
-                                                    <th className="sticky left-[100px] z-20 bg-slate-50 px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">USER ID</span></th>
+                                                    <th className="sticky left-[250px] min-w-[200px] z-20 bg-slate-50 px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">USER ID</span></th>
                                                     <th className="sticky left-[420px] z-20 bg-slate-50 px-5 py-5"><span className="flex items-center gap-1.5 text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest"><span className="material-symbols-outlined text-[14px]">mail</span> CONTACT</span></th>
                                                     <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">COLLEGE NAME</span></th>
                                                     <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">PROGRAM FOCUS</span></th>
@@ -7762,29 +7533,6 @@ export default function StaffDashboardPage() {
                                             <div>
                                                 <p className="text-[22px] font-black text-slate-900 leading-none">{loading ? '—' : s.value}</p>
                                                 <p className="text-[11px] text-slate-500 font-medium mt-1">{s.label}</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                            {/* Recent Activity */}
-                            <div className="bg-white rounded-2xl border border-slate-200/60 p-7 shadow-sm">
-                                <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-5">Recent Activity Log</h3>
-                                <div className="space-y-3">
-                                    {recentActivity.map(a => (
-                                        <div key={a.id} className="flex items-center gap-4 p-4 rounded-xl bg-slate-50/50 border border-slate-100 hover:border-slate-200 transition-all">
-                                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${a.color}`}>
-                                                <span className="material-symbols-outlined text-[18px]">{a.icon}</span>
-                                            </div>
-                                            <p className="flex-1 text-[13px] font-bold text-slate-700">{a.msg}</p>
-                                            <div className="text-right shrink-0">
-                                                <span className="text-[11px] text-slate-400 font-medium block">{a.time}</span>
-                                                {(a.createdAt || a.rawTime) && (
-                                                    <span className="text-[10px] text-slate-300 flex items-center gap-1 justify-end mt-0.5">
-                                                        <span className="material-symbols-outlined text-[10px]">schedule</span>
-                                                        {formatAbsoluteDateTime(a.createdAt || a.rawTime)}
-                                                    </span>
-                                                )}
                                             </div>
                                         </div>
                                     ))}

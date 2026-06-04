@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { authApi, chatApi } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import ProgressTracker from "@/components/ProgressTracker";
+import UserActivityLog from "@/components/user/UserActivityLog";
 
 interface DashboardData {
     applicationCount?: number;
@@ -268,11 +269,11 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
                                 return est.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
                             })()}
                         </span>
-                            {app.id && (
-                                <span className="block text-[11px] text-gray-400 font-mono mt-1.5" title={`Application ID: ${app.id}`}>
-                                    App #: {app.applicationNumber || app.id}
-                                </span>
-                            )}
+                        {app.id && (
+                            <span className="block text-[11px] text-gray-400 font-mono mt-1.5" title={`Application ID: ${app.id}`}>
+                                App #: {app.applicationNumber || app.id}
+                            </span>
+                        )}
                     </p>
                 </div>
             </div>
@@ -396,9 +397,9 @@ export default function DashboardPage() {
                                     Active Account
                                 </div>
                                 {user?.id && (
-                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#6605c7]/5 text-[#6605c7] text-[10px] font-bold uppercase tracking-wider border border-[#6605c7]/10 shadow-sm">
-                                        <span className="material-symbols-outlined text-[12px] text-[#6605c7]">fingerprint</span>
-                                        User ID: {user.id}
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-3 rounded-full bg-[#6605c7]/5 text-[#6605c7] text-[10px] font-bold uppercase tracking-wider border border-[#6605c7]/10 shadow-sm">
+                                        <span className="material-symbols-outlined text-[30px] text-[#6605c7]">fingerprint</span>
+                                        <span className="text-[13px]">User ID: {user.id}</span>
                                     </div>
                                 )}
                             </div>
@@ -431,51 +432,10 @@ export default function DashboardPage() {
                                 <span className="material-symbols-outlined text-sm">chat</span>
                                 Connect with Support
                             </button>
-                            <Link href="/whatsapp-simulator" className="px-5 py-2.5 bg-white text-[#6605c7] border border-[#6605c7]/20 text-xs font-bold rounded-lg hover:bg-[#6605c7]/5 transition-all flex items-center gap-2">
+                            {/* <Link href="/whatsapp-simulator" className="px-5 py-2.5 bg-white text-[#6605c7] border border-[#6605c7]/20 text-xs font-bold rounded-lg hover:bg-[#6605c7]/5 transition-all flex items-center gap-2">
                                 <span className="material-symbols-outlined text-sm">sensors</span>
                                 Simulate Chat
-                            </Link>
-                            {/* 3D Profile Pill Toggle Button & Apply Now Button Group */}
-                            <div className="flex items-center gap-4 bg-white/40 backdrop-blur-md p-1.5 rounded-full border border-purple-500/10 shadow-[0_8px_32px_rgba(102,5,199,0.08)] shrink-0 select-none">
-                                {/* Profile Pill Toggle Button (On/Off Switch) */}
-                                {/* <button 
-                                    onClick={() => {
-                                        if (activeTab === "profile") {
-                                            setActiveTab("overview");
-                                            window.location.hash = "overview";
-                                        } else {
-                                            setActiveTab("profile");
-                                            window.location.hash = "profile";
-                                        }
-                                    }}
-                                    className={`relative flex items-center gap-2.5 px-4 py-2 rounded-full border transition-all duration-150 ease-out select-none group cursor-pointer ${
-                                        activeTab === "profile"
-                                            ? "bg-[#f4ebff] border-[#6605c7]/30 shadow-inner translate-y-0.5 scale-[0.98]"
-                                            : "bg-white border-gray-200 shadow-[0_4px_0_#cbd5e1] translate-y-0 hover:-translate-y-1 hover:shadow-[0_5px_0_#cbd5e1] hover:border-[#6605c7]/20 active:translate-y-0.5 active:shadow-none"
-                                    }`}
-                                >
-                                    <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center font-bold text-xs shadow-md transition-all duration-300 ${
-                                        activeTab === "profile"
-                                            ? "bg-gradient-to-tr from-[#6605c7] to-[#8b24e5] scale-110 shadow-purple-500/30"
-                                            : "bg-gradient-to-tr from-[#6605c7] via-[#a855f7] to-[#fbbf24] shadow-purple-500/10 group-hover:rotate-12 group-hover:scale-110"
-                                    }`}>
-                                        {(user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || "U")}{(user?.lastName?.[0] || "")}
-                                    </div>
-                                    <span className={`text-xs font-extrabold tracking-tight transition-colors duration-150 ${
-                                        activeTab === "profile" ? "text-[#6605c7]" : "text-gray-800"
-                                    }`}>
-                                        {user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.firstName || "User"}
-                                    </span>
-                                </button> */}
-
-                                {/* 3D Apply Now Button */}
-                                <Link
-                                    href="/apply-loan"
-                                    className="relative px-5 py-2.5 bg-gradient-to-r from-[#7c3aed] via-[#a855f7] to-[#f43f5e] text-white text-[11px] font-extrabold uppercase tracking-widest rounded-full shadow-[0_4px_0_#4c1d95] hover:shadow-[0_8px_20px_rgba(124,58,237,0.35),0_6px_0_#4c1d95] border-t border-white/20 translate-y-0 hover:-translate-y-1 hover:brightness-105 active:translate-y-0.5 active:shadow-none transition-all duration-150 ease-out cursor-pointer select-none"
-                                >
-                                    APPLY NOW
-                                </Link>
-                            </div>
+                            </Link> */}
                             <Link href="/onboarding" className="px-5 py-2.5 bg-white text-gray-700 border border-gray-200 text-xs font-bold rounded-lg hover:bg-gray-50 transition-all">
                                 View Roadmap
                             </Link>
@@ -500,7 +460,7 @@ export default function DashboardPage() {
 
                 {/* Tabs */}
                 <div className="flex gap-1 mb-8 overflow-x-auto no-scrollbar border-b border-gray-100">
-                    {["overview", "applications", "documents", "profile"].map((tab) => (
+                    {["overview", "applications", "documents", "activity", "profile"].map((tab) => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -575,7 +535,7 @@ export default function DashboardPage() {
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="font-bold text-[13px] text-gray-900 truncate">{app.bank}</span>
                                                                     {app.applicationNumber && (
-                                                                        <span className="text-[10px] text-gray-400 font-semibold bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100/50">
+                                                                        <span className="text-[13px] text-black-900 font-semibold bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100/50">
                                                                             #{app.applicationNumber}
                                                                         </span>
                                                                     )}
@@ -587,7 +547,7 @@ export default function DashboardPage() {
                                                                     <span className="font-semibold text-gray-700">₹{app.amount?.toLocaleString("en-IN")}</span>
                                                                     {app.universityName && <span>• {app.universityName}</span>}
                                                                     {app.country && <span>• {app.country}</span>}
-                                                                    {app.id && <span className="font-mono text-[10px] text-gray-400" title={`Application ID: ${app.id}`}>• App #: {app.applicationNumber || app.id}</span>}
+
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -638,49 +598,7 @@ export default function DashboardPage() {
 
                         {/* Recent Activity */}
                         <div className="lg:col-span-1">
-                            <h2 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-6">Recent Activity</h2>
-                            <div className="bg-white rounded-xl border border-gray-100 divide-y divide-gray-100 overflow-hidden shadow-sm">
-                                {!data.activity?.length ? (
-                                    <div className="p-12 text-center">
-                                        <span className="material-symbols-outlined text-4xl text-gray-200 mb-2">history</span>
-                                        <p className="text-gray-400 text-[11px] font-bold uppercase">No recent activity</p>
-                                    </div>
-                                ) : (
-                                    data.activity.map((act, i) => (
-                                        <div key={i} className="p-5 hover:bg-gray-50 transition-colors">
-                                            <div className="flex gap-4">
-                                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${act.type === 'forum_post' ? 'bg-blue-100 text-blue-600' :
-                                                    act.type === 'forum_comment' ? 'bg-amber-100 text-amber-600' :
-                                                        act.type.includes('approved') ? 'bg-green-100 text-green-600' :
-                                                            act.type.includes('rejected') ? 'bg-red-100 text-red-600' :
-                                                                'bg-purple-100 text-[#6605c7]'
-                                                    }`}>
-                                                    <span className="material-symbols-outlined text-[18px]">
-                                                        {act.type === 'forum_post' ? 'forum' :
-                                                            act.type === 'forum_comment' ? 'chat_bubble' :
-                                                                act.type === 'upload' ? 'upload_file' :
-                                                                    act.type === 'application' ? 'description' : 'notifications'}
-                                                    </span>
-                                                </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="flex justify-between items-start mb-1">
-                                                        <div className="text-[13px] font-bold text-gray-900 truncate pr-2">{act.title}</div>
-                                                        <div className="text-[10px] text-gray-400 font-bold whitespace-nowrap">
-                                                            {new Date(act.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-[12px] text-gray-500 line-clamp-2 leading-relaxed">{act.description}</div>
-                                                    {act.link && (
-                                                        <a href={act.link} className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-[#6605c7] mt-3 hover:underline">
-                                                            View Details <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
-                                                        </a>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
+                            <UserActivityLog userId={user?.id} limit={10} refreshInterval={30000} variant="sidebar" />
                         </div>
                     </div>
                 )}
@@ -817,6 +735,21 @@ export default function DashboardPage() {
                                 })}
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Activity Tab */}
+                {activeTab === "activity" && (
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-900 mb-6">Activity Log</h2>
+                        <div className="bg-white rounded-xl border border-gray-100 p-8">
+                            <UserActivityLog 
+                                userId={user?.id} 
+                                limit={50} 
+                                refreshInterval={30000} 
+                                variant="page" 
+                            />
+                        </div>
                     </div>
                 )}
 

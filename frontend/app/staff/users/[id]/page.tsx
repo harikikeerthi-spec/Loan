@@ -77,6 +77,78 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
     const [activeTab, setActiveTab] = useState<"profile" | "applications" | "documents">("profile");
     const [selectedApplication, setSelectedApplication] = useState<any>(null);
 
+    const [actionLoading, setActionLoading] = useState(false);
+    const [showRejectForm, setShowRejectForm] = useState(false);
+    const [rejectionReason, setRejectionReason] = useState("");
+    const [selectedDocForReject, setSelectedDocForReject] = useState<any>(null);
+    const [documentRejectionReason, setDocumentRejectionReason] = useState("");
+
+    const handleUpdateUserStatus = async (newStatus: "active" | "rejected") => {
+        setActionLoading(true);
+        try {
+            const res = await adminApi.updateUserStatus(userId, newStatus, newStatus === 'rejected' ? rejectionReason : undefined) as any;
+            if (res && res.success) {
+                setUserData((prev: any) => ({
+                    ...prev,
+                    status: newStatus,
+                    rejectionReason: newStatus === 'rejected' ? rejectionReason : ""
+                }));
+                setShowRejectForm(false);
+                setRejectionReason("");
+            }
+        } catch (err) {
+            console.error("Failed to update status:", err);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleDocumentAction = async (docId: string, action: "accept" | "reject", reason?: string) => {
+        setActionLoading(true);
+        try {
+            const endpoint = action === "accept" 
+                ? `/api/documents/${docId}/accept`
+                : `/api/documents/${docId}/reject`;
+            
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken')}`
+                },
+                body: JSON.stringify(action === "reject" ? { rejectionReason: reason } : {})
+            });
+
+            if (res.ok) {
+                const result = await res.json();
+                // Update document in state
+                setUserDocuments((prev) =>
+                    prev.map((doc) =>
+                        doc.id === docId || doc._id === docId
+                            ? {
+                                ...doc,
+                                status: action === "accept" ? "verified" : "rejected",
+                                rejectionReason: action === "reject" ? reason : undefined,
+                                rejectionDate: action === "reject" ? new Date().toISOString() : undefined
+                            }
+                            : doc
+                    )
+                );
+                
+                if (selectedDocForReject?.id === docId || selectedDocForReject?._id === docId) {
+                    setSelectedDocForReject(null);
+                    setDocumentRejectionReason("");
+                }
+            } else {
+                console.error("Failed to update document:", await res.text());
+            }
+        } catch (err) {
+            console.error(`Failed to ${action} document:`, err);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     useEffect(() => {
         const fetchUserDetails = async () => {
             setLoading(true);
@@ -319,7 +391,8 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                 { label: "First Name", value: userData.firstName },
                                                 { label: "Last Name", value: userData.lastName },
                                                 { label: "Email Node", value: userData.email, lowercase: true },
-                                                { label: "Contact Phone", value: userData.mobile || userData.phone },
+                                                { label: "Contact Phone", value: userData.phoneNumber || userData.mobile || userData.phone },
+                                                { label: "Date of Birth", value: userData.dateOfBirth },
                                                 { label: "Access Privilege", value: userData.role, capitalize: true },
                                             ].map((item, idx) => (
                                                 <div key={idx} className="relative p-4 rounded-xl bg-white/30 border border-white/50 hover:bg-white/50 hover:border-white/80 transition-all duration-300">
@@ -329,13 +402,101 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                     </p>
                                                 </div>
                                             ))}
-                                            <div className="relative p-4 rounded-xl bg-white/30 border border-white/50 hover:bg-white/50 hover:border-white/80 transition-all duration-300">
-                                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1.5">Account Status</p>
-                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/8 text-emerald-600 border border-emerald-500/20">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                                                    Active
-                                                </span>
-                                            </div>
+                                            {/* <div className="relative p-4 rounded-xl bg-white/30 border border-white/50 hover:bg-white/50 hover:border-white/80 transition-all duration-300 md:col-span-2">
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-2">Profile Verification Status</p>
+                                                
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                    <div className="flex items-center gap-3">
+                                                        {userData.status === 'active' || userData.status === 'approved' ? (
+                                                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/8 text-emerald-600 border border-emerald-500/20 shadow-sm">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                                                Profile Accepted
+                                                            </div>
+                                                        ) : userData.status === 'rejected' ? (
+                                                            <div className="flex flex-col gap-1">
+                                                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/8 text-rose-600 border border-rose-500/20 shadow-sm w-fit">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                                                    Profile Rejected
+                                                                </div>
+                                                                {userData.rejectionReason && (
+                                                                    <p className="text-xs text-rose-500 font-bold mt-1">
+                                                                        Reason: <span className="font-medium text-gray-600">{userData.rejectionReason}</span>
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/8 text-amber-600 border border-amber-500/20 shadow-sm">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                                                                Pending Verification
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2">
+                                                        {userData.status !== 'active' && userData.status !== 'approved' && !showRejectForm && (
+                                                            <button
+                                                                onClick={() => handleUpdateUserStatus('active')}
+                                                                disabled={actionLoading}
+                                                                className="px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 rounded-lg shadow transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                                                Accept Profile
+                                                            </button>
+                                                        )}
+                                                        {userData.status !== 'rejected' && !showRejectForm && (
+                                                            <button
+                                                                onClick={() => setShowRejectForm(true)}
+                                                                disabled={actionLoading}
+                                                                className="px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-rose-500 to-red-600 hover:opacity-90 rounded-lg shadow transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[14px]">cancel</span>
+                                                                Reject Profile
+                                                            </button>
+                                                        )}
+                                                        {userData.status === 'rejected' && !showRejectForm && (
+                                                            <button
+                                                                onClick={() => handleUpdateUserStatus('active')}
+                                                                disabled={actionLoading}
+                                                                className="px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 rounded-lg shadow transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                                                Re-Accept Profile
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {showRejectForm && (
+                                                    <div className="mt-4 pt-4 border-t border-gray-100 flex flex-col gap-3">
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-500">Provide Rejection Reason</label>
+                                                        <textarea
+                                                            value={rejectionReason}
+                                                            onChange={(e) => setRejectionReason(e.target.value)}
+                                                            placeholder="Type why this profile was rejected (e.g. invalid document uploads, mismatched details, fake phone number)..."
+                                                            className="w-full p-3 bg-white/50 border border-gray-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 resize-none min-h-[70px] placeholder:text-gray-400 placeholder:font-medium"
+                                                        />
+                                                        <div className="flex justify-end gap-2 mt-1">
+                                                            <button
+                                                                onClick={() => {
+                                                                    setShowRejectForm(false);
+                                                                    setRejectionReason("");
+                                                                }}
+                                                                disabled={actionLoading}
+                                                                className="px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-gray-500 bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleUpdateUserStatus('rejected')}
+                                                                disabled={actionLoading || !rejectionReason.trim()}
+                                                                className="px-3.5 py-1.5 text-[10px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-rose-500 to-red-600 hover:opacity-90 rounded-lg shadow transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            >
+                                                                Confirm Rejection
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div> */}
                                         </div>
                                     </div>
                                 </div>
@@ -471,7 +632,18 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                 {userDocuments.length > 0 ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         {userDocuments.map((doc, idx) => (
-                                            <TiltCard key={idx} className="border border-white/80 rounded-2xl p-6 bg-white/60 backdrop-blur-xl shadow-md hover:shadow-xl transition-all duration-300 relative group/doc">
+                                            <TiltCard key={idx} className={`border rounded-2xl p-6 backdrop-blur-xl shadow-md hover:shadow-xl transition-all duration-300 relative group/doc flex flex-col h-full ${
+                                                doc.status === 'verified'
+                                                    ? 'bg-emerald-50/40 border-emerald-200 opacity-90'
+                                                    : 'bg-white/60 border-white/80 hover:shadow-xl'
+                                            }`}>
+                                                {/* Locked indicator for accepted documents */}
+                                                {doc.status === 'verified' && (
+                                                    <div className="absolute top-3 right-3 bg-emerald-500 text-white rounded-full p-1.5 shadow-lg z-20" title="Document is locked and cannot be changed">
+                                                        <span className="material-symbols-outlined text-[16px]">lock</span>
+                                                    </div>
+                                                )}
+
                                                 {/* Bottom accent border matching status */}
                                                 <div className={`absolute bottom-0 left-0 right-0 h-[2.5px] rounded-b-2xl transition-all duration-300 opacity-60 group-hover/doc:opacity-100 ${doc.status === 'uploaded' || doc.status === 'verified'
                                                         ? 'bg-emerald-500'
@@ -481,8 +653,12 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                     }`} />
                                                 
                                                 <div className="flex items-start gap-4 mb-4">
-                                                    <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 group-hover/doc:text-[#6605c7] group-hover/doc:bg-[#6605c7]/10 transition-colors duration-300">
-                                                        <span className="material-symbols-outlined text-[22px]">description</span>
+                                                    <div className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-colors duration-300 ${
+                                                        doc.status === 'verified'
+                                                            ? 'bg-emerald-100 border-emerald-200 text-emerald-600'
+                                                            : 'bg-gray-50 border-gray-100 text-gray-400 group-hover/doc:text-[#6605c7] group-hover/doc:bg-[#6605c7]/10'
+                                                    }`}>
+                                                        <span className="material-symbols-outlined text-[22px]">{doc.status === 'verified' ? 'check_circle' : 'description'}</span>
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-[12px] font-black text-[#1a1626] uppercase tracking-wider truncate">{doc.docType || doc.type || "Document"}</p>
@@ -490,7 +666,7 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                     </div>
                                                 </div>
 
-                                                <div className="flex items-center justify-between border-t border-gray-100 pt-4 mt-4 text-[9px] font-bold text-gray-400 font-mono">
+                                                <div className="flex items-center justify-between border-t border-gray-100 pt-4 mt-4 mb-4 text-[9px] font-bold text-gray-400 font-mono">
                                                     <div>
                                                         {doc.uploadedAt ? (
                                                             <p className="uppercase tracking-wider">
@@ -506,11 +682,30 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                                 ? 'bg-rose-500/8 text-rose-600 border-rose-500/20'
                                                                 : 'bg-amber-500/8 text-[#d97706] border-amber-500/20'
                                                         }`}>
-                                                        {doc.status || 'pending'}
+                                                        {doc.status === 'verified' ? 'Accepted' : doc.status || 'pending'}
                                                     </span>
                                                 </div>
 
-                                                {/* Corrected path names avoiding 404 router mismatch */}
+                                                {/* Document rejection reason display */}
+                                                {doc.status === 'rejected' && doc.rejectionReason && (
+                                                    <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200">
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-rose-600 mb-1">Rejection Reason</p>
+                                                        <p className="text-[10px] text-rose-700 font-semibold">{doc.rejectionReason}</p>
+                                                    </div>
+                                                )}
+
+                                                {/* Accepted date display for verified documents */}
+                                                {doc.status === 'verified' && (
+                                                    <div className="mb-4 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                                                        <p className="text-[9px] font-black uppercase tracking-widest text-emerald-600 mb-1">Acceptance Status</p>
+                                                        <p className="text-[10px] text-emerald-700 font-semibold flex items-center gap-2">
+                                                            <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                                            Document has been permanently accepted
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {/* Document view button - disabled for accepted documents */}
                                                 {doc.filePath && (
                                                     <button
                                                         onClick={async () => {
@@ -534,12 +729,55 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                                 console.error('Failed to open document:', e);
                                                             }
                                                         }}
-                                                        className="mt-5 w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-[#6605c7] to-[#8b24e5] hover:opacity-90 rounded-xl transition-all duration-300 cursor-pointer shadow-md shadow-[#6605c7]/15 hover:shadow-[#6605c7]/25"
+                                                        disabled={doc.status === 'verified'}
+                                                        className={`w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all duration-300 mb-3 shadow-md ${
+                                                            doc.status === 'verified'
+                                                                ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                                                                : 'text-white bg-gradient-to-r from-[#6605c7] to-[#8b24e5] hover:opacity-90 cursor-pointer shadow-[#6605c7]/15 hover:shadow-[#6605c7]/25'
+                                                        }`}
+                                                        title={doc.status === 'verified' ? 'Cannot modify accepted documents' : 'View document'}
                                                     >
                                                         <span className="material-symbols-outlined text-[14px]">visibility</span>
-                                                        Stream Decrypted Doc
+                                                        {doc.status === 'verified' ? 'Locked' : 'Stream Decrypted Doc'}
                                                     </button>
                                                 )}
+
+                                                {/* Accept/Reject buttons */}
+                                                <div className="flex gap-2 mt-auto">
+                                                    {doc.status !== 'verified' && doc.status !== 'rejected' && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleDocumentAction(doc.id || doc._id, "accept")}
+                                                                disabled={actionLoading}
+                                                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 rounded-lg transition-all active:scale-95 cursor-pointer disabled:opacity-50 shadow-sm shadow-emerald-500/20"
+                                                                title="Accept this document (cannot be changed once accepted)"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                                                                Accept
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setSelectedDocForReject(doc)}
+                                                                disabled={actionLoading}
+                                                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 text-[10px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-rose-500 to-red-600 hover:opacity-90 rounded-lg transition-all active:scale-95 cursor-pointer disabled:opacity-50 shadow-sm shadow-rose-500/20"
+                                                                title="Reject this document"
+                                                            >
+                                                                <span className="material-symbols-outlined text-[14px]">cancel</span>
+                                                                Reject
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    {doc.status === 'verified' && (
+                                                        <div className="text-[10px] font-black text-emerald-600 uppercase tracking-wider text-center w-full py-2 px-3 bg-emerald-50 rounded-lg border border-emerald-200">
+                                                            <span className="material-symbols-outlined text-[12px] align-middle mr-1">lock</span>
+                                                            Document Locked
+                                                        </div>
+                                                    )}
+                                                    {doc.status === 'rejected' && (
+                                                        <div className="text-[10px] font-black text-rose-600 uppercase tracking-wider text-center w-full">
+                                                            Document Rejected
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </TiltCard>
                                         ))}
                                     </div>
@@ -547,6 +785,72 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                     <div className="py-16 text-center bg-white/20 border border-white/40 rounded-2xl">
                                         <span className="material-symbols-outlined text-[48px] text-slate-400 mx-auto block mb-4 animate-pulse">folder_off</span>
                                         <p className="text-gray-500 font-semibold text-sm">No files uploaded for this node</p>
+                                    </div>
+                                )}
+
+                                {/* Document Rejection Modal */}
+                                {selectedDocForReject && (
+                                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                                            className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-white/40"
+                                        >
+                                            {/* Header */}
+                                            <div className="bg-gradient-to-r from-rose-500/10 to-red-500/10 border-b border-rose-200 px-6 py-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-600">
+                                                        <span className="material-symbols-outlined text-[20px]">block</span>
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-[13px] font-black text-[#1a1626] uppercase tracking-wider">Reject Document</h3>
+                                                        <p className="text-[10px] text-gray-500 font-semibold mt-0.5">{selectedDocForReject.docType || selectedDocForReject.type || "Document"}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Content */}
+                                            <div className="p-6">
+                                                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-600 mb-3">
+                                                    Provide Rejection Reason
+                                                </label>
+                                                <textarea
+                                                    value={documentRejectionReason}
+                                                    onChange={(e) => setDocumentRejectionReason(e.target.value)}
+                                                    placeholder="Example: Document is unclear, expired, or doesn't match user details. Image quality is poor, handwriting is illegible, or critical information is missing..."
+                                                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500 resize-none min-h-[100px] placeholder:text-gray-400 placeholder:font-medium placeholder:text-[10px]"
+                                                />
+                                                <p className="text-[9px] text-gray-400 font-medium mt-2">The user will see this reason and can resubmit with corrections.</p>
+                                            </div>
+
+                                            {/* Footer */}
+                                            <div className="bg-gray-50 border-t border-gray-100 px-6 py-4 flex justify-end gap-3">
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedDocForReject(null);
+                                                        setDocumentRejectionReason("");
+                                                    }}
+                                                    disabled={actionLoading}
+                                                    className="px-4 py-2 text-[10px] font-black uppercase tracking-wider text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 rounded-lg transition-all cursor-pointer disabled:opacity-50"
+                                                >
+                                                    Cancel
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        handleDocumentAction(
+                                                            selectedDocForReject.id || selectedDocForReject._id,
+                                                            "reject",
+                                                            documentRejectionReason
+                                                        );
+                                                    }}
+                                                    disabled={actionLoading || !documentRejectionReason.trim()}
+                                                    className="px-4 py-2 text-[10px] font-black uppercase tracking-wider text-white bg-gradient-to-r from-rose-500 to-red-600 hover:opacity-90 rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-rose-500/20"
+                                                >
+                                                    Confirm Rejection
+                                                </button>
+                                            </div>
+                                        </motion.div>
                                     </div>
                                 )}
                             </motion.div>

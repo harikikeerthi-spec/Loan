@@ -33,6 +33,12 @@ const NotificationsPanel = ({
   const socketRef = useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
+  // Real-time toast & view-all modal state
+  const [activeToast, setActiveToast] = useState<Notification | null>(null);
+  const [isAllModalOpen, setIsAllModalOpen] = useState(false);
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'application_created' | 'document_uploaded' | 'candidate_registered'>('all');
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Get icon and color based on notification type
   const getNotificationStyle = (type: string) => {
     const styles: Record<string, any> = {
@@ -90,12 +96,18 @@ const NotificationsPanel = ({
   };
 
   useEffect(() => {
-    // Initialize Socket.io connection
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
-    const token = localStorage.getItem("access_token");
-    const connectionUrl = apiUrl.endsWith('/') ? `${apiUrl}chat` : `${apiUrl}/chat`;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+    // Use portal-specific token keys (staff portal uses "staffAccessToken")
+    const token =
+      localStorage.getItem("staffAccessToken") ||
+      localStorage.getItem("adminAccessToken") ||
+      localStorage.getItem("accessToken");
 
-    socketRef.current = io(connectionUrl, {
+    const socketUrl = apiUrl.endsWith("/api")
+      ? apiUrl.replace("/api", "/chat")
+      : `${apiUrl.replace(/\/$/, "")}/chat`;
+
+    socketRef.current = io(socketUrl, {
       auth: {
         token,
       },
@@ -118,6 +130,13 @@ const NotificationsPanel = ({
         return updated.slice(0, 50); // Keep last 50 notifications
       });
       setUnreadCount((prev) => prev + 1);
+
+      // Trigger Toast Alert
+      setActiveToast(payload);
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      toastTimeoutRef.current = setTimeout(() => {
+        setActiveToast(null);
+      }, 6000); // Show for 6 seconds
     });
 
     socketRef.current.on("disconnect", () => {
@@ -129,17 +148,92 @@ const NotificationsPanel = ({
       console.error("[NotificationsPanel] Socket error:", error);
     });
 
+    const fetchNotifications = async () => {
+      if (!token) return;
+      try {
+        const res = await fetch("/api/notifications", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.items)) {
+            setNotifications(data.items.slice(0, 50));
+            const unread = data.items.filter((n: any) => !n.isRead).length;
+            setUnreadCount(unread);
+          }
+        } else {
+          console.error("[NotificationsPanel] Failed to fetch notifications:", res.statusText);
+        }
+      } catch (err) {
+        console.error("[NotificationsPanel] Fetch error:", err);
+      }
+    };
+
+    fetchNotifications();
+
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
       }
+      if (toastTimeoutRef.current) {
+        clearTimeout(toastTimeoutRef.current);
+      }
     };
   }, []);
 
-  const handleNotificationClick = (notification: Notification) => {
+  const handleNotificationClick = async (notification: Notification) => {
     onNotificationClick?.(notification);
-    // Mark as read
+
+    if (notification.isRead) return;
+
+    // Optimistic update
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n))
+    );
     setUnreadCount((prev) => Math.max(0, prev - 1));
+
+    try {
+      const token =
+        localStorage.getItem("staffAccessToken") ||
+        localStorage.getItem("adminAccessToken") ||
+        localStorage.getItem("accessToken");
+
+      await fetch(`/api/notifications/${notification.id}/mark-read`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+    } catch (err) {
+      console.error("[NotificationsPanel] Failed to mark read:", err);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    // Optimistic update
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    setUnreadCount(0);
+
+    try {
+      const token =
+        localStorage.getItem("staffAccessToken") ||
+        localStorage.getItem("adminAccessToken") ||
+        localStorage.getItem("accessToken");
+
+      await fetch("/api/notifications/mark-all-read", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+    } catch (err) {
+      console.error("[NotificationsPanel] Failed to mark all read:", err);
+    }
   };
 
   const displayedNotifications = notifications.slice(0, maxDisplay);
@@ -198,12 +292,25 @@ const NotificationsPanel = ({
                     <span className="material-symbols-outlined">notifications_active</span>
                     Real-time Notifications
                   </h3>
-                  {!isConnected && (
-                    <div className="flex items-center gap-1 px-2 py-1 bg-yellow-50 rounded text-[10px] text-yellow-700">
-                      <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse" />
-                      Offline
-                    </div>
-                  )}
+                  <div className="flex items-center gap-3">
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMarkAllRead();
+                        }}
+                        className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition-colors"
+                      >
+                        Mark all as read
+                      </button>
+                    )}
+                    {!isConnected && (
+                      <div className="flex items-center gap-1 px-2 py-1 bg-yellow-50 rounded text-[10px] text-yellow-700">
+                        <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse" />
+                        Offline
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -271,15 +378,230 @@ const NotificationsPanel = ({
               </div>
 
               {/* Footer */}
-              {displayedNotifications.length > 0 && (
+              {notifications.length > 0 && (
                 <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 text-center">
-                  <button className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      setIsAllModalOpen(true);
+                    }}
+                    className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors w-full"
+                  >
                     View All Notifications
                   </button>
                 </div>
               )}
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* Real-time Toast Alert Notification Pop-up */}
+      <AnimatePresence>
+        {activeToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9, x: 100 }}
+            animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95, x: 100 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            onClick={() => {
+              handleNotificationClick(activeToast);
+              setActiveToast(null);
+            }}
+            className="fixed bottom-6 right-6 z-[9999] max-w-sm w-full bg-white rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.12)] border border-slate-100 p-4 cursor-pointer hover:shadow-[0_15px_35px_rgba(0,0,0,0.16)] transition-shadow"
+          >
+            <div className="flex gap-3">
+              {/* Style Icon */}
+              {(() => {
+                const style = getNotificationStyle(activeToast.type);
+                return (
+                  <>
+                    <div className={`flex-shrink-0 w-11 h-11 rounded-xl ${style.bgColor} flex items-center justify-center`}>
+                      <span className={`material-symbols-outlined text-[20px] ${style.textColor}`}>
+                        {style.icon}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start">
+                        <p className="font-bold text-xs text-slate-400 uppercase tracking-widest leading-none">
+                          Real-time Alert
+                        </p>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveToast(null);
+                          }}
+                          className="text-slate-400 hover:text-slate-600 transition-colors leading-none"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">close</span>
+                        </button>
+                      </div>
+                      <h4 className="font-extrabold text-sm text-slate-900 mt-1 line-clamp-1">
+                        {activeToast.title}
+                      </h4>
+                      <p className="text-xs text-slate-600 mt-1 line-clamp-2">
+                        {activeToast.body}
+                      </p>
+                      <p className="text-[10px] text-indigo-600 font-bold mt-2">
+                        Click to view details
+                      </p>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* View All Modal Overlay */}
+      <AnimatePresence>
+        {isAllModalOpen && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAllModalOpen(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+
+            {/* Modal Box */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col relative z-10"
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-slate-50 to-indigo-50/30 px-6 py-5 border-b border-slate-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[24px] text-indigo-600">notifications_active</span>
+                      Latest Notifications
+                    </h2>
+                    <p className="text-xs text-slate-500 font-medium mt-1">
+                      Manage real-time candidates, application registrations and uploads.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setIsAllModalOpen(false)}
+                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">close</span>
+                  </button>
+                </div>
+
+                {/* Filter Tab buttons */}
+                <div className="flex flex-wrap gap-2 mt-5">
+                  {[
+                    { id: 'all', label: 'All Activities' },
+                    { id: 'application_created', label: 'Applications' },
+                    { id: 'document_uploaded', label: 'Documents' },
+                    { id: 'candidate_registered', label: 'Registrations' }
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setSelectedFilter(tab.id as any)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
+                        selectedFilter === tab.id
+                          ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/10"
+                          : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Body / List */}
+              <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+                {(() => {
+                  const filtered = notifications.filter(n => selectedFilter === 'all' || n.type === selectedFilter);
+                  return filtered.length > 0 ? (
+                    filtered.map((notif, index) => {
+                      const style = getNotificationStyle(notif.type);
+                      return (
+                        <div
+                          key={notif.id || index}
+                          onClick={() => {
+                            handleNotificationClick(notif);
+                            setIsAllModalOpen(false);
+                          }}
+                          className={`p-4 bg-white rounded-2xl border transition-all cursor-pointer hover:shadow-md flex gap-4 ${
+                            notif.isRead
+                              ? "border-slate-100 opacity-75 hover:opacity-100"
+                              : `border-slate-200 hover:border-slate-300 shadow-sm relative overflow-hidden`
+                          }`}
+                        >
+                          {/* Unread dot indicator on the left side edge */}
+                          {!notif.isRead && (
+                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-600" />
+                          )}
+
+                          {/* Icon Circle */}
+                          <div className={`w-11 h-11 rounded-xl ${style.bgColor} flex items-center justify-center flex-shrink-0`}>
+                            <span className={`material-symbols-outlined text-[20px] ${style.textColor}`}>
+                              {style.icon}
+                            </span>
+                          </div>
+
+                          {/* Text Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start gap-2">
+                              <h4 className="font-extrabold text-sm text-slate-900 line-clamp-1 leading-tight">
+                                {notif.title}
+                              </h4>
+                              <span className="text-[10px] text-slate-400 font-semibold flex-shrink-0 mt-0.5">
+                                {formatTime(notif.timestamp)}
+                              </span>
+                            </div>
+                            <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                              {notif.body}
+                            </p>
+                          </div>
+
+                          {/* Status Circle */}
+                          {!notif.isRead && (
+                            <div className={`w-2.5 h-2.5 rounded-full ${style.badge} flex-shrink-0 self-center`} />
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="py-16 text-center text-slate-400">
+                      <span className="material-symbols-outlined text-[48px] block mb-2 opacity-30">
+                        notifications_off
+                      </span>
+                      <p className="text-sm font-bold">No notifications match this category</p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Try switching tabs to check other notification logs.
+                      </p>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Footer */}
+              <div className="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-between items-center">
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">
+                  Showing {notifications.filter(n => selectedFilter === 'all' || n.type === selectedFilter).length} total
+                </span>
+                {unreadCount > 0 && (
+                  <button
+                    onClick={handleMarkAllRead}
+                    className="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-xl text-xs font-bold transition-all border border-indigo-100"
+                  >
+                    Mark all as read
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

@@ -1,4 +1,4 @@
-﻿
+
 
 "use client";
 import { useEffect, useRef, useState } from "react";
@@ -235,8 +235,8 @@ const ANSWER_ALIASES: Record<string, string> = {
     plan_target_uni: 'target_university', loan_university: 'target_university', compare_uni_search: 'target_university',
     plan_entrance_test: 'entrance_test', loan_entrance_test: 'entrance_test', compare_test: 'entrance_test',
     plan_entrance_score: 'entrance_score', loan_entrance_score: 'entrance_score', compare_test_score: 'entrance_score',
-    plan_english_test: 'english_test', compare_english_test: 'english_test',
-    plan_english_score: 'english_score', compare_english_score: 'english_score',
+    plan_english_test: 'english_test', loan_english_test: 'english_test', compare_english_test: 'english_test',
+    plan_english_score: 'english_score', loan_english_score: 'english_score', compare_english_score: 'english_score',
     plan_start_when: 'start_when', compare_intake: 'start_when',
     loan_pincode: 'pincode',
 };
@@ -431,12 +431,12 @@ const steps: any[] = [
     },
     {
         id: 'loan_entrance_test',
-        q: "Have you taken any standardised tests like GRE or GMAT?",
+        q: "Have you taken any standardised entrance exams like GRE or GMAT?",
         type: 'cards',
         cols: 3,
         options: [
-            { value: 'gre', label: 'GRE' }, { value: 'gmat', label: 'GMAT' },
-            { value: 'toefl', label: 'TOEFL' }, { value: 'ielts', label: 'IELTS' },
+            { value: 'gre', label: 'GRE' },
+            { value: 'gmat', label: 'GMAT' },
             { value: 'none', label: 'None' }
         ],
         flows: ['loan']
@@ -445,6 +445,26 @@ const steps: any[] = [
         id: 'loan_entrance_score',
         type: 'exam_score',
         skipIf: { key: 'loan_entrance_test', value: 'none' },
+        flows: ['loan']
+    },
+    {
+        id: 'loan_english_test',
+        q: "What about English proficiency — have you taken IELTS, TOEFL, or PTE?",
+        type: 'cards',
+        cols: 3,
+        options: [
+            { value: 'ielts', label: 'IELTS' },
+            { value: 'toefl', label: 'TOEFL' },
+            { value: 'pte', label: 'PTE' },
+            { value: 'duolingo', label: 'Duolingo' },
+            { value: 'none', label: 'None' }
+        ],
+        flows: ['loan']
+    },
+    {
+        id: 'loan_english_score',
+        type: 'english_score',
+        skipIf: { key: 'loan_english_test', value: 'none' },
         flows: ['loan']
     },
     {
@@ -670,6 +690,7 @@ export default function OnboardingPage() {
 
     // Generic input state
     const [inputValue, setInputValue] = useState('');
+    const [customUniversityName, setCustomUniversityName] = useState('');
 
     // Loan slider state
     const [loanSliderValue, setLoanSliderValue] = useState(1400000);
@@ -698,6 +719,15 @@ export default function OnboardingPage() {
 
     // Selected university in search step (for preview before confirming)
     const [previewUniversity, setPreviewUniversity] = useState<any>(null);
+
+    // Education loan results state
+    const [loanResults, setLoanResults] = useState<any[]>([]);
+    const [loadingLoanResults, setLoadingLoanResults] = useState(false);
+
+    // Shortlisted universities comparison state
+    const [shortlistedUniversities, setShortlistedUniversities] = useState<any[]>([]);
+    const [evaluationResults, setEvaluationResults] = useState<any>(null);
+    const [evaluatingUniversities, setEvaluatingUniversities] = useState(false);
 
     // Saved universities state
     const [savedUniversities, setSavedUniversities] = useState<Set<string>>(new Set());
@@ -1037,6 +1067,44 @@ export default function OnboardingPage() {
 
         if (step.type === 'ai_match' && !isAiMatching) {
             setIsAiMatching(true);
+            
+            // Fetch loan results if in loan flow
+            const goal = answers.goal?.value;
+            if (goal === 'loan' && loanResults.length === 0) {
+                fetchLoanResults();
+            }
+            
+            if (goal === 'compare') {
+                const firstUniName = answers.compare_uni_search?.label || answers.target_university?.label;
+                if (firstUniName && shortlistedUniversities.length === 0) {
+                    const found = aiUniversities.find((u: any) => u.name.toLowerCase() === firstUniName.toLowerCase())
+                               || countryUniversities.find((u: any) => u.name.toLowerCase() === firstUniName.toLowerCase());
+                    
+                    if (found) {
+                        setShortlistedUniversities([found]);
+                    } else {
+                        const country = answers.country?.value || 'Canada';
+                        const customUni = {
+                            name: firstUniName,
+                            loc: country,
+                            country: country,
+                            rank: 150,
+                            accept: 35,
+                            min_gpa: 7.0,
+                            min_ielts: 6.5,
+                            min_toefl: 90,
+                            tuition: 30000,
+                            courses: [answers.course?.value || 'Masters Program'],
+                            loan: true,
+                            slug: firstUniName.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+                            website: '',
+                            description: 'First selected university',
+                        };
+                        setShortlistedUniversities([customUni]);
+                    }
+                }
+            }
+            
             setTimeout(() => {
                 setIsAiMatching(false);
             }, 3000);
@@ -1190,18 +1258,42 @@ export default function OnboardingPage() {
         }
         setPincodeLoading(true);
         try {
-            const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+
+            const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`, {
+                signal: controller.signal,
+                headers: {
+                    'Accept': 'application/json',
+                }
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!res.ok) {
+                // If API returns error status, silently skip
+                setPincodeError(null);
+                setPincodeLocation(null);
+                return;
+            }
+
             const data = await res.json();
             if (Array.isArray(data) && data[0]?.Status === 'Success' && Array.isArray(data[0].PostOffice) && data[0].PostOffice.length > 0) {
                 const po = data[0].PostOffice[0];
                 setPincodeLocation({ office: po?.Name || '', city: po?.District || po?.Division || '', state: po?.State || '' });
                 setPincodeError(null);
             } else {
-                setPincodeError('Pincode not found');
+                // If pincode not found in data, silently continue
+                setPincodeError(null);
+                setPincodeLocation(null);
             }
-        } catch (e) {
-            console.error('Pincode lookup failed', e);
-            setPincodeError('Lookup failed. Try again');
+        } catch (e: any) {
+            // Silently handle errors - don't show error message for network issues
+            if (e?.name !== 'AbortError') {
+                console.error('Pincode lookup failed', e);
+            }
+            setPincodeError(null);
+            setPincodeLocation(null);
         } finally {
             setPincodeLoading(false);
         }
@@ -1323,6 +1415,245 @@ export default function OnboardingPage() {
             .finally(() => setLoadingCountryUnis(false));
     }, [currentIdx, answers.country?.value, answers.course?.value]);
 
+    // Fetch loan products based on user profile
+    const fetchLoanResults = async () => {
+        setLoadingLoanResults(true);
+        try {
+            const loanAmount = parseInt(answers.loan_amount?.value || '1500000', 10);
+            const coSignerIncome = parseInt(answers.loan_cosigner_income?.value || '50000', 10);
+            const coSignerType = answers.loan_cosigner_type?.value || 'Salaried';
+            const country = answers.country?.value || 'USA';
+            const repaymentType = answers.loan_repayment?.value || 'after_study';
+
+            // Mock loan products with various interest rates based on profile
+            const isStrongProfile = loanAmount <= 3000000 && coSignerIncome >= 50000;
+            const baseRate = isStrongProfile ? 8.5 : 10.5;
+
+            const loanProducts = [
+                {
+                    id: 'hdfc',
+                    name: 'Credila Premium Study Loan',
+                    bank: 'HDFC Credila',
+                    interestRate: baseRate + (coSignerType === 'Self-employed' ? 1 : 0),
+                    processingFee: isStrongProfile ? 0 : 1000,
+                    processingFeeWaiver: isStrongProfile ? true : false,
+                    emi: Math.round((loanAmount * (baseRate / 100 + 0.085)) / 60),
+                    tenureMonths: 60,
+                    repaymentStartMonths: repaymentType === 'during_study' ? 3 : repaymentType === 'moratorium_6' ? 30 : repaymentType === 'moratorium_12' ? 36 : 24,
+                    approved: 'Usually within 5 days',
+                    maxAmount: 15000000,
+                    eligibility: 'Strong',
+                    features: ['100% Finance for top universities', 'Flexible co-applicant options', 'Quick digital sanction'],
+                    collateralRequired: loanAmount > 7500000,
+                },
+                {
+                    id: 'idfc',
+                    name: 'IDFC EduFirst Loan',
+                    bank: 'IDFC First Bank',
+                    interestRate: baseRate + 0.5 + (coSignerType === 'Self-employed' ? 1 : 0),
+                    processingFee: 2000,
+                    processingFeeWaiver: false,
+                    emi: Math.round((loanAmount * (baseRate + 0.535 / 100 + 0.085)) / 60),
+                    tenureMonths: 60,
+                    repaymentStartMonths: repaymentType === 'during_study' ? 3 : repaymentType === 'moratorium_6' ? 30 : repaymentType === 'moratorium_12' ? 36 : 24,
+                    approved: 'Usually within 7 days',
+                    maxAmount: 10000000,
+                    eligibility: 'Good',
+                    features: ['Zero collateral up to ₹75L', 'Multi-city co-applicant allowed', 'Competitive interest rates'],
+                    collateralRequired: loanAmount > 7500000,
+                },
+                {
+                    id: 'avanse',
+                    name: 'Avanse Global Scholar',
+                    bank: 'Avanse Financial',
+                    interestRate: baseRate + 1 + (coSignerType === 'Self-employed' ? 1 : 0),
+                    processingFee: isStrongProfile ? 500 : 1500,
+                    processingFeeWaiver: false,
+                    emi: Math.round((loanAmount * (baseRate + 1 / 100 + 0.085)) / 60),
+                    tenureMonths: 60,
+                    repaymentStartMonths: repaymentType === 'during_study' ? 3 : repaymentType === 'moratorium_6' ? 30 : repaymentType === 'moratorium_12' ? 36 : 24,
+                    approved: 'Usually within 3 days',
+                    maxAmount: 8000000,
+                    eligibility: 'Moderate',
+                    features: ['Fast turnaround in 72 hours', 'Pre-admission sanction letter', 'Covers living expenses fully'],
+                    collateralRequired: loanAmount > 5000000,
+                },
+            ].map(product => ({
+                ...product,
+                loanAmount,
+                country,
+                totalAmount: Math.round(loanAmount + (loanAmount * product.interestRate / 100 / 12 * product.tenureMonths)),
+                totalInterest: Math.round(loanAmount * product.interestRate / 100 / 12 * product.tenureMonths),
+            }));
+
+            setLoanResults(loanProducts);
+        } catch (err) {
+            console.error('Failed to fetch loan results:', err);
+            setLoanResults([]);
+        } finally {
+            setLoadingLoanResults(false);
+        }
+    };
+
+    // Evaluate shortlisted universities
+    const evaluateShortlistedUniversities = async () => {
+        if (shortlistedUniversities.length < 2) {
+            setToastData({
+                name: 'Select Universities',
+                msg: 'Please select at least 2 universities to compare',
+                time: 'now'
+            });
+            return;
+        }
+
+        setEvaluatingUniversities(true);
+        try {
+            const gpa = parseFloat(answers.gpa?.value || '6.5');
+            const workExp = parseInt(answers.work_exp?.value || '0', 10);
+            const engTest = answers.english_test?.value || 'none';
+            const engScore = parseFloat(answers.english_score?.value || '0');
+            const budget = answers.budget?.value || 'above_40';
+            const course = answers.course?.value || '';
+
+            // Evaluate each university based on user profile
+            const evaluated = shortlistedUniversities.map((uni: any, idx: number) => {
+                let overallScore = 0;
+                let recommendation = '';
+                const factors: any = {};
+
+                // 1. Academic Fit (35%)
+                const gpaGap = gpa - (uni.min_gpa || 7.0);
+                let academicScore = 0;
+                if (gpaGap >= 1.0) academicScore = 95;
+                else if (gpaGap >= 0.5) academicScore = 85;
+                else if (gpaGap >= 0) academicScore = 75;
+                else if (gpaGap >= -0.5) academicScore = 55;
+                else academicScore = 35;
+                factors.academic = { score: academicScore, text: academicScore >= 75 ? 'Excellent' : academicScore >= 55 ? 'Good' : 'Moderate' };
+                overallScore += academicScore * 0.35;
+
+                // 2. Admission Probability (25%)
+                const acceptanceScore = Math.max(0, Math.min(100, 100 - uni.accept));
+                factors.admission = { score: acceptanceScore, text: uni.accept >= 50 ? 'High' : uni.accept >= 25 ? 'Moderate' : 'Challenging' };
+                overallScore += acceptanceScore * 0.25;
+
+                // 3. Cost-Benefit (20%)
+                const budgetScore = budget === 'below_15' ? (uni.tuition <= 1500000 ? 85 : 45) :
+                                   budget === '15_25' ? (uni.tuition <= 2500000 ? 85 : 50) :
+                                   budget === '25_40' ? (uni.tuition <= 4000000 ? 85 : 60) : 90;
+                factors.cost = { score: budgetScore, text: budgetScore >= 75 ? 'Affordable' : budgetScore >= 50 ? 'Moderate' : 'Expensive' };
+                overallScore += budgetScore * 0.20;
+
+                // 4. Course Match (15%)
+                const courseMatch = (uni.courses || []).some((c: string) => c.toLowerCase().includes(course.toLowerCase())) ? 90 : 60;
+                factors.courseMatch = { score: courseMatch, text: courseMatch >= 75 ? 'Perfect match' : 'Related' };
+                overallScore += courseMatch * 0.15;
+
+                // 5. Location & Reputation (5%)
+                const repScore = uni.rank <= 50 ? 95 : uni.rank <= 150 ? 80 : 60;
+                factors.reputation = { score: repScore, text: uni.rank <= 50 ? 'Top tier' : uni.rank <= 150 ? 'Well-known' : 'Good' };
+                overallScore += repScore * 0.05;
+
+                // Determine recommendation level
+                if (overallScore >= 80) recommendation = 'Highly Recommended';
+                else if (overallScore >= 65) recommendation = 'Recommended';
+                else if (overallScore >= 50) recommendation = 'Consider';
+                else recommendation = 'Challenging';
+
+                return {
+                    ...uni,
+                    evaluationScore: Math.round(overallScore),
+                    recommendation,
+                    factors,
+                    rank_in_shortlist: idx + 1
+                };
+            }).sort((a: any, b: any) => b.evaluationScore - a.evaluationScore);
+
+            // Prepare final results
+            const results = {
+                topRecommendation: evaluated[0],
+                allEvaluations: evaluated,
+                summaryInsight: `Based on your profile (${gpa} GPA, ${workExp} months experience), ${evaluated[0].name} is your best match with an evaluation score of ${evaluated[0].evaluationScore}%`,
+                timestamp: new Date().toISOString()
+            };
+
+            setEvaluationResults(results);
+        } catch (err) {
+            console.error('Evaluation failed:', err);
+        } finally {
+            setEvaluatingUniversities(false);
+        }
+    };
+
+    const addToShortlist = (university: any) => {
+        if (shortlistedUniversities.some((u: any) => u.name === university.name)) {
+            // Remove if already in shortlist
+            setShortlistedUniversities(shortlistedUniversities.filter((u: any) => u.name !== university.name));
+        } else if (shortlistedUniversities.length < 5) {
+            // Add if less than 5
+            setShortlistedUniversities([...shortlistedUniversities, university]);
+        } else {
+            setToastData({
+                name: 'Max Reached',
+                msg: 'You can compare up to 5 universities. Remove one to add another.',
+                time: 'now'
+            });
+        }
+    };
+
+    const removeFromShortlist = (universityName: string) => {
+        setShortlistedUniversities(shortlistedUniversities.filter((u: any) => u.name !== universityName));
+    };
+
+    const handleAddCustomUniversity = () => {
+        if (!customUniversityName.trim()) return;
+        const name = customUniversityName.trim();
+        const country = answers.country?.value || 'Canada';
+        
+        const customUni = {
+            name,
+            loc: country,
+            country: country,
+            rank: 150,
+            accept: 35,
+            min_gpa: 7.0,
+            min_ielts: 6.5,
+            min_toefl: 90,
+            tuition: 30000,
+            courses: [answers.course?.value || 'Masters Program'],
+            loan: true,
+            slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+            website: '',
+            description: 'Custom added university',
+        };
+
+        if (shortlistedUniversities.some((u: any) => u.name.toLowerCase() === name.toLowerCase())) {
+            setToastData({
+                name: 'Already Added',
+                msg: `${name} is already in your shortlist.`,
+                time: 'now'
+            });
+            return;
+        }
+
+        if (shortlistedUniversities.length >= 5) {
+            setToastData({
+                name: 'Max Reached',
+                msg: 'You can compare up to 5 universities. Remove one to add another.',
+                time: 'now'
+            });
+            return;
+        }
+
+        setShortlistedUniversities([...shortlistedUniversities, customUni]);
+        setCustomUniversityName('');
+    };
+
+    const clearShortlist = () => {
+        setShortlistedUniversities([]);
+        setEvaluationResults(null);
+    };
+
     const editStep = (idx: number) => {
         setCurrentIdx(idx);
         // Clear answers from this step onwards
@@ -1337,6 +1668,388 @@ export default function OnboardingPage() {
             setUniCountResult(null);
             setIsUniCounting(false);
         }
+    };
+
+    const renderLoanResults = () => {
+        if (loadingLoanResults) {
+            return (
+                <div style={{ padding: 20, textAlign: 'center' }}>
+                    <div style={{ width: 32, height: 32, border: '3px solid #e9d5ff', borderTopColor: '#7c3aed', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 10px' }} />
+                    <div style={{ fontSize: 13, color: '#6b7280' }}>Finding best education loans for you...</div>
+                </div>
+            );
+        }
+
+        if (loanResults.length === 0) {
+            return (
+                <div style={{ padding: 20, textAlign: 'center' }}>
+                    <div style={{ fontSize: 13, color: '#6b7280' }}>No loans available. Please try again.</div>
+                </div>
+            );
+        }
+
+        return (
+            <div className="fade-in">
+                <div className="ai-bubble-row fade-in">
+                    <div className="ai-avatar blob-mascot" style={{ width: 32, height: 32, margin: 0, position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #10b981, #34d399)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '18px', fontWeight: 'bold' }}>
+                        <span>💚</span>
+                        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), transparent)' }}></div>
+                    </div>
+                    <div className="ai-bubble">
+                        Found <strong>{loanResults.length} education loan options</strong> perfectly suited for your ₹{parseInt(answers.loan_amount?.value || '0', 10) / 100000} Lakh requirement!<br />
+                        <span style={{ fontSize: 12, color: '#888', marginTop: 4, display: 'block' }}>Compare interest rates, EMI, and eligibility across banks.</span>
+                    </div>
+                </div>
+
+                <div style={{ margin: '24px 0' }}>
+                    {loanResults.map((loan: any, idx: number) => (
+                        <div key={loan.id} style={{ marginBottom: 16, padding: 20, background: '#fff', borderRadius: 16, border: '1px solid #f3f4f6', boxShadow: idx === 0 ? '0 8px 24px rgba(16,185,129,0.1)' : '0 1px 3px rgba(0,0,0,0.05)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                                <div>
+                                    <div style={{ fontSize: 11, color: '#10b981', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
+                                        {idx === 0 ? '⭐ Recommended' : 'Option ' + (idx + 1)}
+                                    </div>
+                                    <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', marginBottom: 4 }}>{loan.name}</h3>
+                                    <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>{loan.bank}</p>
+                                </div>
+                                <div style={{ padding: '8px 12px', background: '#ecfdf5', borderRadius: 8, textAlign: 'center' }}>
+                                    <div style={{ fontSize: 20, fontWeight: 800, color: '#10b981' }}>{loan.interestRate}%</div>
+                                    <div style={{ fontSize: 10, color: '#059669', fontWeight: 600 }}>P.A.</div>
+                                </div>
+                            </div>
+
+                            {/* Key Loan Details Grid */}
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 16 }}>
+                                <div style={{ padding: 12, background: '#f0fdf4', borderRadius: 10, border: '1px solid #bbf7d0' }}>
+                                    <div style={{ fontSize: 10, color: '#059669', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Monthly EMI</div>
+                                    <div style={{ fontSize: 16, fontWeight: 800, color: '#15803d' }}>₹{loan.emi.toLocaleString()}</div>
+                                </div>
+                                <div style={{ padding: 12, background: '#eff6ff', borderRadius: 10, border: '1px solid #bfdbfe' }}>
+                                    <div style={{ fontSize: 10, color: '#1e40af', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Tenure</div>
+                                    <div style={{ fontSize: 16, fontWeight: 800, color: '#1e3a8a' }}>{loan.tenureMonths} Months</div>
+                                </div>
+                                <div style={{ padding: 12, background: '#fef3c7', borderRadius: 10, border: '1px solid #fde68a' }}>
+                                    <div style={{ fontSize: 10, color: '#a16207', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Processing Fee</div>
+                                    <div style={{ fontSize: 16, fontWeight: 800, color: '#b45309' }}>
+                                        {loan.processingFeeWaiver ? '✓ Waived' : `₹${loan.processingFee.toLocaleString()}`}
+                                    </div>
+                                </div>
+                                <div style={{ padding: 12, background: '#fce7f3', borderRadius: 10, border: '1px solid #fbcfe8' }}>
+                                    <div style={{ fontSize: 10, color: '#9d174d', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Total Interest</div>
+                                    <div style={{ fontSize: 16, fontWeight: 800, color: '#be185d' }}>₹{loan.totalInterest.toLocaleString()}</div>
+                                </div>
+                            </div>
+
+                            {/* Additional Details */}
+                            <div style={{ marginBottom: 12, paddingBottom: 12, borderBottom: '1px solid #f3f4f6' }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#4b5563', marginBottom: 6, textTransform: 'uppercase' }}>Key Features</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                    {loan.features.map((f: string, i: number) => (
+                                        <span key={i} style={{ fontSize: 11, background: '#f9fafb', color: '#4b5563', padding: '4px 10px', borderRadius: 6, fontWeight: 500 }}>✓ {f}</span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Approval & Eligibility */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                <div>
+                                    <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Approval Time</div>
+                                    <div style={{ fontSize: 12, fontWeight: 600, color: '#4b5563' }}>{loan.approved}</div>
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>Your Eligibility</div>
+                                    <div style={{ fontSize: 12, fontWeight: 600, color: '#4b5563' }}>{loan.eligibility}</div>
+                                </div>
+                            </div>
+
+                            {/* CTA */}
+                            <button
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    background: idx === 0 ? 'linear-gradient(135deg, #10b981, #059669)' : '#fff',
+                                    color: idx === 0 ? '#fff' : '#10b981',
+                                    border: idx === 0 ? 'none' : '1.5px solid #10b981',
+                                    borderRadius: 12,
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    boxShadow: idx === 0 ? '0 4px 14px rgba(16,185,129,0.3)' : 'none'
+                                }}
+                                onClick={() => {
+                                    const uni = answers.target_university?.label || answers.loan_university?.label || '';
+                                    const countryVal = answers.country?.value || answers.loan_country?.value || '';
+                                    router.push(`/apply-loan?bank=${loan.id}&amount=${loan.loanAmount}&university=${encodeURIComponent(uni)}&country=${encodeURIComponent(countryVal)}`);
+                                }}
+                            >
+                                {idx === 0 ? '✨ Apply Now (Recommended)' : 'Apply for this loan'}
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    const renderComparisonEvaluation = () => {
+        // If evaluation results exist, show them
+        if (evaluationResults) {
+            const top = evaluationResults.topRecommendation;
+            return (
+                <div className="fade-in">
+                    <div className="ai-bubble-row fade-in">
+                        <div className="ai-avatar blob-mascot" style={{ width: 32, height: 32, margin: 0, position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg, #f59e0b, #f97316)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '18px', fontWeight: 'bold' }}>
+                            <span>🏆</span>
+                            <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), transparent)' }}></div>
+                        </div>
+                        <div className="ai-bubble">
+                            <strong>{top.name}</strong> is your best match with <strong>{top.evaluationScore}%</strong> evaluation score!<br />
+                            <span style={{ fontSize: 12, color: '#888', marginTop: 4, display: 'block' }}>Based on your profile, admission probability, and budget.</span>
+                        </div>
+                    </div>
+
+                    {/* Top Recommendation Card */}
+                    <div style={{ margin: '24px 0', padding: 20, background: 'linear-gradient(135deg, #fef3c7, #fef08a)', borderRadius: 16, border: '2px solid #fcd34d', boxShadow: '0 8px 24px rgba(245,158,11,0.2)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                            <div>
+                                <div style={{ fontSize: 11, color: '#d97706', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>🌟 Top Recommendation</div>
+                                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#1a1a2e', marginBottom: 4 }}>{top.name}</h3>
+                                <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>{top.loc || top.country}</p>
+                            </div>
+                            <div style={{ padding: '12px 16px', background: '#fef3c7', borderRadius: 12, textAlign: 'center', border: '2px solid #fcd34d' }}>
+                                <div style={{ fontSize: 28, fontWeight: 800, color: '#d97706' }}>{top.evaluationScore}%</div>
+                                <div style={{ fontSize: 10, color: '#a16207', fontWeight: 700 }}>Match Score</div>
+                            </div>
+                        </div>
+
+                        {/* Evaluation Factors */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 12 }}>
+                            {Object.entries(top.factors).map(([key, val]: any) => (
+                                <div key={key} style={{ padding: 10, background: 'white', borderRadius: 10, border: '1px solid #fcd34d' }}>
+                                    <div style={{ fontSize: 10, color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>{key === 'courseMatch' ? 'Course' : key === 'academic' ? 'Academic' : key === 'admission' ? 'Admission' : key === 'cost' ? 'Affordability' : 'Reputation'}</div>
+                                    <div style={{ fontSize: 14, fontWeight: 800, color: val.score >= 75 ? '#16a34a' : val.score >= 50 ? '#f59e0b' : '#ef4444' }}>{val.score}%</div>
+                                    <div style={{ fontSize: 10, color: '#6b7280', marginTop: 2 }}>{val.text}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ padding: 12, background: 'white', borderRadius: 10, marginBottom: 12 }}>
+                            <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>💡 Why This University?</div>
+                            <div style={{ fontSize: 12, color: '#4b5563', lineHeight: 1.5 }}>
+                                Your academic profile aligns well with this university's requirements. With your {parseFloat(answers.gpa?.value || '0').toFixed(1)} GPA, you have a high chance of admission. The tuition cost fits your budget and the program matches your interests perfectly.
+                            </div>
+                        </div>
+
+                        <button
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                background: 'linear-gradient(135deg, #f59e0b, #f97316)',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: 12,
+                                fontSize: 13,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 14px rgba(245,158,11,0.3)'
+                            }}
+                            onClick={() => {
+                                router.push(`/university/${top.slug || top.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`);
+                            }}
+                        >
+                            📋 View Full Details & Apply
+                        </button>
+                    </div>
+
+                    {/* Other Comparisons */}
+                    <div style={{ marginBottom: 24 }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', marginBottom: 12, letterSpacing: 1 }}>Complete Evaluation</div>
+                        {evaluationResults.allEvaluations.map((uni: any, idx: number) => (
+                            <div key={uni.name} style={{ marginBottom: 12, padding: 16, background: '#fff', borderRadius: 12, border: '1px solid #f3f4f6' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                                    <div>
+                                        <div style={{ fontSize: 12, fontWeight: 700, color: '#4b5563' }}>#{idx + 1} — {uni.name}</div>
+                                        <div style={{ fontSize: 11, color: '#9ca3af' }}>{uni.loc}</div>
+                                    </div>
+                                    <div style={{ padding: '6px 12px', background: idx === 0 ? '#fef3c7' : '#f3f4f6', borderRadius: 8, textAlign: 'center' }}>
+                                        <div style={{ fontSize: 16, fontWeight: 800, color: idx === 0 ? '#d97706' : '#6b7280' }}>{uni.evaluationScore}%</div>
+                                        <div style={{ fontSize: 9, fontWeight: 700, color: idx === 0 ? '#a16207' : '#9ca3af' }}>Score</div>
+                                    </div>
+                                </div>
+                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                    {Object.entries(uni.factors).map(([key, val]: any) => (
+                                        <span key={key} style={{ fontSize: 10, padding: '3px 8px', background: val.score >= 75 ? '#ecfdf5' : val.score >= 50 ? '#fef3c7' : '#fee2e2', color: val.score >= 75 ? '#059669' : val.score >= 50 ? '#d97706' : '#dc2626', borderRadius: 4, fontWeight: 600 }}>
+                                            {val.text}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <button
+                        onClick={clearShortlist}
+                        style={{
+                            width: '100%',
+                            padding: '12px',
+                            background: '#fff',
+                            color: '#6b7280',
+                            border: '1px solid #f3f4f6',
+                            borderRadius: 12,
+                            fontSize: 13,
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                        }}
+                    >
+                        ← Compare Different Universities
+                    </button>
+                </div>
+            );
+        }
+
+        // Show shortlist selection interface
+        return (
+            <div>
+                {/* Instructions */}
+                <div style={{ marginBottom: 16, padding: 12, background: '#fffbeb', borderRadius: 12, border: '1px solid #fde68a' }}>
+                    <div style={{ fontSize: 12, color: '#a16207', fontWeight: 700 }}>
+                        💡 Select 3-5 universities from your matched results to compare and get AI evaluation
+                    </div>
+                </div>
+
+                {/* Manual University Addition */}
+                <div style={{ marginBottom: 16, padding: 16, background: '#f5f3ff', borderRadius: 16, border: '1px solid #ddd6fe' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 0.5 }}>
+                        Can't find your university? Add it manually:
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <input
+                            type="text"
+                            placeholder="e.g. McGill University"
+                            value={customUniversityName}
+                            onChange={(e) => setCustomUniversityName(e.target.value)}
+                            style={{
+                                flex: 1,
+                                padding: '10px 14px',
+                                border: '1.5px solid #e9d5ff',
+                                borderRadius: 12,
+                                fontSize: 13,
+                                outline: 'none',
+                                background: 'white',
+                                color: '#1a1a2e'
+                            }}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleAddCustomUniversity();
+                                }
+                            }}
+                        />
+                        <button
+                            onClick={handleAddCustomUniversity}
+                            style={{
+                                padding: '10px 20px',
+                                background: 'linear-gradient(135deg, #7c3aed, #6605c7)',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: 12,
+                                fontSize: 13,
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                                boxShadow: '0 4px 10px rgba(102,5,199,0.15)',
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            + Add
+                        </button>
+                    </div>
+                </div>
+
+                {/* Shortlisted Universities */}
+                {shortlistedUniversities.length > 0 && (
+                    <div style={{ marginBottom: 16, padding: 16, background: '#f0fdf4', borderRadius: 12, border: '1px solid #bbf7d0' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#059669', textTransform: 'uppercase', marginBottom: 8, letterSpacing: 1 }}>
+                            Selected Universities ({shortlistedUniversities.length}/5)
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {shortlistedUniversities.map((uni: any) => (
+                                <div key={uni.name} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'white', borderRadius: 8, border: '1px solid #bbf7d0' }}>
+                                    <span style={{ fontSize: 12, fontWeight: 600, color: '#1a1a2e' }}>{uni.name}</span>
+                                    <button
+                                        onClick={() => removeFromShortlist(uni.name)}
+                                        style={{ background: 'none', border: 'none', color: '#059669', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Available Universities to Add */}
+                <div style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', marginBottom: 12, letterSpacing: 1 }}>
+                        Available Universities
+                    </div>
+                    <div style={{ maxHeight: 400, overflowY: 'auto', display: 'grid', gap: 10 }}>
+                        {aiUniversities.slice(0, 15).map((uni: any) => (
+                            <div
+                                key={uni.name}
+                                onClick={() => addToShortlist(uni)}
+                                style={{
+                                    padding: 12,
+                                    background: shortlistedUniversities.some((u: any) => u.name === uni.name) ? '#ecfdf5' : '#fff',
+                                    borderRadius: 12,
+                                    border: shortlistedUniversities.some((u: any) => u.name === uni.name) ? '2px solid #10b981' : '1px solid #f3f4f6',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: '#1a1a2e', marginBottom: 4 }}>
+                                            {shortlistedUniversities.some((u: any) => u.name === uni.name) ? '✓ ' : ''}{uni.name}
+                                        </div>
+                                        <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 6 }}>{uni.loc}</div>
+                                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                            {uni.rank && <span style={{ fontSize: 10, background: '#f5f3ff', color: '#7c3aed', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>Rank #{uni.rank}</span>}
+                                            {uni.tuition && <span style={{ fontSize: 10, background: '#fff7ed', color: '#ea580c', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>${(uni.tuition / 1000).toFixed(0)}K/yr</span>}
+                                        </div>
+                                    </div>
+                                    <div style={{ fontSize: 20, color: shortlistedUniversities.some((u: any) => u.name === uni.name) ? '#10b981' : '#d1d5db' }}>
+                                        {shortlistedUniversities.some((u: any) => u.name === uni.name) ? '✓' : '+'}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Evaluate Button */}
+                {shortlistedUniversities.length >= 2 && (
+                    <button
+                        onClick={evaluateShortlistedUniversities}
+                        disabled={evaluatingUniversities}
+                        style={{
+                            width: '100%',
+                            padding: '12px',
+                            background: 'linear-gradient(135deg, #f59e0b, #f97316)',
+                            color: '#fff',
+                            border: 'none',
+                            borderRadius: 12,
+                            fontSize: 13,
+                            fontWeight: 700,
+                            cursor: evaluatingUniversities ? 'not-allowed' : 'pointer',
+                            boxShadow: '0 4px 14px rgba(245,158,11,0.3)',
+                            opacity: evaluatingUniversities ? 0.7 : 1
+                        }}
+                    >
+                        {evaluatingUniversities ? 'Evaluating...' : `📊 Evaluate ${shortlistedUniversities.length} Universities`}
+                    </button>
+                )}
+            </div>
+        );
     };
 
     const renderInteraction = (step: any, idx: number) => {
@@ -2393,6 +3106,19 @@ export default function OnboardingPage() {
     };
 
     const renderAiMatch = () => {
+        const goal = answers.goal?.value;
+
+        // Loan flow - show loan products
+        if (goal === 'loan') {
+            return renderLoanResults();
+        }
+
+        // Compare flow - show university evaluation
+        if (goal === 'compare') {
+            return renderComparisonEvaluation();
+        }
+
+        // Plan flow - show matched universities
         if (isAiMatching) {
             return (
                 <div className="ai-bubble-row fade-in">

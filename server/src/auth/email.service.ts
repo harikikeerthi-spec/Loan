@@ -24,7 +24,7 @@ export class EmailService {
       from: process.env.EMAIL_FROM || '"VidyaLoan" <[EMAIL_ADDRESS]>',
       to: email,
       subject: `Your VidyaLoan OTP Verification Code`,
-      text: `Your OTP is: ${otp}. This code expires in 5 minutes.`,
+      text: `Your OTP is: ${otp}. This code expires in 1 minutes.`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #6605c7 0%, #8b5cf6 100%); padding: 30px; border-radius: 10px; text-align: center;">

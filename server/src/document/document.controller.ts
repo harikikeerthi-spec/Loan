@@ -537,4 +537,86 @@ export class DocumentController {
       data: document,
     };
   }
+
+  // ─── Accept a document (staff action) ────────────────────────────────────
+  @Post(':docId/accept')
+  async acceptDocument(@Param('docId') docId: string) {
+    if (!docId) {
+      throw new BadRequestException('Document ID is required');
+    }
+
+    console.log(`[DOCUMENT-ACCEPT] Processing acceptance for docId: ${docId}`);
+
+    try {
+      const updatedDoc = await this.usersService.updateDocumentStatus(
+        docId,
+        'verified',
+      );
+
+      if (!updatedDoc) {
+        throw new NotFoundException(`Document with ID ${docId} not found`);
+      }
+
+      console.log(`[DOCUMENT-ACCEPT] Document ${docId} accepted successfully`);
+
+      return {
+        success: true,
+        message: 'Document accepted successfully',
+        data: updatedDoc,
+      };
+    } catch (error: any) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error(`[DOCUMENT-ACCEPT] Error accepting document ${docId}:`, error.message);
+      throw new BadRequestException(
+        `Failed to accept document: ${error.message || 'Unknown error'}`,
+      );
+    }
+  }
+
+  // ─── Reject a document with reason (staff action) ──────────────────────────
+  @Post(':docId/reject')
+  async rejectDocument(
+    @Param('docId') docId: string,
+    @Body('rejectionReason') rejectionReason?: string,
+  ) {
+    if (!docId) {
+      throw new BadRequestException('Document ID is required');
+    }
+
+    if (!rejectionReason || rejectionReason.trim().length === 0) {
+      throw new BadRequestException('Rejection reason is required');
+    }
+
+    console.log(`[DOCUMENT-REJECT] Processing rejection for docId: ${docId}, reason: ${rejectionReason}`);
+
+    try {
+      const updatedDoc = await this.usersService.updateDocumentStatus(
+        docId,
+        'rejected',
+        rejectionReason.trim(),
+      );
+
+      if (!updatedDoc) {
+        throw new NotFoundException(`Document with ID ${docId} not found`);
+      }
+
+      console.log(`[DOCUMENT-REJECT] Document ${docId} rejected successfully`);
+
+      return {
+        success: true,
+        message: 'Document rejected successfully',
+        data: updatedDoc,
+      };
+    } catch (error: any) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error(`[DOCUMENT-REJECT] Error rejecting document ${docId}:`, error.message);
+      throw new BadRequestException(
+        `Failed to reject document: ${error.message || 'Unknown error'}`,
+      );
+    }
+  }
 }

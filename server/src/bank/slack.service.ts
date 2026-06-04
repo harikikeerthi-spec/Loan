@@ -1,36 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class SlackService {
-  private readonly logger = new Logger(SlackService.name);
-
-  private async postToSlack(payload: any): Promise<boolean> {
-    const webhookUrl = process.env.SLACK_WEBHOOK_URL;
-    if (!webhookUrl) {
-      this.logger.warn('[SlackService] SLACK_WEBHOOK_URL is not set. Simulating Slack push.');
-      this.logger.debug('[SlackService] Payload:\n' + JSON.stringify(payload, null, 2));
-      return true;
-    }
-
-    try {
-      const res = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) {
-        this.logger.error(`[SlackService] Failed to post to Slack: ${res.status} ${res.statusText}`);
-        return false;
-      }
-      return true;
-    } catch (e) {
-      this.logger.error(`[SlackService] Error posting to Slack: ${e.message}`);
-      return false;
-    }
-  }
-
   /**
-   * Publishes a Block Kit alert to Slack channel on a specific decision event.
+   * Simulates publishing a Block Kit alert to Slack channel on a specific decision event.
    */
   async publishDecisionNotification(
     bankName: string,
@@ -39,8 +12,9 @@ export class SlackService {
     decisionType: string,
     details: any
   ): Promise<any> {
-    this.logger.log(`[SlackService] Pushing Slack event webhook for ${bankName}...`);
+    console.log(`[SlackService] Pushing Slack event webhook for ${bankName}...`);
 
+    // Build standard Slack Block Kit payload
     const blockKitPayload = {
       text: `🏦 VidyaLoans Decision Notification: ${decisionType.toUpperCase()}`,
       blocks: [
@@ -87,7 +61,7 @@ export class SlackService {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*Decision Notes:*\n${typeof details === 'object' ? JSON.stringify(details, null, 2) : details}`
+            text: `*Decision Notes:*\n${JSON.stringify(details, null, 2)}`
           }
         },
         {
@@ -103,91 +77,29 @@ export class SlackService {
               value: `app_view_${applicationNumber}`,
               action_id: 'action_view_application',
               style: 'primary'
+            },
+            {
+              type: 'button',
+              text: {
+                type: 'plain_text',
+                text: 'Audit Log Details',
+                emoji: true
+              },
+              value: `audit_${applicationNumber}`,
+              action_id: 'action_audit_details'
             }
           ]
         }
       ]
     };
 
-    await this.postToSlack(blockKitPayload);
+    console.log('[SlackService] Built Block Kit Message mockup:', JSON.stringify(blockKitPayload, null, 2));
 
+    // Simulated successful trigger response
     return {
       success: true,
       channel: '#loans-pipeline',
       ts: `171620${Math.floor(Math.random() * 900000) + 100000}.000100`,
-      mockMessagePayload: blockKitPayload
-    };
-  }
-
-  /**
-   * Publishes a Block Kit alert to Slack on a query being raised or resolved.
-   */
-  async publishQueryNotification(
-    bankName: string,
-    studentName: string,
-    applicationNumber: string,
-    queryDescription: string,
-    action: 'raised' | 'resolved'
-  ): Promise<any> {
-    this.logger.log(`[SlackService] Pushing Slack query ${action} webhook...`);
-
-    const emoji = action === 'raised' ? '❓' : '✅';
-    const blockKitPayload = {
-      text: `${emoji} VidyaLoans Query Notification: ${action.toUpperCase()}`,
-      blocks: [
-        {
-          type: 'header',
-          text: {
-            type: 'plain_text',
-            text: `🏦 VidyaLoans Query Portal Update`,
-            emoji: true
-          }
-        },
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `*${bankName}* has *${action.toUpperCase()}* a query on an application.`
-          }
-        },
-        {
-          type: 'divider'
-        },
-        {
-          type: 'section',
-          fields: [
-            {
-              type: 'mrkdwn',
-              text: `*Student Name:*\n${studentName}`
-            },
-            {
-              type: 'mrkdwn',
-              text: `*LAN / Application ID:*\n${applicationNumber}`
-            },
-            {
-              type: 'mrkdwn',
-              text: `*Action:*\n${action.toUpperCase()}`
-            },
-            {
-              type: 'mrkdwn',
-              text: `*Timestamp:*\n${new Date().toLocaleString()}`
-            }
-          ]
-        },
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: `*Query Description / Resolution:*\n${queryDescription}`
-          }
-        }
-      ]
-    };
-
-    await this.postToSlack(blockKitPayload);
-
-    return {
-      success: true,
       mockMessagePayload: blockKitPayload
     };
   }
