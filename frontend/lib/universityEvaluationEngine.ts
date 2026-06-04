@@ -156,8 +156,8 @@ export class UniversityEvaluationEngine {
    */
   static calculateReputationScore(
     ranking: number = 500,
-    country?: string,
-    employment?: number = 85
+    country: string = '',
+    employment: number = 85
   ): { score: number; text: string } {
     let baseScore = 0;
 

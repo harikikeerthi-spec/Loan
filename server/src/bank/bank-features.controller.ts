@@ -10,7 +10,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { UserGuard } from '../auth/user.guard';
 import {
   CreateBankSchemeDto,
   BankSchemeResponseDto,
@@ -36,14 +36,14 @@ import {
   BranchConfigResponseDto,
   BranchStatisticsDto,
   MultibranchReportDto,
-} from './bank-features.dto';
+} from './dto/bank-features.dto';
 
 /**
  * Bank Features Controller - F17-F46
  * Comprehensive API endpoints for banking operations
  */
 @Controller('bank')
-@UseGuards(JwtAuthGuard)
+@UseGuards(UserGuard)
 export class BankFeaturesController {
   // ============================================================================
   // F37: BANK SCHEMES
@@ -184,8 +184,8 @@ export class BankFeaturesController {
    */
   @Post('auto-assign')
   async triggerAutoAssignment(
-    @Query('limit') limit?: number,
     @Req() req,
+    @Query('limit') limit?: number,
   ): Promise<{ assigned: number; failed: number }> {
     // TODO: Implement
     // 1. Get pending applications

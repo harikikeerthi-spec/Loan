@@ -205,6 +205,7 @@ export const HttpApiPaths = {
         analyticsMetrics: () => `${HTTP_API_PREFIX}/bank/analytics/metrics`,
         exportCsv: () => `${HTTP_API_PREFIX}/bank/export/csv`,
         exportMis: () => `${HTTP_API_PREFIX}/bank/export/mis`,
+        consent: (applicationId: string) => `${HTTP_API_PREFIX}/bank/applications/${enc(applicationId)}/consent`,
     },
 } as const;
 

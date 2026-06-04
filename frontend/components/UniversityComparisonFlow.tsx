@@ -36,6 +36,7 @@ export default function UniversityComparisonFlow({
   const [selectedUnis, setSelectedUnis] = useState<University[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<University[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "metrics" | "weighted">("grid");
   
   // AI Insights State
@@ -295,19 +296,82 @@ export default function UniversityComparisonFlow({
     setAiReport(null);
   }, [selectedUnis]);
 
+  // Debounce AI search while typing
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    // Instantly filter locally first to keep UI responsive
+    const localResults = activeUnis.filter(
+      (u) =>
+        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.country.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.city.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setSearchResults(localResults);
+    setIsSearching(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const data: any = await aiApi.aiSearch({ query: searchQuery, type: 'university' });
+        const results = data?.universities || data?.results || [];
+        
+        if (results.length > 0) {
+          const mapped = results.map((u: any, i: number) => {
+            const rawTuition = typeof u.tuition === 'string' ? parseFloat(u.tuition.replace(/[^0-9.]/g, '')) : u.tuition;
+            const tuitionVal = isNaN(rawTuition) ? 25000 : rawTuition;
+
+            const rawAccept = typeof u.accept === 'string' ? parseFloat(u.accept.replace(/[^0-9.]/g, '')) : u.accept || u.acceptanceRate;
+            const parsedAccept = typeof rawAccept === 'string' ? parseFloat(rawAccept.replace(/[^0-9.]/g, '')) : rawAccept;
+            const acceptVal = isNaN(parsedAccept) ? 40 : parsedAccept;
+
+            const rawRank = typeof u.rank === 'string' ? parseInt(u.rank.replace(/[^0-9]/g, ''), 10) : u.rank || u.ranking;
+            const parsedRank = typeof rawRank === 'string' ? parseInt(rawRank.replace(/[^0-9]/g, ''), 10) : rawRank;
+            const rankVal = isNaN(parsedRank) ? 150 : parsedRank;
+
+            const rawSalary = u.avgjobSalary || u.averageSalary;
+            const parsedSalary = typeof rawSalary === 'string' ? parseFloat(rawSalary.replace(/[^0-9.]/g, '')) : rawSalary;
+            const avgjobSalary = isNaN(parsedSalary) ? 65000 : parsedSalary;
+
+            const rawEmp = u.employment || u.employmentRate;
+            const parsedEmp = typeof rawEmp === 'string' ? parseFloat(rawEmp.replace(/[^0-9.]/g, '')) : rawEmp;
+            const employment = isNaN(parsedEmp) ? 85 : parsedEmp;
+
+            return {
+              id: u.id || u._id || u.slug || `ai-uni-${i}-${Date.now()}`,
+              name: u.name,
+              country: u.country || u.loc?.split(',').pop()?.trim() || 'Global',
+              city: u.city || u.loc?.split(',')[0]?.trim() || '',
+              rank: rankVal,
+              accept: acceptVal,
+              tuition: tuitionVal,
+              avgjobSalary: avgjobSalary,
+              employment: employment,
+              topRecruiters: u.topRecruiters || [],
+              description: u.description || '',
+              website: u.website || '',
+              loan: u.loan ?? true,
+              slug: u.slug || u.name?.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+            };
+          });
+          
+          setSearchResults(mapped);
+        }
+      } catch (err) {
+        console.error("AI Global Search Failed:", err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    if (query.trim()) {
-      const results = activeUnis.filter(
-        (u) =>
-          u.name.toLowerCase().includes(query.toLowerCase()) ||
-          u.country.toLowerCase().includes(query.toLowerCase()) ||
-          u.city.toLowerCase().includes(query.toLowerCase())
-      );
-      setSearchResults(results);
-    } else {
-      setSearchResults([]);
-    }
   };
 
   const handleAddUni = (uni: University) => {
@@ -485,8 +549,14 @@ export default function UniversityComparisonFlow({
             />
 
             {/* Auto-Complete Droplist */}
-            {searchResults.length > 0 && (
+            {(searchResults.length > 0 || isSearching) && (
               <div className="absolute top-full left-0 right-0 mt-3 bg-white/95 backdrop-blur-md border border-gray-100 rounded-2xl shadow-2xl z-50 max-h-72 overflow-y-auto divide-y divide-gray-50 overflow-hidden">
+                {isSearching && (
+                  <div className="px-6 py-4 text-xs font-semibold text-[#6605c7] flex items-center gap-2 bg-[#6605c7]/5">
+                    <div className="w-3.5 h-3.5 border-2 border-[#6605c7]/20 border-t-[#6605c7] rounded-full animate-spin" />
+                    <span>AI searching globally...</span>
+                  </div>
+                )}
                 {searchResults.map((uni) => (
                   <button
                     key={uni.id}
@@ -496,7 +566,7 @@ export default function UniversityComparisonFlow({
                     <div>
                       <p className="font-bold text-gray-900 text-sm">{uni.name}</p>
                       <p className="text-[11px] text-gray-400 font-bold uppercase tracking-wide mt-1">
-                        {uni.city}, {uni.country}
+                        {uni.city ? `${uni.city}, ` : ""}{uni.country}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">

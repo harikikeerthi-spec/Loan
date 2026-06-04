@@ -2,6 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { randomInt } from 'crypto';
 import { extractFullNameFromOcrRaw } from '../ai/utils/ocr-fields.util';
 import { SupabaseService } from '../supabase/supabase.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class UsersService {
@@ -9,7 +10,10 @@ export class UsersService {
     return this.supabase.getClient();
   }
 
-  constructor(private supabase: SupabaseService) { }
+  constructor(
+    private supabase: SupabaseService,
+    private eventEmitter: EventEmitter2,
+  ) { }
 
   private parseDate(dateStr: string | null | undefined): string | null {
     if (!dateStr) return null;
@@ -850,6 +854,42 @@ export class UsersService {
       .single();
 
     if (error) throw error;
+
+    // Emit application created event for staff notifications
+    try {
+      const name = `${application.firstName || ''} ${application.lastName || ''}`.trim() || application.email || 'Student';
+      this.eventEmitter.emit('application.created', {
+        applicationId: application.id,
+        applicationNumber: application.applicationNumber,
+        userId: application.userId,
+        candidateName: name,
+        candidateEmail: application.email,
+        bank: application.bank,
+        loanAmount: application.amount,
+        loanType: data.loanType,
+        createdAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error('Failed to emit application.created event in UsersService:', e);
+    }
+
+    // Emit live dashboard activity event for new application creation!
+    try {
+      const name = `${application.firstName || ''} ${application.lastName || ''}`.trim() || application.email || 'Student';
+      const targetUni = application.universityName || 'Target University';
+      this.eventEmitter.emit('dashboard.activity', {
+        type: 'application',
+        msg: `Student ${name} submitted a new Loan Application #${application.applicationNumber} for ${targetUni}.`,
+        icon: 'assignment',
+        color: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+        actorName: name,
+        actorEmail: application.email,
+        createdAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error('Failed to emit activity event for application creation in UsersService:', e);
+    }
+
     return application;
   }
 

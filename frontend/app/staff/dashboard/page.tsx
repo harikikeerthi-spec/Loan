@@ -370,7 +370,14 @@ export default function StaffDashboardPage() {
     // Convert UTC to IST
     const convertToIST = (dateStr: string): Date => {
         if (!dateStr) return new Date();
-        const utcDate = new Date(dateStr);
+        let cleanDs = dateStr;
+        if (typeof cleanDs === 'string' && !cleanDs.includes('Z') && !cleanDs.includes('+')) {
+            if (cleanDs.includes('T') || cleanDs.includes(':')) {
+                const formatted = cleanDs.replace(' ', 'T');
+                cleanDs = formatted.includes('Z') ? formatted : formatted + 'Z';
+            }
+        }
+        const utcDate = new Date(cleanDs);
         // Add IST offset to UTC time
         return new Date(utcDate.getTime() + IST_OFFSET);
     };
@@ -379,7 +386,14 @@ export default function StaffDashboardPage() {
     const formatIST = (dateVal: any, includeTime: boolean = true): string => {
         if (!dateVal) return "—";
         try {
-            const d = new Date(dateVal);
+            let cleanDs = dateVal;
+            if (typeof cleanDs === 'string' && !cleanDs.includes('Z') && !cleanDs.includes('+')) {
+                if (cleanDs.includes('T') || cleanDs.includes(':')) {
+                    const formatted = cleanDs.replace(' ', 'T');
+                    cleanDs = formatted.includes('Z') ? formatted : formatted + 'Z';
+                }
+            }
+            const d = new Date(cleanDs);
             if (isNaN(d.getTime())) return "—";
 
             const parts = new Intl.DateTimeFormat("en-US", {
@@ -2836,7 +2850,14 @@ export default function StaffDashboardPage() {
                 <header className="h-[56px] bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-40 flex-shrink-0">
                     {/* Left: Breadcrumb + Title */}
                     <div className="flex flex-col justify-center">
-                        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none mb-0.5">VIdyaLoans</p>
+                        {activeSection === 'onboarding' ? (
+                            <button onClick={resetOnboardModal} className="flex items-center gap-1 text-slate-400 hover:text-indigo-600 transition-colors group mb-1 -ml-1">
+                                <span className="material-symbols-outlined text-[16px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+                                <span className="text-[10px] font-bold uppercase tracking-wider">Back to Dashboard</span>
+                            </button>
+                        ) : (
+                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none mb-0.5">VIdyaLoans</p>
+                        )}
                         <h1 className="text-[18px] font-semibold text-slate-800 leading-tight">
                             {sectionTitles[activeSection] || activeSection}
                         </h1>
@@ -2850,7 +2871,7 @@ export default function StaffDashboardPage() {
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
                             placeholder="Search applications, students, IDs..."
-                            className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-[12px] focus:outline-none focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 w-72 transition-all text-slate-700 placeholder:text-slate-400"
+                            className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-white rounded-lg text-[12px] focus:outline-none focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 focus:bg-white w-72 transition-all text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-md hover:shadow-sm"
                         />
                     </div>
 
@@ -2895,13 +2916,8 @@ export default function StaffDashboardPage() {
                         <div className="flex flex-col md:flex-row h-screen bg-slate-50 animate-in fade-in duration-500 overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
                             {/* Header / Breadcrumbs & Stepper */}
                             {/* LEFT SIDEBAR: Profile & Progress */}
-                            <div className="w-full md:w-[320px] bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col p-6 md:p-8 overflow-y-auto no-scrollbar shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+                            <div className="w-full md:w-[320px] bg-[#F8FAFC] border-b md:border-b-0 md:border-r border-slate-200 flex flex-col p-6 md:p-8 overflow-y-auto no-scrollbar shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
                                 <div className="mb-8">
-                                    <button onClick={resetOnboardModal} className="flex items-center gap-2 text-slate-400 hover:text-slate-900 transition-colors mb-8 group">
-                                        <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
-                                        <span className="text-[11px] font-black uppercase tracking-widest">Back to Dashboard</span>
-                                    </button>
-
                                     {onboardStep >= 2 ? (
                                         <div className="space-y-6">
                                             <div className="text-center">
@@ -2913,8 +2929,8 @@ export default function StaffDashboardPage() {
                                             </div>
 
                                             <div className="space-y-4 pt-6 border-t border-slate-100">
-                                                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                                                    <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center text-slate-400 shadow-sm">
+                                                <div className="flex items-center gap-3 p-3 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                                                    <div className="w-8 h-8 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
                                                         <span className="material-symbols-outlined text-[18px]">mail</span>
                                                     </div>
                                                     <div className="min-w-0">
@@ -2922,8 +2938,8 @@ export default function StaffDashboardPage() {
                                                         <p className="text-[12px] font-bold text-slate-700 truncate">{newStudent.email || '—'}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                                                    <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center text-slate-400 shadow-sm">
+                                                <div className="flex items-center gap-3 p-3 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                                                    <div className="w-8 h-8 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
                                                         <span className="material-symbols-outlined text-[18px]">call</span>
                                                     </div>
                                                     <div className="min-w-0">
@@ -2931,8 +2947,8 @@ export default function StaffDashboardPage() {
                                                         <p className="text-[12px] font-bold text-slate-700">{newStudent.mobile || '—'}</p>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                                                    <div className="w-8 h-8 bg-white rounded-xl flex items-center justify-center text-slate-400 shadow-sm">
+                                                <div className="flex items-center gap-3 p-3 bg-white rounded-2xl border border-slate-100 shadow-sm">
+                                                    <div className="w-8 h-8 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400">
                                                         <span className="material-symbols-outlined text-[18px]">cake</span>
                                                     </div>
                                                     <div className="min-w-0">
@@ -2948,45 +2964,110 @@ export default function StaffDashboardPage() {
                                             </button>
                                         </div>
                                     ) : (
-                                        <div className="py-12 text-center space-y-4">
-                                            <div className="w-16 h-16 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto text-slate-300">
-                                                <span className="material-symbols-outlined text-[32px]">person_add</span>
+                                        <div className="py-12 text-center space-y-6 flex flex-col items-center">
+                                            <div className="relative w-40 h-40 flex items-center justify-center">
+                                                {/* Animated background rings */}
+                                                <div className="absolute inset-0 border-2 border-dashed border-indigo-100/60 rounded-full animate-[spin_40s_linear_infinite]" />
+                                                <div className="absolute inset-4 border border-dashed border-slate-200 rounded-full animate-[spin_20s_linear_infinite_reverse]" />
+                                                
+                                                {/* Outer glowing blur */}
+                                                <div className="absolute w-24 h-24 bg-gradient-to-tr from-indigo-500/10 to-emerald-500/10 rounded-full blur-xl animate-pulse" />
+
+                                                {/* Center avatar card illustration */}
+                                                <svg width="100" height="100" viewBox="0 0 100 100" fill="none" className="relative z-10 filter drop-shadow-[0_8px_16px_rgba(99,102,241,0.1)]">
+                                                    <rect x="15" y="10" width="70" height="80" rx="16" fill="white" stroke="#E2E8F0" strokeWidth="2" />
+                                                    <rect x="25" y="20" width="50" height="8" rx="4" fill="#F1F5F9" />
+                                                    <rect x="25" y="32" width="35" height="6" rx="3" fill="#F1F5F9" />
+                                                    
+                                                    {/* User Avatar Circle */}
+                                                    <circle cx="50" cy="58" r="16" fill="url(#avatar-grad)" />
+                                                    <mask id="avatar-mask">
+                                                        <circle cx="50" cy="58" r="16" fill="white" />
+                                                    </mask>
+                                                    <g mask="url(#avatar-mask)">
+                                                        <circle cx="50" cy="53" r="6" fill="white" />
+                                                        <path d="M34 68 C34 61.3726 39.3726 59 46 59 H54 C60.6274 59 66 61.3726 66 68 V74 H34 V68 Z" fill="white" />
+                                                    </g>
+                                                    
+                                                    {/* Plus badge */}
+                                                    <circle cx="72" cy="24" r="12" fill="#10B981" className="animate-bounce" style={{ animationDuration: '3s' }} />
+                                                    <path d="M72 19V29M67 24H77" stroke="white" strokeWidth="2" strokeLinecap="round" />
+                                                    
+                                                    <defs>
+                                                        <linearGradient id="avatar-grad" x1="34" y1="42" x2="66" y2="74" gradientUnits="userSpaceOnUse">
+                                                            <stop stopColor="#6366F1" />
+                                                            <stop offset="1" stopColor="#4F46E5" />
+                                                        </linearGradient>
+                                                    </defs>
+                                                </svg>
+
+                                                {/* Small floating elements */}
+                                                <div className="absolute top-2 left-6 w-2.5 h-2.5 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.5s', animationDuration: '2.5s' }} />
+                                                <div className="absolute bottom-6 right-6 w-3.5 h-3.5 bg-indigo-100 rounded-lg rotate-12 animate-[spin_10s_linear_infinite]" />
                                             </div>
-                                            <p className="text-xs text-slate-400 font-bold leading-relaxed px-4">Register a student to unlock the full onboarding profile and document management.</p>
+                                            <div className="space-y-2 max-w-[240px]">
+                                                <h4 className="text-[12px] font-bold text-slate-800">Add Applicant Profile</h4>
+                                                <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
+                                                    Register a student to unlock the full onboarding profile and document management.
+                                                    </p>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
 
                                 <div className="mt-8 flex-1">
                                     <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-6">Onboarding Progress</h4>
-                                    <div className="space-y-1">
+                                    <div className="space-y-0 relative pl-4">
+                                        {/* Dotted line track */}
+                                        <div className="absolute left-[27px] top-6 bottom-6 w-[2px] border-l-2 border-dashed border-slate-200 z-0" />
+
                                         {[
-                                            { id: 1, label: 'Registration', icon: 'how_to_reg' },
-                                            { id: 2, label: 'Profile Details', icon: 'person' },
-                                            { id: 3, label: 'Document Vault', icon: 'folder_managed' },
-                                            { id: 4, label: 'Distribution', icon: 'share' },
-                                        ].map(step => (
-                                            <button
-                                                key={step.id}
-                                                type="button"
-                                                disabled={!createdUser || step.id === 1 || step.id === 4}
-                                                onClick={() => setOnboardStep(step.id as any)}
-                                                className={`relative w-full text-left group/step ${(!createdUser || step.id === 1 || step.id === 4) ? 'cursor-default' : 'cursor-pointer'}`}
-                                            >
-                                                <div className={`flex items-center gap-4 p-4 rounded-2xl transition-all ${onboardStep === step.id ? 'bg-indigo-50/50 text-indigo-700' : onboardStep > step.id ? 'text-emerald-600 hover:bg-emerald-50/30' : 'text-slate-400'} ${onboardStep !== step.id && createdUser && step.id !== 1 && step.id !== 4 ? 'hover:bg-indigo-50/30' : ''}`}>
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm transition-all ${onboardStep === step.id ? 'bg-indigo-600 text-white scale-110' : onboardStep > step.id ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'} ${onboardStep !== step.id && createdUser && step.id !== 1 && step.id !== 4 ? 'group-hover/step:scale-105' : ''}`}>
-                                                        <span className="material-symbols-outlined text-[20px]">{onboardStep > step.id ? 'check' : step.icon}</span>
+                                            { id: 1, label: 'Registration', description: 'Enter basic applicant info' },
+                                            { id: 2, label: 'Profile Details', description: 'Fill out full profile forms' },
+                                            { id: 3, label: 'Document Vault', description: 'Upload KYC & academic documents' },
+                                            { id: 4, label: 'Distribution', description: 'Share or match with banks' },
+                                        ].map((step) => {
+                                            const isCompleted = onboardStep > step.id;
+                                            const isActive = onboardStep === step.id;
+                                            const isUpcoming = onboardStep < step.id;
+
+                                            return (
+                                                <button
+                                                    key={step.id}
+                                                    type="button"
+                                                    disabled={!createdUser || step.id === 1 || step.id === 4}
+                                                    onClick={() => setOnboardStep(step.id as any)}
+                                                    className={`relative w-full text-left flex items-start gap-4 py-3 group/step ${(!createdUser || step.id === 1 || step.id === 4) ? 'cursor-default' : 'cursor-pointer'}`}
+                                                >
+                                                    {/* Dot indicator column */}
+                                                    <div className="flex flex-col items-center relative z-10">
+                                                        {isCompleted ? (
+                                                            <div className="w-[26px] h-[26px] rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+                                                                <span className="material-symbols-outlined text-[14px] font-black">check</span>
+                                                            </div>
+                                                        ) : isActive ? (
+                                                            <div className="w-[26px] h-[26px] rounded-full bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-600/35 border-4 border-indigo-100">
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-[26px] h-[26px] rounded-full border-2 border-dashed border-slate-300 bg-white" />
+                                                        )}
                                                     </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-[11px] font-black uppercase tracking-widest">{step.label}</p>
-                                                        <p className="text-[9px] font-bold opacity-60 mt-0.5">{onboardStep === step.id ? 'Current Phase' : onboardStep > step.id ? 'Completed' : 'Upcoming'}</p>
+
+                                                    {/* Text details */}
+                                                    <div className="min-w-0 flex-1 -mt-0.5">
+                                                        <h5 className={`text-[12px] font-bold tracking-wide uppercase transition-colors ${
+                                                            isActive ? 'text-indigo-600 font-extrabold' : isCompleted ? 'text-emerald-700' : 'text-slate-500'
+                                                        }`}>
+                                                            {step.label}
+                                                        </h5>
+                                                        <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                                                            {step.description}
+                                                        </p>
                                                     </div>
-                                                </div>
-                                                {step.id < 4 && (
-                                                    <div className={`ml-[19px] w-[2px] h-6 my-1 ${onboardStep > step.id ? 'bg-emerald-500' : 'bg-slate-100'}`} />
-                                                )}
-                                            </button>
-                                        ))}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </div>
@@ -3033,56 +3114,169 @@ export default function StaffDashboardPage() {
                                     {onboardStep === 1 ? (
                                         /* STEP 1: Registration */
                                         <div className="max-w-2xl mx-auto py-12">
-                                            <div className="bg-white rounded-[40px] shadow-2xl shadow-slate-200 border border-slate-100 p-12 relative overflow-hidden">
-                                                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full opacity-50" />
+                                            <div className="bg-white rounded-[40px] shadow-2xl shadow-slate-200/50 border border-slate-100 p-12 relative overflow-hidden">
+                                                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-bl-full opacity-30 pointer-events-none" />
 
                                                 <div className="relative z-10 text-center mb-10">
                                                     <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner transition-all duration-500 ${onboardMode === 'new' ? 'bg-emerald-50 text-emerald-600 rotate-0' : 'bg-indigo-50 text-indigo-600 rotate-12'}`}>
                                                         <span className="material-symbols-outlined text-[40px]">{onboardMode === 'new' ? 'person_add' : 'link'}</span>
                                                     </div>
                                                     <h2 className="text-3xl font-bold font-['Playfair_Display',serif] text-slate-900 tracking-tight">Onboarding Entry</h2>
-                                                    <div className="flex items-center justify-center gap-6 mt-6">
-                                                        <button onClick={() => setOnboardMode('new')} className={`flex items-center gap-2 pb-2 border-b-2 transition-all ${onboardMode === 'new' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-400'}`}>
-                                                            <span className="text-[11px] font-black uppercase tracking-widest">Register New</span>
+                                                    
+                                                    {/* Pill segment controller */}
+                                                    <div className="inline-flex p-1 bg-slate-100 rounded-xl relative max-w-sm mx-auto w-full mt-6">
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => setOnboardMode('new')} 
+                                                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all relative z-10 ${onboardMode === 'new' ? 'bg-white text-[#0d1b2a] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                                                        >
+                                                            <span className="material-symbols-outlined text-[16px]">person_add</span>
+                                                            Register New
                                                         </button>
-                                                        <button onClick={() => setOnboardMode('link')} className={`flex items-center gap-2 pb-2 border-b-2 transition-all ${onboardMode === 'link' ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-slate-400'}`}>
-                                                            <span className="text-[11px] font-black uppercase tracking-widest">Link Existing</span>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => setOnboardMode('link')} 
+                                                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all relative z-10 ${onboardMode === 'link' ? 'bg-white text-[#0d1b2a] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                                                        >
+                                                            <span className="material-symbols-outlined text-[16px]">link</span>
+                                                            Link Existing
                                                         </button>
                                                     </div>
                                                 </div>
 
                                                 {onboardMode === 'new' ? (
                                                     <form id="quick-register-form" onSubmit={handleQuickRegister} className="space-y-6">
-                                                        <div className="grid grid-cols-2 gap-6">
-                                                            {/* <div className="space-y-2">
-                                                                <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 ml-1">First Name*</label>
-                                                                <input required type="text" value={quickForm.firstName} onChange={e => setQuickForm({ ...quickForm, firstName: e.target.value })} className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-[13px] focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-semibold placeholder:text-slate-300" placeholder="e.g. Rahul" />
-                                                            </div> */}
+                                                        {/* Equalized 2x2 Form Row Grid */}
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                            {/* First Name */}
                                                             <div className="space-y-2">
-                                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">First Name*</label>
-                                                                <input required type="text" value={quickForm.firstName} onChange={e => setQuickForm({ ...quickForm, firstName: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-bold" placeholder="Rahul" />
+                                                                <div className="flex justify-between items-center ml-1">
+                                                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">First Name*</label>
+                                                                </div>
+                                                                <div className="relative">
+                                                                    <input 
+                                                                        required 
+                                                                        type="text" 
+                                                                        value={quickForm.firstName} 
+                                                                        onChange={e => setQuickForm({ ...quickForm, firstName: e.target.value })} 
+                                                                        className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${
+                                                                            quickForm.firstName.trim().length >= 2 
+                                                                                ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500' 
+                                                                                : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
+                                                                        }`} 
+                                                                        placeholder="Rahul" 
+                                                                    />
+                                                                    {quickForm.firstName.trim().length >= 2 && (
+                                                                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 text-[18px] font-bold animate-in fade-in zoom-in-50 duration-200">check_circle</span>
+                                                                    )}
+                                                                </div>
                                                             </div>
+
+                                                            {/* Last Name */}
                                                             <div className="space-y-2">
-                                                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Last Name*</label>
-                                                                <input required type="text" value={quickForm.lastName} onChange={e => setQuickForm({ ...quickForm, lastName: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-bold" placeholder="Sharma" />
+                                                                <div className="flex justify-between items-center ml-1">
+                                                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Last Name*</label>
+                                                                </div>
+                                                                <div className="relative">
+                                                                    <input 
+                                                                        required 
+                                                                        type="text" 
+                                                                        value={quickForm.lastName} 
+                                                                        onChange={e => setQuickForm({ ...quickForm, lastName: e.target.value })} 
+                                                                        className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${
+                                                                            quickForm.lastName.trim().length >= 2 
+                                                                                ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500' 
+                                                                                : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
+                                                                        }`} 
+                                                                        placeholder="Sharma" 
+                                                                    />
+                                                                    {quickForm.lastName.trim().length >= 2 && (
+                                                                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 text-[18px] font-bold animate-in fade-in zoom-in-50 duration-200">check_circle</span>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Email Address*</label>
-                                                            <input required type="email" value={quickForm.email} onChange={e => setQuickForm({ ...quickForm, email: e.target.value })} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-bold" placeholder="rahul@example.com" />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Mobile Number*</label>
-                                                            <div className="flex gap-4">
-                                                                <div className="px-5 py-4 bg-slate-100 border border-slate-200 rounded-2xl text-[14px] flex items-center gap-2 font-black text-slate-600 shadow-inner">🇮🇳 +91</div>
-                                                                <input required type="tel" value={quickForm.phone} onChange={e => setQuickForm({ ...quickForm, phone: formatPhone(e.target.value) })} className="flex-1 px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-[14px] focus:outline-none focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all font-bold" placeholder="9876543210" maxLength={10} />
+
+                                                            {/* Email */}
+                                                            <div className="space-y-2">
+                                                                <div className="flex justify-between items-center ml-1">
+                                                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Email Address*</label>
+                                                                </div>
+                                                                <div className="relative">
+                                                                    <input 
+                                                                        required 
+                                                                        type="email" 
+                                                                        value={quickForm.email} 
+                                                                        onChange={e => setQuickForm({ ...quickForm, email: e.target.value })} 
+                                                                        className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${
+                                                                            /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(quickForm.email) 
+                                                                                ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500' 
+                                                                                : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
+                                                                        }`} 
+                                                                        placeholder="rahul@example.com" 
+                                                                    />
+                                                                    {/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(quickForm.email) && (
+                                                                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 text-[18px] font-bold animate-in fade-in zoom-in-50 duration-200">check_circle</span>
+                                                                    )}
+                                                                </div>
+                                                                {quickForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(quickForm.email) && (
+                                                                    <p className="text-[10px] text-rose-500 font-semibold mt-1 ml-1 animate-in fade-in duration-200">Please enter a valid email format</p>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Mobile Number */}
+                                                            <div className="space-y-2">
+                                                                <div className="flex justify-between items-center ml-1">
+                                                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Mobile Number*</label>
+                                                                </div>
+                                                                <div className="flex gap-3">
+                                                                    <div className="px-4 py-4 bg-slate-100 border border-slate-200 rounded-2xl text-[13px] flex items-center gap-1.5 font-bold text-slate-600 shadow-inner">🇮🇳 +91</div>
+                                                                    <div className="relative flex-1">
+                                                                        <input 
+                                                                            required 
+                                                                            type="tel" 
+                                                                            value={quickForm.phone} 
+                                                                            onChange={e => setQuickForm({ ...quickForm, phone: formatPhone(e.target.value) })} 
+                                                                            className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${
+                                                                                isPhoneValid(quickForm.phone) 
+                                                                                    ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500' 
+                                                                                    : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
+                                                                            }`} 
+                                                                            placeholder="9876543210" 
+                                                                            maxLength={10} 
+                                                                        />
+                                                                        {isPhoneValid(quickForm.phone) && (
+                                                                            <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 text-[18px] font-bold animate-in fade-in zoom-in-50 duration-200">check_circle</span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                {quickForm.phone && !isPhoneValid(quickForm.phone) && (
+                                                                    <p className="text-[10px] text-rose-500 font-semibold mt-1 ml-1 animate-in fade-in duration-200">
+                                                                        {quickForm.phone.length !== 10 
+                                                                            ? "Must be exactly 10 digits" 
+                                                                            : !/^[6-9]/.test(quickForm.phone) 
+                                                                                ? "Must start with 6, 7, 8, or 9" 
+                                                                                : "Please enter a valid mobile number"}
+                                                                    </p>
+                                                                )}
                                                             </div>
                                                         </div>
 
-                                                        <div className="pt-6">
-                                                            <button type="submit" disabled={createLoading} className="w-full py-5 bg-emerald-600 text-white rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-emerald-700 hover:shadow-2xl hover:shadow-emerald-600/30 transition-all flex items-center justify-center gap-3 disabled:opacity-50">
+                                                        {/* Centered Action Buttons */}
+                                                        <div className="flex items-center justify-center gap-4 pt-6 border-t border-slate-100">
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={resetOnboardModal} 
+                                                                className="px-8 py-4 border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-2xl font-bold text-[11px] uppercase tracking-wider transition-all"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                            <button 
+                                                                type="submit" 
+                                                                disabled={createLoading} 
+                                                                className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-[11px] uppercase tracking-wider hover:shadow-lg hover:shadow-emerald-600/20 transition-all flex items-center gap-2 disabled:opacity-50"
+                                                            >
                                                                 {createLoading ? 'Syncing...' : 'Register Applicant'}
-                                                                {!createLoading && <span className="material-symbols-outlined text-[20px]">arrow_forward</span>}
+                                                                {!createLoading && <span className="material-symbols-outlined text-[16px]">arrow_forward</span>}
                                                             </button>
                                                         </div>
                                                     </form>
@@ -3128,10 +3322,25 @@ export default function StaffDashboardPage() {
                                                                 )}
                                                             </div>
                                                         </div>
-                                                        <button type="submit" disabled={isSearchingUsers} className="w-full py-5 bg-indigo-600 text-white rounded-3xl font-black text-[11px] uppercase tracking-[0.2em] hover:bg-indigo-700 hover:shadow-2xl hover:shadow-indigo-600/30 transition-all flex items-center justify-center gap-3 disabled:opacity-50">
-                                                            {isSearchingUsers ? 'Searching...' : 'Check & Link Account'}
-                                                            {!isSearchingUsers && <span className="material-symbols-outlined text-[20px]">link</span>}
-                                                        </button>
+
+                                                        {/* Centered Action Buttons */}
+                                                        <div className="flex items-center justify-center gap-4 pt-6 border-t border-slate-100">
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={resetOnboardModal} 
+                                                                className="px-8 py-4 border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-2xl font-bold text-[11px] uppercase tracking-wider transition-all"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                            <button 
+                                                                type="submit" 
+                                                                disabled={isSearchingUsers} 
+                                                                className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-[11px] uppercase tracking-wider hover:shadow-lg hover:shadow-indigo-600/20 transition-all flex items-center gap-2 disabled:opacity-50"
+                                                            >
+                                                                {isSearchingUsers ? 'Searching...' : 'Check & Link Account'}
+                                                                {!isSearchingUsers && <span className="material-symbols-outlined text-[20px]">link</span>}
+                                                            </button>
+                                                        </div>
                                                     </form>
                                                 )}
                                             </div>

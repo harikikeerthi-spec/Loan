@@ -11,12 +11,23 @@ export class ChatService {
     return this.supabase.getClient();
   }
 
+  private normalizePhone(phoneStr: string): string {
+    const cleaned = phoneStr.replace('whatsapp:', '').trim().replace(/\D/g, '');
+    if (cleaned.length > 10 && cleaned.startsWith('91')) {
+      return cleaned.substring(2);
+    }
+    if (cleaned.length > 10) {
+      return cleaned.slice(-10);
+    }
+    return cleaned;
+  }
+
   async getOrCreateConversation(customerPhone: string, customerEmail?: string, conversationType: string = 'staff', customerName?: string, bankName?: string) {
     if (!customerPhone) {
         throw new HttpException('A valid phone number is required to start a chat. Please update your profile.', HttpStatus.BAD_REQUEST);
     }
-    // Clean phone number (strip 'whatsapp:' if present)
-    const phone = customerPhone.replace('whatsapp:', '');
+    // Clean phone number (strip 'whatsapp:' and normalize to 10 digits)
+    const phone = this.normalizePhone(customerPhone);
 
     // Check if open conversation exists
     let { data: conv, error } = await this.db
@@ -138,7 +149,7 @@ export class ChatService {
   }
 
   async getMessagesByPhone(phone: string) {
-    const cleanPhone = phone.replace('whatsapp:', '');
+    const cleanPhone = this.normalizePhone(phone);
     
     // Find conversation first
     const { data: conv } = await this.db

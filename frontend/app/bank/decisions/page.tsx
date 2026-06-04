@@ -100,10 +100,8 @@ export default function DecisionsHub() {
 
     // F22 Cross-bank Warning popup trigger
     const [showCrossBankPop, setShowCrossBankPop] = useState(false);
-    const [concurrentApps] = useState([
-        { bankName: "Avanse Financial", amount: "₹15,00,000", status: "submitted" },
-        { bankName: "HDFC Credila", amount: "₹18,00,000", status: "under_review" }
-    ]);
+    const [concurrentApps, setConcurrentApps] = useState<any[]>([]);
+    const [workspaceLoading, setWorkspaceLoading] = useState(false);
 
     // F23 Data Consent check
     const [dataConsentVerified, setDataConsentVerified] = useState(false);
@@ -185,6 +183,197 @@ export default function DecisionsHub() {
 
     const handleRefresh = () => {
         fetchApplications(currentBankId);
+    };
+
+    const fetchRemarks = async (appId: string) => {
+        try {
+            const res: any = await adminApi.getRemarks(appId);
+            if (res && res.success && res.data) {
+                setNotesList(res.data.map((n: any) => ({
+                    id: n.id,
+                    author: n.authorName || "Staff",
+                    role: n.type || "Underwriter",
+                    text: n.content,
+                    timestamp: format(new Date(n.createdAt), "dd MMM yyyy, hh:mm a")
+                })));
+            }
+        } catch (err) {
+            console.error("Failed to load remarks:", err);
+        }
+    };
+
+    const fetchTimeline = async (appId: string) => {
+        try {
+            const res: any = await adminApi.getApplicationTracking(appId);
+            if (res && res.success && res.data && res.data.timeline) {
+                setTimelineEvents(res.data.timeline.map((h: any) => ({
+                    id: h.id,
+                    icon: h.toStatus === 'sanctioned' || h.toStatus === 'approved' ? 'check_circle' :
+                          h.toStatus === 'rejected' ? 'cancel' :
+                          h.toStatus === 'query_raised' ? 'help_center' :
+                          h.toStatus === 'file_logged' ? 'assignment_ind' : 'info',
+                    actor: h.changedByName || "System",
+                    text: h.changeReason || h.notes || `Status changed to ${h.toStatus}`,
+                    timestamp: format(new Date(h.createdAt), "dd MMM yyyy, hh:mm a"),
+                    type: "system"
+                })));
+            }
+        } catch (err) {
+            console.error("Failed to load timeline:", err);
+        }
+    };
+
+    const fetchConcurrentApps = async (userId: string, currentAppId: string) => {
+        try {
+            if (!userId) return;
+            const res: any = await adminApi.getApplications({ userId });
+            if (res && res.success && res.data) {
+                const otherApps = res.data.filter((app: any) => app.id !== currentAppId);
+                setConcurrentApps(otherApps.map((app: any) => ({
+                    bankName: app.bank || "Other Lender",
+                    amount: `₹${app.amount?.toLocaleString()}`,
+                    status: app.status
+                })));
+            }
+        } catch (err) {
+            console.error("Failed to fetch concurrent apps:", err);
+        }
+    };
+
+    const saveQualityRating = async (completeness: number, kyc: number, income: number, collateral: number, comments: string) => {
+        if (!selectedApp) return;
+        const avg = (completeness + kyc + income + collateral) / 4;
+        try {
+            await bankApi.fileQualityScore({
+                applicationId: selectedApp.id,
+                rating: avg,
+                feedback: JSON.stringify({ completeness, kyc, income, collateral, comments })
+            });
+        } catch (err) {
+            console.error("Failed to save quality score:", err);
+        }
+    };
+
+    const handleAppraiseFile = async (row: any) => {
+        setWorkspaceLoading(true);
+        setSelectedApp(row);
+        setSanctionAmount(row.amount ? row.amount.toString() : "");
+        setCounterAmount(row.amount ? (row.amount * 0.9).toString() : "");
+        setShowWorkspace(true);
+
+        try {
+            const detailRes = await bankApi.getFileDetail(row.id);
+            if (detailRes) {
+                setSelectedApp(detailRes);
+
+                // Initialize quality rating sliders
+                if (detailRes.file_quality_scores && detailRes.file_quality_scores.length > 0) {
+                    const rateRec = detailRes.file_quality_scores[detailRes.file_quality_scores.length - 1];
+                    try {
+                        const parsed = JSON.parse(rateRec.feedback);
+                        setQualityCompleteness(parsed.completeness || 3);
+                        setQualityKyc(parsed.kyc || 3);
+                        setQualityIncome(parsed.income || 3);
+                        setQualityCollateral(parsed.collateral || 3);
+                        setQualityComments(parsed.comments || rateRec.feedback);
+                    } catch (e) {
+                        setQualityCompleteness(rateRec.rating || 3);
+                        setQualityKyc(rateRec.rating || 3);
+                        setQualityIncome(rateRec.rating || 3);
+                        setQualityCollateral(rateRec.rating || 3);
+                        setQualityComments(rateRec.feedback || "");
+                    }
+                } else {
+                    setQualityCompleteness(4);
+                    setQualityKyc(5);
+                    setQualityIncome(4);
+                    setQualityCollateral(4);
+                    setQualityComments("All core verify documents checks validated");
+                }
+
+                // Initialize hold state
+                const isCurrentlyHold = detailRes.remarks?.includes('[HOLD');
+                setIsHold(!!isCurrentlyHold);
+                if (isCurrentlyHold) {
+                    const match = detailRes.remarks.match(/\[HOLD - Reason: (.*?) - Resume Date: (.*?)\]: (.*)/);
+                    if (match) {
+                        setHoldReason(match[1]);
+                        setHoldResumeDate(match[2]);
+                        setHoldPauseNote(match[3]);
+                    }
+                }
+            }
+
+            await fetchRemarks(row.id);
+
+            if (row.userId) {
+                await fetchConcurrentApps(row.userId, row.id);
+            }
+
+            await fetchTimeline(row.id);
+
+            try {
+                const consentRes = await bankApi.getConsent(row.id);
+                setDataConsentVerified(consentRes && consentRes.status === 'ACCEPTED');
+            } catch (e) {
+                setDataConsentVerified(false);
+            }
+        } catch (err) {
+            console.error("Error loading appraisal data:", err);
+        } finally {
+            setWorkspaceLoading(false);
+        }
+    };
+
+    const handleDispatchQuery = async () => {
+        if (!newQueryText.trim() || !selectedApp) return;
+        try {
+            await bankApi.raiseQuery({
+                applicationId: selectedApp.id,
+                content: newQueryText.trim()
+            });
+            setNewQueryText("");
+            
+            const detailRes = await bankApi.getFileDetail(selectedApp.id);
+            if (detailRes) {
+                setSelectedApp(detailRes);
+            }
+            await fetchTimeline(selectedApp.id);
+        } catch (err) {
+            console.error("Failed to raise query:", err);
+            alert("Error dispatching query.");
+        }
+    };
+
+    const handleResolveQueries = async () => {
+        if (!selectedApp) return;
+        setSubmitting(true);
+        try {
+            const openQueries = selectedApp.queries?.filter((q: any) => q.status === 'open') || [];
+            
+            for (const q of openQueries) {
+                await bankApi.resolveQuery(q.id).catch(err => console.error("Error resolving query", q.id, err));
+            }
+
+            const res: any = await adminApi.updateApplication(selectedApp.id, {
+                status: "under_bank_review",
+                stage: "Verification",
+                progress: 70,
+                remarks: `${selectedApp.remarks || ""}\n[Appraisal - ${format(new Date(), "MMM dd, HH:mm")}]: Verification queries resolved.`
+            });
+
+            if (res && res.success) {
+                const updatedDetail = await bankApi.getFileDetail(selectedApp.id);
+                setSelectedApp(updatedDetail);
+                await fetchTimeline(selectedApp.id);
+                fetchApplications(currentBankId);
+            }
+        } catch (err) {
+            console.error("Failed to resolve queries:", err);
+            alert("Error resolving queries.");
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     // F11: Expiry calculation helper (assumes 30 days validation limit from creation)
@@ -286,30 +475,24 @@ export default function DecisionsHub() {
     };
 
     // F32: Note Handlers
-    const addNote = (e: React.FormEvent) => {
+    const addNote = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newNoteText.trim()) return;
-        const newNote: Note = {
-            id: String(Date.now()),
-            author: "Sarah Jenkins",
-            role: "Senior Underwriter",
-            text: newNoteText.trim(),
-            timestamp: "Just now"
-        };
-        setNotesList([newNote, ...notesList]);
+        if (!newNoteText.trim() || !selectedApp) return;
 
-        // Append note addition to timeline (F31)
-        const timeNow = format(new Date(), "HH:mm");
-        const event: ActivityEvent = {
-            id: String(Date.now() + 1),
-            icon: "chat",
-            actor: "Sarah Jenkins",
-            text: `Added internal note: "${newNote.text.substring(0, 40)}..."`,
-            timestamp: `Today at ${timeNow}`,
-            type: "note"
-        };
-        setTimelineEvents([event, ...timelineEvents]);
-        setNewNoteText("");
+        try {
+            const res: any = await adminApi.addRemark(selectedApp.id, {
+                type: 'remark',
+                content: newNoteText.trim()
+            });
+            if (res && res.success) {
+                setNewNoteText("");
+                await fetchRemarks(selectedApp.id);
+                await fetchTimeline(selectedApp.id);
+            }
+        } catch (err) {
+            console.error("Failed to add remark:", err);
+            alert("Failed to save note.");
+        }
     };
 
     // F9: Route Shortfall to Secondary Bank
@@ -318,25 +501,33 @@ export default function DecisionsHub() {
         setShowRoutingModal(true);
     };
 
-    const confirmRouting = () => {
-        setRoutingSuccessMsg(`Routing Request Dispatched! Shortfall of ₹${shortfallValue.toLocaleString()} successfully routed to ${routingTargetBank.toUpperCase()} co-lending desk.`);
-        
-        // Append to activity timeline
-        const timeNow = format(new Date(), "HH:mm");
-        const event: ActivityEvent = {
-            id: String(Date.now()),
-            icon: "lan",
-            actor: "VidyaLoans Router",
-            text: `Routed shortfall of ₹${shortfallValue.toLocaleString()} to bank "${routingTargetBank.toUpperCase()}"`,
-            timestamp: `Today at ${timeNow}`,
-            type: "system"
-        };
-        setTimelineEvents([event, ...timelineEvents]);
+    const confirmRouting = async () => {
+        try {
+            await bankApi.partialSanction({
+                applicationId: selectedApp.id,
+                sanctionAmount: parseFloat(sanctionAmount),
+                shortfallAmount: shortfallValue,
+                reason: `Routed shortfall to bank ${routingTargetBank.toUpperCase()} co-lending desk`
+            });
 
-        setTimeout(() => {
-            setShowRoutingModal(false);
-            setRoutingSuccessMsg("");
-        }, 3000);
+            setRoutingSuccessMsg(`Routing Request Dispatched! Shortfall of ₹${shortfallValue.toLocaleString()} successfully routed to ${routingTargetBank.toUpperCase()} co-lending desk.`);
+
+            await adminApi.addRemark(selectedApp.id, {
+                type: 'remark',
+                content: `Dispatched shortfall of ₹${shortfallValue.toLocaleString()} to bank ${routingTargetBank.toUpperCase()} co-lending desk.`
+            });
+
+            await fetchRemarks(selectedApp.id);
+            await fetchTimeline(selectedApp.id);
+
+            setTimeout(() => {
+                setShowRoutingModal(false);
+                setRoutingSuccessMsg("");
+            }, 3000);
+        } catch (err) {
+            console.error("Failed to route shortfall:", err);
+            alert("Error routing shortfall.");
+        }
     };
 
     // Final Decision Submit handler
@@ -351,63 +542,66 @@ export default function DecisionsHub() {
 
             if (activeDecisionTab === "sanction") {
                 const sanctionVal = parseFloat(sanctionAmount) || selectedApp.amount;
-                res = await adminApi.updateApplication(selectedApp.id, {
-                    status: "approved",
-                    stage: "approved",
-                    progress: 100,
-                    sanctionAmount: sanctionVal,
-                    sanctionedInterestRate: parseFloat(interestRate),
-                    remarks: `${updatedRemarks} | Processing Fee: ₹${totalFeeValue} (Mode: ${feePaymentMode})`
+
+                // 1. Set ROI
+                await bankApi.setRoi(selectedApp.id, {
+                    roiType: roiType,
+                    roiBase: parseFloat(interestRate),
+                    roiEffective: hasSubsidy ? (parseFloat(interestRate) - parseFloat(subsidyPercentage)) : parseFloat(interestRate),
+                    roiSubsidy: hasSubsidy ? parseFloat(subsidyPercentage) : 0
+                }).catch(err => console.error("Error setting ROI:", err));
+
+                // 2. Set Processing Fee
+                const feePayload = {
+                    feeAmount: parseFloat(feeAmount),
+                    gstAmount: gstValue,
+                    totalAmount: totalFeeValue,
+                    status: hasWaiver ? 'WAIVED' : 'PENDING',
+                    paymentMode: feePaymentMode,
+                    waiverReason: hasWaiver ? waiverReason : null
+                };
+                await bankApi.setProcessingFee(selectedApp.id, feePayload).catch(async () => {
+                    await bankApi.updateProcessingFee(selectedApp.id, feePayload).catch(err => console.error("Error updating fee:", err));
                 });
 
-                await bankApi.submitDecision({
+                // 3. Submit Decision
+                res = await bankApi.submitDecision({
                     applicationId: selectedApp.id,
-                    decision: "approved",
-                    sanctionAmount: sanctionVal,
-                    interestRate: parseFloat(interestRate),
-                    notes: `Processing Fee: ₹${totalFeeValue}`
-                }).catch(() => {});
+                    decisionType: "sanction",
+                    details: {
+                        sanctionAmount: sanctionVal,
+                        interestRate: parseFloat(interestRate),
+                        roiType: roiType,
+                        tenure: 120,
+                        remarks: `Sanctioned with ROI: ${interestRate}%, processing fee: ₹${totalFeeValue}`
+                    }
+                });
 
             } else if (activeDecisionTab === "conditional") {
-                const condText = conditions.map(c => `[${c.type.toUpperCase()}] ${c.text} (Deadline: ${c.deadline})`).join(" ; ");
-                res = await adminApi.updateApplication(selectedApp.id, {
-                    status: "processing",
-                    stage: "conditional_sanction",
-                    remarks: `${updatedRemarks} | Conditions: ${condText}`
-                });
-
-                await bankApi.submitDecision({
+                res = await bankApi.conditionalSanction({
                     applicationId: selectedApp.id,
-                    decision: "conditional",
-                    notes: `Conditions raised: ${condText}`
-                }).catch(() => {});
+                    conditions: conditions.map(c => c.text),
+                    deadline: newConditionDeadline
+                });
 
             } else if (activeDecisionTab === "counter_offer") {
                 const counterAmtVal = parseFloat(counterAmount) || selectedApp.amount * 0.95;
-                res = await adminApi.updateApplication(selectedApp.id, {
-                    status: "processing",
-                    stage: "counter_offer",
-                    remarks: `${updatedRemarks} | Counter Offer proposed: Amount ₹${counterAmtVal.toLocaleString()}, Rate ${counterRate}%, Tenure ${counterTenure} months`
-                });
-
-                await bankApi.counterOffer({
+                res = await bankApi.counterOffer({
                     applicationId: selectedApp.id,
-                    amount: counterAmtVal,
-                    notes: `Proposed ROI: ${counterRate}%, Tenure: ${counterTenure} months`
-                }).catch(() => {});
+                    offeredAmount: counterAmtVal,
+                    offeredRate: parseFloat(counterRate),
+                    offeredTenure: parseInt(counterTenure)
+                });
 
             } else if (activeDecisionTab === "reject") {
-                res = await adminApi.updateApplication(selectedApp.id, {
-                    status: "rejected",
-                    stage: "rejected",
-                    remarks: `${updatedRemarks} | Rejected.`
-                });
-
-                await bankApi.submitDecision({
+                res = await bankApi.submitDecision({
                     applicationId: selectedApp.id,
-                    decision: "rejected",
-                    notes: "Does not satisfy baseline risk thresholds."
-                }).catch(() => {});
+                    decisionType: "reject",
+                    details: {
+                        reason: "Does not satisfy baseline risk thresholds.",
+                        remarks: "Rejection decision finalized."
+                    }
+                });
             }
 
             if (res && res.success) {
@@ -500,12 +694,7 @@ export default function DecisionsHub() {
             cell: (row: any) => (
                 <div className="flex gap-2">
                     <button
-                        onClick={() => {
-                            setSelectedApp(row);
-                            setSanctionAmount(row.amount.toString());
-                            setCounterAmount((row.amount * 0.9).toString());
-                            setShowWorkspace(true);
-                        }}
+                        onClick={() => handleAppraiseFile(row)}
                         className="px-3.5 py-2 bg-[#6605c7] hover:bg-[#8b24e5] text-white text-[9px] font-black uppercase tracking-widest rounded-xl shadow-md shadow-purple-500/10 transition-all flex items-center gap-1.5"
                     >
                         <span className="material-symbols-outlined text-[12px]">gavel</span>
@@ -1564,17 +1753,42 @@ export default function DecisionsHub() {
                                                         
                                                         {/* Chat stream inside appraisal panel */}
                                                         <div className="border border-purple-100 rounded-2xl bg-[#faf9fc] p-4 h-56 overflow-y-auto space-y-3 custom-scrollbar flex flex-col">
-                                                            {queryThread.map(q => (
-                                                                <div key={q.id} className={`flex flex-col max-w-[85%] ${q.sender === 'bank' ? 'self-end items-end ml-auto' : 'self-start items-start mr-auto'}`}>
-                                                                    <span className="text-[7.5px] font-black text-gray-400 uppercase tracking-wider mb-1">
-                                                                        {q.sender === 'bank' ? 'Credit Officer' : 'Student Applicant'}
-                                                                    </span>
-                                                                    <div className={`p-3 rounded-2xl text-xs font-semibold ${q.sender === 'bank' ? 'bg-[#6605c7] text-white rounded-tr-none' : 'bg-white border border-purple-100 text-gray-800 rounded-tl-none shadow-sm'}`}>
-                                                                        {q.text}
-                                                                    </div>
-                                                                    <span className="text-[7px] text-gray-400 font-bold uppercase mt-1">{q.timestamp}</span>
+                                                            {selectedApp?.queries && selectedApp.queries.length > 0 ? (
+                                                                selectedApp.queries.map((q: any) => {
+                                                                    const studentName = `${selectedApp.firstName || ''} ${selectedApp.lastName || ''}`.trim().toLowerCase();
+                                                                    const authorLower = (q.authorName || '').toLowerCase();
+                                                                    const isBank = !authorLower || 
+                                                                                   authorLower.includes('bank') || 
+                                                                                   authorLower.includes('officer') || 
+                                                                                   authorLower.includes('lender') || 
+                                                                                   authorLower.includes('underwriter') || 
+                                                                                   authorLower.includes('monitor') || 
+                                                                                   authorLower.includes('staff') ||
+                                                                                   authorLower.includes('jenkins') || 
+                                                                                   (!authorLower.includes(studentName) && 
+                                                                                    !(selectedApp.firstName && authorLower.includes(selectedApp.firstName.toLowerCase())) &&
+                                                                                    !(selectedApp.lastName && authorLower.includes(selectedApp.lastName.toLowerCase())));
+
+                                                                    return (
+                                                                        <div key={q.id} className={`flex flex-col max-w-[85%] ${isBank ? 'self-end items-end ml-auto' : 'self-start items-start mr-auto'}`}>
+                                                                            <span className="text-[7.5px] font-black text-gray-400 uppercase tracking-wider mb-1">
+                                                                                {isBank ? (q.authorName || 'Credit Officer') : (q.authorName || 'Student Applicant')}
+                                                                            </span>
+                                                                            <div className={`p-3 rounded-2xl text-xs font-semibold ${isBank ? 'bg-[#6605c7] text-white rounded-tr-none' : 'bg-white border border-purple-100 text-gray-800 rounded-tl-none shadow-sm'}`}>
+                                                                                {q.content}
+                                                                            </div>
+                                                                            <span className="text-[7px] text-gray-400 font-bold uppercase mt-1">
+                                                                                {q.createdAt ? format(new Date(q.createdAt), "MMM dd, HH:mm") : 'Just now'}
+                                                                            </span>
+                                                                        </div>
+                                                                    );
+                                                                })
+                                                            ) : (
+                                                                <div className="flex-grow flex flex-col items-center justify-center text-center p-4">
+                                                                    <span className="material-symbols-outlined text-purple-200 text-3xl mb-1">chat_bubble_outline</span>
+                                                                    <p className="text-[10px] font-bold text-purple-400/70 uppercase tracking-wider">No verification queries raised yet.</p>
                                                                 </div>
-                                                            ))}
+                                                            )}
                                                         </div>
 
                                                         {/* F42 Canned Template Presets picker */}
@@ -1610,11 +1824,7 @@ export default function DecisionsHub() {
                                                             />
                                                             <button
                                                                 type="button"
-                                                                onClick={() => {
-                                                                    if (!newQueryText.trim()) return;
-                                                                    setQueryThread([...queryThread, { id: String(Date.now()), sender: 'bank', text: newQueryText.trim(), timestamp: 'Just now' }]);
-                                                                    setNewQueryText("");
-                                                                }}
+                                                                onClick={handleDispatchQuery}
                                                                 className="px-3.5 py-2 bg-[#6605c7] hover:bg-[#5203a4] text-white text-[9.5px] font-black uppercase tracking-wider rounded-xl shadow-sm transition-all"
                                                             >
                                                                 Dispatch
@@ -1624,18 +1834,7 @@ export default function DecisionsHub() {
                                                         <div className="grid grid-cols-2 gap-2">
                                                             <button
                                                                 type="button"
-                                                                onClick={() => {
-                                                                    alert("Queries resolved! Application status restored to review queue.");
-                                                                    const timeNow = format(new Date(), "HH:mm");
-                                                                    setTimelineEvents([{
-                                                                        id: String(Date.now()),
-                                                                        icon: "check_circle",
-                                                                        actor: "Sarah Jenkins",
-                                                                        text: `Resolved credit clarification queries and restored timeline`,
-                                                                        timestamp: `Today at ${timeNow}`,
-                                                                        type: "officer"
-                                                                    }, ...timelineEvents]);
-                                                                }}
+                                                                onClick={handleResolveQueries}
                                                                 className="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md flex items-center justify-center gap-1.5"
                                                             >
                                                                 <span className="material-symbols-outlined text-xs">done_all</span>

@@ -36,7 +36,7 @@ export class WhatsappController {
       const msg = await this.chatService.saveMessage({
         conversationId: conversation.id,
         senderType: 'customer',
-        senderId: from.replace('whatsapp:', ''),
+        senderId: conversation.customerPhone,
         receiverType: 'system',
         content: content || '[Media Attachment]',
         messageType: mediaUrl ? 'image' : 'text',

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EmailService } from './email.service';
+import { StudentNotificationService } from './student-notification.service';
 
 @Injectable()
 export class MultiPartyChatService {
@@ -9,6 +10,7 @@ export class MultiPartyChatService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly emailService: EmailService,
+    private readonly studentNotification: StudentNotificationService,
   ) {}
 
   private get db() {
@@ -152,6 +154,41 @@ export class MultiPartyChatService {
         .from('Conversation')
         .update({ updatedAt: new Date().toISOString() })
         .eq('id', data.conversationId);
+
+      // ── Fire-and-forget WhatsApp / SMS nudge to student recipients ──────────
+      // Only send when a staff/admin/bank member writes to a customer.
+      if (['staff', 'admin', 'super_admin', 'bank', 'partner_bank'].includes(data.senderRole)) {
+        const customerEmails = recipients.filter(e => e !== data.senderEmail);
+        if (customerEmails.length > 0) {
+          // Wrapped in void async IIFE so we can await inside without blocking the response
+          void (async () => {
+            try {
+              const { data: users } = await this.db
+                .from('User')
+                .select('email, firstName, lastName, phoneNumber, whatsappConsent')
+                .in('email', customerEmails);
+
+              for (const u of users || []) {
+                if (!u.phoneNumber) continue;
+                const mobile = String(u.phoneNumber).replace(/\D/g, '').slice(-10);
+                this.studentNotification
+                  .sendStudentNotification({
+                    name: `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Student',
+                    mobile,
+                    whatsapp_consent: u.whatsappConsent ?? false,
+                  })
+                  .catch(err =>
+                    this.logger.error(`Student nudge failed for ${u.email}: ${err.message}`),
+                  );
+              }
+            } catch (err) {
+              this.logger.error(`Failed to fetch student phones for nudge: ${err.message}`);
+            }
+          })();
+        }
+      }
+      // ────────────────────────────────────────────────────────────────────────
+
 
       return message;
     } catch (error) {

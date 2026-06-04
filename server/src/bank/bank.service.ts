@@ -714,11 +714,17 @@ export class BankService {
   }
 
   async resolveQuery(queryId: string): Promise<any> {
-    const { error } = await this.db
+    const { error: error1 } = await this.db
       .from('BankQuery')
       .update({ status: 'RESOLVED', resolvedAt: new Date().toISOString() })
       .eq('id', queryId);
-    if (error) throw error;
+
+    const { error: error2 } = await this.db
+      .from('queries')
+      .update({ status: 'resolved' })
+      .eq('id', queryId);
+
+    if (error1 && error2) throw error1; // throw error if both fail
     return { success: true };
   }
 

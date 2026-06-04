@@ -99,7 +99,7 @@ export default function UniversityEvaluatorFlow() {
       }));
 
       // Call AI evaluation API
-      const response = await aiApi.compareShortlist(shortlist, {
+      const response: any = await aiApi.compareShortlist(shortlist, {
         bachelors: userProfile.bachelors,
         workExp: String(userProfile.workExp),
         gpa: String(userProfile.gpa),

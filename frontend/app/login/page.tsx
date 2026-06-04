@@ -88,6 +88,10 @@ function LoginContent() {
             
             const data = await authApi.verifyOtp(email.trim(), code, currentRef || undefined) as LoginResponse;
 
+            if (data.success === false || !data.access_token) {
+                throw new Error(data.message || "Invalid OTP. Please enter the right one to login.");
+            }
+
             if (data.role && ["staff", "admin", "super_admin", "bank", "partner_bank", "agent", "partner_agent"].includes(data.role)) {
                 let portalName = "";
                 if (data.role === "staff") portalName = "Staff Portal (/staff/login)";

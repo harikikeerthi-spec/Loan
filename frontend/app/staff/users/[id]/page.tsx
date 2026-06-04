@@ -744,7 +744,7 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
 
                                                 {/* Accept/Reject buttons */}
                                                 <div className="flex gap-2 mt-auto">
-                                                    {doc.status !== 'verified' && doc.status !== 'rejected' && (
+                                                    {doc.status === 'uploaded' && (
                                                         <>
                                                             <button
                                                                 onClick={() => handleDocumentAction(doc.id || doc._id, "accept")}
