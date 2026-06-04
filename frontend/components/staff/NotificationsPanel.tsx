@@ -93,9 +93,9 @@ const NotificationsPanel = ({
     // Initialize Socket.io connection
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
     const token = localStorage.getItem("access_token");
+    const connectionUrl = apiUrl.endsWith('/') ? `${apiUrl}chat` : `${apiUrl}/chat`;
 
-    socketRef.current = io(apiUrl, {
-      namespace: "/chat",
+    socketRef.current = io(connectionUrl, {
       auth: {
         token,
       },

@@ -19,6 +19,7 @@ interface KanbanCard {
     priority: "high" | "medium" | "low";
     daysInStage: number;
     createdAt: string;
+    tags?: string;
 }
 
 export default function KanbanBoardPage() {
@@ -28,6 +29,21 @@ export default function KanbanBoardPage() {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
+    const [selectedTagFilter, setSelectedTagFilter] = useState("");
+
+    // Derived unique list of all tags present in current bank applications
+    const allUniqueTags = useMemo(() => {
+        const set = new Set<string>();
+        applications.forEach(app => {
+            if (app.tags) {
+                app.tags.split(",").forEach((t: string) => {
+                    const clean = t.trim();
+                    if (clean) set.add(clean);
+                });
+            }
+        });
+        return Array.from(set);
+    }, [applications]);
 
     useEffect(() => {
         setMounted(true);
@@ -74,7 +90,8 @@ export default function KanbanBoardPage() {
                         stage: app.stage || estimatedStage,
                         priority: priority as any,
                         daysInStage: days < 0 ? 0 : days,
-                        createdAt: app.createdAt || new Date().toISOString()
+                        createdAt: app.createdAt || new Date().toISOString(),
+                        tags: app.tags || ""
                     };
                 });
                 setApplications(mapped);
@@ -113,9 +130,17 @@ export default function KanbanBoardPage() {
                 (card.lanNumber || "").toLowerCase().includes(search.toLowerCase()) ||
                 card.applicationNumber.toLowerCase().includes(search.toLowerCase()) ||
                 card.universityName.toLowerCase().includes(search.toLowerCase());
-            return matchesSearch;
+            
+            if (!matchesSearch) return false;
+
+            if (selectedTagFilter) {
+                const tagsList = card.tags ? card.tags.split(",").map((t: string) => t.trim()) : [];
+                if (!tagsList.includes(selectedTagFilter)) return false;
+            }
+
+            return true;
         });
-    }, [applications, search]);
+    }, [applications, search, selectedTagFilter]);
 
     // Handle Drag & Drop logic
     const onDragStart = (e: React.DragEvent, cardId: string) => {
@@ -200,6 +225,16 @@ export default function KanbanBoardPage() {
                 icon="view_kanban"
                 actionSlot={
                     <div className="flex flex-col sm:flex-row gap-3">
+                        <select
+                            value={selectedTagFilter}
+                            onChange={(e) => setSelectedTagFilter(e.target.value)}
+                            className="px-4 py-2.5 bg-white/70 backdrop-blur-md border border-purple-100 rounded-xl text-xs font-semibold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all text-gray-700 font-display"
+                        >
+                            <option value="">All Tags</option>
+                            {allUniqueTags.map(tag => (
+                                <option key={tag} value={tag}>{tag}</option>
+                            ))}
+                        </select>
                         <div className="relative">
                             <input 
                                 type="text"
@@ -303,6 +338,16 @@ export default function KanbanBoardPage() {
                                                     <p className="text-[9.5px] text-gray-400 font-semibold truncate mt-0.5">
                                                         {card.universityName}
                                                     </p>
+                                                    {/* Tag Pills */}
+                                                    {card.tags && (
+                                                        <div className="flex flex-wrap gap-1 mt-2">
+                                                            {card.tags.split(",").map((t: string) => t.trim()).filter(Boolean).map((tag: string) => (
+                                                                <span key={tag} className="text-[8px] bg-purple-50 text-purple-700 font-black px-1.5 py-0.5 rounded border border-purple-100/50">
+                                                                    {tag}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
 
                                                     {/* Quantum Details */}
                                                     <div className="mt-3 flex items-baseline justify-between border-t border-purple-50/50 pt-2.5">
