@@ -40,6 +40,7 @@ export interface AuthTokenPayload {
 
 export interface LoginResponse {
     success: boolean;
+    message?: string;
     access_token: string;
     refresh_token?: string;
     userExists: boolean;

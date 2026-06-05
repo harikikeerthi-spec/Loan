@@ -10,6 +10,8 @@ import { signInWithPopup } from "firebase/auth";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface LoginResponse {
+    success?: boolean;
+    message?: string;
     access_token: string;
     userId?: string;
     email?: string;
@@ -19,6 +21,8 @@ interface LoginResponse {
     refresh_token?: string;
     userExists?: boolean;
     hasUserDetails?: boolean;
+    phoneNumber?: string;
+    dateOfBirth?: string;
 }
 
 function LoginContent() {
@@ -85,11 +89,11 @@ function LoginContent() {
         setError("");
         try {
             const currentRef = referralCode || localStorage.getItem("referralCode");
-            
+
             const data = await authApi.verifyOtp(email.trim(), code, currentRef || undefined) as LoginResponse;
 
-            if (data.success === false || !data.access_token) {
-                throw new Error(data.message || "Invalid OTP. Please enter the right one to login.");
+            if (!data.access_token) {
+                throw new Error("Invalid OTP. Please enter the right one to login.");
             }
 
             if (data.role && ["staff", "admin", "super_admin", "bank", "partner_bank", "agent", "partner_agent"].includes(data.role)) {
@@ -98,7 +102,7 @@ function LoginContent() {
                 else if (data.role === "admin" || data.role === "super_admin") portalName = "Admin Portal (/admin/login)";
                 else if (data.role === "bank" || data.role === "partner_bank") portalName = "Bank Portal (/bank/login)";
                 else if (data.role === "agent" || data.role === "partner_agent") portalName = "Agent Portal (/agent/login)";
-                
+
                 throw new Error(`Access Denied: Please use the ${portalName} to login.`);
             }
 
@@ -116,7 +120,7 @@ function LoginContent() {
         const newOtp = [...otp];
         newOtp[index] = digit;
         setOtp(newOtp);
-        
+
         if (digit && index < 5) {
             otpRefs.current[index + 1]?.focus();
         }
@@ -152,14 +156,16 @@ function LoginContent() {
         setError("");
 
         if (data.refresh_token) localStorage.setItem("refreshToken", data.refresh_token);
-        
+
         login(data.access_token, {
             id: data.userId,
             email: emailVal,
             firstName: data.firstName,
             lastName: data.lastName,
             role: data.role,
-            refresh_token: data.refresh_token
+            refresh_token: data.refresh_token,
+            phoneNumber: data.phoneNumber,
+            dateOfBirth: data.dateOfBirth,
         });
 
         // Clear stored referral code after login/signup
@@ -174,7 +180,7 @@ function LoginContent() {
                 router.push("/admin");
                 return;
             }
-            
+
             if (data.role === "bank" || data.role === "partner_bank") {
                 router.push("/bank/dashboard");
                 return;
@@ -208,19 +214,19 @@ function LoginContent() {
             }
             const result = await signInWithPopup(auth, googleProvider);
             const idToken = await result.user.getIdToken();
-            
+
             const data = await authApi.firebaseLogin(idToken) as LoginResponse;
-            
+
             if (data.role && ["staff", "admin", "super_admin", "bank", "partner_bank", "agent", "partner_agent"].includes(data.role)) {
                 let portalName = "";
                 if (data.role === "staff") portalName = "Staff Portal (/staff/login)";
                 else if (data.role === "admin" || data.role === "super_admin") portalName = "Admin Portal (/admin/login)";
                 else if (data.role === "bank" || data.role === "partner_bank") portalName = "Bank Portal (/bank/login)";
                 else if (data.role === "agent" || data.role === "partner_agent") portalName = "Agent Portal (/agent/login)";
-                
+
                 throw new Error(`Access Denied: Please use the ${portalName} to login.`);
             }
-            
+
             triggerSuccessAndRedirect(data, result.user.email || "");
         } catch (e: unknown) {
             console.error("Google Login Error:", e);
@@ -259,10 +265,10 @@ function LoginContent() {
                 {/* Logo & Header */}
                 <div className="text-center mb-8">
                     <Link href="/" className="inline-flex items-center gap-2 mb-6 group">
-                        <img 
-                            src="/vidyaloan_logo.png" 
-                            alt="Vidyaloan Logo" 
-                            className="w-10 h-10 object-contain group-hover:scale-105 transition-transform" 
+                        <img
+                            src="/vidyaloan_logo.png"
+                            alt="Vidyaloan Logo"
+                            className="w-10 h-10 object-contain group-hover:scale-105 transition-transform"
                         />
                         <span className="font-bold text-2xl font-display text-gray-900 tracking-tight">Vidyaloan</span>
                     </Link>
@@ -273,10 +279,10 @@ function LoginContent() {
                         {step === "email"
                             ? "Sign in with your email — no password needed"
                             : step === "otp"
-                            ? `We sent a 6-digit code to ${email}`
-                            : step === "verifying"
-                            ? "Confirming validation details..."
-                            : "Logging you into your dashboard..."}
+                                ? `We sent a 6-digit code to ${email}`
+                                : step === "verifying"
+                                    ? "Confirming validation details..."
+                                    : "Logging you into your dashboard..."}
                     </p>
                 </div>
 
@@ -474,7 +480,7 @@ function LoginContent() {
                                     />
                                     {/* Combining Morphing Blob representing numbers merging */}
                                     <motion.div
-                                        animate={{ 
+                                        animate={{
                                             scale: [0.9, 1.1, 0.9],
                                             borderRadius: ["42% 58% 70% 30% / 45% 45% 55% 55%", "70% 30% 52% 48% / 60% 40% 60% 40%", "42% 58% 70% 30% / 45% 45% 55% 55%"]
                                         }}
@@ -498,20 +504,20 @@ function LoginContent() {
                                 transition={{ type: "spring", stiffness: 300, damping: 25 }}
                                 className="flex flex-col items-center justify-center gap-4 py-8 w-full"
                             >
-                                <motion.div 
+                                <motion.div
                                     initial={{ scale: 0.5, opacity: 0 }}
                                     animate={{ scale: 1, opacity: 1 }}
                                     transition={{ delay: 0.15, type: "spring" }}
                                     className="flex items-center justify-center w-20 h-20 rounded-full bg-emerald-50 border-2 border-emerald-500 shadow-[0_0_25px_rgba(16,185,129,0.25)] mb-2 relative overflow-hidden"
                                 >
-                                    <svg 
-                                        width="36" 
-                                        height="36" 
-                                        viewBox="0 0 24 24" 
-                                        fill="none" 
-                                        stroke="#10b981" 
-                                        strokeWidth="3.5" 
-                                        strokeLinecap="round" 
+                                    <svg
+                                        width="36"
+                                        height="36"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="#10b981"
+                                        strokeWidth="3.5"
+                                        strokeLinecap="round"
                                         strokeLinejoin="round"
                                     >
                                         <polyline points="20 6 9 17 4 12"></polyline>

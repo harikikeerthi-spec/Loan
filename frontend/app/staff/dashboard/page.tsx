@@ -6638,7 +6638,7 @@ export default function StaffDashboardPage() {
                                 </div>
 
                                 {/* Activity Feed + Quick Actions */}
-                                <div className="space-y-4">
+                                <div className="space-y-4 flex flex-col">
                                     <div className="space-y-1.5">
                                         <button onClick={() => { navigateToSection('chat_customer'); setAutoStartUser(null); }} className="w-full text-left p-3 rounded border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all flex items-center gap-3 bg-white shadow-sm">
                                             <span className="material-symbols-outlined text-indigo-500 text-[18px]">forum</span>
@@ -6650,6 +6650,29 @@ export default function StaffDashboardPage() {
                                             <span className="text-[12px] font-medium text-slate-800">Applicant Profiles</span>
                                             <span className="material-symbols-outlined text-slate-300 ml-auto text-[14px]">arrow_forward_ios</span>
                                         </button>
+                                    </div>
+
+                                    {/* Activity Log Widget */}
+                                    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[350px]">
+                                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-slate-600 text-[18px]">history</span>
+                                                <h3 className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Recent Activity</h3>
+                                            </div>
+                                            <button
+                                                onClick={() => navigateToSection('activities')}
+                                                className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center gap-1"
+                                                title="View full activity log"
+                                            >
+                                                View All
+                                                <span className="material-symbols-outlined text-[12px]">arrow_forward_ios</span>
+                                            </button>
+                                        </div>
+                                        <ActivityLogWidget
+                                            limit={6}
+                                            refreshInterval={30000}
+                                            showFullLog={false}
+                                        />
                                     </div>
                                 </div>
                             </div>

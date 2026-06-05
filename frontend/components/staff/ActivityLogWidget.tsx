@@ -59,8 +59,10 @@ export default function ActivityLogWidget({
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const socketRef = useRef<Socket | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const timestampIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch activities from backend
   const fetchActivities = async () => {
@@ -151,26 +153,67 @@ export default function ActivityLogWidget({
     };
   }, [limit, refreshInterval]);
 
+  // Auto-refresh timestamp display every 10 seconds
+  useEffect(() => {
+    timestampIntervalRef.current = setInterval(() => {
+      // Trigger re-render to update relative times
+      setRefreshKey(prev => prev + 1);
+    }, 10000);
+
+    return () => {
+      if (timestampIntervalRef.current) {
+        clearInterval(timestampIntervalRef.current);
+      }
+    };
+  }, []);
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 pb-2">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
         <h3 className="text-[12px] font-black uppercase tracking-widest text-slate-600 flex items-center gap-2">
           <span className="material-symbols-outlined text-[16px]">history</span>
           Real-Time Activity
         </h3>
-        <div className="flex items-center gap-1.5">
-          {loading && (
-            <div className="w-4 h-4 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
-          )}
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Live" />
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5">
+            {loading && (
+              <div className="w-4 h-4 border-2 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+            )}
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" title="Live connection active" />
+          </div>
+          <button
+            onClick={() => {
+              fetchActivities();
+              setRefreshKey(prev => prev + 1);
+            }}
+            className="p-1 hover:bg-slate-100 rounded transition-colors"
+            title="Refresh activities"
+          >
+            <span className="material-symbols-outlined text-[16px] text-slate-500">refresh</span>
+          </button>
         </div>
       </div>
 
       {/* Activities List */}
-      <div className="space-y-2 max-h-[600px] overflow-y-auto">
+      <div className="space-y-2 max-h-[600px] overflow-y-auto px-2" key={refreshKey}>
         <AnimatePresence mode="popLayout">
-          {activities.length === 0 ? (
+          {loading && activities.length === 0 ? (
+            // Loading skeleton
+            <>
+              {[...Array(3)].map((_, i) => (
+                <div key={`skeleton-${i}`} className="p-3 rounded-lg bg-slate-50 border border-slate-100 animate-pulse">
+                  <div className="flex gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-200 flex-shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-slate-200 rounded w-3/4" />
+                      <div className="h-3 bg-slate-200 rounded w-1/2" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : activities.length === 0 ? (
             <div className="text-center py-8 px-4">
               <span className="material-symbols-outlined text-4xl text-slate-200 block mb-2">
                 history
@@ -198,7 +241,7 @@ export default function ActivityLogWidget({
                     {/* Icon */}
                     <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center ${styles.bg} border ${styles.border}`}>
                       <span className={`material-symbols-outlined text-[16px] ${styles.text}`}>
-                        {activity.icon}
+                        {activity.icon || 'history'}
                       </span>
                     </div>
 
@@ -235,22 +278,13 @@ export default function ActivityLogWidget({
 
       {/* Error State */}
       {error && (
-        <div className="p-3 rounded-lg bg-rose-50 border border-rose-100">
+        <div className="p-3 rounded-lg bg-rose-50 border border-rose-100 mx-2 mt-2">
           <p className="text-[11px] font-medium text-rose-600 flex items-center gap-2">
             <span className="material-symbols-outlined text-[14px]">error</span>
             {error}
           </p>
         </div>
       )}
-
-      {/* Footer */}
-      <button
-        onClick={fetchActivities}
-        className="w-full py-2 text-[11px] font-bold uppercase tracking-widest text-slate-600 hover:bg-slate-50 rounded-lg transition-colors flex items-center justify-center gap-2"
-      >
-        <span className="material-symbols-outlined text-[14px]">refresh</span>
-        Refresh
-      </button>
     </div>
   );
 }

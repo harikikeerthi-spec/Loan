@@ -300,7 +300,7 @@ const steps: any[] = [
     },
     {
         id: 'plan_target_uni',
-        q: "Do you have a dream university in mind? (optional)",
+        q: "Do you have a dream university in mind?",
         type: 'university_search',
         flows: ['plan']
     },
@@ -571,7 +571,6 @@ const steps: any[] = [
         cols: 3,
         options: [
             { value: 'gre', label: 'GRE' }, { value: 'gmat', label: 'GMAT' },
-            { value: 'toefl', label: 'TOEFL' }, { value: 'ielts', label: 'IELTS' },
             { value: 'none', label: 'None' }
         ],
         flows: ['compare']
@@ -756,8 +755,8 @@ export default function OnboardingPage() {
                 // Get user dashboard data to fetch phone and DOB
                 const dashboardData: any = await authApi.getDashboardData(user.id);
 
-                if (dashboardData?.user) {
-                    const userData = dashboardData.user;
+                if (dashboardData?.data?.user) {
+                    const userData = dashboardData.data.user;
                     // Handle both camelCase and snake_case
                     const phone = userData.phoneNumber || userData.phone_number || userData.phone;
                     const dob = userData.dateOfBirth || userData.date_of_birth || userData.dob;
@@ -1067,19 +1066,19 @@ export default function OnboardingPage() {
 
         if (step.type === 'ai_match' && !isAiMatching) {
             setIsAiMatching(true);
-            
+
             // Fetch loan results if in loan flow
             const goal = answers.goal?.value;
             if (goal === 'loan' && loanResults.length === 0) {
                 fetchLoanResults();
             }
-            
+
             if (goal === 'compare') {
                 const firstUniName = answers.compare_uni_search?.label || answers.target_university?.label;
                 if (firstUniName && shortlistedUniversities.length === 0) {
                     const found = aiUniversities.find((u: any) => u.name.toLowerCase() === firstUniName.toLowerCase())
-                               || countryUniversities.find((u: any) => u.name.toLowerCase() === firstUniName.toLowerCase());
-                    
+                        || countryUniversities.find((u: any) => u.name.toLowerCase() === firstUniName.toLowerCase());
+
                     if (found) {
                         setShortlistedUniversities([found]);
                     } else {
@@ -1104,7 +1103,7 @@ export default function OnboardingPage() {
                     }
                 }
             }
-            
+
             setTimeout(() => {
                 setIsAiMatching(false);
             }, 3000);
@@ -1539,8 +1538,8 @@ export default function OnboardingPage() {
 
                 // 3. Cost-Benefit (20%)
                 const budgetScore = budget === 'below_15' ? (uni.tuition <= 1500000 ? 85 : 45) :
-                                   budget === '15_25' ? (uni.tuition <= 2500000 ? 85 : 50) :
-                                   budget === '25_40' ? (uni.tuition <= 4000000 ? 85 : 60) : 90;
+                    budget === '15_25' ? (uni.tuition <= 2500000 ? 85 : 50) :
+                        budget === '25_40' ? (uni.tuition <= 4000000 ? 85 : 60) : 90;
                 factors.cost = { score: budgetScore, text: budgetScore >= 75 ? 'Affordable' : budgetScore >= 50 ? 'Moderate' : 'Expensive' };
                 overallScore += budgetScore * 0.20;
 
@@ -1609,7 +1608,7 @@ export default function OnboardingPage() {
         if (!customUniversityName.trim()) return;
         const name = customUniversityName.trim();
         const country = answers.country?.value || 'Canada';
-        
+
         const customUni = {
             name,
             loc: country,

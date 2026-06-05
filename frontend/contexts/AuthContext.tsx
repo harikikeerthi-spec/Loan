@@ -188,10 +188,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(storedUser);
             setToken(storedToken);
             
-            // If ID is missing, trigger a refresh immediately
-            if (!storedUser.id) {
-                setTimeout(() => refreshUser(), 100);
-            }
+            // Trigger a background refresh of user details to ensure profile data is up to date
+            setTimeout(() => refreshUser(), 100);
         } else if (storedToken && !storedUser) {
             // Token exists but no user object — try to reconstruct from stored email
             const email = localStorage.getItem(keys.email);

@@ -598,17 +598,17 @@ export default function DashboardPage() {
                                                             </div>
                                                             <div className="min-w-0 flex-1">
                                                                 <div className="flex items-center gap-2">
-                                                                    <span className="font-bold text-[13px] text-gray-900 truncate">{app.bank}</span>
+                                                                    <span className="font-bold text-[15px] text-gray-900 truncate">{app.bank}</span>
                                                                     {app.applicationNumber && (
-                                                                        <span className="text-[13px] text-black-900 font-semibold bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100/50">
+                                                                        <span className="text-[17px] text-black-900 font-semibold bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100/50">
                                                                             #{app.applicationNumber}
                                                                         </span>
                                                                     )}
-                                                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${sc}`}>
+                                                                    <span className={`px-2 py-0.5 rounded-full text-[12px] font-bold uppercase tracking-wider ${sc}`}>
                                                                         {app.status}
                                                                     </span>
                                                                 </div>
-                                                                <div className="flex flex-wrap items-center gap-x-3 text-[11px] text-gray-500 mt-0.5">
+                                                                <div className="flex flex-wrap items-center gap-x-3 text-[14px] text-gray-500 mt-0.5">
                                                                     <span className="font-semibold text-gray-700">₹{app.amount?.toLocaleString("en-IN")}</span>
                                                                     {app.universityName && <span>• {app.universityName}</span>}
                                                                     {app.country && <span>• {app.country}</span>}
@@ -808,11 +808,11 @@ export default function DashboardPage() {
                     <div>
                         <h2 className="text-xl font-bold text-gray-900 mb-6">Activity Log</h2>
                         <div className="bg-white rounded-xl border border-gray-100 p-8">
-                            <UserActivityLog 
-                                userId={user?.id} 
-                                limit={50} 
-                                refreshInterval={30000} 
-                                variant="page" 
+                            <UserActivityLog
+                                userId={user?.id}
+                                limit={50}
+                                refreshInterval={30000}
+                                variant="page"
                             />
                         </div>
                     </div>
@@ -941,7 +941,7 @@ export default function DashboardPage() {
                     className="relative w-14 h-14 bg-gradient-to-br from-[#6605c7] to-[#8b3cf7] hover:from-[#5504a8] hover:to-[#7a2fe0] text-white rounded-full flex items-center justify-center shadow-[0_12px_36px_rgba(102,5,199,0.3)] transition-all hover:scale-105 active:scale-95 group border border-white/10"
                 >
                     <span className="material-symbols-outlined text-2xl group-hover:rotate-12 transition-transform duration-200">chat</span>
-                    
+
                     {/* Unread Badge */}
                     {unreadCount > 0 && (
                         <span className="absolute -top-1.5 -right-1.5 bg-red-500 border-2 border-white text-white text-[9px] font-black w-6 h-6 rounded-full flex items-center justify-center animate-pulse shadow-md">
