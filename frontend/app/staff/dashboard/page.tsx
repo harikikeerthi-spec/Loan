@@ -40,6 +40,7 @@ const DASHBOARD_SECTIONS = [
     "community",
     "communications",
     "chat_customer",
+    "activities",
     "my_profile",
     "onboarding",
 ] as const;
@@ -321,6 +322,8 @@ export default function StaffDashboardPage() {
     const [recentActivity, setRecentActivity] = useState<any[]>([]);
     const [onlineEmails, setOnlineEmails] = useState<string[]>([]);
     const socketRef = useRef<any>(null);
+    const [unreadChatCount, setUnreadChatCount] = useState(0);
+    const activeSectionRef = useRef<string>('overview');
 
     // Initialize real-time WebSocket connection
     useEffect(() => {
@@ -355,14 +358,30 @@ export default function StaffDashboardPage() {
         });
 
         socketInstance.on('user_activity', (newActivity: any) => {
-            console.log('[StaffDashboard] Live activity received (ignored per request):', newActivity);
+            console.log('[StaffDashboard] Live activity received:', newActivity);
+        });
+
+        // Listen for incoming customer messages (WhatsApp) even when ChatInterface is not active
+        socketInstance.on('conversation_updated', (data: { conversationId: string, lastMessage: any }) => {
+            console.log('[StaffDashboard] New incoming message on conversation:', data.conversationId);
+            // Only increment badge if staff is NOT currently on the chat section
+            if (activeSectionRef.current !== 'chat_customer') {
+                setUnreadChatCount(prev => prev + 1);
+            }
+        });
+
+        socketInstance.on('new_message', (msg: any) => {
+            // Show badge for customer messages arriving when not on chat page
+            if (msg.senderType === 'customer' && activeSectionRef.current !== 'chat_customer') {
+                setUnreadChatCount(prev => prev + 1);
+            }
         });
 
         return () => {
             console.log('[StaffDashboard] Disconnecting WebSocket');
             socketInstance.disconnect();
         };
-    }, []);
+    }, [token]);
 
     // IST Timezone offset: +5:30 (19800000 milliseconds)
     const IST_OFFSET = 5.5 * 60 * 60 * 1000; // 5 hours 30 minutes in milliseconds
@@ -592,8 +611,13 @@ export default function StaffDashboardPage() {
 
     const navigateToSection = useCallback((section: string) => {
         const safeSection = getDashboardSection(section);
+        activeSectionRef.current = safeSection;
         setActiveSection(safeSection);
         setCurrentPage(1);
+        // Clear chat badge when navigating to chat
+        if (safeSection === 'chat_customer') {
+            setUnreadChatCount(0);
+        }
         router.push(buildDashboardUrl(safeSection, 1), { scroll: false });
     }, [buildDashboardUrl, router]);
 
@@ -884,6 +908,7 @@ export default function StaffDashboardPage() {
             setActionRemarks("");
             loadData();
             loadOverview();
+            addActivity("update", `Updated application ${appId} status to ${status}`, "published_with_changes", "text-blue-600 bg-blue-50");
         } catch (e) {
             alert("Failed to update application status");
         } finally {
@@ -897,6 +922,7 @@ export default function StaffDashboardPage() {
         try {
             await adminApi.sendEmail(emailData);
             alert("Email sent successfully");
+            addActivity("share", `Sent ${emailData.isBulk ? "bulk" : "direct"} email: ${emailData.subject}`, "mail", "text-indigo-600 bg-indigo-50");
             setEmailData({ to: "", subject: "", content: "", role: "user", isBulk: false });
         } catch (e: any) {
             alert("Failed to send email: " + e.message);
@@ -904,17 +930,27 @@ export default function StaffDashboardPage() {
     };
 
     const toggleTask = (id: number) => {
+        const task = tasks.find(t => t.id === id);
         setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+        if (task) {
+            addActivity("update", `${task.completed ? "Reopened" : "Completed"} task: ${task.title}`, "task_alt", "text-blue-600 bg-blue-50");
+        }
     };
 
     const addTask = () => {
         if (!newTaskTitle.trim()) return;
-        setTasks([{ id: Date.now(), title: newTaskTitle, completed: false }, ...tasks]);
+        const title = newTaskTitle.trim();
+        setTasks([{ id: Date.now(), title, completed: false }, ...tasks]);
+        addActivity("new", `Created task: ${title}`, "add_task", "text-emerald-600 bg-emerald-50");
         setNewTaskTitle("");
     };
 
     const deleteTask = (id: number) => {
+        const task = tasks.find(t => t.id === id);
         setTasks(tasks.filter(t => t.id !== id));
+        if (task) {
+            addActivity("rejected", `Deleted task: ${task.title}`, "delete", "text-rose-600 bg-rose-50");
+        }
     };
 
     const resetOnboardState = () => {
@@ -2687,7 +2723,7 @@ export default function StaffDashboardPage() {
         { section: "blogs", icon: "article", label: "Editorial Content", badge: 0 },
         { section: "community", icon: "groups", label: "Engagement Hub", badge: 0 },
         { section: "communications", icon: "mail", label: "Outreach Center", badge: 0 },
-        { section: "chat_customer", icon: "support_agent", label: "Support Chat", badge: 0 },
+        { section: "chat_customer", icon: "support_agent", label: "Support Chat", badge: unreadChatCount },
         { section: "my_profile", icon: "badge", label: "My Profile", badge: 0 },
     ];
 
@@ -2908,7 +2944,7 @@ export default function StaffDashboardPage() {
                 </header>
 
                 <div className={`staff-dashboard-body flex-1 overflow-y-auto custom-scrollbar ${(activeSection.startsWith('chat_') || activeSection === 'onboarding') ? 'p-0' : 'p-6 space-y-5'} bg-[#f8fafc]`}>
-                    {activeSection === "chat_customer" && <ChatInterface role="staff" initialUser={autoStartUser} />}
+                    {activeSection === "chat_customer" && <ChatInterface role="staff" initialUser={autoStartUser} className="flex h-full border-0 rounded-none overflow-hidden bg-white shadow-none mt-0 animate-fade-in text-gray-900" />}
 
 
                     {/* Onboarding Flow View */}

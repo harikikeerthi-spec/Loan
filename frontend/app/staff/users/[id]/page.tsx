@@ -687,10 +687,10 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                 </div>
 
                                                 {/* Document rejection reason display */}
-                                                {doc.status === 'rejected' && doc.rejectionReason && (
+                                                {doc.status === 'rejected' && (doc.verificationMetadata?.rejectionReason || doc.rejectionReason) && (
                                                     <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200">
                                                         <p className="text-[9px] font-black uppercase tracking-widest text-rose-600 mb-1">Rejection Reason</p>
-                                                        <p className="text-[10px] text-rose-700 font-semibold">{doc.rejectionReason}</p>
+                                                        <p className="text-[10px] text-rose-700 font-semibold">{doc.verificationMetadata?.rejectionReason || doc.rejectionReason}</p>
                                                     </div>
                                                 )}
 

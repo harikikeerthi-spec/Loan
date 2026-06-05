@@ -1052,10 +1052,23 @@ export class UsersService {
     
     if (status === 'verified') {
       payload.verifiedAt = new Date().toISOString();
+      // Clear any previous rejection data
+      payload.verificationMetadata = {
+        status: 'verified',
+        verifiedAt: new Date().toISOString(),
+        message: 'Document manually verified by staff',
+      };
     }
     
     if (status === 'rejected' && rejectionReason) {
-      payload.rejectionReason = rejectionReason;
+      payload.verifiedAt = null;
+      // Store rejection reason inside the existing verificationMetadata JSON column
+      payload.verificationMetadata = {
+        status: 'rejected',
+        rejectedAt: new Date().toISOString(),
+        rejectionReason: rejectionReason,
+        message: `Document rejected by staff: ${rejectionReason}`,
+      };
     }
 
     const { data, error } = await this.db
@@ -1072,6 +1085,7 @@ export class UsersService {
 
     return data;
   }
+
 
   // Get user dashboard data with all applications, documents and full activity feed
   async getUserDashboardData(userId: string) {

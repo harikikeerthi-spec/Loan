@@ -109,7 +109,14 @@ export default function ChatInterface({ role, initialUser, portalTitle, classNam
 
         socketInstance.on('connect', () => {
             console.log(`Connected to chat socket as ${role}`);
+            // Immediately refresh conversations on connect to catch any missed events
+            fetchConversations();
         });
+
+        // Polling fallback: refresh conversations every 10 seconds
+        const pollInterval = setInterval(() => {
+            fetchConversations();
+        }, 10000);
 
         socketInstance.on('user_activity', (data: any) => {
             console.log("Activity detected:", data);
@@ -136,11 +143,21 @@ export default function ChatInterface({ role, initialUser, portalTitle, classNam
                     return [...prev, msg];
                 });
             }
+            // Also update the conversation list preview
+            setConversations(prev => {
+                const exists = prev.find(c => c.id === msg.conversationId);
+                if (exists) {
+                    const updated = prev.filter(c => c.id !== msg.conversationId);
+                    return [{ ...exists, lastMessage: msg, updatedAt: msg.createdAt }, ...updated];
+                }
+                return prev;
+            });
         });
 
         setSocket(socketInstance);
 
         return () => {
+            clearInterval(pollInterval);
             socketInstance.disconnect();
         };
     }, [token, role]);

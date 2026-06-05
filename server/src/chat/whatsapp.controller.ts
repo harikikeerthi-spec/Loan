@@ -4,6 +4,24 @@ import { ChatService } from './chat.service';
 import { ChatGateway } from './chat.gateway';
 import * as twilio from 'twilio';
 
+/**
+ * WhatsApp Webhook Controller
+ * 
+ * Twilio sends incoming WhatsApp messages as HTTP POST with:
+ *   Content-Type: application/x-www-form-urlencoded
+ * 
+ * Key fields sent by Twilio:
+ *   - From:        "whatsapp:+919876543210"   (sender's WhatsApp number)
+ *   - To:          "whatsapp:+14155238886"    (your Twilio sandbox number)
+ *   - Body:        "Hello, I need help"        (message text)
+ *   - MessageSid:  "SMxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+ *   - NumMedia:    "0"                         (number of media attachments)
+ *   - MediaUrl0:   (only present if NumMedia > 0)
+ * 
+ * Registered on two paths:
+ *   POST /api/webhook/whatsapp   ← recommended (set this in Twilio console)
+ *   POST /api/whatsapp           ← alias
+ */
 @Controller(['webhook/whatsapp', 'whatsapp'])
 export class WhatsappController {
   private readonly logger = new Logger(WhatsappController.name);
@@ -13,26 +31,70 @@ export class WhatsappController {
     private readonly chatGateway: ChatGateway
   ) {}
 
+  /**
+   * Health check endpoint — use this to verify the route is alive
+   * GET /api/webhook/whatsapp or GET /api/whatsapp
+   */
+  @Get()
+  healthCheck() {
+    return {
+      status: 'ok',
+      message: 'WhatsApp webhook endpoint is active',
+      routes: {
+        primary: 'POST /api/webhook/whatsapp',
+        alias:   'POST /api/whatsapp',
+        history: 'GET  /api/whatsapp/history/:phone',
+      },
+      note: 'Set one of the above POST URLs in Twilio Console → Sandbox Settings → "When a message comes in"'
+    };
+  }
+
+  /**
+   * Main Twilio webhook handler
+   * POST /api/webhook/whatsapp  OR  POST /api/whatsapp
+   * 
+   * IMPORTANT: Twilio sends application/x-www-form-urlencoded
+   * The express.urlencoded() middleware in main.ts handles this parsing.
+   */
   @Post()
   async handleIncomingMessage(@Req() req: Request, @Res() res: Response, @Body() body: any) {
-    // Note: In production you should validate the Twilio signature here
-    // using twilio.validateRequest() but assuming general acceptance for now.
-    
-    this.logger.log(`Incoming WhatsApp payload: ${JSON.stringify(body)}`);
+    // --- Step 1: Log the full raw payload for debugging ---
+    this.logger.log('━━━━━━━━━━ TWILIO WEBHOOK RECEIVED ━━━━━━━━━━');
+    this.logger.log(`Content-Type : ${req.headers['content-type']}`);
+    this.logger.log(`Raw body keys: ${Object.keys(body || {}).join(', ')}`);
+    this.logger.log(`From         : ${body?.From}`);
+    this.logger.log(`To           : ${body?.To}`);
+    this.logger.log(`Body         : ${body?.Body}`);
+    this.logger.log(`MessageSid   : ${body?.MessageSid}`);
+    this.logger.log(`NumMedia     : ${body?.NumMedia}`);
+    this.logger.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-    const from = body.From; // "whatsapp:+1234567890"
-    const content = body.Body;
-    const mediaUrl = body.MediaUrl0; // Twilio media URL
+    // --- Step 2: Extract fields ---
+    const from: string = body?.From;       // "whatsapp:+919876543210"
+    const content: string = body?.Body;    // Message text
+    const mediaUrl: string = body?.MediaUrl0; // First media URL (if any)
+    const messageSid: string = body?.MessageSid;
 
-    if (!from || (!content && !mediaUrl)) {
-      return res.status(400).send('Invalid payload');
+    // --- Step 3: Validate required fields ---
+    if (!from) {
+      this.logger.error('[WEBHOOK] Missing "From" field — body may not be parsed (urlencoded issue?)');
+      this.logger.error(`Full body dump: ${JSON.stringify(body)}`);
+      return res.status(400).send('Missing From field');
+    }
+
+    if (!content && !mediaUrl) {
+      this.logger.warn('[WEBHOOK] No Body or MediaUrl0 in payload — ignoring');
+      // Still return 200 so Twilio doesn't retry
+      const twiml = new twilio.twiml.MessagingResponse();
+      return res.type('text/xml').send(twiml.toString());
     }
 
     try {
-      // 1. Get or create conversation based on phone number
+      // --- Step 4: Get or create the conversation for this phone ---
       const conversation = await this.chatService.getOrCreateConversation(from);
+      this.logger.log(`[WEBHOOK] Conversation ID: ${conversation.id} | Phone: ${conversation.customerPhone}`);
 
-      // 2. Save incoming message
+      // --- Step 5: Save message to database ---
       const msg = await this.chatService.saveMessage({
         conversationId: conversation.id,
         senderType: 'customer',
@@ -42,36 +104,47 @@ export class WhatsappController {
         messageType: mediaUrl ? 'image' : 'text',
         status: 'delivered'
       });
+      this.logger.log(`[WEBHOOK] Message saved with ID: ${msg.id}`);
 
-      // 3. Emit real-time event to dashboards
-      // Notify active viewers of the conversation
-      this.chatGateway.server.to(`conv_${conversation.id}`).emit('new_message', msg);
-      
-      // Notify global dashboard lists to move conversation to top
-      const type = conversation.metadata?.type || 'staff';
-      if (type === 'bank') {
-          this.chatGateway.server.to('room_bank').emit('conversation_updated', {
-              conversationId: conversation.id,
-              lastMessage: msg
-          });
+      // --- Step 6: Emit real-time events to the staff dashboard via WebSocket ---
+      if (this.chatGateway.server) {
+        // Notify staff who are actively viewing this conversation
+        this.chatGateway.server.to(`conv_${conversation.id}`).emit('new_message', msg);
+        this.logger.log(`[WEBHOOK] Emitted 'new_message' to conv_${conversation.id}`);
+
+        // Notify the global staff dashboard list to update conversation order + badge
+        const type = conversation.metadata?.type || 'staff';
+        const room = type === 'bank' ? 'room_bank' : 'room_staff';
+        this.chatGateway.server.to(room).emit('conversation_updated', {
+          conversationId: conversation.id,
+          lastMessage: msg
+        });
+        this.logger.log(`[WEBHOOK] Emitted 'conversation_updated' to ${room}`);
       } else {
-          this.chatGateway.server.to('room_staff').emit('conversation_updated', {
-              conversationId: conversation.id,
-              lastMessage: msg
-          });
+        this.logger.warn('[WEBHOOK] WebSocket server not initialized — real-time update skipped');
       }
 
-      // Respond to Twilio (send custom message response)
+      // --- Step 7: Respond to Twilio with empty TwiML (no auto-reply) ---
+      // Staff will reply manually via the dashboard
       const twiml = new twilio.twiml.MessagingResponse();
-      twiml.message('Hey Abhi! Your local server received the message successfully! 🚀');
-      res.type('text/xml').send(twiml.toString());
+      // Uncomment below to send an auto-acknowledgement:
+      // twiml.message('Thanks for reaching out to Vidhya Loans! A support agent will respond shortly. 🙏');
       
+      this.logger.log('[WEBHOOK] Responding to Twilio with 200 OK (empty TwiML)');
+      return res.type('text/xml').send(twiml.toString());
+
     } catch (error) {
-      this.logger.error('Failed to process incoming WhatsApp message', error);
-      res.status(500).send('Internal Server Error');
+      this.logger.error('[WEBHOOK] Failed to process incoming WhatsApp message:', error?.message);
+      this.logger.error(error);
+      // Still return 200 so Twilio doesn't retry and spam your logs
+      return res.status(200).send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
     }
   }
 
+  /**
+   * Get message history for a phone number
+   * GET /api/whatsapp/history/:phone
+   */
   @Get('history/:phone')
   async getHistory(@Param('phone') phone: string) {
     return this.chatService.getMessagesByPhone(phone);

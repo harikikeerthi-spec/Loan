@@ -461,15 +461,61 @@ export class StaffProfileService {
     user: any,
     data: { type: string; msg: string; icon: string; color: string },
   ) {
-    // Activity logging disabled by request
-    return;
+    const createdAt = new Date().toISOString();
+    const actorName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim()
+      || user?.email
+      || 'Staff';
+
+    const payload = {
+      action: 'STAFF_ACTIVITY',
+      entityType: 'staff_dashboard',
+      entityId: data.type || 'activity',
+      initiatedBy: user?.id || null,
+      changes: {
+        msg: data.msg,
+        icon: data.icon || 'history',
+        color: data.color || 'bg-slate-50 text-slate-600 border-slate-100',
+        activityType: data.type || 'update',
+        actorName,
+        actorEmail: user?.email || null,
+      },
+      createdAt,
+    };
+
+    const { data: inserted, error } = await this.db
+      .from('AuditLog')
+      .insert(payload)
+      .select('id, createdAt')
+      .single();
+
+    if (error) throw error;
+
+    this.eventEmitter.emit('dashboard.activity', {
+      id: inserted?.id,
+      type: payload.changes.activityType,
+      msg: payload.changes.msg,
+      icon: payload.changes.icon,
+      color: payload.changes.color,
+      actorName: payload.changes.actorName,
+      actorEmail: payload.changes.actorEmail,
+      createdAt: inserted?.createdAt || createdAt,
+    });
   }
 
   /**
    * Returns the N most recent dashboard activity entries (for the sidebar widget).
    */
   async getDashboardActivities(limit: number = 15) {
-    return [];
+    const { data, error } = await this.db
+      .from('AuditLog')
+      .select('id, entityId, changes, createdAt')
+      .eq('action', 'STAFF_ACTIVITY')
+      .eq('entityType', 'staff_dashboard')
+      .order('createdAt', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return (data || []).map((row: any) => this.formatDashboardActivity(row));
   }
 
   /**
@@ -481,7 +527,47 @@ export class StaffProfileService {
     type?: string;
     search?: string;
   }) {
-    return { items: [], total: 0 };
+    const limit = Math.max(1, Math.min(opts.limit || 50, 100));
+    const offset = Math.max(0, opts.offset || 0);
+
+    let query = this.db
+      .from('AuditLog')
+      .select('id, entityId, changes, createdAt', { count: 'exact' })
+      .eq('action', 'STAFF_ACTIVITY')
+      .eq('entityType', 'staff_dashboard')
+      .order('createdAt', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (opts.type && opts.type !== 'all') {
+      query = query.eq('entityId', opts.type);
+    }
+
+    if (opts.search?.trim()) {
+      query = query.ilike('changes->>msg', `%${opts.search.trim()}%`);
+    }
+
+    const { data, error, count } = await query;
+    if (error) throw error;
+
+    return {
+      items: (data || []).map((row: any) => this.formatDashboardActivity(row)),
+      total: count || 0,
+    };
+  }
+
+  private formatDashboardActivity(row: any) {
+    const changes = row?.changes || {};
+
+    return {
+      id: row.id,
+      type: changes.activityType || row.entityId || 'update',
+      msg: changes.msg || changes.message || 'Staff activity recorded',
+      icon: changes.icon || 'history',
+      color: changes.color || 'bg-slate-50 text-slate-600 border-slate-100',
+      actorName: changes.actorName || 'Staff',
+      actorEmail: changes.actorEmail || null,
+      createdAt: row.createdAt,
+    };
   }
 
   private parseDate(dateStr: string | null | undefined): string | null {

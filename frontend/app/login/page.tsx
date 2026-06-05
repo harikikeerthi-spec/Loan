@@ -419,7 +419,7 @@ function LoginContent() {
                                                             onKeyDown={(e) => handleOtpKeyDown(i, e)}
                                                             onFocus={() => setFocusedIndex(i)}
                                                             onBlur={() => setFocusedIndex(null)}
-                                                            className="w-11 h-12 text-center text-lg font-bold bg-gray-50/50 border border-gray-100 rounded-xl text-gray-900 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 transition-all"
+                                                            className="w-11 h-12 text-center text-lg font-bold bg-gray-50/50 border border-blue-100 rounded-xl text-gray-900 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 transition-all"
                                                         />
                                                         {/* Glowing indicator line at the bottom */}
                                                         <motion.div

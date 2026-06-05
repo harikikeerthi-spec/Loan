@@ -29,13 +29,17 @@ export class ChatService {
     // Clean phone number (strip 'whatsapp:' and normalize to 10 digits)
     const phone = this.normalizePhone(customerPhone);
 
-    // Check if open conversation exists
+    // Check if conversation exists by phone number (since customerPhone is unique)
     let { data: conv, error } = await this.db
       .from('Conversation')
       .select('*')
       .eq('customerPhone', phone)
-      .eq('status', 'active')
-      .maybeSingle(); // Changed .single() to .maybeSingle() to handle no results more gracefully
+      .maybeSingle();
+
+    if (error) {
+      this.logger.error('Failed to query conversation', error);
+      throw new HttpException('Database error', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 
     if (!conv) {
       // Create new
@@ -56,6 +60,34 @@ export class ChatService {
         throw new HttpException('Database error', HttpStatus.INTERNAL_SERVER_ERROR);
       }
       conv = newConv;
+    } else if (conv.status !== 'active') {
+      // Reactivate existing conversation
+      const updateData: any = {
+        status: 'active',
+        updatedAt: new Date().toISOString()
+      };
+      if (customerEmail) updateData.customerEmail = customerEmail;
+      if (customerName) updateData.customerName = customerName;
+      if (conversationType || bankName) {
+        updateData.metadata = {
+          ...conv.metadata,
+          type: conversationType || conv.metadata?.type || 'staff',
+          bank: bankName || conv.metadata?.bank || null
+        };
+      }
+
+      const { data: updatedConv, error: updateError } = await this.db
+        .from('Conversation')
+        .update(updateData)
+        .eq('id', conv.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        this.logger.error('Failed to reactivate conversation', updateError);
+        throw new HttpException('Database error reactivating conversation', HttpStatus.INTERNAL_SERVER_ERROR);
+      }
+      conv = updatedConv;
     }
 
     return conv;
@@ -157,7 +189,7 @@ export class ChatService {
       .select('id')
       .eq('customerPhone', cleanPhone)
       .eq('status', 'active')
-      .single();
+      .maybeSingle();
 
     if (!conv) return [];
 
