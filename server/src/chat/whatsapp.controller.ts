@@ -4,7 +4,7 @@ import { ChatService } from './chat.service';
 import { ChatGateway } from './chat.gateway';
 import * as twilio from 'twilio';
 
-@Controller('webhook/whatsapp')
+@Controller(['webhook/whatsapp', 'whatsapp'])
 export class WhatsappController {
   private readonly logger = new Logger(WhatsappController.name);
 
@@ -61,8 +61,9 @@ export class WhatsappController {
           });
       }
 
-      // Respond to Twilio (empty TwiML so no automated response is sent)
+      // Respond to Twilio (send custom message response)
       const twiml = new twilio.twiml.MessagingResponse();
+      twiml.message('Hey Abhi! Your local server received the message successfully! 🚀');
       res.type('text/xml').send(twiml.toString());
       
     } catch (error) {

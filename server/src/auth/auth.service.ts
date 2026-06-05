@@ -231,7 +231,11 @@ export class AuthService {
     } catch (emailError) {
       console.warn(`[AuthService] SMTP failed to send email but OTP is generated: ${otp}`, emailError);
     }
-    return { success: true, message: 'OTP sent successfully' };
+    return { 
+      success: true, 
+      message: 'OTP sent successfully',
+      ...(process.env.NODE_ENV === 'development' ? { otp } : {})
+    };
   }
 
   async checkUserExists(email: string) {
@@ -303,7 +307,8 @@ export class AuthService {
       return {
         success: true,
         message: 'OTP sent successfully',
-        userExists: !!existingUser // Return whether user exists or not
+        userExists: !!existingUser, // Return whether user exists or not
+        ...(process.env.NODE_ENV === 'development' ? { otp } : {})
       };
     } catch (error) {
       console.error('[AuthService] Database or Email error in sendOtpUnified:', error);

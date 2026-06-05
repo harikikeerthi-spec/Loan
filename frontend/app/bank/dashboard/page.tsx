@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { format } from "date-fns";
+import { format, differenceInDays, parseISO } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Chart as ChartJS,
@@ -102,6 +102,8 @@ export default function BankDashboard() {
     const [stats, setStats] = useState<any>(null);
     const [portfolio, setPortfolio] = useState<any>(null);
     const [compliance, setCompliance] = useState<any>(null);
+    const [applications, setApplications] = useState<any[]>([]);
+    const [activeTab, setActiveTab] = useState<"urgent" | "new" | "queries" | "disbursements" | "pending">("urgent");
     const [loading, setLoading] = useState(true);
     const [mounted, setMounted] = useState(false);
 
@@ -113,11 +115,12 @@ export default function BankDashboard() {
 
     const fetchAllData = async (bankId: string) => {
         try {
-            const [statsRes, portfolioRes, complianceRes] = await Promise.all([
+            const [statsRes, portfolioRes, complianceRes, appsRes] = await Promise.all([
                 adminApi.getApplicationStats(bankId).catch(err => { console.error("Stats API error:", err); return null; }),
                 adminApi.getPortfolioAnalysis(bankId).catch(err => { console.error("Portfolio API error:", err); return null; }),
-                adminApi.getComplianceReport(bankId).catch(err => { console.error("Compliance API error:", err); return null; })
-            ]) as [any, any, any];
+                adminApi.getComplianceReport(bankId).catch(err => { console.error("Compliance API error:", err); return null; }),
+                adminApi.getApplications({ bank: bankId }).catch(err => { console.error("Apps API error:", err); return null; })
+            ]) as [any, any, any, any];
 
             if (statsRes && statsRes.success) {
                 setStats(statsRes.data);
@@ -132,6 +135,9 @@ export default function BankDashboard() {
                     setCompliance(complianceRes);
                 }
             }
+            if (appsRes && appsRes.success) {
+                setApplications(appsRes.data || []);
+            }
         } catch (error) {
             console.error("Failed to fetch dashboard metrics:", error);
         } finally {
@@ -143,6 +149,69 @@ export default function BankDashboard() {
         setMounted(true);
         fetchAllData(currentBankId);
     }, []);
+
+    // --- F13 Count + ₹ KPI Memos ---
+    const incomingApps = useMemo(() => {
+        return applications.filter(app => !app.lanNumber && app.status !== "rejected" && app.status !== "approved" && app.status !== "disbursed");
+    }, [applications]);
+    const incomingCount = incomingApps.length;
+    const incomingVal = incomingApps.reduce((acc, app) => acc + (app.amount || 0), 0);
+
+    const loggedApps = useMemo(() => {
+        return applications.filter(app => app.lanNumber && app.status !== "approved" && app.status !== "rejected" && app.status !== "disbursed");
+    }, [applications]);
+    const loggedCount = loggedApps.length;
+    const loggedVal = loggedApps.reduce((acc, app) => acc + (app.amount || 0), 0);
+
+    const sanctionedApps = useMemo(() => {
+        return applications.filter(app => app.status === "approved" || app.status === "disbursed");
+    }, [applications]);
+    const sanctionedCount = sanctionedApps.length;
+    const sanctionedVal = sanctionedApps.reduce((acc, app) => acc + (app.sanctionAmount || app.amount || 0), 0);
+
+    const avgTAT = useMemo(() => {
+        const decided = applications.filter(app => (app.status === "approved" || app.status === "disbursed" || app.status === "rejected") && (app.approvedAt || app.rejectedAt || app.disbursedAt));
+        if (decided.length === 0) return 4.2;
+        const totalDays = decided.reduce((acc, app) => {
+            const start = new Date(app.submittedAt || app.createdAt);
+            const end = new Date(app.approvedAt || app.rejectedAt || app.disbursedAt);
+            const diff = differenceInDays(end, start);
+            return acc + (diff >= 0 ? diff : 0);
+        }, 0);
+        return parseFloat((totalDays / decided.length).toFixed(1));
+    }, [applications]);
+
+    const pipelineVal = useMemo(() => {
+        const active = applications.filter(app => app.status !== "approved" && app.status !== "disbursed" && app.status !== "rejected");
+        return active.reduce((acc, app) => acc + (app.amount || 0), 0);
+    }, [applications]);
+
+    // --- F29 Priority Desk Queues ---
+    const urgentQueue = useMemo(() => {
+        return applications.filter(app => {
+            const isHigh = app.priorityLevel === "high" || app.priority === "high";
+            const dateStr = app.lanEnteredAt || app.submittedAt || app.createdAt;
+            const diff = dateStr ? differenceInDays(new Date(), new Date(dateStr)) : 0;
+            const isOld = diff >= 4;
+            return (isHigh || isOld) && app.status !== "approved" && app.status !== "disbursed" && app.status !== "rejected";
+        });
+    }, [applications]);
+
+    const newQueue = useMemo(() => {
+        return applications.filter(app => !app.lanNumber && app.status !== "approved" && app.status !== "disbursed" && app.status !== "rejected");
+    }, [applications]);
+
+    const queryQueue = useMemo(() => {
+        return applications.filter(app => app.stage === "query_raised" || (app.status === "processing" && (app.remarks || "").toLowerCase().includes("query")));
+    }, [applications]);
+
+    const disbursementQueue = useMemo(() => {
+        return applications.filter(app => app.status === "approved" || app.status === "disbursed");
+    }, [applications]);
+
+    const pendingQueue = useMemo(() => {
+        return applications.filter(app => app.lanNumber && app.status !== "approved" && app.status !== "disbursed" && app.status !== "rejected");
+    }, [applications]);
 
     // Derived Charts Data
     const statusDistribution = useMemo(() => {
@@ -320,42 +389,51 @@ export default function BankDashboard() {
             </div>
 
             {/* Performance Matrix */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 <StatMiniCard
-                    label="Active Portfolio"
-                    value={portfolio ? `₹${(portfolio.totalPortfolioValue / 10000000).toFixed(2)} Cr` : `₹${(( (Array.isArray(stats?.loanTypeStats) ? stats.loanTypeStats : []).reduce((acc: number, curr: any) => acc + (curr.totalAmount || 0), 0) || 0) / 10000000).toFixed(2)}Cr`}
-                    trend={stats?.monthlyComparison?.change || "+12.4"}
-                    icon="account_balance_wallet"
-                    iconColor="text-[#6605c7]"
-                    bgColor="bg-[#6605c7]/5"
+                    label="Incoming Queue"
+                    value={`${incomingCount} files`}
+                    trend={incomingVal ? `₹${(incomingVal / 100000).toFixed(0)}L volume` : "₹0 volume"}
+                    icon="download"
+                    iconColor="text-amber-600"
+                    bgColor="bg-amber-50"
                     delay={0.1}
                 />
                 <StatMiniCard
-                    label="Quantum Units"
-                    value={`${stats?.total || 0}`}
-                    trend="+4.1"
-                    icon="grid_view"
-                    iconColor="text-blue-500"
-                    bgColor="bg-blue-500/5"
+                    label="Logged Files"
+                    value={`${loggedCount} files`}
+                    trend={loggedVal ? `₹${(loggedVal / 10000000).toFixed(2)}Cr value` : "₹0 value"}
+                    icon="assignment"
+                    iconColor="text-blue-600"
+                    bgColor="bg-blue-50"
                     delay={0.2}
                 />
                 <StatMiniCard
-                    label="Approval Vector"
-                    value={portfolio ? `${portfolio.approvalRate}%` : `${((stats?.statusStats?.disbursed || 0) / (stats?.total || 1) * 100).toFixed(1)}%`}
-                    trend={portfolio ? `-${portfolio.defaultRate}` : "-2.1"}
-                    icon="electric_bolt"
-                    iconColor="text-emerald-500"
-                    bgColor="bg-emerald-500/5"
+                    label="Sanctioned"
+                    value={`${sanctionedCount} files`}
+                    trend={sanctionedVal ? `₹${(sanctionedVal / 10000000).toFixed(2)}Cr value` : "₹0 value"}
+                    icon="verified"
+                    iconColor="text-emerald-600"
+                    bgColor="bg-emerald-50"
                     delay={0.3}
                 />
                 <StatMiniCard
-                    label="Pending Audit"
-                    value={`${stats?.statusStats?.submitted || stats?.statusStats?.pending || 0}`}
-                    trend="+0.8"
-                    icon="monitoring"
-                    iconColor="text-rose-500"
-                    bgColor="bg-rose-500/5"
+                    label="Average TAT"
+                    value={`${avgTAT} Days`}
+                    trend="vs target 5.0"
+                    icon="schedule"
+                    iconColor="text-indigo-600"
+                    bgColor="bg-indigo-50"
                     delay={0.4}
+                />
+                <StatMiniCard
+                    label="Pipeline Value"
+                    value={`₹${(pipelineVal / 10000000).toFixed(2)} Cr`}
+                    trend={`${applications.filter(a => a.status !== "approved" && a.status !== "disbursed" && a.status !== "rejected").length} active files`}
+                    icon="account_balance_wallet"
+                    iconColor="text-[#6605c7]"
+                    bgColor="bg-[#6605c7]/5"
+                    delay={0.5}
                 />
             </div>
 
@@ -508,89 +586,134 @@ export default function BankDashboard() {
             </motion.div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                {/* Recent Transmission Sync */}
+                {/* Priority Desk (F29 Today's Dashboard) */}
                 <motion.div 
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.7 }}
-                    className="lg:col-span-2 glass-card rounded-[4rem] border-[#6605c7]/10 bg-white/70 overflow-hidden shadow-2xl shadow-purple-900/[0.05]"
+                    className="lg:col-span-2 glass-card rounded-[3rem] border-[#6605c7]/10 bg-white/70 overflow-hidden shadow-2xl shadow-purple-900/[0.03]"
                 >
-                    <div className="p-12 pb-6 flex justify-between items-end">
-                        <div className="flex items-center gap-5">
-                            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                                <span className="material-symbols-outlined text-2xl animate-pulse">sensors</span>
+                    <div className="p-8 pb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-2xl bg-purple-50 text-[#6605c7] flex items-center justify-center shadow-inner">
+                                <span className="material-symbols-outlined text-xl">priority_high</span>
                             </div>
-                            <div className="space-y-1">
-                                <h3 className="text-2xl font-black font-display text-gray-900 tracking-tight">Live Signal Stream</h3>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.3em]">Incoming Transmissions from Staff Hub</p>
+                            <div>
+                                <h3 className="text-xl font-black font-display text-gray-900 tracking-tight">Today's Priority Desk</h3>
+                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">SLA focused underwriting worklists</p>
                             </div>
                         </div>
-                        <button 
-                            onClick={() => router.push('/bank/applications')}
-                            className="px-6 py-3 rounded-2xl bg-[#6605c7]/5 text-[10px] font-black uppercase tracking-[0.2em] text-[#6605c7] hover:bg-[#6605c7] hover:text-white transition-all shadow-sm"
-                        >
-                            Sync All Nodes
-                        </button>
                     </div>
-                    
-                    <div className="p-8 pt-0">
-                        <div className="overflow-x-auto no-scrollbar">
-                            <table className="w-full text-left">
-                                <thead className="bg-[#6605c7]/[0.02] border-b border-gray-100">
-                                    <tr>
-                                        <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]">Identity Node</th>
-                                        <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]">Quant Load</th>
-                                        <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.3em] text-[#6605c7]">Current State</th>
-                                        <th className="px-6 py-5 text-[9px] font-black uppercase tracking-[0.3em] text-right text-[#6605c7]">Sync Interval</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-50/50">
-                                    {stats?.recentApplications?.slice(0, 5)?.map((app: any, i: number) => (
-                                        <tr key={app.id || i} className="group hover:bg-[#6605c7]/[0.03] transition-all duration-300">
-                                            <td className="px-6 py-6">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#6605c7]/10 to-transparent flex items-center justify-center font-black text-[#6605c7] text-[11px] border border-[#6605c7]/5 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
-                                                        {app.firstName?.[0]}{app.lastName?.[0]}
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-xs font-black text-gray-900 tracking-tight uppercase">{app.firstName} {app.lastName}</p>
-                                                        <p className="text-[9px] font-black text-gray-400 font-mono tracking-tighter uppercase mt-0.5">{app.applicationNumber}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-6">
-                                                <p className="text-xs font-black text-[#6605c7] tracking-tight">₹{app.amount?.toLocaleString()}</p>
-                                                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{app.loanType}</p>
-                                            </td>
-                                            <td className="px-6 py-6">
-                                                <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-[0.2em] border ${statusColors[app.status] || 'bg-gray-50 text-gray-400'}`}>
-                                                    {app.status?.replace(/_/g, ' ')}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-6 text-right">
-                                                <p className="text-[9px] font-black text-gray-900 font-mono tracking-tighter uppercase">
-                                                    {(() => {
-                                                        try {
-                                                            return format(new Date(app.date || app.submittedAt || new Date()), "HH:mm:ss");
-                                                        } catch (e) {
-                                                            return "--:--:--";
-                                                        }
-                                                    })()}
-                                                </p>
-                                                <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">
-                                                    {(() => {
-                                                        try {
-                                                            return format(new Date(app.date || app.submittedAt || new Date()), "MMM dd, yyyy");
-                                                        } catch (e) {
-                                                            return "N/A";
-                                                        }
-                                                    })()}
-                                                </p>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+
+                    {/* F29 5-Tabs Grid */}
+                    <div className="px-8 border-b border-gray-100 flex flex-wrap gap-2 pb-2">
+                        {(["urgent", "new", "queries", "disbursements", "pending"] as const).map(tab => {
+                            const queue = 
+                                tab === "urgent" ? urgentQueue :
+                                tab === "new" ? newQueue :
+                                tab === "queries" ? queryQueue :
+                                tab === "disbursements" ? disbursementQueue :
+                                pendingQueue;
+                            
+                            const labels = {
+                                urgent: "Urgent",
+                                new: "New Files",
+                                queries: "Queries",
+                                disbursements: "Disbursements",
+                                pending: "Pending"
+                            };
+
+                            return (
+                                <button
+                                    key={tab}
+                                    onClick={() => setActiveTab(tab)}
+                                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                                        activeTab === tab 
+                                            ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25" 
+                                            : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                                    }`}
+                                >
+                                    <span>{labels[tab]}</span>
+                                    <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-bold ${activeTab === tab ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                                        {queue.length}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    <div className="p-8 pt-4">
+                        <div className="overflow-x-auto no-scrollbar max-h-[350px] overflow-y-auto">
+                            {(() => {
+                                const activeQueue = 
+                                    activeTab === "urgent" ? urgentQueue :
+                                    activeTab === "new" ? newQueue :
+                                    activeTab === "queries" ? queryQueue :
+                                    activeTab === "disbursements" ? disbursementQueue :
+                                    pendingQueue;
+
+                                if (activeQueue.length === 0) {
+                                    return (
+                                        <div className="py-12 text-center flex flex-col items-center justify-center">
+                                            <span className="material-symbols-outlined text-gray-200 text-5xl mb-2">check_circle</span>
+                                            <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">Queue Clear</p>
+                                            <p className="text-[9px] text-gray-400 mt-1 uppercase tracking-wider">No applications match this filter criteria.</p>
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                    <table className="w-full text-left">
+                                        <thead className="bg-[#6605c7]/[0.01] border-b border-gray-100 sticky top-0 bg-white z-10">
+                                            <tr>
+                                                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-[0.25em] text-[#6605c7]">Applicant Node</th>
+                                                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-[0.25em] text-[#6605c7]">Quantum Seek</th>
+                                                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-[0.25em] text-[#6605c7]">File Age</th>
+                                                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-[0.25em] text-right text-[#6605c7]">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50/50">
+                                            {activeQueue.map((app, i) => {
+                                                const dateStr = app.lanEnteredAt || app.submittedAt || app.createdAt;
+                                                const ageDays = dateStr ? differenceInDays(new Date(), new Date(dateStr)) : 0;
+                                                
+                                                return (
+                                                    <tr key={app.id || i} className="group hover:bg-[#6605c7]/[0.03] transition-all duration-300">
+                                                        <td className="px-4 py-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#6605c7]/10 to-transparent flex items-center justify-center font-black text-[#6605c7] text-[10px] border border-[#6605c7]/5 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+                                                                    {app.firstName?.[0] || "A"}{app.lastName?.[0] || "P"}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-xs font-black text-gray-950 tracking-tight uppercase">{app.firstName} {app.lastName}</p>
+                                                                    <p className="text-[8.5px] font-bold text-gray-400 font-mono tracking-tighter uppercase mt-0.5">{app.lanNumber || app.applicationNumber || "Pending LAN"}</p>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <p className="text-xs font-black text-[#6605c7] tracking-tight">₹{app.amount?.toLocaleString()}</p>
+                                                            <p className="text-[8.5px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{app.universityName || "Global University"}</p>
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider ${ageDays >= 4 ? "bg-rose-50 text-rose-600 border border-rose-100" : "bg-gray-50 text-gray-500 border border-gray-100"}`}>
+                                                                {ageDays} {ageDays === 1 ? "day" : "days"} old
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-4 text-right">
+                                                            <button
+                                                                onClick={() => router.push(`/bank/applications?id=${app.id}`)}
+                                                                className="px-3.5 py-1.5 bg-[#6605c7]/5 hover:bg-[#6605c7] hover:text-white text-[#6605c7] text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm"
+                                                            >
+                                                                Review
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                );
+                            })()}
                         </div>
                     </div>
                 </motion.div>

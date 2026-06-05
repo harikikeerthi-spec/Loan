@@ -587,7 +587,7 @@ export class CommunityService {
     this.otpStore.set(email, { otp, expiresAt });
 
     console.log(`\n🔐 OTP for ${email}: ${otp}\n`);
-    return { success: true, message: 'OTP sent to your email. Please check your inbox.', data: { email, expiresIn: 300 } };
+    return { success: true, message: 'OTP sent to your email. Please check your inbox.', data: { email, expiresIn: 300, ...(process.env.NODE_ENV === 'development' ? { otp } : {}) } };
   }
 
   async verifyMentorOTP(email: string, otp: string) {

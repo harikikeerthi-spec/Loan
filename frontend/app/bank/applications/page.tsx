@@ -40,6 +40,11 @@ export default function ApplicationManagement() {
     const [newRemark, setNewRemark] = useState("");
     const [remarksLoading, setRemarksLoading] = useState(false);
 
+    const [selectedTagFilter, setSelectedTagFilter] = useState("");
+    const [newTagInput, setNewTagInput] = useState("");
+    const [aiReview, setAiReview] = useState<any>(null);
+    const [runningAi, setRunningAi] = useState(false);
+
     // Advanced Log File Modal states (Task 9)
     const [priority, setPriority] = useState("medium");
     const [assignedOfficer, setAssignedOfficer] = useState("Sarah Jenkins (Senior Underwriter)");
@@ -79,16 +84,84 @@ export default function ApplicationManagement() {
         }
     }, [currentBankId, mounted]);
 
+    // Read URL parameters for auto-selecting an application
+    useEffect(() => {
+        if (mounted && applications.length > 0 && typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const appId = params.get("id");
+            if (appId) {
+                const found = applications.find(a => a.id === appId);
+                if (found) {
+                    setSelectedApp(found);
+                    // Clear the query parameter to prevent loop
+                    window.history.replaceState({}, "", window.location.pathname);
+                }
+            }
+        }
+    }, [applications, mounted]);
+
+    // Load AI Review Note
+    useEffect(() => {
+        if (selectedApp) {
+            adminApi.getRemarks(selectedApp.id).then((res: any) => {
+                if (res && res.success && Array.isArray(res.data)) {
+                    const aiNote = res.data.find((n: any) => n.type === "ai_review");
+                    if (aiNote) {
+                        try {
+                            setAiReview(JSON.parse(aiNote.content));
+                        } catch (e) {
+                            console.error("Failed to parse AI review note:", e);
+                            setAiReview(null);
+                        }
+                    } else {
+                        setAiReview(null);
+                    }
+                } else if (Array.isArray(res)) {
+                    const aiNote = res.find((n: any) => n.type === "ai_review");
+                    if (aiNote) {
+                        try {
+                            setAiReview(JSON.parse(aiNote.content));
+                        } catch (e) {
+                            setAiReview(null);
+                        }
+                    } else {
+                        setAiReview(null);
+                    }
+                } else {
+                    setAiReview(null);
+                }
+            }).catch(err => {
+                console.error("Failed to fetch application notes:", err);
+                setAiReview(null);
+            });
+        } else {
+            setAiReview(null);
+        }
+    }, [selectedApp]);
+
     // Handle updates in background or polling
     const handleRefresh = () => {
         fetchApplications(currentBankId);
         if (selectedApp) {
-            // refresh selected application detail
             adminApi.getApplication(selectedApp.id).then((res: any) => {
                 if (res && res.success) setSelectedApp(res.data);
             });
         }
     };
+
+    // Derived unique list of all tags present in current bank applications
+    const allUniqueTags = useMemo(() => {
+        const set = new Set<string>();
+        applications.forEach(app => {
+            if (app.tags) {
+                app.tags.split(",").forEach((t: string) => {
+                    const clean = t.trim();
+                    if (clean) set.add(clean);
+                });
+            }
+        });
+        return Array.from(set);
+    }, [applications]);
 
     // Filter applications
     const filteredApps = useMemo(() => {
@@ -99,6 +172,11 @@ export default function ApplicationManagement() {
                 (app.email || "").toLowerCase().includes(search.toLowerCase());
             
             if (!matchesSearch) return false;
+
+            if (selectedTagFilter) {
+                const tagsList = app.tags ? app.tags.split(",").map((t: string) => t.trim()) : [];
+                if (!tagsList.includes(selectedTagFilter)) return false;
+            }
 
             const hasLan = !!app.lanNumber;
             const status = app.status;
@@ -117,7 +195,7 @@ export default function ApplicationManagement() {
             }
             return true;
         });
-    }, [applications, activeTab, search]);
+    }, [applications, activeTab, search, selectedTagFilter]);
 
     // Group counts
     const tabCounts = useMemo(() => {
@@ -247,6 +325,58 @@ export default function ApplicationManagement() {
         }
     };
 
+    const handleAddTag = async (tag: string) => {
+        if (!selectedApp || !tag.trim()) return;
+        const currentTags: string[] = selectedApp.tags 
+            ? selectedApp.tags.split(",").map((t: string) => t.trim()).filter((t: string) => !!t) 
+            : [];
+        if (currentTags.includes(tag.trim())) return;
+        const updated = [...currentTags, tag.trim()].join(",");
+        try {
+            const res: any = await adminApi.updateApplication(selectedApp.id, { tags: updated });
+            if (res && res.success) {
+                setSelectedApp({ ...selectedApp, tags: updated });
+                handleRefresh();
+            }
+        } catch (err) {
+            console.error("Failed to add tag:", err);
+        }
+    };
+
+    const handleRemoveTag = async (tagToRemove: string) => {
+        if (!selectedApp) return;
+        const currentTags: string[] = selectedApp.tags 
+            ? selectedApp.tags.split(",").map((t: string) => t.trim()).filter((t: string) => !!t) 
+            : [];
+        const updated = currentTags.filter((t: string) => t !== tagToRemove).join(",");
+        try {
+            const res: any = await adminApi.updateApplication(selectedApp.id, { tags: updated });
+            if (res && res.success) {
+                setSelectedApp({ ...selectedApp, tags: updated });
+                handleRefresh();
+            }
+        } catch (err) {
+            console.error("Failed to remove tag:", err);
+        }
+    };
+
+    const handleRunAiAudit = async () => {
+        if (!selectedApp) return;
+        setRunningAi(true);
+        try {
+            const res: any = await adminApi.aiReviewApplication(selectedApp.id);
+            if (res && res.success && res.data) {
+                setAiReview(res.data);
+                handleRefresh();
+            }
+        } catch (err) {
+            console.error("Failed to run AI audit:", err);
+            alert("AI Underwriting engine was unavailable or failed.");
+        } finally {
+            setRunningAi(false);
+        }
+    };
+
     const handleAddRemark = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedApp || !newRemark.trim()) return;
@@ -287,7 +417,17 @@ export default function ApplicationManagement() {
                         <h1 className="text-4xl font-display font-bold text-gray-900 tracking-tight">Application Management</h1>
                         <p className="text-sm text-gray-500 mt-2 font-medium">Verify documents, log file numbers, and record credit underwriting decisions.</p>
                     </div>
-                    <div className="flex gap-4 w-full lg:w-auto">
+                    <div className="flex flex-col sm:flex-row gap-4 w-full lg:w-auto">
+                        <select
+                            value={selectedTagFilter}
+                            onChange={(e) => setSelectedTagFilter(e.target.value)}
+                            className="px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm transition-all text-gray-700"
+                        >
+                            <option value="">All Tags</option>
+                            {allUniqueTags.map(tag => (
+                                <option key={tag} value={tag}>{tag}</option>
+                            ))}
+                        </select>
                         <div className="relative flex-1 lg:flex-none">
                             <input 
                                 type="text" 
@@ -440,6 +580,27 @@ export default function ApplicationManagement() {
                                         }
                                     },
                                     {
+                                        header: "Tags",
+                                        accessorKey: "tags",
+                                        sortable: false,
+                                        cell: (row: any) => {
+                                            const tagsList = row.tags ? row.tags.split(",").map((t: string) => t.trim()).filter(Boolean) : [];
+                                            return (
+                                                <div className="flex flex-wrap gap-1 max-w-[150px]">
+                                                    {tagsList.length > 0 ? (
+                                                        tagsList.map((tag: string) => (
+                                                            <span key={tag} className="text-[9px] bg-purple-50 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200">
+                                                                {tag}
+                                                            </span>
+                                                        ))
+                                                    ) : (
+                                                        <span className="text-gray-300 text-[10px] italic">—</span>
+                                                    )}
+                                                </div>
+                                            );
+                                        }
+                                    },
+                                    {
                                         header: "Audit Verdict",
                                         accessorKey: "status",
                                         sortable: true,
@@ -582,6 +743,190 @@ export default function ApplicationManagement() {
                                             <span className="text-[10px] text-gray-400 uppercase tracking-widest">No documents found.</span>
                                         </div>
                                     )}
+                                </div>
+
+                                {/* AI Underwriting Insights (F47) */}
+                                <div className="space-y-3 border-t border-gray-100 pt-5">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 block pl-1">AI Underwriting Insights</span>
+                                    {aiReview ? (
+                                        <div className="bg-[#6605c7]/5 rounded-2xl p-5 border border-[#6605c7]/10 space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    {/* Circular gauge */}
+                                                    <div className="relative w-12 h-12 flex items-center justify-center">
+                                                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                                                            <path
+                                                                className="text-purple-100"
+                                                                strokeWidth="3.5"
+                                                                stroke="currentColor"
+                                                                fill="none"
+                                                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                                            />
+                                                            <path
+                                                                className="text-[#6605c7] transition-all duration-1000 ease-out"
+                                                                strokeDasharray={`${aiReview.overallScore}, 100`}
+                                                                strokeWidth="3.5"
+                                                                strokeLinecap="round"
+                                                                stroke="currentColor"
+                                                                fill="none"
+                                                                d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                                            />
+                                                        </svg>
+                                                        <span className="absolute text-xs font-black text-[#6605c7]">
+                                                            {aiReview.overallScore}%
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[9px] font-black text-purple-700 uppercase tracking-wider block">Approval Probability</span>
+                                                        <span className="text-xs font-semibold text-gray-500">AI Recommendation Score</span>
+                                                    </div>
+                                                </div>
+
+                                                <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                                                    aiReview.recommendation === 'approve' 
+                                                        ? 'bg-emerald-100 text-emerald-800' 
+                                                        : aiReview.recommendation === 'reject' 
+                                                            ? 'bg-rose-100 text-rose-800' 
+                                                            : 'bg-amber-100 text-amber-800'
+                                                }`}>
+                                                    {aiReview.recommendation?.replace('_', ' ')}
+                                                </span>
+                                            </div>
+
+                                            {/* AI Summary */}
+                                            {aiReview.aiSummary && (
+                                                <p className="text-[11px] text-gray-600 leading-relaxed font-medium bg-white/50 p-3 rounded-xl border border-[#6605c7]/5">
+                                                    {aiReview.aiSummary}
+                                                </p>
+                                            )}
+
+                                            {/* Eligibility Flags / Risks Checklist */}
+                                            {aiReview.eligibilityFlags && aiReview.eligibilityFlags.length > 0 && (
+                                                <div className="space-y-2">
+                                                    <span className="text-[8px] font-black text-purple-800 uppercase tracking-widest block pl-0.5">Risk & Eligibility Factors</span>
+                                                    <div className="grid grid-cols-1 gap-1.5">
+                                                        {aiReview.eligibilityFlags.map((flagObj: any, i: number) => (
+                                                            <div key={i} className="flex items-start gap-2 bg-white/40 p-2 rounded-lg border border-[#6605c7]/5">
+                                                                <span className={`material-symbols-outlined text-sm mt-0.5 ${
+                                                                    flagObj.status === 'pass' 
+                                                                        ? 'text-emerald-500' 
+                                                                        : flagObj.status === 'fail' 
+                                                                            ? 'text-rose-500' 
+                                                                            : 'text-amber-500'
+                                                                }`}>
+                                                                    {flagObj.status === 'pass' ? 'check_circle' : flagObj.status === 'fail' ? 'cancel' : 'warning'}
+                                                                </span>
+                                                                <div>
+                                                                    <span className="text-[10px] font-black text-gray-800 uppercase tracking-tight block">
+                                                                        {flagObj.flag}
+                                                                    </span>
+                                                                    <span className="text-[9px] text-gray-500 block font-medium">
+                                                                        {flagObj.detail}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* AI Recommendations */}
+                                            {aiReview.aiRecommendations && aiReview.aiRecommendations.length > 0 && (
+                                                <div className="space-y-1">
+                                                    <span className="text-[8px] font-black text-purple-800 uppercase tracking-widest block pl-0.5">Next Step Recommendations</span>
+                                                    <ul className="list-disc list-inside space-y-1 pl-1">
+                                                        {aiReview.aiRecommendations.map((rec: string, i: number) => (
+                                                            <li key={i} className="text-[10px] text-gray-600 font-medium leading-tight">
+                                                                {rec}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100 flex flex-col items-center text-center gap-3">
+                                            <span className="material-symbols-outlined text-gray-300 text-3xl">psychology</span>
+                                            <div>
+                                                <h4 className="text-xs font-bold text-gray-900">AI Underwriting is Pending</h4>
+                                                <p className="text-[10px] text-gray-400 mt-1 max-w-xs">Run a live AI Underwriting audit to analyze credit risk, document validity, and academic eligibility.</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleRunAiAudit}
+                                                disabled={runningAi}
+                                                className="px-4 py-2 bg-[#6605c7] text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-[#5203a4] transition-all shadow-md shadow-purple-500/10 flex items-center gap-1.5 disabled:opacity-50"
+                                            >
+                                                {runningAi ? (
+                                                    <>
+                                                        <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                        Auditing File...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <span className="material-symbols-outlined text-xs">bolt</span>
+                                                        Run AI Underwriting Audit
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* File Tags & Labels (F43) */}
+                                <div className="space-y-3 border-t border-gray-100 pt-5">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 block pl-1">File Tags & Labels</span>
+                                    <div className="flex flex-wrap gap-1.5 mb-2">
+                                        {selectedApp.tags ? (
+                                            selectedApp.tags.split(",").map((t: string) => t.trim()).filter(Boolean).map((tag: string) => (
+                                                <span 
+                                                    key={tag} 
+                                                    className="inline-flex items-center gap-1 text-[10px] bg-purple-50 text-purple-700 font-bold px-2 py-0.5 rounded-full border border-purple-100"
+                                                >
+                                                    {tag}
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={() => handleRemoveTag(tag)}
+                                                        className="text-purple-400 hover:text-rose-500 font-bold ml-0.5 transition-colors focus:outline-none text-[11px]"
+                                                    >
+                                                        &times;
+                                                    </button>
+                                                </span>
+                                            ))
+                                        ) : (
+                                            <span className="text-xs text-gray-400 italic pl-1">No tags assigned.</span>
+                                        )}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <input 
+                                            type="text"
+                                            placeholder="Add tag..."
+                                            value={newTagInput}
+                                            onChange={(e) => setNewTagInput(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter') {
+                                                    e.preventDefault();
+                                                    if (newTagInput.trim()) {
+                                                        handleAddTag(newTagInput.trim());
+                                                        setNewTagInput("");
+                                                    }
+                                                }
+                                            }}
+                                            className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
+                                        />
+                                        <button 
+                                            type="button"
+                                            onClick={() => {
+                                                if (newTagInput.trim()) {
+                                                    handleAddTag(newTagInput.trim());
+                                                    setNewTagInput("");
+                                                }
+                                            }}
+                                            className="px-4 py-2 bg-purple-50 text-[#6605c7] border border-purple-100 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-[#6605c7]/5 transition-all"
+                                        >
+                                            Add Tag
+                                        </button>
+                                    </div>
                                 </div>
 
                                 {/* Remarks / Activity Feed */}

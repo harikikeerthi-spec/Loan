@@ -549,6 +549,14 @@ export class BankService {
       application.applicationNumber
     );
 
+    // Emit disbursement event for referral processing
+    this.eventEmitter.emit('bank.application.disbursed', {
+      applicationId: application.id,
+      userId: application.userId,
+      amount: disbursementAmount,
+      bankId: application.bank,
+    });
+
     return {
       success: true,
       message: 'Disbursement UTR confirmed successfully',

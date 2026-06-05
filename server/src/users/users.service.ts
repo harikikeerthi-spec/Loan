@@ -298,6 +298,21 @@ export class UsersService {
 
     // Build the insert payload — only include staffId for staff users to avoid
     // PGRST204 ("staffId column not found in schema cache") for regular users
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let referralCode = '';
+    let exists = true;
+    while (exists) {
+      let code = 'VL-';
+      for (let i = 0; i < 6; i++) {
+        code += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      const { data: existing } = await this.db.from('User').select('id').eq('referralCode', code).single();
+      if (!existing) {
+        referralCode = code;
+        exists = false;
+      }
+    }
+
     const insertPayload: any = {
       id,
       email: data.email,
@@ -309,6 +324,7 @@ export class UsersService {
       password: data.password || '',
       role: data.role || 'user',
       registeredAtIndia: registeredAtIndia,
+      referralCode,
     };
 
     if (data.role === 'staff' && staffId) {

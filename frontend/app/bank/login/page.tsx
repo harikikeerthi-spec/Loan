@@ -164,6 +164,7 @@ function BankLoginContent() {
     const [error, setError] = useState("");
     const [resendDisabled, setResendDisabled] = useState(false);
     const [countdown, setCountdown] = useState(0);
+    const [devOtp, setDevOtp] = useState<string | null>(null);
 
     // Dynamic bank resolver based on email input
     const getBankFromEmail = (emailStr: string): string | null => {
@@ -227,7 +228,12 @@ function BankLoginContent() {
         try {
             sessionStorage.setItem("selectedBank", bankId);
             localStorage.setItem("selectedBank", bankId);
-            await authApi.sendOtp(email.trim()) as { success: boolean };
+            const res = await authApi.sendOtp(email.trim()) as { success: boolean; otp?: string };
+            if (res.otp) {
+                setDevOtp(res.otp);
+            } else {
+                setDevOtp(null);
+            }
             setStep("otp");
             setResendDisabled(true);
             setCountdown(60);
@@ -547,7 +553,7 @@ function BankLoginContent() {
 
                             <button
                                 type="button"
-                                onClick={() => { setStep("form"); setOtp(["", "", "", "", "", ""]); setError(""); }}
+                                onClick={() => { setStep("form"); setOtp(["", "", "", "", "", ""]); setError(""); setDevOtp(null); }}
                                 className="w-full text-center text-[11px] text-gray-400 hover:text-[#6605c7] font-bold uppercase tracking-widest"
                             >
                                 ← Change Bank or Email

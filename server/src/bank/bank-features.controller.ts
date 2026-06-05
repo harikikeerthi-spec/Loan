@@ -10,7 +10,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { UserGuard } from '../auth/user.guard';
+import { StaffGuard } from '../auth/staff.guard';
 import {
   CreateBankSchemeDto,
   BankSchemeResponseDto,
@@ -43,7 +43,7 @@ import {
  * Comprehensive API endpoints for banking operations
  */
 @Controller('bank')
-@UseGuards(UserGuard)
+@UseGuards(StaffGuard)
 export class BankFeaturesController {
   // ============================================================================
   // F37: BANK SCHEMES

@@ -8,7 +8,7 @@ import {
   UseGuards,
   Req,
 } from '@nestjs/common';
-import { UserGuard } from '../auth/user.guard';
+import { StaffGuard } from '../auth/staff.guard';
 
 /**
  * Integration Controllers - F26 (Slack) & F27 (Salesforce)
@@ -36,7 +36,7 @@ export class CreateSlackRuleDto {
 }
 
 @Controller('integration/slack')
-@UseGuards(UserGuard)
+@UseGuards(StaffGuard)
 export class SlackIntegrationController {
   /**
    * Receive Slack webhook events
@@ -148,7 +148,7 @@ export class SalesforceConfigDto {
 }
 
 @Controller('integration/salesforce')
-@UseGuards(UserGuard)
+@UseGuards(StaffGuard)
 export class SalesforceIntegrationController {
   /**
    * Authenticate with Salesforce

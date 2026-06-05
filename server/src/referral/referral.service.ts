@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { OnEvent } from '@nestjs/event-emitter';
 
 @Injectable()
 export class ReferralService {
@@ -10,6 +11,17 @@ export class ReferralService {
   }
 
   constructor(private readonly supabase: SupabaseService) {}
+
+  @OnEvent('bank.application.disbursed')
+  async handleApplicationDisbursed(event: { applicationId: string; userId: string; amount: number; bankId?: string }) {
+    if (event.userId) {
+      try {
+        await this.completeReferral(event.userId);
+      } catch (error) {
+        console.error(`[ReferralService] Failed to process application disbursed event for user: ${event.userId}`, error);
+      }
+    }
+  }
 
   private generateCode(): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -185,15 +197,51 @@ export class ReferralService {
       .eq('referrerId', referral.referrerId)
       .eq('status', 'completed');
 
-    const reward = this.getRewardForCount((completedCount || 0) + 1);
+    const newCompletedCount = (completedCount || 0) + 1;
+    let rewardAmount = 3000;
 
+    // Calculate milestone bonuses
+    if (newCompletedCount === 3) rewardAmount += 500;
+    else if (newCompletedCount === 5) rewardAmount += 10000;
+    else if (newCompletedCount === 10) rewardAmount += 25000;
+    else if (newCompletedCount === 25) rewardAmount += 75000;
+    else if (newCompletedCount === 50) rewardAmount += 200000;
+
+    const rewardStr = `₹${rewardAmount.toLocaleString('en-IN')}`;
+
+    // Update the Referral record with status and reward amount string
     const { data, error } = await this.db
       .from('Referral')
-      .update({ status: 'completed', completedAt: new Date().toISOString(), reward })
+      .update({ 
+        status: 'completed', 
+        completedAt: new Date().toISOString(), 
+        reward: rewardStr 
+      })
       .eq('id', referral.id)
       .select()
       .single();
+
     if (error) throw error;
+
+    // Credit the referrer's wallet balance
+    const { data: wallet } = await this.db
+      .from('wallets')
+      .select('balance')
+      .eq('user_id', referral.referrerId)
+      .single();
+
+    if (!wallet) {
+      await this.db
+        .from('wallets')
+        .insert({ user_id: referral.referrerId, balance: rewardAmount });
+    } else {
+      const newBalance = Number(wallet.balance || 0) + rewardAmount;
+      await this.db
+        .from('wallets')
+        .update({ balance: newBalance, updated_at: new Date().toISOString() })
+        .eq('user_id', referral.referrerId);
+    }
+
     return data;
   }
 

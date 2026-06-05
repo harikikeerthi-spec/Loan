@@ -199,10 +199,50 @@ export default function ReferralPage() {
 
                                 {/* Share Buttons */}
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-                                    <ShareButton icon="whatsapp" label="WhatsApp" color="bg-[#25D366]" />
-                                    <ShareButton icon="telegram" label="Telegram" color="bg-[#0088cc]" />
-                                    <ShareButton icon="mail" label="Email" color="bg-gray-700" />
-                                    <ShareButton icon="share" label="More" color="bg-gray-900" />
+                                    <ShareButton 
+                                        icon="whatsapp" 
+                                        label="WhatsApp" 
+                                        color="bg-[#25D366]" 
+                                        onClick={() => {
+                                            const shareText = encodeURIComponent(`Hey! Use my code ${referralCode} to get your study abroad loan sorted with VidyaLoans: ${referralLink}`);
+                                            window.open(`https://api.whatsapp.com/send?text=${shareText}`, '_blank');
+                                        }}
+                                    />
+                                    <ShareButton 
+                                        icon="telegram" 
+                                        label="Telegram" 
+                                        color="bg-[#0088cc]" 
+                                        onClick={() => {
+                                            const shareText = encodeURIComponent(`Hey! Use my code ${referralCode} to get your study abroad loan sorted with VidyaLoans.`);
+                                            window.open(`https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${shareText}`, '_blank');
+                                        }}
+                                    />
+                                    <ShareButton 
+                                        icon="mail" 
+                                        label="Email" 
+                                        color="bg-gray-700" 
+                                        onClick={() => {
+                                            const subject = encodeURIComponent("Get your study abroad loan sorted with VidyaLoans");
+                                            const body = encodeURIComponent(`Hey! Use my code ${referralCode} to get your study abroad loan sorted with VidyaLoans: ${referralLink}`);
+                                            window.location.href = `mailto:?subject=${subject}&body=${body}`;
+                                        }}
+                                    />
+                                    <ShareButton 
+                                        icon="share" 
+                                        label="More" 
+                                        color="bg-gray-900" 
+                                        onClick={() => {
+                                            if (navigator.share) {
+                                                navigator.share({
+                                                    title: 'Join VidyaLoan & Earn ₹3,000!',
+                                                    text: `Use my referral code ${referralCode} to sign up on VidyaLoan and get started with your education loan.`,
+                                                    url: referralLink,
+                                                }).catch(() => {});
+                                            } else {
+                                               copyToClipboard(referralLink);
+                                            }
+                                        }}
+                                    />
                                 </div>
 
                                 {/* Stats Grid */}
@@ -261,7 +301,7 @@ export default function ReferralPage() {
                                                         </td>
                                                         <td className="py-4 px-4 text-right">
                                                             <span className={`font-bold ${item.status === 'completed' ? 'text-green-600' : 'text-gray-400'}`}>
-                                                                {item.status === 'completed' ? '₹3,000' : 'Pending'}
+                                                                {item.status === 'completed' ? (item.reward || '₹3,000') : 'Pending'}
                                                             </span>
                                                         </td>
                                                     </tr>
@@ -427,7 +467,7 @@ export default function ReferralPage() {
     );
 }
 
-function ShareButton({ icon, label, color }: { icon: string; label: string; color: string }) {
+function ShareButton({ icon, label, color, onClick }: { icon: string; label: string; color: string; onClick?: () => void }) {
     const icons: Record<string, React.ReactNode> = {
         whatsapp: (
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -444,7 +484,7 @@ function ShareButton({ icon, label, color }: { icon: string; label: string; colo
     };
 
     return (
-        <button className={`${color} text-white px-4 py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all`}>
+        <button onClick={onClick} className={`${color} text-white px-4 py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 hover:opacity-90 transition-all`}>
             {icons[icon]}
             <span className="hidden sm:inline">{label}</span>
         </button>
