@@ -131,7 +131,7 @@ export default function AboutPage() {
                 <div className="max-w-2xl mx-auto">
                     <h2 className="text-3xl font-bold font-display mb-4">Join the VidyaLoan Community</h2>
                     <p className="text-[13px] text-gray-500 mb-8">Start your education loan journey today with 10,000+ students who've already taken the leap.</p>
-                    <Link href="/apply-loan" className="inline-block px-10 py-4 bg-[#6605c7] text-white text-[11px] font-bold uppercase tracking-widest rounded-xl hover:-translate-y-1 transition-all shadow-lg shadow-[#6605c7]/20">
+                    <Link href="/community" className="inline-block px-10 py-4 bg-[#6605c7] text-white text-[11px] font-bold uppercase tracking-widest rounded-xl hover:-translate-y-1 transition-all shadow-lg shadow-[#6605c7]/20">
                         Get Started Free
                     </Link>
                 </div>

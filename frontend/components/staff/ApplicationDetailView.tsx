@@ -1,8 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from "react";
 import { format } from "date-fns";
-import { documentApi, staffProfileApi } from "@/lib/api";
+import { documentApi, staffProfileApi, adminApi } from "@/lib/api";
 import KycSystemDashboard from "./KycSystemDashboard";
+import ShareWithBankModal from "./ShareWithBankModal";
 import {
   getDocumentCategory,
   getDocumentRequirementName,
@@ -13,6 +14,7 @@ interface ApplicationDetailViewProps {
   application: any;
   onBack: () => void;
   onAadhaarSaved?: (aadhaarNumber: string) => void;
+  onApplicationUpdated?: () => void;
 }
 
 type OcrSummaryDoc = {
@@ -22,6 +24,7 @@ type OcrSummaryDoc = {
   docType: string;
   category: string;
   status: string;
+  rejectionReason?: string;
   uploaded?: boolean;
   fileName?: string;
   uploadedAt?: string;
@@ -70,9 +73,11 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   application,
   onBack,
   onAadhaarSaved,
+  onApplicationUpdated,
 }) => {
   const [activeTab, setActiveTab] = useState("requirements");
   const [activeSidebarMenu, setActiveSidebarMenu] = useState("application_details");
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const progress = application.progress || 90;
   const status = (application.status || "APPROVED").toUpperCase();
@@ -98,6 +103,36 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
 
   const userId = application.userId || application.user_id || application.applicantId || application.student?.id || application.student?._id || application.user?.id || application.user?._id;
 
+  const handleVerifyDocument = async (docId: string) => {
+    try {
+      const res = await adminApi.verifyDocument(application.id || application._id, docId, "verified") as ApiResult<unknown>;
+      if (res.success || (res as any).data) {
+        alert("Document verified successfully!");
+        fetchDocuments();
+      } else {
+        alert("Failed to verify document.");
+      }
+    } catch (err) {
+      console.error("Failed to verify document:", err);
+      alert("Error verifying document.");
+    }
+  };
+
+  const handleRejectDocument = async (docId: string, reason: string) => {
+    try {
+      const res = await adminApi.verifyDocument(application.id || application._id, docId, "rejected", reason) as ApiResult<unknown>;
+      if (res.success || (res as any).data) {
+        alert("Document rejected successfully!");
+        fetchDocuments();
+      } else {
+        alert("Failed to reject document.");
+      }
+    } catch (err) {
+      console.error("Failed to reject document:", err);
+      alert("Error rejecting document.");
+    }
+  };
+
   const fetchDocuments = async () => {
     if (!userId) return;
     setLoadingDocs(true);
@@ -115,10 +150,11 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
           const extractedFields = metadata?.extractedFields || metadata?.details?.extractedFields || {};
           const uploadedAt = d.uploadedAt || d.uploaded_at || d.createdAt || d.created_at || d.updatedAt || d.updated_at;
           return {
-            id: String(d.id || docType || docName),
+            id: String(d.id || d._id || docType || docName),
             name: docName.replace(/_/g, ' ').toUpperCase(),
             category: getDocumentCategory(docType),
             status: statusValue,
+            rejectionReason: String(d.rejectionReason || metadata?.rejectionReason || ""),
             uploaded: isUploaded,
             fileName: filePath ? filePath.split(/[/\\]/).pop() : '',
             uploadedAt: uploadedAt ? String(uploadedAt) : undefined,
@@ -138,6 +174,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
               name: req.name.toUpperCase(),
               category: req.category,
               status: 'pending',
+              rejectionReason: '',
               uploaded: false,
               fileName: '',
               uploadedAt: undefined,
@@ -790,6 +827,28 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                 </div>
               </div>
 
+              {/* Bank Routing Banner */}
+              {application.status === "submitted" && (
+                <div className="bg-gradient-to-r from-blue-900/90 to-indigo-950/90 backdrop-blur-md rounded-3xl p-8 border border-indigo-800/30 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-indigo-950/10 animate-in slide-in-from-top-6 duration-500">
+                  <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20 shadow-inner">
+                      <span className="material-symbols-outlined text-[28px] animate-pulse">rocket_launch</span>
+                    </div>
+                    <div>
+                      <h3 className="text-[18px] font-bold text-white tracking-tight">Ready for Bank Submission</h3>
+                      <p className="text-[13px] text-indigo-200/80 mt-0.5 font-medium">All initial documents have been submitted. Review document statuses and route this application to a partner bank.</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setIsShareModalOpen(true)}
+                    className="flex items-center gap-2.5 px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[12px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-lg shadow-indigo-600/30 shrink-0"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">send</span>
+                    Send to Bank
+                  </button>
+                </div>
+              )}
+
               {/* Main Info Card - Glassmorphism & Rich Styling */}
               <div className="bg-white/70 backdrop-blur-sm rounded-[40px] p-10 border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.04)] relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-50/30 rounded-full blur-3xl -z-10 group-hover:bg-emerald-100/40 transition-colors duration-1000" />
@@ -988,6 +1047,8 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                         coApplicantDocs={coApplicantOcrDocs}
                         validationChecks={validationChecks}
                         loading={loadingDocs}
+                        onVerifyDocument={handleVerifyDocument}
+                        onRejectDocument={handleRejectDocument}
                         onAddAcademic={() => {
                           setNewDocCategory("academic");
                           setIsAddDocModalOpen(true);
@@ -1444,6 +1505,22 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
           </div>
         )
       }
+
+      {/* Share with Bank Modal */}
+      <ShareWithBankModal
+        applicationId={application.id || application._id}
+        applicationNumber={appId}
+        studentName={fullName}
+        loanAmount={Number(application.amount || application.loanAmount || application.student?.loanAmount || 0)}
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        onSuccess={() => {
+          if (onApplicationUpdated) {
+            onApplicationUpdated();
+          }
+          onBack();
+        }}
+      />
     </div >
   );
 };
@@ -1478,6 +1555,8 @@ const OcrDocumentIntelligence = ({
   passportName,
   aadhaarName,
   getComparableValue,
+  onVerifyDocument,
+  onRejectDocument,
 }: {
   academicDocs: OcrSummaryDoc[];
   coApplicantDocs: OcrSummaryDoc[];
@@ -1508,6 +1587,8 @@ const OcrDocumentIntelligence = ({
   passportName: string | null;
   aadhaarName: string | null;
   getComparableValue: (val: any) => string;
+  onVerifyDocument?: (docId: string) => void;
+  onRejectDocument?: (docId: string, reason: string) => void;
 }) => {
   const [docSubTab, setDocSubTab] = useState<"action" | "completed">("action");
 
@@ -1571,6 +1652,8 @@ const OcrDocumentIntelligence = ({
           onViewDocument={onViewDocument}
           onDeleteDocument={onDeleteDocument}
           onUploadDocument={onUploadDocument}
+          onVerifyDocument={onVerifyDocument}
+          onRejectDocument={onRejectDocument}
         />
         <OcrDocumentGroup
           title="Family & Co-Applicant Documents"
@@ -1586,6 +1669,8 @@ const OcrDocumentIntelligence = ({
           onViewDocument={onViewDocument}
           onDeleteDocument={onDeleteDocument}
           onUploadDocument={onUploadDocument}
+          onVerifyDocument={onVerifyDocument}
+          onRejectDocument={onRejectDocument}
         />
       </div>
 
@@ -1636,6 +1721,8 @@ const OcrDocumentGroup = ({
   onViewDocument,
   onDeleteDocument,
   onUploadDocument,
+  onVerifyDocument,
+  onRejectDocument,
 }: {
   title: string;
   icon: string;
@@ -1650,6 +1737,8 @@ const OcrDocumentGroup = ({
   onViewDocument: (doc: OcrSummaryDoc) => void;
   onDeleteDocument: (doc: OcrSummaryDoc) => void;
   onUploadDocument: (doc: OcrSummaryDoc, file: File) => void;
+  onVerifyDocument?: (docId: string) => void;
+  onRejectDocument?: (docId: string, reason: string) => void;
 }) => (
   <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
     <div className="flex items-center justify-between mb-5">
@@ -1677,12 +1766,15 @@ const OcrDocumentGroup = ({
             fieldsCount={getDocFieldsCount(doc)}
             uploadAge={formatUploadAge(doc.uploadedAt)}
             status={doc.status}
+            rejectionReason={doc.rejectionReason}
             uploaded={doc.uploaded}
             fileName={doc.fileName}
             onPreview={() => onPreviewDocument(doc)}
             onViewFile={() => onViewDocument(doc)}
             onDelete={() => onDeleteDocument(doc)}
             onUpload={(file) => onUploadDocument(doc, file)}
+            onVerify={onVerifyDocument ? () => onVerifyDocument(doc.id) : undefined}
+            onReject={onRejectDocument ? (reason) => onRejectDocument(doc.id, reason) : undefined}
           />
         ))
       ) : (
@@ -1701,27 +1793,34 @@ const OcrMiniDocumentCard = ({
   fieldsCount,
   uploadAge,
   status,
+  rejectionReason,
   uploaded,
   fileName,
   onPreview,
   onViewFile,
   onDelete,
   onUpload,
+  onVerify,
+  onReject,
 }: {
   confidence: number;
   title: string;
   fieldsCount: number;
   uploadAge: string;
   status: string;
+  rejectionReason?: string;
   uploaded?: boolean;
   fileName?: string;
   onPreview: () => void;
   onViewFile: () => void;
   onDelete: () => void;
   onUpload: (file: File) => void;
+  onVerify?: () => void;
+  onReject?: (reason: string) => void;
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const hasFile = Boolean(uploaded || fileName || ["uploaded", "verified", "rejected"].includes(String(status || "").toLowerCase()));
+  const statusLower = String(status || "").toLowerCase();
+  const hasFile = Boolean(uploaded || fileName || ["uploaded", "verified", "approved", "rejected"].includes(statusLower));
   const tone =
     confidence >= 90
       ? { text: "text-emerald-700", bar: "bg-emerald-500", icon: "verified", iconText: "text-emerald-600" }
@@ -1753,10 +1852,28 @@ const OcrMiniDocumentCard = ({
             {hasFile ? "verified_user" : "contact_mail"}
           </span>
           <div className="min-w-0">
-            <h4 className="text-[16px] font-bold text-slate-800 truncate">{title}</h4>
-            <p className="text-[13px] font-medium text-slate-500 mt-0.5">
-              {hasFile ? `${fieldsCount} fields extracted` : "âš ï¸ Pending upload"}
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="text-[16px] font-bold text-slate-800 truncate">{title}</h4>
+              {hasFile && (
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider uppercase border ${
+                  ["verified", "approved"].includes(statusLower)
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-100/80"
+                    : statusLower === "rejected"
+                    ? "bg-rose-50 text-rose-700 border-rose-100/80"
+                    : "bg-blue-50 text-blue-700 border-blue-100/80"
+                }`}>
+                  {["verified", "approved"].includes(statusLower) ? "Verified" : statusLower === "rejected" ? "Rejected" : "Pending Review"}
+                </span>
+              )}
+            </div>
+            <p className="text-[13px] font-medium text-slate-500 mt-1">
+              {hasFile ? `${fieldsCount} fields extracted` : "⚠️ Pending upload"}
             </p>
+            {statusLower === "rejected" && rejectionReason && (
+              <p className="text-[12px] font-bold text-rose-600 mt-1.5 bg-rose-50/50 px-3 py-1 rounded-lg border border-rose-100/50 inline-block">
+                Reason: {rejectionReason}
+              </p>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -1802,17 +1919,45 @@ const OcrMiniDocumentCard = ({
         </>
       )}
 
-      <div className="mt-4 flex items-center gap-3">
+      <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
         {hasFile ? (
           <>
-            <button
-              type="button"
-              onClick={onViewFile}
-              className="inline-flex items-center gap-1.5 text-[12px] font-black text-emerald-600 hover:text-emerald-700 uppercase tracking-widest transition-colors"
-            >
-              <span className="material-symbols-outlined text-[17px]">open_in_new</span>
-              View file
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={onViewFile}
+                className="inline-flex items-center gap-1.5 text-[12px] font-black text-emerald-600 hover:text-emerald-700 uppercase tracking-widest transition-colors"
+              >
+                <span className="material-symbols-outlined text-[17px]">open_in_new</span>
+                View file
+              </button>
+              
+              {onVerify && onReject && !["verified", "approved", "rejected"].includes(statusLower) && (
+                <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
+                  <button
+                    type="button"
+                    onClick={onVerify}
+                    className="inline-flex items-center gap-1 px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-[11px] font-extrabold uppercase tracking-wide transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">check</span>
+                    Verify
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const reason = prompt("Please enter the reason for rejecting this document:");
+                      if (reason !== null) {
+                        onReject(reason.trim());
+                      }
+                    }}
+                    className="inline-flex items-center gap-1 px-3 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg text-[11px] font-extrabold uppercase tracking-wide transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">close</span>
+                    Reject
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}

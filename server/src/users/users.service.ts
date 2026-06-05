@@ -859,7 +859,7 @@ export class UsersService {
         hasCollateral: !!data.collateral && data.collateral !== 'no',
         collateralType: data.collateral !== 'no' ? data.collateral : null,
         remarks: data.notes || null,
-        status: 'pending',
+        status: 'submitted',
         stage: 'application_submitted',
         progress: 10,
         submittedAt: now,

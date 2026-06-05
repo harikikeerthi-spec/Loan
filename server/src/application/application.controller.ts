@@ -145,6 +145,7 @@ export class ApplicationController {
         @Query('sortBy') sortBy?: string,
         @Query('sortOrder') sortOrder?: string,
         @Query('userId') userId?: string,
+        @Query('excludeStatus') excludeStatus?: string,
     ) {
         let dbBankName: string | undefined = bank;
         if (bank) {
@@ -171,6 +172,7 @@ export class ApplicationController {
             sortBy,
             sortOrder: sortOrder as 'asc' | 'desc',
             userId,
+            excludeStatus,
         });
     }
 

@@ -2,7 +2,8 @@
 
 import React, { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BankWorkflowAPI } from "@/lib/bank-workflow-api";
+import { adminApi } from "@/lib/api";
+
 
 interface ShareWithBankModalProps {
   applicationId: string;
@@ -40,6 +41,7 @@ export default function ShareWithBankModal({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [submissionId, setSubmissionId] = useState("");
+  const [remarks, setRemarks] = useState("");
 
   const selectedBankName = BANKS.find((b) => b.id === selectedBank)?.name || "";
 
@@ -53,31 +55,32 @@ export default function ShareWithBankModal({
     setError("");
 
     try {
-      const result = await BankWorkflowAPI.submitToBank({
-        applicationId,
-        bankId: selectedBank,
-        bankName: selectedBankName,
-        submittedBy: "staff", // This should come from user context
+      // Update the bank name and application status directly via adminApi
+      await adminApi.updateApplication(applicationId, { bank: selectedBankName });
+      await adminApi.updateApplicationStatus(applicationId, {
+        status: "processing",
+        stage: "bank_review",
+        progress: 70,
+        remarks: remarks || `Application routed to ${selectedBankName}`,
       });
 
-      if (result.success) {
-        setSubmissionId(result.data.id);
-        setSuccess(true);
-        
-        // Auto-close after 3 seconds
-        setTimeout(() => {
-          onClose();
-          onSuccess?.();
-        }, 3000);
-      } else {
-        setError(result.message || "Failed to share application");
-      }
+      // Generate a local submission reference ID
+      const submissionRef = `SUB-${applicationId.slice(-6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+      setSubmissionId(submissionRef);
+      setSuccess(true);
+
+      // Auto-close after 2 seconds and notify parent
+      setTimeout(() => {
+        onClose();
+        onSuccess?.();
+      }, 2000);
     } catch (err: any) {
       setError(err.message || "An error occurred while sharing application");
     } finally {
       setLoading(false);
     }
-  }, [selectedBank, selectedBankName, applicationId, onClose, onSuccess]);
+  }, [selectedBank, selectedBankName, applicationId, remarks, onClose, onSuccess]);
+
 
   return (
     <AnimatePresence>
@@ -161,6 +164,20 @@ export default function ShareWithBankModal({
                         </button>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Remarks Input */}
+                  <div className="mb-6">
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
+                      Submission Remarks / Notes
+                    </label>
+                    <textarea
+                      value={remarks}
+                      onChange={(e) => setRemarks(e.target.value)}
+                      placeholder="Add internal remarks about document verification or routing details..."
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-900"
+                      rows={3}
+                    />
                   </div>
 
                   {/* Error Message */}

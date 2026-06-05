@@ -30,10 +30,10 @@ export default function Footer() {
 
                         {/* Social Icons */}
                         <div className="flex items-center gap-2.5 mb-8">
-                            <SocialIcon href="#" icon="/images/social/instagram.png" alt="Instagram" color="hover:bg-[#E1306C]" />
-                            <SocialIcon href="#" icon="/images/social/linkedin.png" alt="LinkedIn" color="hover:bg-[#0077B5]" />
-                            <SocialIcon href="#" icon="/images/social/youtube.png" alt="YouTube" color="hover:bg-red-600" />
-                            <SocialIcon href="#" icon="/images/social/twitter.png" alt="Twitter" color="hover:bg-black" />
+                            <SocialIcon href="https://www.instagram.com/vidya_loans/" icon="/images/social/instagram.png" alt="Instagram" color="hover:bg-[#E1306C]" />
+                            <SocialIcon href="https://www.linkedin.com/company/vidyaloans/" icon="/images/social/linkedin.png" alt="LinkedIn" color="hover:bg-[#0077B5]" />
+                            <SocialIcon href="https://www.youtube.com/@VidyaLoans" icon="/images/social/youtube.png" alt="YouTube" color="hover:bg-red-600" />
+                            <SocialIcon href="https://x.com/VidyaLoans07" icon="/images/social/twitter.png" alt="Twitter" color="hover:bg-black" />
                         </div>
 
                         {/* Contact */}
@@ -99,12 +99,12 @@ export default function Footer() {
                                     <span className="text-[11px] text-gray-500">Headquarters</span>
                                 </div>
                             </li>
-                            {["Hyderabad", "Visakhapatnam", "Vijayawada", "Chennai"].map((city) => (
+                            {/* {["Hyderabad", "Visakhapatnam", "Vijayawada", "Chennai"].map((city) => (
                                 <li key={city} className="flex items-start gap-2.5 text-gray-400">
                                     <span className="material-symbols-outlined text-[#6605c7] text-base mt-0.5">location_on</span>
                                     {city}
                                 </li>
-                            ))}
+                            ))} */}
                         </ul>
                     </div>
                 </div>
@@ -117,9 +117,9 @@ export default function Footer() {
                         </p>
 
                         {/* Made in India */}
-                        <p className="text-[11px] text-gray-400 order-2 md:order-3 flex items-center gap-1.5 font-normal opacity-80">
+                        {/* <p className="text-[11px] text-gray-400 order-2 md:order-3 flex items-center gap-1.5 font-normal opacity-80">
                             Made with <span className="text-red-400/80">❤</span> in India for students worldwide
-                        </p>
+                        </p> */}
                     </div>
                 </div>
             </div>

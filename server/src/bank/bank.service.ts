@@ -35,7 +35,7 @@ export class BankService {
     let query = this.db
       .from('LoanApplication')
       .select('*')
-      .in('status', ['submitted', 'submitted_to_bank', 'pending']);
+      .in('status', ['submitted_to_bank', 'processing']);
 
     query = this.matchBankFilter(query, bankName);
 

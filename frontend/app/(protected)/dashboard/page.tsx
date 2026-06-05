@@ -597,7 +597,8 @@ export default function DashboardPage() {
                                         {data.applications.slice(0, 3).map((app) => {
                                             const statusColors: Record<string, string> = {
                                                 pending: "bg-amber-100 text-amber-700",
-                                                processing: "bg-blue-100 text-blue-700",
+                                                submitted: "bg-blue-100 text-blue-700",
+                                                processing: "bg-indigo-100 text-indigo-700",
                                                 approved: "bg-emerald-100 text-emerald-700",
                                                 rejected: "bg-red-100 text-red-600",
                                                 disbursed: "bg-purple-100 text-purple-700",
@@ -711,7 +712,8 @@ export default function DashboardPage() {
                                 {data.applications.map((app) => {
                                     const statusConfig: Record<string, { bg: string; text: string; icon: string }> = {
                                         pending: { bg: "bg-amber-50 border-amber-200", text: "text-amber-700", icon: "schedule" },
-                                        processing: { bg: "bg-blue-50 border-blue-200", text: "text-blue-700", icon: "sync" },
+                                        submitted: { bg: "bg-blue-50 border-blue-200", text: "text-blue-700", icon: "assignment" },
+                                        processing: { bg: "bg-indigo-50 border-indigo-200", text: "text-indigo-700", icon: "sync" },
                                         approved: { bg: "bg-emerald-50 border-emerald-200", text: "text-emerald-700", icon: "check_circle" },
                                         rejected: { bg: "bg-red-50 border-red-200", text: "text-red-600", icon: "cancel" },
                                         disbursed: { bg: "bg-purple-50 border-purple-200", text: "text-purple-700", icon: "paid" },

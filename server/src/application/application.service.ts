@@ -671,7 +671,7 @@ export class ApplicationService {
     return { success: true, message: 'Document deleted successfully' };
   }
 
-  async getAllApplications(filters?: { status?: string; stage?: string; loanType?: string; bank?: string; search?: string; fromDate?: string; toDate?: string; limit?: number; offset?: number; sortBy?: string; sortOrder?: 'asc' | 'desc'; userId?: string }) {
+  async getAllApplications(filters?: { status?: string; stage?: string; loanType?: string; bank?: string; search?: string; fromDate?: string; toDate?: string; limit?: number; offset?: number; sortBy?: string; sortOrder?: 'asc' | 'desc'; userId?: string; excludeStatus?: string }) {
     try {
       console.log('[ApplicationService.getAllApplications] Filters:', JSON.stringify(filters));
       
@@ -685,6 +685,7 @@ export class ApplicationService {
       query = query.order(sortCol, { ascending: isAsc });
 
       if (filters?.status) query = query.eq('status', filters.status);
+      if (filters?.excludeStatus) query = query.neq('status', filters.excludeStatus);
       if (filters?.stage) query = query.eq('stage', filters.stage);
       if (filters?.loanType) query = query.eq('loanType', filters.loanType);
       if (filters?.bank) query = query.eq('bank', filters.bank);
@@ -738,7 +739,7 @@ export class ApplicationService {
     const updateData: any = {};
     const historyData: any = { changedBy: adminId, changedByName: adminName };
 
-    const isAuthorizedToChangeStatus = ['staff', 'super_admin', 'bank'].includes(role || '');
+    const isAuthorizedToChangeStatus = ['staff', 'admin', 'super_admin', 'bank', 'partner_bank'].includes(role || '');
 
     if (data.status && data.status !== application.status) {
       if (!isAuthorizedToChangeStatus) {

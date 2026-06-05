@@ -71,7 +71,7 @@ export default function IncomingQueuePage() {
         return applications.filter((app) => {
             // Must not have a LAN to be in "Incoming Queue"
             if (app.lanNumber) return false;
-            if (app.status === "rejected" || app.status === "approved" || app.status === "disbursed") return false;
+            if (app.status === "rejected" || app.status === "approved" || app.status === "disbursed" || app.status === "submitted" || app.status === "pending" || app.status === "draft") return false;
 
             const matchesSearch = 
                 (app.applicationNumber || "").toLowerCase().includes(search.toLowerCase()) ||

@@ -32,6 +32,7 @@ import NotificationsPanel from "@/components/staff/NotificationsPanel";
 const DASHBOARD_SECTIONS = [
     "overview",
     "applicants",
+    "incoming_queue",
     "applications",
     "tasks",
     "performance",
@@ -760,13 +761,33 @@ export default function StaffDashboardPage() {
             if (activeSection === "blogs") {
                 res = await adminApi.getBlogs({ limit: '100' });
                 setData(Array.isArray(res) ? res : (res.data || []));
+            } else if (activeSection === "incoming_queue") {
+                const offset = (currentPage - 1) * applicationsPerPage;
+                const params: any = {
+                    limit: String(applicationsPerPage),
+                    offset: String(offset),
+                    status: "submitted",
+                };
+                if (searchQuery) params.search = searchQuery;
+                res = await adminApi.getApplications(params);
+                if (res && res.data) {
+                    setData(res.data);
+                    setTotalItems(res.pagination?.total ?? res.total ?? res.data.length);
+                } else {
+                    setData(Array.isArray(res) ? res : []);
+                    setTotalItems(Array.isArray(res) ? res.length : 0);
+                }
             } else if (activeSection === "applications") {
                 const offset = (currentPage - 1) * applicationsPerPage;
                 const params: any = {
                     limit: String(applicationsPerPage),
                     offset: String(offset),
                 };
-                if (filterStatus !== "all") params.status = filterStatus;
+                if (filterStatus !== "all") {
+                    params.status = filterStatus;
+                } else {
+                    params.excludeStatus = "submitted";
+                }
                 if (searchQuery) params.search = searchQuery;
                 res = await adminApi.getApplications(params);
                 if (res && res.data) {
@@ -871,7 +892,7 @@ export default function StaffDashboardPage() {
                 loadOverview();
                 setLastRefresh(new Date());
             }, 20000);
-        } else if (activeSection === "applications") {
+        } else if (activeSection === "applications" || activeSection === "incoming_queue") {
             // Refresh applications every 15 seconds for real-time pipeline
             autoRefreshInterval.current = setInterval(() => {
                 loadData();
@@ -2610,7 +2631,7 @@ export default function StaffDashboardPage() {
             return (item.title?.toLowerCase().includes(query) ||
                 item.authorName?.toLowerCase().includes(query));
         }
-        if (activeSection === 'applications') {
+        if (activeSection === 'applications' || activeSection === 'incoming_queue') {
             const fName = (item.firstName || item.student?.firstName || '').toLowerCase();
             const lName = (item.lastName || item.student?.lastName || '').toLowerCase();
             const appNum = (item.applicationNumber || '').toLowerCase();
@@ -2634,29 +2655,29 @@ export default function StaffDashboardPage() {
     });
 
     // Server-side pagination for applications (20 per page)
-    const activePageSize = activeSection === 'applications' ? applicationsPerPage : itemsPerPage;
-    const appsTotalItems = activeSection === 'applications' ? totalItems : totalItems;
+    const activePageSize = (activeSection === 'applications' || activeSection === 'incoming_queue') ? applicationsPerPage : itemsPerPage;
+    const appsTotalItems = (activeSection === 'applications' || activeSection === 'incoming_queue') ? totalItems : totalItems;
 
-    const pagedData = activeSection === 'applications'
+    const pagedData = (activeSection === 'applications' || activeSection === 'incoming_queue')
         ? filteredData
         : filteredData;
 
-    const totalPages = activeSection === 'applications'
+    const totalPages = (activeSection === 'applications' || activeSection === 'incoming_queue')
         ? Math.max(1, Math.ceil(appsTotalItems / applicationsPerPage))
         : Math.max(1, Math.ceil(totalItems / activePageSize));
 
-    const showingStart = activeSection === 'applications'
+    const showingStart = (activeSection === 'applications' || activeSection === 'incoming_queue')
         ? (appsTotalItems > 0 ? (currentPage - 1) * applicationsPerPage + 1 : 0)
         : ((currentPage - 1) * itemsPerPage + 1);
 
-    const showingEnd = activeSection === 'applications'
+    const showingEnd = (activeSection === 'applications' || activeSection === 'incoming_queue')
         ? Math.min(currentPage * applicationsPerPage, appsTotalItems)
         : Math.min(currentPage * itemsPerPage, totalItems);
 
 
     // Auto-advance to next page when all applications on the current page are completed
     useEffect(() => {
-        if (activeSection === 'applications' && pagedData.length > 0 && !loading) {
+        if ((activeSection === 'applications' || activeSection === 'incoming_queue') && pagedData.length > 0 && !loading) {
             const allCompleted = pagedData.every((item: any) => {
                 const statusKey = (item.status || 'draft').toLowerCase();
                 return ['approved', 'rejected', 'disbursed', 'cancelled', 'verified'].includes(statusKey);
@@ -2671,6 +2692,7 @@ export default function StaffDashboardPage() {
 
     const statusColors: Record<string, string> = {
         pending: "bg-amber-100 text-amber-700 border-amber-200",
+        submitted: "bg-blue-100 text-blue-700 border-blue-200",
         processing: "bg-blue-100 text-blue-700 border-blue-200",
         approved: "bg-emerald-100 text-emerald-700 border-emerald-200",
         rejected: "bg-red-100 text-red-600 border-red-200",
@@ -2679,7 +2701,7 @@ export default function StaffDashboardPage() {
         draft: "bg-gray-100 text-gray-500 border-gray-200",
     };
 
-    const pendingCount = Number(stats.apps?.statusStats?.pending || 0) + Number(stats.apps?.statusStats?.processing || 0) + Number(stats.apps?.statusStats?.submitted || 0);
+    const pendingCount = Number(stats.apps?.statusStats?.pending || 0) + Number(stats.apps?.statusStats?.processing || 0);
     const approvedCount = Number(stats.apps?.statusStats?.approved || 0) + Number(stats.apps?.statusStats?.disbursed || 0);
     const rejectedCount = Number(stats.apps?.statusStats?.rejected || 0) + Number(stats.apps?.statusStats?.cancelled || 0);
     const totalApps = Number(stats.apps?.total ?? 0);
@@ -2688,6 +2710,7 @@ export default function StaffDashboardPage() {
     const sectionTitles: Record<string, string> = {
         overview: 'Dashboard',
         applicants: 'Pull & Share Documents',
+        incoming_queue: 'Incoming Queue',
         applications: 'Active Pipeline',
         tasks: 'Action Items',
         performance: 'Performance',
@@ -2700,13 +2723,16 @@ export default function StaffDashboardPage() {
         onboarding: 'Applicant Onboarding',
     };
 
+    const incomingQueueCount = Number(stats.apps?.statusStats?.submitted || 0);
+
     const navItems = [
         { section: "overview", icon: "dashboard", label: "Dashboard", badge: 0 },
-        { section: "applicants", icon: "send_to_mobile", label: "Document Transfer", badge: 0 },
+        { section: "incoming_queue", icon: "move_to_inbox", label: "Incoming Queue", badge: incomingQueueCount },
         { section: "applications", icon: "description", label: "Active Pipeline", badge: pendingCount },
-        { section: "tasks", icon: "check_circle", label: "Action Items", badge: tasks.filter(t => !t.completed).length },
-        { section: "performance", icon: "insights", label: "Performance", badge: 0 },
         { section: "users", icon: "people", label: "User Directory", badge: 0 },
+        { section: "applicants", icon: "send_to_mobile", label: "Document Transfer", badge: 0 },
+        { section: "performance", icon: "insights", label: "Performance", badge: 0 },
+        { section: "tasks", icon: "check_circle", label: "Action Items", badge: tasks.filter(t => !t.completed).length },
         { section: "blogs", icon: "article", label: "Editorial Content", badge: 0 },
         { section: "community", icon: "groups", label: "Engagement Hub", badge: 0 },
         { section: "communications", icon: "mail", label: "Outreach Center", badge: 0 },
@@ -2806,7 +2832,7 @@ export default function StaffDashboardPage() {
     };
 
     return (
-        <div className="staff-dashboard-shell h-screen overflow-hidden flex bg-white text-slate-900 font-sans text-sm">
+        <div className="staff-dashboard-shell h-screen overflow-hidden flex bg-white text-slate-900 text-sm" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
             {/* Mobile overlay */}
             {sidebarOpen && (
                 <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -2936,7 +2962,7 @@ export default function StaffDashboardPage() {
 
                     {/* Onboarding Flow View */}
                     {activeSection === "onboarding" && (
-                        <div className="flex flex-col md:flex-row h-screen bg-slate-50 animate-in fade-in duration-500 overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+                        <div className="flex flex-col md:flex-row h-screen bg-slate-50 animate-in fade-in duration-500 overflow-hidden">
                             {/* Header / Breadcrumbs & Stepper */}
                             {/* LEFT SIDEBAR: Profile & Progress */}
                             <div className="w-full md:w-[320px] bg-[#F8FAFC] border-b md:border-b-0 md:border-r border-slate-200 flex flex-col p-6 md:p-8 overflow-y-auto no-scrollbar shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
@@ -2992,7 +3018,7 @@ export default function StaffDashboardPage() {
                                                 {/* Animated background rings */}
                                                 <div className="absolute inset-0 border-2 border-dashed border-indigo-100/60 rounded-full animate-[spin_40s_linear_infinite]" />
                                                 <div className="absolute inset-4 border border-dashed border-slate-200 rounded-full animate-[spin_20s_linear_infinite_reverse]" />
-                                                
+
                                                 {/* Outer glowing blur */}
                                                 <div className="absolute w-24 h-24 bg-gradient-to-tr from-indigo-500/10 to-emerald-500/10 rounded-full blur-xl animate-pulse" />
 
@@ -3001,7 +3027,7 @@ export default function StaffDashboardPage() {
                                                     <rect x="15" y="10" width="70" height="80" rx="16" fill="white" stroke="#E2E8F0" strokeWidth="2" />
                                                     <rect x="25" y="20" width="50" height="8" rx="4" fill="#F1F5F9" />
                                                     <rect x="25" y="32" width="35" height="6" rx="3" fill="#F1F5F9" />
-                                                    
+
                                                     {/* User Avatar Circle */}
                                                     <circle cx="50" cy="58" r="16" fill="url(#avatar-grad)" />
                                                     <mask id="avatar-mask">
@@ -3011,11 +3037,11 @@ export default function StaffDashboardPage() {
                                                         <circle cx="50" cy="53" r="6" fill="white" />
                                                         <path d="M34 68 C34 61.3726 39.3726 59 46 59 H54 C60.6274 59 66 61.3726 66 68 V74 H34 V68 Z" fill="white" />
                                                     </g>
-                                                    
+
                                                     {/* Plus badge */}
                                                     <circle cx="72" cy="24" r="12" fill="#10B981" className="animate-bounce" style={{ animationDuration: '3s' }} />
                                                     <path d="M72 19V29M67 24H77" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                                                    
+
                                                     <defs>
                                                         <linearGradient id="avatar-grad" x1="34" y1="42" x2="66" y2="74" gradientUnits="userSpaceOnUse">
                                                             <stop stopColor="#6366F1" />
@@ -3032,7 +3058,7 @@ export default function StaffDashboardPage() {
                                                 <h4 className="text-[12px] font-bold text-slate-800">Add Applicant Profile</h4>
                                                 <p className="text-[11px] text-slate-400 font-medium leading-relaxed">
                                                     Register a student to unlock the full onboarding profile and document management.
-                                                    </p>
+                                                </p>
                                             </div>
                                         </div>
                                     )}
@@ -3079,9 +3105,8 @@ export default function StaffDashboardPage() {
 
                                                     {/* Text details */}
                                                     <div className="min-w-0 flex-1 -mt-0.5">
-                                                        <h5 className={`text-[12px] font-bold tracking-wide uppercase transition-colors ${
-                                                            isActive ? 'text-indigo-600 font-extrabold' : isCompleted ? 'text-emerald-700' : 'text-slate-500'
-                                                        }`}>
+                                                        <h5 className={`text-[12px] font-bold tracking-wide uppercase transition-colors ${isActive ? 'text-indigo-600 font-extrabold' : isCompleted ? 'text-emerald-700' : 'text-slate-500'
+                                                            }`}>
                                                             {step.label}
                                                         </h5>
                                                         <p className="text-[10px] text-slate-400 font-medium mt-0.5">
@@ -3145,20 +3170,20 @@ export default function StaffDashboardPage() {
                                                         <span className="material-symbols-outlined text-[40px]">{onboardMode === 'new' ? 'person_add' : 'link'}</span>
                                                     </div>
                                                     <h2 className="text-3xl font-bold font-['Playfair_Display',serif] text-slate-900 tracking-tight">Onboarding Entry</h2>
-                                                    
+
                                                     {/* Pill segment controller */}
                                                     <div className="inline-flex p-1 bg-slate-100 rounded-xl relative max-w-sm mx-auto w-full mt-6">
-                                                        <button 
+                                                        <button
                                                             type="button"
-                                                            onClick={() => setOnboardMode('new')} 
+                                                            onClick={() => setOnboardMode('new')}
                                                             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all relative z-10 ${onboardMode === 'new' ? 'bg-white text-[#0d1b2a] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
                                                         >
                                                             <span className="material-symbols-outlined text-[16px]">person_add</span>
                                                             Register New
                                                         </button>
-                                                        <button 
+                                                        <button
                                                             type="button"
-                                                            onClick={() => setOnboardMode('link')} 
+                                                            onClick={() => setOnboardMode('link')}
                                                             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all relative z-10 ${onboardMode === 'link' ? 'bg-white text-[#0d1b2a] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
                                                         >
                                                             <span className="material-symbols-outlined text-[16px]">link</span>
@@ -3177,17 +3202,16 @@ export default function StaffDashboardPage() {
                                                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">First Name*</label>
                                                                 </div>
                                                                 <div className="relative">
-                                                                    <input 
-                                                                        required 
-                                                                        type="text" 
-                                                                        value={quickForm.firstName} 
-                                                                        onChange={e => setQuickForm({ ...quickForm, firstName: e.target.value })} 
-                                                                        className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${
-                                                                            quickForm.firstName.trim().length >= 2 
-                                                                                ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500' 
+                                                                    <input
+                                                                        required
+                                                                        type="text"
+                                                                        value={quickForm.firstName}
+                                                                        onChange={e => setQuickForm({ ...quickForm, firstName: e.target.value })}
+                                                                        className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${quickForm.firstName.trim().length >= 2
+                                                                                ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500'
                                                                                 : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
-                                                                        }`} 
-                                                                        placeholder="Rahul" 
+                                                                            }`}
+                                                                        placeholder="Rahul"
                                                                     />
                                                                     {quickForm.firstName.trim().length >= 2 && (
                                                                         <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 text-[18px] font-bold animate-in fade-in zoom-in-50 duration-200">check_circle</span>
@@ -3201,17 +3225,16 @@ export default function StaffDashboardPage() {
                                                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Last Name*</label>
                                                                 </div>
                                                                 <div className="relative">
-                                                                    <input 
-                                                                        required 
-                                                                        type="text" 
-                                                                        value={quickForm.lastName} 
-                                                                        onChange={e => setQuickForm({ ...quickForm, lastName: e.target.value })} 
-                                                                        className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${
-                                                                            quickForm.lastName.trim().length >= 2 
-                                                                                ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500' 
+                                                                    <input
+                                                                        required
+                                                                        type="text"
+                                                                        value={quickForm.lastName}
+                                                                        onChange={e => setQuickForm({ ...quickForm, lastName: e.target.value })}
+                                                                        className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${quickForm.lastName.trim().length >= 2
+                                                                                ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500'
                                                                                 : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
-                                                                        }`} 
-                                                                        placeholder="Sharma" 
+                                                                            }`}
+                                                                        placeholder="Sharma"
                                                                     />
                                                                     {quickForm.lastName.trim().length >= 2 && (
                                                                         <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 text-[18px] font-bold animate-in fade-in zoom-in-50 duration-200">check_circle</span>
@@ -3225,17 +3248,16 @@ export default function StaffDashboardPage() {
                                                                     <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Email Address*</label>
                                                                 </div>
                                                                 <div className="relative">
-                                                                    <input 
-                                                                        required 
-                                                                        type="email" 
-                                                                        value={quickForm.email} 
-                                                                        onChange={e => setQuickForm({ ...quickForm, email: e.target.value })} 
-                                                                        className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${
-                                                                            /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(quickForm.email) 
-                                                                                ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500' 
+                                                                    <input
+                                                                        required
+                                                                        type="email"
+                                                                        value={quickForm.email}
+                                                                        onChange={e => setQuickForm({ ...quickForm, email: e.target.value })}
+                                                                        className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(quickForm.email)
+                                                                                ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500'
                                                                                 : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
-                                                                        }`} 
-                                                                        placeholder="rahul@example.com" 
+                                                                            }`}
+                                                                        placeholder="rahul@example.com"
                                                                     />
                                                                     {/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(quickForm.email) && (
                                                                         <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 text-[18px] font-bold animate-in fade-in zoom-in-50 duration-200">check_circle</span>
@@ -3254,18 +3276,17 @@ export default function StaffDashboardPage() {
                                                                 <div className="flex gap-3">
                                                                     <div className="px-4 py-4 bg-slate-100 border border-slate-200 rounded-2xl text-[13px] flex items-center gap-1.5 font-bold text-slate-600 shadow-inner">🇮🇳 +91</div>
                                                                     <div className="relative flex-1">
-                                                                        <input 
-                                                                            required 
-                                                                            type="tel" 
-                                                                            value={quickForm.phone} 
-                                                                            onChange={e => setQuickForm({ ...quickForm, phone: formatPhone(e.target.value) })} 
-                                                                            className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${
-                                                                                isPhoneValid(quickForm.phone) 
-                                                                                    ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500' 
+                                                                        <input
+                                                                            required
+                                                                            type="tel"
+                                                                            value={quickForm.phone}
+                                                                            onChange={e => setQuickForm({ ...quickForm, phone: formatPhone(e.target.value) })}
+                                                                            className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${isPhoneValid(quickForm.phone)
+                                                                                    ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500'
                                                                                     : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
-                                                                            }`} 
-                                                                            placeholder="9876543210" 
-                                                                            maxLength={10} 
+                                                                                }`}
+                                                                            placeholder="9876543210"
+                                                                            maxLength={10}
                                                                         />
                                                                         {isPhoneValid(quickForm.phone) && (
                                                                             <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-emerald-500 text-[18px] font-bold animate-in fade-in zoom-in-50 duration-200">check_circle</span>
@@ -3274,10 +3295,10 @@ export default function StaffDashboardPage() {
                                                                 </div>
                                                                 {quickForm.phone && !isPhoneValid(quickForm.phone) && (
                                                                     <p className="text-[10px] text-rose-500 font-semibold mt-1 ml-1 animate-in fade-in duration-200">
-                                                                        {quickForm.phone.length !== 10 
-                                                                            ? "Must be exactly 10 digits" 
-                                                                            : !/^[6-9]/.test(quickForm.phone) 
-                                                                                ? "Must start with 6, 7, 8, or 9" 
+                                                                        {quickForm.phone.length !== 10
+                                                                            ? "Must be exactly 10 digits"
+                                                                            : !/^[6-9]/.test(quickForm.phone)
+                                                                                ? "Must start with 6, 7, 8, or 9"
                                                                                 : "Please enter a valid mobile number"}
                                                                     </p>
                                                                 )}
@@ -3286,16 +3307,16 @@ export default function StaffDashboardPage() {
 
                                                         {/* Centered Action Buttons */}
                                                         <div className="flex items-center justify-center gap-4 pt-6 border-t border-slate-100">
-                                                            <button 
-                                                                type="button" 
-                                                                onClick={resetOnboardModal} 
+                                                            <button
+                                                                type="button"
+                                                                onClick={resetOnboardModal}
                                                                 className="px-8 py-4 border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-2xl font-bold text-[11px] uppercase tracking-wider transition-all"
                                                             >
                                                                 Cancel
                                                             </button>
-                                                            <button 
-                                                                type="submit" 
-                                                                disabled={createLoading} 
+                                                            <button
+                                                                type="submit"
+                                                                disabled={createLoading}
                                                                 className="px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-[11px] uppercase tracking-wider hover:shadow-lg hover:shadow-emerald-600/20 transition-all flex items-center gap-2 disabled:opacity-50"
                                                             >
                                                                 {createLoading ? 'Syncing...' : 'Register Applicant'}
@@ -3348,16 +3369,16 @@ export default function StaffDashboardPage() {
 
                                                         {/* Centered Action Buttons */}
                                                         <div className="flex items-center justify-center gap-4 pt-6 border-t border-slate-100">
-                                                            <button 
-                                                                type="button" 
-                                                                onClick={resetOnboardModal} 
+                                                            <button
+                                                                type="button"
+                                                                onClick={resetOnboardModal}
                                                                 className="px-8 py-4 border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-50 rounded-2xl font-bold text-[11px] uppercase tracking-wider transition-all"
                                                             >
                                                                 Cancel
                                                             </button>
-                                                            <button 
-                                                                type="submit" 
-                                                                disabled={isSearchingUsers} 
+                                                            <button
+                                                                type="submit"
+                                                                disabled={isSearchingUsers}
                                                                 className="px-8 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold text-[11px] uppercase tracking-wider hover:shadow-lg hover:shadow-indigo-600/20 transition-all flex items-center gap-2 disabled:opacity-50"
                                                             >
                                                                 {isSearchingUsers ? 'Searching...' : 'Check & Link Account'}
@@ -5477,7 +5498,7 @@ export default function StaffDashboardPage() {
                                         </div>
                                     ) : onboardStep === 3 ? (
                                         /* STEP 3: Documents Summary Dashboard */
-                                        <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in zoom-in-95 duration-300 pb-12 mt-4 font-['Plus_Jakarta_Sans',sans-serif]">
+                                        <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in zoom-in-95 duration-300 pb-12 mt-4 font-serif">
                                             <div className="bg-white rounded-3xl shadow-xl shadow-slate-100 border border-slate-200 p-10 relative overflow-hidden">
                                                 {/* Background Accents */}
                                                 <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50 rounded-full filter blur-3xl -z-10 opacity-60" />
@@ -7001,20 +7022,26 @@ export default function StaffDashboardPage() {
                         </div>
                     )}
 
-                    {["applications", "blogs", "community", "users"].includes(activeSection) && (
+                    {["applications", "incoming_queue", "blogs", "community", "users"].includes(activeSection) && (
                         <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in">
 
                             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                 <div>
-                                    {activeSection === 'applications' && (
+                                    {(activeSection === 'applications' || activeSection === 'incoming_queue') && (
                                         <p className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-400 uppercase tracking-widest mb-1 ml-1">STAFF DASHBOARD</p>
                                     )}
                                     <h2 className={`text-[28px] tracking-tight flex items-center gap-3 font-['Playfair_Display',serif] font-bold text-[#0d1b2a]`}>
-                                        {activeSection === 'overview' ? 'Operational Overview' : activeSection === 'community' ? 'Engagement Hub' : activeSection === 'blogs' ? 'Editorial Content' : activeSection === 'users' ? 'User Directory' : 'Active Pipeline'}
+                                        {activeSection === 'overview' ? 'Operational Overview' : activeSection === 'community' ? 'Engagement Hub' : activeSection === 'blogs' ? 'Editorial Content' : activeSection === 'users' ? 'User Directory' : activeSection === 'incoming_queue' ? 'Incoming Queue' : 'Active Pipeline'}
                                         {activeSection === 'applications' && (
                                             <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-sans font-semibold text-emerald-700 ml-2">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                                 LIVE SYSTEM
+                                            </span>
+                                        )}
+                                        {activeSection === 'incoming_queue' && (
+                                            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-sans font-semibold text-blue-700 ml-2">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                                INCOMING QUEUE
                                             </span>
                                         )}
                                         {activeSection === 'users' && (
@@ -7165,7 +7192,7 @@ export default function StaffDashboardPage() {
                                 </div>
                             )}
 
-                            <div className="rounded-[24px] border border-slate-100 overflow-hidden shadow-sm bg-white font-['Plus_Jakarta_Sans',sans-serif]">
+                            <div className="rounded-[24px] border border-slate-100 overflow-hidden shadow-sm bg-white">
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left">
                                         <TableHeader>
@@ -7178,7 +7205,7 @@ export default function StaffDashboardPage() {
                                                     <th className="px-5 py-3.5 w-28 text-center"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">ACTIONS</span></th>
                                                 </>
                                             )}
-                                            {activeSection === "applications" && (
+                                            {(activeSection === "applications" || activeSection === "incoming_queue") && (
                                                 <>
                                                     <th className="sticky left-0 z-20 bg-slate-50 px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">APPLICANT PROFILE</span></th>
                                                     <th className="sticky left-[250px] min-w-[200px] z-20 bg-slate-50 px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">USER ID</span></th>
@@ -7264,7 +7291,7 @@ export default function StaffDashboardPage() {
                                                             </td>
                                                         </>
                                                     )}
-                                                    {activeSection === "applications" && (() => {
+                                                    {(activeSection === "applications" || activeSection === "incoming_queue") && (() => {
                                                         const progress = item.progress ?? 10;
                                                         const statusKey = (item.status || 'draft').toLowerCase();
                                                         const statusColors: Record<string, string> = {
@@ -7671,15 +7698,15 @@ export default function StaffDashboardPage() {
                                         </tbody>
                                     </table>
                                 </div>
-                                {((activeSection === 'users' && totalItems > itemsPerPage) || activeSection === 'applications') && (
+                                {((activeSection === 'users' && totalItems > itemsPerPage) || activeSection === 'applications' || activeSection === 'incoming_queue') && (
                                     <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
                                         <div className="flex flex-col">
                                             {/* <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Navigation Console</p> */}
                                             <p className="text-[11px] font-bold text-slate-700">
                                                 Page <span className="text-indigo-600">{currentPage}</span> of {totalPages}
                                                 <span className="mx-2 text-slate-300">|</span>
-                                                Total Records: <span className="text-slate-900">{activeSection === 'applications' ? appsTotalItems : totalItems}</span>
-                                                {activeSection === 'applications' && (
+                                                Total Records: <span className="text-slate-900">{(activeSection === 'applications' || activeSection === 'incoming_queue') ? appsTotalItems : totalItems}</span>
+                                                {(activeSection === 'applications' || activeSection === 'incoming_queue') && (
                                                     <span className="ml-2 text-slate-400"> &bull; Showing {showingStart}&ndash;{showingEnd}</span>
                                                 )}
                                             </p>
@@ -7809,6 +7836,16 @@ export default function StaffDashboardPage() {
                             setNewStudent(prev => ({ ...prev, aadhaarNumber }));
                         }
                     }}
+                    onApplicationUpdated={async () => {
+                        await loadOverview();
+                        // If we were viewing an app from the incoming queue and it was sent to bank,
+                        // automatically navigate to Active Pipeline so staff sees the processed app
+                        if (activeSection === 'incoming_queue') {
+                            navigateToSection('applications');
+                        } else {
+                            await loadData();
+                        }
+                    }}
                 />
             )
             }
@@ -7877,7 +7914,7 @@ export default function StaffDashboardPage() {
 
             {/* Premium Interactive Document Upload Modal Popup */}
             {isUploadModalOpen && (
-                <div className="fixed inset-0 z-[95] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md transition-all animate-in fade-in duration-300 font-['Plus_Jakarta_Sans',sans-serif]">
+                <div className="fixed inset-0 z-[95] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md transition-all animate-in fade-in duration-300">
                     <div className="bg-white w-full max-w-5xl h-[85vh] rounded-3xl flex flex-col overflow-hidden shadow-2xl border border-slate-200 animate-in zoom-in-95 duration-300">
                         {/* Header Section */}
                         <div className="px-8 py-6 border-b border-slate-100 bg-white shrink-0">
