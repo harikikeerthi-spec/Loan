@@ -345,34 +345,65 @@ export default function DocumentVaultPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {docList.map((req) => {
                     const existing = docs.find(d => d.docType === req.type);
-                    const isUploaded = existing?.uploaded || existing?.status === 'uploaded';
+                    const isVerified = existing?.status === 'verified';
+                    const isRejected = existing?.status === 'rejected';
+                    const isPending = existing?.status === 'uploaded' || existing?.status === 'pending';
+                    const isUploaded = isVerified || isPending;
 
                     return (
-                        <div key={req.type} className={`bg-white rounded-xl p-5 border transition-all duration-200 ${isUploaded ? 'border-emerald-100 bg-emerald-50/10' : 'border-gray-100'
-                            }`}>
+                        <div key={req.type} className={`bg-white rounded-xl p-5 border transition-all duration-200 ${
+                            isVerified ? 'border-emerald-100 bg-emerald-50/10' :
+                            isRejected ? 'border-rose-100 bg-rose-50/5' :
+                            isPending ? 'border-amber-100 bg-amber-50/5' :
+                            'border-gray-100'
+                        }`}>
                             <div className="flex justify-between items-start mb-5">
-                                <div className={`w-10 h-10 ${isUploaded ? 'bg-emerald-100 text-emerald-600' : 'bg-[#6605c7]/[0.03] text-[#6605c7]'} rounded-xl flex items-center justify-center transition-colors`}>
+                                <div className={`w-10 h-10 ${
+                                    isVerified ? 'bg-emerald-100 text-emerald-600' :
+                                    isRejected ? 'bg-rose-100 text-rose-600' :
+                                    isPending ? 'bg-amber-100 text-[#d97706]' :
+                                    'bg-[#6605c7]/[0.03] text-[#6605c7]'
+                                } rounded-xl flex items-center justify-center transition-colors`}>
                                     <span className="material-symbols-outlined text-[20px]">{req.icon}</span>
                                 </div>
-                                {isUploaded && (
+                                {isVerified && (
                                     <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500 text-white rounded-md text-[9px] font-bold uppercase tracking-wider">
                                         <span className="material-symbols-outlined text-[12px]">check_circle</span>
                                         Verified
+                                    </div>
+                                )}
+                                {isRejected && (
+                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-rose-500 text-white rounded-md text-[9px] font-bold uppercase tracking-wider">
+                                        <span className="material-symbols-outlined text-[12px]">cancel</span>
+                                        Rejected
+                                    </div>
+                                )}
+                                {isPending && (
+                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-500 text-white rounded-md text-[9px] font-bold uppercase tracking-wider">
+                                        <span className="material-symbols-outlined text-[12px]">hourglass_empty</span>
+                                        Pending Review
                                     </div>
                                 )}
                             </div>
 
                             <h3 className="text-[13px] font-bold text-gray-900 mb-1">{req.label}</h3>
                             <p className="text-[11px] text-gray-500 mb-4">
-                                {isUploaded ? "Document successfully stored in vault" : "Click to upload your original document"}
+                                {isVerified ? "Document successfully verified and locked" :
+                                 isPending ? "Document uploaded, awaiting staff review" :
+                                 isRejected ? "Verification failed - please upload a new copy" :
+                                 "Click to upload your original document"}
                             </p>
 
-                            {rejections[req.type] && (
-                                <div className="mb-4 p-3 bg-red-50 rounded-lg border border-red-100 flex gap-2">
-                                    <span className="material-symbols-outlined text-red-500 text-[14px] shrink-0">info</span>
-                                    <p className="text-[10px] text-red-600 leading-relaxed font-medium">{rejections[req.type]}</p>
+                            {isRejected && (
+                                <div className="mb-4 p-3 bg-rose-50 rounded-lg border border-rose-100 flex gap-2">
+                                    <span className="material-symbols-outlined text-rose-500 text-[14px] shrink-0 mt-0.5">info</span>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-wider text-rose-600 mb-0.5">Rejection Reason</p>
+                                        <p className="text-[10px] text-rose-700 leading-normal font-medium">{existing?.verificationMetadata?.rejectionReason || existing?.rejectionReason || "Please upload a clearer document."}</p>
+                                    </div>
                                 </div>
                             )}
+
 
                             <input
                                 id={`file-input-${req.type}`}

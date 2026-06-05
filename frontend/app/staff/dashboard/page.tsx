@@ -40,7 +40,6 @@ const DASHBOARD_SECTIONS = [
     "community",
     "communications",
     "chat_customer",
-    "activities",
     "my_profile",
     "onboarding",
 ] as const;
@@ -908,7 +907,6 @@ export default function StaffDashboardPage() {
             setActionRemarks("");
             loadData();
             loadOverview();
-            addActivity("update", `Updated application ${appId} status to ${status}`, "published_with_changes", "text-blue-600 bg-blue-50");
         } catch (e) {
             alert("Failed to update application status");
         } finally {
@@ -922,7 +920,6 @@ export default function StaffDashboardPage() {
         try {
             await adminApi.sendEmail(emailData);
             alert("Email sent successfully");
-            addActivity("share", `Sent ${emailData.isBulk ? "bulk" : "direct"} email: ${emailData.subject}`, "mail", "text-indigo-600 bg-indigo-50");
             setEmailData({ to: "", subject: "", content: "", role: "user", isBulk: false });
         } catch (e: any) {
             alert("Failed to send email: " + e.message);
@@ -930,27 +927,17 @@ export default function StaffDashboardPage() {
     };
 
     const toggleTask = (id: number) => {
-        const task = tasks.find(t => t.id === id);
         setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-        if (task) {
-            addActivity("update", `${task.completed ? "Reopened" : "Completed"} task: ${task.title}`, "task_alt", "text-blue-600 bg-blue-50");
-        }
     };
 
     const addTask = () => {
         if (!newTaskTitle.trim()) return;
-        const title = newTaskTitle.trim();
-        setTasks([{ id: Date.now(), title, completed: false }, ...tasks]);
-        addActivity("new", `Created task: ${title}`, "add_task", "text-emerald-600 bg-emerald-50");
+        setTasks([{ id: Date.now(), title: newTaskTitle, completed: false }, ...tasks]);
         setNewTaskTitle("");
     };
 
     const deleteTask = (id: number) => {
-        const task = tasks.find(t => t.id === id);
         setTasks(tasks.filter(t => t.id !== id));
-        if (task) {
-            addActivity("rejected", `Deleted task: ${task.title}`, "delete", "text-rose-600 bg-rose-50");
-        }
     };
 
     const resetOnboardState = () => {

@@ -296,65 +296,6 @@ export default function DashboardPage() {
         setExpandedApps(prev => ({ ...prev, [appId]: !prev[appId] }));
     };
 
-    // Fetch active conversation ID on mount for background socket listening
-    useEffect(() => {
-        if (!user) return;
-        chatApi.connect().then((res: any) => {
-            if (res?.conversation?.id) {
-                setConversationId(res.conversation.id);
-            }
-        }).catch(e => console.error("Could not fetch conversation details for notifications:", e));
-    }, [user]);
-
-    // Establish WebSocket connection for real-time notifications
-    useEffect(() => {
-        if (!conversationId || !token) return;
-
-        const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (
-            typeof window !== "undefined" && !window.location.hostname.includes("localhost") && !window.location.hostname.includes("127.0.0.1")
-                ? window.location.origin
-                : "http://localhost:5000"
-        );
-        const socketUrl = baseApiUrl.endsWith("/api")
-            ? baseApiUrl.replace("/api", "/chat")
-            : `${baseApiUrl.replace(/\/$/, "")}/chat`;
-
-        const sock = io(socketUrl, { auth: { token } });
-
-        sock.on("connect", () => {
-            sock.emit("join_conversation", conversationId);
-        });
-
-        sock.on("new_message", (msg: any) => {
-            // Only notify if message belongs to this conversation AND is from staff/bank/system (not the student customer)
-            if (msg.conversationId === conversationId && msg.senderType !== "customer") {
-                // If chat is open, we don't increment unread count or show toast because StudentChatPanel handles it
-                if (!chatOpen) {
-                    setUnreadCount(prev => prev + 1);
-                    setActiveToast({
-                        sender: msg.senderType === "system" ? "System Alert" : "Support Agent",
-                        content: msg.content
-                    });
-                }
-            }
-        });
-
-        return () => {
-            sock.emit("leave_conversation", conversationId);
-            sock.disconnect();
-        };
-    }, [conversationId, token, chatOpen]);
-
-    // Auto-dismiss notification toast
-    useEffect(() => {
-        if (activeToast) {
-            const timer = setTimeout(() => {
-                setActiveToast(null);
-            }, 6000);
-            return () => clearTimeout(timer);
-        }
-    }, [activeToast]);
-
     const loadData = useCallback(async () => {
         if (!user?.email) return;
         setLoading(true);
@@ -390,6 +331,79 @@ export default function DashboardPage() {
             setLoading(false);
         }
     }, [user?.email]);
+
+    // Fetch active conversation ID on mount for background socket listening
+    useEffect(() => {
+        if (!user) return;
+        chatApi.connect().then((res: any) => {
+            if (res?.conversation?.id) {
+                setConversationId(res.conversation.id);
+            }
+        }).catch(e => console.error("Could not fetch conversation details for notifications:", e));
+    }, [user]);
+
+    // Establish WebSocket connection for real-time notifications
+    useEffect(() => {
+        if (!token) return;
+
+        const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (
+            typeof window !== "undefined" && !window.location.hostname.includes("localhost") && !window.location.hostname.includes("127.0.0.1")
+                ? window.location.origin
+                : "http://localhost:5000"
+        );
+        const socketUrl = baseApiUrl.endsWith("/api")
+            ? baseApiUrl.replace("/api", "/chat")
+            : `${baseApiUrl.replace(/\/$/, "")}/chat`;
+
+        const sock = io(socketUrl, { auth: { token } });
+
+        sock.on("connect", () => {
+            if (conversationId) {
+                sock.emit("join_conversation", conversationId);
+            }
+        });
+
+        sock.on("new_message", (msg: any) => {
+            // Only notify if message belongs to this conversation AND is from staff/bank/system (not the student customer)
+            if (conversationId && msg.conversationId === conversationId && msg.senderType !== "customer") {
+                // If chat is open, we don't increment unread count or show toast because StudentChatPanel handles it
+                if (!chatOpen) {
+                    setUnreadCount(prev => prev + 1);
+                    setActiveToast({
+                        sender: msg.senderType === "system" ? "System Alert" : "Support Agent",
+                        content: msg.content
+                    });
+                }
+            }
+        });
+
+        sock.on("notification_received", (notif: any) => {
+            setUnreadCount(prev => prev + 1);
+            setActiveToast({
+                sender: notif.title || "System Notification",
+                content: notif.body
+            });
+            // Reload dashboard data in background (fresh documents/activities)
+            loadData();
+        });
+
+        return () => {
+            if (conversationId) {
+                sock.emit("leave_conversation", conversationId);
+            }
+            sock.disconnect();
+        };
+    }, [conversationId, token, chatOpen, loadData]);
+
+    // Auto-dismiss notification toast
+    useEffect(() => {
+        if (activeToast) {
+            const timer = setTimeout(() => {
+                setActiveToast(null);
+            }, 6000);
+            return () => clearTimeout(timer);
+        }
+    }, [activeToast]);
 
     useEffect(() => {
         loadData();
@@ -878,23 +892,74 @@ export default function DashboardPage() {
                                 </Link>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {data.documents.map((doc, i) => (
-                                    <div key={i} className="bg-white rounded-xl p-5 border border-gray-100 flex items-center justify-between hover:border-[#6605c7]/20 transition-all">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-9 h-9 bg-emerald-50 text-emerald-600 rounded-lg flex items-center justify-center">
-                                                <span className="material-symbols-outlined text-xl">description</span>
+                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {data.documents.map((doc: any, i) => {
+                                    const status = doc.status;
+                                    const isVerified = status === 'verified';
+                                    const isRejected = status === 'rejected';
+                                    const isPending = status === 'uploaded' || status === 'pending';
+
+                                    let statusLabel = "Uploaded";
+                                    let statusColor = "text-gray-400";
+                                    let bgClass = "bg-gray-50 text-gray-600";
+                                    let iconName = "description";
+                                    let checkIcon = "check";
+                                    let checkColor = "bg-emerald-500 text-white";
+
+                                    if (isVerified) {
+                                        statusLabel = "Verified";
+                                        statusColor = "text-emerald-600";
+                                        bgClass = "bg-emerald-50 text-emerald-600";
+                                        iconName = "check_circle";
+                                        checkIcon = "check";
+                                        checkColor = "bg-emerald-500 text-white";
+                                    } else if (isRejected) {
+                                        statusLabel = "Rejected";
+                                        statusColor = "text-rose-600";
+                                        bgClass = "bg-rose-50 text-rose-600";
+                                        iconName = "cancel";
+                                        checkIcon = "close";
+                                        checkColor = "bg-rose-500 text-white";
+                                    } else if (isPending) {
+                                        statusLabel = "Pending Review";
+                                        statusColor = "text-amber-600";
+                                        bgClass = "bg-amber-50 text-[#d97706]";
+                                        iconName = "pending";
+                                        checkIcon = "hourglass_empty";
+                                        checkColor = "bg-amber-500 text-white";
+                                    }
+
+                                    return (
+                                        <div key={i} className={`bg-white rounded-xl p-5 border flex flex-col justify-between hover:border-[#6605c7]/20 transition-all ${
+                                            isRejected ? 'border-rose-100 bg-rose-50/5' : isPending ? 'border-amber-100 bg-amber-50/5' : isVerified ? 'border-emerald-100 bg-emerald-50/5' : 'border-gray-100'
+                                        }`}>
+                                            <div className="flex items-center justify-between w-full">
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`w-9 h-9 ${bgClass} rounded-lg flex items-center justify-center shrink-0`}>
+                                                        <span className="material-symbols-outlined text-xl">{iconName}</span>
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold text-[13px] text-gray-900 capitalize">{doc.docType.replace(/_/g, ' ')}</div>
+                                                        <div className={`text-[10px] uppercase font-black tracking-widest mt-0.5 ${statusColor}`}>{statusLabel}</div>
+                                                    </div>
+                                                </div>
+                                                <div className={`w-6 h-6 rounded-full ${checkColor} flex items-center justify-center shrink-0`}>
+                                                    <span className="material-symbols-outlined text-[14px] font-bold">{checkIcon}</span>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <div className="font-bold text-[13px] text-gray-900 capitalize">{doc.docType.replace('_', ' ')}</div>
-                                                <div className="text-[10px] text-gray-400 uppercase font-black tracking-widest mt-0.5">Verified</div>
-                                            </div>
+
+                                            {isRejected && (
+                                                <div className="mt-4 p-3 bg-rose-50 rounded-lg border border-rose-100 flex gap-2">
+                                                    <span className="material-symbols-outlined text-rose-500 text-[14px] shrink-0 mt-0.5">info</span>
+                                                    <div>
+                                                        <p className="text-[9px] font-black uppercase tracking-wider text-rose-600 mb-0.5">Rejection Reason</p>
+                                                        <p className="text-[10px] text-rose-700 leading-normal font-medium">{doc.verificationMetadata?.rejectionReason || doc.rejectionReason || "Please upload a clearer document."}</p>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center">
-                                            <span className="material-symbols-outlined text-[14px] font-bold">check</span>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </div>

@@ -237,4 +237,55 @@ export class NotificationService {
       this.logger.error(`Failed to handle document uploaded event: ${error.message}`);
     }
   }
+
+  /**
+   * Event listener for document rejection
+   * Creates a notification for the student about document rejection
+   */
+  @OnEvent('document.rejected')
+  async handleDocumentRejected(payload: any) {
+    try {
+      const docName = payload.documentName || payload.documentType;
+      await this.createNotification(
+        payload.userId,
+        `❌ Document Rejected: ${docName}`,
+        `Your uploaded ${docName} has been rejected. Reason: ${payload.rejectionReason}`,
+        'document_rejected',
+        {
+          documentId: payload.documentId,
+          documentType: payload.documentType,
+          documentName: payload.documentName,
+          rejectionReason: payload.rejectionReason,
+          rejectedAt: payload.rejectedAt,
+        }
+      );
+    } catch (error) {
+      this.logger.error(`Failed to handle document rejected event: ${error.message}`);
+    }
+  }
+
+  /**
+   * Event listener for document acceptance/verification
+   * Creates a notification for the student about document approval
+   */
+  @OnEvent('document.verified')
+  async handleDocumentVerified(payload: any) {
+    try {
+      const docName = payload.documentName || payload.documentType;
+      await this.createNotification(
+        payload.userId,
+        `✅ Document Approved: ${docName}`,
+        `Your uploaded ${docName} has been successfully verified.`,
+        'document_verified',
+        {
+          documentId: payload.documentId,
+          documentType: payload.documentType,
+          documentName: payload.documentName,
+          verifiedAt: payload.verifiedAt,
+        }
+      );
+    } catch (error) {
+      this.logger.error(`Failed to handle document verified event: ${error.message}`);
+    }
+  }
 }

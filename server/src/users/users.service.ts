@@ -1043,7 +1043,6 @@ export class UsersService {
     if (error) throw error;
     return { success: true };
   }
-
   async updateDocumentStatus(docId: string, status: string, rejectionReason?: string) {
     const payload: any = {
       status,
@@ -1083,10 +1082,31 @@ export class UsersService {
       throw error;
     }
 
+    // Emit events for real-time student notifications
+    if (data) {
+      const docName = data.verificationMetadata?.docName || data.docType;
+      if (status === 'rejected') {
+        this.eventEmitter.emit('document.rejected', {
+          userId: data.userId,
+          documentId: data.id,
+          documentType: data.docType,
+          documentName: docName,
+          rejectionReason: rejectionReason,
+          rejectedAt: payload.verificationMetadata.rejectedAt,
+        });
+      } else if (status === 'verified') {
+        this.eventEmitter.emit('document.verified', {
+          userId: data.userId,
+          documentId: data.id,
+          documentType: data.docType,
+          documentName: docName,
+          verifiedAt: payload.verifiedAt,
+        });
+      }
+    }
+
     return data;
   }
-
-
   // Get user dashboard data with all applications, documents and full activity feed
   async getUserDashboardData(userId: string) {
     try {
