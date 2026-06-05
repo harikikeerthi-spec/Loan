@@ -276,6 +276,10 @@ function BankLoginContent() {
         try {
             const data = await authApi.verifyOtp(email.trim(), code) as any;
             
+            if (data.success === false || !data.access_token) {
+                throw new Error(data.message || "Invalid OTP. Please enter the right one to login.");
+            }
+            
             if (data.role !== "bank" && data.role !== "partner_bank" && data.role !== "admin" && data.role !== "super_admin") {
                 throw new Error("Unauthorized role. You must be bank staff to access this portal.");
             }

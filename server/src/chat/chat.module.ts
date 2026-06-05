@@ -6,6 +6,7 @@ import { WhatsappController } from './whatsapp.controller';
 import { ChatController } from './chat.controller';
 import { MultiPartyChatService } from './multiparty-chat.service';
 import { MultiPartyChatController } from './multiparty-chat.controller';
+import { StudentNotificationService } from './student-notification.service';
 import { EmailService } from './email.service';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -26,7 +27,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
       })
   ],
   controllers: [WhatsappController, ChatController, MultiPartyChatController],
-  providers: [ChatService, TwilioService, ChatGateway, MultiPartyChatService, EmailService],
-  exports: [ChatService, MultiPartyChatService, EmailService]
+  providers: [ChatService, TwilioService, ChatGateway, MultiPartyChatService, EmailService, StudentNotificationService],
+  exports: [ChatService, MultiPartyChatService, EmailService, StudentNotificationService]
 })
 export class ChatModule {}

@@ -92,6 +92,10 @@ function AgentLoginContent() {
                 lastName?: string;
             };
 
+            if (data.success === false || !data.access_token) {
+                throw new Error((data as any).message || "Invalid OTP. Please enter the right one to login.");
+            }
+
             if (data.role !== 'agent' && data.role !== 'partner_agent' && data.role !== 'admin' && data.role !== 'super_admin') {
                 throw new Error("Access Denied: Agent privileges required.");
             }

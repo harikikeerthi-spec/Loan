@@ -387,31 +387,28 @@ export const blogApi = {
 export const communityApi = {
     // Basic posts (legacy/alias)
     getPosts: (topic?: string, page = 1) =>
-        fetch(`${API_URL}/community/posts?${topic ? `topic=${topic}&` : ""}page=${page}`).then(handleResponse),
+        apiFetch(`${API_URL}/community/posts?${topic ? `topic=${topic}&` : ""}page=${page}`),
 
     getPostBySlug: (slug: string) =>
-        fetch(`${API_URL}/community/posts/${slug}`).then(handleResponse),
+        apiFetch(`${API_URL}/community/posts/${slug}`),
 
     createPost: (data: { title: string; content: string; category: string; force?: boolean }) =>
-        fetch(`${API_URL}/community/posts`, {
+        apiFetch(`${API_URL}/community/posts`, {
             method: 'POST',
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 
     // Engagement
     addComment: (postId: string, content: string) =>
-        fetch(`${API_URL}/community/posts/${postId}/comments`, {
+        apiFetch(`${API_URL}/community/posts/${postId}/comments`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify({ content }),
-        }).then(handleResponse),
+        }),
 
     likePost: (postId: string) =>
-        fetch(`${API_URL}/community/posts/${postId}/like`, {
+        apiFetch(`${API_URL}/community/posts/${postId}/like`, {
             method: "POST",
-            headers: authHeaders(),
-        }).then(handleResponse),
+        }),
 
     // New Forum structure
     getForumPosts: (params?: { category?: string; tag?: string; sort?: string; limit?: number; offset?: number }) => {
@@ -421,73 +418,66 @@ export const communityApi = {
         if (params?.sort) q.set('sort', params.sort);
         if (params?.limit) q.set('limit', String(params.limit));
         if (params?.offset) q.set('offset', String(params.offset));
-        return fetch(`${API_URL}/community/forum?${q.toString()}`).then(handleResponse);
+        return apiFetch(`${API_URL}/community/forum?${q.toString()}`);
     },
 
     getForumPost: (id: string) =>
-        fetch(`${API_URL}/community/forum/${id}`, {
-            headers: authHeaders(),
-        }).then(handleResponse),
+        apiFetch(`${API_URL}/community/forum/${id}`),
 
     likeForumPost: (postId: string) =>
-        fetch(`${API_URL}/community/forum/${postId}/like`, {
+        apiFetch(`${API_URL}/community/forum/${postId}/like`, {
             method: "POST",
-            headers: authHeaders(),
-        }).then(handleResponse),
+        }),
 
     addForumComment: (postId: string, content: string, parentId?: string) =>
-        fetch(`${API_URL}/community/forum/${postId}/comment`, {
+        apiFetch(`${API_URL}/community/forum/${postId}/comment`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify({ content, parentId }),
-        }).then(handleResponse),
+        }),
 
     likeForumComment: (commentId: string) =>
-        fetch(`${API_URL}/community/forum/comments/${commentId}/like`, {
+        apiFetch(`${API_URL}/community/forum/comments/${commentId}/like`, {
             method: "POST",
-            headers: authHeaders(),
-        }).then(handleResponse),
+        }),
 
     // Hubs, Stats, etc.
-    getHubs: () => fetch(`${API_URL}/community/hubs`).then(handleResponse),
+    getHubs: () => apiFetch(`${API_URL}/community/hubs`),
 
-    getStats: () => fetch(`${API_URL}/community/stats`).then(handleResponse),
+    getStats: () => apiFetch(`${API_URL}/community/stats`),
 
     checkDuplicate: (data: { title: string; content: string; category: string }) =>
-        fetch(`${API_URL}/community/forum/check-duplicate`, {
+        apiFetch(`${API_URL}/community/forum/check-duplicate`, {
             method: 'POST',
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 
     checkRelevance: (title: string, content: string) =>
-        fetch(`${API_URL}/ai/check-relevance`, {
+        apiFetch(`${API_URL}/ai/check-relevance`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify({ title, content }),
-        }).then(handleResponse),
+        }),
 
     searchSimilarPosts: (q: string) =>
-        fetch(`${API_URL}/community/forum/search?q=${encodeURIComponent(q)}`).then(handleResponse),
+        apiFetch(`${API_URL}/community/forum/search?q=${encodeURIComponent(q)}`),
 
     // Specialized data
     getMentors: (params?: { limit?: number; offset?: number }) => {
         const q = new URLSearchParams();
         if (params?.limit) q.set('limit', String(params.limit));
         if (params?.offset) q.set('offset', String(params.offset));
-        return fetch(`${API_URL}/community/mentors?${q.toString()}`).then(handleResponse);
+        return apiFetch(`${API_URL}/community/mentors?${q.toString()}`);
     },
 
     getEvents: (params?: { limit?: number }) => {
         const q = new URLSearchParams();
         if (params?.limit) q.set('limit', String(params.limit));
-        return fetch(`${API_URL}/community/events?${q.toString()}`).then(handleResponse);
+        return apiFetch(`${API_URL}/community/events?${q.toString()}`);
     },
 
     getStories: (params?: { limit?: number }) => {
         const q = new URLSearchParams();
         if (params?.limit) q.set('limit', String(params.limit));
-        return fetch(`${API_URL}/community/stories?${q.toString()}`).then(handleResponse);
+        return apiFetch(`${API_URL}/community/stories?${q.toString()}`);
     },
 };
 
@@ -1217,7 +1207,7 @@ export const bankApi = {
     getBranches: () => apiFetch(HttpApiPaths.bank.branches()),
     createBranch: (data: any) => apiFetch(HttpApiPaths.bank.branches(), { method: "POST", body: JSON.stringify(data) }),
     getOfficers: () => apiFetch(HttpApiPaths.bank.officers()),
-    getFileDetail: (id: string) => apiFetch(HttpApiPaths.bank.fileDetail(id)),
+    getFileDetail: (id: string) => apiFetch<any>(HttpApiPaths.bank.fileDetail(id)),
     lookupByLan: (lan: string) => apiFetch(HttpApiPaths.bank.lookupByLan(lan)),
     getMyFiles: (filters?: any) => apiFetch(HttpApiPaths.bank.myFiles(filters)),
     amendDecision: (decisionId: string, data: any) => apiFetch(HttpApiPaths.bank.amendDecision(decisionId), { method: "PUT", body: JSON.stringify(data) }),
@@ -1230,6 +1220,8 @@ export const bankApi = {
     getAnalyticsMetrics: () => apiFetch(HttpApiPaths.bank.analyticsMetrics()),
     exportCsv: () => apiFetch(HttpApiPaths.bank.exportCsv()),
     exportMis: () => apiFetch(HttpApiPaths.bank.exportMis()),
+    getConsent: (applicationId: string) => apiFetch<any>(HttpApiPaths.bank.consent(applicationId)),
+    recordConsent: (applicationId: string, data: any) => apiFetch<any>(HttpApiPaths.bank.consent(applicationId), { method: "POST", body: JSON.stringify(data) }),
 };
 
 /** Shared REST path builders + staff-dashboard catalog (single source for URLs). */

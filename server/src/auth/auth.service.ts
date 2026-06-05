@@ -334,18 +334,12 @@ export class AuthService {
     
     if (otp !== '123456') {
       if (!stored || stored.otp !== otp) {
-        return {
-          success: false,
-          message: 'Invalid OTP. Please try again.'
-        };
+        throw new BadRequestException('Invalid OTP. Please enter the right one to login.');
       }
 
       if (Date.now() > stored.expiresAt) {
         this.otps.delete(email);
-        return {
-          success: false,
-          message: 'OTP has expired. Please request a new OTP.'
-        };
+        throw new BadRequestException('OTP has expired. Please request a new OTP.');
       }
     }
 

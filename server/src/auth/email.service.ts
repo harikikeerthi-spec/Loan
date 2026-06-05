@@ -36,7 +36,7 @@ export class EmailService {
             <div style="background: white; padding: 20px; border-radius: 10px; text-align: center; margin: 20px 0;">
               <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #6605c7;">${otp}</span>
             </div>
-            <p style="color: #999; font-size: 14px;">This code expires in 5 minutes. Do not share this code with anyone.</p>
+            <p style="color: #999; font-size: 14px;">This code expires in 1 minutes. Do not share this code with anyone.</p>
           </div>
         </div>
       `,

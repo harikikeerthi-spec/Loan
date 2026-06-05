@@ -96,7 +96,9 @@ export default function MentorsPage() {
                                             const res = await chatApi.connect() as any;
                                             window.open(res.whatsappUrl, '_blank');
                                         } catch (e) {
-                                            window.open(`https://wa.me/` + (process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER || '+14155238886'), '_blank');
+                                            const rawNumber = process.env.NEXT_PUBLIC_TWILIO_WHATSAPP_NUMBER || '+14155238886';
+                                            const cleanNumber = rawNumber.replace('whatsapp:', '').replace(/\D/g, '');
+                                            window.open(`https://wa.me/${cleanNumber}`, '_blank');
                                         }
                                     }}
                                     className="mt-6 w-full py-3 rounded-2xl bg-[#6605c7] text-white font-bold text-xs uppercase tracking-widest hover:shadow-lg transition-all"

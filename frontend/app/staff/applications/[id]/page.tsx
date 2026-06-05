@@ -11,7 +11,14 @@ import { formatDate } from "@/lib/utils";
 const IST_OFFSET = 5.5 * 60 * 60 * 1000; // India Standard Time offset (+5:30) in ms
 const convertToIST = (dateVal: any): Date => {
     if (!dateVal) return new Date();
-    const d = new Date(dateVal);
+    let cleanDs = dateVal;
+    if (typeof cleanDs === 'string' && !cleanDs.includes('Z') && !cleanDs.includes('+')) {
+        if (cleanDs.includes('T') || cleanDs.includes(':')) {
+            const formatted = cleanDs.replace(' ', 'T');
+            cleanDs = formatted.includes('Z') ? formatted : formatted + 'Z';
+        }
+    }
+    const d = new Date(cleanDs);
     if (isNaN(d.getTime())) return dateVal;
     return new Date(d.getTime() + IST_OFFSET);
 };
@@ -19,7 +26,14 @@ const convertToIST = (dateVal: any): Date => {
 const formatToIST = (dateVal: any, formatStr: string = "MMM d, yyyy • hh:mm a"): string => {
     if (!dateVal) return "—";
     try {
-        const d = new Date(dateVal);
+        let cleanDs = dateVal;
+        if (typeof cleanDs === 'string' && !cleanDs.includes('Z') && !cleanDs.includes('+')) {
+            if (cleanDs.includes('T') || cleanDs.includes(':')) {
+                const formatted = cleanDs.replace(' ', 'T');
+                cleanDs = formatted.includes('Z') ? formatted : formatted + 'Z';
+            }
+        }
+        const d = new Date(cleanDs);
         if (isNaN(d.getTime())) return "—";
 
         const parts = new Intl.DateTimeFormat("en-US", {
@@ -472,7 +486,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                                 };
 
                                                 const currentProgress = getActiveProgress();
-                                                const appCreatedAt = application.createdAt || application.created_at || application.submittedAt || application.submitted_at;
+                                                const appCreatedAt = application.date || application.createdAt || application.created_at || application.submittedAt || application.submitted_at;
                                                 const appUpdatedAt = application.updatedAt || application.updated_at || appCreatedAt;
 
                                                 const completedThresholds = [12, 25, 37, 50, 62, 75, 87, 100];

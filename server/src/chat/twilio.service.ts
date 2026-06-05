@@ -24,8 +24,14 @@ export class TwilioService {
   async sendWhatsAppMessage(to: string, body: string): Promise<any> {
     const from = this.configService.get<string>('TWILIO_WHATSAPP_NUMBER') || 'whatsapp:+14155238886';
     
-    // Format to number (ensure it starts with whatsapp:)
-    const formattedTo = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
+    // Format to number (ensure it starts with whatsapp: and has country code)
+    let cleanTo = to.replace('whatsapp:', '').trim().replace(/\D/g, '');
+    if (cleanTo.length === 10) {
+      cleanTo = `+91${cleanTo}`;
+    } else {
+      cleanTo = `+${cleanTo}`;
+    }
+    const formattedTo = `whatsapp:${cleanTo}`;
 
     if (!this.client) {
       this.logger.log(`[MOCK TWILIO] Sending message to ${formattedTo}: ${body}`);

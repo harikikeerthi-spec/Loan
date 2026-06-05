@@ -301,16 +301,23 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     const regAtInd = application.registeredAtIndia || application.student?.registeredAtIndia || application.user?.registeredAtIndia;
     if (regAtInd && typeof regAtInd === 'string' && regAtInd.endsWith(' IST')) return regAtInd;
     const ds = regAtInd || application.createdAt || application.created_at || application.student?.createdAt || application.student?.created_at || application.user?.createdAt || application.user?.created_at;
-    if (!ds) return "â€”";
+    if (!ds) return "—";
     try {
-      const date = new Date(ds);
-      if (isNaN(date.getTime())) return "â€”";
+      let cleanDs = ds;
+      if (typeof cleanDs === 'string' && !cleanDs.includes('Z') && !cleanDs.includes('+')) {
+        if (cleanDs.includes('T') || cleanDs.includes(':')) {
+          const formatted = cleanDs.replace(' ', 'T');
+          cleanDs = formatted.includes('Z') ? formatted : formatted + 'Z';
+        }
+      }
+      const date = new Date(cleanDs);
+      if (isNaN(date.getTime())) return "—";
       return new Intl.DateTimeFormat('en-IN', {
         timeZone: 'Asia/Kolkata',
         day: '2-digit', month: 'short', year: 'numeric',
         hour: '2-digit', minute: '2-digit', hour12: true
       }).format(date) + " IST";
-    } catch (e) { return "â€”"; }
+    } catch (e) { return "—"; }
   })();
 
   const shortCreatedDateIST = (() => {
@@ -340,7 +347,14 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     const ds = regAtInd || application.createdAt || application.created_at || application.student?.createdAt || application.student?.created_at || application.user?.createdAt || application.user?.created_at;
     if (!ds) return "PENDING";
     try {
-      const date = new Date(ds);
+      let cleanDs = ds;
+      if (typeof cleanDs === 'string' && !cleanDs.includes('Z') && !cleanDs.includes('+')) {
+        if (cleanDs.includes('T') || cleanDs.includes(':')) {
+          const formatted = cleanDs.replace(' ', 'T');
+          cleanDs = formatted.includes('Z') ? formatted : formatted + 'Z';
+        }
+      }
+      const date = new Date(cleanDs);
       if (isNaN(date.getTime())) return "PENDING";
       return new Intl.DateTimeFormat('en-IN', {
         timeZone: 'Asia/Kolkata',
@@ -387,7 +401,15 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
 
       // All other timestamps are UTC ISO strings (e.g. "2026-05-23T04:23:00.000Z").
       // Add +5 hours 30 minutes to convert to Indian Standard Time.
-      date = new Date(ds);
+      let cleanDs = ds;
+      if (typeof cleanDs === 'string' && !cleanDs.includes('Z') && !cleanDs.includes('+')) {
+        if (cleanDs.includes('T') || cleanDs.includes(':')) {
+          const formatted = cleanDs.replace(' ', 'T');
+          cleanDs = formatted.includes('Z') ? formatted : formatted + 'Z';
+        }
+      }
+
+      date = new Date(cleanDs);
       if (isNaN(date.getTime())) return "";
 
       // Use Intl.DateTimeFormat with Asia/Kolkata to correctly apply the +5:30 offset
@@ -410,15 +432,16 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
       const hr = get('hour');
       const min = get('minute');
 
-      return `${monthStr} ${day} ${year}, ${hr}:${min} `;
+      return `${monthStr} ${day} ${year}, ${hr}:${min}`;
     } catch {
       return "";
     }
   };
 
-  // The primary user-directory timestamp â€” sourced from registeredAtIndia / createdAt
+  // The primary user-directory timestamp — sourced from registeredAtIndia / createdAt
   // in the staff dashboard user record. Used as the authoritative time for stage timestamps.
   const userDirectoryTimestamp =
+    application.date ||
     application.registeredAtIndia ||
     application.student?.registeredAtIndia ||
     application.user?.registeredAtIndia ||
@@ -499,7 +522,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
 
     // Fallbacks if history lookup doesn't yield a timestamp:
     // Every completed stage should show a date and time.
-    const createdDate = application.student?.registeredAtIndia || application.registeredAtIndia || application.student?.createdAt || application.student?.created_at || application.user?.createdAt || application.user?.created_at || application.createdAt || application.created_at;
+    const createdDate = application.date || application.student?.registeredAtIndia || application.registeredAtIndia || application.student?.createdAt || application.student?.created_at || application.user?.createdAt || application.user?.created_at || application.createdAt || application.created_at;
     const submittedDate = application.submittedAt || application.submitted_at || createdDate;
     const verifiedDate = application.updatedAt || application.updated_at || submittedDate;
 
