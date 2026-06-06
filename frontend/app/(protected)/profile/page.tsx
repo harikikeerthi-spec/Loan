@@ -61,13 +61,13 @@ export default function ProfilePage() {
 
     const handleSave = async () => {
         if (!user?.email) return;
-        
+
         // Validate phone number
         if (form.phoneNumber && !isPhoneValid(form.phoneNumber)) {
             alert("Please enter a valid phone number");
             return;
         }
-        
+
         setSaving(true);
         try {
             await authApi.updateDetails(user.email, {
@@ -179,10 +179,10 @@ export default function ProfilePage() {
                             ) : (
                                 <div className="space-y-5">
                                     {[
-                                        { key: "firstName", label: "First Name", type: "text" },
+                                        { key: "firstName", label: "First Name", type: "text", },
                                         { key: "lastName", label: "Last Name", type: "text" },
-                                        { key: "phoneNumber", label: "Phone Number", type: "text", isLocked: false },
-                                        { key: "dateOfBirth", label: "Date of Birth", type: "datepicker", isLocked: false },
+                                        { key: "phoneNumber", label: "Phone Number", type: "text", isLocked: true },
+                                        { key: "dateOfBirth", label: "Date of Birth", type: "datepicker", isLocked: true },
                                     ].map((item: any) => {
                                         const { key, label, type, placeholder, pattern, isLocked } = item;
                                         return (
@@ -204,22 +204,27 @@ export default function ProfilePage() {
                                                             pattern={pattern}
                                                             value={form[key as keyof typeof form]}
                                                             onChange={(e) => {
-                                                                const val = key === 'phoneNumber' ? formatPhone(e.target.value) : e.target.value;
+                                                                let val = e.target.value;
+                                                                if (key === 'phoneNumber') {
+                                                                    val = formatPhone(val);
+                                                                } else if (key === 'firstName' || key === 'lastName') {
+                                                                    val = val.replace(/[^A-Za-z]/g, "");
+                                                                }
                                                                 setForm((p) => ({ ...p, [key]: val }));
                                                             }}
                                                             readOnly={isLocked}
-                                                            maxLength={key === 'phoneNumber' ? 10 : undefined}
+                                                            maxLength={key === 'phoneNumber' ? 10 : (key === 'firstName' || key === 'lastName' ? 30 : undefined)}
                                                             className={`w-full px-4 py-2.5 border ${key === 'phoneNumber' && form.phoneNumber && !isPhoneValid(form.phoneNumber) ? 'border-rose-300 focus:border-rose-500' : 'border-gray-200 focus:border-[#6605c7]'} rounded-lg bg-gray-50/50 text-[13px] focus:outline-none focus:ring-2 focus:ring-[#6605c7]/20 transition-all ${isLocked ? 'opacity-60 cursor-not-allowed' : ''}`}
                                                         />
                                                         {key === 'phoneNumber' && form.phoneNumber && !isPhoneValid(form.phoneNumber) && (
                                                             <div className="mt-2 px-3 py-2 bg-rose-50 border border-rose-200 rounded-lg flex items-center gap-2">
                                                                 <span className="material-symbols-outlined text-rose-600 text-sm">error</span>
                                                                 <span className="text-rose-600 text-xs font-medium">
-                                                                    {form.phoneNumber.length < 10 
-                                                                        ? "Phone number must be 10 digits" 
+                                                                    {form.phoneNumber.length < 10
+                                                                        ? "Phone number must be 10 digits"
                                                                         : form.phoneNumber[0] < '6'
-                                                                        ? "Phone number must start with 6, 7, 8, or 9"
-                                                                        : "This phone number is not realistic"}
+                                                                            ? "Phone number must start with 6, 7, 8, or 9"
+                                                                            : "This phone number is not realistic"}
                                                                 </span>
                                                             </div>
                                                         )}
@@ -232,9 +237,9 @@ export default function ProfilePage() {
                                         <button onClick={() => setEditing(false)} className="px-5 py-2.5 bg-gray-100 text-gray-600 text-xs font-bold rounded-lg hover:bg-gray-200 transition-all">
                                             Cancel
                                         </button>
-                                        <button 
-                                            onClick={handleSave} 
-                                            disabled={saving || !!(form.phoneNumber && !isPhoneValid(form.phoneNumber))} 
+                                        <button
+                                            onClick={handleSave}
+                                            disabled={saving || !!(form.phoneNumber && !isPhoneValid(form.phoneNumber))}
                                             className="flex-1 py-2.5 bg-[#6605c7] text-white text-xs font-bold rounded-lg disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 hover:bg-[#5504a8] transition-all shadow-sm"
                                         >
                                             {saving && <span className="material-symbols-outlined animate-spin text-sm">progress_activity</span>}

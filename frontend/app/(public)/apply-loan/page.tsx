@@ -461,8 +461,8 @@ export default function ApplyLoanPage() {
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <InputField label="Given Name" icon="person" value={formData.firstName} onChange={(v) => update("firstName", v)} placeholder="Rahul" error={stepErrors.firstName} required />
-                                    <InputField label="Surname" icon="person" value={formData.lastName} onChange={(v) => update("lastName", v)} placeholder="Sharma" error={stepErrors.lastName} required />
+                                    <InputField label="Given Name" icon="person" value={formData.firstName} onChange={(v) => update("firstName", v.replace(/[^A-Za-z]/g, "").slice(0, 30))} placeholder="Rahul" error={stepErrors.firstName} required />
+                                    <InputField label="Surname" icon="person" value={formData.lastName} onChange={(v) => update("lastName", v.replace(/[^A-Za-z]/g, "").slice(0, 30))} placeholder="Sharma" error={stepErrors.lastName} required />
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

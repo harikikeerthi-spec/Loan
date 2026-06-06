@@ -614,10 +614,29 @@ export class BankService {
   async getFileDetail(applicationId: string): Promise<any> {
     const { data, error } = await this.db
       .from('LoanApplication')
-      .select('*, BankDecision(*), disbursements(*), file_quality_scores(*), queries(*)')
+      .select('*, BankDecision(*), disbursements(*), file_quality_scores(*), queries(*), ProcessingFee(*)')
       .eq('id', applicationId)
-      .single();
-    if (error) throw error;
+      .maybeSingle();
+
+    if (error) {
+      console.error(`[BankService] getFileDetail error for id ${applicationId}:`, error);
+      // Fallback query if relations fail
+      const { data: fallbackData, error: fallbackError } = await this.db
+        .from('LoanApplication')
+        .select('*')
+        .eq('id', applicationId)
+        .maybeSingle();
+        
+      if (fallbackError || !fallbackData) {
+         throw new NotFoundException(`Application not found or error: ${fallbackError?.message || error.message}`);
+      }
+      return fallbackData;
+    }
+
+    if (!data) {
+      throw new NotFoundException(`Loan application with ID "${applicationId}" not found`);
+    }
+
     return data;
   }
 

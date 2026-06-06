@@ -152,6 +152,9 @@ export default function DecisionsHub() {
     ]);
 
     const [submitting, setSubmitting] = useState(false);
+    const [officerRemarks, setOfficerRemarks] = useState("");
+    const [rejectionCategory, setRejectionCategory] = useState("CIBIL");
+    const [rejectionReason, setRejectionReason] = useState("Unsatisfactory CIBIL/Credit Score");
 
     useEffect(() => {
         setMounted(true);
@@ -265,6 +268,72 @@ export default function DecisionsHub() {
             const detailRes = await bankApi.getFileDetail(row.id);
             if (detailRes) {
                 setSelectedApp(detailRes);
+
+                // Initialize dynamic states from database details
+                setRoiType(detailRes.roiType || "floating");
+                setInterestRate(detailRes.roiBase ? detailRes.roiBase.toString() : "9.55");
+                setHasSubsidy(!!detailRes.roiSubsidy);
+                setSubsidyPercentage(detailRes.roiSubsidy ? detailRes.roiSubsidy.toString() : "1.50");
+
+                const feeRecord = detailRes.ProcessingFee ? (Array.isArray(detailRes.ProcessingFee) ? detailRes.ProcessingFee[0] : detailRes.ProcessingFee) : null;
+                if (feeRecord) {
+                    setFeeAmount(feeRecord.feeAmount ? feeRecord.feeAmount.toString() : "15000");
+                    setFeePaymentMode(feeRecord.paymentMode || "deducted");
+                    setHasWaiver(feeRecord.status === 'WAIVED');
+                    setWaiverReason(feeRecord.waiverReason || "");
+                } else {
+                    setFeeAmount("15000");
+                    setFeePaymentMode("deducted");
+                    setHasWaiver(false);
+                    setWaiverReason("");
+                }
+
+                const condDecision = detailRes.BankDecision?.find((d: any) => d.decision === 'CONDITIONAL_SANCTION' || d.decision === 'CONDITIONAL');
+                if (condDecision && condDecision.conditions) {
+                    let parsedConds = [];
+                    try {
+                        parsedConds = typeof condDecision.conditions === 'string'
+                            ? JSON.parse(condDecision.conditions)
+                            : condDecision.conditions;
+                    } catch (e) {}
+                    if (Array.isArray(parsedConds)) {
+                        setConditions(parsedConds.map((c: any, index: number) => ({
+                            id: c.id || String(index + 1),
+                            text: c.text || c,
+                            type: c.type || "mandatory",
+                            deadline: c.deadline ? format(new Date(c.deadline), "yyyy-MM-dd") : format(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), "yyyy-MM-dd")
+                        })));
+                    }
+                } else {
+                    setConditions([
+                        { id: "1", text: "Submit original class 10 & 12 mark sheets for validation", type: "mandatory", deadline: format(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), "yyyy-MM-dd") },
+                        { id: "2", text: "Co-applicant to execute guarantor agreement and indemnity bond", type: "mandatory", deadline: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd") }
+                    ]);
+                }
+
+                const counterDecision = detailRes.BankDecision?.find((d: any) => d.decision === 'COUNTER_OFFER');
+                if (counterDecision) {
+                    let terms = null;
+                    try {
+                        terms = typeof counterDecision.counterOffer === 'string'
+                            ? JSON.parse(counterDecision.counterOffer)
+                            : (counterDecision.counterOffer || counterDecision.counterOfferTerms);
+                        if (typeof terms === 'string') terms = JSON.parse(terms);
+                    } catch (e) {}
+                    if (terms) {
+                        setCounterAmount(terms.offeredAmount ? terms.offeredAmount.toString() : (terms.sanctionAmount ? terms.sanctionAmount.toString() : ""));
+                        setCounterRate(terms.offeredRate ? terms.offeredRate.toString() : (terms.interestRate ? terms.interestRate.toString() : "9.25"));
+                        setCounterTenure(terms.offeredTenure ? terms.offeredTenure.toString() : (terms.tenure ? terms.tenure.toString() : "120"));
+                    }
+                } else {
+                    setCounterAmount(row.amount ? (row.amount * 0.9).toString() : "");
+                    setCounterRate("9.25");
+                    setCounterTenure("120");
+                }
+
+                setOfficerRemarks("");
+                setRejectionCategory("CIBIL");
+                setRejectionReason("Unsatisfactory CIBIL/Credit Score");
 
                 // Initialize quality rating sliders
                 if (detailRes.file_quality_scores && detailRes.file_quality_scores.length > 0) {
@@ -530,6 +599,167 @@ export default function DecisionsHub() {
         }
     };
 
+    const handlePauseFlow = async () => {
+        if (!selectedApp || !holdReason) return;
+        const holdStr = `[HOLD - Reason: ${holdReason} - Resume Date: ${holdResumeDate}]: ${holdPauseNote}`;
+        const newRemarks = selectedApp.remarks ? `${selectedApp.remarks}\n${holdStr}` : holdStr;
+        try {
+            await adminApi.updateApplication(selectedApp.id, { remarks: newRemarks });
+            setIsHold(true);
+            setShowHoldModal(false);
+            
+            // Add note to audit trail
+            await adminApi.addRemark(selectedApp.id, {
+                type: 'remark',
+                content: `Held appraisal SLA timer. Reason: "${holdReason}". Resume Date: ${holdResumeDate}. Note: ${holdPauseNote}`
+            });
+
+            const detailRes = await bankApi.getFileDetail(selectedApp.id);
+            if (detailRes) {
+                setSelectedApp(detailRes);
+            }
+            await fetchRemarks(selectedApp.id);
+            await fetchTimeline(selectedApp.id);
+        } catch (e) {
+            console.error("Failed to hold application:", e);
+            alert("Failed to hold application.");
+        }
+    };
+
+    const handleResumeFlow = async () => {
+        if (!selectedApp) return;
+        let newRemarks = selectedApp.remarks || "";
+        newRemarks = newRemarks.replace(/\[HOLD - Reason:.*?\]:.*?\n?/g, "").trim();
+        try {
+            await adminApi.updateApplication(selectedApp.id, { remarks: newRemarks });
+            setIsHold(false);
+            setHoldReason("");
+            setHoldPauseNote("");
+
+            await adminApi.addRemark(selectedApp.id, {
+                type: 'remark',
+                content: `Resumed appraisal workflow & SLA timer`
+            });
+
+            const detailRes = await bankApi.getFileDetail(selectedApp.id);
+            if (detailRes) {
+                setSelectedApp(detailRes);
+            }
+            await fetchRemarks(selectedApp.id);
+            await fetchTimeline(selectedApp.id);
+        } catch (e) {
+            console.error("Failed to resume application:", e);
+            alert("Failed to resume application.");
+        }
+    };
+
+    const handleRejectCancellation = async () => {
+        if (!selectedApp) return;
+        try {
+            await adminApi.updateApplication(selectedApp.id, {
+                status: 'processing',
+                remarks: `${selectedApp.remarks || ""}\n[Appraisal]: Cancellation request rejected. Application restored to processing.`
+            });
+            await adminApi.addRemark(selectedApp.id, {
+                type: 'remark',
+                content: `Cancellation request rejected. Application status restored to processing.`
+            });
+            setShowWorkspace(false);
+            fetchApplications(currentBankId);
+        } catch (e) {
+            console.error("Failed to reject cancellation:", e);
+            alert("Error updating application status.");
+        }
+    };
+
+    const handleConfirmCancellation = async () => {
+        if (!selectedApp) return;
+        try {
+            await bankApi.submitDecision({
+                applicationId: selectedApp.id,
+                decisionType: "reject",
+                details: {
+                    reason: `Cancellation Dossier: ${cancelCategory}. Refund Option: ${cancelRefundOption}. Details: ${cancelRefundDetails}`,
+                    rejectionCategory: "POLICY",
+                    remarks: `File terminated via cancellation dossier.`
+                }
+            });
+            await adminApi.addRemark(selectedApp.id, {
+                type: 'remark',
+                content: `File terminated via cancellation dossier. Refund: ${cancelRefundOption}. Category: ${cancelCategory}`
+            });
+            setShowWorkspace(false);
+            setShowCancelModal(false);
+            fetchApplications(currentBankId);
+        } catch (e) {
+            console.error("Failed to cancel application:", e);
+            alert("Error cancelling application.");
+        }
+    };
+
+    const handleSignLetter = async () => {
+        if (!selectedApp) return;
+        try {
+            const letterUrl = `/sanctions/VL-SAN-${selectedApp.applicationNumber}.pdf`;
+            await bankApi.uploadSanctionLetter(selectedApp.id, letterUrl);
+            alert("✍️ Sanction Letter Signed! Digital signature hash registered in audit log.");
+            const detailRes = await bankApi.getFileDetail(selectedApp.id);
+            if (detailRes) {
+                setSelectedApp(detailRes);
+            }
+            await fetchRemarks(selectedApp.id);
+            await fetchTimeline(selectedApp.id);
+        } catch (e) {
+            console.error("Failed to sign letter:", e);
+            alert("Failed to sign sanction letter.");
+        }
+    };
+
+    const handleSaveAmendment = async () => {
+        if (!selectedApp) return;
+        const lastDecision = selectedApp.BankDecision?.[selectedApp.BankDecision.length - 1];
+        if (!lastDecision) {
+            alert("No existing sanction decision found to amend. Please submit a sanction first.");
+            return;
+        }
+        try {
+            const amendedAmtVal = parseFloat(amendedAmount || sanctionAmount || selectedApp.amount);
+            const amendedRateVal = parseFloat(amendedRate);
+            
+            await bankApi.amendDecision(lastDecision.id, {
+                applicationId: selectedApp.id,
+                details: {
+                    sanctionAmount: amendedAmtVal,
+                    interestRate: amendedRateVal,
+                    roiType: roiType,
+                    tenure: 120,
+                    remarks: `Amended: ${amendmentReason} (Effective: ${amendmentEffectiveDate}). Previous Fee: ₹${feeAmount}, Amended Fee: ₹${amendedFee}`
+                }
+            });
+
+            if (amendedFee) {
+                const feePayload = {
+                    feeAmount: parseFloat(amendedFee),
+                    gstAmount: Math.round(parseFloat(amendedFee) * 0.18),
+                    totalAmount: Math.round(parseFloat(amendedFee) * 1.18),
+                    status: 'PENDING'
+                };
+                await bankApi.updateProcessingFee(selectedApp.id, feePayload).catch(err => console.error("Error updating fee:", err));
+            }
+
+            alert("✍️ Sanction Decision Amended Successfully!");
+            const detailRes = await bankApi.getFileDetail(selectedApp.id);
+            if (detailRes) {
+                setSelectedApp(detailRes);
+            }
+            await fetchRemarks(selectedApp.id);
+            await fetchTimeline(selectedApp.id);
+        } catch (e) {
+            console.error("Failed to amend decision:", e);
+            alert("Failed to amend decision.");
+        }
+    };
+
     // Final Decision Submit handler
     const handleDecisionSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -539,6 +769,14 @@ export default function DecisionsHub() {
         try {
             let res: any;
             const updatedRemarks = `${selectedApp.remarks || ""}\n[Appraisal - ${format(new Date(), "MMM dd, HH:mm")}]: Type: ${activeDecisionTab.toUpperCase()} | ROI: ${interestRate}% (${roiType}) | Processing Fee: ₹${totalFeeValue}`;
+
+            // Save officer remarks as an internal note if filled
+            if (officerRemarks.trim()) {
+                await adminApi.addRemark(selectedApp.id, {
+                    type: 'remark',
+                    content: `[Underwriting Verdict Comments]: ${officerRemarks.trim()}`
+                }).catch(err => console.error("Error saving verdict comments:", err));
+            }
 
             if (activeDecisionTab === "sanction") {
                 const sanctionVal = parseFloat(sanctionAmount) || selectedApp.amount;
@@ -573,7 +811,7 @@ export default function DecisionsHub() {
                         interestRate: parseFloat(interestRate),
                         roiType: roiType,
                         tenure: 120,
-                        remarks: `Sanctioned with ROI: ${interestRate}%, processing fee: ₹${totalFeeValue}`
+                        remarks: officerRemarks || `Sanctioned with ROI: ${interestRate}%, processing fee: ₹${totalFeeValue}`
                     }
                 });
 
@@ -581,7 +819,8 @@ export default function DecisionsHub() {
                 res = await bankApi.conditionalSanction({
                     applicationId: selectedApp.id,
                     conditions: conditions.map(c => c.text),
-                    deadline: newConditionDeadline
+                    deadline: newConditionDeadline,
+                    remarks: officerRemarks
                 });
 
             } else if (activeDecisionTab === "counter_offer") {
@@ -590,7 +829,8 @@ export default function DecisionsHub() {
                     applicationId: selectedApp.id,
                     offeredAmount: counterAmtVal,
                     offeredRate: parseFloat(counterRate),
-                    offeredTenure: parseInt(counterTenure)
+                    offeredTenure: parseInt(counterTenure),
+                    remarks: officerRemarks
                 });
 
             } else if (activeDecisionTab === "reject") {
@@ -598,8 +838,9 @@ export default function DecisionsHub() {
                     applicationId: selectedApp.id,
                     decisionType: "reject",
                     details: {
-                        reason: "Does not satisfy baseline risk thresholds.",
-                        remarks: "Rejection decision finalized."
+                        reason: rejectionReason,
+                        rejectionCategory: rejectionCategory,
+                        remarks: officerRemarks || "Rejection decision finalized."
                     }
                 });
             }
@@ -874,20 +1115,7 @@ export default function DecisionsHub() {
                                             </div>
                                             <button
                                                 type="button"
-                                                onClick={() => {
-                                                    setIsHold(false);
-                                                    setHoldReason("");
-                                                    // Add event
-                                                    const timeNow = format(new Date(), "HH:mm");
-                                                    setTimelineEvents([{
-                                                        id: String(Date.now()),
-                                                        icon: "play_arrow",
-                                                        actor: "Sarah Jenkins",
-                                                        text: `Resumed appraisal workflow & SLA timer`,
-                                                        timestamp: `Today at ${timeNow}`,
-                                                        type: "officer"
-                                                    }, ...timelineEvents]);
-                                                }}
+                                                onClick={handleResumeFlow}
                                                 className="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white text-[8px] font-black uppercase tracking-wider rounded-lg"
                                             >
                                                 Resume
@@ -933,8 +1161,7 @@ export default function DecisionsHub() {
                                                     type="button"
                                                     onClick={() => {
                                                         if (isHold) {
-                                                            setIsHold(false);
-                                                            setHoldReason("");
+                                                            handleResumeFlow();
                                                         } else {
                                                             setShowHoldModal(true);
                                                         }
@@ -995,15 +1222,27 @@ export default function DecisionsHub() {
                                                         </div>
                                                     </div>
                                                 ))}
-                                                <div className="mt-2">
-                                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Quality Comments</label>
-                                                    <textarea
-                                                        value={qualityComments}
-                                                        onChange={e => setQualityComments(e.target.value)}
-                                                        rows={2}
-                                                        className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 font-semibold focus:outline-none focus:border-[#6605c7]"
-                                                        placeholder="Provide quality checks comments..."
-                                                    />
+                                                <div className="mt-2 flex gap-2 items-center">
+                                                    <div className="flex-1">
+                                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Quality Comments</label>
+                                                        <textarea
+                                                            value={qualityComments}
+                                                            onChange={e => setQualityComments(e.target.value)}
+                                                            rows={2}
+                                                            className="w-full px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-700 font-semibold focus:outline-none focus:border-[#6605c7]"
+                                                            placeholder="Provide quality checks comments..."
+                                                        />
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            saveQualityRating(qualityCompleteness, qualityKyc, qualityIncome, qualityCollateral, qualityComments);
+                                                            alert("⭐ Quality ratings saved successfully!");
+                                                        }}
+                                                        className="px-2.5 py-1.5 bg-[#6605c7] hover:bg-[#5203a4] text-white text-[8px] font-black uppercase rounded-lg shadow-sm self-end"
+                                                    >
+                                                        Save
+                                                    </button>
                                                 </div>
                                             </div>
                                             
@@ -1420,6 +1659,15 @@ export default function DecisionsHub() {
                                                                         <div>Diff: ₹{(parseFloat(amendedAmount || sanctionAmount || selectedApp.amount) - selectedApp.amount).toLocaleString()}</div>
                                                                     </div>
                                                                 </div>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={handleSaveAmendment}
+                                                                    className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white text-[9.5px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-xs">edit_note</span>
+                                                                    Apply Sanction Amendment
+                                                                </button>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1549,7 +1797,7 @@ export default function DecisionsHub() {
                                                                     </tr>
                                                                     <tr>
                                                                         <td className="px-4 py-3.5 font-bold text-gray-500">Interest Rate (%)</td>
-                                                                        <td className="px-4 py-3.5 font-bold text-gray-700">9.55%</td>
+                                                                        <td className="px-4 py-3.5 font-bold text-gray-700">{selectedApp.interestRate || 9.55}%</td>
                                                                         <td className="px-4 py-2 bg-purple-50/20">
                                                                             <input
                                                                                 type="number"
@@ -1562,7 +1810,7 @@ export default function DecisionsHub() {
                                                                     </tr>
                                                                     <tr>
                                                                         <td className="px-4 py-3.5 font-bold text-gray-500">Tenure (months)</td>
-                                                                        <td className="px-4 py-3.5 font-bold text-gray-700">180 months</td>
+                                                                        <td className="px-4 py-3.5 font-bold text-gray-700">{selectedApp.tenure || 180} months</td>
                                                                         <td className="px-4 py-2 bg-purple-50/20">
                                                                             <input
                                                                                 type="number"
@@ -1596,18 +1844,21 @@ export default function DecisionsHub() {
                                                                 <div className="flex gap-2">
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => {
-                                                                            setCounterOfferStatus("accepted");
-                                                                            // Add event
-                                                                            const timeNow = format(new Date(), "HH:mm");
-                                                                            setTimelineEvents([{
-                                                                                id: String(Date.now()),
-                                                                                icon: "handshake",
-                                                                                actor: "Student Applicant",
-                                                                                text: `Student ACCEPTED Counter-Offer (₹${(parseFloat(counterAmount) || 0).toLocaleString()} @ ${counterRate}%)`,
-                                                                                timestamp: `Today at ${timeNow}`,
-                                                                                type: "decision"
-                                                                            }, ...timelineEvents]);
+                                                                        onClick={async () => {
+                                                                            try {
+                                                                                await adminApi.updateApplication(selectedApp.id, { status: "sanctioned" });
+                                                                                await adminApi.addRemark(selectedApp.id, {
+                                                                                    type: 'remark',
+                                                                                    content: `Student ACCEPTED Counter-Offer (₹${(parseFloat(counterAmount) || 0).toLocaleString()} @ ${counterRate}%)`
+                                                                                });
+                                                                                setCounterOfferStatus("accepted");
+                                                                                await fetchTimeline(selectedApp.id);
+                                                                                await fetchRemarks(selectedApp.id);
+                                                                                fetchApplications(currentBankId);
+                                                                            } catch (err) {
+                                                                                console.error(err);
+                                                                                alert("Failed to accept offer");
+                                                                            }
                                                                         }}
                                                                         className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-black uppercase tracking-wider rounded-lg transition-all"
                                                                     >
@@ -1615,17 +1866,21 @@ export default function DecisionsHub() {
                                                                     </button>
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => {
-                                                                            setCounterOfferStatus("rejected");
-                                                                            const timeNow = format(new Date(), "HH:mm");
-                                                                            setTimelineEvents([{
-                                                                                id: String(Date.now()),
-                                                                                icon: "cancel_schedule_send",
-                                                                                actor: "Student Applicant",
-                                                                                text: `Student REJECTED Counter-Offer`,
-                                                                                timestamp: `Today at ${timeNow}`,
-                                                                                type: "decision"
-                                                                            }, ...timelineEvents]);
+                                                                        onClick={async () => {
+                                                                            try {
+                                                                                await adminApi.updateApplication(selectedApp.id, { status: "rejected" });
+                                                                                await adminApi.addRemark(selectedApp.id, {
+                                                                                    type: 'remark',
+                                                                                    content: `Student REJECTED Counter-Offer`
+                                                                                });
+                                                                                setCounterOfferStatus("rejected");
+                                                                                await fetchTimeline(selectedApp.id);
+                                                                                await fetchRemarks(selectedApp.id);
+                                                                                fetchApplications(currentBankId);
+                                                                            } catch (err) {
+                                                                                console.error(err);
+                                                                                alert("Failed to reject offer");
+                                                                            }
                                                                         }}
                                                                         className="px-2.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-[9px] font-black uppercase tracking-wider rounded-lg transition-all"
                                                                     >
@@ -1645,17 +1900,46 @@ export default function DecisionsHub() {
                                                             Rejection Categorization
                                                         </h3>
 
-                                                        <div>
-                                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Rejection Category</label>
-                                                            <select
-                                                                required
-                                                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-rose-500"
-                                                            >
-                                                                <option value="High Debt Ratio">High DTI (Debt-to-Income) Ratio</option>
-                                                                <option value="Poor CIBIL Score">Unsatisfactory CIBIL/Credit Score</option>
-                                                                <option value="Non-Tier University">Ineligible University/Program Tier</option>
-                                                                <option value="Document Discrepancy">Verification Deficiencies / Fraud</option>
-                                                            </select>
+                                                        <div className="space-y-4">
+                                                            <div>
+                                                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Rejection Category</label>
+                                                                <select
+                                                                    required
+                                                                    value={rejectionCategory}
+                                                                    onChange={(e) => {
+                                                                        setRejectionCategory(e.target.value);
+                                                                        if (e.target.value === "CIBIL") setRejectionReason("Unsatisfactory CIBIL/Credit Score");
+                                                                        else if (e.target.value === "INCOME") setRejectionReason("High DTI (Debt-to-Income) Ratio");
+                                                                        else if (e.target.value === "DOCS") setRejectionReason("Document Discrepancy / Missing Verification Docs");
+                                                                        else if (e.target.value === "FRAUD") setRejectionReason("Verification Deficiencies / Fraud");
+                                                                        else if (e.target.value === "POLICY") setRejectionReason("Ineligible University/Program Tier or Policy Deviation");
+                                                                        else if (e.target.value === "TECHNICAL") setRejectionReason("Technical validation or collateral valuation failure");
+                                                                        else if (e.target.value === "OTHER") setRejectionReason("Other credit policy deviation");
+                                                                    }}
+                                                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-rose-500"
+                                                                >
+                                                                    <option value="CIBIL">Unsatisfactory CIBIL/Credit Score</option>
+                                                                    <option value="INCOME">High DTI (Debt-to-Income) Ratio</option>
+                                                                    <option value="DOCS">Verification Deficiencies / Missing Docs</option>
+                                                                    <option value="FRAUD">Fraudulent Documentation / Activity</option>
+                                                                    <option value="POLICY">Policy / Program Ineligibility</option>
+                                                                    <option value="TECHNICAL">Technical / Valuation Issue</option>
+                                                                    <option value="OTHER">Other Reasons</option>
+                                                                </select>
+                                                            </div>
+
+                                                            <div>
+                                                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Detailed Rejection Reason</label>
+                                                                <textarea
+                                                                    required
+                                                                    value={rejectionReason}
+                                                                    onChange={(e) => setRejectionReason(e.target.value)}
+                                                                    placeholder="Provide specific reason for rejection..."
+                                                                    rows={2}
+                                                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-rose-500 text-gray-700"
+                                                                />
+                                                            </div>
+
                                                             {/* F36: Cancellation flow */}
                                                             <div className="p-4.5 bg-rose-50/30 border border-rose-100/50 rounded-2xl space-y-4 mt-4 text-left">
                                                                 <div className="flex justify-between items-center border-b border-rose-100 pb-2">
@@ -1696,20 +1980,14 @@ export default function DecisionsHub() {
                                                                 <div className="flex gap-2">
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => {
-                                                                            setShowWorkspace(false);
-                                                                            alert(`Cancellation rejected. Application status restored to processing.`);
-                                                                        }}
+                                                                        onClick={handleRejectCancellation}
                                                                         className="flex-1 py-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-550 text-[9px] font-black uppercase tracking-wider rounded-lg"
                                                                     >
                                                                         Reject Request
                                                                     </button>
                                                                     <button
                                                                         type="button"
-                                                                        onClick={() => {
-                                                                            setShowWorkspace(false);
-                                                                            alert(`❌ File terminated! Status updated to CANCELLED. Fee refund option: ${cancelRefundOption}.`);
-                                                                        }}
+                                                                        onClick={handleConfirmCancellation}
                                                                         className="flex-1 py-2 bg-rose-600 hover:bg-rose-700 text-white text-[9px] font-black uppercase tracking-wider rounded-lg shadow-sm"
                                                                     >
                                                                         Confirm Reversal
@@ -1893,7 +2171,7 @@ export default function DecisionsHub() {
                                                         <div className="grid grid-cols-2 gap-3">
                                                             <button
                                                                 type="button"
-                                                                onClick={() => alert("✍️ Signatures verified! Digital key sign registered in audit log.")}
+                                                                onClick={handleSignLetter}
                                                                 className="py-2.5 bg-[#6605c7] hover:bg-[#5203a4] text-white text-[9.5px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
                                                             >
                                                                 <span className="material-symbols-outlined text-xs">draw</span>
@@ -1918,6 +2196,8 @@ export default function DecisionsHub() {
                                                             <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Credit Officer Comments & Remarks</label>
                                                             <textarea
                                                                 required
+                                                                value={officerRemarks}
+                                                                onChange={(e) => setOfficerRemarks(e.target.value)}
                                                                 placeholder="Record loan approval note, waiver reasons, or risk mitigants..."
                                                                 rows={3}
                                                                 className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-medium focus:outline-none focus:border-[#6605c7] text-gray-700"
@@ -2185,19 +2465,7 @@ export default function DecisionsHub() {
                                     <button 
                                         type="button"
                                         disabled={!holdReason}
-                                        onClick={() => {
-                                            setIsHold(true);
-                                            setShowHoldModal(false);
-                                            const timeNow = format(new Date(), "HH:mm");
-                                            setTimelineEvents([{
-                                                id: String(Date.now()),
-                                                icon: "pause",
-                                                actor: "Sarah Jenkins",
-                                                text: `Held appraisal SLA timer. Reason: "${holdReason}". Resume Date: ${holdResumeDate}`,
-                                                timestamp: `Today at ${timeNow}`,
-                                                type: "officer"
-                                            }, ...timelineEvents]);
-                                        }}
+                                        onClick={handlePauseFlow}
                                         className="flex-1 py-3 bg-[#6605c7] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#5203a4] shadow-lg shadow-purple-500/10 transition-all font-sans disabled:opacity-50"
                                     >
                                         Pause Flow
@@ -2264,12 +2532,7 @@ export default function DecisionsHub() {
                                     </button>
                                     <button 
                                         type="button"
-                                        onClick={() => {
-                                            setShowCancelModal(false);
-                                            setShowWorkspace(false);
-                                            alert(`❌ File cancelled! Status updated to CANCELLED. Outbound alerts sent.`);
-                                            fetchApplications(currentBankId);
-                                        }}
+                                        onClick={handleConfirmCancellation}
                                         className="flex-1 py-3 bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 shadow-lg shadow-rose-500/10 transition-all font-sans"
                                     >
                                         Confirm Reversal

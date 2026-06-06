@@ -213,6 +213,7 @@ export class OpenRouterService {
             prompt = `Search for REAL, ACCREDITED universities ${query ? `matching or relevant to "${query}"` : 'that are popular'} for international students.
             ${country ? `PRIORITY: Focus PRIMARILY on universities located in "${country}".` : ''}
             ${course ? `SECONARY FOCUS: Universities strong in "${course}".` : ''}
+            CRITICAL REQUIREMENT: Focus on finding top universities that have the HIGHEST acceptance rates for international students. Ensure the acceptance rate data is highly accurate. Please rank the returned universities in descending order of their acceptance rates (highest to lowest).
 
             Context Details: ${JSON.stringify(context || {})}
 

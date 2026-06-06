@@ -218,7 +218,7 @@ const ALL_BACHELORS = [
     'B.Tech in Computer Science', 'B.Tech in Mechanical Engineering', 'B.Tech in Electrical Engineering',
     'B.Tech in Civil Engineering', 'B.Tech in Information Technology', 'B.Sc in Physics', 'B.Sc in Mathematics',
     'B.Sc in Chemistry', 'B.Sc in Computer Science', 'B.A. in Economics', 'B.A. in English', 'B.A. in History',
-    'B.Com', 'BBA', 'BCA', 'MBBS', 'B.Arch', 'B.Des', 'B.Ed', 'B.Pharm'
+    'B.Sc', 'B.Tech', 'B.E.', 'B.A.', 'B.Com', 'BBA', 'BCA', 'MBBS', 'B.Arch', 'B.Des', 'B.Ed', 'B.Pharm'
 ];
 
 // ══════════════════════════════════════════════════════════════

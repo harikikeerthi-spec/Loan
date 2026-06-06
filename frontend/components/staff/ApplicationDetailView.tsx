@@ -850,7 +850,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
               </div>
 
               {/* Bank Routing Banner */}
-              {application.status === "submitted" && (
+              {/* {application.status === "submitted" && (
                 <div className="bg-gradient-to-r from-blue-900/90 to-indigo-950/90 backdrop-blur-md rounded-3xl p-8 border border-indigo-800/30 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-indigo-950/10 animate-in slide-in-from-top-6 duration-500">
                   <div className="flex items-center gap-5">
                     <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center border border-indigo-500/20 shadow-inner">
@@ -869,7 +869,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                     Send to Bank
                   </button>
                 </div>
-              )}
+              )} */}
 
               {/* Main Info Card - Glassmorphism & Rich Styling */}
               <div className="bg-white/70 backdrop-blur-sm rounded-[40px] p-10 border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.04)] relative overflow-hidden group">

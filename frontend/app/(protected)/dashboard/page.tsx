@@ -52,12 +52,14 @@ interface Stage {
 }
 
 const STAGES_CONFIG: Record<string, Stage> = {
-    application_submitted: { order: 1, label: 'Submitted', icon: 'description', progress: 10 },
-    document_verification: { order: 2, label: 'Documents', icon: 'upload_file', progress: 30 },
-    credit_check: { order: 3, label: 'Credit Check', icon: 'analytics', progress: 50 },
-    bank_review: { order: 4, label: 'Review', icon: 'rate_review', progress: 70 },
-    sanction: { order: 5, label: 'Sanction', icon: 'verified', progress: 90 },
-    disbursement: { order: 6, label: 'Disbursed', icon: 'payments', progress: 100 },
+    application_created: { order: 1, label: 'Created', icon: 'bolt', progress: 10 },
+    application_submitted: { order: 2, label: 'Submitted', icon: 'send', progress: 25 },
+    document_verification: { order: 3, label: 'Documents', icon: 'verified', progress: 40 },
+    submit_to_bank: { order: 4, label: 'Submit to Bank', icon: 'account_balance', progress: 50 },
+    credit_check: { order: 5, label: 'Credit Check', icon: 'credit_score', progress: 75 },
+    bank_review: { order: 6, label: 'Review', icon: 'rate_review', progress: 90 },
+    sanction: { order: 7, label: 'Sanction', icon: 'assignment_turned_in', progress: 95 },
+    disbursement: { order: 8, label: 'Disbursed', icon: 'payments', progress: 100 },
 };
 
 const STAGES_LIST = Object.entries(STAGES_CONFIG)
@@ -69,15 +71,30 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
 
     const currentStageKey = (() => {
         if (!app) return null;
-        if (app.status === 'rejected' || app.status === 'cancelled') return null;
+        if (app.status?.toLowerCase() === 'rejected' || app.status?.toLowerCase() === 'cancelled') return null;
 
         let stageKey = app.stage;
         if (!stageKey || !STAGES_CONFIG[stageKey]) {
             // Infer stage from status
-            if (app.status === 'approved') return 'sanction';
-            if (app.status === 'disbursed') return 'disbursement';
-            if (app.status === 'processing') return 'bank_review';
-            return 'application_submitted';
+            const status = app.status?.toLowerCase() || '';
+            if (status.includes('approve') || status.includes('sanction')) return 'sanction';
+            if (status.includes('disburse')) return 'disbursement';
+            if (status.includes('process') || status.includes('review')) return 'bank_review';
+            if (status.includes('submit_to_bank') || status.includes('submitted_to_bank')) return 'submit_to_bank';
+            if (status === 'submitted') return 'application_submitted';
+            if (status.includes('document')) return 'document_verification';
+            if (status.includes('credit')) return 'credit_check';
+            
+            // Fallback: infer from progress if available
+            if (app.progress >= 100) return 'disbursement';
+            if (app.progress >= 95) return 'sanction';
+            if (app.progress >= 90) return 'bank_review';
+            if (app.progress >= 75) return 'credit_check';
+            if (app.progress >= 50) return 'submit_to_bank';
+            if (app.progress >= 40) return 'document_verification';
+            if (app.progress >= 25) return 'application_submitted';
+
+            return 'application_created';
         }
         return stageKey;
     })();
@@ -88,7 +105,7 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
     const appCreatedAt = app.createdAt || app.created_at || app.submittedAt || app.submitted_at || app.date;
     const appUpdatedAt = app.updatedAt || app.updated_at || appCreatedAt;
 
-    const completedThresholds = [1, 2, 3, 4, 5, 6];
+    const completedThresholds = [1, 2, 3, 4, 5, 6, 7, 8];
     const currentOrder = currentStage?.order || 1;
     const lastCompletedIdx = completedThresholds.reduce((acc, val, i) => currentOrder >= val ? i : acc, -1);
 
