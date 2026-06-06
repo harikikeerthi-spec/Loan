@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { documentApi, staffProfileApi, adminApi } from "@/lib/api";
 import KycSystemDashboard from "./KycSystemDashboard";
 import ShareWithBankModal from "./ShareWithBankModal";
+import SendDocumentToBankModal from "./SendDocumentToBankModal";
 import {
   getDocumentCategory,
   getDocumentRequirementName,
@@ -78,6 +79,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const [activeTab, setActiveTab] = useState("requirements");
   const [activeSidebarMenu, setActiveSidebarMenu] = useState("application_details");
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [sendToBankDoc, setSendToBankDoc] = useState<OcrSummaryDoc | null>(null);
 
   const progress = application.progress || 90;
   const status = (application.status || "APPROVED").toUpperCase();
@@ -315,6 +317,26 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     } catch (err) {
       console.error("Upload failed:", err);
       alert("Failed to upload document");
+    }
+  };
+
+  const handleDownloadDocument = async (doc: OcrSummaryDoc) => {
+    if (!userId || !doc.docType) return;
+    try {
+      const result: any = await documentApi.getPresignedView(userId, doc.docType);
+      if (result?.url) {
+        const link = document.createElement("a");
+        link.href = result.url;
+        link.download = `${(doc.name || doc.docType).replace(/\s+/g, "_")}.pdf`;
+        link.target = "_blank";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        window.open(`/api/documents/view/${userId}/${doc.docType}`, "_blank", "noopener,noreferrer");
+      }
+    } catch {
+      window.open(`/api/documents/view/${userId}/${doc.docType}`, "_blank", "noopener,noreferrer");
     }
   };
 
@@ -1065,6 +1087,8 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                         onViewDocument={(doc) => window.open(`/api/documents/view/${userId}/${doc.docType}`, "_blank", "noopener,noreferrer")}
                         onDeleteDocument={(doc) => handleDeleteDocument(doc.id)}
                         onUploadDocument={(doc, file) => handleFileUpload(doc.docType, file)}
+                        onDownloadDocument={handleDownloadDocument}
+                        onSendToBank={(doc) => setSendToBankDoc(doc)}
                         crossDocNameMismatch={crossDocNameMismatch}
                         dobMatched={dobMatched}
                         extractedDob={String(extractedDob || "")}
@@ -1521,6 +1545,20 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
           onBack();
         }}
       />
+
+      {/* Send Individual Document to Bank Modal */}
+      {sendToBankDoc && (
+        <SendDocumentToBankModal
+          isOpen={!!sendToBankDoc}
+          onClose={() => setSendToBankDoc(null)}
+          userId={userId}
+          docType={sendToBankDoc.docType}
+          docTitle={formatDocTitle(sendToBankDoc)}
+          studentName={fullName}
+          applicationNumber={appId}
+          onSuccess={() => setSendToBankDoc(null)}
+        />
+      )}
     </div >
   );
 };
@@ -1540,6 +1578,8 @@ const OcrDocumentIntelligence = ({
   onViewDocument,
   onDeleteDocument,
   onUploadDocument,
+  onDownloadDocument,
+  onSendToBank,
   crossDocNameMismatch,
   dobMatched,
   extractedDob,
@@ -1572,6 +1612,8 @@ const OcrDocumentIntelligence = ({
   onViewDocument: (doc: OcrSummaryDoc) => void;
   onDeleteDocument: (doc: OcrSummaryDoc) => void;
   onUploadDocument: (doc: OcrSummaryDoc, file: File) => void;
+  onDownloadDocument?: (doc: OcrSummaryDoc) => void;
+  onSendToBank?: (doc: OcrSummaryDoc) => void;
   crossDocNameMismatch: boolean;
   dobMatched: boolean;
   extractedDob: string;
@@ -1652,6 +1694,8 @@ const OcrDocumentIntelligence = ({
           onViewDocument={onViewDocument}
           onDeleteDocument={onDeleteDocument}
           onUploadDocument={onUploadDocument}
+          onDownloadDocument={onDownloadDocument}
+          onSendToBank={onSendToBank}
           onVerifyDocument={onVerifyDocument}
           onRejectDocument={onRejectDocument}
         />
@@ -1669,6 +1713,8 @@ const OcrDocumentIntelligence = ({
           onViewDocument={onViewDocument}
           onDeleteDocument={onDeleteDocument}
           onUploadDocument={onUploadDocument}
+          onDownloadDocument={onDownloadDocument}
+          onSendToBank={onSendToBank}
           onVerifyDocument={onVerifyDocument}
           onRejectDocument={onRejectDocument}
         />
@@ -1721,6 +1767,8 @@ const OcrDocumentGroup = ({
   onViewDocument,
   onDeleteDocument,
   onUploadDocument,
+  onDownloadDocument,
+  onSendToBank,
   onVerifyDocument,
   onRejectDocument,
 }: {
@@ -1737,6 +1785,8 @@ const OcrDocumentGroup = ({
   onViewDocument: (doc: OcrSummaryDoc) => void;
   onDeleteDocument: (doc: OcrSummaryDoc) => void;
   onUploadDocument: (doc: OcrSummaryDoc, file: File) => void;
+  onDownloadDocument?: (doc: OcrSummaryDoc) => void;
+  onSendToBank?: (doc: OcrSummaryDoc) => void;
   onVerifyDocument?: (docId: string) => void;
   onRejectDocument?: (docId: string, reason: string) => void;
 }) => (
@@ -1773,6 +1823,8 @@ const OcrDocumentGroup = ({
             onViewFile={() => onViewDocument(doc)}
             onDelete={() => onDeleteDocument(doc)}
             onUpload={(file) => onUploadDocument(doc, file)}
+            onDownload={onDownloadDocument ? () => onDownloadDocument(doc) : undefined}
+            onSendToBank={onSendToBank ? () => onSendToBank(doc) : undefined}
             onVerify={onVerifyDocument ? () => onVerifyDocument(doc.id) : undefined}
             onReject={onRejectDocument ? (reason) => onRejectDocument(doc.id, reason) : undefined}
           />
@@ -1800,6 +1852,8 @@ const OcrMiniDocumentCard = ({
   onViewFile,
   onDelete,
   onUpload,
+  onDownload,
+  onSendToBank,
   onVerify,
   onReject,
 }: {
@@ -1815,6 +1869,8 @@ const OcrMiniDocumentCard = ({
   onViewFile: () => void;
   onDelete: () => void;
   onUpload: (file: File) => void;
+  onDownload?: () => void;
+  onSendToBank?: () => void;
   onVerify?: () => void;
   onReject?: (reason: string) => void;
 }) => {
@@ -1855,13 +1911,12 @@ const OcrMiniDocumentCard = ({
             <div className="flex items-center gap-2 flex-wrap">
               <h4 className="text-[16px] font-bold text-slate-800 truncate">{title}</h4>
               {hasFile && (
-                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider uppercase border ${
-                  ["verified", "approved"].includes(statusLower)
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-100/80"
-                    : statusLower === "rejected"
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider uppercase border ${["verified", "approved"].includes(statusLower)
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-100/80"
+                  : statusLower === "rejected"
                     ? "bg-rose-50 text-rose-700 border-rose-100/80"
                     : "bg-blue-50 text-blue-700 border-blue-100/80"
-                }`}>
+                  }`}>
                   {["verified", "approved"].includes(statusLower) ? "Verified" : statusLower === "rejected" ? "Rejected" : "Pending Review"}
                 </span>
               )}
@@ -1876,7 +1931,7 @@ const OcrMiniDocumentCard = ({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           {hasFile && (
             <>
               <button
@@ -1887,6 +1942,16 @@ const OcrMiniDocumentCard = ({
               >
                 <span className="material-symbols-outlined text-[18px]">visibility</span>
               </button>
+              {onDownload && (
+                <button
+                  type="button"
+                  onClick={onDownload}
+                  title={`Download ${title}`}
+                  className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 flex items-center justify-center transition-all"
+                >
+                  <span className="material-symbols-outlined text-[18px]">download</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={onDelete}
@@ -1919,9 +1984,21 @@ const OcrMiniDocumentCard = ({
         </>
       )}
 
-      <div className="mt-4 flex items-center justify-between gap-3 flex-wrap">
+      <div className="mt-4 flex flex-col gap-3">
+        {/* Send to Bank Action Row */}
+        {hasFile && onSendToBank && (
+          <button
+            type="button"
+            onClick={onSendToBank}
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white rounded-xl text-[11px] font-black uppercase tracking-widest shadow-md shadow-indigo-100 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          >
+            <span className="material-symbols-outlined text-[16px]">account_balance</span>
+            Send to Bank
+          </button>
+        )}
+
         {hasFile ? (
-          <>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -1931,7 +2008,7 @@ const OcrMiniDocumentCard = ({
                 <span className="material-symbols-outlined text-[17px]">open_in_new</span>
                 View file
               </button>
-              
+
               {onVerify && onReject && !["verified", "approved", "rejected"].includes(statusLower) && (
                 <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
                   <button
@@ -1966,7 +2043,8 @@ const OcrMiniDocumentCard = ({
               <span className="material-symbols-outlined text-[17px]">sync</span>
               Re-upload
             </button>
-          </>
+          </div>
+
         ) : (
           <button
             type="button"

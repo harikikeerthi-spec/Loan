@@ -37,7 +37,7 @@ export class DocumentController {
     private kycService: KycService,
     private s3Service: S3Service,
     private supabase: SupabaseService,
-  ) {}
+  ) { }
 
   // ─── Upload & store to S3 ────────────────────────────────────────────────
   @Post('upload')
@@ -79,12 +79,12 @@ export class DocumentController {
         );
       } catch (aiError: any) {
         console.error(`[UPLOAD] KYC Service threw an error: ${aiError.message || aiError}. Running local keyword check...`);
-        
+
         // Even on AI exceptions, we must verify document integrity to reject completely wrong uploads
         const isImage = file.mimetype.startsWith('image/');
         const isPdf = file.mimetype === 'application/pdf';
         const integrityCheck = await this.kycService.validateDocumentKeywords(file.buffer, docType, isPdf, isImage);
-        
+
         if (!integrityCheck.is_valid) {
           console.warn(`[UPLOAD] Rejecting invalid ${docType} on KYC service exception. Error: ${integrityCheck.error}`);
           throw new BadRequestException(
@@ -127,7 +127,7 @@ export class DocumentController {
         previewUrl = await this.s3Service.getPresignedUrl(s3Key, 3600);
       } catch (s3Error: any) {
         console.warn(`[UPLOAD] AWS S3 Upload failed: ${s3Error.message || s3Error}. Falling back to local storage routing.`);
-        
+
         // Write the file locally on the server in a local uploads directory as a fallback!
         try {
           const fs = require('fs');
@@ -262,7 +262,7 @@ export class DocumentController {
       const isImage = mimetype.startsWith('image/');
       const isPdf = mimetype === 'application/pdf';
       const integrityCheck = await this.kycService.validateDocumentKeywords(fileBuffer, docType, isPdf, isImage);
-      
+
       if (!integrityCheck.is_valid) {
         console.warn(`[OCR-REVERIFY] Rejecting invalid ${docType} on KYC service exception. Error: ${integrityCheck.error}`);
         throw new BadRequestException(
@@ -617,6 +617,78 @@ export class DocumentController {
       throw new BadRequestException(
         `Failed to reject document: ${error.message || 'Unknown error'}`,
       );
+    }
+  }
+
+  // ─── Send document to bank (staff action) ─────────────────────────────────
+  @Post('send-to-bank')
+  async sendDocumentToBank(
+    @Body('userId') userId: string,
+    @Body('docType') docType: string,
+    @Body('docTitle') docTitle: string,
+    @Body('bankId') bankId: string,
+    @Body('bankName') bankName: string,
+    @Body('notes') notes?: string,
+    @Body('studentName') studentName?: string,
+    @Body('applicationNumber') applicationNumber?: string,
+  ) {
+    if (!userId || !docType || !bankId) {
+      throw new BadRequestException('userId, docType and bankId are required');
+    }
+
+    console.log(`[SEND-TO-BANK] userId=${userId} docType=${docType} bankName=${bankName}`);
+
+    try {
+      // Retrieve the document to confirm it exists
+      const docs = await this.usersService.getUserDocuments(userId);
+      const doc = docs.find((d) => d.docType === docType);
+
+      if (!doc || !doc.filePath) {
+        throw new NotFoundException('Document not found or not yet uploaded.');
+      }
+
+      // Generate a presigned URL for bank access (1 hour)
+      let presignedUrl = '';
+      try {
+        presignedUrl = await this.s3Service.getPresignedUrl(doc.filePath, 3600);
+      } catch (s3Err: any) {
+        console.warn(`[SEND-TO-BANK] Could not generate presigned URL: ${s3Err.message}`);
+        presignedUrl = `/api/documents/view/${userId}/${docType}`;
+      }
+
+      // Log the bank share event in audit log
+      const transmissionId = `DOC-${Date.now().toString(36).toUpperCase()}-${docType.toUpperCase().slice(0, 4)}`;
+      try {
+        await this.supabase.client.from('data_access_logs').insert({
+          accessedBy: bankId,
+          applicationId: userId,
+          action: `Staff sent document "${docTitle || docType}" to ${bankName}. Notes: ${notes || 'None'}. Ref: ${transmissionId}`,
+          accessedAt: new Date().toISOString(),
+        });
+      } catch (logErr: any) {
+        console.warn(`[SEND-TO-BANK] Audit log insert failed (non-blocking): ${logErr.message}`);
+      }
+
+      return {
+        success: true,
+        message: `Document "${docTitle || docType}" sent to ${bankName} successfully`,
+        data: {
+          transmissionId,
+          bankId,
+          bankName,
+          docType,
+          studentName,
+          applicationNumber,
+          presignedUrl,
+          expiresAt: new Date(Date.now() + 3600 * 1000).toISOString(),
+        },
+      };
+    } catch (error: any) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      console.error(`[SEND-TO-BANK] Error:`, error.message);
+      throw new BadRequestException(`Failed to send document to bank: ${error.message || 'Unknown error'}`);
     }
   }
 }

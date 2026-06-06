@@ -441,20 +441,39 @@ export class UsersService {
         }
       }
       
-      const fullNameVal =
-        extractFullNameFromOcrRaw(details) ||
-        details.full_name ||
-        details.fullName ||
-        details.name;
-      if (fullNameVal) {
-        const parts = fullNameVal.trim().split(/\s+/);
-        if (parts.length > 0) {
-          const newFirstName = parts[0];
-          const newLastName = parts.slice(1).join(' ');
-          
-          compareAndSet(currentUser.firstName, newFirstName, 'firstName');
-          if (newLastName) {
-            compareAndSet(currentUser.lastName, newLastName, 'lastName');
+      // Do not update user's profile firstName and lastName from identity documents like PAN, Aadhaar, or Passport,
+      // and never update them from co-applicant or parent documents.
+      const isIdentityDoc = docType && (
+        docType.toLowerCase().includes('pan') ||
+        docType.toLowerCase().includes('aadhar') ||
+        docType.toLowerCase().includes('aadhaar') ||
+        docType.toLowerCase().includes('national_id') ||
+        docType.toLowerCase().includes('passport')
+      );
+      
+      const isStudentDoc = !docType || (
+        !docType.toLowerCase().includes('coapplicant') &&
+        !docType.toLowerCase().includes('father') &&
+        !docType.toLowerCase().includes('mother') &&
+        !docType.toLowerCase().includes('parent')
+      );
+
+      if (!isIdentityDoc && isStudentDoc) {
+        const fullNameVal =
+          extractFullNameFromOcrRaw(details) ||
+          details.full_name ||
+          details.fullName ||
+          details.name;
+        if (fullNameVal) {
+          const parts = fullNameVal.trim().split(/\s+/);
+          if (parts.length > 0) {
+            const newFirstName = parts[0];
+            const newLastName = parts.slice(1).join(' ');
+            
+            compareAndSet(currentUser.firstName, newFirstName, 'firstName');
+            if (newLastName) {
+              compareAndSet(currentUser.lastName, newLastName, 'lastName');
+            }
           }
         }
       }

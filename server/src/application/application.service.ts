@@ -734,7 +734,7 @@ export class ApplicationService {
     }
   }
 
-  async updateApplicationStatus(applicationId: string, adminId: string, adminName: string, data: { status?: string; stage?: string; progress?: number; remarks?: string; rejectionReason?: string }, role?: string) {
+  async updateApplicationStatus(applicationId: string, adminId: string, adminName: string, data: { status?: string; stage?: string; progress?: number; remarks?: string; rejectionReason?: string; bank?: string }, role?: string) {
     const application = await this.getApplicationById(applicationId);
     const updateData: any = {};
     const historyData: any = { changedBy: adminId, changedByName: adminName };
@@ -766,6 +766,7 @@ export class ApplicationService {
     }
 
     if (data.progress !== undefined && isAuthorizedToChangeStatus) updateData.progress = data.progress;
+    if (data.bank && isAuthorizedToChangeStatus) updateData.bank = data.bank;
     if (data.remarks) {
         // Remarks can be updated by anyone in the StaffGuard (including admin)
         if (!updateData.remarks) updateData.remarks = data.remarks;

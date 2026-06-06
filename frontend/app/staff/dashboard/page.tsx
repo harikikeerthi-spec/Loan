@@ -53,6 +53,14 @@ const getDashboardPage = (page: string | null) => {
     return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
 };
 
+type BankReference = Partial<Record<"name" | "bankName" | "displayName" | "title" | "label" | "id", string>>;
+type ApplicationRowForBankSend = {
+    id?: string;
+    _id?: string;
+    bank?: string;
+    targetBank?: string;
+};
+
 const StatCard = ({ label, value, icon, color, trend, loading, hint, badge, ...props }: any) => {
     // Generate styling based on the color string to keep the UI clean
     let colorScheme = {
@@ -663,6 +671,8 @@ export default function StaffDashboardPage() {
     const [shareResult, setShareResult] = useState<{ url: string; expires: string; applicationId?: string; applicationNumber?: string } | null>(null);
     const [availableBanks, setAvailableBanks] = useState<any[]>([]);
     const [bankUsers, setBankUsers] = useState<any[]>([]);
+    const [sendToBankSelection, setSendToBankSelection] = useState<Record<string, string>>({});
+    const [sendToBankLoadingId, setSendToBankLoadingId] = useState<string | null>(null);
 
     // Fetch suggestions as user types for "Link Existing"
     useEffect(() => {
@@ -932,6 +942,43 @@ export default function StaffDashboardPage() {
             alert("Failed to update application status");
         } finally {
             setActionLoading(false);
+        }
+    };
+
+    const getBankDisplayName = (bank: BankReference) =>
+        bank?.name || bank?.bankName || bank?.displayName || bank?.title || bank?.label || bank?.id || "";
+
+    const bankOptions = availableBanks
+        .map(getBankDisplayName)
+        .filter((name: string, index: number, list: string[]) => name && list.indexOf(name) === index);
+
+    const handleSendApplicationToBank = async (item: ApplicationRowForBankSend, selectedBank: string) => {
+        const appId = item.id || item._id;
+        if (!appId) {
+            alert("Application ID is missing.");
+            return;
+        }
+        if (!selectedBank) {
+            alert("Select a bank before sending this application.");
+            return;
+        }
+
+        setSendToBankLoadingId(appId);
+        try {
+            await adminApi.updateApplicationStatus(appId, {
+                status: "submitted_to_bank",
+                bank: selectedBank,
+                stage: "Submitted",
+                progress: 50,
+                remarks: `Sent to ${selectedBank} from staff incoming queue.`,
+            });
+            addActivity("share", `Sent application to ${selectedBank}`, "send", "text-indigo-600 bg-indigo-50");
+            setActiveMenuId(null);
+            await Promise.all([loadData(), loadOverview()]);
+        } catch (e: unknown) {
+            alert(e instanceof Error ? e.message : "Failed to send application to bank");
+        } finally {
+            setSendToBankLoadingId(null);
         }
     };
 
@@ -7298,6 +7345,7 @@ export default function StaffDashboardPage() {
                                                             draft: 'bg-amber-50 text-amber-600 border border-amber-200',
                                                             pending: 'bg-amber-50 text-amber-600 border border-amber-200',
                                                             submitted: 'bg-blue-50 text-blue-600 border border-blue-200',
+                                                            submitted_to_bank: 'bg-indigo-50 text-indigo-600 border border-indigo-200',
                                                             processing: 'bg-indigo-50 text-indigo-600 border border-indigo-200',
                                                             approved: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
                                                             verified: 'bg-emerald-50 text-emerald-700 border border-emerald-200',
@@ -7475,6 +7523,44 @@ export default function StaffDashboardPage() {
                                                                                         <span className="material-symbols-outlined text-[18px] text-emerald-500">list_alt</span>
                                                                                         All Applications
                                                                                     </button>
+                                                                                    {activeSection === "incoming_queue" && (() => {
+                                                                                        const appId = item.id || item._id;
+                                                                                        const fallbackBanks = [item.bank || item.targetBank].filter(Boolean);
+                                                                                        const options = bankOptions.length ? bankOptions : fallbackBanks;
+                                                                                        const selectedBank = sendToBankSelection[appId] || item.bank || item.targetBank || options[0] || "";
+                                                                                        const isSending = sendToBankLoadingId === appId;
+
+                                                                                        return (
+                                                                                            <div className="mx-3 mt-2 pt-3 border-t border-slate-100">
+                                                                                                <label className="block text-[9px] font-black uppercase tracking-widest text-slate-400 px-2 mb-2">
+                                                                                                    Send to Bank
+                                                                                                </label>
+                                                                                                <select
+                                                                                                    value={selectedBank}
+                                                                                                    onClick={(e) => e.stopPropagation()}
+                                                                                                    onChange={(e) => setSendToBankSelection(prev => ({ ...prev, [appId]: e.target.value }))}
+                                                                                                    className="w-full mb-2 px-3 py-2 rounded-xl border border-slate-200 bg-slate-50 text-[11px] font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
+                                                                                                >
+                                                                                                    {!selectedBank && <option value="">Select bank</option>}
+                                                                                                    {options.map((bankName: string) => (
+                                                                                                        <option key={bankName} value={bankName}>{bankName}</option>
+                                                                                                    ))}
+                                                                                                </select>
+                                                                                                <button
+                                                                                                    onClick={() => handleSendApplicationToBank(item, selectedBank)}
+                                                                                                    disabled={isSending || !selectedBank}
+                                                                                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-[11px] font-black uppercase tracking-widest hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                                                                                                >
+                                                                                                    {isSending ? (
+                                                                                                        <span className="w-4 h-4 border-2 border-indigo-300 border-t-white rounded-full animate-spin" />
+                                                                                                    ) : (
+                                                                                                        <span className="material-symbols-outlined text-[16px]">send</span>
+                                                                                                    )}
+                                                                                                    Send to Bank
+                                                                                                </button>
+                                                                                            </div>
+                                                                                        );
+                                                                                    })()}
                                                                                 </div>
                                                                             </>
                                                                         )}
