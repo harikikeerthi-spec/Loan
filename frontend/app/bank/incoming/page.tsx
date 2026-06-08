@@ -27,6 +27,22 @@ export default function IncomingQueuePage() {
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
 
+    // Staged/Temporary Filter States for explicit Apply Filters action
+    const [tempSearch, setTempSearch] = useState("");
+    const [tempInstType, setTempInstType] = useState("all");
+    const [tempCourseType, setTempCourseType] = useState("all");
+    const [tempMinAmount, setTempMinAmount] = useState("");
+    const [tempMaxAmount, setTempMaxAmount] = useState("");
+    const [tempStartDate, setTempStartDate] = useState("");
+    const [tempEndDate, setTempEndDate] = useState("");
+
+    // Collapsible states
+    const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+    const [isAdvancedFiltersOpen, setIsAdvancedFiltersOpen] = useState(false);
+
+    // Context menu tracking state
+    const [activeMenuAppId, setActiveMenuAppId] = useState<string | null>(null);
+
     // Modal state for Log File (F3)
     const [selectedApp, setSelectedApp] = useState<any | null>(null);
     const [showLogModal, setShowLogModal] = useState(false);
@@ -49,7 +65,6 @@ export default function IncomingQueuePage() {
         try {
             const res: any = await adminApi.getApplications({ bank: bankId });
             if (res && res.success) {
-                // Filter out already logged files (i.e. those with a LAN number) or rejected/approved
                 const rawApps = res.data || [];
                 setApplications(rawApps);
             }
@@ -66,6 +81,73 @@ export default function IncomingQueuePage() {
         }
     }, [currentBankId, mounted]);
 
+    // SLA & KPI stats calculations
+    const incomingApps = useMemo(() => {
+        return applications.filter((app) => {
+            if (app.lanNumber) return false;
+            if (app.status === "rejected" || app.status === "approved" || app.status === "disbursed" || app.status === "submitted" || app.status === "pending" || app.status === "draft") return false;
+            return true;
+        });
+    }, [applications]);
+
+    const kpiTotalPending = useMemo(() => incomingApps.length, [incomingApps]);
+
+    const kpiHighValue = useMemo(() => {
+        return incomingApps.filter(app => (app.amount || 0) > 2500000).length;
+    }, [incomingApps]);
+
+    const kpiSlaBreached = useMemo(() => {
+        const now = new Date();
+        return incomingApps.filter(app => {
+            if (!app.submittedAt) return false;
+            const submittedDate = parseISO(app.submittedAt);
+            const hoursDiff = (now.getTime() - submittedDate.getTime()) / (1000 * 60 * 60);
+            return hoursDiff > 24;
+        }).length;
+    }, [incomingApps]);
+
+    const activeFiltersCount = useMemo(() => {
+        let count = 0;
+        if (search) count++;
+        if (instType !== "all") count++;
+        if (courseType !== "all") count++;
+        if (minAmount) count++;
+        if (maxAmount) count++;
+        if (startDate) count++;
+        if (endDate) count++;
+        return count;
+    }, [search, instType, courseType, minAmount, maxAmount, startDate, endDate]);
+
+    // Apply staged inputs
+    const handleApplyFilters = () => {
+        setSearch(tempSearch);
+        setInstType(tempInstType);
+        setCourseType(tempCourseType);
+        setMinAmount(tempMinAmount);
+        setMaxAmount(tempMaxAmount);
+        setStartDate(tempStartDate);
+        setEndDate(tempEndDate);
+    };
+
+    // Reset staged inputs
+    const handleResetFilters = () => {
+        setTempSearch("");
+        setTempInstType("all");
+        setTempCourseType("all");
+        setTempMinAmount("");
+        setTempMaxAmount("");
+        setTempStartDate("");
+        setTempEndDate("");
+
+        setSearch("");
+        setInstType("all");
+        setCourseType("all");
+        setMinAmount("");
+        setMaxAmount("");
+        setStartDate("");
+        setEndDate("");
+    };
+
     // Apply Filter Bar inputs (Task 6)
     const filteredApps = useMemo(() => {
         return applications.filter((app) => {
@@ -73,19 +155,19 @@ export default function IncomingQueuePage() {
             if (app.lanNumber) return false;
             if (app.status === "rejected" || app.status === "approved" || app.status === "disbursed" || app.status === "submitted" || app.status === "pending" || app.status === "draft") return false;
 
-            const matchesSearch = 
+            const matchesSearch =
                 (app.applicationNumber || "").toLowerCase().includes(search.toLowerCase()) ||
                 (`${app.firstName || ""} ${app.lastName || ""}`).toLowerCase().includes(search.toLowerCase()) ||
                 (app.email || "").toLowerCase().includes(search.toLowerCase());
 
             if (!matchesSearch) return false;
 
-            // Institution type filter (mocked mapping if not present on application schema)
+            // Institution type filter
             if (instType !== "all") {
                 const uniName = (app.universityName || "").toLowerCase();
                 const isInt = uniName.includes("university") || uniName.includes("college") || uniName.includes("institute");
                 if (instType === "international" && !isInt) return false;
-                if (instType === "private" && isInt) return false; // simple demo split
+                if (instType === "private" && isInt) return false;
             }
 
             // Course type filter
@@ -140,7 +222,7 @@ export default function IncomingQueuePage() {
         setSavingLog(true);
         try {
             const remarkText = `[Bank System - Logged]: Assigned LAN: ${lanNumber.trim()} (Priority: ${priority.toUpperCase()}) to officer ${assignedOfficer}`;
-            const mergedRemarks = selectedApp.remarks 
+            const mergedRemarks = selectedApp.remarks
                 ? `${selectedApp.remarks}\n${remarkText}`
                 : remarkText;
 
@@ -150,7 +232,6 @@ export default function IncomingQueuePage() {
                 stage: "under_review",
                 status: "processing",
                 remarks: mergedRemarks
-                // If priority/officer columns exist on backend we can pass them, else they persist in remarks
             };
             const res: any = await adminApi.updateApplication(selectedApp.id, payload);
             if (res && res.success) {
@@ -187,7 +268,7 @@ export default function IncomingQueuePage() {
                     <p className="font-black text-gray-900 uppercase tracking-tight">
                         {row.firstName} {row.lastName}
                     </p>
-                    <p className="text-[10px] text-gray-400 font-medium lowercase">
+                    <p className="text-[9px] text-gray-400/80 font-medium lowercase block mt-0.5">
                         {row.email}
                     </p>
                 </div>
@@ -202,7 +283,7 @@ export default function IncomingQueuePage() {
                     <p className="font-bold text-gray-800 text-[11px] truncate max-w-[180px]">
                         {row.universityName || "Foreign University"}
                     </p>
-                    <p className="text-[9px] text-purple-600 font-semibold uppercase tracking-wider">
+                    <p className="text-[9px] text-purple-650 font-semibold uppercase tracking-wider">
                         {row.courseName || "Master's Degree"}
                     </p>
                 </div>
@@ -213,7 +294,7 @@ export default function IncomingQueuePage() {
             accessorKey: "amount",
             sortable: true,
             cell: (row: any) => (
-                <span className="font-black text-[#6605c7] font-display">
+                <span className="font-extrabold text-sm text-gray-900 font-display">
                     ₹{(row.amount || 0).toLocaleString()}
                 </span>
             )
@@ -243,18 +324,112 @@ export default function IncomingQueuePage() {
             header: "Actions",
             accessorKey: "actions",
             sortable: false,
-            cell: (row: any) => (
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenLogModal(row);
-                    }}
-                    className="px-4 py-2 bg-[#6605c7] text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[#5203a4] transition-all shadow-md shadow-purple-500/10 flex items-center gap-1.5"
-                >
-                    <span className="material-symbols-outlined text-[14px]">note_add</span>
-                    Log File
-                </button>
-            )
+            cell: (row: any) => {
+                const isMenuOpen = activeMenuAppId === row.id;
+                return (
+                    <div className="flex items-center gap-2 relative">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenLogModal(row);
+                            }}
+                            className="px-3.5 py-1.5 bg-[#6605c7] text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[#5203a4] hover:shadow-lg hover:shadow-purple-500/20 active:scale-95 transition-all shadow-md shadow-purple-500/10 flex items-center gap-1.5"
+                        >
+                            <span className="material-symbols-outlined text-[13px]">note_add</span>
+                            Log File
+                        </button>
+
+                        {/* Three-dot context menu */}
+                        <div className="relative">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveMenuAppId(isMenuOpen ? null : row.id);
+                                }}
+                                className={`p-1.5 rounded-xl border text-gray-500 hover:text-[#6605c7] hover:bg-purple-50 transition-all ${
+                                    isMenuOpen ? "border-purple-200 bg-purple-50/50" : "border-gray-200"
+                                }`}
+                            >
+                                <span className="material-symbols-outlined text-base block">more_vert</span>
+                            </button>
+
+                            <AnimatePresence>
+                                {isMenuOpen && (
+                                    <>
+                                        <div className="fixed inset-0 z-45" onClick={() => setActiveMenuAppId(null)} />
+                                        <motion.div
+                                            initial={{ opacity: 0, scale: 0.95, y: 5 }}
+                                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                                            exit={{ opacity: 0, scale: 0.95, y: 5 }}
+                                            className="absolute right-0 mt-1 w-44 bg-white border border-purple-50 shadow-xl rounded-xl z-50 py-1.5 overflow-hidden"
+                                        >
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setActiveMenuAppId(null);
+                                                    alert(`Viewing documents for: ${row.firstName} ${row.lastName} (${row.applicationNumber})`);
+                                                }}
+                                                className="w-full text-left px-3.5 py-2 hover:bg-purple-50/55 text-[10.5px] font-bold text-gray-700 hover:text-[#6605c7] transition-colors flex items-center gap-2"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">folder_open</span>
+                                                View Documents
+                                            </button>
+
+                                            <button
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    setActiveMenuAppId(null);
+                                                    try {
+                                                        const remarkText = `[Bank System - Quick Action]: Assigned to self`;
+                                                        const payload = {
+                                                            remarks: row.remarks ? `${row.remarks}\n${remarkText}` : remarkText
+                                                        };
+                                                        const res: any = await adminApi.updateApplication(row.id, payload);
+                                                        if (res && res.success) {
+                                                            alert(`Application ${row.applicationNumber} assigned to self.`);
+                                                            fetchApplications(currentBankId);
+                                                        }
+                                                    } catch (err) {
+                                                        console.error("Failed to assign application to self:", err);
+                                                    }
+                                                }}
+                                                className="w-full text-left px-3.5 py-2 hover:bg-purple-50/55 text-[10.5px] font-bold text-gray-700 hover:text-[#6605c7] transition-colors flex items-center gap-2"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">person_add</span>
+                                                Assign to Self
+                                            </button>
+
+                                            <button
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    setActiveMenuAppId(null);
+                                                    try {
+                                                        const remarkText = `[Bank System - Flagged]: Marked as flagged by bank auditor`;
+                                                        const payload = {
+                                                            remarks: row.remarks ? `${row.remarks}\n${remarkText}` : remarkText
+                                                        };
+                                                        const res: any = await adminApi.updateApplication(row.id, payload);
+                                                        if (res && res.success) {
+                                                            alert(`Application ${row.applicationNumber} flagged successfully.`);
+                                                            fetchApplications(currentBankId);
+                                                        }
+                                                    } catch (err) {
+                                                        console.error("Failed to flag application:", err);
+                                                    }
+                                                }}
+                                                className="w-full text-left px-3.5 py-2 hover:bg-rose-50/55 text-[10.5px] font-bold text-rose-650 hover:text-rose-700 transition-colors flex items-center gap-2 border-t border-gray-100"
+                                            >
+                                                <span className="material-symbols-outlined text-sm text-rose-500">flag</span>
+                                                Flag Application
+                                            </button>
+                                        </motion.div>
+                                    </>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    </div>
+                );
+            }
         }
     ];
 
@@ -263,123 +438,222 @@ export default function IncomingQueuePage() {
     return (
         <div className="min-h-screen p-6 lg:p-10 transition-all duration-300">
             <div className="max-w-7xl mx-auto space-y-8">
-                
+
                 {/* Page Header */}
-                <PageHeader 
+                <PageHeader
                     title="Incoming Loan Files"
                     description="Incoming loan portfolios from VidyaLoans system awaiting validation and assignation of LAN."
                     moduleName="Module 02 • Incoming Queue"
                     icon="download"
                 />
 
+                {/* KPI Cards Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* KPI Card 1: Total Pending Reviews */}
+                    <div className="glass-card bg-white/70 p-6 rounded-3xl border border-purple-100 shadow-sm flex items-center justify-between hover:shadow-md transition-all duration-300">
+                        <div className="space-y-1">
+                            <p className="text-[10px] font-black text-purple-650 uppercase tracking-widest">Total Pending Reviews</p>
+                            <h3 className="text-3xl font-display font-black text-gray-900">{kpiTotalPending}</h3>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-purple-50 flex items-center justify-center text-[#6605c7]">
+                            <span className="material-symbols-outlined text-2xl">pending_actions</span>
+                        </div>
+                    </div>
+
+                    {/* KPI Card 2: High Value Loans */}
+                    <div className="glass-card bg-white/70 p-6 rounded-3xl border border-purple-100 shadow-sm flex items-center justify-between hover:shadow-md transition-all duration-300">
+                        <div className="space-y-1">
+                            <p className="text-[10px] font-black text-purple-650 uppercase tracking-widest">High Value Loans (&gt; ₹25L)</p>
+                            <h3 className="text-3xl font-display font-black text-gray-900">{kpiHighValue}</h3>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
+                            <span className="material-symbols-outlined text-2xl">payments</span>
+                        </div>
+                    </div>
+
+                    {/* KPI Card 3: SLA Breached Soon */}
+                    <div className="glass-card bg-white/70 p-6 rounded-3xl border border-purple-100 shadow-sm flex items-center justify-between hover:shadow-md transition-all duration-300">
+                        <div className="space-y-1">
+                            <p className="text-[10px] font-black text-purple-650 uppercase tracking-widest">SLA Breached Soon (&gt; 24h)</p>
+                            <h3 className="text-3xl font-display font-black text-gray-900">{kpiSlaBreached}</h3>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-500">
+                            <span className="material-symbols-outlined text-2xl">hourglass_bottom</span>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Filter Bar (Task 6) */}
-                <div className="glass-card bg-white/70 p-6 rounded-3xl border border-[#6605c7]/10 shadow-sm space-y-4">
-                    <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                        <h3 className="text-xs font-black text-gray-800 uppercase tracking-widest flex items-center gap-2">
+                <div className="glass-card bg-white/70 rounded-3xl border border-[#6605c7]/10 shadow-sm overflow-hidden">
+                    {/* Header row */}
+                    <div 
+                        onClick={() => setIsFiltersOpen(!isFiltersOpen)}
+                        className="flex items-center justify-between p-5 cursor-pointer hover:bg-gray-50/50 transition-colors"
+                    >
+                        <div className="flex items-center gap-2">
                             <span className="material-symbols-outlined text-sm text-[#6605c7]">filter_alt</span>
-                            Search Filters
-                        </h3>
-                        <button 
-                            onClick={() => {
-                                setSearch(""); setInstType("all"); setCourseType("all");
-                                setMinAmount(""); setMaxAmount(""); setStartDate(""); setEndDate("");
-                            }}
-                            className="text-[10px] font-black text-purple-600 uppercase tracking-wider hover:underline"
-                        >
-                            Reset Filters
-                        </button>
+                            <h3 className="text-xs font-black text-gray-800 uppercase tracking-widest">
+                                Search Filters
+                            </h3>
+                            {activeFiltersCount > 0 && (
+                                <span className="px-2 py-0.5 rounded-full text-[8.5px] font-extrabold bg-[#6605c7] text-white">
+                                    {activeFiltersCount} Active
+                                </span>
+                            )}
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleResetFilters();
+                                }}
+                                className="text-[10px] font-black text-purple-650 uppercase tracking-wider hover:underline"
+                            >
+                                Reset Filters
+                            </button>
+                            <span className="material-symbols-outlined text-gray-400 text-lg transition-transform duration-300" style={{ transform: isFiltersOpen ? "rotate(180deg)" : "rotate(0deg)" }}>
+                                expand_more
+                            </span>
+                        </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        {/* Keyword Search */}
-                        <div className="relative">
-                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Search student / ID</label>
-                            <input 
-                                type="text"
-                                placeholder="Name, Email or Application Number..."
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="pl-9 pr-4 py-2.5 w-full bg-white border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
-                            />
-                            <span className="material-symbols-outlined absolute left-3 top-[25px] text-gray-400 text-base">search</span>
-                        </div>
-
-                        {/* Institution Type */}
-                        <div>
-                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Institution Group</label>
-                            <select
-                                value={instType}
-                                onChange={(e) => setInstType(e.target.value)}
-                                className="px-3 py-2.5 w-full bg-white border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
+                    {/* Collapsible Content */}
+                    <AnimatePresence>
+                        {isFiltersOpen && (
+                            <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.25, ease: "easeInOut" }}
                             >
-                                <option value="all">All Institutions</option>
-                                <option value="international">International / Universities</option>
-                                <option value="private">Private Colleges</option>
-                            </select>
-                        </div>
+                                <div className="p-5 pt-0 border-t border-gray-100/60 space-y-4">
+                                    {/* Primary Row */}
+                                    <div className="flex flex-col md:flex-row items-end gap-3.5">
+                                        {/* Keyword Search */}
+                                        <div className="relative flex-1 min-w-0">
+                                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Search student / ID</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Name, Email or Application Number..."
+                                                value={tempSearch}
+                                                onChange={(e) => setTempSearch(e.target.value)}
+                                                className="pl-9 pr-4 py-2 w-full bg-white border border-gray-205 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
+                                            />
+                                            <span className="material-symbols-outlined absolute left-3 top-[23px] text-gray-400 text-base">search</span>
+                                        </div>
 
-                        {/* Course Type */}
-                        <div>
-                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Course Sector</label>
-                            <select
-                                value={courseType}
-                                onChange={(e) => setCourseType(e.target.value)}
-                                className="px-3 py-2.5 w-full bg-white border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
-                            >
-                                <option value="all">All Degrees</option>
-                                <option value="stem">STEM Fields</option>
-                                <option value="mba">MBA & Business</option>
-                                <option value="ug">Undergraduate (UG)</option>
-                                <option value="pg">Postgraduate (PG)</option>
-                            </select>
-                        </div>
+                                        {/* Institution Group */}
+                                        <div className="w-full md:w-52">
+                                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Institution Group</label>
+                                            <select
+                                                value={tempInstType}
+                                                onChange={(e) => setTempInstType(e.target.value)}
+                                                className="px-3 py-2 w-full bg-white border border-gray-205 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
+                                            >
+                                                <option value="all">All Institutions</option>
+                                                <option value="international">International / Universities</option>
+                                                <option value="private">Private Colleges</option>
+                                            </select>
+                                        </div>
 
-                        {/* Date Range Start */}
-                        <div>
-                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">From Date</label>
-                            <input 
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                className="px-3 py-2 w-full bg-white border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
-                            />
-                        </div>
+                                        {/* Course Sector */}
+                                        <div className="w-full md:w-52">
+                                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Course Sector</label>
+                                            <select
+                                                value={tempCourseType}
+                                                onChange={(e) => setTempCourseType(e.target.value)}
+                                                className="px-3 py-2 w-full bg-white border border-gray-205 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
+                                            >
+                                                <option value="all">All Degrees</option>
+                                                <option value="stem">STEM Fields</option>
+                                                <option value="mba">MBA & Business</option>
+                                                <option value="ug">Undergraduate (UG)</option>
+                                                <option value="pg">Postgraduate (PG)</option>
+                                            </select>
+                                        </div>
 
-                        {/* Date Range End */}
-                        <div>
-                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">To Date</label>
-                            <input 
-                                type="date"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                                className="px-3 py-2 w-full bg-white border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
-                            />
-                        </div>
+                                        {/* Action buttons inside the inline row */}
+                                        <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
+                                            <button
+                                                onClick={() => setIsAdvancedFiltersOpen(!isAdvancedFiltersOpen)}
+                                                className="px-3 py-2 border border-purple-100 text-purple-650 hover:bg-purple-50/50 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-1 transition-all"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">tune</span>
+                                                {isAdvancedFiltersOpen ? "Hide Advanced" : "Advanced"}
+                                            </button>
+                                            <button
+                                                onClick={handleApplyFilters}
+                                                className="px-4 py-2 bg-[#6605c7] text-white hover:bg-[#5203a4] rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-1 transition-all shadow-md shadow-purple-500/10"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">done</span>
+                                                Apply Filters
+                                            </button>
+                                        </div>
+                                    </div>
 
-                        {/* Min Amount */}
-                        <div>
-                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Min Amount (₹)</label>
-                            <input 
-                                type="number"
-                                placeholder="e.g. 500000"
-                                value={minAmount}
-                                onChange={(e) => setMinAmount(e.target.value)}
-                                className="px-3 py-2.5 w-full bg-white border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
-                            />
-                        </div>
+                                    {/* Advanced/Secondary Filters Row */}
+                                    <AnimatePresence>
+                                        {isAdvancedFiltersOpen && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: "auto", opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                transition={{ duration: 0.2, ease: "easeInOut" }}
+                                                className="pt-3 border-t border-dashed border-gray-100 flex flex-wrap gap-4"
+                                            >
+                                                {/* Date Range Start */}
+                                                <div className="flex-1 min-w-[150px]">
+                                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">From Date</label>
+                                                    <input
+                                                        type="date"
+                                                        value={tempStartDate}
+                                                        onChange={(e) => setTempStartDate(e.target.value)}
+                                                        className="px-3 py-1.5 w-full bg-white border border-gray-205 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
+                                                    />
+                                                </div>
 
-                        {/* Max Amount */}
-                        <div>
-                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Max Amount (₹)</label>
-                            <input 
-                                type="number"
-                                placeholder="e.g. 2500000"
-                                value={maxAmount}
-                                onChange={(e) => setMaxAmount(e.target.value)}
-                                className="px-3 py-2.5 w-full bg-white border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
-                            />
-                        </div>
-                    </div>
+                                                {/* Date Range End */}
+                                                <div className="flex-1 min-w-[150px]">
+                                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">To Date</label>
+                                                    <input
+                                                        type="date"
+                                                        value={tempEndDate}
+                                                        onChange={(e) => setTempEndDate(e.target.value)}
+                                                        className="px-3 py-1.5 w-full bg-white border border-gray-205 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
+                                                    />
+                                                </div>
+
+                                                {/* Min Amount */}
+                                                <div className="flex-1 min-w-[150px]">
+                                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Min Amount (₹)</label>
+                                                    <input
+                                                        type="number"
+                                                        placeholder="e.g. 500000"
+                                                        value={tempMinAmount}
+                                                        onChange={(e) => setTempMinAmount(e.target.value)}
+                                                        className="px-3 py-1.5 w-full bg-white border border-gray-205 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
+                                                    />
+                                                </div>
+
+                                                {/* Max Amount */}
+                                                <div className="flex-1 min-w-[150px]">
+                                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Max Amount (₹)</label>
+                                                    <input
+                                                        type="number"
+                                                        placeholder="e.g. 2500000"
+                                                        value={tempMaxAmount}
+                                                        onChange={(e) => setTempMaxAmount(e.target.value)}
+                                                        className="px-3 py-1.5 w-full bg-white border border-gray-205 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
+                                                    />
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
                 {/* Queue Data Table */}
@@ -387,7 +661,7 @@ export default function IncomingQueuePage() {
                     {loading ? (
                         <Spinner message="Retrieving incoming application pool..." />
                     ) : (
-                        <DataTable 
+                        <DataTable
                             data={filteredApps}
                             columns={columns}
                             emptyMessage="All clear! No incoming files in the queue needing LAN assignation."
@@ -402,7 +676,7 @@ export default function IncomingQueuePage() {
                 {showLogModal && selectedApp && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                         <div className="fixed inset-0 bg-black/45 backdrop-blur-sm" onClick={() => setShowLogModal(false)} />
-                        
+
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
@@ -416,7 +690,7 @@ export default function IncomingQueuePage() {
                                 {/* LAN Number */}
                                 <div>
                                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Loan Account Number (LAN)</label>
-                                    <input 
+                                    <input
                                         type="text"
                                         required
                                         value={lanNumber}
@@ -434,15 +708,14 @@ export default function IncomingQueuePage() {
                                                 key={p}
                                                 type="button"
                                                 onClick={() => setPriority(p)}
-                                                className={`py-2 px-3 border rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                                                    priority === p 
-                                                        ? p === "high" 
+                                                className={`py-2 px-3 border rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${priority === p
+                                                        ? p === "high"
                                                             ? "border-rose-500 bg-rose-50 text-rose-600"
                                                             : p === "medium"
                                                                 ? "border-amber-500 bg-amber-50 text-amber-600"
                                                                 : "border-emerald-500 bg-emerald-50 text-emerald-600"
                                                         : "border-gray-200 text-gray-500 hover:bg-gray-50"
-                                                }`}
+                                                    }`}
                                             >
                                                 {p}
                                             </button>
@@ -451,7 +724,7 @@ export default function IncomingQueuePage() {
                                 </div>
 
                                 {/* Officer Assignment */}
-                                <div>
+                                {/* <div>
                                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Assign Credit Officer</label>
                                     <select
                                         value={assignedOfficer}
@@ -464,11 +737,11 @@ export default function IncomingQueuePage() {
                                             </option>
                                         ))}
                                     </select>
-                                </div>
+                                </div> */}
 
                                 {/* Confirmation Step */}
                                 {confirmingLog && (
-                                    <motion.div 
+                                    <motion.div
                                         initial={{ height: 0, opacity: 0 }}
                                         animate={{ height: "auto", opacity: 1 }}
                                         className="p-4 bg-purple-50 border border-purple-100 rounded-2xl text-[11px] text-purple-700 font-medium leading-relaxed"
@@ -479,8 +752,8 @@ export default function IncomingQueuePage() {
                                 )}
 
                                 <div className="flex gap-4 pt-3">
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         onClick={() => {
                                             if (confirmingLog) setConfirmingLog(false);
                                             else setShowLogModal(false);
@@ -489,7 +762,7 @@ export default function IncomingQueuePage() {
                                     >
                                         {confirmingLog ? "Back" : "Cancel"}
                                     </button>
-                                    <button 
+                                    <button
                                         type="submit"
                                         disabled={savingLog}
                                         className="flex-1 py-3 bg-[#6605c7] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#5203a4] shadow-lg shadow-purple-500/10 transition-all flex items-center justify-center"

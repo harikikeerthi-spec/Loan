@@ -480,7 +480,7 @@ export class CommunityService {
 
     const { data: post, error } = await this.db
       .from('ForumPost')
-      .insert({ title: data.title, content: data.content, category: data.category || 'General', tags: data.tags || [], authorId: userId, isMentorOnly: data.isMentorOnly || false })
+      .insert({ title: data.title, content: data.content, category: data.category || 'General', tags: data.tags || [], authorId: userId, isMentorOnly: data.isMentorOnly || false, updatedAt: new Date().toISOString() })
       .select('*, author:User!authorId(firstName, lastName, role, id)')
       .single();
 
@@ -496,7 +496,7 @@ export class CommunityService {
     const { data: post } = await this.db.from('ForumPost').select('id').eq('id', postId).single();
     if (!post) throw new NotFoundException('Post not found');
 
-    const { data: comment, error } = await this.db.from('ForumComment').insert({ content, postId, authorId: userId, parentId: parentId || null }).select('*, author:User!authorId(firstName, lastName, role)').single();
+    const { data: comment, error } = await this.db.from('ForumComment').insert({ content, postId, authorId: userId, parentId: parentId || null, updatedAt: new Date().toISOString() }).select('*, author:User!authorId(firstName, lastName, role)').single();
     if (error) throw error;
     return { success: true, message: 'Comment added successfully', data: comment };
   }

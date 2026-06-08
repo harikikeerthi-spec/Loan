@@ -5,6 +5,7 @@ import { documentApi, staffProfileApi, adminApi } from "@/lib/api";
 import KycSystemDashboard from "./KycSystemDashboard";
 import ShareWithBankModal from "./ShareWithBankModal";
 import SendDocumentToBankModal from "./SendDocumentToBankModal";
+import SendEmailModal from "./SendEmailModal";
 import {
   getDocumentCategory,
   getDocumentRequirementName,
@@ -80,6 +81,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const [activeSidebarMenu, setActiveSidebarMenu] = useState("application_details");
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [sendToBankDoc, setSendToBankDoc] = useState<OcrSummaryDoc | null>(null);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
   const progress = application.progress || 90;
   const status = (application.status || "APPROVED").toUpperCase();
@@ -742,7 +744,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   ];
 
   return (
-    <div className="staff-dashboard-body fixed inset-y-0 right-0 left-[56px] z-[40] flex flex-col bg-[#F8FAFC] overflow-hidden animate-in fade-in duration-500" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
+    <div className="staff-dashboard-body fixed inset-y-0 right-0 left-[56px] z-[40] flex flex-col bg-[#F8FAFC] overflow-hidden animate-in fade-in duration-500" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       {/* Background Ambient Glows */}
       <div className="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] bg-indigo-50/50 blur-[120px] rounded-full -z-10" />
       <div className="absolute bottom-[-10%] left-[-5%] w-[30%] h-[40%] bg-emerald-50/50 blur-[100px] rounded-full -z-10" />
@@ -779,6 +781,14 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
           >
             <span className="material-symbols-outlined text-[17px]">sticky_note_2</span>
             Internal Notes
+          </button>
+
+          <button
+            onClick={() => setIsEmailModalOpen(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-md shadow-indigo-600/10"
+          >
+            <span className="material-symbols-outlined text-[17px]">mail</span>
+            Send Email
           </button>
 
           <div className="h-8 w-px bg-slate-200/60 mx-1"></div>
@@ -1559,6 +1569,13 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
           onSuccess={() => setSendToBankDoc(null)}
         />
       )}
+
+      <SendEmailModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        recipientEmail={application.email || application.student?.email || ""}
+        recipientName={fullName}
+      />
     </div >
   );
 };

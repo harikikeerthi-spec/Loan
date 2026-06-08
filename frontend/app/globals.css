@@ -47,12 +47,53 @@ body, h1, h2, h3, h4, h5, h6, p, a, button, input, select, textarea, label {
   font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
-/* Bank portal font override — DM Sans scoped to bank layout only */
-.bank-portal, .bank-portal h1, .bank-portal h2, .bank-portal h3,
-.bank-portal h4, .bank-portal h5, .bank-portal h6, .bank-portal p,
-.bank-portal span:not(.material-symbols-outlined), .bank-portal div:not(.material-symbols-outlined), .bank-portal a, .bank-portal button,
-.bank-portal input, .bank-portal select, .bank-portal textarea, .bank-portal label {
+/* Bank portal font override — Premium Fintech Look: Plus Jakarta Sans for titles/headers, DM Sans for text/body */
+.bank-portal,
+.bank-portal p,
+.bank-portal span:not(.material-symbols-outlined),
+.bank-portal div:not(.material-symbols-outlined),
+.bank-portal a,
+.bank-portal button,
+.bank-portal input,
+.bank-portal select,
+.bank-portal textarea,
+.bank-portal label {
   font-family: 'DM Sans', sans-serif !important;
+}
+
+.bank-portal h1,
+.bank-portal h2,
+.bank-portal h3,
+.bank-portal h4,
+.bank-portal h5,
+.bank-portal h6,
+.bank-portal .font-display,
+.bank-portal .bank-title {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
+/* Specific styling for the main header (Incoming Loan Files) in the bank layout */
+.bank-portal h1 {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 32px !important;
+  color: #111827 !important;
+  font-style: normal !important;
+  letter-spacing: -0.02em !important;
+}
+
+/* Specific styling for table row values in the bank layout to look smooth, clean, and geometric */
+.bank-portal table tbody tr,
+.bank-portal table tbody td,
+.bank-portal table tbody td p,
+.bank-portal table tbody td div,
+.bank-portal table tbody td span:not(.material-symbols-outlined) {
+  font-family: 'DM Sans', sans-serif !important;
+  font-weight: 400 !important;
+  font-size: 13px !important;
+  color: #374151 !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
 }
 
 .material-symbols-outlined,
@@ -62,26 +103,56 @@ body, h1, h2, h3, h4, h5, h6, p, a, button, input, select, textarea, label {
   font-family: 'Material Symbols Outlined' !important;
 }
 
+.staff-dashboard-shell,
+.staff-dashboard-body,
+.staff-application-detail-page {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+
 .staff-dashboard-shell h1,
 .staff-dashboard-shell h2,
 .staff-dashboard-shell h3,
 .staff-dashboard-shell h4,
+.staff-dashboard-shell h5,
+.staff-dashboard-shell h6,
 .staff-dashboard-shell .font-display,
-.staff-dashboard-shell [class*="Playfair_Display"] {
+.staff-dashboard-shell [class*="Playfair_Display"],
+.staff-dashboard-body h1,
+.staff-dashboard-body h2,
+.staff-dashboard-body h3,
+.staff-dashboard-body h4,
+.staff-dashboard-body h5,
+.staff-dashboard-body h6,
+.staff-dashboard-body .font-display,
+.staff-dashboard-body [class*="Playfair_Display"],
+.staff-application-detail-page h1,
+.staff-application-detail-page h2,
+.staff-application-detail-page h3,
+.staff-application-detail-page h4,
+.staff-application-detail-page h5,
+.staff-application-detail-page h6,
+.staff-application-detail-page .font-display,
+.staff-application-detail-page [class*="Playfair_Display"] {
   font-family: 'Playfair Display', Georgia, serif !important;
   font-weight: 700 !important;
   letter-spacing: 0 !important;
 }
 
 .staff-dashboard-shell .staff-dashboard-number,
-.staff-dashboard-shell .tabular-nums {
+.staff-dashboard-shell .tabular-nums,
+.staff-dashboard-body .staff-dashboard-number,
+.staff-dashboard-body .tabular-nums,
+.staff-application-detail-page .staff-dashboard-number,
+.staff-application-detail-page .tabular-nums {
   font-family: 'Playfair Display', Georgia, serif !important;
   font-variant-numeric: lining-nums tabular-nums;
   font-feature-settings: "lnum" 1, "tnum" 1;
   letter-spacing: 0 !important;
 }
 
-.staff-dashboard-shell .staff-dashboard-number {
+.staff-dashboard-shell .staff-dashboard-number,
+.staff-dashboard-body .staff-dashboard-number,
+.staff-application-detail-page .staff-dashboard-number {
   font-weight: 800 !important;
 }
 

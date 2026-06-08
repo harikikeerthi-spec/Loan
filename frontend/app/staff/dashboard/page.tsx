@@ -26,6 +26,7 @@ import {
 import ActivityLogWidget from "@/components/staff/ActivityLogWidget";
 import ShareProfileToBankModal from "@/components/staff/ShareProfileToBankModal";
 import NotificationsPanel from "@/components/staff/NotificationsPanel";
+import SendEmailModal from "@/components/staff/SendEmailModal";
 
 // --- Components ---
 
@@ -260,6 +261,10 @@ export default function StaffDashboardPage() {
     const [showPullModal, setShowPullModal] = useState(false);
     const [showShareProfileModal, setShowShareProfileModal] = useState(false);
     const [shareProfileData, setShareProfileData] = useState<any>(null);
+
+    const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+    const [emailModalRecipient, setEmailModalRecipient] = useState("");
+    const [emailModalRecipientName, setEmailModalRecipientName] = useState("");
 
     // Premium Document Upload Popup States
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -992,6 +997,12 @@ export default function StaffDashboardPage() {
         } catch (e: any) {
             alert("Failed to send email: " + e.message);
         } finally { setEmailLoading(false); }
+    };
+
+    const openEmailModal = (email: string, name: string = "") => {
+        setEmailModalRecipient(email || "");
+        setEmailModalRecipientName(name || "");
+        setIsEmailModalOpen(true);
     };
 
     const toggleTask = (id: number) => {
@@ -2879,7 +2890,7 @@ export default function StaffDashboardPage() {
     };
 
     return (
-        <div className="staff-dashboard-shell h-screen overflow-hidden flex bg-white text-slate-900 text-sm" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
+        <div className="staff-dashboard-shell h-screen overflow-hidden flex bg-white text-slate-900 text-sm" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             {/* Mobile overlay */}
             {sidebarOpen && (
                 <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -3255,8 +3266,8 @@ export default function StaffDashboardPage() {
                                                                         value={quickForm.firstName}
                                                                         onChange={e => setQuickForm({ ...quickForm, firstName: e.target.value })}
                                                                         className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${quickForm.firstName.trim().length >= 2
-                                                                                ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500'
-                                                                                : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
+                                                                            ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500'
+                                                                            : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
                                                                             }`}
                                                                         placeholder="Rahul"
                                                                     />
@@ -3278,8 +3289,8 @@ export default function StaffDashboardPage() {
                                                                         value={quickForm.lastName}
                                                                         onChange={e => setQuickForm({ ...quickForm, lastName: e.target.value })}
                                                                         className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${quickForm.lastName.trim().length >= 2
-                                                                                ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500'
-                                                                                : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
+                                                                            ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500'
+                                                                            : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
                                                                             }`}
                                                                         placeholder="Sharma"
                                                                     />
@@ -3301,8 +3312,8 @@ export default function StaffDashboardPage() {
                                                                         value={quickForm.email}
                                                                         onChange={e => setQuickForm({ ...quickForm, email: e.target.value })}
                                                                         className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(quickForm.email)
-                                                                                ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500'
-                                                                                : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
+                                                                            ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500'
+                                                                            : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
                                                                             }`}
                                                                         placeholder="rahul@example.com"
                                                                     />
@@ -3329,8 +3340,8 @@ export default function StaffDashboardPage() {
                                                                             value={quickForm.phone}
                                                                             onChange={e => setQuickForm({ ...quickForm, phone: formatPhone(e.target.value) })}
                                                                             className={`w-full pl-6 pr-10 py-4 bg-slate-50 border rounded-2xl text-[14px] focus:outline-none focus:ring-4 transition-all font-bold ${isPhoneValid(quickForm.phone)
-                                                                                    ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500'
-                                                                                    : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
+                                                                                ? 'border-emerald-500 focus:ring-emerald-500/10 focus:border-emerald-500'
+                                                                                : 'border-slate-200 focus:ring-indigo-500/10 focus:border-indigo-500'
                                                                                 }`}
                                                                             placeholder="9876543210"
                                                                             maxLength={10}
@@ -6733,12 +6744,12 @@ export default function StaffDashboardPage() {
                                     <div className="space-y-1.5">
                                         <button onClick={() => { navigateToSection('chat_customer'); setAutoStartUser(null); }} className="w-full text-left p-3 rounded border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all flex items-center gap-3 bg-white shadow-sm">
                                             <span className="material-symbols-outlined text-indigo-500 text-[18px]">forum</span>
-                                            <span className="text-[12px] font-medium text-slate-800">Support Chat</span>
+                                            <span className="text-[12px] font-semibold text-slate-800">Support Chat</span>
                                             <span className="material-symbols-outlined text-slate-300 ml-auto text-[14px]">arrow_forward_ios</span>
                                         </button>
                                         <button onClick={() => navigateToSection('applicants')} className="w-full text-left p-3 rounded border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30 transition-all flex items-center gap-3 bg-white shadow-sm">
                                             <span className="material-symbols-outlined text-emerald-500 text-[18px]">manage_accounts</span>
-                                            <span className="text-[12px] font-medium text-slate-800">Applicant Profiles</span>
+                                            <span className="text-[12px] font-semibold text-slate-800">Applicant Profiles</span>
                                             <span className="material-symbols-outlined text-slate-300 ml-auto text-[14px]">arrow_forward_ios</span>
                                         </button>
                                     </div>
@@ -7050,11 +7061,62 @@ export default function StaffDashboardPage() {
                                     Compose Message
                                 </h3>
                                 <div className="space-y-4">
-                                    <div className="flex gap-1.5 p-1 bg-slate-100 rounded w-fit mb-4">
-                                        <button onClick={() => setEmailData({ ...emailData, isBulk: false })} className={`px-3 py-1.5 rounded text-[11px] font-medium transition-all ${!emailData.isBulk ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Direct</button>
-                                        <button onClick={() => setEmailData({ ...emailData, isBulk: true })} className={`px-3 py-1.5 rounded text-[11px] font-medium transition-all ${emailData.isBulk ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Bulk</button>
+                                    <div className="flex gap-1.5 p-1 bg-slate-100 rounded w-fit mb-4 font-sans">
+                                        <button type="button" onClick={() => setEmailData({ ...emailData, isBulk: false })} className={`px-3 py-1.5 rounded text-[11px] font-medium transition-all ${!emailData.isBulk ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Direct</button>
+                                        <button type="button" onClick={() => setEmailData({ ...emailData, isBulk: true })} className={`px-3 py-1.5 rounded text-[11px] font-medium transition-all ${emailData.isBulk ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>Bulk</button>
                                     </div>
-                                    <button onClick={handleSendEmail} disabled={emailLoading} className="w-full bg-indigo-600 text-white py-2.5 rounded text-[11px] font-medium flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-sm">
+
+                                    {!emailData.isBulk ? (
+                                        <div>
+                                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Recipient Email</label>
+                                            <input
+                                                type="email"
+                                                placeholder="student@example.com"
+                                                value={emailData.to}
+                                                onChange={e => setEmailData({ ...emailData, to: e.target.value })}
+                                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 text-slate-800 font-sans"
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Target Role Group</label>
+                                            <select
+                                                value={emailData.role}
+                                                onChange={e => setEmailData({ ...emailData, role: e.target.value })}
+                                                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 text-slate-800 cursor-pointer font-sans"
+                                            >
+                                                <option value="student">STUDENTS</option>
+                                                <option value="staff">STAFF</option>
+                                                <option value="bank">BANK PARTNERS</option>
+                                                <option value="agent">AGENTS</option>
+                                                <option value="admin">ADMINS</option>
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5 ml-1 font-sans">Subject</label>
+                                        <input
+                                            type="text"
+                                            placeholder="Enter email subject"
+                                            value={emailData.subject}
+                                            onChange={e => setEmailData({ ...emailData, subject: e.target.value })}
+                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 text-slate-800 font-sans"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5 ml-1 font-sans">Message Body</label>
+                                        <textarea
+                                            placeholder="Type your announcement or message here..."
+                                            rows={8}
+                                            value={emailData.content}
+                                            onChange={e => setEmailData({ ...emailData, content: e.target.value })}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-[13px] font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 text-slate-800 min-h-[150px] resize-y font-sans"
+                                        />
+                                    </div>
+
+                                    <button onClick={handleSendEmail} disabled={emailLoading} className="w-full bg-indigo-600 text-white py-2.5 rounded text-[11px] font-medium flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all shadow-sm font-sans">
                                         {emailLoading ? (
                                             <div className="w-4 h-4 border-2 border-indigo-400 border-t-white rounded-full animate-spin" />
                                         ) : (
@@ -7110,33 +7172,14 @@ export default function StaffDashboardPage() {
                                             </span>
                                         )}
                                     </h2>
-                                    {/* {activeSection === 'applications' && (
-                                        <p className="text-slate-500 text-[13px] mt-1">Review, approve, and track real-time applications and processing pipelines.</p>
-                                    )}
-                                    {activeSection === 'users' && (
-                                        <p className="text-slate-500 text-[13px] mt-1">Manage accounts, roles, and access controls across the platform.</p>
-                                    )}
-                                    {activeSection === 'blogs' && (
-                                        <p className="text-slate-500 text-[13px] mt-1">Create, edit, and publish editorial content and resources.</p>
-                                    )}
-                                    {activeSection === 'community' && (
-                                        <p className="text-slate-500 text-[13px] mt-1">Monitor discussions, engage with users, and moderate threads.</p>
-                                    )} */}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-3">
                                     {activeSection === 'applications' && (
                                         <>
-                                            {/* <button className="text-[10px] font-black text-slate-400 uppercase tracking-widest hover:text-slate-600 transition-colors mr-2">
-                                                Apply Filters
-                                            </button> */}
                                             <button className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-700 uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm">
                                                 <span className="material-symbols-outlined text-[16px]">filter_alt</span>
                                                 Filters
                                             </button>
-                                            {/* <button className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-600/20 transition-all flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-[18px]">add</span>
-                                                Add Application
-                                            </button> */}
                                         </>
                                     )}
                                     <button
@@ -7459,20 +7502,6 @@ export default function StaffDashboardPage() {
                                                                         <span className="text-[10px] font-bold text-[#4f46e5] ml-auto">{progress}%</span>
                                                                     </div>
                                                                 </td>
-                                                                {/* <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
-                                                                    <div className="flex items-center gap-1.5">
-                                                                       
-                                                                        {[
-                                                                            { id: 'id', icon: 'person', label: 'ID', status: progress > 15 ? 'success' : 'pending' },
-                                                                            { id: 'ac', icon: 'school', label: 'EDU', status: progress > 40 ? 'success' : 'pending' },
-                                                                            { id: 'fi', icon: 'payments', label: 'FIN', status: progress > 70 ? 'success' : 'pending' }
-                                                                        ].map(doc => (
-                                                                            <div key={doc.id} title={doc.label} className={`w-7 h-7 rounded-lg flex items-center justify-center border ${doc.status === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-600' : 'bg-slate-50 border-slate-100 text-slate-300'}`}>
-                                                                                <span className="material-symbols-outlined text-[16px]">{doc.icon}</span>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                </td> */}
                                                                 <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
                                                                     <div className="flex flex-col items-start gap-1.5">
                                                                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-black uppercase tracking-wider border ${statusColors[statusKey] || 'bg-amber-50/50 text-amber-600 border-amber-200'}`}>
@@ -7505,17 +7534,18 @@ export default function StaffDashboardPage() {
                                                                                         <span className="material-symbols-outlined text-[18px] text-indigo-500">visibility</span>
                                                                                         View Application
                                                                                     </button>
-                                                                                    {/* <button
+                                                                                    <button
                                                                                         onClick={() => {
-                                                                                            const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
-                                                                                            if (uid) window.open(`/staff/users/${uid}`, '_blank');
+                                                                                            const email = item.email || item.student?.email;
+                                                                                            const name = `${item.firstName || item.student?.firstName || ''} ${item.lastName || item.student?.lastName || ''}`.trim();
+                                                                                            if (email) openEmailModal(email, name);
                                                                                             setActiveMenuId(null);
                                                                                         }}
                                                                                         className="w-full flex items-center gap-4 px-5 py-3 text-[12px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-colors"
                                                                                     >
-                                                                                        <span className="material-symbols-outlined text-[18px] text-indigo-500">account_circle</span>
-                                                                                        View Profile
-                                                                                    </button> */}
+                                                                                        <span className="material-symbols-outlined text-[18px] text-indigo-500">mail</span>
+                                                                                        Send Email
+                                                                                    </button>
                                                                                     <button
                                                                                         onClick={() => { setSearchQuery(item.email || item.student?.email); setActiveMenuId(null); }}
                                                                                         className="w-full flex items-center gap-4 px-5 py-3 text-[12px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-colors"
@@ -7720,6 +7750,17 @@ export default function StaffDashboardPage() {
                                                                             title="Direct Message"
                                                                         >
                                                                             <span className="material-symbols-outlined text-[16px]">chat_bubble</span>
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const email = item.email || "";
+                                                                                const name = `${item.firstName || ""} ${item.lastName || ""}`.trim();
+                                                                                if (email) openEmailModal(email, name);
+                                                                            }}
+                                                                            className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 flex items-center justify-center transition-all shadow-sm"
+                                                                            title="Send Email"
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-[16px]">mail</span>
                                                                         </button>
                                                                     </div>
                                                                 </td>
@@ -7939,6 +7980,13 @@ export default function StaffDashboardPage() {
             <PullDocumentsModal
                 isOpen={showPullModal}
                 onClose={() => setShowPullModal(false)}
+            />
+
+            <SendEmailModal
+                isOpen={isEmailModalOpen}
+                onClose={() => setIsEmailModalOpen(false)}
+                recipientEmail={emailModalRecipient}
+                recipientName={emailModalRecipientName}
             />
 
             {/* Document Preview Modal / Right Side-Drawer */}

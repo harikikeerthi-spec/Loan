@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { adminApi, documentApi } from "@/lib/api";
 import { format } from "date-fns";
 import { formatDate } from "@/lib/utils";
+import SendEmailModal from "@/components/staff/SendEmailModal";
 
 const IST_OFFSET = 5.5 * 60 * 60 * 1000; // India Standard Time offset (+5:30) in ms
 const convertToIST = (dateVal: any): Date => {
@@ -79,6 +80,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
     const [staffNotes, setStaffNotes] = useState<any[]>([]);
     const [newNote, setNewNote] = useState("");
     const [activeTab, setActiveTab] = useState<"details" | "history" | "documents" | "notes" | "verification">("details");
+    const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchApplicationDetails = async () => {
@@ -146,7 +148,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-slate-50 text-slate-800 flex items-center justify-center" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
+            <div className="min-h-screen bg-slate-50 text-slate-800 flex items-center justify-center" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-10 h-10 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin" />
                     <p className="text-[11px] font-black tracking-widest text-slate-400 uppercase">Loading Application...</p>
@@ -157,7 +159,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
 
     if (!application) {
         return (
-            <div className="min-h-screen bg-slate-50 text-slate-800" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
+            <div className="min-h-screen bg-slate-50 text-slate-800" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                 <div className="max-w-6xl mx-auto px-6 py-12 text-center">
                     <p className="text-slate-500">Application not found</p>
                     <button
@@ -172,7 +174,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 text-slate-800" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
+        <div className="min-h-screen bg-slate-50 text-slate-800" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
             {/* Header */}
             <div className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
                 <div className="max-w-7xl mx-auto px-6 py-4">
@@ -200,7 +202,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                     if (application.userId) window.open(`/staff/users/${application.userId}`, '_blank');
                                 }}
                                 className="text-3xl font-black text-slate-900 tracking-tight cursor-pointer hover:text-indigo-600 hover:underline transition-all inline-block"
-                                style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}
+                                style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
                                 title="Click to view Student Profile"
                             >
                                 {application.firstName || "—"} {application.lastName || ""}
@@ -230,19 +232,19 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                     <div className="grid grid-cols-4 gap-4 mb-6">
                         <div className="bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-lg p-4 border border-indigo-200">
                             <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Loan Amount</p>
-                            <p className="text-2xl font-black text-indigo-900 mt-1" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>₹{Number(application.amount || 0).toLocaleString('en-IN')}</p>
+                            <p className="text-2xl font-black text-indigo-900 mt-1" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>₹{Number(application.amount || 0).toLocaleString('en-IN')}</p>
                         </div>
                         <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-4 border border-emerald-200">
                             <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Tenure</p>
-                            <p className="text-2xl font-black text-emerald-900 mt-1" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{application.tenure || 0} Months</p>
+                            <p className="text-2xl font-black text-emerald-900 mt-1" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>{application.tenure || 0} Months</p>
                         </div>
                         <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg p-4 border border-amber-200">
                             <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Interest Rate</p>
-                            <p className="text-2xl font-black text-amber-900 mt-1" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{application.interestRate || 0}%</p>
+                            <p className="text-2xl font-black text-amber-900 mt-1" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>{application.interestRate || 0}%</p>
                         </div>
                         <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
                             <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">Loan Type</p>
-                            <p className="text-lg font-black text-blue-900 mt-1" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{application.loanType || "—"}</p>
+                            <p className="text-lg font-black text-blue-900 mt-1" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{application.loanType || "—"}</p>
                         </div>
                     </div>
                 </div>
@@ -285,7 +287,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                             {/* Left Column - Applicant Info */}
                             <div className="lg:col-span-2 space-y-6">
                                 <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm">
-                                    <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
+                                    <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
                                         <span className="material-symbols-outlined">person</span>
                                         Student Profile - Personal & Academic Details
                                     </h2>
@@ -355,33 +357,33 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                 </div>
 
                                 <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm">
-                                    <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
+                                    <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
                                         <span className="material-symbols-outlined">school</span>
                                         Loan Details
                                     </h2>
                                     <div className="grid grid-cols-2 gap-6">
                                         <div>
                                             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Loan Amount</p>
-                                            <p className="text-[16px] font-black text-slate-900" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>₹{Number(application.amount || 0).toLocaleString('en-IN')}</p>
+                                            <p className="text-[16px] font-black text-slate-900" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>₹{Number(application.amount || 0).toLocaleString('en-IN')}</p>
                                         </div>
                                         <div>
                                             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Tenure</p>
-                                            <p className="text-[16px] font-black text-slate-900" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{application.tenure || 0} Months</p>
+                                            <p className="text-[16px] font-black text-slate-900" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>{application.tenure || 0} Months</p>
                                         </div>
                                         <div>
                                             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Interest Rate</p>
-                                            <p className="text-[16px] font-black text-slate-900" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{application.interestRate || 0}%</p>
+                                            <p className="text-[16px] font-black text-slate-900" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>{application.interestRate || 0}%</p>
                                         </div>
                                         <div>
                                             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Loan Type</p>
-                                            <p className="text-[14px] font-semibold text-slate-900" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{application.loanType || "—"}</p>
+                                            <p className="text-[14px] font-semibold text-slate-900" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>{application.loanType || "—"}</p>
                                         </div>
                                     </div>
                                 </div>
 
                                 {application.purpose && (
                                     <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm">
-                                        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
+                                        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
                                             <span className="material-symbols-outlined">note</span>
                                             Loan Purpose
                                         </h2>
@@ -391,7 +393,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
 
                                 {application.createdAt && (
                                     <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm">
-                                        <h2 className="text-lg font-bold text-slate-900 mb-8 flex items-center gap-2" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>
+                                        <h2 className="text-lg font-bold text-slate-900 mb-8 flex items-center gap-2" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
                                             <span className="material-symbols-outlined text-emerald-600">timeline</span>
                                             Application Progress Timeline
                                         </h2>
@@ -590,7 +592,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                             <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-4 rounded-lg border border-blue-200">
                                                 <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">Current Progress</p>
                                                 <div className="flex items-baseline gap-1">
-                                                    <p className="text-2xl font-black text-blue-900" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>{application.progress || 12}%</p>
+                                                    <p className="text-2xl font-black text-blue-900" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>{application.progress || 12}%</p>
                                                 </div>
                                             </div>
                                             <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-4 rounded-lg border border-emerald-200">
@@ -628,6 +630,13 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                         >
                                             <span className="material-symbols-outlined text-[16px]">cloud_download</span>
                                             Pull from DigiLocker
+                                        </button>
+                                        <button
+                                            onClick={() => setIsEmailModalOpen(true)}
+                                            className="w-full px-4 py-2.5 bg-violet-600 text-white text-[11px] font-bold rounded hover:bg-violet-700 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <span className="material-symbols-outlined text-[16px]">mail</span>
+                                            Send Email
                                         </button>
                                         <button
                                             onClick={() => setActiveTab("verification")}
@@ -809,6 +818,15 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                     </div>
                 )}
             </div>
+
+            {application && (
+                <SendEmailModal
+                    isOpen={isEmailModalOpen}
+                    onClose={() => setIsEmailModalOpen(false)}
+                    recipientEmail={application.email || application.student?.email || ""}
+                    recipientName={`${application.firstName || application.student?.firstName || ""} ${application.lastName || application.student?.lastName || ""}`.trim()}
+                />
+            )}
         </div>
     );
 }

@@ -12,7 +12,7 @@ import { adminApi } from "@/lib/api";
 const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => (
     <Link
         href={path}
-        className={`flex items-center justify-between py-2 px-3 rounded-xl transition-all relative group overflow-hidden ${
+        className={`flex items-center py-2 px-3 rounded-xl transition-all relative group overflow-hidden ${
             active ? "text-white" : "text-gray-400 hover:text-gray-800"
         }`}
         style={active ? {
@@ -20,7 +20,7 @@ const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => (
             boxShadow: '0 4px 14px rgba(102, 5, 199, 0.22)'
         } : undefined}
     >
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-3 min-w-0 flex-1 relative z-10">
             {/* Hover background */}
             {!active && (
                 <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
@@ -36,14 +36,26 @@ const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => (
                     {label}
                 </span>
             )}
+
+            {badge && !collapsed && (
+                <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-extrabold relative z-10 shrink-0 ${
+                    active ? "bg-white text-[#6605c7]" : "bg-[#6605c7] text-white"
+                }`}>
+                    {badge}
+                </span>
+            )}
         </div>
 
-        {badge && !collapsed && (
-            <span className={`px-2 py-0.5 rounded-full text-[8px] font-bold relative z-10 shrink-0 ${
-                active ? "bg-white text-[#6605c7]" : "bg-[#6605c7] text-white"
-            }`}>
-                {badge}
-            </span>
+        {/* Collapsed Tooltip */}
+        {collapsed && (
+            <div className="absolute left-16 top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-gray-900 text-white text-[10px] font-bold tracking-wider uppercase rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 z-50 whitespace-nowrap shadow-lg">
+                {label}
+                {badge && (
+                    <span className="ml-1.5 px-1 py-0.2 bg-white/20 rounded text-[8px] font-extrabold">
+                        {badge}
+                    </span>
+                )}
+            </div>
         )}
     </Link>
 );

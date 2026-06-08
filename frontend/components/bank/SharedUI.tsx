@@ -17,7 +17,10 @@ export function StatusBadge({ status }: StatusBadgeProps) {
     if (normStatus === "pending" || normStatus === "submitted") {
         styles = "bg-amber-50 text-amber-700 border-amber-200/60 shadow-[0_2px_8px_rgba(245,158,11,0.08)]";
         dotColor = "bg-amber-500";
-    } else if (normStatus === "processing" || normStatus === "under review" || normStatus === "under bank review") {
+    } else if (normStatus === "under bank review" || normStatus === "under_bank_review") {
+        styles = "bg-amber-50 text-amber-850 border-amber-200 shadow-[0_2px_8px_rgba(245,158,11,0.08)]";
+        dotColor = "bg-amber-500 animate-pulse";
+    } else if (normStatus === "processing" || normStatus === "under review") {
         styles = "bg-blue-50 text-blue-700 border-blue-200/60 shadow-[0_2px_8px_rgba(59,130,246,0.08)]";
         dotColor = "bg-blue-500 animate-pulse";
     } else if (normStatus === "approved" || normStatus === "sanctioned" || normStatus === "verified") {
@@ -166,8 +169,8 @@ export function DataTable<T>({
                             <tr
                                 key={row.id || idx}
                                 onClick={() => onRowClick && onRowClick(row)}
-                                className={`group transition-all duration-200 ${
-                                    onRowClick ? "cursor-pointer hover:bg-[#6605c7]/[0.03]" : "hover:bg-gray-50/40"
+                                className={`group transition-all duration-200 border-b border-gray-100/50 odd:bg-white even:bg-gray-50/25 hover:bg-[#6605c7]/[0.04] ${
+                                    onRowClick ? "cursor-pointer" : ""
                                 }`}
                             >
                                 {columns.map((col, colIdx) => (
@@ -205,7 +208,7 @@ export function PageHeader({ title, description, moduleName = "Bank Portal", ico
                         {moduleName}
                     </span>
                 </div>
-                <h1 className="text-3xl lg:text-4xl font-display font-black text-gray-900 tracking-tight italic">
+                <h1 className="text-3xl lg:text-4xl font-display font-bold text-gray-900 tracking-tight">
                     {title}
                 </h1>
                 {description && (
