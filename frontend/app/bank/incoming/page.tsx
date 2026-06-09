@@ -294,7 +294,7 @@ export default function IncomingQueuePage() {
             accessorKey: "amount",
             sortable: true,
             cell: (row: any) => (
-                <span className="font-extrabold text-sm text-gray-900 font-display">
+                <span className="font-extrabold text-sm text-gray-900 font-mono">
                     ₹{(row.amount || 0).toLocaleString()}
                 </span>
             )
@@ -333,7 +333,7 @@ export default function IncomingQueuePage() {
                                 e.stopPropagation();
                                 handleOpenLogModal(row);
                             }}
-                            className="px-3.5 py-1.5 bg-[#6605c7] text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-[#5203a4] hover:shadow-lg hover:shadow-purple-500/20 active:scale-95 transition-all shadow-md shadow-purple-500/10 flex items-center gap-1.5"
+                            className="px-3.5 py-1.5 bg-[#111111] hover:bg-black text-white border border-white/10 text-[10px] font-black uppercase tracking-widest rounded-xl hover:shadow-md hover:shadow-black/10 active:scale-95 transition-all shadow-sm flex items-center gap-1.5"
                         >
                             <span className="material-symbols-outlined text-[13px]">note_add</span>
                             Log File
@@ -584,7 +584,7 @@ export default function IncomingQueuePage() {
                                             </button>
                                             <button
                                                 onClick={handleApplyFilters}
-                                                className="px-4 py-2 bg-[#6605c7] text-white hover:bg-[#5203a4] rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-1 transition-all shadow-md shadow-purple-500/10"
+                                                className="px-4 py-2 bg-[#111111] hover:bg-black text-white border border-white/10 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-1 transition-all shadow-sm"
                                             >
                                                 <span className="material-symbols-outlined text-sm">done</span>
                                                 Apply Filters

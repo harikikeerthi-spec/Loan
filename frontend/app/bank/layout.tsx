@@ -6,59 +6,75 @@ import { useAuth } from "@/contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { adminApi } from "@/lib/api";
+import { format } from "date-fns";
 
 // --- Components ---
 
-const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => (
-    <Link
-        href={path}
-        className={`flex items-center py-2 px-3 rounded-xl transition-all relative group overflow-hidden ${
-            active ? "text-white" : "text-gray-400 hover:text-gray-800"
-        }`}
-        style={active ? {
-            background: 'linear-gradient(135deg, #6605c7, #8b24e5)',
-            boxShadow: '0 4px 14px rgba(102, 5, 199, 0.22)'
-        } : undefined}
-    >
-        <div className="flex items-center gap-3 min-w-0 flex-1 relative z-10">
-            {/* Hover background */}
-            {!active && (
-                <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
-                    style={{ backgroundColor: 'rgba(102, 5, 199, 0.06)' }} />
-            )}
+const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => {
+    const isDashboard = path === "/bank/dashboard";
+    const activeStyle = active 
+        ? isDashboard 
+            ? {
+                background: 'linear-gradient(135deg, #6605c7, #8b24e5)',
+                boxShadow: '0 4px 14px rgba(102, 5, 199, 0.22)'
+              }
+            : {
+                background: '#111111',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+              }
+        : undefined;
 
-            <span className={`material-symbols-outlined text-[18px] relative z-10 transition-transform duration-300 ${active ? "scale-110" : "group-hover:scale-105"}`}>
-                {icon}
-            </span>
+    return (
+        <Link
+            href={path}
+            className={`flex items-center py-2 px-3 rounded-xl transition-all relative group overflow-hidden ${
+                active ? "text-white" : "text-gray-500 hover:text-gray-900"
+            }`}
+            style={activeStyle}
+        >
+            <div className="flex items-center gap-3 min-w-0 flex-1 relative z-10">
+                {/* Hover background */}
+                {!active && (
+                    <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
+                        style={{ backgroundColor: 'rgba(102, 5, 199, 0.04)' }} />
+                )}
 
-            {!collapsed && (
-                <span className="text-[11.5px] font-semibold tracking-wide relative z-10 whitespace-nowrap truncate" style={{ fontFamily: '"DM Sans", sans-serif' }}>
-                    {label}
+                <span className={`material-symbols-outlined text-[18px] relative z-10 transition-transform duration-300 ${active ? "scale-110" : "group-hover:scale-105"} ${active ? "text-white" : "text-gray-500 group-hover:text-gray-900"}`}>
+                    {icon}
                 </span>
-            )}
 
-            {badge && !collapsed && (
-                <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-extrabold relative z-10 shrink-0 ${
-                    active ? "bg-white text-[#6605c7]" : "bg-[#6605c7] text-white"
-                }`}>
-                    {badge}
-                </span>
-            )}
-        </div>
+                {!collapsed && (
+                    <span className="text-[11.5px] font-semibold tracking-wide relative z-10 whitespace-nowrap truncate">
+                        {label}
+                    </span>
+                )}
 
-        {/* Collapsed Tooltip */}
-        {collapsed && (
-            <div className="absolute left-16 top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-gray-900 text-white text-[10px] font-bold tracking-wider uppercase rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 z-50 whitespace-nowrap shadow-lg">
-                {label}
-                {badge && (
-                    <span className="ml-1.5 px-1 py-0.2 bg-white/20 rounded text-[8px] font-extrabold">
+                {badge && !collapsed && (
+                    <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-extrabold relative z-10 shrink-0 ${
+                        active 
+                            ? isDashboard ? "bg-white text-[#6605c7]" : "bg-white/20 text-white border border-white/10"
+                            : "bg-[#6605c7] text-white"
+                    }`}>
                         {badge}
                     </span>
                 )}
             </div>
-        )}
-    </Link>
-);
+
+            {/* Collapsed Tooltip */}
+            {collapsed && (
+                <div className="absolute left-16 top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-gray-900 text-white text-[10px] font-bold tracking-wider uppercase rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 z-50 whitespace-nowrap shadow-lg">
+                    {label}
+                    {badge && (
+                        <span className="ml-1.5 px-1 py-0.2 bg-white/20 rounded text-[8px] font-extrabold">
+                            {badge}
+                        </span>
+                    )}
+                </div>
+            )}
+        </Link>
+    );
+};
 
 export default function BankLayout({ children }: { children: React.ReactNode }) {
     const { user, isBank, isAdmin, isLoading, logout } = useAuth();
@@ -66,6 +82,16 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
     const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+
+    const [syncTime, setSyncTime] = useState("");
+
+    useEffect(() => {
+        setSyncTime(format(new Date(), 'MMM dd, HH:mm:ss'));
+        const interval = setInterval(() => {
+            setSyncTime(format(new Date(), 'MMM dd, HH:mm:ss'));
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
 
     // Sidebar badge counts
     const [incomingCount, setIncomingCount] = useState(0);
@@ -183,24 +209,39 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
         }
     }, [user]);
 
-    const navItems = [
-        { icon: "dashboard", label: "Overview Dashboard", path: "/bank/dashboard" },
-        { icon: "calendar_month", label: "Calendar View", path: "/bank/calendar" },
-        { icon: "download", label: "Incoming Queue", path: "/bank/incoming", badge: incomingCount },
-        { icon: "assignment", label: "My Files (Logged)", path: "/bank/applications", badge: loggedCount },
-        { icon: "view_kanban", label: "Kanban Files Board", path: "/bank/kanban" },
-        { icon: "folder_shared", label: "Document Vault", path: "/bank/documents" },
-        { icon: "gavel", label: "Decisions Hub", path: "/bank/decisions" },
-        { icon: "payments", label: "Disbursement Board", path: "/bank/disbursements" },
-        { icon: "receipt_long", label: "Processing Fees", path: "/bank/fees" },
-        { icon: "forum", label: "Secure Chat Stream", path: "/bank/chat", badge: chatCount },
-        { icon: "assignment_add", label: "Task Matrix", path: "/bank/tasks" },
-        { icon: "monitoring", label: "Analytics & SLA", path: "/bank/analytics" },
-        { icon: "extension", label: "System Integrations", path: "/bank/integrations" },
-        { icon: "lan", label: "Branch Matrix", path: "/bank/branches" },
-        { icon: "shopping_bag", label: "Active Products", path: "/bank/products" },
-        { icon: "settings", label: "Settings & Profile", path: "/bank/settings" },
-    ];
+    const categorizedNav = useMemo(() => [
+        {
+            category: "Core Workflow",
+            items: [
+                { icon: "dashboard", label: "Overview Dashboard", path: "/bank/dashboard" },
+                { icon: "download", label: "Incoming Queue", path: "/bank/incoming", badge: incomingCount },
+                { icon: "assignment", label: "My Files (Logged)", path: "/bank/applications", badge: loggedCount },
+                { icon: "view_kanban", label: "Kanban Files Board", path: "/bank/kanban" },
+                { icon: "gavel", label: "Decisions Hub", path: "/bank/decisions" },
+                { icon: "payments", label: "Disbursement Board", path: "/bank/disbursements" },
+            ]
+        },
+        {
+            category: "Collaboration & Operations",
+            items: [
+                { icon: "forum", label: "Secure Chat Stream", path: "/bank/chat", badge: chatCount },
+                { icon: "assignment_add", label: "Task Matrix", path: "/bank/tasks" },
+                { icon: "calendar_month", label: "Calendar View", path: "/bank/calendar" },
+                { icon: "folder_shared", label: "Document Vault", path: "/bank/documents" },
+                { icon: "receipt_long", label: "Processing Fees", path: "/bank/fees" },
+            ]
+        },
+        {
+            category: "Analytics & Settings",
+            items: [
+                { icon: "monitoring", label: "Analytics & SLA", path: "/bank/analytics" },
+                { icon: "extension", label: "System Integrations", path: "/bank/integrations" },
+                { icon: "lan", label: "Branch Matrix", path: "/bank/branches" },
+                { icon: "shopping_bag", label: "Active Products", path: "/bank/products" },
+                { icon: "settings", label: "Settings & Profile", path: "/bank/settings" },
+            ]
+        }
+    ], [incomingCount, loggedCount, chatCount]);
 
     if (pathname === '/bank/login') {
         return <>{children}</>;
@@ -277,11 +318,11 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                 transition={{ duration: 0.2 }}
                                 className="flex flex-col min-w-0"
                             >
-                                <span className="text-lg font-bold text-gray-900 leading-none tracking-tight" style={{ fontFamily: '"DM Sans", sans-serif' }}>
+                                <span className="text-lg font-bold text-gray-900 leading-none tracking-tight" style={{ fontFamily: '"Clash Display", "Cabinet Grotesk", sans-serif' }}>
                                     Vidya<span style={{ color: '#6605c7' }}>Bank</span>
                                 </span>
                                 <span className="text-[8.5px] font-bold uppercase tracking-[0.2em] mt-1 opacity-55"
-                                    style={{ color: '#6605c7', fontFamily: '"DM Sans", sans-serif' }}>
+                                    style={{ color: '#6605c7', fontFamily: '"Clash Display", "Cabinet Grotesk", sans-serif' }}>
                                     Partner Matrix
                                 </span>
                             </motion.div>
@@ -290,14 +331,25 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 </div>
 
                 {/* Nav Section */}
-                <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto no-scrollbar">
-                    {navItems.map((item) => (
-                        <NavItem
-                            key={item.path}
-                            {...item}
-                            active={pathname === item.path || (item.path !== "/bank/dashboard" && pathname.startsWith(item.path))}
-                            collapsed={collapsed}
-                        />
+                <nav className="flex-1 px-3 space-y-4 overflow-y-auto no-scrollbar py-2">
+                    {categorizedNav.map((cat, idx) => (
+                        <div key={idx} className="space-y-1">
+                            {!collapsed && (
+                                <p className="px-3 text-[8.5px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1.5">
+                                    {cat.category}
+                                </p>
+                            )}
+                            <div className="space-y-0.5">
+                                {cat.items.map((item) => (
+                                    <NavItem
+                                        key={item.path}
+                                        {...item}
+                                        active={pathname === item.path || (item.path !== "/bank/dashboard" && pathname.startsWith(item.path))}
+                                        collapsed={collapsed}
+                                    />
+                                ))}
+                            </div>
+                        </div>
                     ))}
                 </nav>
 
@@ -314,7 +366,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                             <span className={`material-symbols-outlined text-[18px] transition-transform duration-300 ${collapsed ? "rotate-180" : ""}`}>
                                 chevron_left
                             </span>
-                            {!collapsed && <span className="text-[11px] font-semibold tracking-wide" style={{ fontFamily: '"DM Sans", sans-serif' }}>Collapse</span>}
+                            {!collapsed && <span className="text-[11px] font-semibold tracking-wide">Collapse</span>}
                         </button>
 
                         <button
@@ -330,7 +382,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
                         >
                             <span className="material-symbols-outlined text-[18px] group-hover:rotate-12 transition-transform">power_settings_new</span>
-                            {!collapsed && <span className="text-[11px] font-semibold tracking-wide" style={{ fontFamily: '"DM Sans", sans-serif' }}>Sign Out</span>}
+                            {!collapsed && <span className="text-[11px] font-semibold tracking-wide">Sign Out</span>}
                         </button>
                     </div>
 
@@ -344,7 +396,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                     >
                         <div
                             className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-[10px] shrink-0 shadow-md"
-                            style={{ background: 'linear-gradient(135deg, #6605c7, #8b24e5)', fontFamily: '"DM Sans", sans-serif' }}
+                            style={{ background: 'linear-gradient(135deg, #6605c7, #8b24e5)' }}
                         >
                             {user.firstName?.[0]}{user.lastName?.[0]}
                         </div>
@@ -356,10 +408,10 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                     exit={{ opacity: 0 }}
                                     className="flex-1 min-w-0"
                                 >
-                                    <p className="text-[11.5px] font-bold text-gray-900 truncate" style={{ fontFamily: '"DM Sans", sans-serif' }}>
+                                    <p className="text-[11.5px] font-bold text-gray-900 truncate">
                                         {user.firstName} {user.lastName}
                                     </p>
-                                    <p className="text-[8.5px] font-semibold text-gray-400 uppercase tracking-widest mt-0.5" style={{ fontFamily: '"DM Sans", sans-serif' }}>
+                                    <p className="text-[8.5px] font-semibold text-gray-400 uppercase tracking-widest mt-0.5">
                                         Bank Auditor
                                     </p>
                                 </motion.div>
@@ -448,10 +500,16 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
 
                     {/* F16 Notification Center & System Ticker */}
                     <div className="flex items-center gap-6">
-                        {/* Live Protocol tag */}
-                        <div className="hidden sm:flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-[9.5px] font-black text-emerald-600 uppercase tracking-widest">Active Node</span>
+                        {/* Live Protocol tag & Real-time Sync Timer */}
+                        <div className="hidden sm:flex items-center gap-4 border-r border-gray-100 pr-4">
+                            <div className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-[9.5px] font-black text-emerald-600 uppercase tracking-widest">Active Node</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[9.5px] text-gray-400 font-bold uppercase tracking-widest font-mono">
+                                <span className="material-symbols-outlined text-[13px]">sync</span>
+                                <span>Sync: {syncTime || '--:--:--'}</span>
+                            </div>
                         </div>
 
                         {/* Bell Notification Trigger */}

@@ -57,35 +57,50 @@ const QuickAction = ({ icon, label, sublabel, bgColor, iconColor, onClick }: any
     </button>
 );
 
-const StatMiniCard = ({ label, value, trend, icon, bgColor, iconColor, delay = 0 }: any) => (
-    <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay, duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
-        className="glass-card stat-card-gradient p-4 rounded-2xl relative overflow-hidden group"
-    >
-        <div className="flex justify-between items-start relative z-10">
-            <div className="space-y-2">
-                <p className="text-gray-500 text-[9px] font-black uppercase tracking-[0.2em]">{label}</p>
-                <div className="text-2xl font-black font-display text-gray-900 leading-none tracking-tight">
-                    {value}
-                </div>
-                {trend !== undefined && (
-                    <div className={`flex items-center gap-1.5 ${Number(trend) >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                        <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${Number(trend) >= 0 ? 'bg-emerald-50' : 'bg-rose-50'}`}>
-                            <span className="material-symbols-outlined text-[9px] font-black">{Number(trend) >= 0 ? 'trending_up' : 'trending_down'}</span>
-                            {trend}%
-                        </div>
-                        <span className="text-[7.5px] font-bold text-gray-400 uppercase tracking-widest">vs last month</span>
+const StatMiniCard = ({ label, value, subtext, trendType, trendLabel, icon, bgColor, iconColor, delay = 0 }: any) => {
+    let trendColorClass = "bg-gray-50 text-gray-500";
+    let trendIcon = "trending_flat";
+    if (trendType === "up") {
+        trendColorClass = "bg-emerald-50 text-emerald-600 border border-emerald-100/30";
+        trendIcon = "trending_up";
+    } else if (trendType === "down") {
+        trendColorClass = "bg-rose-50 text-rose-600 border border-rose-100/30";
+        trendIcon = "trending_down";
+    } else if (trendType === "neutral" || trendType === "info") {
+        trendColorClass = "bg-purple-50 text-purple-650 border border-purple-100/30";
+        trendIcon = "sync";
+    }
+
+    return (
+        <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay, duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
+            className="glass-card stat-card-gradient p-4 rounded-2xl relative overflow-hidden group"
+        >
+            <div className="flex justify-between items-start relative z-10">
+                <div className="space-y-2">
+                    <p className="text-gray-500 text-[9px] font-black uppercase tracking-[0.2em]">{label}</p>
+                    <div className="text-2xl font-black font-mono text-gray-900 leading-none tracking-tight">
+                        {value}
                     </div>
-                )}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        {trendLabel && trendType !== "none" && (
+                            <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${trendColorClass}`}>
+                                <span className="material-symbols-outlined text-[9px] font-black">{trendIcon}</span>
+                                {trendLabel}
+                            </div>
+                        )}
+                        <span className="text-[9.5px] font-medium text-gray-400 uppercase tracking-wider">{subtext}</span>
+                    </div>
+                </div>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-12 duration-500 ${bgColor || 'bg-[#6605c7]/10'} shadow-sm`}>
+                    <span className={`material-symbols-outlined text-xl ${iconColor || 'text-[#6605c7]'}`}>{icon}</span>
+                </div>
             </div>
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-12 duration-500 ${bgColor || 'bg-[#6605c7]/10'} shadow-sm`}>
-                <span className={`material-symbols-outlined text-xl ${iconColor || 'text-[#6605c7]'}`}>{icon}</span>
-            </div>
-        </div>
-    </motion.div>
-);
+        </motion.div>
+    );
+};
 
 interface AdminStatsResponse {
     success?: boolean;
@@ -262,13 +277,13 @@ export default function BankDashboard() {
                 backgroundColor: (context: any) => {
                     const chart = context.chart;
                     const {ctx, chartArea} = chart;
-                    if (!chartArea) return 'rgba(102, 5, 199, 0.05)';
+                    if (!chartArea) return 'rgba(102, 5, 199, 0.03)';
                     const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
-                    gradient.addColorStop(0, 'rgba(102, 5, 199, 0)');
-                    gradient.addColorStop(1, 'rgba(102, 5, 199, 0.15)');
+                    gradient.addColorStop(0, 'rgba(102, 5, 199, 0.01)');
+                    gradient.addColorStop(1, 'rgba(102, 5, 199, 0.08)');
                     return gradient;
                 },
-                tension: 0.5,
+                tension: 0.4,
                 fill: true,
                 pointRadius: 0,
                 pointHoverRadius: 8,
@@ -351,10 +366,6 @@ export default function BankDashboard() {
                     <h2 className="text-3xl lg:text-4xl font-black font-display text-gray-900 tracking-tighter leading-none">
                         Portfolio <span className="text-[#6605c7]">Overview</span>
                     </h2>
-                    <p className="text-gray-400 font-bold uppercase tracking-[0.3em] text-[10px] flex items-center gap-2 pl-1">
-                        <span className="material-symbols-outlined text-xs">sync</span>
-                        Network Sync: {mounted ? format(new Date(), 'MMM dd, HH:mm:ss') : '--:--:--'} (UTC+5:30)
-                    </p>
                 </div>
                 
                 <div className="flex flex-wrap gap-4 items-center relative">
@@ -371,7 +382,7 @@ export default function BankDashboard() {
                             element.click();
                             document.body.removeChild(element);
                         }}
-                        className="px-6 py-4 rounded-[1.5rem] bg-white/80 border border-[#6605c7]/10 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#6605c7] hover:bg-white transition-all shadow-sm group"
+                        className="px-6 py-4 rounded-[1.5rem] bg-white/80 border border-black/10 hover:border-black/20 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#111111] hover:bg-white transition-all shadow-sm group"
                     >
                         <span className="material-symbols-outlined text-xl group-hover:scale-125 transition-transform">database</span> 
                         Extract Matrix
@@ -380,7 +391,7 @@ export default function BankDashboard() {
                         whileHover={{ y: -2, scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => router.push('/bank/applications')}
-                        className="px-8 py-4 rounded-[1.5rem] bg-[#6605c7] text-white flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-purple-500/30 group"
+                        className="px-8 py-4 rounded-[1.5rem] bg-[#111111] hover:bg-black text-white border border-white/10 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] shadow-md hover:shadow-lg transition-all group"
                     >
                         <span className="material-symbols-outlined text-xl group-hover:rotate-90 transition-transform duration-500">add_circle</span> 
                         Initialize Pulse
@@ -392,8 +403,10 @@ export default function BankDashboard() {
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 <StatMiniCard
                     label="Incoming Queue"
-                    value={`${incomingCount} files`}
-                    trend={incomingVal ? `₹${(incomingVal / 100000).toFixed(0)}L volume` : "₹0 volume"}
+                    value={incomingVal ? `₹${(incomingVal / 100000).toFixed(0)}L` : "₹0L"}
+                    subtext={incomingCount === 1 ? "1 pending file" : `${incomingCount} files pending`}
+                    trendType="info"
+                    trendLabel="In Queue"
                     icon="download"
                     iconColor="text-amber-600"
                     bgColor="bg-amber-50"
@@ -401,8 +414,10 @@ export default function BankDashboard() {
                 />
                 <StatMiniCard
                     label="Logged Files"
-                    value={`${loggedCount} files`}
-                    trend={loggedVal ? `₹${(loggedVal / 10000000).toFixed(2)}Cr value` : "₹0 value"}
+                    value={loggedVal ? `₹${(loggedVal / 10000000).toFixed(2)} Cr` : "₹0.00 Cr"}
+                    subtext={loggedCount === 1 ? "1 file active" : `${loggedCount} files active`}
+                    trendType="neutral"
+                    trendLabel="Active"
                     icon="assignment"
                     iconColor="text-blue-600"
                     bgColor="bg-blue-50"
@@ -410,8 +425,10 @@ export default function BankDashboard() {
                 />
                 <StatMiniCard
                     label="Sanctioned"
-                    value={`${sanctionedCount} files`}
-                    trend={sanctionedVal ? `₹${(sanctionedVal / 10000000).toFixed(2)}Cr value` : "₹0 value"}
+                    value={sanctionedVal ? `₹${(sanctionedVal / 10000000).toFixed(2)} Cr` : "₹0.00 Cr"}
+                    subtext={sanctionedCount === 1 ? "1 file approved" : `${sanctionedCount} files approved`}
+                    trendType="up"
+                    trendLabel="Approved"
                     icon="verified"
                     iconColor="text-emerald-600"
                     bgColor="bg-emerald-50"
@@ -420,7 +437,9 @@ export default function BankDashboard() {
                 <StatMiniCard
                     label="Average TAT"
                     value={`${avgTAT} Days`}
-                    trend="vs target 5.0"
+                    subtext="vs target 5.0 days"
+                    trendType={avgTAT <= 5.0 ? "up" : "down"}
+                    trendLabel={avgTAT <= 5.0 ? "SLA Met" : "SLA Breach"}
                     icon="schedule"
                     iconColor="text-indigo-600"
                     bgColor="bg-indigo-50"
@@ -428,8 +447,10 @@ export default function BankDashboard() {
                 />
                 <StatMiniCard
                     label="Pipeline Value"
-                    value={`₹${(pipelineVal / 10000000).toFixed(2)} Cr`}
-                    trend={`${applications.filter(a => a.status !== "approved" && a.status !== "disbursed" && a.status !== "rejected").length} active files`}
+                    value={pipelineVal ? `₹${(pipelineVal / 10000000).toFixed(2)} Cr` : "₹0.00 Cr"}
+                    subtext={`${applications.filter(a => a.status !== "approved" && a.status !== "disbursed" && a.status !== "rejected").length} active files`}
+                    trendType="none"
+                    trendLabel=""
                     icon="account_balance_wallet"
                     iconColor="text-[#6605c7]"
                     bgColor="bg-[#6605c7]/5"
@@ -629,12 +650,12 @@ export default function BankDashboard() {
                                     onClick={() => setActiveTab(tab)}
                                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
                                         activeTab === tab 
-                                            ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25" 
-                                            : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
+                                            ? "bg-[#111111] text-white border border-white/10 shadow-md" 
+                                            : "text-gray-500 hover:text-gray-900 hover:bg-gray-100/50"
                                     }`}
                                 >
                                     <span>{labels[tab]}</span>
-                                    <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-bold ${activeTab === tab ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                                    <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-bold ${activeTab === tab ? "bg-white/25 text-white" : "bg-gray-100 text-gray-500"}`}>
                                         {queue.length}
                                     </span>
                                 </button>
@@ -691,7 +712,7 @@ export default function BankDashboard() {
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <p className="text-xs font-black text-[#6605c7] tracking-tight">₹{app.amount?.toLocaleString()}</p>
+                                                            <p className="text-xs font-black text-[#6605c7] font-mono tracking-tight">₹{app.amount?.toLocaleString()}</p>
                                                             <p className="text-[8.5px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{app.universityName || "Global University"}</p>
                                                         </td>
                                                         <td className="px-4 py-4">

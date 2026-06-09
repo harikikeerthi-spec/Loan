@@ -47,18 +47,18 @@ body, h1, h2, h3, h4, h5, h6, p, a, button, input, select, textarea, label {
   font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
-/* Bank portal font override — Premium Fintech Look: Plus Jakarta Sans for titles/headers, DM Sans for text/body */
+/* Bank portal font override — Premium Fintech Look: Clash Display for headers, Satoshi for text/body */
 .bank-portal,
 .bank-portal p,
-.bank-portal span:not(.material-symbols-outlined),
-.bank-portal div:not(.material-symbols-outlined),
+.bank-portal span:not(.material-symbols-outlined):not(.font-mono):not([class*="font-mono"]),
+.bank-portal div:not(.material-symbols-outlined):not(.font-mono):not([class*="font-mono"]),
 .bank-portal a,
 .bank-portal button,
 .bank-portal input,
 .bank-portal select,
 .bank-portal textarea,
 .bank-portal label {
-  font-family: 'DM Sans', sans-serif !important;
+  font-family: 'Satoshi', 'Inter Tight', sans-serif !important;
 }
 
 .bank-portal h1,
@@ -69,31 +69,46 @@ body, h1, h2, h3, h4, h5, h6, p, a, button, input, select, textarea, label {
 .bank-portal h6,
 .bank-portal .font-display,
 .bank-portal .bank-title {
-  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-family: 'Clash Display', 'Cabinet Grotesk', sans-serif !important;
+  letter-spacing: -0.03em !important;
 }
 
 /* Specific styling for the main header (Incoming Loan Files) in the bank layout */
 .bank-portal h1 {
-  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-family: 'Clash Display', 'Cabinet Grotesk', sans-serif !important;
   font-weight: 700 !important;
   font-size: 32px !important;
   color: #111827 !important;
   font-style: normal !important;
-  letter-spacing: -0.02em !important;
+  letter-spacing: -0.03em !important;
 }
 
 /* Specific styling for table row values in the bank layout to look smooth, clean, and geometric */
 .bank-portal table tbody tr,
 .bank-portal table tbody td,
-.bank-portal table tbody td p,
-.bank-portal table tbody td div,
-.bank-portal table tbody td span:not(.material-symbols-outlined) {
-  font-family: 'DM Sans', sans-serif !important;
-  font-weight: 400 !important;
+.bank-portal table tbody td p:not(.font-mono):not([class*="font-mono"]),
+.bank-portal table tbody td div:not(.font-mono):not([class*="font-mono"]),
+.bank-portal table tbody td span:not(.material-symbols-outlined):not(.font-mono):not([class*="font-mono"]) {
+  font-family: 'Satoshi', 'Inter Tight', sans-serif !important;
+  font-weight: 450 !important;
   font-size: 13px !important;
   color: #374151 !important;
   text-transform: none !important;
   letter-spacing: normal !important;
+}
+
+/* Specific styling for financial numbers and monospaced metrics in the bank portal */
+.bank-portal .font-mono,
+.bank-portal [class*="font-mono"],
+.bank-portal .tabular-nums,
+.bank-portal .financial-metric,
+.bank-portal table tbody td .font-mono,
+.bank-portal table tbody td span.font-mono,
+.bank-portal table tbody td p.font-mono {
+  font-family: 'JetBrains Mono', 'Satoshi Mono', 'SF Mono', monospace !important;
+  font-variant-numeric: tabular-nums !important;
+  letter-spacing: -0.02em !important;
+  font-weight: 550 !important;
 }
 
 .material-symbols-outlined,
@@ -287,11 +302,18 @@ body, h1, h2, h3, h4, h5, h6, p, a, button, input, select, textarea, label {
 
 /* Glass cards */
 .glass-card {
-  background-color: rgba(255, 255, 255, 0.97);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(102, 5, 199, 0.12);
-  box-shadow: 0 4px 24px 0 rgba(102, 5, 199, 0.07), 0 1px 4px rgba(0,0,0,0.06);
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -1px rgba(0, 0, 0, 0.02) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+}
+
+.glass-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
 }
 
 @keyframes scrollLeft {
@@ -668,15 +690,18 @@ body, h1, h2, h3, h4, h5, h6, p, a, button, input, select, textarea, label {
 }
 
 .admin-btn-primary {
-  background: linear-gradient(135deg, #6605c7 0%, #8b24e5 100%);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 15px rgba(102, 5, 199, 0.2);
+  background: #111111 !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  transition: all 0.2s ease-in-out !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
 }
 
 .admin-btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 5, 199, 0.3);
-  filter: brightness(1.1);
+  background: #000000 !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15) !important;
 }
 
 .admin-table-container {

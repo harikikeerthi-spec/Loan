@@ -1189,7 +1189,19 @@ export default function DecisionsHub() {
                                                 <input
                                                     type="checkbox"
                                                     checked={dataConsentVerified}
-                                                    onChange={e => setDataConsentVerified(e.target.checked)}
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setDataConsentVerified(checked);
+                                                        if (selectedApp) {
+                                                            try {
+                                                                await bankApi.recordConsent(selectedApp.id, { 
+                                                                    consentType: "officer_override" 
+                                                                });
+                                                            } catch (err) {
+                                                                console.error("Failed to record consent in backend:", err);
+                                                            }
+                                                        }
+                                                    }}
                                                     className="w-4 h-4 text-[#6605c7] focus:ring-[#6605c7]/20 border-gray-300 rounded cursor-pointer animate-pulse"
                                                 />
                                             </label>
@@ -2205,6 +2217,12 @@ export default function DecisionsHub() {
                                                         </div>
 
                                                         {/* Final Actions block */}
+                                                        {!dataConsentVerified && (
+                                                            <div className="text-[10px] text-amber-700 bg-amber-50 border border-amber-100 px-4 py-2.5 rounded-xl flex items-center gap-2 font-medium">
+                                                                <span className="material-symbols-outlined text-amber-500 text-sm animate-pulse">lock</span>
+                                                                <span>Data Consent check is required. Verify and toggle the <strong>Data Consent</strong> indicator under Underwriting Indicators above to submit.</span>
+                                                            </div>
+                                                        )}
                                                         <div className="flex gap-4 pt-3">
                                                             <button 
                                                                 type="button" 
