@@ -688,7 +688,10 @@ export class ApplicationService {
       if (filters?.excludeStatus) query = query.neq('status', filters.excludeStatus);
       if (filters?.stage) query = query.eq('stage', filters.stage);
       if (filters?.loanType) query = query.eq('loanType', filters.loanType);
-      if (filters?.bank) query = query.eq('bank', filters.bank);
+      if (filters?.bank) {
+        query = query.eq('bank', filters.bank);
+        query = query.not('status', 'in', '("submitted","pending","draft","docs_received","staff_verified","application_submitted")');
+      }
       
       if (filters?.search) {
         const search = filters.search;
@@ -894,11 +897,12 @@ export class ApplicationService {
       let lastMonthQuery = this.db.from('LoanApplication').select('*', { count: 'exact', head: true });
 
       if (isBank && bankName) {
-        totalQuery = totalQuery.ilike('bank', `%${bankName}%`);
-        allAppsQuery = allAppsQuery.ilike('bank', `%${bankName}%`);
-        recentAppsQuery = recentAppsQuery.ilike('bank', `%${bankName}%`);
-        thisMonthQuery = thisMonthQuery.ilike('bank', `%${bankName}%`);
-        lastMonthQuery = lastMonthQuery.ilike('bank', `%${bankName}%`);
+        const excludeStr = '("submitted","pending","draft","docs_received","staff_verified","application_submitted")';
+        totalQuery = totalQuery.ilike('bank', `%${bankName}%`).not('status', 'in', excludeStr);
+        allAppsQuery = allAppsQuery.ilike('bank', `%${bankName}%`).not('status', 'in', excludeStr);
+        recentAppsQuery = recentAppsQuery.ilike('bank', `%${bankName}%`).not('status', 'in', excludeStr);
+        thisMonthQuery = thisMonthQuery.ilike('bank', `%${bankName}%`).not('status', 'in', excludeStr);
+        lastMonthQuery = lastMonthQuery.ilike('bank', `%${bankName}%`).not('status', 'in', excludeStr);
       }
 
       console.log(`[Stats] Executing queries for ${bankName || 'all banks'}...`);

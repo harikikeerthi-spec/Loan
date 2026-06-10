@@ -8,6 +8,14 @@ import Link from "next/link";
 import { adminApi } from "@/lib/api";
 import { format } from "date-fns";
 
+const bankLogos: Record<string, string> = {
+    auxilo: "/banks/auxilo.png",
+    avanse: "/banks/avanse.png",
+    credila: "/banks/credila.png",
+    idfc: "/banks/idfc.png",
+    poonawalla: "/banks/poonawalla.jpg",
+};
+
 // --- Components ---
 
 const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => {
@@ -111,6 +119,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
     }, [user, isLoading, isBank, isAdmin, router, pathname]);
 
     const [bankName, setBankName] = useState("SBI");
+    const [selectedBankKey, setSelectedBankKey] = useState("idfc");
     const [branchName, setBranchName] = useState("Hyderabad Branch");
 
     // --- F16 Notifications & F30 Global Search States ---
@@ -177,10 +186,13 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                         res.data.forEach((app: any) => {
                             const hasLan = !!app.lanNumber;
                             const status = app.status;
-                            if (!hasLan && status !== "rejected" && status !== "approved" && status !== "disbursed") {
-                                incoming++;
-                            } else if (hasLan && status !== "rejected" && status !== "approved" && status !== "disbursed") {
-                                logged++;
+                            const isExcluded = ["rejected", "approved", "disbursed", "submitted", "pending", "draft", "docs_received", "staff_verified", "application_submitted"].includes(status);
+                            if (!isExcluded) {
+                                if (!hasLan) {
+                                    incoming++;
+                                } else {
+                                    logged++;
+                                }
                             }
                         });
                         setIncomingCount(incoming);
@@ -193,8 +205,9 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
 
     useEffect(() => {
         if (typeof window !== "undefined") {
-            const selected = sessionStorage.getItem("selectedBank");
+            const selected = sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank");
             if (selected) {
+                setSelectedBankKey(selected);
                 const map: Record<string, string> = {
                     auxilo: "Auxilo Finserve",
                     avanse: "Avanse Financial",
@@ -204,6 +217,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 };
                 setBankName(map[selected] || selected.toUpperCase());
             } else if (user?.firstName) {
+                setSelectedBankKey("idfc");
                 setBankName(user.firstName);
             }
         }
@@ -316,15 +330,28 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: -10 }}
                                 transition={{ duration: 0.2 }}
-                                className="flex flex-col min-w-0"
+                                className="flex items-center gap-2 min-w-0 flex-1"
                             >
-                                <span className="text-lg font-bold text-gray-900 leading-none tracking-tight" style={{ fontFamily: '"Clash Display", "Cabinet Grotesk", sans-serif' }}>
-                                    Vidya<span style={{ color: '#6605c7' }}>Bank</span>
-                                </span>
-                                <span className="text-[8.5px] font-bold uppercase tracking-[0.2em] mt-1 opacity-55"
-                                    style={{ color: '#6605c7', fontFamily: '"Clash Display", "Cabinet Grotesk", sans-serif' }}>
-                                    Partner Matrix
-                                </span>
+                                <div className="flex flex-col min-w-0">
+                                    <span className="text-lg font-bold text-gray-900 leading-none tracking-tight" style={{ fontFamily: '"Clash Display", "Cabinet Grotesk", sans-serif' }}>
+                                        Vidya<span style={{ color: '#6605c7' }}>Bank</span>
+                                    </span>
+                                    <span className="text-[8.5px] font-bold uppercase tracking-[0.2em] mt-1 opacity-55"
+                                        style={{ color: '#6605c7', fontFamily: '"Clash Display", "Cabinet Grotesk", sans-serif' }}>
+                                        Partner Matrix
+                                    </span>
+                                </div>
+                                {selectedBankKey && bankLogos[selectedBankKey] && (
+                                    <>
+                                        <div className="h-6 w-px bg-gray-200 shrink-0 mx-0.5" />
+                                        <img 
+                                            src={bankLogos[selectedBankKey]} 
+                                            alt={bankName}
+                                            className="h-8 max-w-[75px] object-contain rounded shrink-0"
+                                            title={bankName}
+                                        />
+                                    </>
+                                )}
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -442,9 +469,9 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                 setShowSearchPop(true);
                             }}
                             onFocus={() => setShowSearchPop(true)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-[#fbfbff] border border-purple-50 rounded-2xl text-xs font-semibold focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
+                            className="w-full pl-8 pr-4 py-2 bg-transparent border-b border-gray-200 text-xs font-semibold focus:outline-none focus:border-gray-900 transition-all"
                         />
-                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
+                        <span className="material-symbols-outlined absolute left-1 top-1/2 -translate-y-1/2 text-gray-400 text-base">search</span>
 
                         {/* Search Results Popover */}
                         <AnimatePresence>
@@ -498,10 +525,45 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                         </AnimatePresence>
                     </div>
 
+
                     {/* F16 Notification Center & System Ticker */}
                     <div className="flex items-center gap-6">
+                        {/* Partner Bank Identity Badge */}
+                        {selectedBankKey && (
+                            <div className="hidden md:flex items-center gap-3 px-4 py-1.5 rounded-xl border"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(102,5,199,0.04) 0%, rgba(139,36,229,0.03) 100%)',
+                                    borderColor: 'rgba(102,5,199,0.12)',
+                                    boxShadow: '0 2px 8px rgba(102,5,199,0.06)'
+                                }}
+                            >
+                                {bankLogos[selectedBankKey] ? (
+                                    <img
+                                        src={bankLogos[selectedBankKey]}
+                                        alt={bankName}
+                                        className="h-7 max-w-[60px] object-contain rounded"
+                                        title={bankName}
+                                    />
+                                ) : (
+                                    <div className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-[9px] font-black"
+                                        style={{ background: 'linear-gradient(135deg, #6605c7, #8b24e5)' }}>
+                                        {bankName?.[0] || 'B'}
+                                    </div>
+                                )}
+                                <div className="flex flex-col min-w-0">
+                                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-400 leading-none">Partner Bank</span>
+                                    <span className="text-[11.5px] font-bold text-gray-800 leading-tight truncate max-w-[120px]" title={bankName}>{bankName}</span>
+                                </div>
+                                <div className="flex items-center gap-1 ml-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                    <span className="text-[8px] font-black text-emerald-600 uppercase tracking-wide">Live</span>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Live Protocol tag & Real-time Sync Timer */}
                         <div className="hidden sm:flex items-center gap-4 border-r border-gray-100 pr-4">
+
                             <div className="flex items-center gap-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                 <span className="text-[9.5px] font-black text-emerald-600 uppercase tracking-widest">Active Node</span>

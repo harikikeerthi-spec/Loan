@@ -282,7 +282,7 @@ function LoginContent() {
                         <path d="M 100 800 C 100 350, 220 150, 400 150 C 580 150, 700 350, 700 800" strokeWidth="2.5" stroke="url(#gridGrad)" />
                         <path d="M 180 800 C 180 430, 270 240, 400 240 C 530 240, 620 430, 620 800" strokeWidth="1.5" stroke="url(#gridGrad)" />
                         <path d="M 260 800 C 260 500, 320 330, 400 330 C 480 330, 540 500, 540 800" strokeWidth="1" stroke="url(#gridGrad)" />
-                        
+
                         {/* Floor Perspective Lines representing Banking Growth and structural geometry */}
                         <line x1="400" y1="150" x2="400" y2="800" strokeWidth="1" stroke="url(#gridGrad)" />
                         <line x1="400" y1="150" x2="50" y2="800" strokeWidth="0.5" stroke="url(#gridGrad)" />
@@ -291,7 +291,7 @@ function LoginContent() {
                         <line x1="400" y1="150" x2="520" y2="800" strokeWidth="0.5" stroke="url(#gridGrad)" />
                         <line x1="400" y1="150" x2="650" y2="800" strokeWidth="0.5" stroke="url(#gridGrad)" />
                         <line x1="400" y1="150" x2="750" y2="800" strokeWidth="0.5" stroke="url(#gridGrad)" />
-                        
+
                         {/* Horizon steps */}
                         <line x1="0" y1="450" x2="800" y2="450" strokeWidth="0.5" stroke="url(#gridGrad)" />
                         <line x1="0" y1="560" x2="800" y2="560" strokeWidth="0.5" stroke="url(#gridGrad)" />
@@ -308,7 +308,7 @@ function LoginContent() {
 
                 {/* Top brand signature */}
                 <div className="z-10 flex items-center gap-3 select-none">
-                    <img src="/vidyaloan_logo.png" alt="Vidyaloan Logo" className="w-10 h-10 object-contain filter drop-shadow-[0_2px_8px_rgba(212,175,55,0.2)]" />
+                    <img src="/images/vidyaloans-logo-transparent.png" alt="Vidyaloan Logo" className="w-20 h-20 object-contain filter drop-shadow-[0_2px_8px_rgba(212,175,55,0.2)]" />
                     <span className="text-xl font-black font-display tracking-widest uppercase bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent">VidyaLoans</span>
                 </div>
 
@@ -361,7 +361,7 @@ function LoginContent() {
                     )}
 
                     {/* Passport Container */}
-                    <div 
+                    <div
                         className="w-full bg-[#0d1627] rounded-[2.5rem] p-1 border border-[#d4af37]/30 shadow-[0_25px_6px_rgba(5,11,20,0.5)] overflow-hidden relative"
                         style={{
                             backgroundImage: `
@@ -373,7 +373,7 @@ function LoginContent() {
                     >
                         {/* Inner Gold Foil Border */}
                         <div className="border border-[#d4af37]/20 rounded-[2.2rem] p-6 lg:p-10 flex flex-col justify-center min-h-[420px] relative overflow-hidden">
-                            
+
                             {/* Visa/Passport Stamps Overlay (Decorative background) */}
                             <div className="absolute inset-0 pointer-events-none opacity-[0.05] z-0 flex items-center justify-center select-none">
                                 <span className="text-8xl font-black font-mono border-8 border-rose-500 text-rose-500 rounded-3xl p-4 rotate-12 uppercase tracking-widest">
@@ -391,7 +391,7 @@ function LoginContent() {
                                 <span className="text-[10px] font-black uppercase tracking-[0.35em] text-[#d4af37]/80 font-serif">
                                     PASSPORT TO THE FUTURE
                                 </span>
-                                
+
                                 {/* Embossed Crest SVG */}
                                 <div className="my-4 w-12 h-12 flex items-center justify-center text-[#d4af37] opacity-80 filter drop-shadow-[0_2px_4px_rgba(212,175,55,0.25)] select-none">
                                     <svg className="w-full h-full fill-current" viewBox="0 0 24 24">
@@ -400,7 +400,7 @@ function LoginContent() {
                                         <circle cx="12" cy="12" r="2" />
                                     </svg>
                                 </div>
-                                
+
                                 <span className="text-[8px] font-black uppercase tracking-[0.2em] text-[#d4af37]/50 font-mono">
                                     VIDYALOANS INTERNATIONAL
                                 </span>
@@ -484,9 +484,9 @@ function LoginContent() {
                                                     <motion.path
                                                         d="M 20 160 L 50 140 L 80 150 L 120 100 L 150 110 L 180 50 M 180 50 L 140 30 L 100 50 L 140 70 Z M 140 70 L 140 95 C 140 105, 100 105, 100 95 L 100 50 M 100 50 L 100 75 L 85 90"
                                                         initial={{ pathLength: 0.05, opacity: 0.2 }}
-                                                        animate={{ 
-                                                            pathLength: isEmailFocused ? 1 : 0.05, 
-                                                            opacity: isEmailFocused ? 1 : 0.2 
+                                                        animate={{
+                                                            pathLength: isEmailFocused ? 1 : 0.05,
+                                                            opacity: isEmailFocused ? 1 : 0.2
                                                         }}
                                                         transition={{ duration: 1.8, ease: "easeInOut" }}
                                                         stroke="url(#goldStroke)"

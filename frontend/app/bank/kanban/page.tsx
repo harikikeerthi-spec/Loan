@@ -60,7 +60,9 @@ export default function KanbanBoardPage() {
             if (res && res.success) {
                 const raw = res.data || [];
                 // Map API applications to our Kanban Card schema with fallback values
-                const mapped: KanbanCard[] = raw.map((app: any) => {
+                const mapped: KanbanCard[] = raw
+                    .filter((app: any) => !["submitted", "pending", "draft", "docs_received", "staff_verified", "application_submitted"].includes(app.status))
+                    .map((app: any) => {
                     // Estimate stage based on LAN and status
                     let estimatedStage = "incoming";
                     if (app.status === "disbursed") {

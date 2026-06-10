@@ -85,7 +85,7 @@ export default function IncomingQueuePage() {
     const incomingApps = useMemo(() => {
         return applications.filter((app) => {
             if (app.lanNumber) return false;
-            if (app.status === "rejected" || app.status === "approved" || app.status === "disbursed" || app.status === "submitted" || app.status === "pending" || app.status === "draft") return false;
+            if (["rejected", "approved", "disbursed", "submitted", "pending", "draft", "docs_received", "staff_verified", "application_submitted"].includes(app.status)) return false;
             return true;
         });
     }, [applications]);
@@ -153,7 +153,7 @@ export default function IncomingQueuePage() {
         return applications.filter((app) => {
             // Must not have a LAN to be in "Incoming Queue"
             if (app.lanNumber) return false;
-            if (app.status === "rejected" || app.status === "approved" || app.status === "disbursed" || app.status === "submitted" || app.status === "pending" || app.status === "draft") return false;
+            if (["rejected", "approved", "disbursed", "submitted", "pending", "draft", "docs_received", "staff_verified", "application_submitted"].includes(app.status)) return false;
 
             const matchesSearch =
                 (app.applicationNumber || "").toLowerCase().includes(search.toLowerCase()) ||

@@ -166,14 +166,16 @@ export default function BankDashboard() {
     }, []);
 
     // --- F13 Count + ₹ KPI Memos ---
+    const excludeStatuses = ["submitted", "pending", "draft", "docs_received", "staff_verified", "application_submitted"];
+
     const incomingApps = useMemo(() => {
-        return applications.filter(app => !app.lanNumber && app.status !== "rejected" && app.status !== "approved" && app.status !== "disbursed");
+        return applications.filter(app => !app.lanNumber && !["rejected", "approved", "disbursed", ...excludeStatuses].includes(app.status));
     }, [applications]);
     const incomingCount = incomingApps.length;
     const incomingVal = incomingApps.reduce((acc, app) => acc + (app.amount || 0), 0);
 
     const loggedApps = useMemo(() => {
-        return applications.filter(app => app.lanNumber && app.status !== "approved" && app.status !== "rejected" && app.status !== "disbursed");
+        return applications.filter(app => app.lanNumber && !["approved", "rejected", "disbursed", ...excludeStatuses].includes(app.status));
     }, [applications]);
     const loggedCount = loggedApps.length;
     const loggedVal = loggedApps.reduce((acc, app) => acc + (app.amount || 0), 0);
@@ -197,7 +199,7 @@ export default function BankDashboard() {
     }, [applications]);
 
     const pipelineVal = useMemo(() => {
-        const active = applications.filter(app => app.status !== "approved" && app.status !== "disbursed" && app.status !== "rejected");
+        const active = applications.filter(app => !["approved", "disbursed", "rejected", ...excludeStatuses].includes(app.status));
         return active.reduce((acc, app) => acc + (app.amount || 0), 0);
     }, [applications]);
 
@@ -208,12 +210,12 @@ export default function BankDashboard() {
             const dateStr = app.lanEnteredAt || app.submittedAt || app.createdAt;
             const diff = dateStr ? differenceInDays(new Date(), new Date(dateStr)) : 0;
             const isOld = diff >= 4;
-            return (isHigh || isOld) && app.status !== "approved" && app.status !== "disbursed" && app.status !== "rejected";
+            return (isHigh || isOld) && !["approved", "disbursed", "rejected", ...excludeStatuses].includes(app.status);
         });
     }, [applications]);
 
     const newQueue = useMemo(() => {
-        return applications.filter(app => !app.lanNumber && app.status !== "approved" && app.status !== "disbursed" && app.status !== "rejected");
+        return applications.filter(app => !app.lanNumber && !["approved", "disbursed", "rejected", ...excludeStatuses].includes(app.status));
     }, [applications]);
 
     const queryQueue = useMemo(() => {
@@ -225,7 +227,7 @@ export default function BankDashboard() {
     }, [applications]);
 
     const pendingQueue = useMemo(() => {
-        return applications.filter(app => app.lanNumber && app.status !== "approved" && app.status !== "disbursed" && app.status !== "rejected");
+        return applications.filter(app => app.lanNumber && !["approved", "disbursed", "rejected", ...excludeStatuses].includes(app.status));
     }, [applications]);
 
     // Derived Charts Data

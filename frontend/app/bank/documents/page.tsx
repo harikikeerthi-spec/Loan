@@ -11,11 +11,11 @@ export default function DocumentReviewCenter() {
     const [applications, setApplications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
-    const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
+    const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
     const [appDocs, setAppDocs] = useState<Record<string, any[]>>({});
     const [docsLoading, setDocsLoading] = useState<Record<string, boolean>>({});
 
-    // Inline PDF Viewer & Fullscreen States (Task 7 & 8)
+    // Inline PDF Viewer & Fullscreen States
     const [activeViewerDoc, setActiveViewerDoc] = useState<any | null>(null);
     const [viewerAppId, setViewerAppId] = useState<string | null>(null);
     const [zoom, setZoom] = useState(100);
@@ -74,17 +74,21 @@ export default function DocumentReviewCenter() {
         }
     };
 
-    const toggleExpand = (appId: string) => {
-        if (expandedAppId === appId) {
-            setExpandedAppId(null);
-        } else {
-            setExpandedAppId(appId);
-            fetchAppDocuments(appId);
-        }
+    const selectApplication = (appId: string) => {
+        setSelectedAppId(appId);
+        fetchAppDocuments(appId);
     };
+
+    // Status groups that indicate staff has NOT yet forwarded to bank
+    const STAFF_PENDING_STATUSES = new Set(["draft", "submitted", "pending", "application_submitted", "docs_received", "staff_verified"]);
 
     const filteredApps = useMemo(() => {
         return applications.filter(app => {
+            // Only show applications that have been explicitly forwarded by staff to the bank
+            // (i.e., exclude applications still in student/staff review stage)
+            const status = (app.status || "").toLowerCase();
+            if (STAFF_PENDING_STATUSES.has(status)) return false;
+
             const matchesSearch = 
                 (app.applicationNumber || "").toLowerCase().includes(search.toLowerCase()) ||
                 (`${app.firstName || ""} ${app.lastName || ""}`).toLowerCase().includes(search.toLowerCase()) ||
@@ -93,15 +97,48 @@ export default function DocumentReviewCenter() {
         });
     }, [applications, search]);
 
+    // Zero-Click auto-selection of the first student in the list
+    useEffect(() => {
+        if (mounted && filteredApps.length > 0) {
+            const exists = filteredApps.some(app => app.id === selectedAppId);
+            if (!exists) {
+                setSelectedAppId(filteredApps[0].id);
+                fetchAppDocuments(filteredApps[0].id);
+            }
+        } else if (mounted && filteredApps.length === 0) {
+            setSelectedAppId(null);
+        }
+    }, [filteredApps, selectedAppId, mounted]);
+
+    const currentDocs = useMemo(() => {
+        return selectedAppId ? appDocs[selectedAppId] || [] : [];
+    }, [selectedAppId, appDocs]);
+
+    // Auto-select first document of selected applicant for preview
+    useEffect(() => {
+        if (selectedAppId && currentDocs && currentDocs.length > 0) {
+            if (!activeViewerDoc || !currentDocs.some((d: any) => d.id === activeViewerDoc.id)) {
+                setActiveViewerDoc(currentDocs[0]);
+                setViewerAppId(selectedAppId);
+                setZoom(100);
+                setRotate(0);
+                setSelectedThumb(1);
+            }
+        } else if (selectedAppId && currentDocs && currentDocs.length === 0) {
+            setActiveViewerDoc(null);
+            setViewerAppId(null);
+        }
+    }, [selectedAppId, currentDocs, activeViewerDoc]);
+
     const handleVerifySubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedDoc || !expandedAppId) return;
+        if (!selectedDoc || !selectedAppId) return;
         setVerifying(true);
 
         try {
             const docId = selectedDoc.id.startsWith('vault_') ? selectedDoc.id : `vault_${selectedDoc.id}`;
             const res: any = await adminApi.verifyDocument(
-                expandedAppId, 
+                selectedAppId, 
                 docId, 
                 verifyStatus, 
                 verifyStatus === "rejected" ? rejectionReason : undefined
@@ -112,11 +149,11 @@ export default function DocumentReviewCenter() {
                 setRejectionReason("");
                 
                 // Force reload documents for this application
-                setDocsLoading(prev => ({ ...prev, [expandedAppId]: true }));
-                const docsRes: any = await adminApi.getApplicationDocuments(expandedAppId);
+                setDocsLoading(prev => ({ ...prev, [selectedAppId]: true }));
+                const docsRes: any = await adminApi.getApplicationDocuments(selectedAppId);
                 if (docsRes && docsRes.success) {
                     const updatedDocs = docsRes.data || [];
-                    setAppDocs(prev => ({ ...prev, [expandedAppId]: updatedDocs }));
+                    setAppDocs(prev => ({ ...prev, [selectedAppId]: updatedDocs }));
                     
                     // If the active viewer document was this document, update its status
                     if (activeViewerDoc && activeViewerDoc.id === selectedDoc.id) {
@@ -130,11 +167,10 @@ export default function DocumentReviewCenter() {
             alert("Failed to submit verification status");
         } finally {
             setVerifying(false);
-            setDocsLoading(prev => ({ ...prev, [expandedAppId]: false }));
+            setDocsLoading(prev => ({ ...prev, [selectedAppId]: false }));
         }
     };
 
-    // Download All ZIP function (Task 8)
     const handleDownloadAllZip = async (appId: string) => {
         setZippingId(appId);
         try {
@@ -166,30 +202,25 @@ export default function DocumentReviewCenter() {
         setActiveViewerDoc(doc);
         setZoom(100);
         setRotate(0);
-        setFullscreen(false);
         setSelectedThumb(1);
     };
 
-    const getDocIcon = (type: string) => {
-        const norm = (type || "").toLowerCase();
-        if (norm.includes("pdf")) return { name: "picture_as_pdf", color: "text-rose-600 bg-rose-50" };
-        if (norm.includes("aadhar") || norm.includes("pan") || norm.includes("passport")) return { name: "badge", color: "text-blue-600 bg-blue-50" };
-        if (norm.includes("mark") || norm.includes("degree") || norm.includes("academic")) return { name: "school", color: "text-indigo-600 bg-indigo-50" };
-        if (norm.includes("bank") || norm.includes("statement") || norm.includes("financial")) return { name: "finance", color: "text-emerald-600 bg-emerald-50" };
-        return { name: "description", color: "text-gray-600 bg-gray-50" };
-    };
-
-    if (!mounted) return null;
-
-    // View file URL helper
     const getDocumentViewUrl = (appId: string, docId: string) => {
         const token = typeof window !== "undefined" ? (localStorage.getItem("bankAccessToken") || localStorage.getItem("adminAccessToken") || "") : "";
         return `/api/applications/admin/${appId}/documents/${docId}/view?token=${token}`;
     };
 
+    if (!mounted) return null;
+
+    const selectedApp = applications.find(app => app.id === selectedAppId);
+    const isAbroad = selectedApp && selectedApp.universityName && !selectedApp.universityName.toLowerCase().includes("india") && (selectedApp.universityName.toLowerCase().includes("stanford") || selectedApp.universityName.toLowerCase().includes("usc") || selectedApp.universityName.toLowerCase().includes("carnegie") || selectedApp.universityName.toLowerCase().includes("abroad") || selectedApp.universityName.toLowerCase().includes("nyu") || selectedApp.universityName.toLowerCase().includes("london") || selectedApp.universityName.toLowerCase().includes("mit") || selectedApp.universityName.toLowerCase().includes("harvard") || selectedApp.universityName.toLowerCase().includes("university of") || true);
+
     return (
-        <div className="min-h-screen p-8 lg:p-12 transition-all duration-300">
-            <div className="max-w-7xl mx-auto space-y-8">
+        <div 
+            className="min-h-screen bg-[#F8FAFC] p-8 lg:p-12 transition-all duration-300 -mt-20 pt-28"
+            style={{ position: "relative", zIndex: 10 }}
+        >
+            <div className="max-w-[1600px] mx-auto space-y-6">
 
                 {/* Page Header */}
                 <PageHeader 
@@ -197,218 +228,455 @@ export default function DocumentReviewCenter() {
                     description="Verify identity proofs, academic degrees, and financial assets uploaded by students."
                     moduleName="Module 04 • Document Vault"
                     icon="folder_shared"
-                    actionSlot={
-                        <div className="relative">
-                            <input 
-                                type="text" 
-                                placeholder="Search by student name..." 
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="pl-12 pr-6 py-3 w-full lg:w-72 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm transition-all"
-                            />
-                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
-                        </div>
-                    }
                 />
 
-                {/* Applications Document Grid */}
-                <div className="bg-white/80 backdrop-blur-xl rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/20 p-8">
-                    {loading ? (
-                        <Spinner message="Syncing document directories..." />
-                    ) : filteredApps.length === 0 ? (
-                        <EmptyState message="There are no files matching your document query." icon="folder_off" />
-                    ) : (
-                        <div className="space-y-4">
-                            {filteredApps.map((app) => {
-                                const isExpanded = expandedAppId === app.id;
-                                const isDocLoading = docsLoading[app.id];
-                                const docs = appDocs[app.id] || [];
-                                const isAbroad = app.universityName && !app.universityName.toLowerCase().includes("india") && (app.universityName.toLowerCase().includes("stanford") || app.universityName.toLowerCase().includes("usc") || app.universityName.toLowerCase().includes("carnegie") || app.universityName.toLowerCase().includes("abroad") || app.universityName.toLowerCase().includes("nyu") || app.universityName.toLowerCase().includes("london") || app.universityName.toLowerCase().includes("mit") || app.universityName.toLowerCase().includes("harvard") || app.universityName.toLowerCase().includes("university of") || true);
+                {/* Action Slot & Global Content Layout */}
+                <div className="space-y-6">
+                    {/* Search student panel */}
+                    <div className="bg-white border border-[#E2E8F0] rounded-lg p-4 shadow-sm">
+                        <div className="relative max-w-md">
+                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">search</span>
+                            <input 
+                                type="text" 
+                                placeholder="Search Student..." 
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="w-full pl-9 pr-6 py-2.5 bg-white border border-gray-200 rounded-md text-xs font-semibold focus:outline-none focus:border-gray-400 transition-all shadow-none"
+                            />
+                        </div>
+                    </div>
 
-                                return (
-                                    <div 
-                                        key={app.id}
-                                        className="border border-gray-100 rounded-2xl overflow-hidden shadow-sm bg-white transition-all hover:border-[#6605c7]/20"
-                                    >
-                                        {/* Row Header */}
-                                        <div 
-                                            onClick={() => toggleExpand(app.id)}
-                                            className="p-6 flex items-center justify-between cursor-pointer hover:bg-[#6605c7]/[0.02] transition-colors"
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-[#6605c7]">
-                                                    <span className="material-symbols-outlined text-xl">account_box</span>
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight flex items-center gap-1.5">
-                                                        {app.firstName} {app.lastName}
-                                                        {isAbroad && (
-                                                            <span className="material-symbols-outlined text-blue-500 text-sm animate-pulse cursor-help" title="Study Abroad Case">public</span>
-                                                        )}
-                                                    </h3>
-                                                    <span className="text-[9px] font-semibold text-gray-400 block mt-0.5">
-                                                        App: {app.applicationNumber} • LAN: {app.lanNumber || "Pending"}
-                                                    </span>
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                        
+                        {/* LEFT PANE: DENSE LEDGER LIST */}
+                        <div className="lg:col-span-4 flex flex-col bg-white border border-[#E2E8F0] rounded-lg shadow-sm overflow-hidden h-[780px]">
+                            <div className="p-4 border-b border-[#E2E8F0] bg-gray-50/50 flex justify-between items-center">
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                    Student Ledger ({filteredApps.length})
+                                </span>
+                            </div>
+                            
+                            {loading ? (
+                                <div className="flex-1 flex items-center justify-center">
+                                    <Spinner message="Syncing document directories..." size="sm" />
+                                </div>
+                            ) : filteredApps.length === 0 ? (
+                                <div className="flex-1 flex items-center justify-center">
+                                    <EmptyState message="No concurrent student records match." icon="folder_off" />
+                                </div>
+                            ) : (
+                                <div className="flex-1 overflow-y-auto divide-y divide-[#E2E8F0] no-scrollbar">
+                                    {filteredApps.map((app) => {
+                                        const isSelected = selectedAppId === app.id;
+                                        const isAppAbroad = app.universityName && !app.universityName.toLowerCase().includes("india") && (app.universityName.toLowerCase().includes("stanford") || app.universityName.toLowerCase().includes("usc") || app.universityName.toLowerCase().includes("carnegie") || app.universityName.toLowerCase().includes("abroad") || app.universityName.toLowerCase().includes("nyu") || app.universityName.toLowerCase().includes("london") || app.universityName.toLowerCase().includes("mit") || app.universityName.toLowerCase().includes("harvard") || app.universityName.toLowerCase().includes("university of") || true);
+                                        const isPending = !app.lanNumber || app.lanNumber.toLowerCase() === "pending";
+
+                                        return (
+                                            <div 
+                                                key={app.id}
+                                                onClick={() => selectApplication(app.id)}
+                                                className={`p-4 cursor-pointer transition-all relative select-none ${
+                                                    isSelected 
+                                                        ? "bg-[#6605c7]/[0.03] border-l-4 border-l-[#6605c7]" 
+                                                        : "hover:bg-gray-50 border-l-4 border-l-transparent"
+                                                }`}
+                                            >
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="min-w-0 flex-1">
+                                                        <h3 className="text-xs font-black text-gray-900 uppercase tracking-tight flex items-center gap-1">
+                                                            {app.firstName} {app.lastName}
+                                                            {isAppAbroad && (
+                                                                <span className="material-symbols-outlined text-blue-500 text-[14px] animate-pulse cursor-help" title="Study Abroad Case">public</span>
+                                                            )}
+                                                        </h3>
+                                                        
+                                                        <div className="mt-1 space-y-0.5">
+                                                            <div style={{ fontFamily: "monospace", fontSize: "12px", color: "#64748B" }}>
+                                                                ID: {app.applicationNumber}
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5" style={{ fontFamily: "monospace", fontSize: "12px", color: "#64748B" }}>
+                                                                <span>LAN:</span>
+                                                                {isPending ? (
+                                                                    <span 
+                                                                        className="inline-block px-1.5 py-0.5 rounded bg-[#FEF3C7] text-[#92400E] font-bold text-[11px] uppercase select-none align-middle"
+                                                                        style={{ letterSpacing: "0.05em" }}
+                                                                    >
+                                                                        Pending
+                                                                    </span>
+                                                                ) : (
+                                                                    <span>{app.lanNumber}</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider truncate mt-1.5">
+                                                            {app.universityName || "Stanford University"}
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="flex flex-col items-end gap-1.5 text-right shrink-0">
+                                                        <span className="text-[10px] font-black text-gray-800">
+                                                            {app.amount ? `₹${app.amount.toLocaleString()}` : "—"}
+                                                        </span>
+                                                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${
+                                                            app.status === "approved" || app.status === "verified" ? "bg-emerald-50 text-emerald-700" :
+                                                            app.status === "rejected" ? "bg-rose-50 text-rose-700" : "bg-amber-50 text-amber-700"
+                                                        }`}>
+                                                            {app.status || "pending"}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
 
-                                            <div className="flex items-center gap-6">
-                                                {/* Download All ZIP */}
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDownloadAllZip(app.id);
-                                                    }}
-                                                    disabled={zippingId === app.id}
-                                                    className="px-3 py-1.5 bg-gray-50 border border-gray-200 text-gray-600 hover:text-[#6605c7] hover:border-[#6605c7]/15 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5"
-                                                >
-                                                    <span className="material-symbols-outlined text-xs">archive</span>
-                                                    {zippingId === app.id ? "Zipping..." : "Download All ZIP"}
-                                                </button>
-                                                <div className="text-right hidden md:block">
-                                                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Institution</span>
-                                                    <span className="text-xs font-bold text-gray-700">{app.universityName || "Stanford University"}</span>
+                        {/* RIGHT PANE: DOCUMENT COMMAND CENTER */}
+                        <div className="lg:col-span-8 flex flex-col bg-white border border-[#E2E8F0] rounded-lg shadow-sm overflow-hidden h-[780px]">
+                            {selectedApp ? (
+                                <div className="flex flex-col h-full">
+                                    
+                                    {/* Command Center Header */}
+                                    <div className="p-5 border-b border-[#E2E8F0] bg-gray-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                        <div>
+                                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block">
+                                                Active Command Center
+                                            </span>
+                                            <h2 className="text-sm font-black text-gray-950 uppercase tracking-tight mt-0.5">
+                                                SELECTED: {selectedApp.firstName} {selectedApp.lastName}
+                                            </h2>
+                                            <div className="flex items-center gap-2 mt-1.5">
+                                                <div className="flex items-center gap-1.5" style={{ fontFamily: "monospace", fontSize: "12px", color: "#64748B" }}>
+                                                    <span>LAN:</span>
+                                                    {(!selectedApp.lanNumber || selectedApp.lanNumber.toLowerCase() === "pending") ? (
+                                                        <span 
+                                                            className="inline-block px-1.5 py-0.5 rounded bg-[#FEF3C7] text-[#92400E] font-bold text-[11px] uppercase select-none align-middle"
+                                                            style={{ letterSpacing: "0.05em" }}
+                                                        >
+                                                            Pending
+                                                        </span>
+                                                    ) : (
+                                                        <span>{selectedApp.lanNumber}</span>
+                                                    )}
                                                 </div>
-                                                <span className="material-symbols-outlined text-gray-400 transition-transform duration-300" style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>
-                                                    keyboard_arrow_down
+                                                <span className="text-gray-300">•</span>
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                                    {selectedApp.universityName || "Stanford University"}
                                                 </span>
                                             </div>
                                         </div>
 
-                                        {/* Expanded Document Grid */}
-                                        <AnimatePresence>
-                                            {isExpanded && (
-                                                <motion.div
-                                                    initial={{ height: 0 }}
-                                                    animate={{ height: "auto" }}
-                                                    exit={{ height: 0 }}
-                                                    className="border-t border-gray-100 bg-gray-50/30 overflow-hidden"
-                                                >
-                                                    <div className="p-6 space-y-4">
-                                                        {/* Study Abroad Travel Verification Checklist */}
-                                                        {isAbroad && (
-                                                            <div className="p-5 bg-blue-50/30 border border-blue-100 rounded-2xl space-y-3 mb-4 text-left">
-                                                                <div className="flex items-center justify-between border-b border-blue-100 pb-2">
-                                                                    <h4 className="text-xs font-black text-blue-700 uppercase tracking-wider flex items-center gap-1.5 font-sans">
-                                                                        <span className="material-symbols-outlined text-sm">public</span>
-                                                                        Education Abroad Travel & Visa Validation
-                                                                    </h4>
-                                                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-[8px] font-black uppercase tracking-widest font-mono">Abroad Case</span>
-                                                                </div>
-                                                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                                                    <div className="flex items-start gap-2.5 p-2.5 bg-white border border-gray-100 rounded-xl shadow-sm">
-                                                                        <span className="material-symbols-outlined text-emerald-500 text-base">check_circle</span>
-                                                                        <div>
-                                                                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Student Visa Status</span>
-                                                                            <span className="text-xs font-bold text-gray-805">F1 Approved (USA)</span>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex items-start gap-2.5 p-2.5 bg-white border border-gray-100 rounded-xl shadow-sm">
-                                                                        <span className="material-symbols-outlined text-emerald-500 text-base">check_circle</span>
-                                                                        <div>
-                                                                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Passport Validity</span>
-                                                                            <span className="text-xs font-bold text-gray-805">Valid (Expires 2031)</span>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div className="flex items-start gap-2.5 p-2.5 bg-white border border-gray-100 rounded-xl shadow-sm">
-                                                                        <span className="material-symbols-outlined text-amber-500 text-base">pending</span>
-                                                                        <div>
-                                                                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Flight Booking Proof</span>
-                                                                            <span className="text-xs font-bold text-gray-805">Awaiting schedule</span>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <p className="text-[9.5px] text-gray-500 mt-1 font-medium font-sans">Verification Checklist: Mapped academic offer verification, visa clearance status, and SEVIS receipts to travel compliance standards.</p>
-                                                            </div>
-                                                        )}
-
-                                                        {isDocLoading ? (
-                                                            <Spinner message="Scanning student documents..." size="sm" />
-                                                        ) : docs.length === 0 ? (
-                                                            <div className="py-6 text-center">
-                                                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">No files uploaded for this application.</span>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                {docs.map((doc: any) => {
-                                                                    const iconMeta = getDocIcon(doc.docType);
-                                                                    return (
-                                                                        <div 
-                                                                            key={doc.id}
-                                                                            className="p-4 bg-white border border-gray-100 rounded-xl flex items-center justify-between gap-3 shadow-sm min-w-0"
-                                                                        >
-                                                                            <div className="flex items-center gap-3 min-w-0">
-                                                                                <span className={`material-symbols-outlined p-2 rounded-xl flex-shrink-0 ${iconMeta.color}`}>
-                                                                                    {iconMeta.name}
-                                                                                </span>
-                                                                                <div className="min-w-0">
-                                                                                    <span className="text-xs font-black text-gray-800 uppercase tracking-tight block truncate" title={doc.docType}>
-                                                                                        {doc.docType?.replace(/_/g, " ")}
-                                                                                    </span>
-                                                                                    <div className="flex items-center gap-2 mt-1">
-                                                                                        <StatusBadge status={doc.status || "pending"} />
-                                                                                        {doc.rejectionReason && (
-                                                                                            <span className="text-[8px] font-semibold text-rose-500 max-w-[120px] truncate block" title={doc.rejectionReason}>
-                                                                                                Reason: {doc.rejectionReason}
-                                                                                            </span>
-                                                                                        )}
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-
-                                                                            <div className="flex items-center gap-2 flex-shrink-0">
-                                                                                {/* Inline Viewer button */}
-                                                                                <button 
-                                                                                    onClick={() => handleOpenViewer(app.id, doc)}
-                                                                                    className="p-2 bg-gray-50 border border-gray-100 text-gray-400 hover:text-[#6605c7] hover:border-[#6605c7]/10 hover:bg-[#6605c7]/5 rounded-lg transition-all"
-                                                                                    title="View file inline"
-                                                                                >
-                                                                                    <span className="material-symbols-outlined text-base">visibility</span>
-                                                                                </button>
-                                                                                
-                                                                                {doc.status !== "verified" && (
-                                                                                    <button 
-                                                                                        onClick={() => {
-                                                                                            setSelectedDoc(doc);
-                                                                                            setVerifyStatus("verified");
-                                                                                            setShowVerifyModal(true);
-                                                                                        }}
-                                                                                        className="px-3 py-1.5 bg-gray-900 text-white text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-gray-800 transition-all flex items-center gap-1 shadow-sm"
-                                                                                    >
-                                                                                        Verify
-                                                                                    </button>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
+                                        {/* Action Cleanliness: Download All ZIP */}
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDownloadAllZip(selectedApp.id);
+                                            }}
+                                            disabled={zippingId === selectedApp.id}
+                                            className="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 hover:text-[#6605c7] hover:border-[#6605c7]/40 rounded-md text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-sm"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">archive</span>
+                                            {zippingId === selectedApp.id ? "Zipping..." : "Download All ZIP (.zip)"}
+                                        </button>
                                     </div>
-                                );
-                            })}
+
+                                    {/* Study Abroad Travel & Visa Validation Banner */}
+                                    {isAbroad && (
+                                        <div className="px-5 py-3.5 bg-blue-50/15 border-b border-[#E2E8F0] space-y-2.5">
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="text-[10px] font-black text-blue-700 uppercase tracking-wider flex items-center gap-1.5">
+                                                    <span className="material-symbols-outlined text-sm">public</span>
+                                                    Education Abroad Travel & Visa Validation
+                                                </h4>
+                                                <span className="px-1.5 py-0.2 bg-blue-100/60 text-blue-800 rounded text-[8px] font-black uppercase tracking-widest font-mono">
+                                                    Abroad Case
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                                <div className="flex items-start gap-2 p-2 bg-white border border-gray-100 rounded-md shadow-sm">
+                                                    <span className="material-symbols-outlined text-emerald-500 text-sm">check_circle</span>
+                                                    <div>
+                                                        <span className="text-[7.5px] font-black text-gray-400 uppercase tracking-widest block">Student Visa Status</span>
+                                                        <span className="text-[10px] font-bold text-gray-800">F1 Approved (USA)</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-start gap-2 p-2 bg-white border border-gray-100 rounded-md shadow-sm">
+                                                    <span className="material-symbols-outlined text-emerald-500 text-sm">check_circle</span>
+                                                    <div>
+                                                        <span className="text-[7.5px] font-black text-gray-400 uppercase tracking-widest block">Passport Validity</span>
+                                                        <span className="text-[10px] font-bold text-gray-800">Valid (Expires 2031)</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-start gap-2 p-2 bg-white border border-gray-100 rounded-md shadow-sm">
+                                                    <span className="material-symbols-outlined text-amber-500 text-sm">pending</span>
+                                                    <div>
+                                                        <span className="text-[7.5px] font-black text-gray-400 uppercase tracking-widest block">Flight Booking Proof</span>
+                                                        <span className="text-[10px] font-bold text-gray-800">Awaiting schedule</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Workspace Body: Split Document Selection Hub & Inline PDF Previewer */}
+                                    <div className="flex-1 min-h-0 flex flex-col md:flex-row">
+                                        
+                                        {/* Inline Document Hub */}
+                                        <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-[#E2E8F0] overflow-y-auto p-4 flex flex-col gap-2 shrink-0">
+                                            <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">
+                                                Inline Document Hub
+                                            </span>
+                                            
+                                            {docsLoading[selectedApp.id] ? (
+                                                <div className="py-8 flex justify-center">
+                                                    <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                                                </div>
+                                            ) : currentDocs.length === 0 ? (
+                                                <span className="text-xs text-gray-400 italic py-4 text-center">
+                                                    No files uploaded.
+                                                </span>
+                                            ) : (
+                                                <div className="space-y-1.5">
+                                                    {currentDocs.map((doc: any) => {
+                                                        const isDocSelected = activeViewerDoc?.id === doc.id;
+                                                        
+                                                        // Format Status Indicators
+                                                        const normStatus = (doc.status || "pending").toLowerCase();
+                                                        let statusLabel = "Unverified";
+                                                        let statusClass = "bg-amber-100 text-amber-800";
+                                                        if (normStatus === "verified" || normStatus === "approved") {
+                                                            statusLabel = "Checked";
+                                                            statusClass = "bg-emerald-100 text-emerald-800";
+                                                        } else if (normStatus === "rejected" || normStatus === "cancelled") {
+                                                            statusLabel = "Defective";
+                                                            statusClass = "bg-rose-100 text-rose-800";
+                                                        }
+
+                                                        const docName = (doc.docType || "Document").replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+                                                        return (
+                                                            <button
+                                                                key={doc.id}
+                                                                onClick={() => handleOpenViewer(selectedApp.id, doc)}
+                                                                className={`w-full text-left p-3 rounded-md border text-xs font-semibold transition-all flex flex-col gap-1.5 ${
+                                                                    isDocSelected 
+                                                                        ? "bg-gray-50 border-gray-400 shadow-sm" 
+                                                                        : "border-gray-150 bg-white hover:bg-gray-50/50"
+                                                                }`}
+                                                            >
+                                                                <span className="text-gray-900 font-bold block truncate">
+                                                                    {docName}
+                                                                </span>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <span className="text-[9px] text-gray-400 font-bold uppercase">
+                                                                        {doc.docType?.toLowerCase().includes("pdf") ? "PDF" : "IMAGE"}
+                                                                    </span>
+                                                                    <span className="text-gray-300">•</span>
+                                                                    <span className={`px-1.5 py-0.2 rounded-[3px] text-[8px] font-black uppercase ${statusClass}`}>
+                                                                        {statusLabel}
+                                                                    </span>
+                                                                </div>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Inline High-Speed PDF Previewer */}
+                                        <div className="flex-1 min-w-0 bg-gray-50/30 overflow-y-auto p-4 flex flex-col">
+                                            {activeViewerDoc ? (
+                                                <div className="flex-1 flex flex-col h-full min-h-[500px]">
+                                                    
+                                                    {/* Active File Header Actions */}
+                                                    <div className="mb-3 p-3 bg-white border border-[#E2E8F0] rounded-md flex items-center justify-between gap-4">
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="material-symbols-outlined text-rose-600 text-sm">picture_as_pdf</span>
+                                                                <span className="text-xs font-black text-gray-900 uppercase truncate">
+                                                                    {activeViewerDoc.docType?.replace(/_/g, " ")}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                                <span className="text-[9px] font-bold text-gray-400 uppercase">Status:</span>
+                                                                <StatusBadge status={activeViewerDoc.status} />
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex items-center gap-1.5">
+                                                            {activeViewerDoc.status !== "verified" && (
+                                                                <button 
+                                                                    onClick={() => {
+                                                                        setSelectedDoc(activeViewerDoc);
+                                                                        setVerifyStatus("verified");
+                                                                        setShowVerifyModal(true);
+                                                                    }}
+                                                                    className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-black uppercase tracking-wider rounded flex items-center gap-1"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-xs">done</span>
+                                                                    Verify
+                                                                </button>
+                                                            )}
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setSelectedDoc(activeViewerDoc);
+                                                                    setVerifyStatus("rejected");
+                                                                    setShowVerifyModal(true);
+                                                                }}
+                                                                className="px-2.5 py-1.5 bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 text-[9px] font-black uppercase tracking-wider rounded flex items-center gap-1"
+                                                            >
+                                                                <span className="material-symbols-outlined text-xs">close</span>
+                                                                Reject
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Toolbar Controls */}
+                                                    <div className="flex items-center justify-between p-2.5 bg-white border-t border-x border-[#E2E8F0] rounded-t-md text-gray-500 text-xs">
+                                                        <div className="flex items-center gap-1">
+                                                            <button onClick={() => setZoom(z => Math.max(50, z - 25))} className="p-1 hover:bg-gray-100 rounded text-gray-600" title="Zoom Out">
+                                                                <span className="material-symbols-outlined text-sm">zoom_out</span>
+                                                            </button>
+                                                            <span className="px-1.5 text-[10px] font-black font-mono">{zoom}%</span>
+                                                            <button onClick={() => setZoom(z => Math.min(200, z + 25))} className="p-1 hover:bg-gray-100 rounded text-gray-600" title="Zoom In">
+                                                                <span className="material-symbols-outlined text-sm">zoom_in</span>
+                                                            </button>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <button onClick={() => setRotate(r => (r + 90) % 360)} className="p-1 hover:bg-gray-100 rounded text-gray-600" title="Rotate document">
+                                                                <span className="material-symbols-outlined text-sm">rotate_right</span>
+                                                            </button>
+                                                            <button onClick={() => setFullscreen(true)} className="p-1 hover:bg-gray-100 rounded text-gray-600" title="Fullscreen Toggle">
+                                                                <span className="material-symbols-outlined text-sm">fullscreen</span>
+                                                            </button>
+                                                            <a 
+                                                                href={getDocumentViewUrl(selectedApp.id, activeViewerDoc.id)}
+                                                                download
+                                                                className="p-1 hover:bg-gray-100 rounded text-gray-600 flex items-center"
+                                                                title="Download payload"
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">download</span>
+                                                            </a>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Canvas Container */}
+                                                    <div className="flex-1 min-h-[350px] border border-[#E2E8F0] bg-gray-100/60 flex rounded-b-md overflow-hidden">
+                                                        
+                                                        {/* Preview Thumbnails */}
+                                                        <div className="w-16 border-r border-[#E2E8F0] bg-white p-2 overflow-y-auto flex flex-col gap-2 shrink-0 no-scrollbar">
+                                                            {[1, 2, 3].map((page) => (
+                                                                <button
+                                                                    key={page}
+                                                                    onClick={() => setSelectedThumb(page)}
+                                                                    className={`p-1 rounded border text-center transition-all flex flex-col items-center gap-1 ${
+                                                                        selectedThumb === page 
+                                                                            ? "border-[#6605c7] bg-[#6605c7]/5 shadow-sm" 
+                                                                            : "border-gray-200 hover:bg-gray-50"
+                                                                    }`}
+                                                                >
+                                                                    <div className="w-10 h-14 bg-gray-50 border border-gray-200 rounded flex items-center justify-center shadow-inner relative overflow-hidden select-none">
+                                                                        <span className="text-[6px] font-bold text-gray-300">P. {page}</span>
+                                                                        <div className="absolute inset-x-1 top-1 h-0.5 bg-gray-200 rounded" />
+                                                                        <div className="absolute inset-x-1 top-2 h-0.5 bg-gray-200 rounded" />
+                                                                        <div className="absolute inset-x-1 top-3.5 h-0.5 bg-gray-200 rounded w-1/2" />
+                                                                    </div>
+                                                                    <span className="text-[8px] font-semibold text-gray-500">Page {page}</span>
+                                                                </button>
+                                                            ))}
+                                                        </div>
+
+                                                        {/* Preview Main Frame */}
+                                                        <div className="flex-1 overflow-auto p-6 flex items-center justify-center">
+                                                            <motion.div
+                                                                animate={{ scale: zoom / 100, rotate }}
+                                                                transition={{ duration: 0.15 }}
+                                                                className="bg-white rounded border border-[#E2E8F0] shadow-sm p-6 w-full max-w-md min-h-[360px] flex flex-col justify-between"
+                                                            >
+                                                                <div className="space-y-4">
+                                                                    <div className="flex justify-between items-start border-b border-gray-100 pb-3">
+                                                                        <div>
+                                                                            <span className="text-[7px] font-black text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                                                                OFFICIAL TRANSCRIPT
+                                                                            </span>
+                                                                            <h4 className="text-xs font-bold text-gray-900 mt-1 uppercase tracking-tight">
+                                                                                {activeViewerDoc.docType?.replace(/_/g, " ")}
+                                                                            </h4>
+                                                                        </div>
+                                                                        <span className="material-symbols-outlined text-lg text-gray-300">lock_outline</span>
+                                                                    </div>
+
+                                                                    <div className="space-y-3">
+                                                                        <div className="grid grid-cols-2 gap-2 text-[9px] font-semibold text-gray-500">
+                                                                            <div>
+                                                                                <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest block">Audit Date</span>
+                                                                                <span className="text-gray-800 font-bold">23 May 2026</span>
+                                                                            </div>
+                                                                            <div>
+                                                                                <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest block">Verification Hash</span>
+                                                                                <span className="text-gray-800 font-mono text-[8px] break-all">sha256-550f28e21183aa9b2a</span>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div className="p-3 bg-gray-50 rounded border border-gray-100 text-[10px] font-medium text-gray-500 leading-relaxed space-y-1">
+                                                                            <p className="font-bold text-gray-800 uppercase tracking-wider text-[8px]">
+                                                                                Document Details - Page {selectedThumb} of 3
+                                                                            </p>
+                                                                            <p>This is a certified digital preview of the document payload uploaded directly from the applicant's secure storage vault. Authenticated signature checks are validated on receipt.</p>
+                                                                            <p>Please review details carefully. Accept the asset below if the documents match underwriting policies, or reject with a descriptive reason to request resubmission.</p>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="border-t border-gray-100 pt-3 text-center">
+                                                                    <span className="text-[7px] font-bold text-gray-400 uppercase tracking-widest">
+                                                                        VidyaLoans Secure Document Gateway v2.8
+                                                                    </span>
+                                                                </div>
+                                                            </motion.div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex-1 flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-gray-200 rounded-md bg-white">
+                                                    <span className="material-symbols-outlined text-gray-300 text-5xl mb-2">visibility_off</span>
+                                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                                        Select document asset to preview
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+                                    <span className="material-symbols-outlined text-gray-300 text-5xl mb-3">account_box</span>
+                                    <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                                        No Student Selected
+                                    </h3>
+                                    <p className="text-[11px] text-gray-400 mt-1 max-w-xs">
+                                        Click a student on the left ledger to review educational credentials and assets.
+                                    </p>
+                                </div>
+                            )}
                         </div>
-                    )}
+                    </div>
                 </div>
             </div>
 
-            {/* Premium Inline PDF Viewer Modal (Task 7 & 8) */}
+            {/* Premium Fullscreen View Modal */}
             <AnimatePresence>
-                {activeViewerDoc && viewerAppId && (
+                {fullscreen && activeViewerDoc && viewerAppId && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setActiveViewerDoc(null)} />
+                        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setFullscreen(false)} />
                         
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
-                            className={`bg-white rounded-[2rem] border border-gray-100 shadow-2xl z-10 relative overflow-hidden flex flex-col transition-all duration-300 ${
-                                fullscreen ? "w-screen h-screen max-w-none max-h-none rounded-none p-0" : "max-w-6xl w-full h-[85vh]"
-                            }`}
+                            className="bg-white rounded-none border border-gray-100 shadow-2xl z-10 relative overflow-hidden flex flex-col w-screen h-screen max-w-none max-h-none p-0"
                         >
                             {/* Viewer Header */}
                             <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-white shrink-0">
@@ -441,8 +709,8 @@ export default function DocumentReviewCenter() {
                                         <button onClick={() => setRotate(r => (r + 90) % 360)} className="p-1.5 hover:bg-white rounded-lg hover:text-gray-800" title="Rotate">
                                             <span className="material-symbols-outlined text-sm">rotate_right</span>
                                         </button>
-                                        <button onClick={() => setFullscreen(!fullscreen)} className="p-1.5 hover:bg-white rounded-lg hover:text-gray-800" title="Fullscreen toggle">
-                                            <span className="material-symbols-outlined text-sm">{fullscreen ? "fullscreen_exit" : "fullscreen"}</span>
+                                        <button onClick={() => setFullscreen(false)} className="p-1.5 hover:bg-white rounded-lg hover:text-gray-800" title="Exit Fullscreen">
+                                            <span className="material-symbols-outlined text-sm">fullscreen_exit</span>
                                         </button>
                                     </div>
 
@@ -457,7 +725,7 @@ export default function DocumentReviewCenter() {
                                     </a>
 
                                     <button 
-                                        onClick={() => setActiveViewerDoc(null)}
+                                        onClick={() => setFullscreen(false)}
                                         className="w-10 h-10 bg-gray-50 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all flex items-center justify-center"
                                     >
                                         <span className="material-symbols-outlined text-lg">close</span>
@@ -467,7 +735,7 @@ export default function DocumentReviewCenter() {
 
                             {/* Viewer Body: Thumbnails + Main View */}
                             <div className="flex-1 min-h-0 flex bg-gray-100">
-                                {/* Thumbnails Column (Task 7) */}
+                                {/* Thumbnails Column */}
                                 <div className="w-40 border-r border-gray-200 bg-white/70 backdrop-blur-sm p-4 overflow-y-auto shrink-0 flex flex-col gap-3">
                                     <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Page Index</span>
                                     {[1, 2, 3].map((page) => (
@@ -482,7 +750,6 @@ export default function DocumentReviewCenter() {
                                         >
                                             <div className="w-24 h-32 bg-gray-50 border border-gray-200 rounded flex items-center justify-center shadow-inner relative overflow-hidden select-none">
                                                 <span className="text-[8px] font-bold text-gray-300">Page {page}</span>
-                                                {/* Simulated thumbnail text */}
                                                 <div className="absolute inset-x-2 top-2 h-1 bg-gray-200 rounded" />
                                                 <div className="absolute inset-x-2 top-4 h-1 bg-gray-200 rounded" />
                                                 <div className="absolute inset-x-2 top-6 h-1 bg-gray-200 rounded" />
@@ -498,12 +765,11 @@ export default function DocumentReviewCenter() {
                                     <motion.div
                                         animate={{ scale: zoom / 100, rotate }}
                                         transition={{ duration: 0.2 }}
-                                        className="bg-white rounded-2xl border border-gray-200 shadow-lg p-10 max-w-2xl w-full min-h-[700px] flex flex-col justify-between"
+                                        className="bg-white rounded-lg border border-gray-200 shadow-lg p-10 max-w-2xl w-full min-h-[700px] flex flex-col justify-between"
                                         style={{
                                             boxShadow: "0 20px 50px rgba(0,0,0,0.06)",
                                         }}
                                     >
-                                        {/* Mock visual preview of document */}
                                         <div className="space-y-6">
                                             <div className="flex justify-between items-start border-b border-gray-100 pb-5">
                                                 <div>
@@ -539,34 +805,6 @@ export default function DocumentReviewCenter() {
                                     </motion.div>
                                 </div>
                             </div>
-
-                            {/* Viewer Footer: Quick Verification actions */}
-                            {activeViewerDoc.status !== "verified" && (
-                                <div className="p-5 border-t border-gray-100 bg-white flex justify-end gap-3 shrink-0">
-                                    <button
-                                        onClick={() => {
-                                            setSelectedDoc(activeViewerDoc);
-                                            setVerifyStatus("rejected");
-                                            setShowVerifyModal(true);
-                                        }}
-                                        className="px-5 py-3 border border-rose-200 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 transition-all flex items-center gap-1.5"
-                                    >
-                                        <span className="material-symbols-outlined text-base">cancel</span>
-                                        Reject Asset
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setSelectedDoc(activeViewerDoc);
-                                            setVerifyStatus("verified");
-                                            setShowVerifyModal(true);
-                                        }}
-                                        className="px-6 py-3 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 shadow-lg shadow-emerald-500/10 transition-all flex items-center gap-1.5"
-                                    >
-                                        <span className="material-symbols-outlined text-base">check_circle</span>
-                                        Accept & Verify
-                                    </button>
-                                </div>
-                            )}
                         </motion.div>
                     </div>
                 )}
@@ -581,7 +819,7 @@ export default function DocumentReviewCenter() {
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white rounded-[2rem] border border-gray-100 shadow-2xl p-8 max-w-md w-full z-10 relative overflow-hidden"
+                            className="bg-white rounded-lg border border-gray-100 shadow-2xl p-8 max-w-md w-full z-10 relative overflow-hidden"
                         >
                             <h3 className="text-xl font-black text-gray-900 mb-2 uppercase tracking-tight">Verify Document Asset</h3>
                             <p className="text-xs text-gray-400 mb-6 font-bold uppercase tracking-wider">Acknowledge suitability or specify defects for resubmission.</p>
@@ -593,7 +831,7 @@ export default function DocumentReviewCenter() {
                                         <button
                                             type="button"
                                             onClick={() => setVerifyStatus("verified")}
-                                            className={`py-3 px-4 border rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all ${
+                                            className={`py-3 px-4 border rounded-md flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all ${
                                                 verifyStatus === "verified" 
                                                     ? "border-emerald-600 bg-emerald-50 text-emerald-600" 
                                                     : "border-gray-200 text-gray-500 hover:bg-gray-50"
@@ -605,7 +843,7 @@ export default function DocumentReviewCenter() {
                                         <button
                                             type="button"
                                             onClick={() => setVerifyStatus("rejected")}
-                                            className={`py-3 px-4 border rounded-xl flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all ${
+                                            className={`py-3 px-4 border rounded-md flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all ${
                                                 verifyStatus === "rejected" 
                                                     ? "border-rose-600 bg-rose-50 text-rose-600" 
                                                     : "border-gray-200 text-gray-500 hover:bg-gray-50"
@@ -626,7 +864,7 @@ export default function DocumentReviewCenter() {
                                             placeholder="Provide reasoning for reject verdict (e.g. Blurry photo, expired date)..."
                                             value={rejectionReason}
                                             onChange={(e) => setRejectionReason(e.target.value)}
-                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7]"
+                                            className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-xs font-bold focus:outline-none focus:border-[#6605c7]"
                                         />
                                     </div>
                                 )}
@@ -635,14 +873,14 @@ export default function DocumentReviewCenter() {
                                     <button
                                         type="button"
                                         onClick={() => setShowVerifyModal(false)}
-                                        className="flex-1 py-3 border border-gray-200 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all"
+                                        className="flex-1 py-3 border border-gray-200 text-gray-500 rounded-md text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={verifying}
-                                        className="flex-1 py-3 bg-[#6605c7] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#5203a4] shadow-lg shadow-purple-500/10 transition-all flex items-center justify-center"
+                                        className="flex-1 py-3 bg-[#6605c7] text-white rounded-md text-[10px] font-black uppercase tracking-widest hover:bg-[#5203a4] shadow-lg shadow-purple-500/10 transition-all flex items-center justify-center"
                                     >
                                         {verifying ? "..." : "Save Audit"}
                                     </button>

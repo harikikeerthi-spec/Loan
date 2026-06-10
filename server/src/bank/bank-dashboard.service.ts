@@ -510,7 +510,7 @@ export class BankDashboardService {
       .from('LoanApplication')
       .select('id, status, amount, createdAt')
       .eq('bank', bankId)
-      .not('status', 'in', '("submitted","pending","draft")');
+      .not('status', 'in', '("submitted","pending","draft","docs_received","staff_verified","application_submitted")');
 
     if (error) throw error;
 
@@ -566,7 +566,7 @@ export class BankDashboardService {
       .from('LoanApplication')
       .select('id, status, amount, firstName, lastName, lanNumber, bank, createdAt, updatedAt')
       .eq('bank', bankId)
-      .not('status', 'in', '("submitted","pending","draft")');
+      .not('status', 'in', '("submitted","pending","draft","docs_received","staff_verified","application_submitted")');
 
     if (error) throw error;
     const apps = data || [];
@@ -602,7 +602,7 @@ export class BankDashboardService {
       .from('LoanApplication')
       .select('id, createdAt, status, firstName, lastName, amount, lanNumber')
       .eq('bank', bankId)
-      .not('status', 'in', '("closed","rejected","expired","disbursement_confirmed","submitted","pending","draft")');
+      .not('status', 'in', '("closed","rejected","expired","disbursement_confirmed","submitted","pending","draft","docs_received","staff_verified","application_submitted")');
 
     if (error) throw error;
 
@@ -728,7 +728,7 @@ export class BankDashboardService {
 
       let appQuery = this.db.from('LoanApplication')
         .select('*')
-        .not('status', 'in', '("submitted","pending","draft")');
+        .not('status', 'in', '("submitted","pending","draft","docs_received","staff_verified","application_submitted")');
 
       if (bankId) {
         // Filter by specific bank
@@ -781,7 +781,7 @@ export class BankDashboardService {
     let query = this.db
       .from('FileEntry')
       .select('*, LoanApplication!inner(id, firstName, lastName, amount, status, lanNumber, priority, assignedOfficer, bank)')
-      .not('LoanApplication.status', 'in', '("submitted","pending","draft")');
+      .not('LoanApplication.status', 'in', '("submitted","pending","draft","docs_received","staff_verified","application_submitted")');
 
     // Only filter by bankId if a specific bank is requested
     if (bankId) {

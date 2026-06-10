@@ -17,8 +17,8 @@ async function checkApplications() {
     // Get all applications
     const { data: allApps, error: allAppsError } = await db
       .from('LoanApplication')
-      .select('id, userId, email, bank, loanType, amount, status, stage, firstName, lastName, submittedAt, createdAt')
-      .order('createdAt', { ascending: false })
+      .select('id, userId, email, bank, loanType, amount, status, stage, firstName, lastName, submittedAt, date')
+      .order('date', { ascending: false })
       .limit(50);
 
     if (allAppsError) {
@@ -42,7 +42,7 @@ async function checkApplications() {
         console.log(`  Status: ${app.status}`);
         console.log(`  Stage: ${app.stage}`);
         console.log(`  Submitted At: ${app.submittedAt}`);
-        console.log(`  Created At: ${app.createdAt}`);
+        console.log(`  Created At: ${app.date}`);
       });
     } else {
       console.log('No applications found in database.');
