@@ -1711,10 +1711,7 @@ export default function OnboardingPage() {
                                     <h3 style={{ fontSize: 16, fontWeight: 800, color: '#1a1a2e', marginBottom: 4 }}>{loan.name}</h3>
                                     <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>{loan.bank}</p>
                                 </div>
-                                <div style={{ padding: '8px 12px', background: '#ecfdf5', borderRadius: 8, textAlign: 'center' }}>
-                                    <div style={{ fontSize: 20, fontWeight: 800, color: '#10b981' }}>{loan.interestRate}%</div>
-                                    <div style={{ fontSize: 10, color: '#059669', fontWeight: 600 }}>P.A.</div>
-                                </div>
+
                             </div>
 
                             {/* Key Loan Details Grid */}
@@ -3175,7 +3172,14 @@ export default function OnboardingPage() {
             if (workExp >= 12) score += 3; else if (workExp >= 6) score += 1;
 
             return { ...u, _score: Math.min(score, 100) };
-        }).sort((a, b) => b._score - a._score);
+        }).sort((a, b) => {
+            const acceptA = a.accept ?? a.acceptanceRate ?? 0;
+            const acceptB = b.accept ?? b.acceptanceRate ?? 0;
+            if (acceptB !== acceptA) {
+                return acceptB - acceptA;
+            }
+            return b._score - a._score;
+        });
 
         return (
             <div className="fade-in">

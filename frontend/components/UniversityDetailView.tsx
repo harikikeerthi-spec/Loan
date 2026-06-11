@@ -66,6 +66,33 @@ export interface UniversityData {
     notableAlumni?: any[];
 }
 
+const getTuitionInINR = (tuition?: number, country?: string) => {
+  if (!tuition) return '—';
+  const normalizedCountry = (country || '').toLowerCase().trim();
+  let rate = 84; // Default USD rate
+  if (normalizedCountry.includes('usa') || normalizedCountry.includes('united states') || normalizedCountry.includes('us')) {
+    rate = 84;
+  } else if (normalizedCountry.includes('canada') || normalizedCountry.includes('ca')) {
+    rate = 61;
+  } else if (normalizedCountry.includes('united kingdom') || normalizedCountry.includes('uk') || normalizedCountry.includes('gb') || normalizedCountry.includes('england')) {
+    rate = 106;
+  } else if (normalizedCountry.includes('germany') || normalizedCountry.includes('france') || normalizedCountry.includes('ireland') || normalizedCountry.includes('spain') || normalizedCountry.includes('europe') || normalizedCountry.includes('de') || normalizedCountry.includes('fr') || normalizedCountry.includes('ie') || normalizedCountry.includes('es')) {
+    rate = 90;
+  } else if (normalizedCountry.includes('australia') || normalizedCountry.includes('au')) {
+    rate = 55;
+  } else if (normalizedCountry.includes('singapore') || normalizedCountry.includes('sg')) {
+    rate = 62;
+  } else if (normalizedCountry.includes('uae') || normalizedCountry.includes('united arab emirates') || normalizedCountry.includes('ae')) {
+    rate = 22.8;
+  }
+  const inr = tuition * rate;
+  if (inr >= 100000) {
+    const lakhs = inr / 100000;
+    return `₹${lakhs % 1 === 0 ? lakhs.toFixed(0) : lakhs.toFixed(1)}L`;
+  }
+  return `₹${Math.round(inr).toLocaleString('en-IN')}`;
+};
+
 interface UniversityDetailViewProps {
     university: UniversityData;
     onApply?: (uni: UniversityData) => void;
@@ -346,7 +373,7 @@ export default function UniversityDetailView({ university: initialUni, onApply, 
                         </div>
                         <div className="text-right px-6 py-4 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
                             <div className="text-[#e0c389] text-[10px] font-black uppercase tracking-widest mb-1">Avg. Tuition</div>
-                            <div className="text-3xl font-black text-white">{u.currency} {Math.round(u.tuition / 1000)}k</div>
+                            <div className="text-3xl font-black text-white">{getTuitionInINR(u.tuition, u.country)}</div>
                         </div>
                         <div className="ml-2 flex flex-col gap-3">
                             {u.website && (

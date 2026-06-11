@@ -952,3 +952,33 @@ input[type="range"]::-moz-range-thumb:hover {
 .staff-dashboard-body table td {
   font-size: 14px !important;
 }
+
+/* Container Card */
+.login-card {
+  background: #131722;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  padding: 40px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+}
+
+/* Divider Text Line ("OR SIGN IN WITH EMAIL") */
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #4B5563; /* Muted grey */
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  margin: 24px 0;
+}
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+.divider:not(:empty)::before { margin-right: .5em; }
+.divider:not(:empty)::after { margin-left: .5em; }
+

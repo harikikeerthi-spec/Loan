@@ -51,6 +51,17 @@ function extractDomain(url?: string): string | null {
   }
 }
 
+const COUNTRY_FLAGS: Record<string, string> = {
+  'USA': '🇺🇸',
+  'UK': '🇬🇧',
+  'Canada': '🇨🇦',
+  'Australia': '🇦🇺',
+  'Germany': '🇩🇪',
+  'Ireland': '🇮🇪',
+  'Singapore': '🇸🇬',
+  'Other': '🌍'
+};
+
 const COUNTRY_COLORS: Record<string, { badge: string; glow: string }> = {
   'USA': { badge: 'bg-blue-50 text-blue-600 border-blue-200', glow: 'bg-blue-400' },
   'UK': { badge: 'bg-rose-50 text-rose-600 border-rose-200', glow: 'bg-rose-400' },
@@ -61,9 +72,31 @@ const COUNTRY_COLORS: Record<string, { badge: string; glow: string }> = {
   'Singapore': { badge: 'bg-red-50 text-red-600 border-red-200', glow: 'bg-red-400' },
 };
 
-const COUNTRY_FLAGS: Record<string, string> = {
-  'USA': '🇺🇸', 'UK': '🇬🇧', 'Canada': '🇨🇦', 'Australia': '🇦🇺',
-  'Germany': '🇩🇪', 'Ireland': '🇮🇪', 'Singapore': '🇸🇬',
+const getTuitionInINR = (tuition?: number, country?: string) => {
+  if (!tuition) return '—';
+  const normalizedCountry = (country || '').toLowerCase().trim();
+  let rate = 84; // Default USD rate
+  if (normalizedCountry.includes('usa') || normalizedCountry.includes('united states') || normalizedCountry.includes('us')) {
+    rate = 84;
+  } else if (normalizedCountry.includes('canada') || normalizedCountry.includes('ca')) {
+    rate = 61;
+  } else if (normalizedCountry.includes('united kingdom') || normalizedCountry.includes('uk') || normalizedCountry.includes('gb') || normalizedCountry.includes('england')) {
+    rate = 106;
+  } else if (normalizedCountry.includes('germany') || normalizedCountry.includes('france') || normalizedCountry.includes('ireland') || normalizedCountry.includes('spain') || normalizedCountry.includes('europe') || normalizedCountry.includes('de') || normalizedCountry.includes('fr') || normalizedCountry.includes('ie') || normalizedCountry.includes('es')) {
+    rate = 90;
+  } else if (normalizedCountry.includes('australia') || normalizedCountry.includes('au')) {
+    rate = 55;
+  } else if (normalizedCountry.includes('singapore') || normalizedCountry.includes('sg')) {
+    rate = 62;
+  } else if (normalizedCountry.includes('uae') || normalizedCountry.includes('united arab emirates') || normalizedCountry.includes('ae')) {
+    rate = 22.8;
+  }
+  const inr = tuition * rate;
+  if (inr >= 100000) {
+    const lakhs = inr / 100000;
+    return `₹${lakhs % 1 === 0 ? lakhs.toFixed(0) : lakhs.toFixed(1)}L`;
+  }
+  return `₹${Math.round(inr).toLocaleString('en-IN')}`;
 };
 
 export default function UniversityTemplate({
@@ -180,7 +213,7 @@ export default function UniversityTemplate({
           </div>
           <div className="flex flex-col p-3 rounded-2xl bg-amber-50/70 border border-amber-100/80">
             <span className="text-[9px] font-black uppercase tracking-widest text-amber-600/70 mb-1">Tuition Fee</span>
-            <span className="text-amber-700 font-black text-[15px]">{university.tuition ? `$${Math.round(university.tuition / 1000)}k` : '—'}</span>
+            <span className="text-amber-700 font-black text-[15px]">{getTuitionInINR(university.tuition, university.country)}</span>
           </div>
           <div className="flex flex-col p-3 rounded-2xl bg-purple-50/70 border border-purple-100/80">
             <span className="text-[9px] font-black uppercase tracking-widest text-purple-600/70 mb-1">Min GPA</span>
