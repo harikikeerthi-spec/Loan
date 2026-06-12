@@ -328,6 +328,14 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Nationality</p>
                                             <p className="text-[14px] font-semibold text-slate-900">{application.nationality || "Indian"}</p>
                                         </div>
+                                        <div>
+                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Study Destination</p>
+                                            <p className="text-[14px] font-semibold text-slate-900 uppercase">{application.country || application.user?.studyDestination || application.student?.studyDestination || "—"}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Target Intake</p>
+                                            <p className="text-[14px] font-semibold text-slate-900">{application.user?.intakeSeason || application.student?.intakeSeason || "—"}</p>
+                                        </div>
                                         <div className="col-span-2">
                                             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Current Address</p>
                                             <p className="text-[14px] font-semibold text-slate-900">{application.address || "—"}</p>

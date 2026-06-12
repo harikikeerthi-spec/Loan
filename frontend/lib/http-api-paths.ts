@@ -110,6 +110,7 @@ export const HttpApiPaths = {
         messages: (conversationId: string) =>
             `${HTTP_API_PREFIX}/chat/messages/${enc(conversationId)}`,
         staffStart: () => `${HTTP_API_PREFIX}/chat/staff-start`,
+        bankStart: () => `${HTTP_API_PREFIX}/chat/bank-start`,
     },
 
     admin: {

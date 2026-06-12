@@ -60,4 +60,42 @@ export class ChatController {
       conversation
     };
   }
+
+  @Post('bank-start')
+  async startBankConversation(@Req() req: any, @Body() body: { bankName: string, bankEmail?: string, applicationId?: string, applicationNumber?: string }) {
+    if (!body.bankName) {
+      return { success: false, error: 'bankName is required' };
+    }
+
+    // Create a stable synthetic phone identifier for this bank channel
+    // Using a format that won't conflict with real phone numbers
+    const safeBank = body.bankName.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+    const syntheticPhone = `BNK_${safeBank}`;
+
+    const displayName = `${body.bankName} (Bank)`;
+    const staffEmail = req.user?.email || 'staff';
+
+    const conversation = await this.chatService.getOrCreateConversation(
+      syntheticPhone,
+      body.bankEmail || `bank+${safeBank.toLowerCase()}@internal`,
+      'bank',
+      displayName,
+      body.bankName
+    );
+
+    // If an applicationId was provided, patch it into metadata
+    if (body.applicationId || body.applicationNumber) {
+      // The service will carry forward existing metadata; we return it here
+      (conversation as any).metadata = {
+        ...(conversation as any).metadata,
+        applicationId: body.applicationId || null,
+        applicationNumber: body.applicationNumber || null,
+      };
+    }
+
+    return {
+      success: true,
+      conversation
+    };
+  }
 }

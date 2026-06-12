@@ -276,7 +276,7 @@ export class ApplicationService {
   async getApplicationById(applicationId: string) {
     const { data: application } = await this.db
       .from('LoanApplication')
-      .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth), documents:ApplicationDocument(*), statusHistory:ApplicationStatusHistory(*), notes:ApplicationNote(id, content, type, isInternal, createdAt)')
+      .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth, studyDestination, intakeSeason), documents:ApplicationDocument(*), statusHistory:ApplicationStatusHistory(*), notes:ApplicationNote(id, content, type, isInternal, createdAt)')
       .eq('id', applicationId)
       .single();
 
@@ -293,7 +293,7 @@ export class ApplicationService {
   async getApplicationByNumber(applicationNumber: string) {
     const { data: application } = await this.db
       .from('LoanApplication')
-      .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth), documents:ApplicationDocument(*), statusHistory:ApplicationStatusHistory(*)')
+      .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth, studyDestination, intakeSeason), documents:ApplicationDocument(*), statusHistory:ApplicationStatusHistory(*)')
       .eq('applicationNumber', applicationNumber)
       .single();
 
@@ -677,7 +677,7 @@ export class ApplicationService {
       
       let query = this.db
         .from('LoanApplication')
-        .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth), documents:ApplicationDocument(id, status)', { count: 'exact' });
+        .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth, studyDestination, intakeSeason), documents:ApplicationDocument(id, status)', { count: 'exact' });
 
       // Apply sorting
       const sortCol = filters?.sortBy || 'updatedAt';

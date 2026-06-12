@@ -383,7 +383,7 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                         
                                         <h2 className="text-sm font-black uppercase tracking-widest text-[#6605c7] mb-8 flex items-center gap-2">
                                             <span className="material-symbols-outlined text-[20px]">person</span>
-                                            Identity Configuration
+                                            Student Profile - Personal & Academic Details
                                         </h2>
                                         
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -393,11 +393,17 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                 { label: "Email Node", value: userData.email, lowercase: true },
                                                 { label: "Contact Phone", value: userData.phoneNumber || userData.mobile || userData.phone },
                                                 { label: "Date of Birth", value: userData.dateOfBirth },
+                                                { label: "Nationality", value: userData.nationality?.name || (typeof userData.nationality === 'string' ? userData.nationality : '') || "Indian" },
+                                                { label: "Study Destination", value: userData.studyDestination, uppercase: true },
+                                                { label: "Target Intake", value: userData.intakeSeason },
+                                                { label: "Current Address", value: userData.permanentAddress || userData.address, fullWidth: true },
+                                                { label: "College/University Name", value: userData.targetUniversity || userData.universityName || userData.university },
+                                                { label: "Course Name", value: userData.courseName },
                                                 { label: "Access Privilege", value: userData.role, capitalize: true },
                                             ].map((item, idx) => (
-                                                <div key={idx} className="relative p-4 rounded-xl bg-white/30 border border-white/50 hover:bg-white/50 hover:border-white/80 transition-all duration-300">
+                                                <div key={idx} className={`relative p-4 rounded-xl bg-white/30 border border-white/50 hover:bg-white/50 hover:border-white/80 transition-all duration-300 ${item.fullWidth ? "md:col-span-2" : ""}`}>
                                                     <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">{item.label}</p>
-                                                    <p className={`text-[13px] font-semibold text-slate-800 ${item.lowercase ? "lowercase" : item.capitalize ? "capitalize" : ""}`}>
+                                                    <p className={`text-[13px] font-semibold text-slate-800 ${item.lowercase ? "lowercase" : item.capitalize ? "capitalize" : item.uppercase ? "uppercase" : ""}`}>
                                                         {item.value || "—"}
                                                     </p>
                                                 </div>

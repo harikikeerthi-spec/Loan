@@ -258,6 +258,7 @@ export default function StaffDashboardPage() {
     const [filterStatus, setFilterStatus] = useState("all");
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [autoStartUser, setAutoStartUser] = useState<any>(null);
+    const [autoStartBank, setAutoStartBank] = useState<{ bankName: string; bankEmail?: string; applicationId?: string; applicationNumber?: string } | null>(null);
     const [showPullModal, setShowPullModal] = useState(false);
     const [showShareProfileModal, setShowShareProfileModal] = useState(false);
     const [shareProfileData, setShareProfileData] = useState<any>(null);
@@ -601,6 +602,10 @@ export default function StaffDashboardPage() {
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
     const [userRoleFilter, setUserRoleFilter] = useState("all");
     const [activeContactPopup, setActiveContactPopup] = useState<{ id: string; type: 'email' | 'phone' } | null>(null);
+    const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+    const toggleRowExpanded = (rowId: string) => {
+        setExpandedRows(prev => ({ ...prev, [rowId]: !prev[rowId] }));
+    };
 
     const [currentPage, setCurrentPage] = useState(() => getDashboardPage(searchParams.get("page")));
     const [itemsPerPage] = useState(30);
@@ -2923,7 +2928,7 @@ export default function StaffDashboardPage() {
                 <nav className="flex-1 flex flex-col w-full gap-0.5 overflow-y-auto overflow-x-hidden" style={{ scrollbarWidth: 'none' }}>
                     {navItems.map(item => (
                         <NavItem key={item.section} {...item} active={activeSection} expanded={sidebarOpen} onClick={(s: string) => {
-                            if (s === 'chat_customer') setAutoStartUser(null);
+                            if (s === 'chat_customer') { setAutoStartUser(null); setAutoStartBank(null); }
                             navigateToSection(s);
                             setSidebarOpen(false);
                         }} />
@@ -3015,7 +3020,7 @@ export default function StaffDashboardPage() {
                 </header>
 
                 <div className={`staff-dashboard-body flex-1 overflow-y-auto custom-scrollbar ${(activeSection.startsWith('chat_') || activeSection === 'onboarding') ? 'p-0' : 'p-6 space-y-5'} bg-[#f8fafc]`}>
-                    {activeSection === "chat_customer" && <ChatInterface role="staff" initialUser={autoStartUser} className="flex h-full border-0 rounded-none overflow-hidden bg-white shadow-none mt-0 animate-fade-in text-gray-900" />}
+                    {activeSection === "chat_customer" && <ChatInterface role="staff" initialUser={autoStartUser} initialBank={autoStartBank} className="flex h-full border-0 rounded-none overflow-hidden bg-white shadow-none mt-0 animate-fade-in text-gray-900" />}
 
 
                     {/* Onboarding Flow View */}
@@ -7143,12 +7148,12 @@ export default function StaffDashboardPage() {
                                                 LIVE SYSTEM
                                             </span>
                                         )}
-                                        {activeSection === 'incoming_queue' && (
+                                        {/* {activeSection === 'incoming_queue' && (
                                             <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[11px] font-sans font-semibold text-blue-700 ml-2">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
                                                 INCOMING QUEUE
                                             </span>
-                                        )}
+                                        )} */}
                                         {activeSection === 'users' && (
                                             <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-[11px] font-semibold text-indigo-700">
                                                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
@@ -7296,6 +7301,7 @@ export default function StaffDashboardPage() {
                                                     <th className="sticky left-0 z-20 bg-slate-50 px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">APPLICANT PROFILE</span></th>
                                                     <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">COLLEGE NAME</span></th>
                                                     <th className="px-6 py-5 min-w-[240px] w-[240px]"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">TARGET BANK</span></th>
+                                                    <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">LAN NUMBER</span></th>
                                                     <th className="px-5 py-5 w-48"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">PROGRESS</span></th>
                                                     <th className="px-5 py-5 min-w-[220px] w-[220px]"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">CURRENT STATUS</span></th>
                                                     <th className="px-5 py-5 text-center"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">ACTIONS</span></th>
@@ -7392,34 +7398,55 @@ export default function StaffDashboardPage() {
                                                         const stageLabel = item.currentStage || (progress <= 12 ? 'Application Created' : progress <= 40 ? 'Documents Uploaded' : progress <= 70 ? 'Under Review' : progress <= 85 ? 'Credit Check' : progress <= 90 ? 'Sanction' : 'Disbursement');
                                                         const isOnline = (item.email || item.student?.email) && onlineEmails.map(e => e.toLowerCase()).includes((item.email || item.student?.email).toLowerCase());
                                                         const popup = activeContactPopup;
+                                                        const rowId = item.id || item._id || String(idx);
+                                                        const isExpanded = !!expandedRows[rowId];
                                                         return (
                                                             <>
-                                                                <td className="sticky left-0 z-10 bg-white px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors" style={{ minWidth: 260, maxWidth: 280 }}>
-                                                                    <div className="flex items-center gap-3">
-                                                                        {/* Avatar */}
-                                                                        <div
-                                                                            onClick={() => {
-                                                                                const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
-                                                                                const email = item.email || item.student?.email;
-                                                                                const params = new URLSearchParams();
-                                                                                if (email) params.append('email', email);
-                                                                                const queryStr = params.toString();
-                                                                                if (uid) window.open(`/staff/users/${uid}${queryStr ? `?${queryStr}` : ''}`, '_blank');
+                                                                <td className={`sticky left-0 z-10 bg-white px-5 border-b border-slate-50 group-hover:bg-slate-50/50 transition-all ${isExpanded ? 'py-6' : 'py-4'}`} style={{ minWidth: 260, maxWidth: 280 }}>
+                                                                    <div className={`flex ${isExpanded ? 'items-start' : 'items-center'} gap-3`}>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                toggleRowExpanded(rowId);
                                                                             }}
-                                                                            className="relative shrink-0 cursor-pointer group/avatar hover:scale-105 transition-all"
-                                                                            title="Click to view Student Profile"
+                                                                            className={`shrink-0 w-6 h-6 rounded-md hover:bg-slate-100 active:bg-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors ${isExpanded ? 'mt-1' : ''}`}
+                                                                            title={isExpanded ? "Collapse Details" : "Expand Details"}
                                                                         >
-                                                                            <div className="w-10 h-10 rounded-full bg-white border border-slate-200 group-hover/avatar:border-indigo-400 group-hover/avatar:text-indigo-600 flex items-center justify-center font-medium text-[13px] text-slate-600 transition-all">
-                                                                                {initials}
+                                                                            <span className="material-symbols-outlined text-[18px] transition-transform duration-200" style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                                                                                expand_more
+                                                                            </span>
+                                                                        </button>
+                                                                        {isExpanded && (
+                                                                            <div
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    const userObj = {
+                                                                                        id: item.userId || item.user_id || item.student?.id || item.student?._id,
+                                                                                        email: item.email || item.student?.email,
+                                                                                        firstName: item.firstName || item.student?.firstName || 'Student',
+                                                                                        lastName: item.lastName || item.student?.lastName || '',
+                                                                                        phone: item.phone || item.mobile || item.phoneNumber || item.student?.phone || '',
+                                                                                        phoneNumber: item.phone || item.mobile || item.phoneNumber || item.student?.phone || ''
+                                                                                    };
+                                                                                    setAutoStartUser(userObj);
+                                                                                    setAutoStartBank(null);
+                                                                                    navigateToSection("chat_customer");
+                                                                                }}
+                                                                                className="relative shrink-0 cursor-pointer group/avatar hover:scale-105 transition-all"
+                                                                                title="Click to open chat with this student"
+                                                                            >
+                                                                                <div className="w-10 h-10 rounded-full bg-white border border-slate-200 group-hover/avatar:border-emerald-400 group-hover/avatar:bg-emerald-50 flex items-center justify-center font-medium text-[13px] text-slate-600 group-hover/avatar:text-emerald-700 transition-all relative overflow-hidden">
+                                                                                    <span className="group-hover/avatar:opacity-0 transition-opacity">{initials}</span>
+                                                                                    <span className="material-symbols-outlined text-[16px] text-emerald-600 absolute opacity-0 group-hover/avatar:opacity-100 transition-opacity">chat_bubble</span>
+                                                                                </div>
+                                                                                {isOnline && (
+                                                                                    <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full animate-pulse shadow-sm shadow-emerald-500/30" />
+                                                                                )}
                                                                             </div>
-                                                                            {isOnline && (
-                                                                                <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full animate-pulse shadow-sm shadow-emerald-500/30" />
-                                                                            )}
-                                                                        </div>
-                                                                        
-                                                                        {/* Text/Details Card */}
+                                                                        )}
+
                                                                         <div className="min-w-0 flex-1 flex items-start justify-between gap-3">
-                                                                            {/* Left Side: Name and Application ID link */}
                                                                             <div className="min-w-0 flex-col gap-1">
                                                                                 <p
                                                                                     onClick={() => {
@@ -7435,137 +7462,130 @@ export default function StaffDashboardPage() {
                                                                                 >
                                                                                     {item.firstName || item.student?.firstName || '—'} {item.lastName || item.student?.lastName || ''}
                                                                                 </p>
-                                                                                <div className="mt-1">
-                                                                                    <p
-                                                                                        onClick={(e) => {
-                                                                                            e.stopPropagation();
-                                                                                            const appId = item.id || item._id;
-                                                                                            if (appId) window.open(`/staff/applications/${appId}`, '_blank');
-                                                                                        }}
-                                                                                        className="text-[11px] text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer transition-all font-bold uppercase tracking-wide inline-block"
-                                                                                        title="Click to open Application Page"
-                                                                                    >
-                                                                                        {item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`}
-                                                                                    </p>
-                                                                                    {activeSection === "applications" && (item.bank || item.targetBank) && (
-                                                                                        <div className="mt-1 flex items-center gap-1.5">
-                                                                                            <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest leading-none border ${
-                                                                                                item.lanNumber 
-                                                                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                                                                                                    : 'bg-amber-50 text-amber-700 border-amber-200'
-                                                                                            }`}>
-                                                                                                LAN: {item.lanNumber || 'PENDING'}
-                                                                                            </span>
-                                                                                        </div>
-                                                                                    )}
-                                                                                </div>
+                                                                                {isExpanded && (
+                                                                                    <div className="mt-1">
+                                                                                        <p
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                const appId = item.id || item._id;
+                                                                                                if (appId) window.open(`/staff/applications/${appId}`, '_blank');
+                                                                                            }}
+                                                                                            className="text-[11px] text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer transition-all font-bold uppercase tracking-wide inline-block"
+                                                                                            title="Click to open Application Page"
+                                                                                        >
+                                                                                            {item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                )}
                                                                             </div>
 
-                                                                            {/* Right Side: Contact Icons */}
-                                                                            <div className="flex flex-col items-end shrink-0 pt-0.5">
-                                                                                <div className="flex items-center gap-1.5 relative">
-                                                                                    {/* Phone */}
-                                                                                    <button
-                                                                                        onClick={(e) => {
-                                                                                            e.stopPropagation();
-                                                                                            const uid = item.id || item._id;
-                                                                                            setActiveContactPopup(
-                                                                                                activeContactPopup?.id === uid && activeContactPopup?.type === 'phone'
-                                                                                                    ? null
-                                                                                                    : { id: uid, type: 'phone' }
-                                                                                            );
-                                                                                        }}
-                                                                                        className="w-6 h-6 rounded-md bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-all"
-                                                                                        title="Phone number"
-                                                                                    >
-                                                                                        <span className="material-symbols-outlined text-[13px]">phone_enabled</span>
-                                                                                    </button>
+                                                                            {isExpanded && (
+                                                                                <div className="flex flex-col items-end shrink-0 pt-0.5">
+                                                                                    <div className="flex items-center gap-1.5 relative">
+                                                                                        {/* Phone */}
+                                                                                        <button
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                const uid = item.id || item._id;
+                                                                                                setActiveContactPopup(
+                                                                                                    activeContactPopup?.id === uid && activeContactPopup?.type === 'phone'
+                                                                                                        ? null
+                                                                                                        : { id: uid, type: 'phone' }
+                                                                                                );
+                                                                                            }}
+                                                                                            className="w-6 h-6 rounded-md bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-all"
+                                                                                            title="Phone number"
+                                                                                        >
+                                                                                            <span className="material-symbols-outlined text-[13px]">phone_enabled</span>
+                                                                                        </button>
 
-                                                                                    {/* Email */}
-                                                                                    <button
-                                                                                        onClick={(e) => {
-                                                                                            e.stopPropagation();
-                                                                                            const uid = item.id || item._id;
-                                                                                            setActiveContactPopup(
-                                                                                                activeContactPopup?.id === uid && activeContactPopup?.type === 'email'
-                                                                                                    ? null
-                                                                                                    : { id: uid, type: 'email' }
-                                                                                            );
-                                                                                        }}
-                                                                                        className="w-6 h-6 rounded-md bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-all"
-                                                                                        title="Email address"
-                                                                                    >
-                                                                                        <span className="material-symbols-outlined text-[13px]">mail</span>
-                                                                                    </button>
+                                                                                        {/* Email */}
+                                                                                        <button
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                const uid = item.id || item._id;
+                                                                                                setActiveContactPopup(
+                                                                                                    activeContactPopup?.id === uid && activeContactPopup?.type === 'email'
+                                                                                                        ? null
+                                                                                                        : { id: uid, type: 'email' }
+                                                                                                );
+                                                                                            }}
+                                                                                            className="w-6 h-6 rounded-md bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-all"
+                                                                                            title="Email address"
+                                                                                        >
+                                                                                            <span className="material-symbols-outlined text-[13px]">mail</span>
+                                                                                        </button>
 
-                                                                                    {/* Tooltip Overlay */}
-                                                                                    {popup && popup.id === (item.id || item._id) && (
-                                                                                        <>
-                                                                                            <div className="fixed inset-0 z-40" onClick={() => setActiveContactPopup(null)} />
-                                                                                            <div className="absolute right-0 top-7 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2.5 flex items-center gap-2.5 animate-in fade-in slide-in-from-top-1 duration-150 font-sans w-max max-w-[260px]">
-                                                                                                <span className="material-symbols-outlined text-slate-400 text-[15px]">
-                                                                                                    {popup.type === 'email' ? 'mail' : 'call'}
-                                                                                                </span>
-                                                                                                <span className="text-[12px] font-semibold text-slate-700 select-all truncate max-w-[160px]">
-                                                                                                    {popup.type === 'email'
-                                                                                                        ? (item.email || item.student?.email || 'No email')
-                                                                                                        : (item.phone || item.mobile || item.phoneNumber || item.student?.phone || 'No phone')}
-                                                                                                </span>
-                                                                                                {popup.type === 'phone' && (
+                                                                                        {/* Tooltip Overlay */}
+                                                                                        {popup && popup.id === (item.id || item._id) && (
+                                                                                            <>
+                                                                                                <div className="fixed inset-0 z-40" onClick={() => setActiveContactPopup(null)} />
+                                                                                                <div className="absolute right-0 top-7 bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2.5 flex items-center gap-2.5 animate-in fade-in slide-in-from-top-1 duration-150 font-sans w-max max-w-[260px]">
+                                                                                                    <span className="material-symbols-outlined text-slate-400 text-[15px]">
+                                                                                                        {popup.type === 'email' ? 'mail' : 'call'}
+                                                                                                    </span>
+                                                                                                    <span className="text-[12px] font-semibold text-slate-700 select-all truncate max-w-[160px]">
+                                                                                                        {popup.type === 'email'
+                                                                                                            ? (item.email || item.student?.email || 'No email')
+                                                                                                            : (item.phone || item.mobile || item.phoneNumber || item.student?.phone || 'No phone')}
+                                                                                                    </span>
+                                                                                                    {popup.type === 'phone' && (
+                                                                                                        <button
+                                                                                                            onClick={(e) => {
+                                                                                                                e.stopPropagation();
+                                                                                                                const userObj = {
+                                                                                                                    id: item.userId || item.user_id || item.student?.id || item.student?._id,
+                                                                                                                    email: item.email || item.student?.email,
+                                                                                                                    firstName: item.firstName || item.student?.firstName || 'Student',
+                                                                                                                    lastName: item.lastName || item.student?.lastName || '',
+                                                                                                                    phone: item.phone || item.mobile || item.phoneNumber || item.student?.phone || ''
+                                                                                                                };
+                                                                                                                setAutoStartUser(userObj);
+                                                                                                                setAutoStartBank(null);
+                                                                                                                navigateToSection("chat_customer");
+                                                                                                                setActiveContactPopup(null);
+                                                                                                            }}
+                                                                                                            className="w-5 h-5 rounded hover:bg-emerald-50 flex items-center justify-center text-emerald-600 hover:text-emerald-800"
+                                                                                                            title="Open Support Chat"
+                                                                                                        >
+                                                                                                            <span className="material-symbols-outlined text-[14px]">chat_bubble</span>
+                                                                                                        </button>
+                                                                                                    )}
+                                                                                                    {popup.type === 'email' && (
+                                                                                                        <button
+                                                                                                            onClick={(e) => {
+                                                                                                                e.stopPropagation();
+                                                                                                                const email = item.email || item.student?.email;
+                                                                                                                const name = `${item.firstName || item.student?.firstName || ''} ${item.lastName || item.student?.lastName || ''}`.trim();
+                                                                                                                if (email) openEmailModal(email, name);
+                                                                                                                setActiveContactPopup(null);
+                                                                                                            }}
+                                                                                                            className="w-5 h-5 rounded hover:bg-indigo-50 flex items-center justify-center text-indigo-600 hover:text-indigo-800"
+                                                                                                            title="Compose Email"
+                                                                                                        >
+                                                                                                            <span className="material-symbols-outlined text-[14px]">mail</span>
+                                                                                                        </button>
+                                                                                                    )}
                                                                                                     <button
                                                                                                         onClick={(e) => {
                                                                                                             e.stopPropagation();
-                                                                                                            const userObj = {
-                                                                                                                id: item.userId || item.user_id || item.student?.id || item.student?._id,
-                                                                                                                email: item.email || item.student?.email,
-                                                                                                                firstName: item.firstName || item.student?.firstName || 'Student',
-                                                                                                                lastName: item.lastName || item.student?.lastName || '',
-                                                                                                                phone: item.phone || item.mobile || item.phoneNumber || item.student?.phone || ''
-                                                                                                            };
-                                                                                                            setAutoStartUser(userObj);
-                                                                                                            navigateToSection("chat_customer");
-                                                                                                            setActiveContactPopup(null);
+                                                                                                            const textToCopy = popup.type === 'email'
+                                                                                                                ? (item.email || item.student?.email || '')
+                                                                                                                : (item.phone || item.mobile || item.phoneNumber || item.student?.phone || '');
+                                                                                                            navigator.clipboard.writeText(textToCopy);
+                                                                                                            alert(`${popup.type === 'email' ? 'Email' : 'Phone'} copied to clipboard!`);
                                                                                                         }}
-                                                                                                        className="w-5 h-5 rounded hover:bg-emerald-50 flex items-center justify-center text-emerald-600 hover:text-emerald-800"
-                                                                                                        title="Open Support Chat"
+                                                                                                        className="w-5 h-5 rounded hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600"
+                                                                                                        title="Copy to clipboard"
                                                                                                     >
-                                                                                                        <span className="material-symbols-outlined text-[14px]">chat_bubble</span>
+                                                                                                        <span className="material-symbols-outlined text-[13px]">content_copy</span>
                                                                                                     </button>
-                                                                                                )}
-                                                                                                {popup.type === 'email' && (
-                                                                                                    <button
-                                                                                                        onClick={(e) => {
-                                                                                                            e.stopPropagation();
-                                                                                                            const email = item.email || item.student?.email;
-                                                                                                            const name = `${item.firstName || item.student?.firstName || ''} ${item.lastName || item.student?.lastName || ''}`.trim();
-                                                                                                            if (email) openEmailModal(email, name);
-                                                                                                            setActiveContactPopup(null);
-                                                                                                        }}
-                                                                                                        className="w-5 h-5 rounded hover:bg-indigo-50 flex items-center justify-center text-indigo-600 hover:text-indigo-800"
-                                                                                                        title="Compose Email"
-                                                                                                    >
-                                                                                                        <span className="material-symbols-outlined text-[14px]">mail</span>
-                                                                                                    </button>
-                                                                                                )}
-                                                                                                <button
-                                                                                                    onClick={(e) => {
-                                                                                                        e.stopPropagation();
-                                                                                                        const textToCopy = popup.type === 'email'
-                                                                                                            ? (item.email || item.student?.email || '')
-                                                                                                            : (item.phone || item.mobile || item.phoneNumber || item.student?.phone || '');
-                                                                                                        navigator.clipboard.writeText(textToCopy);
-                                                                                                        alert(`${popup.type === 'email' ? 'Email' : 'Phone'} copied to clipboard!`);
-                                                                                                    }}
-                                                                                                    className="w-5 h-5 rounded hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600"
-                                                                                                    title="Copy to clipboard"
-                                                                                                >
-                                                                                                    <span className="material-symbols-outlined text-[13px]">content_copy</span>
-                                                                                                </button>
-                                                                                            </div>
-                                                                                        </>
-                                                                                    )}
+                                                                                                </div>
+                                                                                            </>
+                                                                                        )}
+                                                                                    </div>
                                                                                 </div>
-                                                                            </div>
+                                                                            )}
                                                                         </div>
                                                                     </div>
                                                                 </td>
@@ -7603,18 +7623,18 @@ export default function StaffDashboardPage() {
                                                                                 return <div className="text-[#0d1b2a] font-black text-[14px] uppercase truncate max-w-[200px]">{item.bank || item.targetBank || '—'}</div>;
                                                                             })()}
                                                                         </div>
-                                                                        {activeSection === "applications" && (item.bank || item.targetBank) && (
-                                                                            <div className="flex items-center gap-1.5">
-                                                                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-widest leading-none border ${
-                                                                                    item.lanNumber 
-                                                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                                                                                        : 'bg-amber-50 text-amber-700 border-amber-200'
-                                                                                }`}>
-                                                                                    LAN: {item.lanNumber || 'PENDING'}
-                                                                                </span>
-                                                                            </div>
-                                                                        )}
                                                                     </div>
+                                                                </td>
+                                                                <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
+                                                                    {item.lanNumber ? (
+                                                                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                                            {item.lanNumber}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                                                            PENDING
+                                                                        </span>
+                                                                    )}
                                                                 </td>
                                                                 <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors" style={{ minWidth: 160 }}>
                                                                     <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden mb-2">
@@ -7633,8 +7653,8 @@ export default function StaffDashboardPage() {
                                                                             {item.status || 'DRAFT'}
                                                                         </span>
                                                                         <div className="text-[12px] text-slate-500 font-medium">
-                                                                            <p>Submitted: {item.submittedAt ? formatIST(item.submittedAt) : '—'}</p>
-                                                                            <p>Now: {formatIST(nowTime)}</p>
+                                                                            <p>Submitted: {item.submittedAt ? formatIST(item.submittedAt, false) : '—'}</p>
+                                                                            <p>Now: {formatIST(nowTime, false)}</p>
                                                                         </div>
                                                                     </div>
                                                                 </td>
@@ -7869,11 +7889,43 @@ export default function StaffDashboardPage() {
                                                                             <span className="material-symbols-outlined text-[16px]">visibility</span>
                                                                         </button>
                                                                         <button
-                                                                            onClick={() => { setAutoStartUser(item); navigateToSection("chat_customer"); }}
-                                                                            className="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-300 hover:bg-indigo-50 flex items-center justify-center transition-all shadow-sm"
-                                                                            title="Direct Message"
+                                                                            onClick={() => {
+                                                                                const userObj = {
+                                                                                    id: item.userId || item.user_id || item.student?.id || item.student?._id,
+                                                                                    email: item.email || item.student?.email,
+                                                                                    firstName: item.firstName || item.student?.firstName || 'Student',
+                                                                                    lastName: item.lastName || item.student?.lastName || '',
+                                                                                    phone: item.phone || item.mobile || item.phoneNumber || item.student?.phone || '',
+                                                                                    phoneNumber: item.phone || item.mobile || item.phoneNumber || item.student?.phone || ''
+                                                                                };
+                                                                                setAutoStartUser(userObj);
+                                                                                setAutoStartBank(null);
+                                                                                navigateToSection("chat_customer");
+                                                                            }}
+                                                                            className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-100 flex items-center justify-center transition-all shadow-sm"
+                                                                            title="Chat with Student"
                                                                         >
-                                                                            <span className="material-symbols-outlined text-[16px]">chat_bubble</span>
+                                                                            <span className="material-symbols-outlined text-[16px]">school</span>
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const bankName = item.bank || item.targetBank || item.bankName || item.assignedBank || item.submittedTo || null;
+                                                                                if (!bankName) {
+                                                                                    alert('No bank has been assigned to this application yet.');
+                                                                                    return;
+                                                                                }
+                                                                                setAutoStartUser(null);
+                                                                                setAutoStartBank({
+                                                                                    bankName,
+                                                                                    applicationId: item.id || item._id,
+                                                                                    applicationNumber: item.applicationNumber || item.lanNumber || undefined
+                                                                                });
+                                                                                navigateToSection("chat_customer");
+                                                                            }}
+                                                                            className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 hover:text-amber-800 hover:bg-amber-100 flex items-center justify-center transition-all shadow-sm"
+                                                                            title="Chat with Bank"
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-[16px]">account_balance</span>
                                                                         </button>
                                                                         <button
                                                                             onClick={() => {

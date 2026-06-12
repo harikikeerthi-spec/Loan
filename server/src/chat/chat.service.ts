@@ -12,6 +12,8 @@ export class ChatService {
   }
 
   private normalizePhone(phoneStr: string): string {
+    // Synthetic bank identifiers start with BNK_ — pass through unchanged
+    if (phoneStr.startsWith('BNK_')) return phoneStr;
     const cleaned = phoneStr.replace('whatsapp:', '').trim().replace(/\D/g, '');
     if (cleaned.length > 10 && cleaned.startsWith('91')) {
       return cleaned.substring(2);

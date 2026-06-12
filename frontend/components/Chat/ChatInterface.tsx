@@ -30,6 +30,7 @@ interface Conversation {
 interface ChatInterfaceProps {
     role: 'staff' | 'bank' | 'agent'; // What dashboard is this embedded in
     initialUser?: any;
+    initialBank?: { bankName: string; bankEmail?: string; applicationId?: string; applicationNumber?: string } | null;
     portalTitle?: string;
     className?: string;
 }
@@ -45,7 +46,7 @@ interface StudentDocument {
     uploadedAt?: string;
 }
 
-export default function ChatInterface({ role, initialUser, portalTitle, className }: ChatInterfaceProps) {
+export default function ChatInterface({ role, initialUser, initialBank, portalTitle, className }: ChatInterfaceProps) {
     const { token, user } = useAuth();
     const [socket, setSocket] = useState<Socket | null>(null);
     const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -53,6 +54,8 @@ export default function ChatInterface({ role, initialUser, portalTitle, classNam
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputText, setInputText] = useState('');
     const [sidebarTab, setSidebarTab] = useState<'chats' | 'users'>('chats');
+    // 'all' | 'student' | 'bank' — for staff to filter which conversation type they see
+    const [chatTypeFilter, setChatTypeFilter] = useState<'all' | 'student' | 'bank'>('all');
     const [allUsers, setAllUsers] = useState<any[]>([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -221,13 +224,6 @@ export default function ChatInterface({ role, initialUser, portalTitle, classNam
         setInputText('');
     };
 
-    // Handle initialUser from props
-    useEffect(() => {
-        if (initialUser && token) {
-            startNewChat(initialUser);
-        }
-    }, [initialUser, token]);
-
     const startNewChat = async (targetUser: any) => {
         if (!targetUser.phoneNumber) {
             alert("This user does not have a phone number registered.");
@@ -251,6 +247,7 @@ export default function ChatInterface({ role, initialUser, portalTitle, classNam
             const data = await res.json();
             if (data.success) {
                 setSidebarTab('chats');
+                setChatTypeFilter('student');
                 setActiveConversation(data.conversation.id);
                 fetchConversations();
             }
@@ -258,6 +255,42 @@ export default function ChatInterface({ role, initialUser, portalTitle, classNam
             console.error("Failed to start chat", e);
         }
     }
+
+    const startBankChat = async (bankInfo: { bankName: string; bankEmail?: string; applicationId?: string; applicationNumber?: string }) => {
+        try {
+            const res = await fetch(HttpApiPaths.chat.bankStart(), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify(bankInfo)
+            });
+            const data = await res.json();
+            if (data.success) {
+                setSidebarTab('chats');
+                setChatTypeFilter('bank');
+                setActiveConversation(data.conversation.id);
+                fetchConversations();
+            }
+        } catch (e) {
+            console.error("Failed to start bank chat", e);
+        }
+    }
+
+    // Handle initialUser from props
+    useEffect(() => {
+        if (initialUser && token) {
+            startNewChat(initialUser);
+        }
+    }, [initialUser, token]);
+
+    // Handle initialBank from props
+    useEffect(() => {
+        if (initialBank && token) {
+            startBankChat(initialBank);
+        }
+    }, [initialBank, token]);
 
     // Fetch student documents for the active conversation
     const openStudentDocuments = async () => {
@@ -366,9 +399,14 @@ export default function ChatInterface({ role, initialUser, portalTitle, classNam
         return { bg: 'bg-slate-50', text: 'text-slate-500', border: 'border-slate-200', dot: 'bg-slate-400', label: 'Pending' };
     };
 
-    const filteredConversations = conversations.filter(c =>
-        (c.customerName || c.customerPhone || '').toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredConversations = conversations.filter(c => {
+        const matchesSearch = (c.customerName || c.customerPhone || '').toLowerCase().includes(searchQuery.toLowerCase());
+        if (!matchesSearch) return false;
+        if (role !== 'staff') return true; // bank/agent: no extra filter
+        if (chatTypeFilter === 'bank') return c.metadata?.type === 'bank';
+        if (chatTypeFilter === 'student') return c.metadata?.type !== 'bank';
+        return true; // 'all'
+    });
 
     const filteredUsers = allUsers.filter(u =>
         u.role !== 'admin' && u.role !== 'staff' && u.role !== 'agent' &&
@@ -381,7 +419,7 @@ export default function ChatInterface({ role, initialUser, portalTitle, classNam
             {/* Sidebar: Conversations & Users */}
             <div className="w-80 border-r border-gray-200 bg-[#fbfbfd] flex flex-col">
                 <div className="p-8 border-b border-gray-200 bg-[#fbfbfd]">
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center justify-between mb-4">
                         <h3 className="font-bold text-xl tracking-tight text-gray-900">{portalTitle || 'Conversations'}</h3>
                         <div className="flex gap-2">
                             <button
@@ -400,6 +438,33 @@ export default function ChatInterface({ role, initialUser, portalTitle, classNam
                             )}
                         </div>
                     </div>
+
+                    {/* Student / Bank filter tabs — only for staff when in chats tab */}
+                    {role === 'staff' && sidebarTab === 'chats' && (
+                        <div className="flex gap-1 mb-4 p-1 bg-white border border-gray-200 rounded-2xl">
+                            {(['all', 'student', 'bank'] as const).map(type => (
+                                <button
+                                    key={type}
+                                    onClick={() => setChatTypeFilter(type)}
+                                    className={`flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
+                                        chatTypeFilter === type
+                                            ? type === 'bank'
+                                                ? 'bg-amber-500 text-white shadow-sm'
+                                                : type === 'student'
+                                                    ? 'bg-[#6605c7] text-white shadow-sm'
+                                                    : 'bg-gray-900 text-white shadow-sm'
+                                            : 'text-gray-400 hover:text-gray-600'
+                                    }`}
+                                >
+                                    <span className="material-symbols-outlined text-[12px]">
+                                        {type === 'bank' ? 'account_balance' : type === 'student' ? 'school' : 'all_inclusive'}
+                                    </span>
+                                    {type === 'all' ? 'All' : type === 'student' ? 'Students' : 'Banks'}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
                     <div className="relative">
                         <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
                         <input
@@ -422,28 +487,43 @@ export default function ChatInterface({ role, initialUser, portalTitle, classNam
                                 <p className="text-xs font-medium text-gray-500">No active conversations</p>
                             </div>
                         ) : (
-                            filteredConversations.map(conv => (
+                            filteredConversations.map(conv => {
+                                const isBank = conv.metadata?.type === 'bank';
+                                const activeStyle = activeConversation === conv.id;
+                                const activeBg = isBank
+                                    ? 'bg-amber-500 shadow-xl shadow-amber-500/20'
+                                    : 'bg-[#6605c7] shadow-xl shadow-[#6605c7]/20';
+                                return (
                                 <div
                                     key={conv.id}
                                     onClick={() => { setActiveConversation(conv.id); setShowDocPanel(false); }}
                                     className={`px-6 py-5 cursor-pointer transition-all relative rounded-3xl group
-                                    ${activeConversation === conv.id ? 'bg-[#6605c7] shadow-xl shadow-[#6605c7]/20' : 'hover:bg-gray-50'}`}
+                                    ${activeStyle ? activeBg : 'hover:bg-gray-50'}`}
                                 >
                                     <div className="flex justify-between items-start mb-2">
                                         <div className="flex items-center gap-3">
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${activeConversation === conv.id ? 'bg-white/20 text-white' : 'bg-[#6605c7] text-white shadow-lg shadow-[#6605c7]/20'}`}>
-                                                {(conv.customerName || conv.customerPhone)?.substring(0, 1)}
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${
+                                                activeStyle
+                                                    ? 'bg-white/20 text-white'
+                                                    : isBank
+                                                        ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                                                        : 'bg-[#6605c7] text-white shadow-lg shadow-[#6605c7]/20'
+                                            }`}>
+                                                {isBank
+                                                    ? <span className="material-symbols-outlined text-[16px]">account_balance</span>
+                                                    : (conv.customerName || conv.customerPhone)?.substring(0, 1)
+                                                }
                                             </div>
                                             <div className="min-w-0">
-                                                <span className={`font-black text-sm tracking-tight truncate block ${activeConversation === conv.id ? 'text-white' : 'text-gray-200'}`}>
+                                                <span className={`font-black text-sm tracking-tight truncate block ${activeStyle ? 'text-white' : 'text-gray-800'}`}>
                                                     {conv.customerName || conv.customerPhone}
                                                 </span>
-                                                <span className={`text-[10px] font-medium block mt-0.5 ${activeConversation === conv.id ? 'text-white/80' : 'text-gray-500'}`}>
-                                                    Online
+                                                <span className={`text-[10px] font-medium block mt-0.5 ${activeStyle ? 'text-white/80' : isBank ? 'text-amber-600' : 'text-gray-500'}`}>
+                                                    {isBank ? '🏦 Bank Channel' : 'Online'}
                                                 </span>
                                             </div>
                                         </div>
-                                        <span className={`text-[10px] font-medium ${activeConversation === conv.id ? 'text-white/70' : 'text-gray-400'}`}>
+                                        <span className={`text-[10px] font-medium ${activeStyle ? 'text-white/70' : 'text-gray-400'}`}>
                                             {conv.updatedAt ? new Date(conv.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                                         </span>
                                     </div>
@@ -456,7 +536,8 @@ export default function ChatInterface({ role, initialUser, portalTitle, classNam
                                         <div className="absolute right-6 bottom-6 w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></div>
                                     )}
                                 </div>
-                            ))
+                                );
+                            })
                         )
                     ) : (
                         loadingUsers ? (

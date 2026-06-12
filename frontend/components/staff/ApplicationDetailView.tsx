@@ -949,6 +949,18 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">COURSE CATEGORY</p>
                           <p className="text-[12px] font-bold text-slate-700 truncate">{application.courseLevel || "POSTGRADUATE ABROAD"}</p>
                         </div>
+                        <div className="space-y-0.5 col-span-2 sm:col-span-1">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">DESTINATION</p>
+                          <p className="text-[12px] font-bold text-slate-700 uppercase truncate">
+                            {application.country || application.user?.studyDestination || application.student?.studyDestination || "—"}
+                          </p>
+                        </div>
+                        <div className="space-y-0.5 col-span-2 sm:col-span-1">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">INTAKE</p>
+                          <p className="text-[12px] font-bold text-slate-700 truncate">
+                            {application.user?.intakeSeason || application.student?.intakeSeason || "—"}
+                          </p>
+                        </div>
                         {(application.bank || application.targetBank) && (
                           <div className="space-y-0.5 col-span-2 sm:col-span-1">
                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">LAN NUMBER</p>
@@ -1307,6 +1319,14 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Nationality</p>
                           <p className="text-[14px] font-semibold text-slate-900">{application.nationality || application.student?.nationality?.name || "Indian"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Study Destination</p>
+                          <p className="text-[14px] font-semibold text-slate-900 uppercase">{application.country || application.user?.studyDestination || application.student?.studyDestination || "—"}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Target Intake</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.user?.intakeSeason || application.student?.intakeSeason || "—"}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Visa Refusal</p>
