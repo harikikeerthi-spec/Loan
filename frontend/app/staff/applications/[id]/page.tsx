@@ -221,9 +221,19 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                     }`}>
                                     {application.status || "PENDING"}
                                 </span>
-                                <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded">
-                                    {application.bank}
-                                </span>
+                                {application.bank && (
+                                    <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded">
+                                        {application.bank}
+                                    </span>
+                                )}
+                                {application.bank && (
+                                    <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${application.lanNumber
+                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                            : "bg-amber-50 text-amber-700 border-amber-200"
+                                        }`}>
+                                        LAN: {application.lanNumber || "PENDING"}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     </div>
