@@ -438,6 +438,9 @@ export class BankDashboardService {
       .from('LoanApplication')
       .update({
         status: 'disbursed',
+        stage: 'disbursement',
+        progress: 100,
+        disbursedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       })
       .eq('id', applicationId);

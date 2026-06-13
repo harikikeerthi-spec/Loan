@@ -92,9 +92,9 @@ export class LoanStateMachine {
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
     {
-      from: ['under_bank_review', 'file_logged', 'query_raised', 'conditional_sanction', 'partial_sanction', 'counter_offer'],
+      from: ['pending', 'docs_received', 'staff_verified', 'submitted_to_bank', 'under_bank_review', 'file_logged', 'query_raised', 'conditional_sanction', 'partial_sanction', 'counter_offer', 'approved', 'sanctioned'],
       to: 'rejected',
-      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
+      allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin', 'staff']
     },
     {
       from: ['approved', 'sanctioned', 'conditional_sanction', 'partial_sanction', 'counter_offer'],
@@ -172,7 +172,9 @@ export class LoanStateMachine {
       case 'counter_offer': return 80;
       case 'approved': return 85;
       case 'sanctioned': return 90;
-      case 'disbursement_confirmed': return 95;
+      case 'disbursement_confirmed': return 100;
+      case 'disbursed': return 100;
+      case 'partially_disbursed': return 95;
       case 'closed': return 100;
       default: return 10;
     }
@@ -187,7 +189,7 @@ export class LoanStateMachine {
     if (['staff_verified', 'submitted_to_bank'].includes(s)) return 'Submitted';
     if (['file_logged', 'under_bank_review', 'query_raised'].includes(s)) return 'Verification';
     if (['conditional_sanction', 'partial_sanction', 'counter_offer', 'approved', 'sanctioned'].includes(s)) return 'Sanctioned';
-    if (['disbursement_confirmed', 'closed'].includes(s)) return 'Disbursed';
+    if (['disbursement_confirmed', 'closed', 'disbursed', 'partially_disbursed'].includes(s)) return 'Disbursed';
     return 'Pre-login';
   }
 

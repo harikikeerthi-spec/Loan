@@ -87,7 +87,19 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const [fetchedStatusHistory, setFetchedStatusHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  const progress = application.progress || 90;
+  const getDynamicProgress = () => {
+    const s = String(application.status || '').toLowerCase();
+    if (['disbursed', 'closed'].includes(s)) return 100;
+    if (typeof application.progress === 'number' && application.progress > 0) return application.progress;
+    if (['sanctioned', 'approved'].includes(s)) return 95;
+    if (['under_bank_review', 'query_raised', 'conditional_sanction'].includes(s)) return 90;
+    if (['submitted_to_bank', 'file_logged'].includes(s)) return 75;
+    if (['staff_verified'].includes(s)) return 50;
+    if (['docs_received', 'docs_uploaded', 'under_review'].includes(s)) return 40;
+    if (['submitted'].includes(s)) return 25;
+    return application.progress || 90;
+  };
+  const progress = getDynamicProgress();
   const status = (application.status || "APPROVED").toUpperCase();
   const appId = application.applicationNumber || `APP${(application.id || application._id || "MO2V2P4UQZEU").slice(-10).toUpperCase()}`;
   const studentId = application.studentId || application.userId || "—";
@@ -702,17 +714,18 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     const history = fetchedStatusHistory && fetchedStatusHistory.length > 0
       ? fetchedStatusHistory
       : (application.statusHistory || []);
+    console.log('[DEBUG_TIMELINE] history used for timestamps:', history);
 
     const findHistoryTime = (statuses: string[]) => {
       const matches = history
-        .filter((h: any) => statuses.includes(String(h.toStatus || h.to_status || "").toLowerCase()))
+        .filter((h: any) => statuses.includes(String(h.toStatus || h.to_status || h.status || h.toStage || h.to_stage || h.stage || "").toLowerCase()))
         .sort((a: any, b: any) => {
-          const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
-          const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
+          const timeA = new Date(a.createdAt || a.created_at || a.timestamp || 0).getTime();
+          const timeB = new Date(b.createdAt || b.created_at || b.timestamp || 0).getTime();
           return timeA - timeB;
         });
       if (matches.length > 0) {
-        return matches[0].createdAt || matches[0].created_at;
+        return matches[0].createdAt || matches[0].created_at || matches[0].timestamp;
       }
       return undefined;
     };
@@ -722,43 +735,41 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
       let time: string | undefined = undefined;
       switch (i) {
         case 0:
-          time = findHistoryTime(['pending']);
+          time = findHistoryTime(['draft', 'pending', 'application_created']) || application.createdAt || application.date;
           break;
         case 1:
-          time = findHistoryTime(['docs_received', 'docs_uploaded']);
+          time = findHistoryTime(['submitted', 'application_submitted', 'docs_received', 'docs_uploaded']) || application.submittedAt;
           break;
         case 2:
-          time = findHistoryTime(['staff_verified']);
+          time = findHistoryTime(['staff_verified', 'verification', 'documents_verified']) || application.verifiedAt;
           break;
         case 3:
-          time = findHistoryTime(['submitted_to_bank', 'file_logged']);
+          time = findHistoryTime(['submitted_to_bank', 'file_logged']) || application.fileLoggedAt || application.submittedToBankAt;
           break;
         case 4:
-          time = findHistoryTime(['under_bank_review', 'query_raised']);
+          time = findHistoryTime(['under_bank_review', 'query_raised', 'processing']) || application.reviewStartedAt || application.fileLoggedAt;
           break;
         case 5:
-          time = findHistoryTime(['approved', 'sanctioned', 'conditional_sanction', 'counter_offer']);
+          time = findHistoryTime(['approved', 'sanctioned', 'conditional_sanction', 'counter_offer']) || application.approvedAt;
           break;
         case 6:
-          time = findHistoryTime(['sanctioned', 'approved']);
+          time = findHistoryTime(['sanctioned', 'approved', 'sanction']) || application.sanctionDate || application.approvedAt;
           break;
         case 7:
-          time = findHistoryTime(['disbursement_confirmed', 'closed']);
+          time = findHistoryTime(['disbursed', 'disbursement_confirmed', 'closed', 'disbursement']) || application.disbursedAt;
           break;
       }
       extractedTimestamps.push(time);
     }
 
-    // Check if the history timestamps are valid and distinct
-    const validTimestamps = extractedTimestamps.filter((t): t is string => !!t);
-    const uniqueTimestamps = Array.from(new Set(validTimestamps.map(t => new Date(t).getTime())));
-    const hasValidHistory = uniqueTimestamps.length >= 2;
-
-    if (hasValidHistory && extractedTimestamps[stageIdx]) {
+    // Check if the history timestamps are valid
+    if (extractedTimestamps[stageIdx]) {
       return extractedTimestamps[stageIdx];
     }
 
-    // Chronological fallback when status history is missing/identical
+    // Fallbacks if history timestamp is missing
+    if (stageIdx === 0 && appCreatedAt) return appCreatedAt;
+
     const getAnchorIdx = (p: number) => {
       if (p >= 100) return 7;
       if (p >= 95) return 7;
@@ -773,25 +784,32 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
 
     const anchorIdx = getAnchorIdx(progress);
 
+    // If this is the active stage and we have an update time, use it
+    if (active && stageIdx === anchorIdx && appUpdatedAt) {
+      return appUpdatedAt;
+    }
+    
+    // If this is a completed stage and it is the last completed stage
+    if (completed && stageIdx === anchorIdx && appUpdatedAt) {
+      return appUpdatedAt;
+    }
+
     let startD = new Date(appCreatedAt);
-    if (isNaN(startD.getTime())) startD = new Date(Date.now() - 5 * 24 * 3600000);
+    if (isNaN(startD.getTime())) startD = new Date();
     let endD = new Date(appUpdatedAt);
     if (isNaN(endD.getTime())) endD = new Date();
 
     if (startD.getTime() > endD.getTime()) {
-      startD = new Date(endD.getTime() - 5 * 24 * 3600000);
+      startD = new Date(endD.getTime() - 1000);
     }
 
     const span = endD.getTime() - startD.getTime();
-    if (span >= 2 * 3600000 && anchorIdx > 0) {
-      // Linear interpolation fallback
+    if (span > 0 && anchorIdx > 0) {
+      // Linear interpolation fallback only if we absolutely have to
       const step = span / anchorIdx;
       return new Date(startD.getTime() + stageIdx * step).toISOString();
     } else {
-      // Offsets back from endD fallback
-      const offset = 24 * 3600000 + 4 * 3600000; // 28 hours
-      const diff = (anchorIdx - stageIdx) * offset;
-      return new Date(endD.getTime() - diff).toISOString();
+      return new Date(endD.getTime() - (anchorIdx - stageIdx) * 60000).toISOString();
     }
   };
 

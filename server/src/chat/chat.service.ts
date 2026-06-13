@@ -31,12 +31,17 @@ export class ChatService {
     // Clean phone number (strip 'whatsapp:' and normalize to 10 digits)
     const phone = this.normalizePhone(customerPhone);
 
-    // Check if conversation exists by phone number (since customerPhone is unique)
-    let { data: conv, error } = await this.db
+    let query = this.db
       .from('Conversation')
       .select('*')
-      .eq('customerPhone', phone)
-      .maybeSingle();
+      .eq('customerPhone', phone);
+
+    if (additionalMetadata && additionalMetadata.applicationId) {
+      query = query.contains('metadata', { applicationId: additionalMetadata.applicationId });
+    }
+
+    let { data: convData, error } = await query.order('updatedAt', { ascending: false }).limit(1);
+    let conv = convData?.[0] || null;
 
     if (error) {
       this.logger.error('Failed to query conversation', error);
@@ -106,6 +111,9 @@ export class ChatService {
     content: string;
     messageType?: string;
     status?: string;
+    attachmentUrl?: string;
+    attachmentType?: string;
+    senderName?: string;
   }) {
     const { data: message, error } = await this.db
       .from('Message')
@@ -185,17 +193,32 @@ export class ChatService {
     return data;
   }
 
+  async getMessageById(messageId: string) {
+    const { data, error } = await this.db
+      .from('Message')
+      .select('*')
+      .eq('id', messageId)
+      .maybeSingle();
+
+    if (error) {
+      throw new HttpException('Db Error', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+    return data;
+  }
+
   async getMessagesByPhone(phone: string) {
     const cleanPhone = this.normalizePhone(phone);
     
-    // Find conversation first
-    const { data: conv } = await this.db
+    // Find most recently updated active conversation first
+    const { data: convData } = await this.db
       .from('Conversation')
       .select('id')
       .eq('customerPhone', cleanPhone)
       .eq('status', 'active')
-      .maybeSingle();
+      .order('updatedAt', { ascending: false })
+      .limit(1);
 
+    const conv = convData?.[0] || null;
     if (!conv) return [];
 
     return this.getMessages(conv.id);

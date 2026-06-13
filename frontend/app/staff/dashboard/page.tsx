@@ -62,6 +62,82 @@ type ApplicationRowForBankSend = {
     targetBank?: string;
 };
 
+type ApplicationProgressFields = {
+    progress?: number;
+    status?: string;
+    stage?: string;
+    bankWorkflowStatus?: string;
+    currentStage?: string;
+};
+
+const getApplicationDisplayProgress = (app: ApplicationProgressFields): number => {
+    const status = (app.status || "").toLowerCase();
+    const stage = (app.stage || "").toLowerCase();
+    const bankWorkflow = (app.bankWorkflowStatus || "").toUpperCase();
+
+    if (
+        status === "disbursed" ||
+        status === "disbursement_confirmed" ||
+        status === "closed" ||
+        bankWorkflow === "DISBURSED"
+    ) {
+        return 100;
+    }
+    if (status === "partially_disbursed") {
+        return Math.max(app.progress ?? 0, 95);
+    }
+    if (status === "approved" || stage === "sanction" || stage === "sanctioned") {
+        return Math.max(app.progress ?? 0, 90);
+    }
+    if (
+        stage === "bank_review" ||
+        status === "under_bank_review" ||
+        status === "file_logged" ||
+        status === "processing"
+    ) {
+        return Math.max(app.progress ?? 0, 75);
+    }
+    if (stage === "credit_check" || status === "query_raised") {
+        return Math.max(app.progress ?? 0, 62);
+    }
+    if (
+        stage === "submit_to_bank" ||
+        stage === "bank_submission" ||
+        status === "submitted_to_bank"
+    ) {
+        return Math.max(app.progress ?? 0, 50);
+    }
+    if (stage === "document_verification" || stage === "documents_verification") {
+        return Math.max(app.progress ?? 0, 40);
+    }
+    if (status === "submitted" || stage === "application_submitted") {
+        return Math.max(app.progress ?? 0, 25);
+    }
+
+    return app.progress ?? 10;
+};
+
+const getApplicationStageLabel = (app: ApplicationProgressFields, progress: number): string => {
+    if (app.currentStage) return app.currentStage;
+
+    const status = (app.status || "").toLowerCase();
+    if (
+        status === "disbursed" ||
+        status === "disbursement_confirmed" ||
+        status === "closed" ||
+        (app.bankWorkflowStatus || "").toUpperCase() === "DISBURSED"
+    ) {
+        return "Disbursed";
+    }
+
+    if (progress <= 12) return "Application Created";
+    if (progress <= 40) return "Documents Uploaded";
+    if (progress <= 70) return "Under Review";
+    if (progress <= 85) return "Credit Check";
+    if (progress <= 90) return "Sanction";
+    return "Disbursement";
+};
+
 const StatCard = ({ label, value, icon, color, trend, loading, hint, badge, ...props }: any) => {
     // Generate styling based on the color string to keep the UI clean
     let colorScheme = {
@@ -583,13 +659,34 @@ export default function StaffDashboardPage() {
     const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true);
     const autoRefreshInterval = useRef<NodeJS.Timeout | null>(null);
 
-    // Tasks State
-    const [tasks, setTasks] = useState([
-        { id: 1, title: "Review pending applications from HDFC", completed: false },
-        { id: 2, title: "Follow up with Student #8921 on missing documents", completed: false },
-        { id: 3, title: "Sync with Bank representative regarding SLA", completed: true },
+    const [tasks, setTasks] = useState<{ id: any; title: string; completed: boolean }[]>([
+        { id: 1, title: "Loading action items...", completed: false }
     ]);
     const [newTaskTitle, setNewTaskTitle] = useState("");
+
+    const loadDynamicTasks = useCallback(async () => {
+        try {
+            const res: any = await adminApi.getApplications({ limit: "5", status: "submitted" });
+            const apps = res.data || [];
+            const dynamicTasks = apps.map((app: any, idx: number) => ({
+                id: app._id || app.id || idx,
+                title: `Review pending application from ${app.applicant?.firstName || 'Student'} (${app.applicationNumber || 'New'})`,
+                completed: false
+            }));
+
+            if (dynamicTasks.length === 0) {
+                dynamicTasks.push({ id: 999, title: "All caught up! No pending applications.", completed: true });
+            }
+            setTasks(dynamicTasks);
+        } catch (e) {
+            console.error("Failed to load tasks", e);
+            setTasks([{ id: 1, title: "Failed to load tasks", completed: false }]);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadDynamicTasks();
+    }, [loadDynamicTasks]);
 
     // Email / Communications
     const [emailData, setEmailData] = useState({ to: "", subject: "", content: "", role: "student", isBulk: false });
@@ -2989,6 +3086,18 @@ export default function StaffDashboardPage() {
 
                     {/* Right: Notifications + User + Logout */}
                     <div className="flex items-center gap-3">
+                        {/* Real-time Sync Timer */}
+                        <div className="hidden lg:flex items-center gap-4 border-r border-slate-200 pr-4">
+                            {/* <div className="flex items-center gap-2">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-[14px] font-black text-emerald-600 uppercase tracking-widest">Active System</span>
+                            </div> */}
+                            <div className="flex items-center gap-1.5 text-[14px] text-black-600 font-bold uppercase tracking-widest font-mono">
+                                <span className="material-symbols-outlined text-[13px]">sync</span>
+                                <span>Sync: {format(nowTime, 'MMM dd, HH:mm:ss')}</span>
+                            </div>
+                        </div>
+
                         <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded transition-all" onClick={() => setSidebarOpen(!sidebarOpen)}>
                             <span className="material-symbols-outlined text-[20px]">menu</span>
                         </button>
@@ -7301,7 +7410,9 @@ export default function StaffDashboardPage() {
                                                     <th className="sticky left-0 z-20 bg-slate-50 px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">APPLICANT PROFILE</span></th>
                                                     <th className="px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">COLLEGE NAME</span></th>
                                                     <th className="px-6 py-5 min-w-[240px] w-[240px]"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">TARGET BANK</span></th>
-                                                    <th className="px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">LAN NUMBER</span></th>
+                                                    {activeSection !== "incoming_queue" && (
+                                                        <th className="px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">LAN NUMBER</span></th>
+                                                    )}
                                                     <th className="px-5 py-5 w-48"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">PROGRESS</span></th>
                                                     <th className="px-5 py-5 min-w-[220px] w-[220px]"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">CURRENT STATUS</span></th>
                                                     <th className="px-5 py-5 text-center"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">ACTIONS</span></th>
@@ -7381,7 +7492,7 @@ export default function StaffDashboardPage() {
                                                         </>
                                                     )}
                                                     {(activeSection === "applications" || activeSection === "incoming_queue") && (() => {
-                                                        const progress = item.progress ?? 10;
+                                                        const progress = getApplicationDisplayProgress(item);
                                                         const statusKey = (item.status || 'draft').toLowerCase();
                                                         const statusColors: Record<string, string> = {
                                                             draft: 'bg-amber-50 text-amber-600 border border-amber-200',
@@ -7395,7 +7506,7 @@ export default function StaffDashboardPage() {
                                                             disbursed: 'bg-indigo-50 text-indigo-700 border border-indigo-200',
                                                         };
                                                         const initials = `${(item.firstName || item.student?.firstName || '?')[0]}${(item.lastName || item.student?.lastName || '')[0] || ''}`;
-                                                        const stageLabel = item.currentStage || (progress <= 12 ? 'Application Created' : progress <= 40 ? 'Documents Uploaded' : progress <= 70 ? 'Under Review' : progress <= 85 ? 'Credit Check' : progress <= 90 ? 'Sanction' : 'Disbursement');
+                                                        const stageLabel = getApplicationStageLabel(item, progress);
                                                         const isOnline = (item.email || item.student?.email) && onlineEmails.map(e => e.toLowerCase()).includes((item.email || item.student?.email).toLowerCase());
                                                         const popup = activeContactPopup;
                                                         const rowId = item.id || item._id || String(idx);
@@ -7427,7 +7538,9 @@ export default function StaffDashboardPage() {
                                                                                         firstName: item.firstName || item.student?.firstName || 'Student',
                                                                                         lastName: item.lastName || item.student?.lastName || '',
                                                                                         phone: item.phone || item.mobile || item.phoneNumber || item.student?.phone || '',
-                                                                                        phoneNumber: item.phone || item.mobile || item.phoneNumber || item.student?.phone || ''
+                                                                                        phoneNumber: item.phone || item.mobile || item.phoneNumber || item.student?.phone || '',
+                                                                                        applicationId: item.id || item.applicationId,
+                                                                                        applicationNumber: item.applicationNumber || item.application_number || (item.id ? `App #${item.id.substring(0, 8)}` : undefined)
                                                                                     };
                                                                                     setAutoStartUser(userObj);
                                                                                     setAutoStartBank(null);
@@ -7463,25 +7576,45 @@ export default function StaffDashboardPage() {
                                                                                     {item.firstName || item.student?.firstName || '—'} {item.lastName || item.student?.lastName || ''}
                                                                                 </p>
                                                                                 {isExpanded && (
-                                                                                    <div className="mt-1">
+                                                                                    <div className="mt-2 flex flex-wrap items-center gap-2">
                                                                                         <p
                                                                                             onClick={(e) => {
                                                                                                 e.stopPropagation();
                                                                                                 const appId = item.id || item._id;
                                                                                                 if (appId) window.open(`/staff/applications/${appId}`, '_blank');
                                                                                             }}
-                                                                                            className="text-[12px] text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer transition-all font-bold uppercase tracking-wide inline-block"
+                                                                                            className="text-[10px] bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-indigo-700 cursor-pointer transition-all font-bold uppercase tracking-widest inline-flex items-center gap-1.5 px-2 py-1 rounded whitespace-nowrap border border-slate-200"
                                                                                             title="Click to open Application Page"
                                                                                         >
+                                                                                            <span className="material-symbols-outlined text-[12px]">description</span>
                                                                                             {item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`}
                                                                                         </p>
+
+                                                                                        <button
+                                                                                            onClick={(e) => {
+                                                                                                e.stopPropagation();
+                                                                                                const bankObj = {
+                                                                                                    bankName: item.bank || item.targetBank || 'Bank Partner',
+                                                                                                    applicationId: item.id || item._id,
+                                                                                                    applicationNumber: item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`
+                                                                                                };
+                                                                                                setAutoStartUser(null);
+                                                                                                setAutoStartBank(bankObj);
+                                                                                                navigateToSection("chat_customer");
+                                                                                            }}
+                                                                                            className="text-[10px] text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-2 py-1 rounded inline-flex items-center gap-1.5 font-bold uppercase tracking-wider transition-colors border border-amber-200 whitespace-nowrap shadow-sm"
+                                                                                            title="Open Bank Support Chat"
+                                                                                        >
+                                                                                            <span className="material-symbols-outlined text-[12px]">chat</span>
+                                                                                            Chat with Bank
+                                                                                        </button>
                                                                                     </div>
                                                                                 )}
                                                                             </div>
 
                                                                             {isExpanded && (
-                                                                                <div className="flex flex-col items-end shrink-0 pt-0.5">
-                                                                                    <div className="flex items-center gap-1.5 relative">
+                                                                                <div className="flex flex-col items-end shrink-0 pt-1">
+                                                                                    <div className="flex items-center gap-2 relative">
                                                                                         {/* Phone */}
                                                                                         <button
                                                                                             onClick={(e) => {
@@ -7493,10 +7626,10 @@ export default function StaffDashboardPage() {
                                                                                                         : { id: uid, type: 'phone' }
                                                                                                 );
                                                                                             }}
-                                                                                            className="w-6 h-6 rounded-md bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-all"
+                                                                                            className="w-7 h-7 rounded bg-white border border-slate-200 shadow-sm hover:border-indigo-300 hover:bg-indigo-50 flex items-center justify-center text-slate-500 hover:text-indigo-600 transition-all"
                                                                                             title="Phone number"
                                                                                         >
-                                                                                            <span className="material-symbols-outlined text-[13px]">phone_enabled</span>
+                                                                                            <span className="material-symbols-outlined text-[14px]">phone_enabled</span>
                                                                                         </button>
 
                                                                                         {/* Email */}
@@ -7510,10 +7643,10 @@ export default function StaffDashboardPage() {
                                                                                                         : { id: uid, type: 'email' }
                                                                                                 );
                                                                                             }}
-                                                                                            className="w-6 h-6 rounded-md bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-800 transition-all"
+                                                                                            className="w-7 h-7 rounded bg-white border border-slate-200 shadow-sm hover:border-indigo-300 hover:bg-indigo-50 flex items-center justify-center text-slate-500 hover:text-indigo-600 transition-all"
                                                                                             title="Email address"
                                                                                         >
-                                                                                            <span className="material-symbols-outlined text-[13px]">mail</span>
+                                                                                            <span className="material-symbols-outlined text-[14px]">mail</span>
                                                                                         </button>
 
                                                                                         {/* Tooltip Overlay */}
@@ -7538,7 +7671,10 @@ export default function StaffDashboardPage() {
                                                                                                                     email: item.email || item.student?.email,
                                                                                                                     firstName: item.firstName || item.student?.firstName || 'Student',
                                                                                                                     lastName: item.lastName || item.student?.lastName || '',
-                                                                                                                    phone: item.phone || item.mobile || item.phoneNumber || item.student?.phone || ''
+                                                                                                                    phone: item.phone || item.mobile || item.phoneNumber || item.student?.phone || '',
+                                                                                                                    phoneNumber: item.phone || item.mobile || item.phoneNumber || item.student?.phone || '',
+                                                                                                                    applicationId: item.id || item.applicationId,
+                                                                                                                    applicationNumber: item.applicationNumber || item.application_number || (item.id ? `App #${item.id.substring(0, 8)}` : undefined)
                                                                                                                 };
                                                                                                                 setAutoStartUser(userObj);
                                                                                                                 setAutoStartBank(null);
@@ -7625,17 +7761,19 @@ export default function StaffDashboardPage() {
                                                                         </div>
                                                                     </div>
                                                                 </td>
-                                                                <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
-                                                                    {item.lanNumber ? (
-                                                                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                                                            {item.lanNumber}
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                                                            PENDING
-                                                                        </span>
-                                                                    )}
-                                                                </td>
+                                                                {activeSection !== "incoming_queue" && (
+                                                                    <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
+                                                                        {item.lanNumber ? (
+                                                                            <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                                                {item.lanNumber}
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                                                                PENDING
+                                                                            </span>
+                                                                        )}
+                                                                    </td>
+                                                                )}
                                                                 <td className="px-5 py-4 border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors" style={{ minWidth: 160 }}>
                                                                     <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden mb-2">
                                                                         <div className={`h-1.5 rounded-full transition-all duration-700 ${progress === 100 ? 'bg-emerald-500' : 'bg-[#4f46e5]'}`} style={{ width: `${progress}%` }} />
@@ -7891,12 +8029,14 @@ export default function StaffDashboardPage() {
                                                                         <button
                                                                             onClick={() => {
                                                                                 const userObj = {
-                                                                                    id: item.userId || item.user_id || item.student?.id || item.student?._id,
+                                                                                    id: item.id || item._id || item.userId || item.user_id || item.student?.id || item.student?._id,
                                                                                     email: item.email || item.student?.email,
                                                                                     firstName: item.firstName || item.student?.firstName || 'Student',
                                                                                     lastName: item.lastName || item.student?.lastName || '',
                                                                                     phone: item.phone || item.mobile || item.phoneNumber || item.student?.phone || '',
-                                                                                    phoneNumber: item.phone || item.mobile || item.phoneNumber || item.student?.phone || ''
+                                                                                    phoneNumber: item.phone || item.mobile || item.phoneNumber || item.student?.phone || '',
+                                                                                    applicationId: item.id || item.applicationId,
+                                                                                    applicationNumber: item.applicationNumber || item.application_number || (item.id ? `App #${item.id.substring(0, 8)}` : undefined)
                                                                                 };
                                                                                 setAutoStartUser(userObj);
                                                                                 setAutoStartBank(null);
@@ -7906,26 +8046,6 @@ export default function StaffDashboardPage() {
                                                                             title="Chat with Student"
                                                                         >
                                                                             <span className="material-symbols-outlined text-[16px]">school</span>
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                const bankName = item.bank || item.targetBank || item.bankName || item.assignedBank || item.submittedTo || null;
-                                                                                if (!bankName) {
-                                                                                    alert('No bank has been assigned to this application yet.');
-                                                                                    return;
-                                                                                }
-                                                                                setAutoStartUser(null);
-                                                                                setAutoStartBank({
-                                                                                    bankName,
-                                                                                    applicationId: item.id || item._id,
-                                                                                    applicationNumber: item.applicationNumber || item.lanNumber || undefined
-                                                                                });
-                                                                                navigateToSection("chat_customer");
-                                                                            }}
-                                                                            className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 text-amber-600 hover:text-amber-800 hover:bg-amber-100 flex items-center justify-center transition-all shadow-sm"
-                                                                            title="Chat with Bank"
-                                                                        >
-                                                                            <span className="material-symbols-outlined text-[16px]">account_balance</span>
                                                                         </button>
                                                                         <button
                                                                             onClick={() => {

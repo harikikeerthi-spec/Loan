@@ -18,7 +18,6 @@ export default function BankSettings() {
     const [smsAlerts, setSmsAlerts] = useState(false);
     const [autoAssign, setAutoAssign] = useState(true);
     const [slaThreshold, setSlaThreshold] = useState("48");
-    const [themeMode, setThemeMode] = useState("light");
     const [saving, setSaving] = useState(false);
     const [saveStatus, setSaveStatus] = useState<"idle" | "success" | "error">("idle");
 
@@ -298,7 +297,7 @@ export default function BankSettings() {
                 </div>
 
                 {/* Select fields */}
-                <div className="grid grid-cols-2 gap-4 border-t border-purple-50/50 pt-6">
+                <div className="grid grid-cols-1 md:w-1/2 gap-4 border-t border-purple-50/50 pt-6">
                     <div>
                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">SLA Escalation Threshold</label>
                         <select 
@@ -309,18 +308,6 @@ export default function BankSettings() {
                             <option value="24">24 Hours (Aggressive)</option>
                             <option value="48">48 Hours (Standard)</option>
                             <option value="72">72 Hours (Relaxed)</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1.5">Portal Interface Theme</label>
-                        <select 
-                            value={themeMode}
-                            onChange={(e) => setThemeMode(e.target.value)}
-                            className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7] text-gray-700"
-                        >
-                            <option value="light">Glass Violet (Default)</option>
-                            <option value="dark">Monochrome Dark</option>
                         </select>
                     </div>
                 </div>

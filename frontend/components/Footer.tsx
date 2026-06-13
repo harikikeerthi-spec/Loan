@@ -95,7 +95,7 @@ export default function Footer() {
                             <li className="flex items-start gap-2 text-gray-400">
                                 <span className="material-symbols-outlined text-[#6605c7] text-base mt-0.5">location_on</span>
                                 <div>
-                                    <span className="text-white font-medium block">Nuzvidu</span>
+                                    <span className="text-white font-medium block">Nuzvid</span>
                                     <span className="text-[11px] text-gray-500">Headquarters</span>
                                 </div>
                             </li>

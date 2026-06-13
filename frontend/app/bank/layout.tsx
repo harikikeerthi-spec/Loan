@@ -20,25 +20,24 @@ const bankLogos: Record<string, string> = {
 
 const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => {
     const isDashboard = path === "/bank/dashboard";
-    const activeStyle = active 
-        ? isDashboard 
+    const activeStyle = active
+        ? isDashboard
             ? {
                 background: 'linear-gradient(135deg, #6605c7, #8b24e5)',
                 boxShadow: '0 4px 14px rgba(102, 5, 199, 0.22)'
-              }
+            }
             : {
                 background: '#111111',
                 border: '1px solid rgba(255, 255, 255, 0.1)',
                 boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
-              }
+            }
         : undefined;
 
     return (
         <Link
             href={path}
-            className={`flex items-center py-2 px-3 rounded-xl transition-all relative group overflow-hidden ${
-                active ? "text-white" : "text-gray-500 hover:text-gray-900"
-            }`}
+            className={`flex items-center py-2 px-3 rounded-xl transition-all relative group overflow-hidden ${active ? "text-white" : "text-gray-500 hover:text-gray-900"
+                }`}
             style={activeStyle}
         >
             <div className="flex items-center gap-3 min-w-0 flex-1 relative z-10">
@@ -59,11 +58,10 @@ const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => {
                 )}
 
                 {badge && !collapsed && (
-                    <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-extrabold relative z-10 shrink-0 ${
-                        active 
+                    <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-extrabold relative z-10 shrink-0 ${active
                             ? isDashboard ? "bg-white text-[#6605c7]" : "bg-white/20 text-white border border-white/10"
                             : "bg-[#6605c7] text-white"
-                    }`}>
+                        }`}>
                         {badge}
                     </span>
                 )}
@@ -92,6 +90,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
     const [scrolled, setScrolled] = useState(false);
 
     const [syncTime, setSyncTime] = useState("");
+
 
     useEffect(() => {
         setSyncTime(format(new Date(), 'MMM dd, HH:mm:ss'));
@@ -344,8 +343,8 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                 {selectedBankKey && bankLogos[selectedBankKey] && (
                                     <>
                                         <div className="h-6 w-px bg-gray-200 shrink-0 mx-0.5" />
-                                        <img 
-                                            src={bankLogos[selectedBankKey]} 
+                                        <img
+                                            src={bankLogos[selectedBankKey]}
                                             alt={bankName}
                                             className="h-8 max-w-[75px] object-contain rounded shrink-0"
                                             title={bankName}
@@ -568,7 +567,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                 <span className="text-[9.5px] font-black text-emerald-600 uppercase tracking-widest">Active Node</span>
                             </div>
-                            <div className="flex items-center gap-1.5 text-[9.5px] text-gray-400 font-bold uppercase tracking-widest font-mono">
+                            <div className="flex items-center gap-1.5 text-[9.5px] text-black-400 font-bold uppercase tracking-widest font-mono">
                                 <span className="material-symbols-outlined text-[13px]">sync</span>
                                 <span>Sync: {syncTime || '--:--:--'}</span>
                             </div>
@@ -619,16 +618,15 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                                     <button
                                                         key={tab}
                                                         onClick={() => setActiveNotifTab(tab)}
-                                                        className={`flex-1 py-1 rounded-lg text-center transition-all ${
-                                                            activeNotifTab === tab 
-                                                                ? "bg-[#6605c7] text-white shadow-sm" 
+                                                        className={`flex-1 py-1 rounded-lg text-center transition-all ${activeNotifTab === tab
+                                                                ? "bg-[#6605c7] text-white shadow-sm"
                                                                 : "text-gray-400 hover:text-gray-700"
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {tab} ({
                                                             tab === "all" ? notifications.length :
-                                                            tab === "unread" ? notifications.filter(n => !n.read).length :
-                                                            notifications.filter(n => n.read).length
+                                                                tab === "unread" ? notifications.filter(n => !n.read).length :
+                                                                    notifications.filter(n => n.read).length
                                                         })
                                                     </button>
                                                 ))}
@@ -642,16 +640,15 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                                         <div
                                                             key={notif.id}
                                                             onClick={() => toggleRead(notif.id)}
-                                                            className={`p-3 border rounded-2xl relative transition-all cursor-pointer group ${
-                                                                notif.read ? "bg-white border-gray-100 opacity-60 hover:opacity-100" : "bg-purple-50/20 border-purple-100 hover:bg-purple-50/30"
-                                                            }`}
+                                                            className={`p-3 border rounded-2xl relative transition-all cursor-pointer group ${notif.read ? "bg-white border-gray-100 opacity-60 hover:opacity-100" : "bg-purple-50/20 border-purple-100 hover:bg-purple-50/30"
+                                                                }`}
                                                         >
                                                             <div className="flex justify-between items-start pr-4">
                                                                 <span className="text-[9.5px] font-black uppercase text-gray-800">{notif.title}</span>
                                                                 <span className="text-[8px] font-bold text-gray-400">{notif.time}</span>
                                                             </div>
                                                             <p className="text-[10.5px] text-gray-550 mt-1 leading-relaxed">{notif.text}</p>
-                                                            
+
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();

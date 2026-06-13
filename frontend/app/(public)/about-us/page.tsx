@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 const team = [
-    { name: "Arjun Mehta", role: "CEO & Co-Founder", avatar: "arjun" },
+    { name: "Vamsi Krishna", role: "CEO & Co-Founder", avatar: "" },
     { name: "Priya Nair", role: "CTO & Co-Founder", avatar: "priya" },
     { name: "Ravi Shankar", role: "Head of Partnerships", avatar: "ravi" },
     { name: "Kavya Reddy", role: "Lead Counselor", avatar: "kavya" },

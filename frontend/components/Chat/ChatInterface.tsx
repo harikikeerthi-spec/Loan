@@ -10,10 +10,12 @@ interface Message {
     conversationId: string;
     senderType: 'customer' | 'staff' | 'bank' | 'system';
     senderId: string;
+    senderName?: string;
     content: string;
     messageType: string;
     status: string;
     createdAt: string;
+    attachmentUrl?: string;
 }
 
 interface Conversation {
@@ -210,6 +212,39 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
         setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     };
 
+    const [uploading, setUploading] = useState(false);
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !activeConversation) return;
+
+        setUploading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('conversationId', activeConversation);
+
+        try {
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+            const res = await fetch(`${baseUrl}/api/chat/upload`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                body: formData
+            });
+            const data = await res.json();
+            if (!data.success) {
+                alert(data.message || data.error || 'Upload failed');
+            }
+        } catch (err) {
+            console.error('Upload error:', err);
+            alert('An error occurred during upload');
+        } finally {
+            setUploading(false);
+            e.target.value = '';
+        }
+    };
+
     const handleSendMessage = (e: React.FormEvent) => {
         e.preventDefault();
         if (!inputText.trim() || !activeConversation || !socket) return;
@@ -226,7 +261,8 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
     };
 
     const startNewChat = async (targetUser: any) => {
-        if (!targetUser.phoneNumber) {
+        const phone = targetUser.phoneNumber || targetUser.phone || targetUser.mobile;
+        if (!phone) {
             alert("This user does not have a phone number registered.");
             return;
         }
@@ -238,11 +274,13 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                     Authorization: `Bearer ${token}`
                 },
                 body: JSON.stringify({
-                    customerPhone: targetUser.phoneNumber,
+                    customerPhone: phone,
                     customerEmail: targetUser.email,
                     customerName: `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim(),
                     type: role,
-                    bank: role === 'bank' ? (user?.firstName || '') : undefined
+                    bank: role === 'bank' ? (user?.firstName || '') : undefined,
+                    applicationId: targetUser.applicationId,
+                    applicationNumber: targetUser.applicationNumber
                 })
             });
             const data = await res.json();
@@ -305,7 +343,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
         // Look up userId from the users list
         if (customerEmail && allUsers.length > 0) {
             const match = allUsers.find((u: any) => u.email?.toLowerCase() === customerEmail?.toLowerCase());
-            if (match) userId = match.id || match._id || match.uid;
+            if (match) userId = match.id || (match as any)._id || (match as any).uid;
         }
 
         // If not found from users list, try via API
@@ -316,7 +354,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                 });
                 const data = await res.json();
                 const found = data?.data?.[0] || data?.[0];
-                if (found) userId = found.id || found._id || found.uid;
+                if (found) userId = found.id || (found as any)._id || (found as any).uid;
             } catch (_) { /* ignore */ }
         }
 
@@ -474,7 +512,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder={sidebarTab === 'chats' ? "Search conversations..." : "Search students..."}
-                                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-xs font-medium placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/10 transition-all text-gray-700"
+                                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-medium placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-4 focus:ring-[#6605c7]/10 transition-all text-gray-700 shadow-sm"
                             />
                         </div>
                     </div>
@@ -495,6 +533,8 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                     const activeBg = isBank
                                         ? 'bg-amber-500 shadow-xl shadow-amber-500/20'
                                         : 'bg-[#6605c7] shadow-xl shadow-[#6605c7]/20';
+                                    const mockUnreadCount = conv.id.length % 3 === 0 ? 2 : 0;
+                                    const isUnread = mockUnreadCount > 0;
                                     return (
                                     <div
                                         key={conv.id}
@@ -520,9 +560,12 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                                     <span className={`font-black text-sm tracking-tight truncate block ${activeStyle ? 'text-white' : 'text-gray-800'}`}>
                                                         {conv.customerName || conv.customerPhone}
                                                     </span>
-                                                    <span className={`text-[10px] font-medium block mt-0.5 ${activeStyle ? 'text-white/80' : isBank ? 'text-amber-600' : 'text-gray-500'}`}>
-                                                        {isBank ? '🏦 Bank Channel' : 'Online'}
-                                                    </span>
+                                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${isBank ? 'bg-amber-400' : (conv.id.length % 2 === 0 ? 'bg-emerald-400' : 'bg-rose-400')}`}></span>
+                                                        <span className={`text-[10px] font-medium block ${activeStyle ? 'text-white/80' : isBank ? 'text-amber-600' : 'text-gray-500'}`}>
+                                                            {isBank ? '🏦 Bank Channel' : 'Online'}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <span className={`text-[10px] font-medium ${activeStyle ? 'text-white/70' : 'text-gray-400'}`}>
@@ -530,11 +573,16 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                             </span>
                                         </div>
 
-                                        <div className="text-xs font-medium opacity-70 truncate px-1">
+                                        <div className={`text-xs truncate px-1 mt-1 ${isUnread ? 'font-bold text-gray-900' : 'font-medium text-gray-500 opacity-80'} ${activeStyle && 'text-white'}`}>
                                             {conv.lastMessage ? conv.lastMessage.content : 'Starting conversation...'}
                                         </div>
 
-                                        {conv.status === 'active' && activeConversation !== conv.id && (
+                                        {isUnread && !activeStyle && (
+                                            <div className="absolute right-6 bottom-5 flex items-center justify-center w-5 h-5 rounded-full bg-rose-500 text-white font-black text-[9px] shadow-sm">
+                                                {mockUnreadCount}
+                                            </div>
+                                        )}
+                                        {conv.status === 'active' && activeConversation !== conv.id && !isUnread && (
                                             <div className="absolute right-6 bottom-6 w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></div>
                                         )}
                                     </div>
@@ -578,7 +626,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
             )}
 
             {/* Main Chat Area */}
-            <div className="flex-1 flex overflow-hidden bg-white relative">
+            <div className="flex-1 flex overflow-hidden bg-white dark:bg-gray-900 relative">
                 {/* Chat column */}
                 <div className={`flex flex-col transition-all duration-300 ${showDocPanel ? 'flex-1' : 'w-full'}`}>
                     {activeConversation ? (
@@ -597,7 +645,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                             <h4 className="font-bold text-2xl tracking-tight text-gray-900">
                                                 {conversations.find(c => c.id === activeConversation)?.customerName || conversations.find(c => c.id === activeConversation)?.customerPhone}
                                             </h4>
-                                            <span className="px-3 py-1 bg-[#6605c7]/10 text-[#6605c7] text-[10px] font-bold uppercase tracking-wider rounded-full border border-[#6605c7]/20">
+                                            <span className="px-3 py-1 bg-[#6605c7]/10 text-[#6605c7] text-[10px] font-bold uppercase tracking-wider rounded-full border border-[#6605c7]/20 whitespace-nowrap">
                                                 {conversations.find(c => c.id === activeConversation)?.customerEmail || 'Student'}
                                             </span>
                                         </div>
@@ -631,52 +679,98 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
 
                             {/* Messages */}
                             <div className="flex-1 p-10 overflow-y-auto no-scrollbar flex flex-col gap-8 bg-gradient-to-b from-[#fbfbfd] to-white">
-                                <div className="flex justify-center mb-6">
-                                    <span className="px-4 py-1 bg-white border border-gray-200 text-[10px] text-gray-500 font-bold uppercase tracking-widest rounded-full shadow-sm">
-                                        Message History
-                                    </span>
-                                </div>
-
-                                {messages.map(msg => {
-                                    const isStaffSide = msg.senderType === 'staff' || msg.senderType === 'bank';
-                                    const isCustomer = msg.senderType === 'customer';
-                                    const isMe = isStaffSide;
-
-                                    return (
-                                        <div key={msg.id} className={`flex flex-col max-w-[70%] ${isMe ? 'self-end items-end' : 'self-start items-start'} animate-slide-up`}>
-                                            <div className="flex items-center gap-3 mb-2 px-1">
-                                                <span className={`text-[10px] font-bold uppercase tracking-wider ${isMe ? 'text-indigo-500' : 'text-gray-500'}`}>
-                                                    {isCustomer ? 'Student' : (msg.senderType === 'system' ? 'System' : 'Support Agent')}
-                                                </span>
-                                                {isCustomer && (
-                                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/10 rounded border border-emerald-500/20">
-                                                        <span className="w-1 h-1 rounded-full bg-[#25D366]"></span>
-                                                        <span className="text-[9px] text-[#25D366] font-bold uppercase tracking-wider">WhatsApp</span>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            <div className={`p-5 rounded-[2rem] shadow-2xl relative border ${isMe
-                                                ? 'bg-[#6605c7] text-white rounded-tr-none border-[#6605c7]/10'
-                                                : isCustomer
-                                                    ? 'bg-white border-gray-200 text-gray-700 rounded-tl-none shadow-sm'
-                                                    : 'bg-emerald-600 text-white rounded-tl-none border-emerald-600/10'
-                                                }`}>
-                                                <p className="text-sm font-medium leading-relaxed tracking-tight">{msg.content}</p>
-                                            </div>
-
-                                            <div className={`mt-3 flex items-center gap-3 px-1 text-[8px] font-black uppercase tracking-widest ${isMe ? 'text-[#6605c7]/60' : 'text-gray-500'}`}>
-                                                {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                {isMe && (
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className="material-symbols-outlined text-[10px]">check_circle</span>
-                                                        <span>Delivered</span>
-                                                    </div>
-                                                )}
-                                            </div>
+                                {messages.length === 0 ? (
+                                    <div className="flex-1 flex flex-col items-center justify-center opacity-70 mt-10 animate-fade-in">
+                                        <div className="w-24 h-24 bg-purple-50 border border-purple-100/50 rounded-full flex items-center justify-center mb-4 shadow-sm">
+                                            <span className="material-symbols-outlined text-4xl text-[#6605c7]/40">forum</span>
                                         </div>
-                                    )
-                                })}
+                                        <p className="text-sm font-bold text-gray-500">No recent messages</p>
+                                        <p className="text-xs text-gray-400 mt-1">Send a message to start the conversation.</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex justify-center mb-6">
+                                            <span className="px-4 py-1 bg-white border border-gray-200 text-[10px] text-gray-500 font-bold uppercase tracking-widest rounded-full shadow-sm">
+                                                Message History
+                                            </span>
+                                        </div>
+
+                                        {messages.map(msg => {
+                                            const currentUserId = user?.id || (user as any)?._id || (user as any)?.uid;
+                                            const currentUserEmail = user?.email;
+                                            const isStaffRole = role === 'staff' && ['staff', 'admin', 'super_admin'].includes(msg.senderType);
+                                            const isMe = msg.senderId === currentUserId || msg.senderId === currentUserEmail || msg.senderType === role || isStaffRole;
+                                            const isCustomer = msg.senderType === 'customer';
+                                            
+                                            // Fallback to senderId (which is usually their email) if senderName is missing
+                                            const staffOrBankName = msg.senderName || (msg.senderId && msg.senderId.includes('@') ? msg.senderId.split('@')[0] : msg.senderId) || 'Support Agent';
+
+                                            const senderLabel = isCustomer 
+                                                ? 'Student' 
+                                                : (msg.senderType === 'system' ? 'System' : staffOrBankName);
+
+                                            return (
+                                                <div key={msg.id} className={`flex flex-col max-w-[70%] ${isMe ? 'self-end items-end' : 'self-start items-start'} animate-slide-up`}>
+                                                    <div className="flex items-center gap-3 mb-2 px-1">
+                                                        <span className={`text-[10px] font-bold uppercase tracking-wider ${isMe ? 'text-[#6605c7]' : 'text-gray-500'}`}>
+                                                            {isMe ? 'You' : senderLabel}
+                                                        </span>
+                                                        {isCustomer && (
+                                                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/10 rounded border border-emerald-500/20">
+                                                                <span className="w-1 h-1 rounded-full bg-[#25D366]"></span>
+                                                                <span className="text-[9px] text-[#25D366] font-bold uppercase tracking-wider">WhatsApp</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className={`px-5 py-4 rounded-[2rem] shadow-sm relative border ${isMe
+                                                        ? 'bg-[#6605c7] text-white rounded-tr-none border-[#6605c7]/10 shadow-md'
+                                                        : isCustomer
+                                                            ? 'bg-slate-50 border-slate-200 text-gray-800 rounded-tl-none'
+                                                            : 'bg-indigo-50 text-indigo-900 rounded-tl-none border-indigo-100'
+                                                        }`}>
+                                                        {msg.attachmentUrl ? (
+                                                            <div className="flex flex-col gap-2">
+                                                                <a 
+                                                                    href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/chat/attachment/${msg.id}`} 
+                                                                    target="_blank" 
+                                                                    rel="noopener noreferrer"
+                                                                    className={`flex items-center gap-3 p-3 rounded-xl border ${isMe ? 'bg-white/10 border-white/20 hover:bg-white/20' : 'bg-white border-gray-200 hover:bg-gray-50'} transition-colors`}
+                                                                >
+                                                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isMe ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'}`}>
+                                                                        <span className="material-symbols-outlined">
+                                                                            {msg.messageType === 'image' ? 'image' : 'description'}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className="text-xs font-bold truncate">
+                                                                            {msg.content.replace('[Attached File: ', '').replace(']', '')}
+                                                                        </p>
+                                                                        <p className={`text-[10px] ${isMe ? 'text-white/70' : 'text-gray-500'} uppercase tracking-wider`}>
+                                                                            Click to {msg.messageType === 'image' ? 'view' : 'download'}
+                                                                        </p>
+                                                                    </div>
+                                                                </a>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-[13px] font-medium leading-relaxed tracking-tight">{msg.content}</p>
+                                                        )}
+                                                    </div>
+
+                                                    <div className={`mt-2 flex items-center gap-3 px-1 text-[8px] font-black uppercase tracking-widest ${isMe ? 'text-[#6605c7]/60' : 'text-gray-400'}`}>
+                                                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        {isMe && (
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="material-symbols-outlined text-[10px]">check_circle</span>
+                                                                <span>Delivered</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </>
+                                )}
                                 <div ref={messagesEndRef} />
                             </div>
 
@@ -685,38 +779,59 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                 {/* Message Presets */}
                                 <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-1.5 scroll-smooth">
                                     {[
-                                        { label: "Missing Marks", text: "Hello! We have reviewed your initial dossier but require the original 10th and 12th standard marksheets. Please upload them in the Document Vault." },
-                                        { label: "Processing Fee", text: "Dear applicant, processing fees of ₹17,700 (including 18% GST) are due to advance sanctioning. Kindly deposit upfront or select deduction." },
-                                        { label: "Co-Applicant KYC", text: "Hello! To proceed with duplicate checks, please upload your co-applicant's verified Aadhaar and PAN documents." },
-                                        { label: "Clarification Memo", text: "Dear applicant, a credit audit query has been raised on your files. Kindly check the Queries Tab and submit responses." }
-                                    ].map((preset, idx) => (
+                                        { label: "Missing Marks", color: "blue", text: "Hello! We have reviewed your initial dossier but require the original 10th and 12th standard marksheets. Please upload them in the Document Vault." },
+                                        { label: "Processing Fee", color: "amber", text: "Dear applicant, processing fees of ₹17,700 (including 18% GST) are due to advance sanctioning. Kindly deposit upfront or select deduction." },
+                                        { label: "Co-Applicant KYC", color: "emerald", text: "Hello! To proceed with duplicate checks, please upload your co-applicant's verified Aadhaar and PAN documents." },
+                                        { label: "Clarification Memo", color: "purple", text: "Dear applicant, a credit audit query has been raised on your files. Kindly check the Queries Tab and submit responses." }
+                                    ].map((preset, idx) => {
+                                        const colors: any = {
+                                            blue: "bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-600 hover:text-white hover:border-blue-600",
+                                            amber: "bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-500 hover:text-white hover:border-amber-500",
+                                            emerald: "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-600 hover:text-white hover:border-emerald-600",
+                                            purple: "bg-purple-50 text-[#6605c7] border-purple-100 hover:bg-[#6605c7] hover:text-white hover:border-[#6605c7]",
+                                        };
+                                        return (
                                         <button
                                             key={idx}
                                             type="button"
                                             onClick={() => setInputText(preset.text)}
-                                            className="px-3.5 py-2 bg-purple-50 hover:bg-[#6605c7] border border-purple-100/50 hover:border-[#6605c7] text-[#6605c7] hover:text-white text-[9.5px] font-black uppercase tracking-wider rounded-xl transition-all shrink-0 shadow-sm"
+                                            className={`px-3.5 py-2 border text-[9.5px] font-black uppercase tracking-wider rounded-xl transition-all shrink-0 shadow-sm hover:shadow-md ${colors[preset.color]}`}
                                         >
                                             {preset.label}
                                         </button>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
-                                <form onSubmit={handleSendMessage} className="flex gap-6 items-center">
-                                    <button type="button" className="w-14 h-14 bg-white hover:bg-gray-50 rounded-2xl flex items-center justify-center text-gray-500 transition-all border border-gray-200 shadow-sm">
-                                        <span className="material-symbols-outlined font-black">add</span>
-                                    </button>
-                                    <div className="flex-1 relative">
+                                <form onSubmit={handleSendMessage} className="flex gap-4 items-center">
+                                    <div className="flex-1 relative flex items-center">
+                                        <label className="absolute left-2 w-10 h-10 flex items-center justify-center text-gray-400 hover:text-[#6605c7] hover:bg-purple-50 rounded-xl transition-all cursor-pointer">
+                                            {uploading ? (
+                                                <div className="w-5 h-5 border-2 border-[#6605c7]/30 border-t-[#6605c7] rounded-full animate-spin" />
+                                            ) : (
+                                                <span className="material-symbols-outlined font-black">add</span>
+                                            )}
+                                            <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" />
+                                        </label>
                                         <input
                                             type="text"
                                             value={inputText}
                                             onChange={(e) => setInputText(e.target.value)}
                                             placeholder="Type your message here..."
-                                            className="w-full bg-[#fbfbfd] border border-gray-200 rounded-2xl px-8 py-5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/10 transition-all font-medium"
+                                            className="w-full bg-[#fbfbfd] border border-gray-200 rounded-2xl pl-14 pr-24 py-5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-4 focus:ring-[#6605c7]/10 transition-all font-medium"
                                         />
+                                        <div className="absolute right-3 flex items-center gap-1">
+                                            <button type="button" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-amber-500 transition-all rounded-lg hover:bg-amber-50">
+                                                <span className="material-symbols-outlined text-[20px]">mood</span>
+                                            </button>
+                                            <button type="button" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-emerald-500 transition-all rounded-lg hover:bg-emerald-50">
+                                                <span className="material-symbols-outlined text-[20px]">mic</span>
+                                            </button>
+                                        </div>
                                     </div>
                                     <button
                                         type="submit"
                                         disabled={!inputText.trim()}
-                                        className="w-16 h-16 bg-[#6605c7] text-white rounded-2xl flex items-center justify-center hover:bg-[#4f0399] disabled:opacity-20 transition-all shadow-2xl shadow-[#6605c7]/20 active:scale-95 group"
+                                        className="w-16 h-16 bg-[#6605c7] hover:bg-[#8b24e5] text-white rounded-2xl flex items-center justify-center disabled:opacity-50 transition-all shadow-2xl shadow-[#6605c7]/20 active:scale-95 group shrink-0"
                                     >
                                         <span className="material-symbols-outlined font-black group-hover:rotate-12 transition-transform">send</span>
                                     </button>

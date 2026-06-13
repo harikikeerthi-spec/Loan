@@ -756,6 +756,7 @@ export class ApplicationService {
         if (data.status === 'approved') { updateData.stage = 'sanction'; updateData.progress = 90; }
         else if (data.status === 'rejected') { updateData.progress = 0; }
         else if (data.status === 'processing') { updateData.stage = 'document_verification'; updateData.progress = 40; }
+        else if (data.status === 'disbursed' || data.status === 'disbursement_confirmed') { updateData.stage = 'disbursement'; updateData.progress = 100; }
       }
     }
 

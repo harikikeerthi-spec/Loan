@@ -12,11 +12,13 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UsersModule } from '../users/users.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { DocumentModule } from '../document/document.module';
 
 @Module({
   imports: [
       EventEmitterModule,
       UsersModule,
+      DocumentModule,
       ConfigModule,
       JwtModule.registerAsync({
         imports: [ConfigModule],

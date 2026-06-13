@@ -576,14 +576,13 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                                         extractedTimestamps.push(time);
                                                     }
 
-                                                    // Check if history timestamps are valid and distinct
-                                                    const validTimestamps = extractedTimestamps.filter((t): t is string => !!t);
-                                                    const uniqueTimestamps = Array.from(new Set(validTimestamps.map(t => new Date(t).getTime())));
-                                                    const hasValidHistory = uniqueTimestamps.length >= 2;
-
-                                                    if (hasValidHistory && extractedTimestamps[stageIdx]) {
+                                                    // Check if history timestamps are valid
+                                                    if (extractedTimestamps[stageIdx]) {
                                                         return extractedTimestamps[stageIdx];
                                                     }
+
+                                                    // Fallbacks if history timestamp is missing
+                                                    if (stageIdx === 0 && appCreatedAt) return appCreatedAt;
 
                                                     // Fallback chronological generator for standalone details page
                                                     const getAnchorIdx = (p: number) => {
@@ -599,23 +598,28 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
 
                                                     const anchorIdx = getAnchorIdx(currentProgress);
 
+                                                    if (active && stageIdx === anchorIdx && appUpdatedAt) {
+                                                        return appUpdatedAt;
+                                                    }
+                                                    if (completed && stageIdx === anchorIdx && appUpdatedAt) {
+                                                        return appUpdatedAt;
+                                                    }
+
                                                     let startD = new Date(appCreatedAt);
-                                                    if (isNaN(startD.getTime())) startD = new Date(Date.now() - 5 * 24 * 3600000);
+                                                    if (isNaN(startD.getTime())) startD = new Date();
                                                     let endD = new Date(appUpdatedAt);
                                                     if (isNaN(endD.getTime())) endD = new Date();
 
                                                     if (startD.getTime() > endD.getTime()) {
-                                                        startD = new Date(endD.getTime() - 5 * 24 * 3600000);
+                                                        startD = new Date(endD.getTime() - 1000);
                                                     }
 
                                                     const span = endD.getTime() - startD.getTime();
-                                                    if (span >= 2 * 3600000 && anchorIdx > 0) {
+                                                    if (span > 0 && anchorIdx > 0) {
                                                         const step = span / anchorIdx;
                                                         return new Date(startD.getTime() + stageIdx * step).toISOString();
                                                     } else {
-                                                        const offset = 24 * 3600000 + 4 * 3600000; // 28 hours
-                                                        const diff = (anchorIdx - stageIdx) * offset;
-                                                        return new Date(endD.getTime() - diff).toISOString();
+                                                        return new Date(endD.getTime() - (anchorIdx - stageIdx) * 60000).toISOString();
                                                     }
                                                 };
 

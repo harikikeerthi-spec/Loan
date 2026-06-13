@@ -1073,6 +1073,10 @@ export class BankWorkflowService {
       .update({
         bankWorkflowStatus: 'DISBURSED',
         status: 'disbursed',
+        stage: 'disbursement',
+        progress: 100,
+        disbursedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       })
       .eq('id', submission.applicationId);
 
@@ -1751,11 +1755,16 @@ export class BankWorkflowService {
     );
 
     // Update LoanApplication
+    const isFullyDisbursed = remainingAmt <= 0;
     await this.db.client
       .from('LoanApplication')
       .update({
         bankWorkflowStatus: 'DISBURSED',
-        status: remainingAmt <= 0 ? 'disbursed' : 'partially_disbursed',
+        status: isFullyDisbursed ? 'disbursed' : 'partially_disbursed',
+        stage: isFullyDisbursed ? 'disbursement' : 'sanction',
+        progress: isFullyDisbursed ? 100 : 95,
+        disbursedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       })
       .eq('id', submission.applicationId);
 

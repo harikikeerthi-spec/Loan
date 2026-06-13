@@ -664,13 +664,11 @@ export default function DecisionsHub() {
     const handleRejectCancellation = async () => {
         if (!selectedApp) return;
         try {
-            await adminApi.updateApplication(selectedApp.id, {
-                status: 'processing',
-                remarks: `${selectedApp.remarks || ""}\n[Appraisal]: Cancellation request rejected. Application restored to processing.`
-            });
-            await adminApi.addRemark(selectedApp.id, {
-                type: 'remark',
-                content: `Cancellation request rejected. Application status restored to processing.`
+            await bankApi.raiseQuery({
+                applicationId: selectedApp.id,
+                queryType: "DOCUMENTATION",
+                queryText: `[Cancellation Rejected]: The request to cancel this application has been rejected by the bank. Please proceed with processing.`,
+                priority: "HIGH"
             });
             setShowWorkspace(false);
             fetchApplications(currentBankId);
@@ -691,10 +689,6 @@ export default function DecisionsHub() {
                     rejectionCategory: "POLICY",
                     remarks: `File terminated via cancellation dossier.`
                 }
-            });
-            await adminApi.addRemark(selectedApp.id, {
-                type: 'remark',
-                content: `File terminated via cancellation dossier. Refund: ${cancelRefundOption}. Category: ${cancelCategory}`
             });
             setShowWorkspace(false);
             setShowCancelModal(false);
@@ -1362,7 +1356,14 @@ export default function DecisionsHub() {
 
                                         {/* Tab Content Box */}
                                         <div className="p-6">
-                                            <form onSubmit={handleDecisionSubmit} className="space-y-6">
+                                            {activeDecisionTab !== "queries" && activeDecisionTab !== "letter" && selectedApp.BankDecision && selectedApp.BankDecision.length > 0 ? (
+                                                <div className="p-6 bg-gray-50 border border-gray-200 border-dashed rounded-2xl text-center mt-4">
+                                                    <span className="material-symbols-outlined block text-3xl mb-3 text-purple-400">task_alt</span>
+                                                    <p className="text-sm text-gray-600 font-bold">Decision already registered: <span className="text-[#6605c7] uppercase">{selectedApp.BankDecision[selectedApp.BankDecision.length - 1].decision.replace(/_/g, ' ')}</span></p>
+                                                    <p className="text-xs text-gray-400 mt-2">Check the Activity Timeline for specific decision history.</p>
+                                                </div>
+                                            ) : (
+                                                <form onSubmit={handleDecisionSubmit} className="space-y-6">
                                                 
                                                 {/* TAB 1: SANCTION (F5 & F9 Nested) */}
                                                 {activeDecisionTab === "sanction" && (
@@ -1611,84 +1612,92 @@ export default function DecisionsHub() {
                                                             </AnimatePresence>
 
                                                             {/* F35: Sanction Amendment Section */}
-                                                            <div className="p-4 bg-purple-50/20 border border-purple-100/50 rounded-2xl space-y-4 mt-4 text-left">
-                                                                <div className="flex justify-between items-center">
-                                                                    <span className="text-[9px] font-black text-purple-700 uppercase tracking-widest">Sanction Amendment Workspace</span>
-                                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest font-mono">Revision Node</span>
-                                                                </div>
-                                                                
-                                                                <div className="grid grid-cols-2 gap-4">
+                                                            {selectedApp.BankDecision && selectedApp.BankDecision.length > 0 ? (
+                                                                <div className="p-4 bg-purple-50/20 border border-purple-100/50 rounded-2xl space-y-4 mt-4 text-left">
+                                                                    <div className="flex justify-between items-center">
+                                                                        <span className="text-[9px] font-black text-purple-700 uppercase tracking-widest">Sanction Amendment Workspace</span>
+                                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest font-mono">Revision Node</span>
+                                                                    </div>
+                                                                    
+                                                                    <div className="grid grid-cols-2 gap-4">
+                                                                        <div>
+                                                                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Amended Amount (₹)</label>
+                                                                            <input 
+                                                                                type="number"
+                                                                                value={amendedAmount || sanctionAmount || selectedApp.amount}
+                                                                                onChange={e => setAmendedAmount(e.target.value)}
+                                                                                className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7]"
+                                                                            />
+                                                                        </div>
+                                                                        <div>
+                                                                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Amended ROI (%)</label>
+                                                                            <input 
+                                                                                type="number"
+                                                                                step="0.01"
+                                                                                value={amendedRate}
+                                                                                onChange={e => setAmendedRate(e.target.value)}
+                                                                                className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7]"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="grid grid-cols-2 gap-4">
+                                                                        <div>
+                                                                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Amended Fee (₹)</label>
+                                                                            <input 
+                                                                                type="number"
+                                                                                value={amendedFee}
+                                                                                onChange={e => setAmendedFee(e.target.value)}
+                                                                                className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7]"
+                                                                            />
+                                                                        </div>
+                                                                        <div>
+                                                                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Effective Date</label>
+                                                                            <input 
+                                                                                type="date"
+                                                                                value={amendmentEffectiveDate}
+                                                                                onChange={e => setAmendmentEffectiveDate(e.target.value)}
+                                                                                className="w-full px-3 py-1 bg-white border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7]"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+
                                                                     <div>
-                                                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Amended Amount (₹)</label>
-                                                                        <input 
-                                                                            type="number"
-                                                                            value={amendedAmount || sanctionAmount || selectedApp.amount}
-                                                                            onChange={e => setAmendedAmount(e.target.value)}
-                                                                            className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7]"
+                                                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Reason for Revision</label>
+                                                                        <textarea
+                                                                            value={amendmentReason}
+                                                                            onChange={e => setAmendmentReason(e.target.value)}
+                                                                            rows={2}
+                                                                            placeholder="Provide adjustment reason..."
+                                                                            className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs"
                                                                         />
                                                                     </div>
-                                                                    <div>
-                                                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Amended ROI (%)</label>
-                                                                        <input 
-                                                                            type="number"
-                                                                            step="0.01"
-                                                                            value={amendedRate}
-                                                                            onChange={e => setAmendedRate(e.target.value)}
-                                                                            className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7]"
-                                                                        />
-                                                                    </div>
-                                                                </div>
 
-                                                                <div className="grid grid-cols-2 gap-4">
-                                                                    <div>
-                                                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Amended Fee (₹)</label>
-                                                                        <input 
-                                                                            type="number"
-                                                                            value={amendedFee}
-                                                                            onChange={e => setAmendedFee(e.target.value)}
-                                                                            className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7]"
-                                                                        />
+                                                                    <div className="p-3 bg-purple-50/50 rounded-xl border border-purple-100/50 text-[10px] text-gray-650">
+                                                                        <strong>Side-by-Side Comparison:</strong>
+                                                                        <div className="grid grid-cols-3 gap-2 mt-2 font-mono text-[9px]">
+                                                                            <div>Original: ₹{(selectedApp.amount).toLocaleString()}</div>
+                                                                            <div>Amended: ₹{parseFloat(amendedAmount || sanctionAmount || selectedApp.amount).toLocaleString()}</div>
+                                                                            <div>Diff: ₹{(parseFloat(amendedAmount || sanctionAmount || selectedApp.amount) - selectedApp.amount).toLocaleString()}</div>
+                                                                        </div>
                                                                     </div>
-                                                                    <div>
-                                                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Effective Date</label>
-                                                                        <input 
-                                                                            type="date"
-                                                                            value={amendmentEffectiveDate}
-                                                                            onChange={e => setAmendmentEffectiveDate(e.target.value)}
-                                                                            className="w-full px-3 py-1 bg-white border border-purple-200 rounded-lg text-xs font-bold focus:outline-none focus:border-[#6605c7]"
-                                                                        />
-                                                                    </div>
-                                                                </div>
 
-                                                                <div>
-                                                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Reason for Revision</label>
-                                                                    <textarea
-                                                                        value={amendmentReason}
-                                                                        onChange={e => setAmendmentReason(e.target.value)}
-                                                                        rows={2}
-                                                                        placeholder="Provide adjustment reason..."
-                                                                        className="w-full px-3 py-1.5 bg-white border border-purple-200 rounded-lg text-xs"
-                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={handleSaveAmendment}
+                                                                        className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white text-[9.5px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
+                                                                    >
+                                                                        <span className="material-symbols-outlined text-xs">edit_note</span>
+                                                                        Apply Sanction Amendment
+                                                                    </button>
                                                                 </div>
-
-                                                                <div className="p-3 bg-purple-50/50 rounded-xl border border-purple-100/50 text-[10px] text-gray-650">
-                                                                    <strong>Side-by-Side Comparison:</strong>
-                                                                    <div className="grid grid-cols-3 gap-2 mt-2 font-mono text-[9px]">
-                                                                        <div>Original: ₹{(selectedApp.amount).toLocaleString()}</div>
-                                                                        <div>Amended: ₹{parseFloat(amendedAmount || sanctionAmount || selectedApp.amount).toLocaleString()}</div>
-                                                                        <div>Diff: ₹{(parseFloat(amendedAmount || sanctionAmount || selectedApp.amount) - selectedApp.amount).toLocaleString()}</div>
-                                                                    </div>
+                                                            ) : (
+                                                                <div className="p-6 bg-gray-50 border border-gray-200 border-dashed rounded-2xl text-center mt-4">
+                                                                    <span className="material-symbols-outlined block text-2xl mb-2 text-gray-400">gavel</span>
+                                                                    <p className="text-xs text-gray-500 font-medium">No existing sanction decision found to amend.</p>
+                                                                    <p className="text-[10px] text-gray-400 mt-1">Please submit a sanction first from the Underwriting tab.</p>
                                                                 </div>
-
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={handleSaveAmendment}
-                                                                    className="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white text-[9.5px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5"
-                                                                >
-                                                                    <span className="material-symbols-outlined text-xs">edit_note</span>
-                                                                    Apply Sanction Amendment
-                                                                </button>
-                                                            </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 )}
@@ -2275,7 +2284,8 @@ export default function DecisionsHub() {
                                                         </div>
                                                     </>
                                                 )}
-                                            </form>
+                                                </form>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

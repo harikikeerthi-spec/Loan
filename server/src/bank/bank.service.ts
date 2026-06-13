@@ -559,7 +559,7 @@ export class BankService {
 
     // Update application
     const targetStatus = 'disbursement_confirmed';
-    const updatedStage = LoanStateMachine.getStageByStatus(targetStatus);
+    const updatedStage = 'disbursement';
     const updatedProgress = LoanStateMachine.getProgressByStatus(targetStatus);
 
     const { data: updatedApp, error: updateError } = await this.db

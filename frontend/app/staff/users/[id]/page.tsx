@@ -106,10 +106,10 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
     const handleDocumentAction = async (docId: string, action: "accept" | "reject", reason?: string) => {
         setActionLoading(true);
         try {
-            const endpoint = action === "accept" 
+            const endpoint = action === "accept"
                 ? `/api/documents/${docId}/accept`
                 : `/api/documents/${docId}/reject`;
-            
+
             const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
@@ -134,7 +134,7 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                             : doc
                     )
                 );
-                
+
                 if (selectedDocForReject?.id === docId || selectedDocForReject?._id === docId) {
                     setSelectedDocForReject(null);
                     setDocumentRejectionReason("");
@@ -267,7 +267,7 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
 
     return (
         <div className="min-h-screen bg-[#FAF8FE] font-sans text-slate-800 relative overflow-hidden pb-16">
-            
+
             {/* Floating glowing color circles and tech-grid aligned with the homepage */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
                 <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-gradient-to-tr from-[#ede0ff]/50 to-[#f3eaff]/20 blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
@@ -278,51 +278,60 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
 
             {/* Main view container */}
             <div className="max-w-6xl mx-auto px-6 pt-10 relative z-10">
-                
-                {/* Back button */}
-                <button
-                    onClick={handleBack}
-                    className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-[#6605c7] transition-all duration-300 group mb-8 cursor-pointer"
-                >
-                    <span className="material-symbols-outlined text-[16px] group-hover:-translate-x-1 transition-transform">arrow_back</span>
-                    Back to Command Center
-                </button>
+
+                {/* Breadcrumbs */}
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-500 mb-8">
+                    <button
+                        onClick={handleBack}
+                        className="hover:text-[#6605c7] transition-colors cursor-pointer"
+                    >
+                        Command Center
+                    </button>
+                    <span className="material-symbols-outlined text-[14px]">chevron_right</span>
+                    <span className="text-[#6605c7]">Users</span>
+                    <span className="material-symbols-outlined text-[14px]">chevron_right</span>
+                    <span className="text-slate-800">{userData.firstName || "—"} {userData.lastName || ""}</span>
+                </div>
 
                 {/* Profile Header Block */}
-                <TiltCard className="p-8 rounded-2xl bg-white/60 border border-white/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(102,5,199,0.03)] relative overflow-hidden">
+                <TiltCard className="p-8 rounded-2xl bg-white/60 border border-white/80 backdrop-blur-xl shadow-[0_8px_32px_rgba(102,5,199,0.03)] relative overflow-hidden sticky top-6 z-30">
                     <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-purple-300 via-[#6605c7]/50 to-orange-300" />
-                    
+
                     <div className="flex flex-col md:flex-row items-center md:items-start gap-8 relative z-20">
                         {/* 3D avatar container */}
                         <div className="relative group">
                             <div className="absolute -inset-1 bg-gradient-to-r from-[#6605c7] to-[#8b24e5] rounded-full blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
-                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#6605c7] to-[#8b24e5] flex items-center justify-center text-white text-3xl font-black shadow-lg border-4 border-white relative">
-                                {(userData.firstName?.[0] || "U").toUpperCase()}{(userData.lastName?.[0] || "").toUpperCase()}
+                            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#6605c7] to-[#8b24e5] flex items-center justify-center text-white text-3xl font-black shadow-lg border-4 border-white relative overflow-hidden">
+                                {userData.profilePicture ? (
+                                    <img src={userData.profilePicture} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span className="material-symbols-outlined text-[40px] opacity-80">person</span>
+                                )}
                             </div>
                         </div>
 
                         {/* Title details */}
                         <div className="flex-1 text-center md:text-left">
                             <div className="flex flex-wrap items-center justify-center md:justify-start gap-4">
-                                <h1 className="text-3xl font-extrabold text-[#1a1626] tracking-tight uppercase" style={{ letterSpacing: '-0.02em' }}>
+                                <h1 className="text-3xl font-black text-slate-900 tracking-tight cursor-pointer hover:text-indigo-600 hover:underline transition-all inline-block" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
                                     {userData.firstName || "—"} {userData.lastName || ""}
                                 </h1>
                                 <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-[#6605c7]/8 text-[#6605c7] border border-[#6605c7]/15 shadow-sm">
                                     {userData.role?.replace("_", " ") || "USER"}
                                 </span>
                             </div>
-                            
-                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 mt-5 text-xs font-semibold text-gray-500">
-                                <div className="flex items-center gap-1.5 font-mono">
+
+                            <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 mt-5 text-xs font-semibold text-gray-700">
+                                <div className="flex items-center gap-1.5 font-mono bg-white/50 px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
                                     <span className="material-symbols-outlined text-[16px] text-[#6605c7]">fingerprint</span>
-                                    <span className="text-[9px] text-gray-400 uppercase font-black">ID:</span>
-                                    <span className="text-[#1a1626] select-all" title={userId}>{userId}</span>
+                                    <span className="text-[9px] text-gray-500 uppercase font-black">ID:</span>
+                                    <span className="text-slate-800 select-all font-bold" title={userId}>{userId}</span>
                                 </div>
                                 {(userData.createdAt || userData.created_at) && (
-                                    <div className="flex items-center gap-1.5 font-mono">
+                                    <div className="flex items-center gap-1.5 font-mono bg-white/50 px-3 py-1.5 rounded-full border border-gray-100 shadow-sm">
                                         <span className="material-symbols-outlined text-[16px] text-purple-500">schedule</span>
-                                        <span className="text-[9px] text-gray-400 uppercase font-black">Registered:</span>
-                                        <span className="text-[#1a1626]">
+                                        <span className="text-[9px] text-gray-500 uppercase font-black">Registered:</span>
+                                        <span className="text-slate-800 font-bold">
                                             {new Date(userData.createdAt || userData.created_at).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric', year: 'numeric' })}
                                         </span>
                                     </div>
@@ -344,14 +353,17 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id as any)}
-                                className={`pb-4 px-4 font-black text-[11px] uppercase tracking-wider relative flex items-center gap-2 transition-all duration-300 cursor-pointer ${isActive ? "text-[#6605c7]" : "text-gray-400 hover:text-gray-600"}`}
+                                className={`pb-4 px-4 font-black text-[11px] uppercase tracking-wider relative flex items-center gap-2 transition-all duration-300 cursor-pointer ${isActive ? "text-[#6605c7] opacity-100" : "text-gray-500 hover:text-gray-800 opacity-80"}`}
                             >
                                 <span className={`material-symbols-outlined text-[18px] transition-transform duration-300 ${isActive ? "scale-110" : ""}`}>{tab.icon}</span>
                                 {tab.label}
                                 {tab.count !== undefined && (
-                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border transition-all duration-300 ${isActive ? "bg-[#6605c7]/8 text-[#6605c7] border-[#6605c7]/15" : "bg-gray-50 text-gray-400 border-transparent"}`}>
+                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-black border transition-all duration-300 ${isActive ? "bg-[#6605c7]/10 text-[#6605c7] border-[#6605c7]/20" : "bg-gray-100 text-gray-600 border-transparent"}`}>
                                         {tab.count}
                                     </span>
+                                )}
+                                {tab.id === 'applications' && userApplications.length > 0 && (
+                                    <span className={`w-2 h-2 rounded-full shadow-sm absolute top-0 right-2 animate-pulse ${userApplications.some(app => app.status === 'processing' || app.status === 'pending') ? 'bg-amber-500' : userApplications.some(app => app.status === 'rejected') ? 'bg-rose-500' : 'bg-emerald-500'}`} />
                                 )}
                                 {isActive && (
                                     <motion.div
@@ -378,21 +390,19 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                             >
                                 {/* Personal Information Glass-Card */}
                                 <div className="lg:col-span-2">
-                                    <div className="p-8 rounded-2xl bg-white/60 border border-white/80 backdrop-blur-xl shadow-lg relative overflow-hidden group">
-                                        <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-[#6605c7]/10 via-[#6605c7]/30 to-[#6605c7]/10" />
-                                        
-                                        <h2 className="text-sm font-black uppercase tracking-widest text-[#6605c7] mb-8 flex items-center gap-2">
-                                            <span className="material-symbols-outlined text-[20px]">person</span>
+                                    <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm">
+                                        <h2 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2" style={{ fontFamily: "'Playfair Display', Georgia, serif" }}>
+                                            <span className="material-symbols-outlined">person</span>
                                             Student Profile - Personal & Academic Details
                                         </h2>
-                                        
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+
+                                        <div className="grid grid-cols-2 gap-6">
                                             {[
                                                 { label: "First Name", value: userData.firstName },
                                                 { label: "Last Name", value: userData.lastName },
-                                                { label: "Email Node", value: userData.email, lowercase: true },
-                                                { label: "Contact Phone", value: userData.phoneNumber || userData.mobile || userData.phone },
-                                                { label: "Date of Birth", value: userData.dateOfBirth },
+                                                { label: "Email", value: userData.email, lowercase: true },
+                                                { label: "Phone", value: userData.phoneNumber || userData.mobile || userData.phone },
+                                                { label: "Date of Birth", value: userData.dateOfBirth ? new Date(userData.dateOfBirth).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : "" },
                                                 { label: "Nationality", value: userData.nationality?.name || (typeof userData.nationality === 'string' ? userData.nationality : '') || "Indian" },
                                                 { label: "Study Destination", value: userData.studyDestination, uppercase: true },
                                                 { label: "Target Intake", value: userData.intakeSeason },
@@ -401,9 +411,9 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                 { label: "Course Name", value: userData.courseName },
                                                 { label: "Access Privilege", value: userData.role, capitalize: true },
                                             ].map((item, idx) => (
-                                                <div key={idx} className={`relative p-4 rounded-xl bg-white/30 border border-white/50 hover:bg-white/50 hover:border-white/80 transition-all duration-300 ${item.fullWidth ? "md:col-span-2" : ""}`}>
-                                                    <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">{item.label}</p>
-                                                    <p className={`text-[13px] font-semibold text-slate-800 ${item.lowercase ? "lowercase" : item.capitalize ? "capitalize" : item.uppercase ? "uppercase" : ""}`}>
+                                                <div key={idx} className={item.fullWidth ? "col-span-2" : ""}>
+                                                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">{item.label}</p>
+                                                    <p className={`text-[14px] font-semibold text-slate-900 ${item.lowercase ? "lowercase" : item.capitalize ? "capitalize" : item.uppercase ? "uppercase" : ""}`}>
                                                         {item.value || "—"}
                                                     </p>
                                                 </div>
@@ -574,7 +584,7 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                                     : app.status === "processing"
                                                                         ? "bg-indigo-500/8 text-indigo-600 border-indigo-500/20"
                                                                         : "bg-amber-500/8 text-amber-600 border-amber-500/20";
-                                                            
+
                                                             return (
                                                                 <tr key={idx} className="hover:bg-white/30 transition-colors duration-200">
                                                                     <td className="px-6 py-4 text-xs font-mono font-bold text-[#6605c7]" title={app.id}>
@@ -638,11 +648,10 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                 {userDocuments.length > 0 ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         {userDocuments.map((doc, idx) => (
-                                            <TiltCard key={idx} className={`border rounded-2xl p-6 backdrop-blur-xl shadow-md hover:shadow-xl transition-all duration-300 relative group/doc flex flex-col h-full ${
-                                                doc.status === 'verified'
-                                                    ? 'bg-emerald-50/40 border-emerald-200 opacity-90'
-                                                    : 'bg-white/60 border-white/80 hover:shadow-xl'
-                                            }`}>
+                                            <TiltCard key={idx} className={`border rounded-2xl p-6 backdrop-blur-xl shadow-md hover:shadow-xl transition-all duration-300 relative group/doc flex flex-col h-full ${doc.status === 'verified'
+                                                ? 'bg-emerald-50/40 border-emerald-200 opacity-90'
+                                                : 'bg-white/60 border-white/80 hover:shadow-xl'
+                                                }`}>
                                                 {/* Locked indicator for accepted documents */}
                                                 {doc.status === 'verified' && (
                                                     <div className="absolute top-3 right-3 bg-emerald-500 text-white rounded-full p-1.5 shadow-lg z-20" title="Document is locked and cannot be changed">
@@ -652,18 +661,17 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
 
                                                 {/* Bottom accent border matching status */}
                                                 <div className={`absolute bottom-0 left-0 right-0 h-[2.5px] rounded-b-2xl transition-all duration-300 opacity-60 group-hover/doc:opacity-100 ${doc.status === 'uploaded' || doc.status === 'verified'
-                                                        ? 'bg-emerald-500'
-                                                        : doc.status === 'rejected'
-                                                            ? 'bg-rose-500'
-                                                            : 'bg-amber-500'
+                                                    ? 'bg-emerald-500'
+                                                    : doc.status === 'rejected'
+                                                        ? 'bg-rose-500'
+                                                        : 'bg-amber-500'
                                                     }`} />
-                                                
+
                                                 <div className="flex items-start gap-4 mb-4">
-                                                    <div className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-colors duration-300 ${
-                                                        doc.status === 'verified'
-                                                            ? 'bg-emerald-100 border-emerald-200 text-emerald-600'
-                                                            : 'bg-gray-50 border-gray-100 text-gray-400 group-hover/doc:text-[#6605c7] group-hover/doc:bg-[#6605c7]/10'
-                                                    }`}>
+                                                    <div className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-colors duration-300 ${doc.status === 'verified'
+                                                        ? 'bg-emerald-100 border-emerald-200 text-emerald-600'
+                                                        : 'bg-gray-50 border-gray-100 text-gray-400 group-hover/doc:text-[#6605c7] group-hover/doc:bg-[#6605c7]/10'
+                                                        }`}>
                                                         <span className="material-symbols-outlined text-[22px]">{doc.status === 'verified' ? 'check_circle' : 'description'}</span>
                                                     </div>
                                                     <div className="flex-1 min-w-0">
@@ -683,10 +691,10 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                         )}
                                                     </div>
                                                     <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${doc.status === 'uploaded' || doc.status === 'verified'
-                                                            ? 'bg-emerald-500/8 text-emerald-600 border-emerald-500/20'
-                                                            : doc.status === 'rejected'
-                                                                ? 'bg-rose-500/8 text-rose-600 border-rose-500/20'
-                                                                : 'bg-amber-500/8 text-[#d97706] border-amber-500/20'
+                                                        ? 'bg-emerald-500/8 text-emerald-600 border-emerald-500/20'
+                                                        : doc.status === 'rejected'
+                                                            ? 'bg-rose-500/8 text-rose-600 border-rose-500/20'
+                                                            : 'bg-amber-500/8 text-[#d97706] border-amber-500/20'
                                                         }`}>
                                                         {doc.status === 'verified' ? 'Accepted' : doc.status || 'pending'}
                                                     </span>
@@ -719,7 +727,7 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                                 const token = typeof window !== 'undefined'
                                                                     ? (localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken'))
                                                                     : null;
-                                                                
+
                                                                 // Use absolute /api route to ensure it's proxied to NestJS
                                                                 const res = await fetch(`/api/documents/presigned-view/${userId}/${encodeURIComponent(doc.docType)}`, {
                                                                     headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -736,11 +744,10 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                             }
                                                         }}
                                                         disabled={doc.status === 'verified'}
-                                                        className={`w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all duration-300 mb-3 shadow-md ${
-                                                            doc.status === 'verified'
-                                                                ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
-                                                                : 'text-white bg-gradient-to-r from-[#6605c7] to-[#8b24e5] hover:opacity-90 cursor-pointer shadow-[#6605c7]/15 hover:shadow-[#6605c7]/25'
-                                                        }`}
+                                                        className={`w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all duration-300 mb-3 shadow-md ${doc.status === 'verified'
+                                                            ? 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                                                            : 'text-white bg-gradient-to-r from-[#6605c7] to-[#8b24e5] hover:opacity-90 cursor-pointer shadow-[#6605c7]/15 hover:shadow-[#6605c7]/25'
+                                                            }`}
                                                         title={doc.status === 'verified' ? 'Cannot modify accepted documents' : 'View document'}
                                                     >
                                                         <span className="material-symbols-outlined text-[14px]">visibility</span>
@@ -788,9 +795,28 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="py-16 text-center bg-white/20 border border-white/40 rounded-2xl">
-                                        <span className="material-symbols-outlined text-[48px] text-slate-400 mx-auto block mb-4 animate-pulse">folder_off</span>
-                                        <p className="text-gray-500 font-semibold text-sm">No files uploaded for this node</p>
+                                    <div className="py-20 text-center bg-white/40 border border-white/60 rounded-2xl shadow-sm backdrop-blur-sm">
+                                        <div className="w-24 h-24 mx-auto bg-indigo-50 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                                            <span className="material-symbols-outlined text-[48px] text-indigo-300">file_copy</span>
+                                        </div>
+                                        <h3 className="text-lg font-black text-slate-800 mb-2">No Documents Found</h3>
+                                        <p className="text-gray-500 font-medium text-sm mb-8 max-w-md mx-auto">This student hasn't uploaded any documents to their secure vault yet.</p>
+                                        {/* <div className="flex items-center justify-center gap-4">
+                                            <button
+                                                className="px-6 py-2.5 bg-gradient-to-r from-[#6605c7] to-[#8b24e5] text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300 flex items-center gap-2"
+                                                onClick={() => alert("Upload functionality to be implemented")}
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">upload_file</span>
+                                                Upload Document
+                                            </button>
+                                            <button
+                                                className="px-6 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm hover:bg-gray-50 transition-all duration-300 flex items-center gap-2"
+                                                onClick={() => alert("Request functionality to be implemented")}
+                                            >
+                                                <span className="material-symbols-outlined text-[16px]">send</span>
+                                                Request Files
+                                            </button>
+                                        </div> */}
                                     </div>
                                 )}
 

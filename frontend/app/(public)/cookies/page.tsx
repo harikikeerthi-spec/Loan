@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 const cookieData = [
@@ -18,6 +18,17 @@ export default function CookiePolicyPage() {
     });
     const [isSaved, setIsSaved] = useState(false);
 
+    useEffect(() => {
+        const saved = localStorage.getItem('cookie-preferences');
+        if (saved) {
+            try {
+                setPreferences(JSON.parse(saved));
+            } catch (e) {
+                // Ignore parse error
+            }
+        }
+    }, []);
+
     const togglePreference = (key: 'analytical' | 'marketing') => {
         setPreferences(prev => ({
             ...prev,
@@ -27,6 +38,23 @@ export default function CookiePolicyPage() {
     };
 
     const handleSave = () => {
+        localStorage.setItem('cookie-preferences', JSON.stringify(preferences));
+        
+        // Set actual cookies based on preferences
+        document.cookie = "cookie_consent_answered=true; max-age=31536000; path=/";
+        
+        if (preferences.analytical) {
+            document.cookie = "visitor_analytics_id=active; max-age=63072000; path=/";
+        } else {
+            document.cookie = "visitor_analytics_id=; max-age=0; path=/";
+        }
+        
+        if (preferences.marketing) {
+            document.cookie = "marketing_funnel_state=active; max-age=31536000; path=/";
+        } else {
+            document.cookie = "marketing_funnel_state=; max-age=0; path=/";
+        }
+
         setIsSaved(true);
         setTimeout(() => setIsSaved(false), 3000);
     };

@@ -296,6 +296,19 @@ function ApplicationProgressCollapse({ app }: { app: any }) {
     );
 }
 
+const getDynamicProgress = (app: any) => {
+    if (!app) return 10;
+    const s = String(app.status || '').toLowerCase();
+    if (['disbursed', 'closed'].includes(s)) return 100;
+    if (['sanctioned', 'approved', 'sanction'].includes(s)) return 95;
+    if (['under_bank_review', 'query_raised', 'conditional_sanction', 'processing'].includes(s)) return 90;
+    if (['submitted_to_bank', 'file_logged'].includes(s)) return 75;
+    if (['staff_verified', 'verification', 'documents_verified'].includes(s)) return 50;
+    if (['docs_received', 'docs_uploaded', 'under_review'].includes(s)) return 40;
+    if (['submitted', 'application_submitted'].includes(s)) return 25;
+    return typeof app.progress === 'number' && app.progress > 0 ? app.progress : 10;
+};
+
 export default function DashboardPage() {
     const { user, token } = useAuth();
     // The new ID is already human-readable (e.g. VL-STU-2026-54097) — no mangling needed
@@ -503,7 +516,7 @@ export default function DashboardPage() {
                             </h1>
                             <p className="text-gray-500 text-sm">
                                 {data.applications?.length
-                                    ? `Your education loan journey is ${data.applications[0]?.progress || 10}% complete. ${data.applications[0]?.progress && data.applications[0].progress >= 50 ? "You're doing great!" : "Keep going!"}`
+                                    ? `Your education loan journey is ${getDynamicProgress(data.applications[0])}% complete. ${getDynamicProgress(data.applications[0]) >= 50 ? "You're doing great!" : "Keep going!"}`
                                     : "Start your education loan journey today!"}
                             </p>
                         </div>
@@ -654,10 +667,10 @@ export default function DashboardPage() {
                                                         <div className="flex-1 bg-gray-100 rounded-full h-1.5">
                                                             <div
                                                                 className="bg-gradient-to-r from-[#6605c7] to-purple-400 h-1.5 rounded-full transition-all duration-700"
-                                                                style={{ width: `${app.progress || 10}%` }}
+                                                                style={{ width: `${getDynamicProgress(app)}%` }}
                                                             />
                                                         </div>
-                                                        <span className="text-[10px] font-bold text-[#6605c7] whitespace-nowrap">{app.progress || 10}%</span>
+                                                        <span className="text-[10px] font-bold text-[#6605c7] whitespace-nowrap">{getDynamicProgress(app)}%</span>
                                                     </div>
 
                                                     {/* Action Footer for detailed progress toggle */}
@@ -784,12 +797,12 @@ export default function DashboardPage() {
                                                                     <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
                                                                         {app.stage?.replace(/_/g, ' ') || 'application submitted'}
                                                                     </span>
-                                                                    <span className="text-[10px] font-bold text-[#6605c7]">{app.progress}%</span>
+                                                                    <span className="text-[10px] font-bold text-[#6605c7]">{getDynamicProgress(app)}%</span>
                                                                 </div>
                                                                 <div className="w-full bg-gray-100 rounded-full h-1.5">
                                                                     <div
                                                                         className="bg-gradient-to-r from-[#6605c7] to-purple-400 h-1.5 rounded-full transition-all duration-500"
-                                                                        style={{ width: `${app.progress}%` }}
+                                                                        style={{ width: `${getDynamicProgress(app)}%` }}
                                                                     />
                                                                 </div>
                                                             </div>

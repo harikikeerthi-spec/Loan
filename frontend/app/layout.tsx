@@ -4,7 +4,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { UniversityProvider } from "@/context/UniversityContext";
 import SelectedUniversityWidget from "@/components/SelectedUniversityWidget";
 import ReferralTracker from "@/components/ReferralTracker";
-
+import CookieConsentBanner from "@/components/CookieConsentBanner";
 
 export const metadata: Metadata = {
   title: {
@@ -70,7 +70,7 @@ export default function RootLayout({
             <UniversityProvider>
               {children}
               <SelectedUniversityWidget />
-
+              <CookieConsentBanner />
             </UniversityProvider>
           </AuthProvider>
         </div>
