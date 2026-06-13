@@ -47,7 +47,7 @@ body, h1, h2, h3, h4, h5, h6, p, a, button, input, select, textarea, label {
   font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
-/* Bank portal font override — Premium Fintech Look: Clash Display for headers, Satoshi for text/body */
+/* Bank portal font override — Match the clean, premium style in the images: Plus Jakarta Sans for the entire dashboard */
 .bank-portal,
 .bank-portal p,
 .bank-portal span:not(.material-symbols-outlined):not(.font-mono):not([class*="font-mono"]),
@@ -58,7 +58,7 @@ body, h1, h2, h3, h4, h5, h6, p, a, button, input, select, textarea, label {
 .bank-portal select,
 .bank-portal textarea,
 .bank-portal label {
-  font-family: 'Satoshi', 'Inter Tight', sans-serif !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
 
 .bank-portal h1,
@@ -69,35 +69,45 @@ body, h1, h2, h3, h4, h5, h6, p, a, button, input, select, textarea, label {
 .bank-portal h6,
 .bank-portal .font-display,
 .bank-portal .bank-title {
-  font-family: 'Clash Display', 'Cabinet Grotesk', sans-serif !important;
-  letter-spacing: -0.03em !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  letter-spacing: normal !important;
 }
 
 /* Specific styling for the main header (Incoming Loan Files) in the bank layout */
 .bank-portal h1 {
-  font-family: 'Clash Display', 'Cabinet Grotesk', sans-serif !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
   font-weight: 700 !important;
   font-size: 32px !important;
   color: #111827 !important;
   font-style: normal !important;
-  letter-spacing: -0.03em !important;
+  letter-spacing: normal !important;
 }
 
-/* Specific styling for table row values in the bank layout to look smooth, clean, and geometric */
+/* Specific styling for table row values in the bank layout */
 .bank-portal table tbody tr,
 .bank-portal table tbody td,
 .bank-portal table tbody td p:not(.font-mono):not([class*="font-mono"]),
 .bank-portal table tbody td div:not(.font-mono):not([class*="font-mono"]),
 .bank-portal table tbody td span:not(.material-symbols-outlined):not(.font-mono):not([class*="font-mono"]) {
-  font-family: 'Satoshi', 'Inter Tight', sans-serif !important;
-  font-weight: 450 !important;
-  font-size: 13px !important;
-  color: #374151 !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-weight: 550 !important;
+  font-size: 14.5px !important;
+  color: #1f2937 !important;
   text-transform: none !important;
   letter-spacing: normal !important;
 }
 
-/* Specific styling for financial numbers and monospaced metrics in the bank portal */
+/* Specific styling for bank table headers */
+.bank-portal table th,
+.bank-portal table thead th {
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-weight: 750 !important;
+  font-size: 12.5px !important;
+  letter-spacing: 0.05em !important;
+  color: #4b5563 !important;
+}
+
+/* Specific styling for numbers and metrics in the bank portal: Use Plus Jakarta Sans without specialized mono/serif number styles */
 .bank-portal .font-mono,
 .bank-portal [class*="font-mono"],
 .bank-portal .tabular-nums,
@@ -105,10 +115,11 @@ body, h1, h2, h3, h4, h5, h6, p, a, button, input, select, textarea, label {
 .bank-portal table tbody td .font-mono,
 .bank-portal table tbody td span.font-mono,
 .bank-portal table tbody td p.font-mono {
-  font-family: 'JetBrains Mono', 'Satoshi Mono', 'SF Mono', monospace !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
   font-variant-numeric: tabular-nums !important;
-  letter-spacing: -0.02em !important;
-  font-weight: 550 !important;
+  letter-spacing: normal !important;
+  font-size: 14.5px !important;
+  font-weight: 600 !important;
 }
 
 .material-symbols-outlined,

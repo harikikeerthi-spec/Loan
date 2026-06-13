@@ -7298,13 +7298,13 @@ export default function StaffDashboardPage() {
                                             )}
                                             {(activeSection === "applications" || activeSection === "incoming_queue") && (
                                                 <>
-                                                    <th className="sticky left-0 z-20 bg-slate-50 px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">APPLICANT PROFILE</span></th>
-                                                    <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">COLLEGE NAME</span></th>
-                                                    <th className="px-6 py-5 min-w-[240px] w-[240px]"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">TARGET BANK</span></th>
-                                                    <th className="px-5 py-5"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">LAN NUMBER</span></th>
-                                                    <th className="px-5 py-5 w-48"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">PROGRESS</span></th>
-                                                    <th className="px-5 py-5 min-w-[220px] w-[220px]"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">CURRENT STATUS</span></th>
-                                                    <th className="px-5 py-5 text-center"><span className="text-[10px] font-['Playfair_Display',serif] font-bold text-slate-600 uppercase tracking-widest">ACTIONS</span></th>
+                                                    <th className="sticky left-0 z-20 bg-slate-50 px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">APPLICANT PROFILE</span></th>
+                                                    <th className="px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">COLLEGE NAME</span></th>
+                                                    <th className="px-6 py-5 min-w-[240px] w-[240px]"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">TARGET BANK</span></th>
+                                                    <th className="px-5 py-5"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">LAN NUMBER</span></th>
+                                                    <th className="px-5 py-5 w-48"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">PROGRESS</span></th>
+                                                    <th className="px-5 py-5 min-w-[220px] w-[220px]"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">CURRENT STATUS</span></th>
+                                                    <th className="px-5 py-5 text-center"><span className="text-[12px] font-['Playfair_Display',serif] font-extrabold text-[#0d1b2a] uppercase tracking-widest">ACTIONS</span></th>
                                                 </>
                                             )}
                                             {activeSection === "users" && (
@@ -7457,7 +7457,7 @@ export default function StaffDashboardPage() {
                                                                                         const queryStr = params.toString();
                                                                                         if (uid) window.open(`/staff/users/${uid}${queryStr ? `?${queryStr}` : ''}`, '_blank');
                                                                                     }}
-                                                                                    className="text-[15px] font-['Playfair_Display',serif] font-bold text-slate-900 leading-tight truncate cursor-pointer hover:text-indigo-600 transition-all"
+                                                                                    className="text-[17px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] leading-tight truncate cursor-pointer hover:text-indigo-600 transition-all"
                                                                                     title="Click to view Student Profile"
                                                                                 >
                                                                                     {item.firstName || item.student?.firstName || '—'} {item.lastName || item.student?.lastName || ''}
@@ -7470,7 +7470,7 @@ export default function StaffDashboardPage() {
                                                                                                 const appId = item.id || item._id;
                                                                                                 if (appId) window.open(`/staff/applications/${appId}`, '_blank');
                                                                                             }}
-                                                                                            className="text-[11px] text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer transition-all font-bold uppercase tracking-wide inline-block"
+                                                                                            className="text-[12px] text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer transition-all font-bold uppercase tracking-wide inline-block"
                                                                                             title="Click to open Application Page"
                                                                                         >
                                                                                             {item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`}
@@ -7597,16 +7597,16 @@ export default function StaffDashboardPage() {
                                                                             <Link
                                                                                 href={`/university/${slug}`}
                                                                                 target="_blank"
-                                                                                className="text-[16px] font-['Playfair_Display',serif] font-bold text-black hover:text-slate-800 cursor-pointer transition-all block truncate max-w-[180px]"
+                                                                                className="text-[17px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] hover:text-slate-800 cursor-pointer transition-all block truncate max-w-[180px]"
                                                                                 title="Click to view University Details"
                                                                             >
                                                                                 {collegeName}
                                                                             </Link>
                                                                         );
                                                                     })() : (
-                                                                        <p className="text-[16px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] truncate max-w-[180px]">—</p>
+                                                                        <p className="text-[17px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] truncate max-w-[180px]">—</p>
                                                                     )}
-                                                                    <p className="text-[11px] text-slate-500 font-bold truncate max-w-[180px] mt-1">
+                                                                    <p className="text-[12px] text-slate-500 font-bold truncate max-w-[180px] mt-1">
                                                                         {item.courseName || item.program || item.courseLevel || '—'}
                                                                     </p>
                                                                 </td>

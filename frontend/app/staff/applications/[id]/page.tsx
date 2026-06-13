@@ -8,6 +8,7 @@ import { adminApi, documentApi } from "@/lib/api";
 import { format } from "date-fns";
 import { formatDate } from "@/lib/utils";
 import SendEmailModal from "@/components/staff/SendEmailModal";
+import ChatInterface from "@/components/Chat/ChatInterface";
 
 const IST_OFFSET = 5.5 * 60 * 60 * 1000; // India Standard Time offset (+5:30) in ms
 const convertToIST = (dateVal: any): Date => {
@@ -79,8 +80,9 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
     const [userApplications, setUserApplications] = useState<any[]>([]);
     const [staffNotes, setStaffNotes] = useState<any[]>([]);
     const [newNote, setNewNote] = useState("");
-    const [activeTab, setActiveTab] = useState<"details" | "history" | "documents" | "notes" | "verification">("details");
+    const [activeTab, setActiveTab] = useState<"details" | "history" | "documents" | "notes" | "verification" | "bank_chat">("details");
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+    const [fetchedStatusHistory, setFetchedStatusHistory] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchApplicationDetails = async () => {
@@ -92,6 +94,15 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
 
                 if (foundApp) {
                     setApplication(foundApp);
+
+                    try {
+                        const trackingRes = await adminApi.getApplicationTracking(applicationId) as any;
+                        if (trackingRes && trackingRes.success && trackingRes.data) {
+                            setFetchedStatusHistory(trackingRes.data.timeline || []);
+                        }
+                    } catch (trackErr) {
+                        console.error("Error fetching tracking history:", trackErr);
+                    }
 
                     // Fetch ALL applications for this user (including the current one)
                     const userApps = appsRes.data?.filter((a: any) =>
@@ -266,6 +277,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                         { id: "history", label: "All Applications", icon: "list_alt", count: userApplications.length },
                         { id: "documents", label: "Documents", icon: "folder", count: 0 },
                         { id: "verification", label: "Verification", icon: "verified_user" },
+                        { id: "bank_chat", label: "Bank Chat", icon: "forum" },
                         { id: "notes", label: "Internal Notes", icon: "note", count: staffNotes.length },
                     ].map((tab) => (
                         <button
@@ -514,9 +526,97 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
 
                                                 const getStageTimestamp = (stageIdx: number, completed: boolean, active?: boolean): string | undefined => {
                                                     if (!completed && !active) return undefined;
-                                                    if (stageIdx === 0) return appCreatedAt;
-                                                    if (active || stageIdx === lastCompletedIdx) return appUpdatedAt || appCreatedAt;
-                                                    return appCreatedAt;
+
+                                                    // 1. Try to extract timestamps from fetchedStatusHistory
+                                                    const history = fetchedStatusHistory || [];
+
+                                                    const findHistoryTime = (statuses: string[]) => {
+                                                        const matches = history
+                                                            .filter((h: any) => statuses.includes(String(h.toStatus || h.to_status || "").toLowerCase()))
+                                                            .sort((a: any, b: any) => {
+                                                                const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
+                                                                const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
+                                                                return timeA - timeB;
+                                                            });
+                                                        if (matches.length > 0) {
+                                                            return matches[0].createdAt || matches[0].created_at;
+                                                        }
+                                                        return undefined;
+                                                    };
+
+                                                    const extractedTimestamps: (string | undefined)[] = [];
+                                                    for (let i = 0; i < 8; i++) {
+                                                        let time: string | undefined = undefined;
+                                                        switch (i) {
+                                                            case 0:
+                                                                time = findHistoryTime(['pending']);
+                                                                break;
+                                                            case 1:
+                                                                time = findHistoryTime(['docs_received', 'docs_uploaded']);
+                                                                break;
+                                                            case 2:
+                                                                time = findHistoryTime(['staff_verified']);
+                                                                break;
+                                                            case 3:
+                                                                time = findHistoryTime(['submitted_to_bank', 'file_logged']);
+                                                                break;
+                                                            case 4:
+                                                                time = findHistoryTime(['under_bank_review', 'query_raised']);
+                                                                break;
+                                                            case 5:
+                                                                time = findHistoryTime(['approved', 'sanctioned', 'conditional_sanction', 'counter_offer']);
+                                                                break;
+                                                            case 6:
+                                                                time = findHistoryTime(['sanctioned', 'approved']);
+                                                                break;
+                                                            case 7:
+                                                                time = findHistoryTime(['disbursement_confirmed', 'closed']);
+                                                                break;
+                                                        }
+                                                        extractedTimestamps.push(time);
+                                                    }
+
+                                                    // Check if history timestamps are valid and distinct
+                                                    const validTimestamps = extractedTimestamps.filter((t): t is string => !!t);
+                                                    const uniqueTimestamps = Array.from(new Set(validTimestamps.map(t => new Date(t).getTime())));
+                                                    const hasValidHistory = uniqueTimestamps.length >= 2;
+
+                                                    if (hasValidHistory && extractedTimestamps[stageIdx]) {
+                                                        return extractedTimestamps[stageIdx];
+                                                    }
+
+                                                    // Fallback chronological generator for standalone details page
+                                                    const getAnchorIdx = (p: number) => {
+                                                        if (p >= 100) return 7;
+                                                        if (p >= 87) return 6;
+                                                        if (p >= 75) return 5;
+                                                        if (p >= 62) return 4;
+                                                        if (p >= 50) return 3;
+                                                        if (p >= 37) return 2;
+                                                        if (p >= 25) return 1;
+                                                        return 0;
+                                                    };
+
+                                                    const anchorIdx = getAnchorIdx(currentProgress);
+
+                                                    let startD = new Date(appCreatedAt);
+                                                    if (isNaN(startD.getTime())) startD = new Date(Date.now() - 5 * 24 * 3600000);
+                                                    let endD = new Date(appUpdatedAt);
+                                                    if (isNaN(endD.getTime())) endD = new Date();
+
+                                                    if (startD.getTime() > endD.getTime()) {
+                                                        startD = new Date(endD.getTime() - 5 * 24 * 3600000);
+                                                    }
+
+                                                    const span = endD.getTime() - startD.getTime();
+                                                    if (span >= 2 * 3600000 && anchorIdx > 0) {
+                                                        const step = span / anchorIdx;
+                                                        return new Date(startD.getTime() + stageIdx * step).toISOString();
+                                                    } else {
+                                                        const offset = 24 * 3600000 + 4 * 3600000; // 28 hours
+                                                        const diff = (anchorIdx - stageIdx) * offset;
+                                                        return new Date(endD.getTime() - diff).toISOString();
+                                                    }
                                                 };
 
                                                 const isCompleted = currentProgress > item.progress;
@@ -833,6 +933,30 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                 </div>
                             )}
                         </div>
+                    </div>
+                )}
+
+                {/* Bank Chat Tab */}
+                {activeTab === "bank_chat" && (
+                    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[700px]">
+                        {application.bank ? (
+                            <ChatInterface
+                                role="staff"
+                                hideSidebar={true}
+                                initialBank={{
+                                    bankName: application.bank,
+                                    applicationId: application.id || application._id,
+                                    applicationNumber: application.applicationNumber?.toString()
+                                }}
+                                className="flex h-full w-full border-0 rounded-none overflow-hidden bg-white text-gray-900"
+                            />
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-full p-8 text-center bg-slate-50/50">
+                                <span className="material-symbols-outlined text-slate-300 text-5xl mb-4">account_balance</span>
+                                <h3 className="text-base font-bold text-slate-700">No Bank Assigned</h3>
+                                <p className="text-xs text-slate-500 max-w-xs mt-1">This application has not been assigned or forwarded to any partner bank yet.</p>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

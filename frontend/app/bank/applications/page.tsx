@@ -5,8 +5,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { adminApi } from "@/lib/api";
 import { DataTable, StatusBadge, PriorityTag } from "@/components/bank/SharedUI";
+import { useRouter } from "next/navigation";
 
 export default function ApplicationManagement() {
+    const router = useRouter();
     const [mounted, setMounted] = useState(false);
     const [currentBankId, setCurrentBankId] = useState<string>("idfc");
     const [applications, setApplications] = useState<any[]>([]);
@@ -974,29 +976,37 @@ export default function ApplicationManagement() {
                             </div>
 
                             {/* Action Buttons */}
-                            <div className="border-t border-gray-100 pt-6 flex gap-4 mt-6">
-                                {!selectedApp.lanNumber ? (
-                                    <button 
-                                        onClick={() => setShowLanModal(true)}
-                                        className="flex-1 py-4 bg-[#6605c7] text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-purple-500/20 hover:bg-[#5203a4] transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <span className="material-symbols-outlined text-lg">note_add</span> Log File (Enter LAN)
-                                    </button>
-                                ) : (
-                                    <>
-                                        {selectedApp.status !== "approved" && selectedApp.status !== "disbursed" && selectedApp.status !== "rejected" && (
-                                            <button 
-                                                onClick={() => {
-                                                    setSanctionAmount(selectedApp.amount.toString());
-                                                    setShowDecisionModal(true);
-                                                }}
-                                                className="flex-1 py-4 bg-[#6605c7] text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-purple-500/20 hover:bg-[#5203a4] transition-all flex items-center justify-center gap-2"
-                                            >
-                                                <span className="material-symbols-outlined text-lg">gavel</span> Record Underwriting Decision
-                                            </button>
-                                        )}
-                                    </>
-                                )}
+                            <div className="border-t border-gray-100 pt-6 flex flex-col gap-3 mt-6">
+                                <div className="flex gap-4">
+                                    {!selectedApp.lanNumber ? (
+                                        <button 
+                                            onClick={() => setShowLanModal(true)}
+                                            className="flex-1 py-4 bg-[#6605c7] text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-purple-500/20 hover:bg-[#5203a4] transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <span className="material-symbols-outlined text-lg">note_add</span> Log File (Enter LAN)
+                                        </button>
+                                    ) : (
+                                        <>
+                                            {selectedApp.status !== "approved" && selectedApp.status !== "disbursed" && selectedApp.status !== "rejected" && (
+                                                <button 
+                                                    onClick={() => {
+                                                        setSanctionAmount(selectedApp.amount.toString());
+                                                        setShowDecisionModal(true);
+                                                    }}
+                                                    className="flex-1 py-4 bg-[#6605c7] text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-purple-500/20 hover:bg-[#5203a4] transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    <span className="material-symbols-outlined text-lg">gavel</span> Record Underwriting Decision
+                                                </button>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                                <button 
+                                    onClick={() => router.push(`/bank/chat?applicationId=${selectedApp.id}&applicationNumber=${selectedApp.applicationNumber || ''}`)}
+                                    className="w-full py-3.5 bg-white hover:bg-gray-50 border border-gray-200 text-[#6605c7] rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm"
+                                >
+                                    <span className="material-symbols-outlined text-lg">forum</span> Chat with Staff
+                                </button>
                             </div>
                         </motion.div>
                     </>

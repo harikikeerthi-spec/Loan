@@ -24,7 +24,7 @@ export class ChatService {
     return cleaned;
   }
 
-  async getOrCreateConversation(customerPhone: string, customerEmail?: string, conversationType: string = 'staff', customerName?: string, bankName?: string) {
+  async getOrCreateConversation(customerPhone: string, customerEmail?: string, conversationType: string = 'staff', customerName?: string, bankName?: string, additionalMetadata?: any) {
     if (!customerPhone) {
         throw new HttpException('A valid phone number is required to start a chat. Please update your profile.', HttpStatus.BAD_REQUEST);
     }
@@ -43,6 +43,12 @@ export class ChatService {
       throw new HttpException('Database error', HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    const mergedMetadata = {
+      type: conversationType,
+      bank: bankName || null,
+      ...(additionalMetadata || {})
+    };
+
     if (!conv) {
       // Create new
       const { data: newConv, error: createError } = await this.db
@@ -52,7 +58,7 @@ export class ChatService {
             status: 'active',
             customerEmail: customerEmail || null,
             customerName: customerName || null,
-            metadata: { type: conversationType, bank: bankName }
+            metadata: mergedMetadata
         })
         .select()
         .single();
@@ -62,21 +68,18 @@ export class ChatService {
         throw new HttpException('Database error', HttpStatus.INTERNAL_SERVER_ERROR);
       }
       conv = newConv;
-    } else if (conv.status !== 'active') {
-      // Reactivate existing conversation
+    } else {
+      // Reactivate or update existing conversation metadata
       const updateData: any = {
         status: 'active',
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        metadata: {
+          ...(conv.metadata || {}),
+          ...mergedMetadata
+        }
       };
       if (customerEmail) updateData.customerEmail = customerEmail;
       if (customerName) updateData.customerName = customerName;
-      if (conversationType || bankName) {
-        updateData.metadata = {
-          ...conv.metadata,
-          type: conversationType || conv.metadata?.type || 'staff',
-          bank: bankName || conv.metadata?.bank || null
-        };
-      }
 
       const { data: updatedConv, error: updateError } = await this.db
         .from('Conversation')

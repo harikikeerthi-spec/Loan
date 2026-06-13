@@ -35,6 +35,7 @@ export class NotificationService {
       type,
       isRead: false,
       timestamp: new Date().toISOString(),
+      metadata: metadata || null,
     };
 
     const { data, error } = await this.db

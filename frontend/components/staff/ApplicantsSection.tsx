@@ -197,7 +197,7 @@ function ProfileList({ onSelect, onlineEmails = [] }: { onSelect: (p: any) => vo
               <thead>
                 <tr className="bg-white border-b border-slate-100 shadow-[4px_0_12px_rgba(0,0,0,0.02)]">
                   {["Applicant Profile", "Processing Details", "Service Provider", "Status Tracking", "Date Added", "Control"].map(h => (
-                    <th key={h} className="px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">{h}</th>
+                    <th key={h} className="px-6 py-4 text-[12px] font-extrabold uppercase tracking-[0.2em] text-[#0d1b2a]">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -217,40 +217,40 @@ function ProfileList({ onSelect, onlineEmails = [] }: { onSelect: (p: any) => vo
                             )}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-[14px] font-bold text-slate-900 tracking-tight truncate group-hover/profile:text-slate-900 group-hover/profile:underline transition-colors font-display">
+                            <p className="text-[16px] font-bold text-[#0d1b2a] tracking-tight truncate group-hover/profile:text-[#0d1b2a] group-hover/profile:underline transition-colors font-display">
                               {p.linkedUser?.firstName} {p.linkedUser?.lastName}
                             </p>
                             <div className="flex items-center gap-1 mt-0.5">
                               <span className="material-symbols-outlined text-[12px] text-emerald-500">verified_user</span>
-                              <span className="text-[10px] font-semibold text-slate-500 truncate">{p.linkedUser?.email}</span>
+                              <span className="text-[12px] font-semibold text-slate-500 truncate">{p.linkedUser?.email}</span>
                             </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <p className="text-[13px] font-bold text-slate-700">{p.loanType || "General Loan"}</p>
-                        <p className="text-[10px] font-semibold text-slate-400 font-mono mt-0.5">FIN-AID</p>
+                        <p className="text-[14px] font-bold text-slate-700">{p.loanType || "General Loan"}</p>
+                        <p className="text-[11px] font-semibold text-slate-400 font-mono mt-0.5">FIN-AID</p>
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 rounded-lg bg-sky-50 flex items-center justify-center border border-sky-100">
                             <span className="material-symbols-outlined text-sky-600 text-[16px]">account_balance</span>
                           </div>
-                          <span className="text-[13px] font-bold text-slate-700">{p.targetBank || "Internal Pool"}</span>
+                          <span className="text-[14px] font-bold text-slate-700">{p.targetBank || "Internal Pool"}</span>
                         </div>
                       </td>
                       <td className="px-6 py-5">
-                        <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.15em] inline-flex items-center gap-1.5 shadow-sm ${STATUS_COLORS[p.bankStatus] || "bg-slate-50 text-slate-600 border border-slate-200"}`}>
+                        <span className={`px-3 py-1.5 rounded-full text-[11px] font-black uppercase tracking-[0.15em] inline-flex items-center gap-1.5 shadow-sm ${STATUS_COLORS[p.bankStatus] || "bg-slate-50 text-slate-600 border border-slate-200"}`}>
                           <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70"></span>
                           {p.bankStatus?.replace(/_/g, ' ') || 'Initiated'}
                         </span>
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex flex-col gap-1">
-                          <p className="text-[12px] font-bold text-slate-800">
+                          <p className="text-[13px] font-bold text-slate-800">
                             {new Date(p.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
                           </p>
-                          <p className="text-[10px] font-semibold text-slate-400 flex items-center gap-1">
+                          <p className="text-[11px] font-semibold text-slate-400 flex items-center gap-1">
                             <span className="material-symbols-outlined text-[12px]">schedule</span>
                             {new Date(p.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                           </p>

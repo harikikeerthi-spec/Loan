@@ -353,6 +353,19 @@ export class BankService {
     };
   }
 
+  private normalizePhone(phoneStr: string): string {
+    if (!phoneStr) return '';
+    if (phoneStr.startsWith('BNK_')) return phoneStr;
+    const cleaned = phoneStr.replace('whatsapp:', '').trim().replace(/\D/g, '');
+    if (cleaned.length > 10 && cleaned.startsWith('91')) {
+      return cleaned.substring(2);
+    }
+    if (cleaned.length > 10) {
+      return cleaned.slice(-10);
+    }
+    return cleaned;
+  }
+
   /**
    * Category A: Raise query to VidyaLoans staff
    */
@@ -365,7 +378,7 @@ export class BankService {
 
     const { data: application } = await this.db
       .from('LoanApplication')
-      .select('status, stage, bank, applicationNumber')
+      .select('status, stage, bank, applicationNumber, phone, mobile, email, firstName, lastName')
       .eq('id', applicationId)
       .single();
 
@@ -424,6 +437,65 @@ export class BankService {
     };
     await this.db.from('Notification').insert(notifData);
     this.eventEmitter.emit('notification.created', notifData);
+
+    // Push query message to the chat conversation
+    if (application) {
+      const rawPhone = application.phone || application.mobile;
+      const phone = this.normalizePhone(rawPhone || '');
+      if (phone) {
+        // Find or create conversation for the student
+        let { data: conv } = await this.db
+          .from('Conversation')
+          .select('*')
+          .eq('customerPhone', phone)
+          .maybeSingle();
+
+        if (!conv) {
+          const fullName = `${application.firstName || ''} ${application.lastName || ''}`.trim();
+          const { data: newConv } = await this.db
+            .from('Conversation')
+            .insert({
+              customerPhone: phone,
+              status: 'active',
+              customerEmail: application.email || null,
+              customerName: fullName || null,
+              metadata: { type: 'staff' }
+            })
+            .select()
+            .single();
+          conv = newConv;
+        }
+
+        if (conv) {
+          const bankName = bankUser.firstName || 'Banker';
+          const msgContent = `[BANK QUERY from ${bankName}]: ${content}`;
+          const { data: chatMessage } = await this.db
+            .from('Message')
+            .insert({
+              conversationId: conv.id,
+              senderType: 'system',
+              senderId: bankUser.email,
+              receiverType: 'staff',
+              content: msgContent,
+              messageType: 'text',
+              status: 'sent'
+            })
+            .select()
+            .single();
+
+          if (chatMessage) {
+            // Update conversation timestamp
+            await this.db
+              .from('Conversation')
+              .update({ updatedAt: new Date().toISOString() })
+              .eq('id', conv.id);
+
+            // Emit the programmatically created message so WebSocket clients receive it in real-time
+            this.eventEmitter.emit('chat.message_created', chatMessage);
+          }
+        }
+      }
+    }
 
     return {
       success: true,

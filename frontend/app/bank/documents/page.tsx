@@ -210,6 +210,60 @@ export default function DocumentReviewCenter() {
         return `/api/applications/admin/${appId}/documents/${docId}/view?token=${token}`;
     };
 
+    const renderDocumentPreview = (doc: any, full = false) => {
+        if (!doc || !selectedAppId) return null;
+        
+        const url = getDocumentViewUrl(selectedAppId, doc.id);
+        const fileName = (doc.fileName || "").toLowerCase();
+        const filePath = (doc.filePath || "").toLowerCase();
+        const mimeType = (doc.mimeType || "").toLowerCase();
+        
+        const isPdf = mimeType === "application/pdf" || fileName.endsWith(".pdf") || filePath.endsWith(".pdf");
+        const isDigilocker = filePath.startsWith("in.gov.");
+        const isImage = mimeType.startsWith("image/") || /\.(jpg|jpeg|png|webp|gif)/i.test(fileName) || /\.(jpg|jpeg|png|webp|gif)/i.test(filePath);
+        
+        if (isPdf || isDigilocker) {
+            return (
+                <iframe
+                    src={url}
+                    className="w-full h-full min-h-[500px] bg-white rounded-lg border border-gray-200 shadow-sm"
+                    title={doc.docType || "Document PDF"}
+                />
+            );
+        }
+        
+        if (isImage) {
+            return (
+                <motion.div
+                    animate={{ scale: zoom / 100, rotate }}
+                    transition={{ duration: 0.15 }}
+                    className="relative max-w-full max-h-full flex items-center justify-center p-2"
+                >
+                    <img
+                        src={url}
+                        alt={doc.docType || "Document Image"}
+                        className={`max-w-full rounded-lg shadow-md object-contain ${full ? 'max-h-[80vh]' : 'max-h-[60vh]'}`}
+                    />
+                </motion.div>
+            );
+        }
+        
+        return (
+            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center max-w-md mx-auto">
+                <span className="material-symbols-outlined text-4xl text-gray-400 mb-2">draft</span>
+                <h4 className="text-sm font-bold text-gray-900 uppercase">{doc.docType?.replace(/_/g, " ")}</h4>
+                <p className="text-xs text-gray-500 mt-2">This file type ({doc.mimeType || "Binary"}) cannot be previewed inline.</p>
+                <a
+                    href={url}
+                    download
+                    className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-[#6605c7] hover:bg-[#5203a4] text-white rounded-md text-xs font-black uppercase tracking-wider transition-all"
+                >
+                    <span className="material-symbols-outlined text-xs">download</span> Download File
+                </a>
+            </div>
+        );
+    };
+
     if (!mounted) return null;
 
     const selectedApp = applications.find(app => app.id === selectedAppId);
@@ -540,7 +594,7 @@ export default function DocumentReviewCenter() {
                                                                 <span className="material-symbols-outlined text-sm">zoom_out</span>
                                                             </button>
                                                             <span className="px-1.5 text-[10px] font-black font-mono">{zoom}%</span>
-                                                            <button onClick={() => setZoom(z => Math.min(200, z + 25))} className="p-1 hover:bg-gray-100 rounded text-gray-600" title="Zoom In">
+                                                            <button onClick={() => setZoom(z => Math.min(200, z + 25))} className="p-1 hover:bg-gray-150 rounded text-gray-600" title="Zoom In">
                                                                 <span className="material-symbols-outlined text-sm">zoom_in</span>
                                                             </button>
                                                         </div>
@@ -589,53 +643,8 @@ export default function DocumentReviewCenter() {
                                                         </div>
 
                                                         {/* Preview Main Frame */}
-                                                        <div className="flex-1 overflow-auto p-6 flex items-center justify-center">
-                                                            <motion.div
-                                                                animate={{ scale: zoom / 100, rotate }}
-                                                                transition={{ duration: 0.15 }}
-                                                                className="bg-white rounded border border-[#E2E8F0] shadow-sm p-6 w-full max-w-md min-h-[360px] flex flex-col justify-between"
-                                                            >
-                                                                <div className="space-y-4">
-                                                                    <div className="flex justify-between items-start border-b border-gray-100 pb-3">
-                                                                        <div>
-                                                                            <span className="text-[7px] font-black text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded uppercase tracking-wider">
-                                                                                OFFICIAL TRANSCRIPT
-                                                                            </span>
-                                                                            <h4 className="text-xs font-bold text-gray-900 mt-1 uppercase tracking-tight">
-                                                                                {activeViewerDoc.docType?.replace(/_/g, " ")}
-                                                                            </h4>
-                                                                        </div>
-                                                                        <span className="material-symbols-outlined text-lg text-gray-300">lock_outline</span>
-                                                                    </div>
-
-                                                                    <div className="space-y-3">
-                                                                        <div className="grid grid-cols-2 gap-2 text-[9px] font-semibold text-gray-500">
-                                                                            <div>
-                                                                                <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest block">Audit Date</span>
-                                                                                <span className="text-gray-800 font-bold">23 May 2026</span>
-                                                                            </div>
-                                                                            <div>
-                                                                                <span className="text-[7px] font-black text-gray-400 uppercase tracking-widest block">Verification Hash</span>
-                                                                                <span className="text-gray-800 font-mono text-[8px] break-all">sha256-550f28e21183aa9b2a</span>
-                                                                            </div>
-                                                                        </div>
-
-                                                                        <div className="p-3 bg-gray-50 rounded border border-gray-100 text-[10px] font-medium text-gray-500 leading-relaxed space-y-1">
-                                                                            <p className="font-bold text-gray-800 uppercase tracking-wider text-[8px]">
-                                                                                Document Details - Page {selectedThumb} of 3
-                                                                            </p>
-                                                                            <p>This is a certified digital preview of the document payload uploaded directly from the applicant's secure storage vault. Authenticated signature checks are validated on receipt.</p>
-                                                                            <p>Please review details carefully. Accept the asset below if the documents match underwriting policies, or reject with a descriptive reason to request resubmission.</p>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className="border-t border-gray-100 pt-3 text-center">
-                                                                    <span className="text-[7px] font-bold text-gray-400 uppercase tracking-widest">
-                                                                        VidyaLoans Secure Document Gateway v2.8
-                                                                    </span>
-                                                                </div>
-                                                            </motion.div>
+                                                        <div className="flex-1 overflow-auto p-6 flex items-center justify-center h-full min-h-[500px]">
+                                                            {renderDocumentPreview(activeViewerDoc, false)}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -762,47 +771,7 @@ export default function DocumentReviewCenter() {
 
                                 {/* Main Document Canvas */}
                                 <div className="flex-1 overflow-auto p-8 flex items-center justify-center">
-                                    <motion.div
-                                        animate={{ scale: zoom / 100, rotate }}
-                                        transition={{ duration: 0.2 }}
-                                        className="bg-white rounded-lg border border-gray-200 shadow-lg p-10 max-w-2xl w-full min-h-[700px] flex flex-col justify-between"
-                                        style={{
-                                            boxShadow: "0 20px 50px rgba(0,0,0,0.06)",
-                                        }}
-                                    >
-                                        <div className="space-y-6">
-                                            <div className="flex justify-between items-start border-b border-gray-100 pb-5">
-                                                <div>
-                                                    <span className="text-[8px] font-black text-purple-600 bg-purple-50 px-2 py-1 rounded uppercase tracking-wider">OFFICIAL TRANSCRIPT</span>
-                                                    <h4 className="text-xl font-bold text-gray-900 mt-2 uppercase tracking-tight">{activeViewerDoc.docType?.replace(/_/g, " ")}</h4>
-                                                </div>
-                                                <span className="material-symbols-outlined text-4xl text-gray-300">lock_outline</span>
-                                            </div>
-
-                                            <div className="space-y-4">
-                                                <div className="grid grid-cols-2 gap-4 text-xs font-semibold text-gray-600">
-                                                    <div>
-                                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Audit Date</span>
-                                                        <span className="text-gray-900 font-bold">23 May 2026</span>
-                                                    </div>
-                                                    <div>
-                                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Verification Hash</span>
-                                                        <span className="text-gray-900 font-mono text-[10px] break-all">sha256-550f28e21183aa9b2a</span>
-                                                    </div>
-                                                </div>
-
-                                                <div className="p-5 bg-gray-50 rounded-xl border border-gray-100 text-xs font-medium text-gray-500 leading-relaxed space-y-2">
-                                                    <p className="font-bold text-gray-800 uppercase tracking-wider text-[9px]">Document Details - Page {selectedThumb} of 3</p>
-                                                    <p>This is a certified digital preview of the document payload uploaded directly from the applicant's secure storage vault. Authenticated signature checks are validated on receipt.</p>
-                                                    <p>Please review details carefully. Accept the asset below if the documents match underwriting policies, or reject with a descriptive reason to request resubmission.</p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="border-t border-gray-100 pt-5 text-center">
-                                            <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">VidyaLoans Secure Document Gateway v2.8</span>
-                                        </div>
-                                    </motion.div>
+                                    {renderDocumentPreview(activeViewerDoc, true)}
                                 </div>
                             </div>
                         </motion.div>

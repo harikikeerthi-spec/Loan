@@ -33,6 +33,7 @@ interface ChatInterfaceProps {
     initialBank?: { bankName: string; bankEmail?: string; applicationId?: string; applicationNumber?: string } | null;
     portalTitle?: string;
     className?: string;
+    hideSidebar?: boolean;
 }
 
 interface StudentDocument {
@@ -46,7 +47,7 @@ interface StudentDocument {
     uploadedAt?: string;
 }
 
-export default function ChatInterface({ role, initialUser, initialBank, portalTitle, className }: ChatInterfaceProps) {
+export default function ChatInterface({ role, initialUser, initialBank, portalTitle, className, hideSidebar = false }: ChatInterfaceProps) {
     const { token, user } = useAuth();
     const [socket, setSocket] = useState<Socket | null>(null);
     const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -417,162 +418,164 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
         <div className={className || "flex h-[800px] border border-gray-200 rounded-[2.5rem] overflow-hidden bg-white shadow-[0_24px_80px_rgba(17,24,39,0.08)] mt-6 animate-fade-in text-gray-900"}>
 
             {/* Sidebar: Conversations & Users */}
-            <div className="w-80 border-r border-gray-200 bg-[#fbfbfd] flex flex-col">
-                <div className="p-8 border-b border-gray-200 bg-[#fbfbfd]">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold text-xl tracking-tight text-gray-900">{portalTitle || 'Conversations'}</h3>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setSidebarTab('chats')}
-                                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${sidebarTab === 'chats' ? 'bg-[#6605c7] text-white shadow-lg shadow-[#6605c7]/20' : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-200'}`}
-                            >
-                                <span className="material-symbols-outlined text-sm font-black">forum</span>
-                            </button>
-                            {(role === 'staff' || role === 'agent') && (
+            {!hideSidebar && (
+                <div className="w-80 border-r border-gray-200 bg-[#fbfbfd] flex flex-col">
+                    <div className="p-8 border-b border-gray-200 bg-[#fbfbfd]">
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="font-bold text-xl tracking-tight text-gray-900">{portalTitle || 'Conversations'}</h3>
+                            <div className="flex gap-2">
                                 <button
-                                    onClick={() => setSidebarTab('users')}
-                                    className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${sidebarTab === 'users' ? 'bg-[#6605c7] text-white shadow-lg shadow-[#6605c7]/20' : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-200'}`}
+                                    onClick={() => setSidebarTab('chats')}
+                                    className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${sidebarTab === 'chats' ? 'bg-[#6605c7] text-white shadow-lg shadow-[#6605c7]/20' : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-200'}`}
                                 >
-                                    <span className="material-symbols-outlined text-sm font-black">person_add</span>
+                                    <span className="material-symbols-outlined text-sm font-black">forum</span>
                                 </button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Student / Bank filter tabs — only for staff when in chats tab */}
-                    {role === 'staff' && sidebarTab === 'chats' && (
-                        <div className="flex gap-1 mb-4 p-1 bg-white border border-gray-200 rounded-2xl">
-                            {(['all', 'student', 'bank'] as const).map(type => (
-                                <button
-                                    key={type}
-                                    onClick={() => setChatTypeFilter(type)}
-                                    className={`flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
-                                        chatTypeFilter === type
-                                            ? type === 'bank'
-                                                ? 'bg-amber-500 text-white shadow-sm'
-                                                : type === 'student'
-                                                    ? 'bg-[#6605c7] text-white shadow-sm'
-                                                    : 'bg-gray-900 text-white shadow-sm'
-                                            : 'text-gray-400 hover:text-gray-600'
-                                    }`}
-                                >
-                                    <span className="material-symbols-outlined text-[12px]">
-                                        {type === 'bank' ? 'account_balance' : type === 'student' ? 'school' : 'all_inclusive'}
-                                    </span>
-                                    {type === 'all' ? 'All' : type === 'student' ? 'Students' : 'Banks'}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
-                    <div className="relative">
-                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder={sidebarTab === 'chats' ? "Search conversations..." : "Search students..."}
-                            className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-xs font-medium placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/10 transition-all text-gray-700"
-                        />
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto no-scrollbar py-4 px-2 space-y-2">
-                    {sidebarTab === 'chats' ? (
-                        conversations.length === 0 ? (
-                            <div className="p-10 text-center opacity-50">
-                                <div className="w-16 h-16 rounded-[2rem] bg-white flex items-center justify-center mx-auto mb-4 border border-gray-200 shadow-sm">
-                                    <span className="material-symbols-outlined text-3xl">sensors_off</span>
-                                </div>
-                                <p className="text-xs font-medium text-gray-500">No active conversations</p>
+                                {(role === 'staff' || role === 'agent') && (
+                                    <button
+                                        onClick={() => setSidebarTab('users')}
+                                        className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${sidebarTab === 'users' ? 'bg-[#6605c7] text-white shadow-lg shadow-[#6605c7]/20' : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-200'}`}
+                                    >
+                                        <span className="material-symbols-outlined text-sm font-black">person_add</span>
+                                    </button>
+                                )}
                             </div>
-                        ) : (
-                            filteredConversations.map(conv => {
-                                const isBank = conv.metadata?.type === 'bank';
-                                const activeStyle = activeConversation === conv.id;
-                                const activeBg = isBank
-                                    ? 'bg-amber-500 shadow-xl shadow-amber-500/20'
-                                    : 'bg-[#6605c7] shadow-xl shadow-[#6605c7]/20';
-                                return (
-                                <div
-                                    key={conv.id}
-                                    onClick={() => { setActiveConversation(conv.id); setShowDocPanel(false); }}
-                                    className={`px-6 py-5 cursor-pointer transition-all relative rounded-3xl group
-                                    ${activeStyle ? activeBg : 'hover:bg-gray-50'}`}
-                                >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${
-                                                activeStyle
-                                                    ? 'bg-white/20 text-white'
-                                                    : isBank
-                                                        ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                                                        : 'bg-[#6605c7] text-white shadow-lg shadow-[#6605c7]/20'
-                                            }`}>
-                                                {isBank
-                                                    ? <span className="material-symbols-outlined text-[16px]">account_balance</span>
-                                                    : (conv.customerName || conv.customerPhone)?.substring(0, 1)
-                                                }
-                                            </div>
-                                            <div className="min-w-0">
-                                                <span className={`font-black text-sm tracking-tight truncate block ${activeStyle ? 'text-white' : 'text-gray-800'}`}>
-                                                    {conv.customerName || conv.customerPhone}
-                                                </span>
-                                                <span className={`text-[10px] font-medium block mt-0.5 ${activeStyle ? 'text-white/80' : isBank ? 'text-amber-600' : 'text-gray-500'}`}>
-                                                    {isBank ? '🏦 Bank Channel' : 'Online'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <span className={`text-[10px] font-medium ${activeStyle ? 'text-white/70' : 'text-gray-400'}`}>
-                                            {conv.updatedAt ? new Date(conv.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                        </div>
+
+                        {/* Student / Bank filter tabs — only for staff when in chats tab */}
+                        {role === 'staff' && sidebarTab === 'chats' && (
+                            <div className="flex gap-1 mb-4 p-1 bg-white border border-gray-200 rounded-2xl">
+                                {(['all', 'student', 'bank'] as const).map(type => (
+                                    <button
+                                        key={type}
+                                        onClick={() => setChatTypeFilter(type)}
+                                        className={`flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
+                                            chatTypeFilter === type
+                                                ? type === 'bank'
+                                                    ? 'bg-amber-500 text-white shadow-sm'
+                                                    : type === 'student'
+                                                        ? 'bg-[#6605c7] text-white shadow-sm'
+                                                        : 'bg-gray-900 text-white shadow-sm'
+                                                : 'text-gray-400 hover:text-gray-600'
+                                        }`}
+                                    >
+                                        <span className="material-symbols-outlined text-[12px]">
+                                            {type === 'bank' ? 'account_balance' : type === 'student' ? 'school' : 'all_inclusive'}
                                         </span>
-                                    </div>
+                                        {type === 'all' ? 'All' : type === 'student' ? 'Students' : 'Banks'}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
 
-                                    <div className="text-xs font-medium opacity-70 truncate px-1">
-                                        {conv.lastMessage ? conv.lastMessage.content : 'Starting conversation...'}
-                                    </div>
+                        <div className="relative">
+                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder={sidebarTab === 'chats' ? "Search conversations..." : "Search students..."}
+                                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-2xl text-xs font-medium placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/10 transition-all text-gray-700"
+                            />
+                        </div>
+                    </div>
 
-                                    {conv.status === 'active' && activeConversation !== conv.id && (
-                                        <div className="absolute right-6 bottom-6 w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></div>
-                                    )}
+                    <div className="flex-1 overflow-y-auto no-scrollbar py-4 px-2 space-y-2">
+                        {sidebarTab === 'chats' ? (
+                            conversations.length === 0 ? (
+                                <div className="p-10 text-center opacity-50">
+                                    <div className="w-16 h-16 rounded-[2rem] bg-white flex items-center justify-center mx-auto mb-4 border border-gray-200 shadow-sm">
+                                        <span className="material-symbols-outlined text-3xl">sensors_off</span>
+                                    </div>
+                                    <p className="text-xs font-medium text-gray-500">No active conversations</p>
                                 </div>
-                                );
-                            })
-                        )
-                    ) : (
-                        loadingUsers ? (
-                            <div className="p-10 text-center"><div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto" /></div>
-                        ) : filteredUsers.length === 0 ? (
-                            <div className="p-10 text-center opacity-30"><p className="text-[10px] font-black uppercase">No users found</p></div>
+                            ) : (
+                                filteredConversations.map(conv => {
+                                    const isBank = conv.metadata?.type === 'bank';
+                                    const activeStyle = activeConversation === conv.id;
+                                    const activeBg = isBank
+                                        ? 'bg-amber-500 shadow-xl shadow-amber-500/20'
+                                        : 'bg-[#6605c7] shadow-xl shadow-[#6605c7]/20';
+                                    return (
+                                    <div
+                                        key={conv.id}
+                                        onClick={() => { setActiveConversation(conv.id); setShowDocPanel(false); }}
+                                        className={`px-6 py-5 cursor-pointer transition-all relative rounded-3xl group
+                                        ${activeStyle ? activeBg : 'hover:bg-gray-50'}`}
+                                    >
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${
+                                                    activeStyle
+                                                        ? 'bg-white/20 text-white'
+                                                        : isBank
+                                                            ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                                                            : 'bg-[#6605c7] text-white shadow-lg shadow-[#6605c7]/20'
+                                                }`}>
+                                                    {isBank
+                                                        ? <span className="material-symbols-outlined text-[16px]">account_balance</span>
+                                                        : (conv.customerName || conv.customerPhone)?.substring(0, 1)
+                                                    }
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <span className={`font-black text-sm tracking-tight truncate block ${activeStyle ? 'text-white' : 'text-gray-800'}`}>
+                                                        {conv.customerName || conv.customerPhone}
+                                                    </span>
+                                                    <span className={`text-[10px] font-medium block mt-0.5 ${activeStyle ? 'text-white/80' : isBank ? 'text-amber-600' : 'text-gray-500'}`}>
+                                                        {isBank ? '🏦 Bank Channel' : 'Online'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <span className={`text-[10px] font-medium ${activeStyle ? 'text-white/70' : 'text-gray-400'}`}>
+                                                {conv.updatedAt ? new Date(conv.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                            </span>
+                                        </div>
+
+                                        <div className="text-xs font-medium opacity-70 truncate px-1">
+                                            {conv.lastMessage ? conv.lastMessage.content : 'Starting conversation...'}
+                                        </div>
+
+                                        {conv.status === 'active' && activeConversation !== conv.id && (
+                                            <div className="absolute right-6 bottom-6 w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></div>
+                                        )}
+                                    </div>
+                                    );
+                                })
+                            )
                         ) : (
-                            filteredUsers.map(u => (
-                                <div
-                                    key={u.id}
-                                    onClick={() => startNewChat(u)}
-                                    className="px-6 py-5 cursor-pointer transition-all relative rounded-3xl hover:bg-gray-50 group border border-transparent hover:border-gray-200"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-[#6605c7]/10 flex items-center justify-center font-black text-xs text-[#6605c7]">
-                                            {u.firstName?.[0] || u.email?.[0]?.toUpperCase()}
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <span className="font-black text-sm tracking-tight truncate block text-gray-900">
-                                                {u.firstName} {u.lastName}
-                                            </span>
-                                            <span className="text-xs font-medium block mt-0.5 text-gray-500">
-                                                {u.email}
-                                            </span>
-                                        </div>
-                                        <div className="w-8 h-8 rounded-full bg-[#6605c7]/10 text-[#6605c7] items-center justify-center hidden group-hover:flex">
-                                            <span className="material-symbols-outlined text-sm">chat</span>
+                            loadingUsers ? (
+                                <div className="p-10 text-center"><div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto" /></div>
+                            ) : filteredUsers.length === 0 ? (
+                                <div className="p-10 text-center opacity-30"><p className="text-[10px] font-black uppercase">No users found</p></div>
+                            ) : (
+                                filteredUsers.map(u => (
+                                    <div
+                                        key={u.id}
+                                        onClick={() => startNewChat(u)}
+                                        className="px-6 py-5 cursor-pointer transition-all relative rounded-3xl hover:bg-gray-50 group border border-transparent hover:border-gray-200"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-xl bg-[#6605c7]/10 flex items-center justify-center font-black text-xs text-[#6605c7]">
+                                                {u.firstName?.[0] || u.email?.[0]?.toUpperCase()}
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <span className="font-black text-sm tracking-tight truncate block text-gray-900">
+                                                    {u.firstName} {u.lastName}
+                                                </span>
+                                                <span className="text-xs font-medium block mt-0.5 text-gray-500">
+                                                    {u.email}
+                                                </span>
+                                            </div>
+                                            <div className="w-8 h-8 rounded-full bg-[#6605c7]/10 text-[#6605c7] items-center justify-center hidden group-hover:flex">
+                                                <span className="material-symbols-outlined text-sm">chat</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))
-                        )
-                    )}
+                                ))
+                            )
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Main Chat Area */}
             <div className="flex-1 flex overflow-hidden bg-white relative">

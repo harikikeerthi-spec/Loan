@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { io, Socket } from "socket.io-client";
+import { useRouter } from "next/navigation";
+import { adminApi } from "@/lib/api";
 
 interface Notification {
   id: string;
@@ -27,6 +29,7 @@ const NotificationsPanel = ({
   maxDisplay = 5,
   showUnreadBadge = true,
 }: NotificationsPanelProps) => {
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -187,29 +190,77 @@ const NotificationsPanel = ({
   const handleNotificationClick = async (notification: Notification) => {
     onNotificationClick?.(notification);
 
-    if (notification.isRead) return;
+    if (!notification.isRead) {
+      // Optimistic update
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
 
-    // Optimistic update
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n))
-    );
-    setUnreadCount((prev) => Math.max(0, prev - 1));
+      try {
+        const token =
+          localStorage.getItem("staffAccessToken") ||
+          localStorage.getItem("adminAccessToken") ||
+          localStorage.getItem("accessToken");
 
+        await fetch(`/api/notifications/${notification.id}/mark-read`, {
+          method: "PUT",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+      } catch (err) {
+        console.error("[NotificationsPanel] Failed to mark read:", err);
+      }
+    }
+
+    // Navigation logic
     try {
-      const token =
-        localStorage.getItem("staffAccessToken") ||
-        localStorage.getItem("adminAccessToken") ||
-        localStorage.getItem("accessToken");
+      const metadata = notification.metadata;
+      let appId = metadata?.applicationId || metadata?.id;
+      let userId = metadata?.userId || metadata?.studentId;
 
-      await fetch(`/api/notifications/${notification.id}/mark-read`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-    } catch (err) {
-      console.error("[NotificationsPanel] Failed to mark read:", err);
+      if (!appId && !userId) {
+        // Fallback: Parse from body / title (for legacy/existing notifications)
+        const appNumRegex = /VL-APP-\d{4}-\d{5}/i;
+        const appNumMatch = notification.body?.match(appNumRegex) || notification.title?.match(appNumRegex);
+
+        const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+        const emailMatch = notification.body?.match(emailRegex) || notification.title?.match(emailRegex);
+
+        if (appNumMatch) {
+          const appNum = appNumMatch[0];
+          console.log(`[NotificationsPanel] Parsed application number ${appNum} from notification, fetching ID...`);
+          const appsRes = await adminApi.getApplications({}) as any;
+          const foundApp = appsRes.data?.find((a: any) => 
+            a.applicationNumber?.toLowerCase() === appNum.toLowerCase()
+          );
+          if (foundApp) {
+            appId = foundApp.id || foundApp._id;
+          }
+        } else if (emailMatch) {
+          const email = emailMatch[0];
+          console.log(`[NotificationsPanel] Parsed email ${email} from notification, fetching user ID...`);
+          const usersRes = await adminApi.getUsers(20, 0, email) as any;
+          const foundUser = usersRes.items?.find((u: any) => 
+            u.email?.toLowerCase() === email.toLowerCase()
+          );
+          if (foundUser) {
+            userId = foundUser.id || foundUser._id;
+          }
+        }
+      }
+
+      if (appId) {
+        router.push(`/staff/applications/${appId}`);
+      } else if (userId) {
+        router.push(`/staff/users/${userId}`);
+      } else {
+        console.warn("[NotificationsPanel] Could not resolve application ID or user ID for notification:", notification);
+      }
+    } catch (routeErr) {
+      console.error("[NotificationsPanel] Error navigating to notification details:", routeErr);
     }
   };
 

@@ -1017,6 +1017,13 @@ export const chatApi = {
         fetch(HttpApiPaths.chat.messages(conversationId), {
             headers: authHeaders(),
         }).then(handleResponse),
+
+    staffStart: (customerPhone: string, email: string, name?: string) =>
+        fetch(HttpApiPaths.chat.staffStart(), {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ customerPhone, email, name }),
+        }).then(handleResponse),
 };
 // ─── Staff Profile (Intermediary Flow) ───────────────────────────────
 export const staffProfileApi = {

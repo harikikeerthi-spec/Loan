@@ -70,28 +70,26 @@ export class ChatController {
     // Create a stable synthetic phone identifier for this bank channel
     // Using a format that won't conflict with real phone numbers
     const safeBank = body.bankName.toUpperCase().replace(/[^A-Z0-9]/g, '_');
-    const syntheticPhone = `BNK_${safeBank}`;
+    const syntheticPhone = body.applicationId
+      ? `BNK_${safeBank}_APP_${body.applicationId}`
+      : `BNK_${safeBank}`;
 
-    const displayName = `${body.bankName} (Bank)`;
-    const staffEmail = req.user?.email || 'staff';
+    const shortAppId = body.applicationNumber || (body.applicationId ? body.applicationId.slice(0, 8) : '');
+    const displayName = body.applicationId
+      ? `${body.bankName} - App #${shortAppId}`
+      : `${body.bankName} (Bank)`;
 
     const conversation = await this.chatService.getOrCreateConversation(
       syntheticPhone,
       body.bankEmail || `bank+${safeBank.toLowerCase()}@internal`,
       'bank',
       displayName,
-      body.bankName
-    );
-
-    // If an applicationId was provided, patch it into metadata
-    if (body.applicationId || body.applicationNumber) {
-      // The service will carry forward existing metadata; we return it here
-      (conversation as any).metadata = {
-        ...(conversation as any).metadata,
+      body.bankName,
+      {
         applicationId: body.applicationId || null,
         applicationNumber: body.applicationNumber || null,
-      };
-    }
+      }
+    );
 
     return {
       success: true,

@@ -53,7 +53,7 @@ const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => {
                 </span>
 
                 {!collapsed && (
-                    <span className="text-[11.5px] font-semibold tracking-wide relative z-10 whitespace-nowrap truncate">
+                    <span className="text-[13.5px] font-bold tracking-wide relative z-10 whitespace-nowrap truncate">
                         {label}
                     </span>
                 )}
@@ -333,11 +333,11 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                 className="flex items-center gap-2 min-w-0 flex-1"
                             >
                                 <div className="flex flex-col min-w-0">
-                                    <span className="text-lg font-bold text-gray-900 leading-none tracking-tight" style={{ fontFamily: '"Clash Display", "Cabinet Grotesk", sans-serif' }}>
+                                    <span className="text-xl font-extrabold text-gray-900 leading-none tracking-tight" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
                                         Vidya<span style={{ color: '#6605c7' }}>Bank</span>
                                     </span>
-                                    <span className="text-[8.5px] font-bold uppercase tracking-[0.2em] mt-1 opacity-55"
-                                        style={{ color: '#6605c7', fontFamily: '"Clash Display", "Cabinet Grotesk", sans-serif' }}>
+                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] mt-1.5 opacity-55"
+                                        style={{ color: '#6605c7', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
                                         Partner Matrix
                                     </span>
                                 </div>
@@ -362,7 +362,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                     {categorizedNav.map((cat, idx) => (
                         <div key={idx} className="space-y-1">
                             {!collapsed && (
-                                <p className="px-3 text-[8.5px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1.5">
+                                <p className="px-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#6605c7] opacity-80 mb-2">
                                     {cat.category}
                                 </p>
                             )}

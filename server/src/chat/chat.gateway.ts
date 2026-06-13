@@ -286,4 +286,16 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.logger.warn(`WS server not initialized. Skipping notification broadcast.`);
     }
   }
+
+  @OnEvent('chat.message_created')
+  handleChatMessageCreated(msg: any) {
+    this.logger.log(`Broadcasting programmatically created message in conversation ${msg.conversationId}`);
+    if (this.server) {
+      this.server.to(`conv_${msg.conversationId}`).emit('new_message', msg);
+      this.server.to('room_staff').emit('conversation_updated', {
+        conversationId: msg.conversationId,
+        lastMessage: msg
+      });
+    }
+  }
 }

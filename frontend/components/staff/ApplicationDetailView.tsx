@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect } from "react";
 import { format } from "date-fns";
-import { documentApi, staffProfileApi, adminApi } from "@/lib/api";
+import { documentApi, staffProfileApi, adminApi, chatApi } from "@/lib/api";
+import { io, Socket } from "socket.io-client";
+import { useAuth } from "@/contexts/AuthContext";
 import KycSystemDashboard from "./KycSystemDashboard";
 import ShareWithBankModal from "./ShareWithBankModal";
 import SendDocumentToBankModal from "./SendDocumentToBankModal";
@@ -82,6 +84,8 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [sendToBankDoc, setSendToBankDoc] = useState<OcrSummaryDoc | null>(null);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [fetchedStatusHistory, setFetchedStatusHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const progress = application.progress || 90;
   const status = (application.status || "APPROVED").toUpperCase();
@@ -89,14 +93,13 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const studentId = application.studentId || application.userId || "—";
   const studentId10 = application.studentId || application.userId || "—";
 
-  const [messages, setMessages] = useState([
-    { id: 1, sender: "staff", text: `Hello ${application.firstName || "Applicant"}, we noticed that your 10th standard marksheet is slightly blurred. Could you please upload a clearer scan?`, time: "10:45 AM", type: "chat" },
-    { id: 2, sender: "student", text: "Sure, I'll upload it right away. Give me 5 minutes.", time: "11:12 AM", type: "chat" },
-    { id: 3, sender: "system", text: "New Document Uploaded: Marksheet_10th_Final.pdf", time: "11:15 AM", type: "notification" },
-  ]);
+  const { token } = useAuth();
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
   const [notes, setNotes] = useState([
     { id: 1, author: "Ananya Deshmukh", role: "Senior Auditor", text: "Student has excellent academic pedigree. Waitlisted at UofT but current profile shows high employability in data science. Financials look solid; father's income is consistent for last 3 years.", time: "2 DAYS AGO" },
-    { id: 2, author: "Staff Member", role: "Relationship Manager", text: "Requested a clearer scan of 10th marksheet. Verification pending for academic section.", time: "TODAY â€¢ 10:15 AM" },
+    { id: 2, author: "Staff Member", role: "Relationship Manager", text: "Requested a clearer scan of 10th marksheet. Verification pending for academic section.", time: "TODAY • 10:15 AM" },
   ]);
   const [msgInput, setMsgInput] = useState("");
   const [noteInput, setNoteInput] = useState("");
@@ -106,6 +109,147 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const [loadingDocs, setLoadingDocs] = useState(false);
 
   const userId = application.userId || application.user_id || application.applicantId || application.student?.id || application.student?._id || application.user?.id || application.user?._id;
+
+  // Fetch/start conversation
+  useEffect(() => {
+    let active = true;
+    if (!application) return;
+
+    const phone = application.phone || application.student?.phone || application.mobile || "";
+    const email = application.email || application.student?.email || "";
+    const name = `${application.firstName || application.student?.firstName || ""} ${application.lastName || application.student?.lastName || ""}`.trim() || "Student";
+
+    if (!phone) {
+      console.warn("No phone number found for applicant. Chat cannot be initialized.");
+      return;
+    }
+
+    async function initChat() {
+      try {
+        const res: any = await chatApi.staffStart(phone, email, name);
+        if (active && res && res.success && res.conversation) {
+          const convId = res.conversation.id;
+          setConversationId(convId);
+
+          // Load historical messages
+          const msgRes: any = await chatApi.getMessages(convId);
+          if (active && msgRes && Array.isArray(msgRes)) {
+            const mapped = msgRes.map((msg: any) => {
+              const isSystem = msg.senderType === "system";
+              let sender = "student";
+              if (msg.senderType === "staff") {
+                sender = "staff";
+              } else if (msg.senderType === "system") {
+                sender = "system";
+              } else if (msg.senderType === "bank") {
+                sender = "bank";
+              }
+
+              let formattedTime = "";
+              try {
+                formattedTime = format(new Date(msg.createdAt), "hh:mm a") + " IST";
+              } catch (e) {
+                formattedTime = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }).format(new Date()) + " IST";
+              }
+
+              return {
+                id: msg.id,
+                sender,
+                text: msg.content || "",
+                time: formattedTime,
+                type: isSystem ? "notification" : "chat"
+              };
+            });
+            setMessages(mapped);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to start chat session:", err);
+      }
+    }
+
+    initChat();
+
+    return () => {
+      active = false;
+    };
+  }, [application]);
+
+  // Set up socket connection and join room
+  useEffect(() => {
+    if (!conversationId || !token) return;
+
+    const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (
+      typeof window !== 'undefined' &&
+        !window.location.hostname.includes('localhost') &&
+        !window.location.hostname.includes('127.0.0.1')
+        ? window.location.origin
+        : 'http://localhost:5000'
+    );
+
+    const socketUrl = baseApiUrl.endsWith('/api')
+      ? baseApiUrl.replace('/api', '/chat')
+      : `${baseApiUrl.replace(/\/$/, '')}/chat`;
+
+    const newSocket = io(socketUrl, {
+      auth: { token },
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5
+    });
+
+    newSocket.on('connect', () => {
+      console.log('[ApplicationDetailView] Socket connected');
+      newSocket.emit('join_conversation', conversationId);
+    });
+
+    newSocket.on('new_message', (msg: any) => {
+      if (msg.conversationId !== conversationId) return;
+
+      const isSystem = msg.senderType === "system";
+      let sender = "student";
+      if (msg.senderType === "staff") {
+        sender = "staff";
+      } else if (msg.senderType === "system") {
+        sender = "system";
+      } else if (msg.senderType === "bank") {
+        sender = "bank";
+      }
+
+      let formattedTime = "";
+      try {
+        formattedTime = format(new Date(msg.createdAt), "hh:mm a") + " IST";
+      } catch (e) {
+        formattedTime = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }).format(new Date()) + " IST";
+      }
+
+      const incomingMsg = {
+        id: msg.id,
+        sender,
+        text: msg.content || "",
+        time: formattedTime,
+        type: isSystem ? "notification" : "chat"
+      };
+
+      setMessages((prev) => {
+        // Prevent duplicate messages if already present
+        if (prev.some((m) => m.id === incomingMsg.id)) return prev;
+        return [...prev, incomingMsg];
+      });
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('[ApplicationDetailView] Socket disconnected');
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      newSocket.emit('leave_conversation', conversationId);
+      newSocket.disconnect();
+      setSocket(null);
+    };
+  }, [conversationId, token]);
 
   const handleVerifyDocument = async (docId: string) => {
     try {
@@ -204,6 +348,25 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     fetchDocuments();
   }, [userId]);
 
+  useEffect(() => {
+    const fetchStatusHistory = async () => {
+      const appRefId = application.id || application._id;
+      if (!appRefId) return;
+      setLoadingHistory(true);
+      try {
+        const res = await adminApi.getApplicationTracking(appRefId) as any;
+        if (res && res.success && res.data) {
+          setFetchedStatusHistory(res.data.timeline || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch application tracking:", err);
+      } finally {
+        setLoadingHistory(false);
+      }
+    };
+    fetchStatusHistory();
+  }, [application.id, application._id]);
+
   const [isAddDocModalOpen, setIsAddDocModalOpen] = useState(false);
   const [newDocName, setNewDocName] = useState("");
   const [newDocCategory, setNewDocCategory] = useState("academic");
@@ -217,14 +380,19 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
 
   const handleSendMessage = () => {
     if (!msgInput.trim()) return;
-    const newMessage = {
-      id: Date.now(),
-      sender: "staff",
-      text: msgInput,
-      time: new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }).format(new Date()) + " IST",
-      type: "chat"
-    };
-    setMessages([...messages, newMessage]);
+    if (!socket || !conversationId) {
+      alert("Chat connection is not ready. Please try again in a moment.");
+      return;
+    }
+
+    const customerPhone = application.phone || application.student?.phone || application.mobile || "";
+
+    socket.emit("send_message", {
+      conversationId,
+      customerPhone,
+      content: msgInput.trim()
+    });
+
     setMsgInput("");
   };
 
@@ -530,73 +698,100 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const getStageTimestamp = (stageIdx: number, completed: boolean, active?: boolean): string | undefined => {
     if (!completed && !active) return undefined;
 
-    // Attempt to search application.statusHistory first
-    const history = application.statusHistory || [];
-    if (history.length > 0) {
-      // Helper to find the earliest createdAt timestamp for any matching status
-      const findHistoryTime = (statuses: string[]) => {
-        const matches = history
-          .filter((h: any) => statuses.includes(String(h.toStatus || h.to_status || "").toLowerCase()))
-          .sort((a: any, b: any) => {
-            const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
-            const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
-            return timeA - timeB;
-          });
-        if (matches.length > 0) {
-          return matches[0].createdAt || matches[0].created_at;
-        }
-        return undefined;
-      };
+    // 1. Try to extract timestamps from fetchedStatusHistory or application.statusHistory
+    const history = fetchedStatusHistory && fetchedStatusHistory.length > 0
+      ? fetchedStatusHistory
+      : (application.statusHistory || []);
 
-      let statusHistoryTime: string | undefined = undefined;
-      switch (stageIdx) {
+    const findHistoryTime = (statuses: string[]) => {
+      const matches = history
+        .filter((h: any) => statuses.includes(String(h.toStatus || h.to_status || "").toLowerCase()))
+        .sort((a: any, b: any) => {
+          const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
+          const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
+          return timeA - timeB;
+        });
+      if (matches.length > 0) {
+        return matches[0].createdAt || matches[0].created_at;
+      }
+      return undefined;
+    };
+
+    const extractedTimestamps: (string | undefined)[] = [];
+    for (let i = 0; i < 8; i++) {
+      let time: string | undefined = undefined;
+      switch (i) {
         case 0:
-          statusHistoryTime = findHistoryTime(['pending']);
+          time = findHistoryTime(['pending']);
           break;
         case 1:
-          statusHistoryTime = findHistoryTime(['docs_received', 'docs_uploaded']);
+          time = findHistoryTime(['docs_received', 'docs_uploaded']);
           break;
         case 2:
-          statusHistoryTime = findHistoryTime(['staff_verified']);
+          time = findHistoryTime(['staff_verified']);
           break;
         case 3:
-          statusHistoryTime = findHistoryTime(['submitted_to_bank', 'file_logged']);
+          time = findHistoryTime(['submitted_to_bank', 'file_logged']);
           break;
         case 4:
-          statusHistoryTime = findHistoryTime(['under_bank_review', 'query_raised']);
+          time = findHistoryTime(['under_bank_review', 'query_raised']);
           break;
         case 5:
-          statusHistoryTime = findHistoryTime(['approved', 'sanctioned', 'conditional_sanction', 'counter_offer']);
+          time = findHistoryTime(['approved', 'sanctioned', 'conditional_sanction', 'counter_offer']);
           break;
         case 6:
-          statusHistoryTime = findHistoryTime(['sanctioned', 'approved']);
+          time = findHistoryTime(['sanctioned', 'approved']);
           break;
         case 7:
-          statusHistoryTime = findHistoryTime(['disbursement_confirmed', 'closed']);
+          time = findHistoryTime(['disbursement_confirmed', 'closed']);
           break;
       }
-
-      if (statusHistoryTime) {
-        return statusHistoryTime;
-      }
+      extractedTimestamps.push(time);
     }
 
-    // Fallbacks if history lookup doesn't yield a timestamp:
-    // Every completed stage should show a date and time.
-    const createdDate = application.date || application.student?.registeredAtIndia || application.registeredAtIndia || application.student?.createdAt || application.student?.created_at || application.user?.createdAt || application.user?.created_at || application.createdAt || application.created_at;
-    const submittedDate = application.submittedAt || application.submitted_at || createdDate;
-    const verifiedDate = application.updatedAt || application.updated_at || submittedDate;
+    // Check if the history timestamps are valid and distinct
+    const validTimestamps = extractedTimestamps.filter((t): t is string => !!t);
+    const uniqueTimestamps = Array.from(new Set(validTimestamps.map(t => new Date(t).getTime())));
+    const hasValidHistory = uniqueTimestamps.length >= 2;
 
-    switch (stageIdx) {
-      case 0:
-        return createdDate;
-      case 1:
-        return submittedDate;
-      case 2:
-        return verifiedDate;
-      default:
-        // For other completed steps, use the application's updatedAt time
-        return application.updatedAt || application.updated_at || appCreatedAt;
+    if (hasValidHistory && extractedTimestamps[stageIdx]) {
+      return extractedTimestamps[stageIdx];
+    }
+
+    // Chronological fallback when status history is missing/identical
+    const getAnchorIdx = (p: number) => {
+      if (p >= 100) return 7;
+      if (p >= 95) return 7;
+      if (p >= 90) return 6;
+      if (p >= 75) return 5;
+      if (p >= 50) return 4;
+      if (p >= 40) return 3;
+      if (p >= 25) return 2;
+      if (p >= 10) return 1;
+      return 0;
+    };
+
+    const anchorIdx = getAnchorIdx(progress);
+
+    let startD = new Date(appCreatedAt);
+    if (isNaN(startD.getTime())) startD = new Date(Date.now() - 5 * 24 * 3600000);
+    let endD = new Date(appUpdatedAt);
+    if (isNaN(endD.getTime())) endD = new Date();
+
+    if (startD.getTime() > endD.getTime()) {
+      startD = new Date(endD.getTime() - 5 * 24 * 3600000);
+    }
+
+    const span = endD.getTime() - startD.getTime();
+    if (span >= 2 * 3600000 && anchorIdx > 0) {
+      // Linear interpolation fallback
+      const step = span / anchorIdx;
+      return new Date(startD.getTime() + stageIdx * step).toISOString();
+    } else {
+      // Offsets back from endD fallback
+      const offset = 24 * 3600000 + 4 * 3600000; // 28 hours
+      const diff = (anchorIdx - stageIdx) * offset;
+      return new Date(endD.getTime() - diff).toISOString();
     }
   };
 
@@ -1171,11 +1366,17 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                                 </div>
                               ) : (
                                 <div className={`flex flex-col space-y-2 ${msg.sender === "staff" ? "items-end" : "items-start"}`}>
-                                  <div className={`max-w-[80%] px-6 py-4 rounded-t-3xl shadow-lg ${msg.sender === "staff" ? "bg-indigo-600 text-white rounded-bl-3xl shadow-indigo-100" : "bg-white border border-slate-100 text-slate-700 rounded-br-3xl shadow-sm"}`}>
+                                  <div className={`max-w-[80%] px-6 py-4 rounded-t-3xl shadow-lg ${
+                                    msg.sender === "staff"
+                                      ? "bg-indigo-600 text-white rounded-bl-3xl shadow-indigo-100"
+                                      : msg.sender === "bank"
+                                        ? "bg-amber-50 border border-amber-105 text-slate-705 rounded-br-3xl shadow-sm"
+                                        : "bg-white border border-slate-100 text-slate-707 rounded-br-3xl shadow-sm"
+                                  }`}>
                                     <p className="text-[14px] leading-relaxed">{msg.text}</p>
                                   </div>
                                   <p className={`text-[10px] font-bold text-slate-400 ${msg.sender === "staff" ? "mr-2" : "ml-2"}`}>
-                                    {msg.sender === "staff" ? "STAFF" : "STUDENT"} â€¢ {msg.time}
+                                    {msg.sender === "staff" ? "STAFF" : msg.sender === "bank" ? "BANK" : "STUDENT"} • {msg.time}
                                   </p>
                                 </div>
                               )}

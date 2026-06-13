@@ -331,6 +331,14 @@ export default function DecisionsHub() {
                     setCounterTenure("120");
                 }
 
+                if (detailRes.status === 'sanctioned') {
+                    setCounterOfferStatus("accepted");
+                } else if (detailRes.status === 'rejected') {
+                    setCounterOfferStatus("rejected");
+                } else {
+                    setCounterOfferStatus("pending");
+                }
+
                 setOfficerRemarks("");
                 setRejectionCategory("CIBIL");
                 setRejectionReason("Unsatisfactory CIBIL/Credit Score");
@@ -1959,10 +1967,36 @@ export default function DecisionsHub() {
                                                                     <span className="px-2 py-0.5 bg-rose-100 text-rose-700 text-[8px] font-black rounded-lg">Termination Pending</span>
                                                                 </div>
 
-                                                                <div className="text-xs space-y-1.5 bg-white p-3 rounded-xl border border-rose-50 font-medium text-gray-650">
-                                                                    <p><strong>Request Date:</strong> Yesterday at 14:32</p>
-                                                                    <p><strong>Reason:</strong> Student decided to switch to Avanse due to zero margin collateral requirement.</p>
-                                                                    <p><strong>Sought Refund:</strong> Customer requests full reversal of processing fee.</p>
+                                                                <div className="text-xs space-y-3 bg-white p-3 rounded-xl border border-rose-50 font-medium text-gray-650">
+                                                                    <div>
+                                                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Request Date</span>
+                                                                        <p className="font-bold text-gray-750">
+                                                                            {selectedApp?.updatedAt ? format(new Date(selectedApp.updatedAt), "dd MMM yyyy, HH:mm") : format(new Date(), "dd MMM yyyy, HH:mm")}
+                                                                        </p>
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Cancellation Category</label>
+                                                                        <select
+                                                                            value={cancelCategory}
+                                                                            onChange={(e) => setCancelCategory(e.target.value)}
+                                                                            className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold focus:outline-none focus:border-rose-500 text-gray-700"
+                                                                        >
+                                                                            <option value="applicant_withdrew">Applicant Withdrew</option>
+                                                                            <option value="lender_rejected">Lender Rejected</option>
+                                                                            <option value="duplicate_file">Duplicate File</option>
+                                                                            <option value="other">Other</option>
+                                                                        </select>
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Refund Reversal Remarks</label>
+                                                                        <textarea
+                                                                            value={cancelRefundDetails}
+                                                                            onChange={(e) => setCancelRefundDetails(e.target.value)}
+                                                                            placeholder="Describe reversal details..."
+                                                                            rows={2}
+                                                                            className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium focus:outline-none focus:border-rose-500 text-gray-750"
+                                                                        />
+                                                                    </div>
                                                                 </div>
 
                                                                 <div>
