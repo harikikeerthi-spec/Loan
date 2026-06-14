@@ -202,39 +202,41 @@ export class ApplicationService {
     await this.createStatusHistory(application.id, { toStatus: application.status, toStage: application.stage, notes: 'Application created', isAutomatic: true });
     await this.initializeRequiredDocuments(application.id, application.userId, data.loanType);
 
-    // Emit application created event for staff notifications
-    try {
-      const name = `${application.firstName || ''} ${application.lastName || ''}`.trim() || application.email || 'Student';
-      this.eventEmitter.emit('application.created', {
-        applicationId: application.id,
-        applicationNumber: application.applicationNumber,
-        userId: application.userId,
-        candidateName: name,
-        candidateEmail: application.email,
-        bank: application.bank,
-        loanAmount: application.amount,
-        loanType: data.loanType,
-        createdAt: new Date().toISOString()
-      });
-    } catch (e) {
-      console.error('Failed to emit application.created event:', e);
-    }
+    // Emit application created event for staff notifications ONLY if not a draft
+    if (application.status !== 'draft') {
+      try {
+        const name = `${application.firstName || ''} ${application.lastName || ''}`.trim() || application.email || 'Student';
+        this.eventEmitter.emit('application.created', {
+          applicationId: application.id,
+          applicationNumber: application.applicationNumber,
+          userId: application.userId,
+          candidateName: name,
+          candidateEmail: application.email,
+          bank: application.bank,
+          loanAmount: application.amount,
+          loanType: data.loanType,
+          createdAt: new Date().toISOString()
+        });
+      } catch (e) {
+        console.error('Failed to emit application.created event:', e);
+      }
 
-    // Emit live dashboard activity event for new application creation!
-    try {
-      const name = `${application.firstName || ''} ${application.lastName || ''}`.trim() || application.email || 'Student';
-      const targetUni = application.universityName || 'Target University';
-      this.eventEmitter.emit('dashboard.activity', {
-        type: 'application',
-        msg: `Student ${name} submitted a new Loan Application #${application.applicationNumber} for ${targetUni}.`,
-        icon: 'assignment',
-        color: 'bg-indigo-50 text-indigo-700 border-indigo-100',
-        actorName: name,
-        actorEmail: application.email,
-        createdAt: new Date().toISOString()
-      });
-    } catch (e) {
-      console.error('Failed to emit activity event for application creation:', e);
+      // Emit live dashboard activity event for new application creation
+      try {
+        const name = `${application.firstName || ''} ${application.lastName || ''}`.trim() || application.email || 'Student';
+        const targetUni = application.universityName || 'Target University';
+        this.eventEmitter.emit('dashboard.activity', {
+          type: 'application',
+          msg: `Student ${name} submitted a new Loan Application #${application.applicationNumber} for ${targetUni}.`,
+          icon: 'assignment',
+          color: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+          actorName: name,
+          actorEmail: application.email,
+          createdAt: new Date().toISOString()
+        });
+      } catch (e) {
+        console.error('Failed to emit activity event for application creation:', e);
+      }
     }
 
     return { success: true, data: application, message: 'Application created successfully' };

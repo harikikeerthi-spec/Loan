@@ -190,11 +190,11 @@ const NotificationsPanel = ({
   const handleNotificationClick = async (notification: Notification) => {
     onNotificationClick?.(notification);
 
+    // Remove the notification from the list entirely when clicked
+    setNotifications((prev) => prev.filter((n) => n.id !== notification.id));
+
     if (!notification.isRead) {
-      // Optimistic update
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n))
-      );
+      // Optimistic update for unread count
       setUnreadCount((prev) => Math.max(0, prev - 1));
 
       try {
@@ -253,7 +253,7 @@ const NotificationsPanel = ({
       }
 
       if (notification.type === 'application_created' || notification.type === 'application_submitted') {
-        router.push('/staff/dashboard?section=applications');
+        router.push('/staff/dashboard?section=incoming_queue');
       } else if (appId) {
         router.push(`/staff/applications/${appId}`);
       } else if (userId) {

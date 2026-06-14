@@ -105,7 +105,7 @@ const getApplicationDisplayProgress = (app: ApplicationProgressFields): number =
         return Math.max(app.progress ?? 0, 50);
     }
     if (
-        stage === "document_verification" || 
+        stage === "document_verification" ||
         stage === "documents_verification" ||
         status === "staff_verified" ||
         status === "docs_received" ||
@@ -864,10 +864,18 @@ export default function StaffDashboardPage() {
                 adminApi.getApplicationStats().catch(() => ({ data: {} })),
                 adminApi.getUsers().catch(() => ({ data: [], total: 0 }))
             ]);
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const joinedToday = userStats.data?.filter((u: any) => u.createdAt && new Date(u.createdAt) >= today).length || 0;
+
             setStats({
                 blogs: blogStats.data || {},
                 apps: appStats.data || {},
-                users: { total: userStats.total || userStats.data?.length || 0 }
+                users: {
+                    total: userStats.total || userStats.data?.length || 0,
+                    joinedToday
+                }
             });
         } catch (e) {
             console.error(e);
@@ -5562,8 +5570,7 @@ export default function StaffDashboardPage() {
                                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                                     {(() => {
                                                                         const docs = [
-                                                                            ...getRequiredDocuments(newStudent.coApplicant.employmentType, newStudent.coApplicant.name || "Co-applicant", 'coapplicant'),
-                                                                            { name: "Relation Proof with Applicant", type: "coapplicant_relation", required: true }
+                                                                            ...getRequiredDocuments(newStudent.coApplicant.employmentType, newStudent.coApplicant.name || "Co-applicant", 'coapplicant')
                                                                         ];
                                                                         return docs.map((doc, idx) => {
                                                                             const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
@@ -6380,8 +6387,7 @@ export default function StaffDashboardPage() {
                                                         <div className="space-y-3">
                                                             {newStudent.coApplicant.employmentType ? (
                                                                 [
-                                                                    ...getRequiredDocuments(newStudent.coApplicant.employmentType, newStudent.coApplicant.name || "Co-applicant", 'coapplicant'),
-                                                                    { name: "Relation Proof with Applicant", type: "coapplicant_relation", required: true }
+                                                                    ...getRequiredDocuments(newStudent.coApplicant.employmentType, newStudent.coApplicant.name || "Co-applicant", 'coapplicant')
                                                                 ].map((doc, i) => {
                                                                     const existingDoc = userDocuments.find(ud => ud.docType === doc.type || ud.type === doc.type);
                                                                     const existingStatus = String(existingDoc?.status || "").toLowerCase();
@@ -6786,8 +6792,8 @@ export default function StaffDashboardPage() {
                                         icon="hourglass_empty"
                                         color="text-amber-600"
                                         loading={loading}
-                                        hint="Avg. age: 4 hours"
-                                        badge={pendingCount > 0 ? `${pendingCount} Urgent` : undefined}
+                                        hint={pendingCount > 0 ? "Action Required" : "All caught up"}
+                                        badge={pendingCount > 0 ? `${pendingCount} Pending` : undefined}
                                         trend="⏳ Pending"
                                     />
                                 </div>
@@ -6797,7 +6803,7 @@ export default function StaffDashboardPage() {
                                     icon="check_circle"
                                     color="text-emerald-600"
                                     loading={loading}
-                                    trend="📈 +1.2% this month"
+                                    trend={stats.apps?.monthlyComparison?.change ? `📈 ${Number(stats.apps.monthlyComparison.change) > 0 ? '+' : ''}${stats.apps.monthlyComparison.change}% this month` : ''}
                                 />
                                 <StatCard
                                     label="Total Users"
@@ -6805,7 +6811,7 @@ export default function StaffDashboardPage() {
                                     icon="group"
                                     color="text-purple-600"
                                     loading={loading}
-                                    hint="3 joined today"
+                                    hint={`${stats.users?.joinedToday || 0} joined today`}
                                     footerAction="View List ➔"
                                     onFooterActionClick={(e: any) => { e.stopPropagation(); navigateToSection('users'); }}
                                 />
@@ -7596,24 +7602,7 @@ export default function StaffDashboardPage() {
                                                                                             {item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`}
                                                                                         </p>
 
-                                                                                        <button
-                                                                                            onClick={(e) => {
-                                                                                                e.stopPropagation();
-                                                                                                const bankObj = {
-                                                                                                    bankName: item.bank || item.targetBank || 'Bank Partner',
-                                                                                                    applicationId: item.id || item._id,
-                                                                                                    applicationNumber: item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`
-                                                                                                };
-                                                                                                setAutoStartUser(null);
-                                                                                                setAutoStartBank(bankObj);
-                                                                                                navigateToSection("chat_customer");
-                                                                                            }}
-                                                                                            className="text-[10px] text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-2 py-1 rounded inline-flex items-center gap-1.5 font-bold uppercase tracking-wider transition-colors border border-amber-200 whitespace-nowrap shadow-sm"
-                                                                                            title="Open Bank Support Chat"
-                                                                                        >
-                                                                                            <span className="material-symbols-outlined text-[12px]">chat</span>
-                                                                                            Chat with Bank
-                                                                                        </button>
+
                                                                                     </div>
                                                                                 )}
                                                                             </div>
@@ -7690,7 +7679,7 @@ export default function StaffDashboardPage() {
                                                                                                             className="w-5 h-5 rounded hover:bg-emerald-50 flex items-center justify-center text-emerald-600 hover:text-emerald-800"
                                                                                                             title="Open Support Chat"
                                                                                                         >
-                                                                                                            <span className="material-symbols-outlined text-[14px]">chat_bubble</span>
+                                                                                                            {/* <span className="material-symbols-outlined text-[14px]">chat_bubble</span> */}
                                                                                                         </button>
                                                                                                     )}
                                                                                                     {popup.type === 'email' && (
@@ -7797,8 +7786,8 @@ export default function StaffDashboardPage() {
                                                                             {item.status || 'DRAFT'}
                                                                         </span>
                                                                         <div className="text-[12px] text-slate-500 font-medium">
-                                                                            <p>Submitted: {item.submittedAt ? formatIST(item.submittedAt, false) : '—'}</p>
-                                                                            <p>Now: {formatIST(nowTime, false)}</p>
+                                                                            <p>Submitted: {item.submittedAt ? formatIST(item.submittedAt, true) : '—'}</p>
+                                                                            <p>Now: {formatIST(nowTime, true)}</p>
                                                                         </div>
                                                                     </div>
                                                                 </td>
@@ -7817,26 +7806,15 @@ export default function StaffDashboardPage() {
                                                                                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl border border-slate-100 shadow-xl z-50 py-3 animate-in fade-in zoom-in-95 duration-200 font-sans">
                                                                                     <button
                                                                                         onClick={() => { setSelectedApp(item); setActiveMenuId(null); }}
-                                                                                        className="w-full flex items-center gap-4 px-5 py-3 text-[12px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-colors"
+                                                                                        className="w-full flex gap-4 px-5 py-3 text-[12px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-colors"
                                                                                     >
                                                                                         <span className="material-symbols-outlined text-[18px] text-indigo-500">visibility</span>
                                                                                         View Application
                                                                                     </button>
-                                                                                    <button
-                                                                                        onClick={() => {
-                                                                                            const email = item.email || item.student?.email;
-                                                                                            const name = `${item.firstName || item.student?.firstName || ''} ${item.lastName || item.student?.lastName || ''}`.trim();
-                                                                                            if (email) openEmailModal(email, name);
-                                                                                            setActiveMenuId(null);
-                                                                                        }}
-                                                                                        className="w-full flex items-center gap-4 px-5 py-3 text-[12px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-colors"
-                                                                                    >
-                                                                                        <span className="material-symbols-outlined text-[18px] text-indigo-500">mail</span>
-                                                                                        Send Email
-                                                                                    </button>
+
                                                                                     <button
                                                                                         onClick={() => { setSearchQuery(item.email || item.student?.email); setActiveMenuId(null); }}
-                                                                                        className="w-full flex items-center gap-4 px-5 py-3 text-[12px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-colors"
+                                                                                        className="w-full flex gap-4 px-5 py-3 text-[12px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-colors"
                                                                                     >
                                                                                         <span className="material-symbols-outlined text-[18px] text-emerald-500">list_alt</span>
                                                                                         All Applications
