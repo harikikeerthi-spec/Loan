@@ -117,26 +117,26 @@ export class UsersController {
         try {
             const l = limit ? parseInt(limit, 10) : 30;
             const o = offset ? parseInt(offset, 10) : 0;
-            
+
             const excludeRoles = req.user?.role === 'staff' ? ['admin', 'super_admin'] : [];
 
             console.log('[UsersController.listUsers] Calling usersService.findAll()...');
             const result = await this.usersService.findAll(l, o, search, role, excludeRoles);
             const users = result.data;
             console.log(`[UsersController.listUsers] Found ${users?.length || 0} users (Total: ${result.total})`);
-            
+
             if (!users) return { success: true, data: [], total: 0 };
-            
+
             return {
                 success: true,
-                data: users.map(u => ({ 
-                    id: u?.id || '', 
-                    email: u?.email || '', 
-                    firstName: u?.firstName || '', 
-                    lastName: u?.lastName || '', 
+                data: users.map(u => ({
+                    id: u?.id || '',
+                    email: u?.email || '',
+                    firstName: u?.firstName || '',
+                    lastName: u?.lastName || '',
                     phoneNumber: u?.phoneNumber || '',
                     mobile: u?.mobile || '',
-                    role: u?.role || 'user', 
+                    role: u?.role || 'user',
                     createdAt: u?.createdAt || u?.created_at || new Date().toISOString(),
                     registeredAtIndia: u?.registeredAtIndia || ''
                 })),
@@ -197,12 +197,12 @@ export class UsersController {
     @UseGuards(AdminGuard)
     @Post('admin/send-email')
     async sendAdminEmail(
-        @Body() body: { 
-            to: string; 
-            subject: string; 
-            content: string; 
-            role?: string; 
-            isBulk?: boolean 
+        @Body() body: {
+            to: string;
+            subject: string;
+            content: string;
+            role?: string;
+            isBulk?: boolean
         }
     ) {
         if (!body || !body.subject || !body.content) {
@@ -213,7 +213,7 @@ export class UsersController {
             if (body.isBulk && body.role) {
                 const users = await this.usersService.findAll();
                 const filteredUsers = users.data.filter(u => u.role === body.role);
-                
+
                 for (const u of filteredUsers) {
                     await this.emailService.sendMail(
                         u.email,
@@ -222,10 +222,10 @@ export class UsersController {
                         body.content
                     );
                 }
-                
-                return { 
-                    success: true, 
-                    message: `Email sent to ${filteredUsers.length} users with role '${body.role}'` 
+
+                return {
+                    success: true,
+                    message: `Email sent to ${filteredUsers.length} users with role '${body.role}'`
                 };
             } else if (body.to) {
                 await this.emailService.sendMail(
@@ -247,17 +247,17 @@ export class UsersController {
     @UseGuards(AdminGuard)
     @Post('admin/create')
     async adminCreateUser(
-        @Body() body: { 
-            email: string; 
-            firstName: string; 
-            lastName: string; 
-            mobile: string; 
-            role: string 
+        @Body() body: {
+            email: string;
+            firstName: string;
+            lastName: string;
+            mobile: string;
+            role: string
         }
     ) {
         console.log('=== ADMIN CREATE USER START ===');
         console.log('Request body:', body);
-        
+
         if (!body || !body.email || !body.role) {
             console.log('Validation failed: missing email or role');
             return { success: false, message: 'Email and role are required' };
@@ -278,8 +278,8 @@ export class UsersController {
                 password: Math.random().toString(36).slice(-12), // Generate a dummy password
             });
 
-            console.log('New user created:', { 
-                fullUser: JSON.stringify(newUser), 
+            console.log('New user created:', {
+                fullUser: JSON.stringify(newUser),
                 hasId: !!newUser?.id,
                 id: newUser?.id,
                 keys: Object.keys(newUser || {})
@@ -313,12 +313,12 @@ export class UsersController {
 
             console.log('Sending response:', { success: true, user: responseUser });
 
-            const finalResponse = { 
-                success: true, 
-                message: 'User created successfully', 
-                user: responseUser 
+            const finalResponse = {
+                success: true,
+                message: 'User created successfully',
+                user: responseUser
             };
-            
+
             console.log('=== ADMIN CREATE USER END ===');
             console.log('Final Response:', JSON.stringify(finalResponse, null, 2));
             return finalResponse;
@@ -334,12 +334,12 @@ export class UsersController {
     @UseGuards(AdminGuard)
     @Post('admin/update-details')
     async adminUpdateUser(
-        @Body() body: { 
-            email: string; 
-            firstName: string; 
-            lastName: string; 
-            phoneNumber: string; 
-            dateOfBirth: string 
+        @Body() body: {
+            email: string;
+            firstName: string;
+            lastName: string;
+            phoneNumber: string;
+            dateOfBirth: string
         }
     ) {
         if (!body || !body.email) {
@@ -358,33 +358,33 @@ export class UsersController {
     @UseGuards(AdminGuard)
     @Post('admin/update-status')
     async adminUpdateUserStatus(
-        @Body() body: { 
-            userId: string; 
-            status: string; 
-            rejectionReason?: string 
+        @Body() body: {
+            userId: string;
+            status: string;
+            rejectionReason?: string
         }
     ) {
         if (!body || !body.userId || !body.status) {
             return { success: false, message: 'User ID and status are required' };
         }
-        
+
         console.log(`[UsersController.adminUpdateUserStatus] Status change request for user ${body.userId} to ${body.status}`);
-        
+
         const updated = await this.usersService.updateUserStatus(
             body.userId,
             body.status,
             body.rejectionReason
         );
-        
-        return { 
-            success: true, 
-            message: 'User status updated successfully', 
+
+        return {
+            success: true,
+            message: 'User status updated successfully',
             user: {
                 id: updated.id,
                 email: updated.email,
                 status: updated.status,
                 rejectionReason: updated.rejectionReason
-            } 
+            }
         };
     }
 
