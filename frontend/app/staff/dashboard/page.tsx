@@ -83,31 +83,35 @@ const getApplicationDisplayProgress = (app: ApplicationProgressFields): number =
     ) {
         return 100;
     }
-    if (status === "partially_disbursed") {
-        return Math.max(app.progress ?? 0, 95);
-    }
     if (status === "approved" || stage === "sanction" || stage === "sanctioned") {
-        return Math.max(app.progress ?? 0, 90);
+        return Math.max(app.progress ?? 0, 95);
     }
     if (
         stage === "bank_review" ||
         status === "under_bank_review" ||
-        status === "file_logged" ||
         status === "processing"
     ) {
-        return Math.max(app.progress ?? 0, 75);
+        return Math.max(app.progress ?? 0, 90);
     }
     if (stage === "credit_check" || status === "query_raised") {
-        return Math.max(app.progress ?? 0, 62);
+        return Math.max(app.progress ?? 0, 75);
     }
     if (
         stage === "submit_to_bank" ||
         stage === "bank_submission" ||
-        status === "submitted_to_bank"
+        status === "submitted_to_bank" ||
+        status === "file_logged"
     ) {
         return Math.max(app.progress ?? 0, 50);
     }
-    if (stage === "document_verification" || stage === "documents_verification") {
+    if (
+        stage === "document_verification" || 
+        stage === "documents_verification" ||
+        status === "staff_verified" ||
+        status === "docs_received" ||
+        status === "docs_uploaded" ||
+        status === "under_review"
+    ) {
         return Math.max(app.progress ?? 0, 40);
     }
     if (status === "submitted" || stage === "application_submitted") {
@@ -131,10 +135,12 @@ const getApplicationStageLabel = (app: ApplicationProgressFields, progress: numb
     }
 
     if (progress <= 12) return "Application Created";
-    if (progress <= 40) return "Documents Uploaded";
-    if (progress <= 70) return "Under Review";
-    if (progress <= 85) return "Credit Check";
-    if (progress <= 90) return "Sanction";
+    if (progress <= 25) return "Application Submitted";
+    if (progress <= 40) return "Docs Verification";
+    if (progress <= 50) return "Submit to Bank";
+    if (progress <= 75) return "Credit Check";
+    if (progress <= 90) return "Bank Review";
+    if (progress <= 95) return "Sanction";
     return "Disbursement";
 };
 
@@ -6801,7 +6807,7 @@ export default function StaffDashboardPage() {
                                     loading={loading}
                                     hint="3 joined today"
                                     footerAction="View List ➔"
-                                    onFooterActionClick={(e: any) => { e.stopPropagation(); navigateToSection('applicants'); }}
+                                    onFooterActionClick={(e: any) => { e.stopPropagation(); navigateToSection('users'); }}
                                 />
                             </div>
 
@@ -6861,7 +6867,7 @@ export default function StaffDashboardPage() {
                                             <span className="text-[12px] font-semibold text-slate-800">Support Chat</span>
                                             <span className="material-symbols-outlined text-slate-300 ml-auto text-[14px]">arrow_forward_ios</span>
                                         </button>
-                                        <button onClick={() => navigateToSection('applicants')} className="w-full text-left p-3 rounded border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30 transition-all flex items-center gap-3 bg-white shadow-sm">
+                                        <button onClick={() => navigateToSection('applications')} className="w-full text-left p-3 rounded border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/30 transition-all flex items-center gap-3 bg-white shadow-sm">
                                             <span className="material-symbols-outlined text-emerald-500 text-[18px]">manage_accounts</span>
                                             <span className="text-[12px] font-semibold text-slate-800">Applicant Profiles</span>
                                             <span className="material-symbols-outlined text-slate-300 ml-auto text-[14px]">arrow_forward_ios</span>

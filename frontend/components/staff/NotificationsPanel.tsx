@@ -252,7 +252,9 @@ const NotificationsPanel = ({
         }
       }
 
-      if (appId) {
+      if (notification.type === 'application_created' || notification.type === 'application_submitted') {
+        router.push('/staff/dashboard?section=applications');
+      } else if (appId) {
         router.push(`/staff/applications/${appId}`);
       } else if (userId) {
         router.push(`/staff/users/${userId}`);

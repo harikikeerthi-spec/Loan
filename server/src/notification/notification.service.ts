@@ -209,6 +209,36 @@ export class NotificationService {
   }
 
   /**
+   * Event listener for application submission
+   * Creates a notification for staff about submitted application
+   */
+  @OnEvent('application.submitted')
+  async handleApplicationSubmitted(payload: any) {
+    try {
+      const candidateName = payload.candidateName || 'Candidate';
+      await this.createNotification(
+        'staff',
+        `🚀 Application Submitted: ${candidateName}`,
+        `${candidateName} submitted a loan application for ${payload.bank || 'a bank'}. Application #${payload.applicationNumber}`,
+        'application_submitted',
+        {
+          applicationId: payload.applicationId,
+          applicationNumber: payload.applicationNumber,
+          userId: payload.userId,
+          candidateName: payload.candidateName,
+          candidateEmail: payload.candidateEmail,
+          bank: payload.bank,
+          loanAmount: payload.loanAmount,
+          loanType: payload.loanType,
+          submittedAt: payload.submittedAt
+        }
+      );
+    } catch (error) {
+      this.logger.error(`Failed to handle application submitted event: ${error.message}`);
+    }
+  }
+
+  /**
    * Event listener for document upload
    * Creates a notification for staff about document uploads
    */

@@ -188,9 +188,10 @@ export class ApplicationService {
         collateralType: data.collateralType,
         collateralValue: data.collateralValue ? parseFloat(data.collateralValue) : null,
         collateralDetails: data.collateralDetails,
-        status: data.status || 'draft',
+        status: data.status === 'draft' ? 'draft' : (data.status || 'submitted'),
         stage: 'application_submitted',
-        progress: 10,
+        progress: data.status === 'draft' ? 10 : 15,
+        submittedAt: data.status === 'draft' ? null : new Date().toISOString(),
         estimatedCompletionAt: estimatedCompletionAt.toISOString(),
       })
       .select('*, user:User!userId(id, email, firstName, lastName)')
@@ -266,8 +267,21 @@ export class ApplicationService {
         actorEmail: application.email,
         createdAt: new Date().toISOString()
       });
+      
+      // Emit application submitted event for staff notifications
+      this.eventEmitter.emit('application.submitted', {
+        applicationId: application.id,
+        applicationNumber: application.applicationNumber,
+        userId: application.userId,
+        candidateName: name,
+        candidateEmail: application.email,
+        bank: application.bank,
+        loanAmount: application.amount,
+        loanType: application.loanType,
+        submittedAt: new Date().toISOString()
+      });
     } catch (e) {
-      console.error('Failed to emit activity event for application submission:', e);
+      console.error('Failed to emit events for application submission:', e);
     }
 
     return { success: true, data: updated, message: 'Application submitted successfully' };

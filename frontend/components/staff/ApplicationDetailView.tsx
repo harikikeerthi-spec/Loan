@@ -89,15 +89,17 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
 
   const getDynamicProgress = () => {
     const s = String(application.status || '').toLowerCase();
-    if (['disbursed', 'closed'].includes(s)) return 100;
-    if (typeof application.progress === 'number' && application.progress > 0) return application.progress;
-    if (['sanctioned', 'approved'].includes(s)) return 95;
-    if (['under_bank_review', 'query_raised', 'conditional_sanction'].includes(s)) return 90;
-    if (['submitted_to_bank', 'file_logged'].includes(s)) return 75;
-    if (['staff_verified'].includes(s)) return 50;
-    if (['docs_received', 'docs_uploaded', 'under_review'].includes(s)) return 40;
-    if (['submitted'].includes(s)) return 25;
-    return application.progress || 90;
+    const baseProgress = typeof application.progress === 'number' ? application.progress : 10;
+
+    if (['disbursed', 'closed', 'disbursement_confirmed'].includes(s)) return 100;
+    if (['sanctioned', 'approved', 'sanction'].includes(s)) return Math.max(baseProgress, 95);
+    if (['under_bank_review', 'bank_review'].includes(s)) return Math.max(baseProgress, 90);
+    if (['credit_check', 'query_raised'].includes(s)) return Math.max(baseProgress, 75);
+    if (['submitted_to_bank', 'file_logged', 'submit_to_bank', 'bank_submission'].includes(s)) return Math.max(baseProgress, 50);
+    if (['staff_verified', 'documents_verification', 'document_verification', 'docs_received', 'docs_uploaded', 'under_review'].includes(s)) return Math.max(baseProgress, 40);
+    if (['submitted', 'application_submitted'].includes(s)) return Math.max(baseProgress, 25);
+    
+    return baseProgress;
   };
   const progress = getDynamicProgress();
   const status = (application.status || "APPROVED").toUpperCase();
