@@ -346,7 +346,7 @@ export class UsersService {
     return user;
   }
 
-  async findAll(limit?: number, offset?: number, search?: string, role?: string) {
+  async findAll(limit?: number, offset?: number, search?: string, role?: string, excludeRoles?: string[]) {
     let query = this.db.from('User').select('*', { count: 'exact' });
     
     if (search) {
@@ -354,11 +354,11 @@ export class UsersService {
     }
 
     if (role && role !== 'all') {
-      if (role === 'staff') {
-        query = query.or('role.eq.admin,role.eq.staff');
-      } else {
-        query = query.eq('role', role);
-      }
+      query = query.eq('role', role);
+    }
+
+    if (excludeRoles && excludeRoles.length > 0) {
+      query = query.not('role', 'in', `(${excludeRoles.join(',')})`);
     }
 
     query = query.order('createdAt', { ascending: false });

@@ -3107,7 +3107,7 @@ export default function StaffDashboardPage() {
                                 <span className="text-[14px] font-black text-emerald-600 uppercase tracking-widest">Active System</span>
                             </div> */}
                             <div className="flex items-center gap-1.5 text-[14px] text-black-600 font-bold uppercase tracking-widest font-mono">
-                                <span className="material-symbols-outlined text-[13px]">sync</span>
+                                {/* <span className="material-symbols-outlined text-[13px]">sync</span> */}
                                 <span>Sync: {format(nowTime, 'MMM dd, HH:mm:ss')}</span>
                             </div>
                         </div>
@@ -7602,6 +7602,27 @@ export default function StaffDashboardPage() {
                                                                                             {item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`}
                                                                                         </p>
 
+                                                                                        {activeSection === 'applications' && (
+                                                                                            <button
+                                                                                                onClick={(e) => {
+                                                                                                    e.stopPropagation();
+                                                                                                    const bankObj = {
+                                                                                                        bankName: item.bank || item.targetBank || 'Bank Partner',
+                                                                                                        applicationId: item.id || item._id,
+                                                                                                        applicationNumber: item.applicationNumber || item.application_number || (item.id ? `App #${item.id.substring(0, 8)}` : undefined)
+                                                                                                    };
+                                                                                                    setAutoStartUser(null);
+                                                                                                    setAutoStartBank(bankObj);
+                                                                                                    navigateToSection("chat_customer");
+                                                                                                }}
+                                                                                                className="text-[10px] text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 px-2 py-1 rounded inline-flex items-center gap-1.5 font-bold uppercase tracking-wider transition-colors border border-amber-200 whitespace-nowrap shadow-sm cursor-pointer"
+                                                                                                title="Open Bank Support Chat"
+                                                                                            >
+                                                                                                <span className="material-symbols-outlined text-[12px]">account_balance</span>
+                                                                                                Chat with Bank
+                                                                                            </button>
+                                                                                        )}
+
 
                                                                                     </div>
                                                                                 )}
@@ -7748,7 +7769,7 @@ export default function StaffDashboardPage() {
                                                                                 const bName = (item.bank || item.targetBank || '').toLowerCase();
                                                                                 if (bName.includes('idfc')) return <img src="/images/lenders/idfc-first-bank.jpg" alt="IDFC FIRST Bank" className="h-12 max-w-[190px] w-auto object-contain" />;
                                                                                 if (bName.includes('avanse')) return <img src="/images/lenders/avanse.jpg" alt="Avanse" className="h-14 max-w-[190px] w-auto object-contain" />;
-                                                                                if (bName.includes('auxilo')) return <img src="/images/lenders/auxilo.png" alt="Auxilo" className="h-16 max-w-[190px] w-auto object-contain" />;
+                                                                                if (bName.includes('auxilo')) return <img src="/images/lenders/auxilo.png" alt="Auxilo" className="h-24 max-w-[240px] w-auto object-contain" />;
                                                                                 if (bName.includes('credila') || bName.includes('hdfc')) return <img src="/images/lenders/hdfc-credila.png" alt="Credila" className="h-11 max-w-[190px] w-auto object-contain" />;
                                                                                 if (bName.includes('poonawalla')) return <img src="/images/lenders/poonawalla.png" alt="Poonawalla" className="h-[52px] max-w-[190px] w-auto object-contain" />;
                                                                                 return <div className="text-[#0d1b2a] font-black text-[14px] uppercase truncate max-w-[200px]">{item.bank || item.targetBank || '—'}</div>;
@@ -7787,7 +7808,7 @@ export default function StaffDashboardPage() {
                                                                         </span>
                                                                         <div className="text-[12px] text-slate-500 font-medium">
                                                                             <p>Submitted: {item.submittedAt ? formatIST(item.submittedAt, true) : '—'}</p>
-                                                                            <p>Now: {formatIST(nowTime, true)}</p>
+                                                                            {/* <p>Now: {formatIST(nowTime, true)}</p> */}
                                                                         </div>
                                                                     </div>
                                                                 </td>

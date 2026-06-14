@@ -107,6 +107,7 @@ export class UsersController {
     @Get('admin/list')
     @UseGuards(AdminGuard)
     async listUsers(
+        @Req() req: any,
         @Query('limit') limit?: string,
         @Query('offset') offset?: string,
         @Query('search') search?: string,
@@ -117,8 +118,10 @@ export class UsersController {
             const l = limit ? parseInt(limit, 10) : 30;
             const o = offset ? parseInt(offset, 10) : 0;
             
+            const excludeRoles = req.user?.role === 'staff' ? ['admin', 'super_admin'] : [];
+
             console.log('[UsersController.listUsers] Calling usersService.findAll()...');
-            const result = await this.usersService.findAll(l, o, search, role);
+            const result = await this.usersService.findAll(l, o, search, role, excludeRoles);
             const users = result.data;
             console.log(`[UsersController.listUsers] Found ${users?.length || 0} users (Total: ${result.total})`);
             

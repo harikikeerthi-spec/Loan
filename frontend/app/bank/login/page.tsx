@@ -8,10 +8,10 @@ import { authApi } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 
 const SUPPORTED_BANKS = [
-    { id: "auxilo",     name: "Auxilo Finserve",    logo: "/banks/auxilo.png" },
-    { id: "avanse",     name: "Avanse Financial",   logo: "/banks/avanse.png" },
-    { id: "credila",    name: "HDFC Credila",        logo: "/banks/credila.png" },
-    { id: "idfc",       name: "IDFC FIRST Bank",    logo: "/banks/idfc.png" },
+    { id: "auxilo", name: "Auxilo Finserve", logo: "/banks/auxilo.png" },
+    { id: "avanse", name: "Avanse Financial", logo: "/banks/avanse.png" },
+    { id: "credila", name: "HDFC Credila", logo: "/banks/credila.png" },
+    { id: "idfc", name: "IDFC FIRST Bank", logo: "/banks/idfc.png" },
     { id: "poonawalla", name: "Poonawalla Fincorp", logo: "/banks/poonawalla.jpg" },
 ];
 
@@ -174,11 +174,12 @@ function BankLoginContent() {
         if (lowerEmail.includes("credila") || lowerEmail.includes("hdfc")) return "credila";
         if (lowerEmail.includes("idfc")) return "idfc";
         if (lowerEmail.includes("poonawalla")) return "poonawalla";
-        
+
         // Fallbacks for seed test users
-        if (lowerEmail === "shannukalneedi@gmail.com") return "idfc";
+        if (lowerEmail === "") return "idfc";
         if (lowerEmail === "keerthichinnu0728@gmail.com") return "credila";
-        
+        if (lowerEmail === "luharika28@gmail.com") return "auxilo";
+
         return null;
     };
 
@@ -275,21 +276,21 @@ function BankLoginContent() {
         setError("");
         try {
             const data = await authApi.verifyOtp(email.trim(), code) as any;
-            
+
             if (data.success === false || !data.access_token) {
                 throw new Error(data.message || "Invalid OTP. Please enter the right one to login.");
             }
-            
+
             if (data.role !== "bank" && data.role !== "partner_bank" && data.role !== "admin" && data.role !== "super_admin") {
                 throw new Error("Unauthorized role. You must be bank staff to access this portal.");
             }
 
             if (data.refresh_token) localStorage.setItem("refreshToken", data.refresh_token);
-            
+
             const bankId = getBankFromEmail(email.trim()) || "idfc";
             sessionStorage.setItem("selectedBank", bankId);
             localStorage.setItem("selectedBank", bankId);
-            
+
             login(data.access_token, {
                 id: data.userId,
                 email: email.trim(),
@@ -325,7 +326,7 @@ function BankLoginContent() {
                 <div className="text-center mb-8">
                     <div className="inline-flex items-center justify-center gap-4 mb-6">
                         {selectedBank ? (
-                            <motion.div 
+                            <motion.div
                                 initial={{ scale: 0.9, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 className="flex items-center gap-5 bg-white/90 backdrop-blur-md px-6 py-2 rounded-2xl border border-purple-200/50 shadow-md shadow-purple-500/5"
@@ -580,7 +581,7 @@ function BankLoginContent() {
                         >
                             <h3 className="text-xl font-black text-gray-900 mb-2 uppercase tracking-tight">Recover Credentials</h3>
                             <p className="text-xs text-gray-400 mb-6 font-bold uppercase tracking-wider">A security recovery protocol will be sent to your corporate address.</p>
-                            
+
                             {forgotSuccess ? (
                                 <div className="space-y-6">
                                     <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl text-emerald-700 text-xs font-semibold flex items-start gap-2.5 leading-relaxed">
@@ -590,7 +591,7 @@ function BankLoginContent() {
                                             <p className="opacity-90">A link has been dispatched. Please check your inbox or contact your IT security administrator.</p>
                                         </div>
                                     </div>
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={() => setShowForgotModal(false)}
                                         className="w-full py-3 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 transition-all"
@@ -602,8 +603,8 @@ function BankLoginContent() {
                                 <form onSubmit={handleForgotSubmit} className="space-y-5">
                                     <div>
                                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Corporate Email Address</label>
-                                        <input 
-                                            type="email" 
+                                        <input
+                                            type="email"
                                             required
                                             placeholder="staff@bank.com"
                                             value={forgotEmail}
@@ -611,23 +612,23 @@ function BankLoginContent() {
                                             className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-bold focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm transition-all"
                                         />
                                     </div>
-                                    
+
                                     {forgotError && (
                                         <div className="px-4 py-2.5 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs font-medium flex items-center gap-2">
                                             <span className="material-symbols-outlined text-base">error</span>
                                             {forgotError}
                                         </div>
                                     )}
-                                    
+
                                     <div className="flex gap-4 pt-3">
-                                        <button 
-                                            type="button" 
+                                        <button
+                                            type="button"
                                             onClick={() => setShowForgotModal(false)}
                                             className="flex-1 py-3 border border-gray-200 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all"
                                         >
                                             Cancel
                                         </button>
-                                        <button 
+                                        <button
                                             type="submit"
                                             disabled={forgotLoading}
                                             className="flex-1 py-3 bg-[#6605c7] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#5203a4] shadow-lg shadow-purple-500/10 transition-all flex items-center justify-center"

@@ -223,7 +223,7 @@ const NotificationsPanel = ({
 
       if (!appId && !userId) {
         // Fallback: Parse from body / title (for legacy/existing notifications)
-        const appNumRegex = /VL-APP-\d{4}-\d{5}/i;
+        const appNumRegex = /(?:VL-)?APP-[\w-]+/i;
         const appNumMatch = notification.body?.match(appNumRegex) || notification.title?.match(appNumRegex);
 
         const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
@@ -252,12 +252,12 @@ const NotificationsPanel = ({
         }
       }
 
-      if (notification.type === 'application_created' || notification.type === 'application_submitted') {
-        router.push('/staff/dashboard?section=incoming_queue');
-      } else if (appId) {
-        router.push(`/staff/applications/${appId}`);
+      if (appId) {
+        window.open(`/staff/applications/${appId}`, '_blank');
       } else if (userId) {
-        router.push(`/staff/users/${userId}`);
+        window.open(`/staff/users/${userId}`, '_blank');
+      } else if (notification.type === 'application_created' || notification.type === 'application_submitted') {
+        router.push('/staff/dashboard?section=incoming_queue');
       } else {
         console.warn("[NotificationsPanel] Could not resolve application ID or user ID for notification:", notification);
       }

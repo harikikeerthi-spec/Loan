@@ -89,7 +89,10 @@ export default function ActivityLogWidget({
 
   // Initialize WebSocket connection for real-time updates
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token =
+      localStorage.getItem("staffAccessToken") ||
+      localStorage.getItem("adminAccessToken") ||
+      localStorage.getItem("accessToken");
     if (!token) return;
 
     const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (

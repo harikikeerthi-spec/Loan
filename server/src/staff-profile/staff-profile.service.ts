@@ -1101,6 +1101,7 @@ export class StaffProfileService {
               stage: step.stage,
               progress: step.progress,
               bank: body.recipientName,
+              ...(step.to === 'submitted_to_bank' ? { submittedToBankAt: new Date().toISOString() } : {}),
               updatedAt: new Date().toISOString()
             })
             .eq('id', application.id);

@@ -543,7 +543,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const createdDateIST = (() => {
     const regAtInd = application.registeredAtIndia || application.student?.registeredAtIndia || application.user?.registeredAtIndia;
     if (regAtInd && typeof regAtInd === 'string' && regAtInd.endsWith(' IST')) return regAtInd;
-    const ds = regAtInd || application.createdAt || application.created_at || application.student?.createdAt || application.student?.created_at || application.user?.createdAt || application.user?.created_at;
+    const ds = regAtInd || application.date || application.submittedAt || application.createdAt || application.created_at || application.student?.createdAt || application.student?.created_at || application.user?.createdAt || application.user?.created_at || application.updatedAt;
     if (!ds) return "—";
     try {
       let cleanDs = ds;
@@ -983,7 +983,10 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
 
           {/* Sticky Action Buttons */}
           <button
-            onClick={() => window.print()}
+            onClick={() => {
+              setActiveSidebarMenu("overview");
+              setTimeout(() => window.print(), 300);
+            }}
             className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-lg shadow-emerald-600/20"
           >
             <span className="material-symbols-outlined text-[17px]">print</span>
@@ -991,7 +994,11 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
           </button>
 
           <button
-            onClick={() => setActiveTab("notes")}
+            onClick={() => {
+              setActiveSidebarMenu("overview");
+              setActiveTab("notes");
+              setTimeout(() => document.getElementById("action-hub-section")?.scrollIntoView({ behavior: 'smooth' }), 100);
+            }}
             className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-md"
           >
             <span className="material-symbols-outlined text-[17px]">sticky_note_2</span>
@@ -1275,7 +1282,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
               </div>
 
               {/* Action Hub & Sticky Tabs Section */}
-              <div className="space-y-8 animate-in slide-in-from-bottom-10 duration-700 delay-200">
+              <div id="action-hub-section" className="space-y-8 animate-in slide-in-from-bottom-10 duration-700 delay-200">
                 <div className="sticky top-0 bg-[#F8FAFC]/95 backdrop-blur-md z-[50] py-4 border-b border-slate-200 flex items-center justify-between px-6 -mx-6 shadow-sm">
                   <div className="flex items-center gap-10">
                     {[
@@ -1495,27 +1502,27 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">First Name</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.firstName || application.student?.firstName || "â€”"}</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.firstName || application.user?.firstName || application.student?.firstName || "—"}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Last Name</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.lastName || application.student?.lastName || "â€”"}</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.lastName || application.user?.lastName || application.student?.lastName || "—"}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Date of Birth</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.dob || application.student?.dob || "â€”"}</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{String(application.dob || application.user?.dateOfBirth || application.student?.dob || "—").split('T')[0]}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Email Address</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.email || application.student?.email || "â€”"}</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.email || application.user?.email || application.student?.email || "—"}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Phone Number</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.phone || application.student?.phone || application.mobile || "â€”"}</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.phone || application.user?.phoneNumber || application.student?.phone || application.mobile || "—"}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Gender</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.gender || application.student?.gender || "â€”"}</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.gender || application.user?.gender || application.student?.gender || "—"}</p>
                         </div>
                       </div>
                     </section>
@@ -1525,11 +1532,11 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                       <div className="grid grid-cols-2 gap-6">
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Address</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.address || application.student?.mailingAddress?.address1 || application.student?.address || "â€”"}</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.address || application.student?.mailingAddress?.address1 || application.student?.address || "—"}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">City / Pincode</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.city || application.student?.mailingAddress?.city || "â€”"} - {application.pincode || application.student?.mailingAddress?.pincode || "â€”"}</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.city || application.student?.mailingAddress?.city || "—"} - {application.pincode || application.student?.mailingAddress?.pincode || "—"}</p>
                         </div>
                       </div>
                     </section>
@@ -1565,15 +1572,15 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                       <div className="grid grid-cols-3 gap-6">
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Contact Name</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.name || application.emergencyContactName || "â€”"}</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.name || application.emergencyContactName || "—"}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Relation</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.relation || application.emergencyContactRelation || "â€”"}</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.relation || application.emergencyContactRelation || "—"}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Phone</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.phone || application.emergencyContactPhone || "â€”"}</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{application.student?.emergencyContact?.phone || application.emergencyContactPhone || "—"}</p>
                         </div>
                       </div>
                     </section>
@@ -1726,10 +1733,10 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                     {/* Field Row Component */}
                     {[
                       { label: 'Full Name', key: 'full_name', current: application.firstName + " " + application.lastName, extracted: selectedDocForSync.extractedData?.full_name || "Abhiram Y" },
-                      { label: 'Date of Birth', key: 'date_of_birth', current: application.dob || "â€”", extracted: selectedDocForSync.extractedData?.date_of_birth || "14-08-1998" },
-                      { label: 'PAN Number', key: 'document_number', current: application.panNumber || "â€”", extracted: selectedDocForSync.extractedData?.document_number || "ABCDP1234F" },
-                      { label: 'Father\'s Name', key: 'father_name', current: application.fatherName || "â€”", extracted: selectedDocForSync.extractedData?.father_name || "Y. Venkatesh" },
-                      { label: 'Issuing Authority', key: 'issuing_authority', current: "â€”", extracted: selectedDocForSync.extractedData?.issuing_authority || "Income Tax Dept." }
+                      { label: 'Date of Birth', key: 'date_of_birth', current: application.dob || "—", extracted: selectedDocForSync.extractedData?.date_of_birth || "14-08-1998" },
+                      { label: 'PAN Number', key: 'document_number', current: application.panNumber || "—", extracted: selectedDocForSync.extractedData?.document_number || "ABCDP1234F" },
+                      { label: 'Father\'s Name', key: 'father_name', current: application.fatherName || "—", extracted: selectedDocForSync.extractedData?.father_name || "Y. Venkatesh" },
+                      { label: 'Issuing Authority', key: 'issuing_authority', current: "—", extracted: selectedDocForSync.extractedData?.issuing_authority || "Income Tax Dept." }
                     ].map((field, idx) => (
                       <div key={idx} className="group/row">
                         <div className="flex items-center justify-between mb-2">
