@@ -23,6 +23,25 @@ export class BankService {
    */
   private matchBankFilter(query: any, bankName: string) {
     if (!bankName) return query;
+    const lowerName = bankName.toLowerCase();
+    
+    // Map common frontend names to broader database matches
+    if (lowerName.includes('auxilo')) {
+      return query.ilike('bank', '%auxilo%');
+    }
+    if (lowerName.includes('credila') || lowerName.includes('hdfc')) {
+      return query.ilike('bank', '%credila%');
+    }
+    if (lowerName.includes('idfc')) {
+      return query.ilike('bank', '%idfc%');
+    }
+    if (lowerName.includes('avanse')) {
+      return query.ilike('bank', '%avanse%');
+    }
+    if (lowerName.includes('poonawalla')) {
+      return query.ilike('bank', '%poonawalla%');
+    }
+
     return query.ilike('bank', `%${bankName}%`);
   }
 

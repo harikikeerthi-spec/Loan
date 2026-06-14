@@ -705,7 +705,7 @@ export class ApplicationService {
       if (filters?.stage) query = query.eq('stage', filters.stage);
       if (filters?.loanType) query = query.eq('loanType', filters.loanType);
       if (filters?.bank) {
-        query = query.eq('bank', filters.bank);
+        query = query.ilike('bank', `%${filters.bank}%`);
         query = query.not('status', 'in', '("submitted","pending","draft","docs_received","staff_verified","application_submitted")');
       }
       

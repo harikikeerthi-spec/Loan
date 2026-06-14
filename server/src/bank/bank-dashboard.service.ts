@@ -722,11 +722,17 @@ export class BankDashboardService {
     // Synchronize LoanApplications matching this bankId with FileEntry records
     try {
       const BANK_MAPPING: Record<string, string[]> = {
-        credila: ['HDFC Credila', 'Credila'],
-        poonawalla: ['Poonawalla Fincorp', 'Poonawalla'],
-        idfc: ['IDFC First Bank', 'IDFC FIRST Bank', 'IDFC'],
-        avanse: ['Avanse Financial Services', 'Avanse Financial', 'Avanse'],
-        auxilo: ['Auxilo Finserve', 'Auxilo']
+        'credila': ['HDFC Credila', 'Credila'],
+        'hdfc credila': ['HDFC Credila', 'Credila'],
+        'poonawalla': ['Poonawalla Fincorp', 'Poonawalla'],
+        'poonawalla fincorp': ['Poonawalla Fincorp', 'Poonawalla'],
+        'idfc': ['IDFC First Bank', 'IDFC FIRST Bank', 'IDFC'],
+        'idfc first bank': ['IDFC First Bank', 'IDFC FIRST Bank', 'IDFC'],
+        'avanse': ['Avanse Financial Services', 'Avanse Financial', 'Avanse'],
+        'avanse financial services': ['Avanse Financial Services', 'Avanse Financial', 'Avanse'],
+        'avanse financial': ['Avanse Financial Services', 'Avanse Financial', 'Avanse'],
+        'auxilo': ['Auxilo Finserve', 'Auxilo'],
+        'auxilo finserve': ['Auxilo Finserve', 'Auxilo']
       };
 
       let appQuery = this.db.from('LoanApplication')

@@ -176,7 +176,7 @@ function BankLoginContent() {
         if (lowerEmail.includes("poonawalla")) return "poonawalla";
 
         // Fallbacks for seed test users
-        if (lowerEmail === "") return "idfc";
+        if (lowerEmail === "abhimadasu4@gmail.com") return "idfc";
         if (lowerEmail === "keerthichinnu0728@gmail.com") return "credila";
         if (lowerEmail === "luharika28@gmail.com") return "auxilo";
 
@@ -354,7 +354,7 @@ function BankLoginContent() {
                                     className="w-10 h-10 object-contain group-hover:scale-105 transition-transform"
                                 />
                                 <span className="font-bold text-2xl font-display text-gray-900 tracking-tight">
-                                    Vidyaloan Staff
+                                    Vidyaloan X Bank Access Portal
                                 </span>
                             </Link>
                         )}
