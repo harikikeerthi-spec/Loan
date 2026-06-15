@@ -210,6 +210,77 @@ export default function DocumentReviewCenter() {
         return `/api/applications/admin/${appId}/documents/${docId}/view?token=${token}`;
     };
 
+    const renderThumbnailPreview = (doc: any, page: number) => {
+        if (!doc) return null;
+        const appId = viewerAppId || selectedAppId;
+        if (!appId) return null;
+        
+        const url = getDocumentViewUrl(appId, doc.id);
+        const fileName = (doc.fileName || "").toLowerCase();
+        const filePath = (doc.filePath || "").toLowerCase();
+        const mimeType = (doc.mimeType || "").toLowerCase();
+        
+        const isPdf = mimeType === "application/pdf" || fileName.endsWith(".pdf") || filePath.endsWith(".pdf");
+        const isDigilocker = filePath.startsWith("in.gov.");
+        const isImage = mimeType.startsWith("image/") || /\.(jpg|jpeg|png|webp|gif)/i.test(fileName) || /\.(jpg|jpeg|png|webp|gif)/i.test(filePath);
+        
+        if (isPdf || isDigilocker) {
+            return (
+                <iframe
+                    src={`${url}#page=${page}&toolbar=0&navpanes=0&scrollbar=0`}
+                    className="w-[300%] h-[300%] pointer-events-none scale-[0.33] origin-top-left border-none bg-white"
+                    title={`Thumb P${page}`}
+                />
+            );
+        }
+        
+        if (isImage) {
+            let containerStyle: React.CSSProperties = {
+                overflow: "hidden",
+                position: "relative",
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#f1f5f9"
+            };
+
+            let imgStyle: React.CSSProperties = {
+                maxWidth: "100%",
+                maxHeight: "100%",
+                objectFit: "contain",
+                pointerEvents: "none"
+            };
+
+            if (page === 1) {
+                containerStyle.alignItems = "flex-start";
+                imgStyle.objectFit = "cover";
+                imgStyle.objectPosition = "top center";
+                imgStyle.height = "200%";
+                imgStyle.maxHeight = "none";
+            } else if (page === 2) {
+                containerStyle.alignItems = "flex-end";
+                imgStyle.objectFit = "cover";
+                imgStyle.objectPosition = "bottom center";
+                imgStyle.height = "200%";
+                imgStyle.maxHeight = "none";
+            }
+
+            return (
+                <div style={containerStyle}>
+                    <img
+                        src={url}
+                        alt={`Thumb P${page}`}
+                        style={imgStyle}
+                    />
+                </div>
+            );
+        }
+        
+        return <span className="text-[6px] font-bold text-gray-300">P. {page}</span>;
+    };
+
     const renderDocumentPreview = (doc: any, full = false) => {
         if (!doc || !selectedAppId) return null;
         
@@ -225,26 +296,60 @@ export default function DocumentReviewCenter() {
         if (isPdf || isDigilocker) {
             return (
                 <iframe
-                    src={url}
-                    className="w-full h-full min-h-[500px] bg-white rounded-lg border border-gray-200 shadow-sm"
+                    key={selectedThumb}
+                    src={`${url}#page=${selectedThumb}`}
+                    className="w-full h-full min-h-[550px] bg-white rounded-lg border border-gray-200 shadow-sm"
                     title={doc.docType || "Document PDF"}
                 />
             );
         }
         
         if (isImage) {
+            let containerStyle: React.CSSProperties = {
+                overflow: "hidden",
+                position: "relative",
+                width: "100%",
+                height: full ? "80vh" : "60vh",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#f1f5f9",
+                borderRadius: "12px",
+                border: "1px solid #e2e8f0"
+            };
+
+            let imgStyle: React.CSSProperties = {
+                maxWidth: "100%",
+                maxHeight: "100%",
+                objectFit: "contain",
+                transform: `scale(${zoom / 100}) rotate(${rotate}deg)`,
+                transition: "all 0.2s ease-in-out"
+            };
+
+            if (selectedThumb === 1) {
+                containerStyle.alignItems = "flex-start";
+                imgStyle.objectFit = "cover";
+                imgStyle.objectPosition = "top center";
+                imgStyle.maxHeight = "none";
+                imgStyle.height = "200%";
+            } else if (selectedThumb === 2) {
+                containerStyle.alignItems = "flex-end";
+                imgStyle.objectFit = "cover";
+                imgStyle.objectPosition = "bottom center";
+                imgStyle.maxHeight = "none";
+                imgStyle.height = "200%";
+            }
+
             return (
-                <motion.div
-                    animate={{ scale: zoom / 100, rotate }}
-                    transition={{ duration: 0.15 }}
-                    className="relative max-w-full max-h-full flex items-center justify-center p-2"
-                >
-                    <img
+                <div style={containerStyle}>
+                    <motion.img
+                        key={selectedThumb}
                         src={url}
                         alt={doc.docType || "Document Image"}
-                        className={`max-w-full rounded-lg shadow-md object-contain ${full ? 'max-h-[80vh]' : 'max-h-[60vh]'}`}
+                        style={imgStyle}
+                        className="rounded-lg shadow-md"
                     />
-                </motion.div>
+                </div>
             );
         }
         
@@ -253,13 +358,23 @@ export default function DocumentReviewCenter() {
                 <span className="material-symbols-outlined text-4xl text-gray-400 mb-2">draft</span>
                 <h4 className="text-sm font-bold text-gray-900 uppercase">{doc.docType?.replace(/_/g, " ")}</h4>
                 <p className="text-xs text-gray-500 mt-2">This file type ({doc.mimeType || "Binary"}) cannot be previewed inline.</p>
-                <a
-                    href={url}
-                    download
-                    className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-[#6605c7] hover:bg-[#5203a4] text-white rounded-md text-xs font-black uppercase tracking-wider transition-all"
-                >
-                    <span className="material-symbols-outlined text-xs">download</span> Download File
-                </a>
+                <div className="flex gap-2 justify-center mt-4">
+                    <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-md text-xs font-black uppercase tracking-wider transition-all"
+                    >
+                        <span className="material-symbols-outlined text-xs">open_in_new</span> View Full
+                    </a>
+                    <a
+                        href={`${url}&download=true`}
+                        download
+                        className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#6605c7] hover:bg-[#5203a4] text-white rounded-md text-xs font-black uppercase tracking-wider transition-all"
+                    >
+                        <span className="material-symbols-outlined text-xs">download</span> Download
+                    </a>
+                </div>
             </div>
         );
     };
@@ -607,9 +722,18 @@ export default function DocumentReviewCenter() {
                                                             </button>
                                                             <a 
                                                                 href={getDocumentViewUrl(selectedApp.id, activeViewerDoc.id)}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="p-1 hover:bg-gray-100 rounded text-gray-600 flex items-center"
+                                                                title="View full document in new tab"
+                                                            >
+                                                                <span className="material-symbols-outlined text-sm">open_in_new</span>
+                                                            </a>
+                                                            <a 
+                                                                href={`${getDocumentViewUrl(selectedApp.id, activeViewerDoc.id)}&download=true`}
                                                                 download
                                                                 className="p-1 hover:bg-gray-100 rounded text-gray-600 flex items-center"
-                                                                title="Download payload"
+                                                                title="Download document"
                                                             >
                                                                 <span className="material-symbols-outlined text-sm">download</span>
                                                             </a>
@@ -632,10 +756,7 @@ export default function DocumentReviewCenter() {
                                                                     }`}
                                                                 >
                                                                     <div className="w-10 h-14 bg-gray-50 border border-gray-200 rounded flex items-center justify-center shadow-inner relative overflow-hidden select-none">
-                                                                        <span className="text-[6px] font-bold text-gray-300">P. {page}</span>
-                                                                        <div className="absolute inset-x-1 top-1 h-0.5 bg-gray-200 rounded" />
-                                                                        <div className="absolute inset-x-1 top-2 h-0.5 bg-gray-200 rounded" />
-                                                                        <div className="absolute inset-x-1 top-3.5 h-0.5 bg-gray-200 rounded w-1/2" />
+                                                                        {renderThumbnailPreview(activeViewerDoc, page)}
                                                                     </div>
                                                                     <span className="text-[8px] font-semibold text-gray-500">Page {page}</span>
                                                                 </button>
@@ -723,9 +844,20 @@ export default function DocumentReviewCenter() {
                                         </button>
                                     </div>
 
+                                    {/* Open in New Tab */}
+                                    <a 
+                                        href={getDocumentViewUrl(viewerAppId || "", activeViewerDoc.id)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-3.5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5"
+                                    >
+                                        <span className="material-symbols-outlined text-xs">open_in_new</span>
+                                        View Full
+                                    </a>
+
                                     {/* Direct Download */}
                                     <a 
-                                        href={getDocumentViewUrl(viewerAppId, activeViewerDoc.id)}
+                                        href={`${getDocumentViewUrl(viewerAppId || "", activeViewerDoc.id)}&download=true`}
                                         download 
                                         className="px-3.5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1"
                                     >
@@ -758,11 +890,7 @@ export default function DocumentReviewCenter() {
                                             }`}
                                         >
                                             <div className="w-24 h-32 bg-gray-50 border border-gray-200 rounded flex items-center justify-center shadow-inner relative overflow-hidden select-none">
-                                                <span className="text-[8px] font-bold text-gray-300">Page {page}</span>
-                                                <div className="absolute inset-x-2 top-2 h-1 bg-gray-200 rounded" />
-                                                <div className="absolute inset-x-2 top-4 h-1 bg-gray-200 rounded" />
-                                                <div className="absolute inset-x-2 top-6 h-1 bg-gray-200 rounded" />
-                                                <div className="absolute inset-x-2 top-10 h-1 bg-gray-200 rounded w-1/2" />
+                                                {renderThumbnailPreview(activeViewerDoc, page)}
                                             </div>
                                             <span className="text-[9px] font-black text-gray-500">Page {page}</span>
                                         </button>

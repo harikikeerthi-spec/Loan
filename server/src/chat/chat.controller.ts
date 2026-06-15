@@ -19,8 +19,14 @@ export class ChatController {
   ) {}
 
   @Get('conversations')
-  async getConversations(@Req() req: any) {
-    return this.chatService.getConversations('active', req.user);
+  async getConversations(@Req() req: any, @Query('bankName') bankName?: string) {
+    // For bank users: if explicit bankName is passed from client, use it;
+    // otherwise fall back to the user object's bankName / firstName
+    const userWithBank = { ...req.user };
+    if (bankName) {
+      userWithBank.bankName = bankName;
+    }
+    return this.chatService.getConversations('active', userWithBank);
   }
 
   @Get('messages/:conversationId')

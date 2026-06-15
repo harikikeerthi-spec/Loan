@@ -866,6 +866,7 @@ export class UsersService {
     
     if (status === 'verified') {
       payload.verifiedAt = new Date().toISOString();
+      payload.rejectionReason = null;
       // Clear any previous rejection data
       payload.verificationMetadata = {
         status: 'verified',
@@ -876,6 +877,7 @@ export class UsersService {
     
     if (status === 'rejected' && rejectionReason) {
       payload.verifiedAt = null;
+      payload.rejectionReason = rejectionReason;
       // Store rejection reason inside the existing verificationMetadata JSON column
       payload.verificationMetadata = {
         status: 'rejected',

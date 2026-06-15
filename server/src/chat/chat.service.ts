@@ -154,9 +154,11 @@ export class ChatService {
           // Bank partners should only see conversations explicitly marked for banks
           query = query.contains('metadata', { type: 'bank' });
           
-          // If the user has an associated bank, filter by it.
-          const bankName = user.bankName || (user.firstName && user.firstName.includes('Bank') ? user.firstName : null);
+          // Priority: explicit bankName > user.bankName > user.firstName
+          // The frontend sends the resolved full bank name (e.g. "IDFC FIRST Bank")
+          const bankName = user.bankName || user.firstName || null;
           if (bankName) {
+              this.logger.debug(`Filtering conversations for bank: ${bankName}`);
               query = query.contains('metadata', { bank: bankName });
           }
       } else if (user && user.role === 'agent') {

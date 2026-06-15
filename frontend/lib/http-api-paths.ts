@@ -105,8 +105,8 @@ export const HttpApiPaths = {
 
     chat: {
         connect: () => `${HTTP_API_PREFIX}/chat/connect`,
-        conversations: (role?: string) =>
-            `${HTTP_API_PREFIX}/chat/conversations${role !== undefined ? httpApiQuery({ role }) : ""}`,
+        conversations: (role?: string, bankName?: string) =>
+            `${HTTP_API_PREFIX}/chat/conversations${httpApiQuery({ role, bankName })}`,
         messages: (conversationId: string) =>
             `${HTTP_API_PREFIX}/chat/messages/${enc(conversationId)}`,
         staffStart: () => `${HTTP_API_PREFIX}/chat/staff-start`,

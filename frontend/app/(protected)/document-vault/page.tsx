@@ -35,7 +35,7 @@ export default function DocumentVaultPage() {
             if (res.success) {
                 setDocs(res.data.documents || []);
                 setProfile(res.data.user || null);
-                
+
                 // Keep the salaried vs self-employed toggle in sync with the database
                 const baseProfile = res.data.user || {};
                 const coapp = baseProfile.coApplicant || {};
@@ -75,7 +75,7 @@ export default function DocumentVaultPage() {
     const handleProfileTypeChange = async (type: "salaried" | "self-employed") => {
         setProfileType(type);
         if (!user?.id) return;
-        
+
         // Merge this selection into the current user profile
         const baseProfile = profile || user || {};
         const coapp = baseProfile.coApplicant || {};
@@ -85,18 +85,18 @@ export default function DocumentVaultPage() {
             // Fallback name if co-applicant name isn't filled in yet
             name: coapp.name || baseProfile.coApplicantName || "Co-applicant"
         };
-        
+
         const updatedProfile = {
             ...baseProfile,
             coApplicant: updatedCoApplicant
         };
-        
+
         setProfile(updatedProfile);
-        
+
         try {
             console.log("[VAULT] Syncing coapplicant employment type toggle to DB:", type);
             await onboardingApi.submit(updatedProfile);
-            
+
             // Dispatch dynamic update event
             const key = `dashboardDataUpdated_${user.id}`;
             localStorage.setItem(key, String(Date.now()));
@@ -108,7 +108,7 @@ export default function DocumentVaultPage() {
 
     const getActiveProfile = () => {
         const baseProfile = profile || user || {};
-        
+
         // Ensure family details have defaults if not present so parent documents are shown
         const family = baseProfile.family || baseProfile.familyDetails || {};
         const fatherName = family.fatherName || baseProfile.fatherName || "Father";
@@ -213,7 +213,7 @@ export default function DocumentVaultPage() {
                     try {
                         const text = await response.text();
                         if (text) errorMessage = text;
-                    } catch (textError) {}
+                    } catch (textError) { }
                 }
                 throw new Error(errorMessage);
             }
@@ -294,10 +294,10 @@ export default function DocumentVaultPage() {
     // Dynamically calculate requirements
     const activeProfile = getActiveProfile();
     const allRequiredDocs = getProfileDocumentRequirements(activeProfile);
-    
-    const studentDocs = allRequiredDocs.filter(req => 
-        !req.type.startsWith('coapplicant_') && 
-        !req.type.startsWith('father_') && 
+
+    const studentDocs = allRequiredDocs.filter(req =>
+        !req.type.startsWith('coapplicant_') &&
+        !req.type.startsWith('father_') &&
         !req.type.startsWith('mother_') &&
         !req.type.startsWith('parent_')
     ).map(req => ({
@@ -306,7 +306,7 @@ export default function DocumentVaultPage() {
         icon: getDocIcon(req.type)
     }));
 
-    const coappDocs = allRequiredDocs.filter(req => 
+    const coappDocs = allRequiredDocs.filter(req =>
         req.type.startsWith('coapplicant_')
     ).map(req => ({
         type: req.type,
@@ -314,8 +314,8 @@ export default function DocumentVaultPage() {
         icon: getDocIcon(req.type)
     }));
 
-    const parentDocs = allRequiredDocs.filter(req => 
-        req.type.startsWith('father_') || 
+    const parentDocs = allRequiredDocs.filter(req =>
+        req.type.startsWith('father_') ||
         req.type.startsWith('mother_') ||
         req.type.startsWith('parent_')
     ).map(req => ({
@@ -351,19 +351,17 @@ export default function DocumentVaultPage() {
                     const isUploaded = isVerified || isPending;
 
                     return (
-                        <div key={req.type} className={`bg-white rounded-xl p-5 border transition-all duration-200 ${
-                            isVerified ? 'border-emerald-100 bg-emerald-50/10' :
+                        <div key={req.type} className={`bg-white rounded-xl p-5 border transition-all duration-200 ${isVerified ? 'border-emerald-100 bg-emerald-50/10' :
                             isRejected ? 'border-rose-100 bg-rose-50/5' :
-                            isPending ? 'border-amber-100 bg-amber-50/5' :
-                            'border-gray-100'
-                        }`}>
+                                isPending ? 'border-amber-100 bg-amber-50/5' :
+                                    'border-gray-100'
+                            }`}>
                             <div className="flex justify-between items-start mb-5">
-                                <div className={`w-10 h-10 ${
-                                    isVerified ? 'bg-emerald-100 text-emerald-600' :
+                                <div className={`w-10 h-10 ${isVerified ? 'bg-emerald-100 text-emerald-600' :
                                     isRejected ? 'bg-rose-100 text-rose-600' :
-                                    isPending ? 'bg-amber-100 text-[#d97706]' :
-                                    'bg-[#6605c7]/[0.03] text-[#6605c7]'
-                                } rounded-xl flex items-center justify-center transition-colors`}>
+                                        isPending ? 'bg-amber-100 text-[#d97706]' :
+                                            'bg-[#6605c7]/[0.03] text-[#6605c7]'
+                                    } rounded-xl flex items-center justify-center transition-colors`}>
                                     <span className="material-symbols-outlined text-[20px]">{req.icon}</span>
                                 </div>
                                 {isVerified && (
@@ -389,9 +387,9 @@ export default function DocumentVaultPage() {
                             <h3 className="text-[13px] font-bold text-gray-900 mb-1">{req.label}</h3>
                             <p className="text-[11px] text-gray-500 mb-4">
                                 {isVerified ? "Document successfully verified and locked" :
-                                 isPending ? "Document uploaded, awaiting staff review" :
-                                 isRejected ? "Verification failed - please upload a new copy" :
-                                 "Click to upload your original document"}
+                                    isPending ? "Document uploaded, awaiting staff review" :
+                                        isRejected ? "Verification failed - please upload a new copy" :
+                                            "Click to upload your original document"}
                             </p>
 
                             {isRejected && (
@@ -450,19 +448,19 @@ export default function DocumentVaultPage() {
                                         </div>
                                     ) : (
                                         <>
-                                            {([
+                                            {/* {([
                                                 'pan', 'coapplicant_pan', 'national_id', 'coapplicant_aadhar',
                                                 'marksheet_10', 'marksheet_12', 'passport',
                                                 'father_pan', 'mother_pan', 'father_aadhar', 'mother_aadhar'
                                             ].includes(req.type)) && !isUploaded && (
-                                                 <Link
-                                                    href={`/document-vault/digilocker?docType=${req.type}`}
-                                                    className="w-full py-2.5 bg-emerald-600 text-white text-[11px] font-bold rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 border border-emerald-500/20"
-                                                >
-                                                    <img src="https://upload.wikimedia.org/wikipedia/en/1/1d/DigiLocker_logo.png" alt="DigiLocker" className="h-4 w-auto brightness-0 invert" />
-                                                    Upload from DigiLocker
-                                                </Link>
-                                            )}
+                                                    <Link
+                                                        href={`/document-vault/digilocker?docType=${req.type}`}
+                                                        className="w-full py-2.5 bg-emerald-600 text-white text-[11px] font-bold rounded-lg hover:bg-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 border border-emerald-500/20"
+                                                    >
+                                                        <img src="https://upload.wikimedia.org/wikipedia/en/1/1d/DigiLocker_logo.png" alt="DigiLocker" className="h-4 w-auto brightness-0 invert" />
+                                                        Upload from DigiLocker
+                                                    </Link>
+                                                )} */}
 
                                             <button
                                                 onClick={() => triggerFileInput(req.type)}
@@ -472,7 +470,7 @@ export default function DocumentVaultPage() {
                                                     'marksheet_10', 'marksheet_12', 'passport',
                                                     'father_pan', 'mother_pan', 'father_aadhar', 'mother_aadhar'
                                                 ].includes(req.type))
-                                                    ? 'bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100'
+                                                    ? 'bg-gray-50 text-black-500 border border-gray-200 hover:bg-gray-100'
                                                     : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
                                                     }`}
                                             >
@@ -485,7 +483,7 @@ export default function DocumentVaultPage() {
                                                     'pan', 'coapplicant_pan', 'national_id', 'coapplicant_aadhar',
                                                     'marksheet_10', 'marksheet_12', 'passport',
                                                     'father_pan', 'mother_pan', 'father_aadhar', 'mother_aadhar'
-                                                ].includes(req.type)) ? "Upload Manually (Priority 2)" : "Upload to Vault"}
+                                                ].includes(req.type)) ? "Upload Manually" : "Upload to Vault"}
                                             </button>
                                         </>
                                     )}
@@ -501,7 +499,7 @@ export default function DocumentVaultPage() {
     if (!mounted) return null;
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-transparent">
             <Navbar />
             <div className="max-w-6xl mx-auto px-6 pt-24 pb-16">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
@@ -542,7 +540,7 @@ export default function DocumentVaultPage() {
                     </div>
                 </div>
 
-                <div className="mb-12">
+                {/* <div className="mb-12">
                     <div className="bg-gradient-to-br from-[#004791] to-[#0b84ff] rounded-[32px] p-8 text-white relative overflow-hidden shadow-2xl shadow-blue-500/20">
                         <div className="absolute -top-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
                         <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-blue-900/30 rounded-full blur-3xl" />
@@ -578,7 +576,7 @@ export default function DocumentVaultPage() {
                             </div>
                         </div>
                     </div>
-                </div>
+                </div> */}
 
                 {docs.some(d => d.status === 'available_in_digilocker' && !d.uploaded) && (
                     <div className="mb-12 bg-gray-50/50 rounded-[32px] p-8 border border-dashed border-gray-200">
@@ -592,7 +590,7 @@ export default function DocumentVaultPage() {
                                     <p className="text-gray-500 text-[11px] font-medium uppercase tracking-widest">Select documents to sync with your vault</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 onClick={loadDocs}
                                 className="w-10 h-10 bg-white rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 hover:text-[#6605c7] hover:border-[#6605c7] transition-all"
                                 title="Refresh"

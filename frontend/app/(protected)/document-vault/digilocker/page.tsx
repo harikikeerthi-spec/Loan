@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -116,7 +116,7 @@ function DigilockerIntegrationContent() {
     const digilockerDocs = docs.filter(d => d.status === 'available_in_digilocker' && !d.uploaded);
 
     return (
-        <div className="min-h-screen bg-white">
+        <div className="min-h-screen bg-transparent">
             <Navbar />
             <div className="max-w-6xl mx-auto px-6 pt-24 pb-16">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">

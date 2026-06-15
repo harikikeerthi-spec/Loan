@@ -318,8 +318,23 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
 
   const updateStatus = async (docId: string, status: string) => {
     setMsg("");
+    let reason: string | undefined = undefined;
+    if (status === "rejected") {
+      const promptReason = prompt("Please enter the reason for rejecting this document:");
+      if (promptReason === null) {
+        loadDocs();
+        return;
+      }
+      if (!promptReason.trim()) {
+        alert("A rejection reason is required.");
+        loadDocs();
+        return;
+      }
+      reason = promptReason.trim();
+    }
+
     try {
-      await staffProfileApi.updateDocumentStatus(profile.id, docId, status);
+      await staffProfileApi.updateDocumentStatus(profile.id, docId, status, reason);
       setMsg(`✓ Status updated to "${status}" and synced to user profile.`);
 
       // Log activity for document status update
@@ -334,13 +349,16 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
 
       await staffProfileApi.logActivity({
         type: activityType,
-        msg: `Updated ${doc?.docType?.replace(/_/g, ' ') || 'document'} status to ${status} for ${profile.linkedUser?.firstName} ${profile.linkedUser?.lastName}`,
+        msg: `Updated ${doc?.docType?.replace(/_/g, ' ') || 'document'} status to ${status} for ${profile.linkedUser?.firstName} ${profile.linkedUser?.lastName}${reason ? ` (Reason: ${reason})` : ''}`,
         icon: icons[status] || 'event_note',
         color: colors[status] || 'text-slate-600 bg-slate-50'
       }).catch(console.error);
 
       loadDocs();
-    } catch (e: any) { setMsg("✗ " + e.message); }
+    } catch (e: any) {
+      setMsg("✗ " + e.message);
+      loadDocs();
+    }
   };
 
   const removeDoc = async (docId: string) => {
@@ -577,6 +595,11 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
                           <span className={`mt-3 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${STATUS_COLORS[doc.status] || "bg-slate-100"}`}>
                             {doc.status}
                           </span>
+                          {doc.status === 'rejected' && doc.rejectionReason && (
+                            <p className="text-[10px] text-rose-700 font-semibold mt-2 px-2 line-clamp-2" title={doc.rejectionReason}>
+                              Reason: {doc.rejectionReason}
+                            </p>
+                          )}
                         </div>
                         <div className="h-12 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-4">
                           <button onClick={() => loadPreview(doc)} className="w-8 h-8 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center transition-all">
@@ -636,6 +659,11 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
                       <span className={`mt-3 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-sm ${STATUS_COLORS[doc.status] || "bg-slate-100"}`}>
                         {doc.status}
                       </span>
+                      {doc.status === 'rejected' && doc.rejectionReason && (
+                        <p className="text-[10px] text-rose-700 font-semibold mt-2 px-2 line-clamp-2" title={doc.rejectionReason}>
+                          Reason: {doc.rejectionReason}
+                        </p>
+                      )}
                     </div>
                     <div className="h-12 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-4">
                       <button onClick={() => loadPreview(doc)} className="w-8 h-8 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 flex items-center justify-center transition-all">

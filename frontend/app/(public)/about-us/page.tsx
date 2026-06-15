@@ -9,9 +9,10 @@ export const metadata: Metadata = {
 
 const team = [
     { name: "Vamsi Krishna", role: "CEO & Co-Founder", avatar: "" },
-    { name: "Priya Nair", role: "CTO & Co-Founder", avatar: "priya" },
-    { name: "Ravi Shankar", role: "Head of Partnerships", avatar: "ravi" },
-    { name: "Kavya Reddy", role: "Lead Counselor", avatar: "kavya" },
+    { name: "Manohar", role: "Senior Counselor", avatar: "" },
+    { name: "Keerthi Naidu", role: "Team Lead", avatar: "keerthi" },
+    { name: "Abhiram", role: "Developer", avatar: "abhiram" },
+    { name: "Shanmukh Sai", role: "Developer", avatar: "" },
 ];
 
 const values = [
@@ -108,7 +109,7 @@ export default function AboutPage() {
                         <h2 className="text-4xl font-bold font-display mb-4">Meet the Team</h2>
                         <p className="text-[13px] text-gray-500">Dedicated to changing education financing for the better.</p>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
                         {team.map((m) => (
                             <div key={m.name} className="text-center group">
                                 <Image

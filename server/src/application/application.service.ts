@@ -199,6 +199,21 @@ export class ApplicationService {
 
     if (error) throw error;
 
+    // Sync target intake and destination to User profile
+    if (userId && (data.intakeSeason || data.country)) {
+      try {
+        await this.db
+          .from('User')
+          .update({
+            ...(data.intakeSeason ? { intakeSeason: data.intakeSeason } : {}),
+            ...(data.country ? { studyDestination: data.country } : {}),
+          })
+          .eq('id', userId);
+      } catch (err) {
+        console.error('Failed to sync target intake/destination to User profile:', err);
+      }
+    }
+
     await this.createStatusHistory(application.id, { toStatus: application.status, toStage: application.stage, notes: 'Application created', isAutomatic: true });
     await this.initializeRequiredDocuments(application.id, application.userId, data.loanType);
 
@@ -362,6 +377,22 @@ export class ApplicationService {
       .single();
 
     if (error) throw error;
+
+    // Sync target intake and destination to User profile on update
+    if (application.userId && (data.intakeSeason !== undefined || data.country !== undefined)) {
+      try {
+        await this.db
+          .from('User')
+          .update({
+            ...(data.intakeSeason !== undefined ? { intakeSeason: data.intakeSeason } : {}),
+            ...(data.country !== undefined ? { studyDestination: data.country } : {}),
+          })
+          .eq('id', application.userId);
+      } catch (err) {
+        console.error('Failed to sync target intake/destination to User profile on update:', err);
+      }
+    }
+
     return { success: true, data: updated, message: 'Application updated successfully' };
   }
 
@@ -406,6 +437,22 @@ export class ApplicationService {
       console.error('[ApplicationService.adminUpdateApplication] DB Error:', error);
       throw error;
     }
+
+    // Sync target intake and destination to User profile on admin update
+    if (application.userId && (data.intakeSeason !== undefined || data.country !== undefined)) {
+      try {
+        await this.db
+          .from('User')
+          .update({
+            ...(data.intakeSeason !== undefined ? { intakeSeason: data.intakeSeason } : {}),
+            ...(data.country !== undefined ? { studyDestination: data.country } : {}),
+          })
+          .eq('id', application.userId);
+      } catch (err) {
+        console.error('Failed to sync target intake/destination to User profile on admin update:', err);
+      }
+    }
+
     return { success: true, data: updated, message: 'Application updated successfully' };
   }
 
@@ -835,23 +882,121 @@ export class ApplicationService {
   async verifyDocument(documentId: string, adminId: string, data: { status: 'verified' | 'rejected'; rejectionReason?: string }) {
     if (documentId.startsWith('vault_')) {
       const realId = documentId.replace('vault_', '');
-      const update: any = { status: data.status === 'verified' ? 'approved' : 'rejected' };
-      if (data.status === 'verified') update.updatedAt = new Date().toISOString();
-      
-      const { error } = await this.db.from('UserDocument').update(update).eq('id', realId);
+      const mappedStatus = data.status === 'verified' ? 'verified' : 'rejected';
+      const syncPayload: any = {
+        status: mappedStatus,
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (mappedStatus === 'verified') {
+        syncPayload.verifiedAt = new Date().toISOString();
+        syncPayload.rejectionReason = null;
+        syncPayload.verificationMetadata = {
+          status: 'verified',
+          verifiedAt: new Date().toISOString(),
+          message: 'Document manually verified by staff from application',
+        };
+      } else if (mappedStatus === 'rejected') {
+        syncPayload.verifiedAt = null;
+        syncPayload.rejectionReason = data.rejectionReason || null;
+        syncPayload.verificationMetadata = {
+          status: 'rejected',
+          rejectedAt: new Date().toISOString(),
+          rejectionReason: data.rejectionReason || null,
+          message: data.rejectionReason ? `Document rejected by staff: ${data.rejectionReason}` : 'Document rejected by staff',
+        };
+      }
+
+      const { data: userDoc, error } = await this.db
+        .from('UserDocument')
+        .update(syncPayload)
+        .eq('id', realId)
+        .select()
+        .single();
       if (error) throw error;
+
+      if (userDoc) {
+        const docName = userDoc.verificationMetadata?.docName || userDoc.docType;
+        if (mappedStatus === 'rejected') {
+          this.eventEmitter.emit('document.rejected', {
+            userId: userDoc.userId,
+            documentId: userDoc.id,
+            documentType: userDoc.docType,
+            documentName: docName,
+            rejectionReason: data.rejectionReason,
+            rejectedAt: syncPayload.verificationMetadata.rejectedAt,
+          });
+        } else if (mappedStatus === 'verified') {
+          this.eventEmitter.emit('document.verified', {
+            userId: userDoc.userId,
+            documentId: userDoc.id,
+            documentType: userDoc.docType,
+            documentName: docName,
+            verifiedAt: syncPayload.verifiedAt,
+          });
+        }
+      }
       return { success: true, message: `Vault document ${data.status} successfully` };
     }
 
-    const { data: document } = await this.db.from('ApplicationDocument').select('id').eq('id', documentId).single();
-    if (!document) {
-      const { data: userDoc } = await this.db.from('UserDocument').select('id').eq('id', documentId).single();
+    const { data: appDoc } = await this.db.from('ApplicationDocument').select('id, applicationId, docType').eq('id', documentId).single();
+    if (!appDoc) {
+      const { data: userDoc } = await this.db.from('UserDocument').select('*').eq('id', documentId).single();
       if (userDoc) {
-        const update: any = { status: data.status === 'verified' ? 'approved' : 'rejected' };
-        if (data.status === 'verified') update.updatedAt = new Date().toISOString();
-        
-        const { error } = await this.db.from('UserDocument').update(update).eq('id', documentId);
+        const mappedStatus = data.status === 'verified' ? 'verified' : 'rejected';
+        const syncPayload: any = {
+          status: mappedStatus,
+          updatedAt: new Date().toISOString(),
+        };
+
+        if (mappedStatus === 'verified') {
+          syncPayload.verifiedAt = new Date().toISOString();
+          syncPayload.rejectionReason = null;
+          syncPayload.verificationMetadata = {
+            status: 'verified',
+            verifiedAt: new Date().toISOString(),
+            message: 'Document manually verified by staff from application',
+          };
+        } else if (mappedStatus === 'rejected') {
+          syncPayload.verifiedAt = null;
+          syncPayload.rejectionReason = data.rejectionReason || null;
+          syncPayload.verificationMetadata = {
+            status: 'rejected',
+            rejectedAt: new Date().toISOString(),
+            rejectionReason: data.rejectionReason || null,
+            message: data.rejectionReason ? `Document rejected by staff: ${data.rejectionReason}` : 'Document rejected by staff',
+          };
+        }
+
+        const { data: updatedUserDoc, error } = await this.db
+          .from('UserDocument')
+          .update(syncPayload)
+          .eq('id', documentId)
+          .select()
+          .single();
         if (error) throw error;
+
+        if (updatedUserDoc) {
+          const docName = updatedUserDoc.verificationMetadata?.docName || updatedUserDoc.docType;
+          if (mappedStatus === 'rejected') {
+            this.eventEmitter.emit('document.rejected', {
+              userId: updatedUserDoc.userId,
+              documentId: updatedUserDoc.id,
+              documentType: updatedUserDoc.docType,
+              documentName: docName,
+              rejectionReason: data.rejectionReason,
+              rejectedAt: syncPayload.verificationMetadata.rejectedAt,
+            });
+          } else if (mappedStatus === 'verified') {
+            this.eventEmitter.emit('document.verified', {
+              userId: updatedUserDoc.userId,
+              documentId: updatedUserDoc.id,
+              documentType: updatedUserDoc.docType,
+              documentName: docName,
+              verifiedAt: syncPayload.verifiedAt,
+            });
+          }
+        }
         return { success: true, message: `Vault document ${data.status} successfully` };
       }
       throw new NotFoundException('Document not found');
@@ -865,6 +1010,71 @@ export class ApplicationService {
       .single();
 
     if (error) throw error;
+
+    // Back-sync to UserDocument if there's a matching one
+    const { data: application } = await this.db
+      .from('LoanApplication')
+      .select('userId')
+      .eq('id', appDoc.applicationId)
+      .single();
+
+    if (application?.userId) {
+      const mappedStatus = data.status === 'verified' ? 'verified' : 'rejected';
+      const syncPayload: any = {
+        status: mappedStatus,
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (mappedStatus === 'verified') {
+        syncPayload.verifiedAt = new Date().toISOString();
+        syncPayload.rejectionReason = null;
+        syncPayload.verificationMetadata = {
+          status: 'verified',
+          verifiedAt: new Date().toISOString(),
+          message: 'Document manually verified by staff from application',
+        };
+      } else if (mappedStatus === 'rejected') {
+        syncPayload.verifiedAt = null;
+        syncPayload.rejectionReason = data.rejectionReason || null;
+        syncPayload.verificationMetadata = {
+          status: 'rejected',
+          rejectedAt: new Date().toISOString(),
+          rejectionReason: data.rejectionReason || null,
+          message: data.rejectionReason ? `Document rejected by staff: ${data.rejectionReason}` : 'Document rejected by staff',
+        };
+      }
+
+      const { data: updatedUserDoc } = await this.db
+        .from('UserDocument')
+        .update(syncPayload)
+        .eq('userId', application.userId)
+        .eq('docType', appDoc.docType)
+        .select()
+        .single();
+
+      if (updatedUserDoc) {
+        const docName = updatedUserDoc.verificationMetadata?.docName || updatedUserDoc.docType;
+        if (mappedStatus === 'rejected') {
+          this.eventEmitter.emit('document.rejected', {
+            userId: updatedUserDoc.userId,
+            documentId: updatedUserDoc.id,
+            documentType: updatedUserDoc.docType,
+            documentName: docName,
+            rejectionReason: data.rejectionReason,
+            rejectedAt: syncPayload.verificationMetadata.rejectedAt,
+          });
+        } else if (mappedStatus === 'verified') {
+          this.eventEmitter.emit('document.verified', {
+            userId: updatedUserDoc.userId,
+            documentId: updatedUserDoc.id,
+            documentType: updatedUserDoc.docType,
+            documentName: docName,
+            verifiedAt: syncPayload.verifiedAt,
+          });
+        }
+      }
+    }
+
     return { success: true, data: updated, message: `Document ${data.status} successfully` };
   }
 

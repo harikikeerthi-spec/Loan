@@ -58,6 +58,58 @@ const formatAmountInINR = (num: number) => {
   }).format(num);
 };
 
+/** Derive a readable intake season from a raw value (named season or ISO date) */
+const resolveIntakeSeason = (raw?: string | null): string => {
+  if (!raw) return "—";
+  const s = String(raw).trim();
+  if (!s) return "—";
+  // Already a named season (has letters)
+  if (/[a-zA-Z]/.test(s)) return s;
+  // Looks like an ISO date — extract month + year
+  try {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) {
+      return new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(d);
+    }
+  } catch { /* ignore */ }
+  return s;
+};
+
+/** Best-effort study destination resolver across all possible field paths */
+const resolveDestination = (app: any): string => {
+  const candidates = [
+    app?.country,
+    app?.destinationCountry,
+    app?.studyDestination,
+    app?.user?.studyDestination,
+    app?.student?.studyDestination,
+    app?.academic?.countryOfEducation,
+    app?.user?.academic?.countryOfEducation,
+    app?.user?.countryOfEducation,
+  ];
+  for (const c of candidates) {
+    if (c && String(c).trim()) return String(c).trim();
+  }
+  return "—";
+};
+
+/** Best-effort intake season resolver across all possible field paths */
+const resolveIntake = (app: any): string => {
+  const candidates = [
+    app?.intakeSeason,
+    app?.user?.intakeSeason,
+    app?.student?.intakeSeason,
+    app?.targetIntake,
+    app?.user?.targetIntake,
+    app?.courseStartDate,
+    app?.user?.courseStartDate,
+  ];
+  for (const c of candidates) {
+    if (c && String(c).trim()) return resolveIntakeSeason(String(c).trim());
+  }
+  return "—";
+};
+
 const formatStepLabel = (label: string) => {
   if (label === "APPLICATION CREATED") return "Application\nCreated";
   if (label === "APPLICATION SUBMITTED") return "Application\nSubmitted";
@@ -71,6 +123,24 @@ const formatStepLabel = (label: string) => {
   if (label === "SANCTION") return "Sanction";
   if (label === "DISBURSEMENT") return "Disbursement";
   return label.replace(/\s+/g, '\n');
+};
+
+const formatNoteTime = (createdAt?: string): string => {
+  if (!createdAt) return "JUST NOW";
+  try {
+    const date = new Date(createdAt);
+    if (isNaN(date.getTime())) return "JUST NOW";
+    return new Intl.DateTimeFormat('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }).format(date) + " IST";
+  } catch {
+    return "JUST NOW";
+  }
 };
 
 const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
@@ -98,7 +168,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     if (['submitted_to_bank', 'file_logged', 'submit_to_bank', 'bank_submission'].includes(s)) return Math.max(baseProgress, 50);
     if (['staff_verified', 'documents_verification', 'document_verification', 'docs_received', 'docs_uploaded', 'under_review'].includes(s)) return Math.max(baseProgress, 40);
     if (['submitted', 'application_submitted'].includes(s)) return Math.max(baseProgress, 25);
-    
+
     return baseProgress;
   };
   const progress = getDynamicProgress();
@@ -111,10 +181,8 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
-  const [notes, setNotes] = useState([
-    { id: 1, author: "Ananya Deshmukh", role: "Senior Auditor", text: "Student has excellent academic pedigree. Waitlisted at UofT but current profile shows high employability in data science. Financials look solid; father's income is consistent for last 3 years.", time: "2 DAYS AGO" },
-    { id: 2, author: "Staff Member", role: "Relationship Manager", text: "Requested a clearer scan of 10th marksheet. Verification pending for academic section.", time: "TODAY • 10:15 AM" },
-  ]);
+  const [notes, setNotes] = useState<any[]>([]);
+  const [loadingNotes, setLoadingNotes] = useState(false);
   const [msgInput, setMsgInput] = useState("");
   const [noteInput, setNoteInput] = useState("");
 
@@ -410,17 +478,46 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     setMsgInput("");
   };
 
-  const handleAddNote = () => {
+  const fetchNotes = async () => {
+    const appRefId = application.id || application._id;
+    if (!appRefId) return;
+    setLoadingNotes(true);
+    try {
+      const res = await adminApi.getRemarks(appRefId) as any;
+      if (res && res.success && Array.isArray(res.data)) {
+        setNotes(res.data);
+      } else if (Array.isArray(res)) {
+        setNotes(res);
+      }
+    } catch (err) {
+      console.error("Failed to fetch notes:", err);
+    } finally {
+      setLoadingNotes(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotes();
+  }, [application.id, application._id]);
+
+  const handleAddNote = async () => {
     if (!noteInput.trim()) return;
-    const newNote = {
-      id: Date.now(),
-      author: "Staff Member",
-      role: "Level 4 Admin",
-      text: noteInput,
-      time: "JUST NOW"
-    };
-    setNotes([...notes, newNote]);
-    setNoteInput("");
+    const appRefId = application.id || application._id;
+    if (!appRefId) return;
+
+    try {
+      await adminApi.addRemark(appRefId, {
+        type: 'note',
+        content: noteInput.trim(),
+        authorName: 'Staff Member',
+        isInternal: true
+      } as any);
+      setNoteInput("");
+      fetchNotes();
+    } catch (err) {
+      console.error("Failed to add note:", err);
+      alert("Failed to save note to database.");
+    }
   };
 
   const handleAddDocument = async () => {
@@ -790,7 +887,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     if (active && stageIdx === anchorIdx && appUpdatedAt) {
       return appUpdatedAt;
     }
-    
+
     // If this is a completed stage and it is the last completed stage
     if (completed && stageIdx === anchorIdx && appUpdatedAt) {
       return appUpdatedAt;
@@ -858,12 +955,12 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   };
   const formatUploadAge = (timestamp?: string) => {
     if (!timestamp) return "Upload time unavailable";
-    
+
     let safeTimestamp = timestamp;
     if (!timestamp.endsWith('Z') && !timestamp.includes('+') && !timestamp.match(/-\d{2}:\d{2}$/)) {
       safeTimestamp = timestamp + 'Z';
     }
-    
+
     const uploadedDate = new Date(safeTimestamp);
     if (Number.isNaN(uploadedDate.getTime())) return "Upload time unavailable";
 
@@ -879,7 +976,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
 
     const diffMs = Date.now() - uploadedDate.getTime();
     const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
-    
+
     let relative = "";
     if (diffMinutes < 1) relative = "just now";
     else if (diffMinutes < 60) relative = `${diffMinutes} minute${diffMinutes === 1 ? "" : "s"} ago`;
@@ -923,6 +1020,43 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const dobMatched = extractedDob && application.dob ? getComparableValue(extractedDob) === getComparableValue(application.dob) : false;
   const hasCoapplicantPan = coApplicantOcrDocs.some((doc) => String(doc.docType || "").toLowerCase().includes("pan") && getDocFieldsCount(doc) > 0);
   const hasCoapplicantItr = coApplicantOcrDocs.some((doc) => String(doc.docType || "").toLowerCase().includes("itr") && getDocFieldsCount(doc) > 0);
+
+  const examsList = (() => {
+    const list: Array<{ name: string; score: string }> = [];
+
+    // 1. Check direct columns
+    const englishTest = application.englishTest || application.user?.englishTest || application.student?.englishTest;
+    const englishScore = application.englishScore || application.user?.englishScore || application.student?.englishScore;
+    if (englishTest && englishScore) {
+      list.push({ name: String(englishTest).toUpperCase(), score: String(englishScore) });
+    }
+
+    const entranceTest = application.entranceTest || application.user?.entranceTest || application.student?.entranceTest;
+    const entranceScore = application.entranceScore || application.user?.entranceScore || application.student?.entranceScore;
+    if (entranceTest && entranceScore) {
+      list.push({ name: String(entranceTest).toUpperCase(), score: String(entranceScore) });
+    }
+
+    // 2. Check tests JSON
+    try {
+      const testsStr = application.tests || application.user?.tests || application.student?.tests;
+      if (testsStr) {
+        const parsed = typeof testsStr === 'string' ? JSON.parse(testsStr) : testsStr;
+        if (parsed && typeof parsed === 'object') {
+          const testKeys = ['gre', 'gmat', 'sat', 'ielts', 'toefl', 'pte', 'duolingo'];
+          testKeys.forEach(key => {
+            if (parsed[key] && !list.some(e => e.name.toLowerCase() === key.toLowerCase())) {
+              list.push({ name: key.toUpperCase(), score: String(parsed[key]) });
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to parse tests JSON:", e);
+    }
+
+    return list;
+  })();
 
   // â”€â”€â”€ Cross-Document Discrepancy Detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const panDoc = documents.find(d => String(d.docType || "").toLowerCase() === "pan");
@@ -988,70 +1122,38 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
       <div className="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] bg-indigo-50/50 blur-[120px] rounded-full -z-10" />
       <div className="absolute bottom-[-10%] left-[-5%] w-[30%] h-[40%] bg-emerald-50/50 blur-[100px] rounded-full -z-10" />
 
-      {/* Top Navbar - Glassmorphism */}
-      <div className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-100 flex items-center justify-between px-10 shrink-0 sticky top-0 z-[80] shadow-sm">
-        <div className="flex flex-col">
-          <p className="text-[10px] font-['Playfair_Display',serif] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">STAFF DASHBOARD</p>
-          <h1 className="text-[24px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Application Detail</h1>
+      {/* Top Navbar */}
+      <div className="h-[56px] bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 sticky top-0 z-40 shadow-sm">
+        <div className="flex flex-col justify-center">
+          <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none mb-0.5">VIdyaLoans</p>
+          <h1 className="text-[18px] font-semibold text-slate-800 leading-tight">Application Detail</h1>
         </div>
 
-        <div className="flex items-center gap-6">
-          <div className="relative group mr-4">
-            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-[20px] group-focus-within:text-emerald-500 transition-colors">search</span>
+        <div className="flex items-center gap-4">
+          <div className="relative group mr-2">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">search</span>
             <input
               type="text"
               placeholder="Search applications, students, IDs..."
-              className="pl-12 pr-6 py-2.5 bg-slate-50/50 border border-slate-200 rounded-2xl text-[13px] w-[260px] focus:outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500/50 transition-all font-medium animate-all"
+              className="pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-white rounded-lg text-[12px] focus:outline-none focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 focus:bg-white w-64 transition-all text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-md"
             />
           </div>
 
-          {/* Sticky Action Buttons */}
-          <button
-            onClick={() => {
-              setActiveSidebarMenu("overview");
-              setTimeout(() => window.print(), 300);
-            }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-lg shadow-emerald-600/20"
-          >
-            <span className="material-symbols-outlined text-[17px]">print</span>
-            Export PDF
-          </button>
+          <div className="h-5 w-px bg-slate-200"></div>
 
-          <button
-            onClick={() => {
-              setActiveSidebarMenu("overview");
-              setActiveTab("notes");
-              setTimeout(() => document.getElementById("action-hub-section")?.scrollIntoView({ behavior: 'smooth' }), 100);
-            }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-md"
-          >
-            <span className="material-symbols-outlined text-[17px]">sticky_note_2</span>
-            Internal Notes
-          </button>
-
-          <button
-            onClick={() => setIsEmailModalOpen(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-md shadow-indigo-600/10"
-          >
-            <span className="material-symbols-outlined text-[17px]">mail</span>
-            Send Email
-          </button>
-
-          <div className="h-8 w-px bg-slate-200/60 mx-1"></div>
-
-          <div className="flex items-center gap-4">
-            <button className="w-11 h-11 rounded-2xl flex items-center justify-center text-slate-400 hover:bg-white hover:text-emerald-600 hover:shadow-md transition-all relative">
-              <span className="material-symbols-outlined text-[24px]">notifications</span>
-              <span className="absolute top-3 right-3 w-2 h-2 bg-rose-500 rounded-full border-2 border-white"></span>
+          <div className="flex items-center gap-3">
+            <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded transition-all relative">
+              <span className="material-symbols-outlined text-[20px]">notifications</span>
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
             </button>
-            <div className="h-8 w-px bg-slate-200/60 mx-1"></div>
-            <div className="flex items-center gap-3 pl-2">
-              <div className="text-right">
-                <p className="text-[12px] font-black text-slate-900">Staff Member</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Level 4 Admin</p>
+            <div className="h-5 w-px bg-slate-200" />
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 shadow-sm">
+                <span className="material-symbols-outlined text-[16px]">person</span>
               </div>
-              <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100/50 shadow-sm">
-                <span className="material-symbols-outlined text-[24px]">person</span>
+              <div className="hidden sm:flex flex-col">
+                <span className="text-[12px] font-semibold text-slate-800 leading-none">Staff Member</span>
+                <span className="text-[10px] text-slate-400 capitalize leading-none mt-0.5">Level 4 Admin</span>
               </div>
             </div>
           </div>
@@ -1090,18 +1192,56 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
             <div className="max-w-[1400px] mx-auto p-10 space-y-10 animate-in fade-in zoom-in-95 duration-300">
 
               {/* Breadcrumb / Back Navigation */}
-              <div className="flex items-center gap-5">
-                <button
-                  onClick={onBack}
-                  className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-emerald-600 hover:border-emerald-200 hover:shadow-lg transition-all"
-                >
-                  <span className="material-symbols-outlined text-[22px]">arrow_back</span>
-                </button>
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-200">
-                    <span className="material-symbols-outlined text-[20px]">account_balance</span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-5">
+                  <button
+                    onClick={onBack}
+                    className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-emerald-600 hover:border-emerald-200 hover:shadow-lg transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[22px]">arrow_back</span>
+                  </button>
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-200">
+                      <span className="material-symbols-outlined text-[20px]">account_balance</span>
+                    </div>
+                    <h2 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Education Loan Terminal</h2>
                   </div>
-                  <h2 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Education Loan Terminal</h2>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => {
+                      setActiveSidebarMenu("application_details");
+                      setTimeout(() => window.print(), 300);
+                    }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-lg shadow-emerald-600/20"
+                  >
+                    <span className="material-symbols-outlined text-[17px]">print</span>
+                    Export PDF
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setActiveSidebarMenu("application_details");
+                      setActiveTab("notes");
+                      setTimeout(() => {
+                        const notesSection = document.getElementById("internal-notes-section");
+                        notesSection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }, 100);
+                    }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-md"
+                  >
+                    <span className="material-symbols-outlined text-[17px]">sticky_note_2</span>
+                    Internal Notes
+                  </button>
+
+                  <button
+                    onClick={() => setIsEmailModalOpen(true)}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-md shadow-indigo-600/10"
+                  >
+                    <span className="material-symbols-outlined text-[17px]">mail</span>
+                    Send Email
+                  </button>
                 </div>
               </div>
 
@@ -1198,13 +1338,13 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                         <div className="space-y-0.5 col-span-2 sm:col-span-1">
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">DESTINATION</p>
                           <p className="text-[12px] font-bold text-slate-700 uppercase truncate">
-                            {application.country || application.user?.studyDestination || application.student?.studyDestination || "—"}
+                            {resolveDestination(application)}
                           </p>
                         </div>
                         <div className="space-y-0.5 col-span-2 sm:col-span-1">
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">INTAKE</p>
                           <p className="text-[12px] font-bold text-slate-700 truncate">
-                            {application.user?.intakeSeason || application.student?.intakeSeason || "—"}
+                            {resolveIntake(application)}
                           </p>
                         </div>
                         {(application.bank || application.targetBank) && (
@@ -1417,13 +1557,12 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                                 </div>
                               ) : (
                                 <div className={`flex flex-col space-y-2 ${msg.sender === "staff" ? "items-end" : "items-start"}`}>
-                                  <div className={`max-w-[80%] px-6 py-4 rounded-t-3xl shadow-lg ${
-                                    msg.sender === "staff"
+                                  <div className={`max-w-[80%] px-6 py-4 rounded-t-3xl shadow-lg ${msg.sender === "staff"
                                       ? "bg-indigo-600 text-white rounded-bl-3xl shadow-indigo-100"
                                       : msg.sender === "bank"
                                         ? "bg-amber-50 border border-amber-105 text-slate-705 rounded-br-3xl shadow-sm"
                                         : "bg-white border border-slate-100 text-slate-707 rounded-br-3xl shadow-sm"
-                                  }`}>
+                                    }`}>
                                     <p className="text-[14px] leading-relaxed">{msg.text}</p>
                                   </div>
                                   <p className={`text-[10px] font-bold text-slate-400 ${msg.sender === "staff" ? "mr-2" : "ml-2"}`}>
@@ -1453,7 +1592,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                     )}
 
                     {activeTab === "notes" && (
-                      <div className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm space-y-6">
+                      <div id="internal-notes-section" className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm space-y-6">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
                             <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-lg shadow-amber-100">
@@ -1473,10 +1612,15 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                           {notes.map((note) => (
                             <div key={note.id} className="p-6 rounded-3xl bg-slate-50/80 border border-slate-100 hover:border-amber-200 transition-all">
                               <div className="flex items-start justify-between mb-3">
-                                <p className="text-[12px] font-black text-slate-900">{note.author} <span className="font-medium text-slate-400 ml-2">{note.role}</span></p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase">{note.time}</p>
+                                <p className="text-[12px] font-black text-slate-900">
+                                  {note.authorName || note.author || 'Staff Member'}{" "}
+                                  <span className="font-medium text-slate-400 ml-2">{note.role || 'Level 4 Admin'}</span>
+                                </p>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase">
+                                  {note.createdAt ? formatNoteTime(note.createdAt) : (note.time || 'JUST NOW')}
+                                </p>
                               </div>
-                              <p className="text-[14px] text-slate-600 leading-relaxed">{note.text}</p>
+                              <p className="text-[14px] text-slate-600 leading-relaxed">{note.content || note.text}</p>
                             </div>
                           ))}
                         </div>
@@ -1559,7 +1703,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                           <p className="text-[14px] font-semibold text-slate-900">{application.address || application.student?.mailingAddress?.address1 || application.student?.address || "—"}</p>
                         </div>
                         <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">City / Pincode</p>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Pincode</p>
                           <p className="text-[14px] font-semibold text-slate-900">{application.city || application.student?.mailingAddress?.city || "—"} - {application.pincode || application.student?.mailingAddress?.pincode || "—"}</p>
                         </div>
                       </div>
@@ -1574,11 +1718,11 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Study Destination</p>
-                          <p className="text-[14px] font-semibold text-slate-900 uppercase">{application.country || application.user?.studyDestination || application.student?.studyDestination || "—"}</p>
+                          <p className="text-[14px] font-semibold text-slate-900 uppercase">{resolveDestination(application)}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Target Intake</p>
-                          <p className="text-[14px] font-semibold text-slate-900">{application.user?.intakeSeason || application.student?.intakeSeason || "—"}</p>
+                          <p className="text-[14px] font-semibold text-slate-900">{resolveIntake(application)}</p>
                         </div>
                         <div>
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Visa Refusal</p>
@@ -1610,6 +1754,61 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                     </section>
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeSidebarMenu === 'exams' && (
+            <div className="max-w-[1400px] mx-auto p-10 space-y-10 animate-in fade-in zoom-in-95 duration-300">
+              <div className="flex items-center gap-5">
+                <button
+                  onClick={onBack}
+                  className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-emerald-600 hover:border-emerald-200 hover:shadow-lg transition-all"
+                >
+                  <span className="material-symbols-outlined text-[22px]">arrow_back</span>
+                </button>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-lg shadow-emerald-200">
+                    <span className="material-symbols-outlined text-[20px]">school</span>
+                  </div>
+                  <div>
+                    <h2 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Standardized Test Scores</h2>
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Academic & Language Competency</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white/70 backdrop-blur-sm rounded-[40px] p-10 border border-white/50 shadow-[0_20px_50px_rgba(0,0,0,0.04)] relative">
+                {examsList.length === 0 ? (
+                  <div className="text-center py-20">
+                    <div className="w-20 h-20 bg-slate-50 border border-slate-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                      <span className="material-symbols-outlined text-4xl text-slate-300">school</span>
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-800">No Test Scores Registered</h3>
+                    <p className="text-sm text-slate-400 mt-2">The applicant has not registered any standardized test scores (GRE, GMAT, IELTS, TOEFL, PTE) for this profile.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    {examsList.map((exam, index) => (
+                      <div key={index} className="bg-white rounded-3xl border border-slate-100 p-6 hover:shadow-xl hover:border-emerald-200 transition-all duration-300 group relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-50/50 rounded-full blur-xl -z-10 group-hover:scale-150 transition-transform duration-700" />
+                        <div className="flex items-center gap-4 mb-4">
+                          <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 border border-emerald-100/50 shadow-sm">
+                            <span className="material-symbols-outlined text-[24px]">grade</span>
+                          </div>
+                          <div>
+                            <h4 className="text-[18px] font-bold text-slate-900 tracking-tight">{exam.name}</h4>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Exam Score</p>
+                          </div>
+                        </div>
+                        <div className="mt-6 flex items-baseline gap-2">
+                          <span className="text-[36px] font-black text-[#0d1b2a] tracking-tight leading-none">{exam.score}</span>
+                          <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded">Verified</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

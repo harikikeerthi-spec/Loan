@@ -21,6 +21,7 @@ import { extname, resolve } from 'path';
 import { existsSync, mkdirSync, unlinkSync } from 'fs';
 import type { Response } from 'express';
 import { ApplicationService } from './application.service';
+import { S3Service } from '../document/s3.service';
 import { UserGuard } from '../auth/user.guard';
 import { AdminGuard } from '../auth/admin.guard';
 import { StaffGuard } from '../auth/staff.guard';
@@ -44,7 +45,10 @@ const storage = diskStorage({
 
 @Controller('applications')
 export class ApplicationController {
-    constructor(private applicationService: ApplicationService) { }
+    constructor(
+        private applicationService: ApplicationService,
+        private s3Service: S3Service,
+    ) { }
 
     // ==================== PUBLIC ENDPOINTS ====================
 
@@ -283,6 +287,7 @@ export class ApplicationController {
     async viewDocumentAdmin(
         @Param('id') applicationId: string,
         @Param('documentId') documentId: string,
+        @Query('download') download: string,
         @Res() res: Response,
     ) {
         const docsResult = await this.applicationService.getApplicationDocuments(applicationId);
@@ -339,15 +344,32 @@ export class ApplicationController {
             return res.send(html);
         }
         const absolutePath = resolve(doc.filePath);
-        if (!existsSync(absolutePath)) {
+        if (existsSync(absolutePath)) {
+            if (download === 'true') {
+                const filename = doc.fileName || doc.docName || 'document.pdf';
+                return res.download(absolutePath, filename);
+            }
+            return res.sendFile(absolutePath);
+        }
+
+        // Try S3 bucket integration
+        try {
+            console.log(`[viewDocumentAdmin] Document not found locally at ${absolutePath}. Generating presigned URL (download=${download}) for S3 key: ${doc.filePath}`);
+            const filename = doc.fileName || doc.docName || 'document.pdf';
+            const presignedUrl = await this.s3Service.getPresignedUrl(
+                doc.filePath, 
+                3600, 
+                download === 'true' ? filename : undefined
+            );
+            return res.redirect(302, presignedUrl);
+        } catch (s3Error) {
+            console.error(`[viewDocumentAdmin] S3 presigned URL generation failed for ${doc.filePath}:`, s3Error);
             const fallbackPath = resolve(process.cwd(), 'public/mock/document_missing.pdf');
             if (existsSync(fallbackPath)) {
                 return res.sendFile(fallbackPath);
             }
-            throw new NotFoundException('Document file not found on disk');
+            throw new NotFoundException('Document file not found on disk or S3');
         }
-
-        res.sendFile(absolutePath);
     }
 
     /**

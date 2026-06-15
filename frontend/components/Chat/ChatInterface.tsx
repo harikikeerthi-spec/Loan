@@ -1,9 +1,18 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '@/contexts/AuthContext';
 import { HttpApiPaths } from '@/lib/http-api-paths';
+
+/** Maps the sessionStorage bank key to the full bank name stored in conversation metadata */
+const BANK_NAME_MAP: Record<string, string> = {
+    auxilo: "Auxilo Finserve",
+    avanse: "Avanse Financial",
+    credila: "HDFC Credila",
+    idfc: "IDFC FIRST Bank",
+    poonawalla: "Poonawalla Fincorp",
+};
 
 interface Message {
     id: string;
@@ -79,9 +88,24 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
         activeConversationRef.current = activeConversation;
     }, [activeConversation]);
 
+    // Resolve the full bank name for the current bank session
+    const resolvedBankName = useMemo(() => {
+        if (role !== 'bank') return undefined;
+        // 1. Try user.bankName
+        if (user?.bankName) return user.bankName;
+        // 2. Try selectedBank from sessionStorage
+        if (typeof window !== 'undefined') {
+            const savedKey = sessionStorage.getItem('selectedBank') || localStorage.getItem('selectedBank');
+            if (savedKey && BANK_NAME_MAP[savedKey]) return BANK_NAME_MAP[savedKey];
+        }
+        // 3. Fallback to user.firstName (legacy)
+        if (user?.firstName) return user.firstName;
+        return undefined;
+    }, [role, user]);
+
     const fetchConversations = async () => {
         try {
-            const res = await fetch(HttpApiPaths.chat.conversations(role), {
+            const res = await fetch(HttpApiPaths.chat.conversations(role, resolvedBankName), {
                 headers: { Authorization: `Bearer ${token}` }
             });
             const data: Conversation[] = await res.json();
@@ -441,7 +465,13 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
     const filteredConversations = conversations.filter(c => {
         const matchesSearch = (c.customerName || c.customerPhone || '').toLowerCase().includes(searchQuery.toLowerCase());
         if (!matchesSearch) return false;
-        if (role !== 'staff') return true; // bank/agent: no extra filter
+        if (role === 'bank') {
+            // Extra client-side safety: only show bank-type conversations matching this bank
+            if (c.metadata?.type !== 'bank') return false;
+            if (resolvedBankName && c.metadata?.bank && c.metadata.bank !== resolvedBankName) return false;
+            return true;
+        }
+        if (role !== 'staff') return true; // agent: no extra filter
         if (chatTypeFilter === 'bank') return c.metadata?.type === 'bank';
         if (chatTypeFilter === 'student') return c.metadata?.type !== 'bank';
         return true; // 'all'

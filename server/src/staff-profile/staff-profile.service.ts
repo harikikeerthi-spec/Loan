@@ -306,9 +306,37 @@ export class StaffProfileService {
     // ── Back-sync: propagate to the original UserDocument if linked ──────────
     let syncResult = 'no_user_doc';
     if (doc.userDocumentId) {
+      const mappedStatus = body.status === 'approved' ? 'verified' : body.status;
+      const syncPayload: any = {
+        status: mappedStatus,
+        updatedAt: new Date().toISOString(),
+      };
+
+      if (mappedStatus === 'verified') {
+        syncPayload.verifiedAt = new Date().toISOString();
+        syncPayload.rejectionReason = null;
+        syncPayload.verificationMetadata = {
+          status: 'verified',
+          verifiedAt: new Date().toISOString(),
+          message: 'Document manually verified by staff profile update',
+        };
+      } else if (mappedStatus === 'rejected') {
+        syncPayload.verifiedAt = null;
+        syncPayload.rejectionReason = body.rejection_reason || null;
+        syncPayload.verificationMetadata = {
+          status: 'rejected',
+          rejectedAt: new Date().toISOString(),
+          rejectionReason: body.rejection_reason || null,
+          message: body.rejection_reason ? `Document rejected by staff: ${body.rejection_reason}` : 'Document rejected by staff',
+        };
+      } else {
+        syncPayload.rejectionReason = null;
+        syncPayload.verificationMetadata = null;
+      }
+
       const { error: syncErr } = await this.db
         .from('UserDocument')
-        .update({ status: body.status, updatedAt: new Date().toISOString() })
+        .update(syncPayload)
         .eq('id', doc.userDocumentId);
 
       syncResult = syncErr ? 'sync_failed' : 'synced';

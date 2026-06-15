@@ -70,6 +70,58 @@ const formatToIST = (dateVal: any, formatStr: string = "MMM d, yyyy • hh:mm a"
     }
 };
 
+/** Derive a readable intake season from a raw value (named season or ISO date) */
+const resolveIntakeSeason = (raw?: string | null): string => {
+    if (!raw) return "—";
+    const s = String(raw).trim();
+    if (!s) return "—";
+    // Already a named season (has letters)
+    if (/[a-zA-Z]/.test(s)) return s;
+    // Looks like an ISO date — extract month + year
+    try {
+        const d = new Date(s);
+        if (!isNaN(d.getTime())) {
+            return new Intl.DateTimeFormat('en-IN', { month: 'long', year: 'numeric', timeZone: 'Asia/Kolkata' }).format(d);
+        }
+    } catch { /* ignore */ }
+    return s;
+};
+
+/** Best-effort study destination resolver across all possible field paths */
+const resolveDestination = (app: any): string => {
+    const candidates = [
+        app?.country,
+        app?.destinationCountry,
+        app?.studyDestination,
+        app?.user?.studyDestination,
+        app?.student?.studyDestination,
+        app?.academic?.countryOfEducation,
+        app?.user?.academic?.countryOfEducation,
+        app?.user?.countryOfEducation,
+    ];
+    for (const c of candidates) {
+        if (c && String(c).trim()) return String(c).trim();
+    }
+    return "—";
+};
+
+/** Best-effort intake season resolver across all possible field paths */
+const resolveIntake = (app: any): string => {
+    const candidates = [
+        app?.intakeSeason,
+        app?.user?.intakeSeason,
+        app?.student?.intakeSeason,
+        app?.targetIntake,
+        app?.user?.targetIntake,
+        app?.courseStartDate,
+        app?.user?.courseStartDate,
+    ];
+    for (const c of candidates) {
+        if (c && String(c).trim()) return resolveIntakeSeason(String(c).trim());
+    }
+    return "—";
+};
+
 export default function StaffApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
     const { user } = useAuth();
@@ -342,11 +394,11 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                         </div>
                                         <div>
                                             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Study Destination</p>
-                                            <p className="text-[14px] font-semibold text-slate-900 uppercase">{application.country || application.user?.studyDestination || application.student?.studyDestination || "—"}</p>
+                                            <p className="text-[14px] font-semibold text-slate-900 uppercase">{resolveDestination(application)}</p>
                                         </div>
                                         <div>
                                             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Target Intake</p>
-                                            <p className="text-[14px] font-semibold text-slate-900">{application.user?.intakeSeason || application.student?.intakeSeason || "—"}</p>
+                                            <p className="text-[14px] font-semibold text-slate-900">{resolveIntake(application)}</p>
                                         </div>
                                         <div className="col-span-2">
                                             <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Current Address</p>

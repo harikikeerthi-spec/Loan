@@ -6,9 +6,10 @@ import { AdminApplicationService } from './admin-application.service';
 import { AuthModule } from '../auth/auth.module';
 import { AiModule } from '../ai/ai.module';
 import { IntegrationModule } from '../integration/integration.module';
+import { DocumentModule } from '../document/document.module';
 
 @Module({
-    imports: [AuthModule, AiModule, IntegrationModule],
+    imports: [AuthModule, AiModule, IntegrationModule, DocumentModule],
     controllers: [ApplicationController, AdminApplicationController],
     providers: [ApplicationService, AdminApplicationService],
     exports: [ApplicationService, AdminApplicationService],

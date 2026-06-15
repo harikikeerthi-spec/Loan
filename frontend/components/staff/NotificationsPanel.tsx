@@ -217,30 +217,37 @@ const NotificationsPanel = ({
 
     // Navigation logic
     try {
-      const metadata = notification.metadata;
+      setIsOpen(false);
+
+      let metadata = notification.metadata;
+      if (typeof metadata === "string") {
+        try {
+          metadata = JSON.parse(metadata);
+        } catch (e) {
+          console.warn("[NotificationsPanel] Failed to parse metadata string:", e);
+        }
+      }
+
       let appId = metadata?.applicationId || metadata?.id;
       let userId = metadata?.userId || metadata?.studentId;
+      const email = metadata?.candidateEmail || metadata?.email || notification.body?.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)?.[0];
 
       if (!appId && !userId) {
         // Fallback: Parse from body / title (for legacy/existing notifications)
         const appNumRegex = /(?:VL-)?APP-[\w-]+/i;
         const appNumMatch = notification.body?.match(appNumRegex) || notification.title?.match(appNumRegex);
 
-        const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
-        const emailMatch = notification.body?.match(emailRegex) || notification.title?.match(emailRegex);
-
         if (appNumMatch) {
           const appNum = appNumMatch[0];
           console.log(`[NotificationsPanel] Parsed application number ${appNum} from notification, fetching ID...`);
-          const appsRes = await adminApi.getApplications({}) as any;
+          const appsRes = await adminApi.getApplications({ search: appNum }) as any;
           const foundApp = appsRes.data?.find((a: any) => 
             a.applicationNumber?.toLowerCase() === appNum.toLowerCase()
           );
           if (foundApp) {
             appId = foundApp.id || foundApp._id;
           }
-        } else if (emailMatch) {
-          const email = emailMatch[0];
+        } else if (email) {
           console.log(`[NotificationsPanel] Parsed email ${email} from notification, fetching user ID...`);
           const usersRes = await adminApi.getUsers(20, 0, email) as any;
           const foundUser = usersRes.items?.find((u: any) => 
@@ -252,10 +259,22 @@ const NotificationsPanel = ({
         }
       }
 
+      // Try resolving application ID by email if we have no direct appId
+      if (!appId && email) {
+        console.log(`[NotificationsPanel] Attempting to find application by searching user email: ${email}`);
+        const appsRes = await adminApi.getApplications({ search: email }) as any;
+        if (appsRes.success && Array.isArray(appsRes.data) && appsRes.data.length > 0) {
+          const sorted = [...appsRes.data].sort((a: any, b: any) => 
+            new Date(b.updatedAt || b.submittedAt || 0).getTime() - new Date(a.updatedAt || a.submittedAt || 0).getTime()
+          );
+          appId = sorted[0].id || sorted[0]._id;
+        }
+      }
+
       if (appId) {
-        window.open(`/staff/applications/${appId}`, '_blank');
+        router.push(`/staff/applications/${appId}`);
       } else if (userId) {
-        window.open(`/staff/users/${userId}`, '_blank');
+        router.push(`/staff/users/${userId}`);
       } else if (notification.type === 'application_created' || notification.type === 'application_submitted') {
         router.push('/staff/dashboard?section=incoming_queue');
       } else {

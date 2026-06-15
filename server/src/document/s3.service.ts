@@ -68,10 +68,11 @@ export class S3Service {
   /**
    * Generate a pre-signed GET URL valid for `expiresIn` seconds (default 3600 = 1 hour).
    */
-  async getPresignedUrl(key: string, expiresIn = 3600): Promise<string> {
+  async getPresignedUrl(key: string, expiresIn = 3600, downloadFilename?: string): Promise<string> {
     const command = new GetObjectCommand({
       Bucket: this.bucket,
       Key: key,
+      ...(downloadFilename ? { ResponseContentDisposition: `attachment; filename="${downloadFilename}"` } : {}),
     });
     return getSignedUrl(this.client, command, { expiresIn });
   }
