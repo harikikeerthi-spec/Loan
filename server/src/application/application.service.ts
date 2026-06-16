@@ -740,7 +740,7 @@ export class ApplicationService {
       
       let query = this.db
         .from('LoanApplication')
-        .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth, studyDestination, intakeSeason), documents:ApplicationDocument(id, status)', { count: 'exact' });
+        .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth, studyDestination, intakeSeason), documents:ApplicationDocument(id, status), ProcessingFee(*)', { count: 'exact' });
 
       // Apply sorting
       const sortCol = filters?.sortBy || 'updatedAt';
@@ -1105,15 +1105,28 @@ export class ApplicationService {
       const isBank = (user?.role === 'bank' || user?.role === 'partner_bank');
       let bankName: string | null = null;
       if (isBank) {
-        const bId = bankId || user?.firstName;
-        if (bId) {
-          const lower = bId.toLowerCase();
-          if (lower.includes('credila')) bankName = 'HDFC Credila';
-          else if (lower.includes('poonawalla')) bankName = 'Poonawalla Fincorp';
-          else if (lower.includes('idfc')) bankName = 'IDFC First Bank';
-          else if (lower.includes('avanse')) bankName = 'Avanse Financial Services';
-          else if (lower.includes('auxilo')) bankName = 'Auxilo';
-          else bankName = bId;
+        // Try email first
+        const email = user?.email;
+        if (email) {
+          const lowerEmail = email.toLowerCase().trim();
+          if (lowerEmail.includes("auxilo") || lowerEmail === "luharika28@gmail.com") bankName = 'Auxilo';
+          else if (lowerEmail.includes("avanse") || lowerEmail === "ropayi2211@aspensif.com") bankName = 'Avanse';
+          else if (lowerEmail.includes("credila") || lowerEmail.includes("hdfc") || lowerEmail === "keerthichinnu0728@gmail.com") bankName = 'HDFC Credila';
+          else if (lowerEmail.includes("idfc") || lowerEmail === "abhimadasu4@gmail.com") bankName = 'IDFC';
+          else if (lowerEmail.includes("poonawalla") || lowerEmail === "farmatech@gmail.com") bankName = 'Poonawalla';
+        }
+
+        if (!bankName) {
+          const bId = bankId || user?.firstName;
+          if (bId) {
+            const lower = bId.toLowerCase();
+            if (lower.includes('credila')) bankName = 'HDFC Credila';
+            else if (lower.includes('poonawalla')) bankName = 'Poonawalla';
+            else if (lower.includes('idfc')) bankName = 'IDFC';
+            else if (lower.includes('avanse')) bankName = 'Avanse';
+            else if (lower.includes('auxilo')) bankName = 'Auxilo';
+            else bankName = bId;
+          }
         }
       }
 

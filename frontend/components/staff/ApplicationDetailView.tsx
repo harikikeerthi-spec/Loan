@@ -656,7 +656,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
         timeZone: 'Asia/Kolkata',
         day: '2-digit', month: 'short', year: 'numeric',
         hour: '2-digit', minute: '2-digit', hour12: true
-      }).format(date) + " IST";
+      }).format(date);
     } catch (e) { return "—"; }
   })();
 
@@ -1558,10 +1558,10 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                               ) : (
                                 <div className={`flex flex-col space-y-2 ${msg.sender === "staff" ? "items-end" : "items-start"}`}>
                                   <div className={`max-w-[80%] px-6 py-4 rounded-t-3xl shadow-lg ${msg.sender === "staff"
-                                      ? "bg-indigo-600 text-white rounded-bl-3xl shadow-indigo-100"
-                                      : msg.sender === "bank"
-                                        ? "bg-amber-50 border border-amber-105 text-slate-705 rounded-br-3xl shadow-sm"
-                                        : "bg-white border border-slate-100 text-slate-707 rounded-br-3xl shadow-sm"
+                                    ? "bg-indigo-600 text-white rounded-bl-3xl shadow-indigo-100"
+                                    : msg.sender === "bank"
+                                      ? "bg-amber-50 border border-amber-105 text-slate-705 rounded-br-3xl shadow-sm"
+                                      : "bg-white border border-slate-100 text-slate-707 rounded-br-3xl shadow-sm"
                                     }`}>
                                     <p className="text-[14px] leading-relaxed">{msg.text}</p>
                                   </div>
@@ -1600,7 +1600,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                             </div>
                             <div>
                               <h3 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Internal Staff Notes</h3>
-                              <p className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">Confidential â€¢ staff only</p>
+                              <p className="text-[11px] font-bold text-amber-600 uppercase tracking-widest">Confidential staff only</p>
                             </div>
                           </div>
                           <button onClick={handleAddNote} className="flex items-center gap-2 px-5 py-2.5 bg-[#0d1b2a] text-white rounded-xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10">
@@ -1614,7 +1614,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                               <div className="flex items-start justify-between mb-3">
                                 <p className="text-[12px] font-black text-slate-900">
                                   {note.authorName || note.author || 'Staff Member'}{" "}
-                                  <span className="font-medium text-slate-400 ml-2">{note.role || 'Level 4 Admin'}</span>
+                                  <span className="font-medium text-slate-400 ml-2">{note.role}</span>
                                 </p>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase">
                                   {note.createdAt ? formatNoteTime(note.createdAt) : (note.time || 'JUST NOW')}

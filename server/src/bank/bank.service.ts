@@ -796,14 +796,23 @@ export class BankService {
   }
 
   async setProcessingFee(applicationId: string, feeData: any): Promise<any> {
+    const gstAmount = feeData.gstAmount !== undefined ? feeData.gstAmount : parseFloat((feeData.feeAmount * 0.18).toFixed(2));
+    const totalAmount = feeData.totalAmount !== undefined ? feeData.totalAmount : parseFloat((feeData.feeAmount + gstAmount).toFixed(2));
     const { data, error } = await this.db
       .from('ProcessingFee')
-      .insert({
+      .upsert({
         applicationId: applicationId,
+        lanNumber: feeData.lanNumber || null,
         feeAmount: feeData.feeAmount,
-        totalAmount: feeData.totalAmount,
-        status: feeData.status || 'PENDING'
-      })
+        gstAmount: gstAmount,
+        totalAmount: totalAmount,
+        status: feeData.status || 'PENDING',
+        paymentMode: feeData.paymentMode || null,
+        paymentRef: feeData.paymentRef || null,
+        paidAt: feeData.paidAt || null,
+        waivedBy: feeData.waivedBy || null,
+        waiverReason: feeData.waiverReason || null
+      }, { onConflict: 'applicationId' })
       .select()
       .single();
     if (error) throw error;
@@ -925,5 +934,51 @@ export class BankService {
 
   async exportMisReports(bankName: string): Promise<any> {
     return { success: true, reportUrl: 'http://example.com/report.csv' };
+  }
+
+  async recordConsent(applicationId: string, consentData: any, bankUser: any): Promise<any> {
+    const { data, error } = await this.db
+      .from('ConsentRecord')
+      .upsert(
+        {
+          applicationId,
+          consentType: consentData.consentType || 'DATA_SHARING',
+          status: 'ACCEPTED',
+          recordedAt: new Date().toISOString(),
+          recordedBy: bankUser.email
+        },
+        { onConflict: 'applicationId' }
+      )
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await this.db.from('AuditLog').insert({
+      entityType: 'LOAN',
+      entityId: applicationId,
+      action: 'CONSENT_RECORDED',
+      initiatedBy: bankUser.email,
+      changes: {
+        role: bankUser.role,
+      },
+      createdAt: new Date().toISOString()
+    });
+
+    return data;
+  }
+
+  async getConsentStatus(applicationId: string): Promise<any> {
+    const { data, error } = await this.db
+      .from('ConsentRecord')
+      .select('*')
+      .eq('applicationId', applicationId)
+      .single();
+
+    if (error || !data) {
+      return { applicationId, status: 'PENDING', consentType: null };
+    }
+
+    return data;
   }
 }

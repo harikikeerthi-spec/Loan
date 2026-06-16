@@ -62,6 +62,7 @@ export default function Navbar() {
                             priority
                         />
                         <span className="font-bold text-2xl tracking-tight font-display transition-colors duration-500 text-[#1a1626]">
+                            <link rel="stylesheet" href="#" />
                             VidyaLoans
                         </span>
                     </Link>
@@ -218,22 +219,19 @@ export default function Navbar() {
                             <div className="relative" ref={profileRef}>
                                 <button
                                     onClick={() => setProfileOpen((p) => !p)}
-                                    className={`relative flex items-center gap-2.5 px-4 py-2 rounded-full border transition-all duration-150 ease-out select-none group cursor-pointer ${
-                                        profileOpen
-                                            ? "bg-[#f4ebff] border-[#6605c7]/30 shadow-inner translate-y-0.5 scale-[0.98]"
-                                            : "bg-white border-gray-200 shadow-[0_4px_0_#cbd5e1] translate-y-0 hover:-translate-y-1 hover:shadow-[0_5px_0_#cbd5e1] hover:border-[#6605c7]/20 active:translate-y-0.5 active:shadow-none"
-                                    }`}
+                                    className={`relative flex items-center gap-2.5 px-4 py-2 rounded-full border transition-all duration-150 ease-out select-none group cursor-pointer ${profileOpen
+                                        ? "bg-[#f4ebff] border-[#6605c7]/30 shadow-inner translate-y-0.5 scale-[0.98]"
+                                        : "bg-white border-gray-200 shadow-[0_4px_0_#cbd5e1] translate-y-0 hover:-translate-y-1 hover:shadow-[0_5px_0_#cbd5e1] hover:border-[#6605c7]/20 active:translate-y-0.5 active:shadow-none"
+                                        }`}
                                 >
-                                    <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center font-bold text-xs shadow-md transition-all duration-300 ${
-                                        profileOpen
-                                            ? "bg-gradient-to-tr from-[#6605c7] to-[#8b24e5] scale-110 shadow-purple-500/30"
-                                            : "bg-gradient-to-tr from-[#6605c7] via-[#a855f7] to-[#fbbf24] shadow-purple-500/10 group-hover:rotate-12 group-hover:scale-110"
-                                    }`}>
+                                    <div className={`w-8 h-8 rounded-full text-white flex items-center justify-center font-bold text-xs shadow-md transition-all duration-300 ${profileOpen
+                                        ? "bg-gradient-to-tr from-[#6605c7] to-[#8b24e5] scale-110 shadow-purple-500/30"
+                                        : "bg-gradient-to-tr from-[#6605c7] via-[#a855f7] to-[#fbbf24] shadow-purple-500/10 group-hover:rotate-12 group-hover:scale-110"
+                                        }`}>
                                         {(user?.firstName?.[0] || user?.email?.[0]?.toUpperCase() || "U")}{(user?.lastName?.[0] || "")}
                                     </div>
-                                    <span className={`text-xs font-extrabold tracking-tight transition-colors duration-150 ${
-                                        profileOpen ? "text-[#6605c7]" : "text-gray-800"
-                                    }`}>
+                                    <span className={`text-xs font-extrabold tracking-tight transition-colors duration-150 ${profileOpen ? "text-[#6605c7]" : "text-gray-800"
+                                        }`}>
                                         {displayName && displayName.length > 15 ? `${displayName.substring(0, 12)}...` : displayName || "User"}
                                     </span>
                                 </button>
@@ -245,11 +243,11 @@ export default function Navbar() {
                                             <p className="text-sm font-bold text-gray-900 truncate">{user?.email}</p>
                                         </div>
                                         <div className="py-2">
-                                            <ProfileDropItem 
-                                                href={user?.role === 'bank' || user?.role === 'partner_bank' ? "/bank/dashboard" : "/dashboard"} 
-                                                icon="dashboard" 
-                                                label="Dashboard" 
-                                                iconClass="text-[#6605c7]" 
+                                            <ProfileDropItem
+                                                href={user?.role === 'bank' || user?.role === 'partner_bank' ? "/bank/dashboard" : "/dashboard"}
+                                                icon="dashboard"
+                                                label="Dashboard"
+                                                iconClass="text-[#6605c7]"
                                             />
                                             <ProfileDropItem href="/referral" icon="redeem" label="Refer & Earn" iconClass="text-pink-500" />
                                             <ProfileDropItem href="/profile" icon="person" label="My Profile" iconClass="text-[#6605c7]" />
@@ -302,10 +300,10 @@ export default function Navbar() {
                     <MobileLink href="/visa-mock" label="Visa Interview Prep" onClick={() => setMobileOpen(false)} />
                     {isAuthenticated ? (
                         <>
-                            <MobileLink 
-                                href={user?.role === 'bank' || user?.role === 'partner_bank' ? "/bank/dashboard" : "/dashboard"} 
-                                label="Dashboard" 
-                                onClick={() => setMobileOpen(false)} 
+                            <MobileLink
+                                href={user?.role === 'bank' || user?.role === 'partner_bank' ? "/bank/dashboard" : "/dashboard"}
+                                label="Dashboard"
+                                onClick={() => setMobileOpen(false)}
                             />
                             <button onClick={handleLogout} className="text-left text-red-500 font-bold text-sm">Sign Out</button>
                         </>

@@ -484,10 +484,30 @@ export class BankDashboardController {
   }
 
   private resolveBankIdOrAll(req: any): string | null {
-    const headerBank = req.headers['x-bank-id'];
-    if (headerBank) return headerBank.toString();
+    const headerBank = req.headers['x-bank-id'] || req.headers['x-selected-bank'];
+    if (headerBank) {
+      const hb = headerBank.toString().toLowerCase();
+      if (hb.includes('avanse')) return 'avanse';
+      if (hb.includes('poonawalla')) return 'poonawalla';
+      if (hb.includes('credila') || hb.includes('hdfc')) return 'credila';
+      if (hb.includes('idfc')) return 'idfc';
+      if (hb.includes('auxilo')) return 'auxilo';
+      return hb;
+    }
     
     if (req.user?.bankId) return req.user.bankId;
+
+    // Check email domain/address mapping first
+    const email = req.user?.email;
+    if (email) {
+      const lowerEmail = email.toLowerCase().trim();
+      if (lowerEmail.includes("auxilo") || lowerEmail === "luharika28@gmail.com") return "auxilo";
+      if (lowerEmail.includes("avanse") || lowerEmail === "ropayi2211@aspensif.com") return "avanse";
+      if (lowerEmail.includes("credila") || lowerEmail.includes("hdfc") || lowerEmail === "keerthichinnu0728@gmail.com") return "credila";
+      if (lowerEmail.includes("idfc") || lowerEmail === "abhimadasu4@gmail.com") return "idfc";
+      if (lowerEmail.includes("poonawalla") || lowerEmail === "farmatech@gmail.com") return "poonawalla";
+    }
+
     if (req.user?.firstName) {
       const lowerName = req.user.firstName.toLowerCase();
       const validBanks = ['credila', 'auxilo', 'avanse', 'idfc', 'poonawalla', 'sbi', 'icici', 'axis'];

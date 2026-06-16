@@ -3,8 +3,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
-import { adminApi } from "@/lib/api";
+import { adminApi, bankApi } from "@/lib/api";
 import { PageHeader, Spinner } from "@/components/bank/SharedUI";
+import AlertModal from "@/components/AlertModal";
 
 export default function ProcessingFeeTracker() {
     const [mounted, setMounted] = useState(false);
@@ -21,6 +22,17 @@ export default function ProcessingFeeTracker() {
     const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
     const [waiverReason, setWaiverReason] = useState("");
     const [processing, setProcessing] = useState(false);
+    const [alertConfig, setAlertConfig] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        type: "success" | "error" | "info" | "warning";
+    }>({
+        isOpen: false,
+        title: "",
+        message: "",
+        type: "success"
+    });
 
     // Mock initial fee states stored in state to simulate changes locally
     const [feeRecords, setFeeRecords] = useState<Record<string, {
@@ -48,18 +60,32 @@ export default function ProcessingFeeTracker() {
                 const apps = res.data || [];
                 setApplications(apps);
                 
-                // Initialize default processing fee states for applications
+                // Initialize processing fee states for applications from DB
                 const initialRecords: typeof feeRecords = {};
                 apps.forEach((app: any) => {
-                    const baseAmount = Math.max(10000, Math.round((app.amount || 500000) * 0.01));
-                    const isApproved = app.status === "approved" || app.status === "disbursed";
-                    initialRecords[app.id] = {
-                        status: isApproved ? "paid" : "pending",
-                        amount: baseAmount,
-                        txnRef: isApproved ? `TXN-${app.applicationNumber}-F5` : undefined,
-                        paymentMode: isApproved ? "direct_debit" : undefined,
-                        paymentDate: isApproved ? format(new Date(app.createdAt || Date.now()), "yyyy-MM-dd") : undefined
-                    };
+                    const pfVal = app.ProcessingFee || app.processingFee;
+                    const pf = Array.isArray(pfVal) ? pfVal[0] : pfVal;
+
+                    if (pf) {
+                        initialRecords[app.id] = {
+                            status: (pf.status || "pending").toLowerCase() as "pending" | "paid" | "waived",
+                            amount: pf.feeAmount !== undefined && pf.feeAmount !== null ? pf.feeAmount : Math.max(10000, Math.round((app.amount || 500000) * 0.01)),
+                            txnRef: pf.paymentRef || undefined,
+                            paymentMode: pf.paymentMode || undefined,
+                            paymentDate: pf.paidAt ? format(new Date(pf.paidAt), "yyyy-MM-dd") : undefined,
+                            actionReason: pf.waiverReason || undefined
+                        };
+                    } else {
+                        const baseAmount = Math.max(10000, Math.round((app.amount || 500000) * 0.01));
+                        const isApproved = app.status === "approved" || app.status === "disbursed";
+                        initialRecords[app.id] = {
+                            status: isApproved ? "paid" : "pending",
+                            amount: baseAmount,
+                            txnRef: isApproved ? `TXN-${app.applicationNumber}-F5` : undefined,
+                            paymentMode: isApproved ? "direct_debit" : undefined,
+                            paymentDate: isApproved ? format(new Date(app.createdAt || Date.now()), "yyyy-MM-dd") : undefined
+                        };
+                    }
                 });
                 setFeeRecords(initialRecords);
             }
@@ -104,50 +130,97 @@ export default function ProcessingFeeTracker() {
         });
     }, [applications, feeRecords, search]);
 
-    const handleActionSubmit = (e: React.FormEvent) => {
+    const handleActionSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedApp) return;
         setProcessing(true);
 
-        setTimeout(() => {
-            setFeeRecords(prev => {
-                const current = prev[selectedApp.id];
-                if (drawerMode === "payment") {
-                    return {
-                        ...prev,
-                        [selectedApp.id]: {
-                            ...current,
-                            status: "paid",
-                            txnRef,
-                            paymentMode,
-                            paymentDate
-                        }
-                    };
-                } else if (drawerMode === "waiver") {
-                    return {
-                        ...prev,
-                        [selectedApp.id]: {
-                            ...current,
-                            status: "waived",
-                            actionReason: waiverReason
-                        }
-                    };
-                }
-                return prev;
-            });
+        try {
+            const baseAmount = (feeRecords[selectedApp.id]?.amount) || Math.max(10000, Math.round((selectedApp.amount || 500000) * 0.01));
+            let payload: any = {};
 
-            // Cleanup & Alert
-            const alertText = 
-                drawerMode === "payment" ? `Fee Payment confirmed for LAN ${selectedApp.lanNumber || 'N/A'}` :
-                `Fee Waived for application ${selectedApp.applicationNumber}`;
-            
-            alert(alertText);
-            setDrawerMode(null);
-            setSelectedApp(null);
-            setTxnRef("");
-            setWaiverReason("");
+            if (drawerMode === "payment") {
+                const gst = Math.round(baseAmount * 0.18);
+                const total = baseAmount + gst;
+                payload = {
+                    feeAmount: baseAmount,
+                    gstAmount: gst,
+                    totalAmount: total,
+                    status: 'PAID',
+                    paymentMode: paymentMode,
+                    paymentRef: txnRef,
+                    paidAt: new Date(paymentDate).toISOString(),
+                    lanNumber: selectedApp.lanNumber || null
+                };
+            } else if (drawerMode === "waiver") {
+                payload = {
+                    feeAmount: 0,
+                    gstAmount: 0,
+                    totalAmount: 0,
+                    status: 'WAIVED',
+                    waiverReason: waiverReason,
+                    lanNumber: selectedApp.lanNumber || null
+                };
+            }
+
+            const res: any = await bankApi.setProcessingFee(selectedApp.id, payload);
+
+            if (res && res.success) {
+                setFeeRecords(prev => {
+                    const current = prev[selectedApp.id] || { amount: baseAmount, status: "pending" };
+                    if (drawerMode === "payment") {
+                        return {
+                            ...prev,
+                            [selectedApp.id]: {
+                                ...current,
+                                status: "paid",
+                                txnRef,
+                                paymentMode,
+                                paymentDate
+                            }
+                        };
+                    } else if (drawerMode === "waiver") {
+                        return {
+                            ...prev,
+                            [selectedApp.id]: {
+                                ...current,
+                                status: "waived",
+                                actionReason: waiverReason
+                            }
+                        };
+                    }
+                    return prev;
+                });
+
+                const alertText = 
+                    drawerMode === "payment" ? `Fee Payment confirmed for LAN ${selectedApp.lanNumber || 'N/A'}` :
+                    `Fee Waived successfully for application ${selectedApp.applicationNumber}`;
+
+                setAlertConfig({
+                    isOpen: true,
+                    title: drawerMode === "payment" ? "Payment Confirmed" : "Waiver Approved",
+                    message: alertText,
+                    type: "success"
+                });
+
+                setDrawerMode(null);
+                setSelectedApp(null);
+                setTxnRef("");
+                setWaiverReason("");
+            } else {
+                throw new Error(res?.message || "Failed to update fee on the backend.");
+            }
+        } catch (err: any) {
+            console.error("Failed to update fee record:", err);
+            setAlertConfig({
+                isOpen: true,
+                title: "Action Failed",
+                message: err.message || "An unexpected error occurred while saving fee details. Please check connection and try again.",
+                type: "error"
+            });
+        } finally {
             setProcessing(false);
-        }, 600);
+        }
     };
 
     if (!mounted) return null;
@@ -435,6 +508,14 @@ export default function ProcessingFeeTracker() {
                     </div>
                 )}
             </AnimatePresence>
+
+            <AlertModal
+                isOpen={alertConfig.isOpen}
+                onClose={() => setAlertConfig(prev => ({ ...prev, isOpen: false }))}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                type={alertConfig.type}
+            />
         </div>
     );
 }

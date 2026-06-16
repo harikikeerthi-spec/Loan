@@ -59,8 +59,8 @@ const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => {
 
                 {badge && !collapsed && (
                     <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-extrabold relative z-10 shrink-0 ${active
-                            ? isDashboard ? "bg-white text-[#6605c7]" : "bg-white/20 text-white border border-white/10"
-                            : "bg-[#6605c7] text-white"
+                        ? isDashboard ? "bg-white text-[#6605c7]" : "bg-white/20 text-white border border-white/10"
+                        : "bg-[#6605c7] text-white"
                         }`}>
                         {badge}
                     </span>
@@ -568,7 +568,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                 <span className="text-[9.5px] font-black text-emerald-600 uppercase tracking-widest">Active Node</span>
                             </div>
                             <div className="flex items-center gap-1.5 text-[9.5px] text-black-400 font-bold uppercase tracking-widest font-mono">
-                                <span className="material-symbols-outlined text-[13px]">sync</span>
+                                {/* <span className="material-symbols-outlined text-[13px]">sync</span> */}
                                 <span>Sync: {syncTime || '--:--:--'}</span>
                             </div>
                         </div>
@@ -619,8 +619,8 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                                         key={tab}
                                                         onClick={() => setActiveNotifTab(tab)}
                                                         className={`flex-1 py-1 rounded-lg text-center transition-all ${activeNotifTab === tab
-                                                                ? "bg-[#6605c7] text-white shadow-sm"
-                                                                : "text-gray-400 hover:text-gray-700"
+                                                            ? "bg-[#6605c7] text-white shadow-sm"
+                                                            : "text-gray-400 hover:text-gray-700"
                                                             }`}
                                                     >
                                                         {tab} ({

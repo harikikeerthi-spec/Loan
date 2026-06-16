@@ -155,9 +155,9 @@ export class ApplicationController {
         if (bank) {
             const mappings: Record<string, string> = {
                 credila: 'HDFC Credila',
-                poonawalla: 'Poonawalla Fincorp',
-                idfc: 'IDFC First Bank',
-                avanse: 'Avanse Financial Services',
+                poonawalla: 'Poonawalla',
+                idfc: 'IDFC',
+                avanse: 'Avanse',
                 auxilo: 'Auxilo'
             };
             dbBankName = mappings[bank.toLowerCase()] || bank;

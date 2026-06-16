@@ -6,6 +6,7 @@ import { authApi, documentApi, onboardingApi } from "@/lib/api";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
 import DigilockerConsentModal from "@/components/DigilockerConsentModal";
+import AlertModal from "@/components/AlertModal";
 import { getDocumentRequirementName, getProfileDocumentRequirements } from "@/lib/documentRequirements";
 
 export default function DocumentVaultPage() {
@@ -19,6 +20,26 @@ export default function DocumentVaultPage() {
     const [rejections, setRejections] = useState<Record<string, string>>({});
     const [showConsentModal, setShowConsentModal] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [alertState, setAlertState] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
+        type: "success" | "error" | "info" | "warning";
+    }>({
+        isOpen: false,
+        title: "",
+        message: "",
+        type: "info",
+    });
+
+    const showAlert = (title: string, message: string, type: "success" | "error" | "info" | "warning" = "info") => {
+        setAlertState({
+            isOpen: true,
+            title,
+            message,
+            type,
+        });
+    };
 
     useEffect(() => {
         setMounted(true);
@@ -63,11 +84,11 @@ export default function DocumentVaultPage() {
         const message = searchParams.get('message');
 
         if (status === 'success') {
-            alert(message || "DigiLocker verification successful!");
+            showAlert("Verification Success", message || "DigiLocker verification successful!", "success");
             window.history.replaceState({}, document.title, window.location.pathname);
             loadDocs();
         } else if (status === 'error') {
-            alert(message || "DigiLocker verification failed.");
+            showAlert("Verification Failed", message || "DigiLocker verification failed.", "error");
             window.history.replaceState({}, document.title, window.location.pathname);
         }
     }, [loadDocs]);
@@ -163,18 +184,18 @@ export default function DocumentVaultPage() {
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, docType: string) => {
         const file = e.target.files?.[0];
         if (!file || !user?.id) {
-            alert("File or user information missing");
+            showAlert("Information Missing", "File or user information is missing.", "warning");
             return;
         }
 
         if (file.size > 5 * 1024 * 1024) {
-            alert("File size exceeds 5MB limit");
+            showAlert("File Too Large", "File size exceeds the 5MB limit.", "warning");
             return;
         }
 
         const validFileTypes = ['image/jpeg', 'image/png', 'application/pdf'];
         if (!validFileTypes.includes(file.type)) {
-            alert("File must be JPG, PNG, or PDF");
+            showAlert("Invalid File Type", "File must be JPG, PNG, or PDF format.", "warning");
             return;
         }
 
@@ -226,11 +247,11 @@ export default function DocumentVaultPage() {
             const key = `dashboardDataUpdated_${user.id}`;
             localStorage.setItem(key, String(Date.now()));
             window.dispatchEvent(new Event('dashboard-data-changed'));
-            alert("Document uploaded successfully!");
+            showAlert("Upload Success", "Document uploaded successfully!", "success");
 
         } catch (e: any) {
             console.error("Upload error:", e.message || e);
-            alert(`Upload failed: ${e.message || 'Unknown error occurred'}`);
+            showAlert("Upload Failed", e.message || "Unknown error occurred.", "error");
         } finally {
             setUploading(null);
         }
@@ -238,7 +259,7 @@ export default function DocumentVaultPage() {
 
     const handleDigilockerVerify = async (docType: string) => {
         if (!user?.id) {
-            alert("User identity not found. Please refresh.");
+            showAlert("User Identity Missing", "User identity not found. Please refresh the page.", "error");
             refreshUser();
             return;
         }
@@ -251,14 +272,14 @@ export default function DocumentVaultPage() {
         try {
             const result: any = await documentApi.syncFromDigilocker(user.id, docType);
             if (result.success) {
-                alert("Successfully synced from DigiLocker!");
+                showAlert("Sync Success", "Successfully synced from DigiLocker!", "success");
                 await loadDocs();
             } else {
-                alert(result.message || "Failed to sync document.");
+                showAlert("Sync Failed", result.message || "Failed to sync document.", "error");
             }
         } catch (e) {
             console.error(e);
-            alert("An error occurred during sync.");
+            showAlert("Sync Error", "An error occurred during sync.", "error");
         } finally {
             setUploading(null);
         }
@@ -270,7 +291,7 @@ export default function DocumentVaultPage() {
             const viewUrl = `/api/documents/view/${user.id}/${docType}`;
             window.open(viewUrl, '_blank');
         } else {
-            alert("Document file not available.");
+            showAlert("Document Unavailable", "Document file is not available.", "warning");
         }
     };
 
@@ -282,10 +303,10 @@ export default function DocumentVaultPage() {
         try {
             await documentApi.delete(user.id, docType);
             await loadDocs();
-            alert("Document deleted successfully.");
+            showAlert("Delete Success", "Document deleted successfully.", "success");
         } catch (e) {
             console.error(e);
-            alert("Failed to delete document.");
+            showAlert("Delete Failed", "Failed to delete document.", "error");
         } finally {
             setUploading(null);
         }
@@ -682,6 +703,13 @@ export default function DocumentVaultPage() {
                     onClose={() => setShowConsentModal(false)}
                 />
             )}
+            <AlertModal
+                isOpen={alertState.isOpen}
+                onClose={() => setAlertState(prev => ({ ...prev, isOpen: false }))}
+                title={alertState.title}
+                message={alertState.message}
+                type={alertState.type}
+            />
         </div>
     );
 }

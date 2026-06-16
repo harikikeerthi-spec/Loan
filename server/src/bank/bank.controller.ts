@@ -32,9 +32,30 @@ export class BankController {
     const headerBank = req.headers['x-selected-bank'];
     if (headerBank) return headerBank.toString();
 
+    // Try user email mapping first
+    const email = req.user?.email;
+    if (email) {
+      const lowerEmail = email.toLowerCase().trim();
+      if (lowerEmail.includes("auxilo") || lowerEmail === "luharika28@gmail.com") return "Auxilo Finserve";
+      if (lowerEmail.includes("avanse") || lowerEmail === "ropayi2211@aspensif.com") return "Avanse Financial";
+      if (lowerEmail.includes("credila") || lowerEmail.includes("hdfc") || lowerEmail === "keerthichinnu0728@gmail.com") return "HDFC Credila";
+      if (lowerEmail.includes("idfc") || lowerEmail === "abhimadasu4@gmail.com") return "IDFC FIRST Bank";
+      if (lowerEmail.includes("poonawalla") || lowerEmail === "farmatech@gmail.com") return "Poonawalla Fincorp";
+    }
+
     // Fallback: extract from user profile (firstName carries bank mapping)
     if (req.user?.role === 'bank') {
-      return req.user.firstName || 'SBI';
+      const bId = req.user.firstName;
+      if (bId) {
+        const lower = bId.toLowerCase();
+        if (lower.includes('credila')) return 'HDFC Credila';
+        if (lower.includes('poonawalla')) return 'Poonawalla Fincorp';
+        if (lower.includes('idfc')) return 'IDFC FIRST Bank';
+        if (lower.includes('avanse')) return 'Avanse Financial';
+        if (lower.includes('auxilo')) return 'Auxilo Finserve';
+        return bId;
+      }
+      return 'SBI';
     }
     return '';
   }
@@ -315,5 +336,19 @@ export class BankController {
   async exportMisReports(@Request() req) {
     const bankName = this.resolveBankName(req);
     return this.bankService.exportMisReports(bankName);
+  }
+
+  @Post('applications/:applicationId/consent')
+  async recordConsent(
+    @Request() req,
+    @Param('applicationId') applicationId: string,
+    @Body() body: any
+  ) {
+    return this.bankService.recordConsent(applicationId, body, req.user);
+  }
+
+  @Get('applications/:applicationId/consent')
+  async getConsent(@Param('applicationId') applicationId: string) {
+    return this.bankService.getConsentStatus(applicationId);
   }
 }

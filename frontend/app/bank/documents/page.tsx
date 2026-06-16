@@ -89,7 +89,7 @@ export default function DocumentReviewCenter() {
             const status = (app.status || "").toLowerCase();
             if (STAFF_PENDING_STATUSES.has(status)) return false;
 
-            const matchesSearch = 
+            const matchesSearch =
                 (app.applicationNumber || "").toLowerCase().includes(search.toLowerCase()) ||
                 (`${app.firstName || ""} ${app.lastName || ""}`).toLowerCase().includes(search.toLowerCase()) ||
                 (app.lanNumber || "").toLowerCase().includes(search.toLowerCase());
@@ -138,23 +138,23 @@ export default function DocumentReviewCenter() {
         try {
             const docId = selectedDoc.id.startsWith('vault_') ? selectedDoc.id : `vault_${selectedDoc.id}`;
             const res: any = await adminApi.verifyDocument(
-                selectedAppId, 
-                docId, 
-                verifyStatus, 
+                selectedAppId,
+                docId,
+                verifyStatus,
                 verifyStatus === "rejected" ? rejectionReason : undefined
             );
             if (res && res.success) {
                 setShowVerifyModal(false);
                 setSelectedDoc(null);
                 setRejectionReason("");
-                
+
                 // Force reload documents for this application
                 setDocsLoading(prev => ({ ...prev, [selectedAppId]: true }));
                 const docsRes: any = await adminApi.getApplicationDocuments(selectedAppId);
                 if (docsRes && docsRes.success) {
                     const updatedDocs = docsRes.data || [];
                     setAppDocs(prev => ({ ...prev, [selectedAppId]: updatedDocs }));
-                    
+
                     // If the active viewer document was this document, update its status
                     if (activeViewerDoc && activeViewerDoc.id === selectedDoc.id) {
                         const newDoc = updatedDocs.find((d: any) => d.id === selectedDoc.id);
@@ -214,16 +214,16 @@ export default function DocumentReviewCenter() {
         if (!doc) return null;
         const appId = viewerAppId || selectedAppId;
         if (!appId) return null;
-        
+
         const url = getDocumentViewUrl(appId, doc.id);
         const fileName = (doc.fileName || "").toLowerCase();
         const filePath = (doc.filePath || "").toLowerCase();
         const mimeType = (doc.mimeType || "").toLowerCase();
-        
+
         const isPdf = mimeType === "application/pdf" || fileName.endsWith(".pdf") || filePath.endsWith(".pdf");
         const isDigilocker = filePath.startsWith("in.gov.");
         const isImage = mimeType.startsWith("image/") || /\.(jpg|jpeg|png|webp|gif)/i.test(fileName) || /\.(jpg|jpeg|png|webp|gif)/i.test(filePath);
-        
+
         if (isPdf || isDigilocker) {
             return (
                 <iframe
@@ -233,7 +233,7 @@ export default function DocumentReviewCenter() {
                 />
             );
         }
-        
+
         if (isImage) {
             let containerStyle: React.CSSProperties = {
                 overflow: "hidden",
@@ -277,22 +277,22 @@ export default function DocumentReviewCenter() {
                 </div>
             );
         }
-        
+
         return <span className="text-[6px] font-bold text-gray-300">P. {page}</span>;
     };
 
     const renderDocumentPreview = (doc: any, full = false) => {
         if (!doc || !selectedAppId) return null;
-        
+
         const url = getDocumentViewUrl(selectedAppId, doc.id);
         const fileName = (doc.fileName || "").toLowerCase();
         const filePath = (doc.filePath || "").toLowerCase();
         const mimeType = (doc.mimeType || "").toLowerCase();
-        
+
         const isPdf = mimeType === "application/pdf" || fileName.endsWith(".pdf") || filePath.endsWith(".pdf");
         const isDigilocker = filePath.startsWith("in.gov.");
         const isImage = mimeType.startsWith("image/") || /\.(jpg|jpeg|png|webp|gif)/i.test(fileName) || /\.(jpg|jpeg|png|webp|gif)/i.test(filePath);
-        
+
         if (isPdf || isDigilocker) {
             return (
                 <iframe
@@ -303,7 +303,7 @@ export default function DocumentReviewCenter() {
                 />
             );
         }
-        
+
         if (isImage) {
             let containerStyle: React.CSSProperties = {
                 overflow: "hidden",
@@ -352,7 +352,7 @@ export default function DocumentReviewCenter() {
                 </div>
             );
         }
-        
+
         return (
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center max-w-md mx-auto">
                 <span className="material-symbols-outlined text-4xl text-gray-400 mb-2">draft</span>
@@ -385,14 +385,14 @@ export default function DocumentReviewCenter() {
     const isAbroad = selectedApp && selectedApp.universityName && !selectedApp.universityName.toLowerCase().includes("india") && (selectedApp.universityName.toLowerCase().includes("stanford") || selectedApp.universityName.toLowerCase().includes("usc") || selectedApp.universityName.toLowerCase().includes("carnegie") || selectedApp.universityName.toLowerCase().includes("abroad") || selectedApp.universityName.toLowerCase().includes("nyu") || selectedApp.universityName.toLowerCase().includes("london") || selectedApp.universityName.toLowerCase().includes("mit") || selectedApp.universityName.toLowerCase().includes("harvard") || selectedApp.universityName.toLowerCase().includes("university of") || true);
 
     return (
-        <div 
+        <div
             className="min-h-screen bg-[#F8FAFC] p-8 lg:p-12 transition-all duration-300 -mt-20 pt-28"
             style={{ position: "relative", zIndex: 10 }}
         >
             <div className="max-w-[1600px] mx-auto space-y-6">
 
                 {/* Page Header */}
-                <PageHeader 
+                <PageHeader
                     title="Document Vault"
                     description="Verify identity proofs, academic degrees, and financial assets uploaded by students."
                     moduleName="Module 04 • Document Vault"
@@ -405,9 +405,9 @@ export default function DocumentReviewCenter() {
                     <div className="bg-white border border-[#E2E8F0] rounded-lg p-4 shadow-sm">
                         <div className="relative max-w-md">
                             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">search</span>
-                            <input 
-                                type="text" 
-                                placeholder="Search Student..." 
+                            <input
+                                type="text"
+                                placeholder="Search Student..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="w-full pl-9 pr-6 py-2.5 bg-white border border-gray-200 rounded-md text-xs font-semibold focus:outline-none focus:border-gray-400 transition-all shadow-none"
@@ -416,7 +416,7 @@ export default function DocumentReviewCenter() {
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-                        
+
                         {/* LEFT PANE: DENSE LEDGER LIST */}
                         <div className="lg:col-span-4 flex flex-col bg-white border border-[#E2E8F0] rounded-lg shadow-sm overflow-hidden h-[780px]">
                             <div className="p-4 border-b border-[#E2E8F0] bg-gray-50/50 flex justify-between items-center">
@@ -424,7 +424,7 @@ export default function DocumentReviewCenter() {
                                     Student Ledger ({filteredApps.length})
                                 </span>
                             </div>
-                            
+
                             {loading ? (
                                 <div className="flex-1 flex items-center justify-center">
                                     <Spinner message="Syncing document directories..." size="sm" />
@@ -441,14 +441,13 @@ export default function DocumentReviewCenter() {
                                         const isPending = !app.lanNumber || app.lanNumber.toLowerCase() === "pending";
 
                                         return (
-                                            <div 
+                                            <div
                                                 key={app.id}
                                                 onClick={() => selectApplication(app.id)}
-                                                className={`p-4 cursor-pointer transition-all relative select-none ${
-                                                    isSelected 
-                                                        ? "bg-[#6605c7]/[0.03] border-l-4 border-l-[#6605c7]" 
-                                                        : "hover:bg-gray-50 border-l-4 border-l-transparent"
-                                                }`}
+                                                className={`p-4 cursor-pointer transition-all relative select-none ${isSelected
+                                                    ? "bg-[#6605c7]/[0.03] border-l-4 border-l-[#6605c7]"
+                                                    : "hover:bg-gray-50 border-l-4 border-l-transparent"
+                                                    }`}
                                             >
                                                 <div className="flex items-start justify-between gap-3">
                                                     <div className="min-w-0 flex-1">
@@ -458,7 +457,7 @@ export default function DocumentReviewCenter() {
                                                                 <span className="material-symbols-outlined text-blue-500 text-[14px] animate-pulse cursor-help" title="Study Abroad Case">public</span>
                                                             )}
                                                         </h3>
-                                                        
+
                                                         <div className="mt-1 space-y-0.5">
                                                             <div style={{ fontFamily: "monospace", fontSize: "12px", color: "#64748B" }}>
                                                                 ID: {app.applicationNumber}
@@ -466,7 +465,7 @@ export default function DocumentReviewCenter() {
                                                             <div className="flex items-center gap-1.5" style={{ fontFamily: "monospace", fontSize: "12px", color: "#64748B" }}>
                                                                 <span>LAN:</span>
                                                                 {isPending ? (
-                                                                    <span 
+                                                                    <span
                                                                         className="inline-block px-1.5 py-0.5 rounded bg-[#FEF3C7] text-[#92400E] font-bold text-[11px] uppercase select-none align-middle"
                                                                         style={{ letterSpacing: "0.05em" }}
                                                                     >
@@ -487,10 +486,9 @@ export default function DocumentReviewCenter() {
                                                         <span className="text-[10px] font-black text-gray-800">
                                                             {app.amount ? `₹${app.amount.toLocaleString()}` : "—"}
                                                         </span>
-                                                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${
-                                                            app.status === "approved" || app.status === "verified" ? "bg-emerald-50 text-emerald-700" :
+                                                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wider ${app.status === "approved" || app.status === "verified" ? "bg-emerald-50 text-emerald-700" :
                                                             app.status === "rejected" ? "bg-rose-50 text-rose-700" : "bg-amber-50 text-amber-700"
-                                                        }`}>
+                                                            }`}>
                                                             {app.status || "pending"}
                                                         </span>
                                                     </div>
@@ -506,7 +504,7 @@ export default function DocumentReviewCenter() {
                         <div className="lg:col-span-8 flex flex-col bg-white border border-[#E2E8F0] rounded-lg shadow-sm overflow-hidden h-[780px]">
                             {selectedApp ? (
                                 <div className="flex flex-col h-full">
-                                    
+
                                     {/* Command Center Header */}
                                     <div className="p-5 border-b border-[#E2E8F0] bg-gray-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                         <div>
@@ -520,7 +518,7 @@ export default function DocumentReviewCenter() {
                                                 <div className="flex items-center gap-1.5" style={{ fontFamily: "monospace", fontSize: "12px", color: "#64748B" }}>
                                                     <span>LAN:</span>
                                                     {(!selectedApp.lanNumber || selectedApp.lanNumber.toLowerCase() === "pending") ? (
-                                                        <span 
+                                                        <span
                                                             className="inline-block px-1.5 py-0.5 rounded bg-[#FEF3C7] text-[#92400E] font-bold text-[11px] uppercase select-none align-middle"
                                                             style={{ letterSpacing: "0.05em" }}
                                                         >
@@ -591,13 +589,13 @@ export default function DocumentReviewCenter() {
 
                                     {/* Workspace Body: Split Document Selection Hub & Inline PDF Previewer */}
                                     <div className="flex-1 min-h-0 flex flex-col md:flex-row">
-                                        
+
                                         {/* Inline Document Hub */}
                                         <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-[#E2E8F0] overflow-y-auto p-4 flex flex-col gap-2 shrink-0">
                                             <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">
                                                 Inline Document Hub
                                             </span>
-                                            
+
                                             {docsLoading[selectedApp.id] ? (
                                                 <div className="py-8 flex justify-center">
                                                     <div className="w-5 h-5 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
@@ -610,7 +608,7 @@ export default function DocumentReviewCenter() {
                                                 <div className="space-y-1.5">
                                                     {currentDocs.map((doc: any) => {
                                                         const isDocSelected = activeViewerDoc?.id === doc.id;
-                                                        
+
                                                         // Format Status Indicators
                                                         const normStatus = (doc.status || "pending").toLowerCase();
                                                         let statusLabel = "Unverified";
@@ -629,11 +627,10 @@ export default function DocumentReviewCenter() {
                                                             <button
                                                                 key={doc.id}
                                                                 onClick={() => handleOpenViewer(selectedApp.id, doc)}
-                                                                className={`w-full text-left p-3 rounded-md border text-xs font-semibold transition-all flex flex-col gap-1.5 ${
-                                                                    isDocSelected 
-                                                                        ? "bg-gray-50 border-gray-400 shadow-sm" 
-                                                                        : "border-gray-150 bg-white hover:bg-gray-50/50"
-                                                                }`}
+                                                                className={`w-full text-left p-3 rounded-md border text-xs font-semibold transition-all flex flex-col gap-1.5 ${isDocSelected
+                                                                    ? "bg-gray-50 border-gray-400 shadow-sm"
+                                                                    : "border-gray-150 bg-white hover:bg-gray-50/50"
+                                                                    }`}
                                                             >
                                                                 <span className="text-gray-900 font-bold block truncate">
                                                                     {docName}
@@ -658,7 +655,7 @@ export default function DocumentReviewCenter() {
                                         <div className="flex-1 min-w-0 bg-gray-50/30 overflow-y-auto p-4 flex flex-col">
                                             {activeViewerDoc ? (
                                                 <div className="flex-1 flex flex-col h-full min-h-[500px]">
-                                                    
+
                                                     {/* Active File Header Actions */}
                                                     <div className="mb-3 p-3 bg-white border border-[#E2E8F0] rounded-md flex items-center justify-between gap-4">
                                                         <div className="min-w-0 flex-1">
@@ -676,7 +673,7 @@ export default function DocumentReviewCenter() {
 
                                                         <div className="flex items-center gap-1.5">
                                                             {activeViewerDoc.status !== "verified" && (
-                                                                <button 
+                                                                <button
                                                                     onClick={() => {
                                                                         setSelectedDoc(activeViewerDoc);
                                                                         setVerifyStatus("verified");
@@ -688,7 +685,7 @@ export default function DocumentReviewCenter() {
                                                                     Verify
                                                                 </button>
                                                             )}
-                                                            <button 
+                                                            <button
                                                                 onClick={() => {
                                                                     setSelectedDoc(activeViewerDoc);
                                                                     setVerifyStatus("rejected");
@@ -717,19 +714,19 @@ export default function DocumentReviewCenter() {
                                                             <button onClick={() => setRotate(r => (r + 90) % 360)} className="p-1 hover:bg-gray-100 rounded text-gray-600" title="Rotate document">
                                                                 <span className="material-symbols-outlined text-sm">rotate_right</span>
                                                             </button>
-                                                            <button onClick={() => setFullscreen(true)} className="p-1 hover:bg-gray-100 rounded text-gray-600" title="Fullscreen Toggle">
+                                                            {/* <button onClick={() => setFullscreen(true)} className="p-1 hover:bg-gray-100 rounded text-gray-600" title="Fullscreen Toggle">
                                                                 <span className="material-symbols-outlined text-sm">fullscreen</span>
-                                                            </button>
-                                                            <a 
+                                                            </button> */}
+                                                            <a
                                                                 href={getDocumentViewUrl(selectedApp.id, activeViewerDoc.id)}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
                                                                 className="p-1 hover:bg-gray-100 rounded text-gray-600 flex items-center"
-                                                                title="View full document in new tab"
+                                                                title="Full Screen"
                                                             >
                                                                 <span className="material-symbols-outlined text-sm">open_in_new</span>
                                                             </a>
-                                                            <a 
+                                                            <a
                                                                 href={`${getDocumentViewUrl(selectedApp.id, activeViewerDoc.id)}&download=true`}
                                                                 download
                                                                 className="p-1 hover:bg-gray-100 rounded text-gray-600 flex items-center"
@@ -742,18 +739,17 @@ export default function DocumentReviewCenter() {
 
                                                     {/* Canvas Container */}
                                                     <div className="flex-1 min-h-[350px] border border-[#E2E8F0] bg-gray-100/60 flex rounded-b-md overflow-hidden">
-                                                        
+
                                                         {/* Preview Thumbnails */}
                                                         <div className="w-16 border-r border-[#E2E8F0] bg-white p-2 overflow-y-auto flex flex-col gap-2 shrink-0 no-scrollbar">
                                                             {[1, 2, 3].map((page) => (
                                                                 <button
                                                                     key={page}
                                                                     onClick={() => setSelectedThumb(page)}
-                                                                    className={`p-1 rounded border text-center transition-all flex flex-col items-center gap-1 ${
-                                                                        selectedThumb === page 
-                                                                            ? "border-[#6605c7] bg-[#6605c7]/5 shadow-sm" 
-                                                                            : "border-gray-200 hover:bg-gray-50"
-                                                                    }`}
+                                                                    className={`p-1 rounded border text-center transition-all flex flex-col items-center gap-1 ${selectedThumb === page
+                                                                        ? "border-[#6605c7] bg-[#6605c7]/5 shadow-sm"
+                                                                        : "border-gray-200 hover:bg-gray-50"
+                                                                        }`}
                                                                 >
                                                                     <div className="w-10 h-14 bg-gray-50 border border-gray-200 rounded flex items-center justify-center shadow-inner relative overflow-hidden select-none">
                                                                         {renderThumbnailPreview(activeViewerDoc, page)}
@@ -801,7 +797,7 @@ export default function DocumentReviewCenter() {
                 {fullscreen && activeViewerDoc && viewerAppId && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setFullscreen(false)} />
-                        
+
                         <motion.div
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
@@ -845,7 +841,7 @@ export default function DocumentReviewCenter() {
                                     </div>
 
                                     {/* Open in New Tab */}
-                                    <a 
+                                    <a
                                         href={getDocumentViewUrl(viewerAppId || "", activeViewerDoc.id)}
                                         target="_blank"
                                         rel="noopener noreferrer"
@@ -856,16 +852,16 @@ export default function DocumentReviewCenter() {
                                     </a>
 
                                     {/* Direct Download */}
-                                    <a 
+                                    <a
                                         href={`${getDocumentViewUrl(viewerAppId || "", activeViewerDoc.id)}&download=true`}
-                                        download 
+                                        download
                                         className="px-3.5 py-2.5 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1"
                                     >
                                         <span className="material-symbols-outlined text-xs">download</span>
                                         Download
                                     </a>
 
-                                    <button 
+                                    <button
                                         onClick={() => setFullscreen(false)}
                                         className="w-10 h-10 bg-gray-50 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all flex items-center justify-center"
                                     >
@@ -883,11 +879,10 @@ export default function DocumentReviewCenter() {
                                         <button
                                             key={page}
                                             onClick={() => setSelectedThumb(page)}
-                                            className={`p-2 rounded-xl border text-center transition-all flex flex-col items-center gap-1 ${
-                                                selectedThumb === page 
-                                                    ? "border-[#6605c7] bg-[#6605c7]/5 shadow-sm" 
-                                                    : "border-gray-200 hover:bg-gray-50"
-                                            }`}
+                                            className={`p-2 rounded-xl border text-center transition-all flex flex-col items-center gap-1 ${selectedThumb === page
+                                                ? "border-[#6605c7] bg-[#6605c7]/5 shadow-sm"
+                                                : "border-gray-200 hover:bg-gray-50"
+                                                }`}
                                         >
                                             <div className="w-24 h-32 bg-gray-50 border border-gray-200 rounded flex items-center justify-center shadow-inner relative overflow-hidden select-none">
                                                 {renderThumbnailPreview(activeViewerDoc, page)}
@@ -928,11 +923,10 @@ export default function DocumentReviewCenter() {
                                         <button
                                             type="button"
                                             onClick={() => setVerifyStatus("verified")}
-                                            className={`py-3 px-4 border rounded-md flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all ${
-                                                verifyStatus === "verified" 
-                                                    ? "border-emerald-600 bg-emerald-50 text-emerald-600" 
-                                                    : "border-gray-200 text-gray-500 hover:bg-gray-50"
-                                            }`}
+                                            className={`py-3 px-4 border rounded-md flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all ${verifyStatus === "verified"
+                                                ? "border-emerald-600 bg-emerald-50 text-emerald-600"
+                                                : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                                                }`}
                                         >
                                             <span className="material-symbols-outlined text-base">check_circle</span>
                                             Accept Asset
@@ -940,11 +934,10 @@ export default function DocumentReviewCenter() {
                                         <button
                                             type="button"
                                             onClick={() => setVerifyStatus("rejected")}
-                                            className={`py-3 px-4 border rounded-md flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all ${
-                                                verifyStatus === "rejected" 
-                                                    ? "border-rose-600 bg-rose-50 text-rose-600" 
-                                                    : "border-gray-200 text-gray-500 hover:bg-gray-50"
-                                            }`}
+                                            className={`py-3 px-4 border rounded-md flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all ${verifyStatus === "rejected"
+                                                ? "border-rose-600 bg-rose-50 text-rose-600"
+                                                : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                                                }`}
                                         >
                                             <span className="material-symbols-outlined text-base">cancel</span>
                                             Reject Asset
