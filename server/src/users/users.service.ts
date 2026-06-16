@@ -382,14 +382,16 @@ export class UsersService {
     const { count: total } = await this.db.from('User').select('*', { count: 'exact', head: true });
     const { count: student } = await this.db.from('User').select('*', { count: 'exact', head: true }).eq('role', 'student');
     const { count: bank } = await this.db.from('User').select('*', { count: 'exact', head: true }).eq('role', 'bank');
-    const { count: staff } = await this.db.from('User').select('*', { count: 'exact', head: true }).or('role.eq.admin,role.eq.staff');
+    const { count: staff } = await this.db.from('User').select('*', { count: 'exact', head: true }).or('role.eq.staff,role.eq.staff_admin');
+    const { count: admin } = await this.db.from('User').select('*', { count: 'exact', head: true }).eq('role', 'admin');
     
     return {
       total: total || 0,
       student: student || 0,
       bank: bank || 0,
       staff: staff || 0,
-      other: (total || 0) - (student || 0) - (bank || 0) - (staff || 0)
+      admin: admin || 0,
+      other: (total || 0) - (student || 0) - (bank || 0) - (staff || 0) - (admin || 0)
     };
   }
 

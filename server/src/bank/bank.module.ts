@@ -12,11 +12,13 @@ import { SlackService } from './slack.service';
 import { SalesforceService } from './salesforce.service';
 import { BankCronService } from './bank-cron.service';
 import { BankRbacInterceptor } from './bank-rbac.middleware';
+import { ChatModule } from '../chat/chat.module';
 
 @Module({
   imports: [
     SupabaseModule,
     UsersModule,
+    ChatModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'secretKey',
       signOptions: { expiresIn: '7d' },

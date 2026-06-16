@@ -19,6 +19,7 @@ interface ActivityLogWidgetProps {
   limit?: number;
   refreshInterval?: number;
   showFullLog?: boolean;
+  onViewAll?: () => void;
 }
 
 const getActivityStyles = (type: string) => {
@@ -35,26 +36,27 @@ const getActivityStyles = (type: string) => {
   return styles[type] || styles.update;
 };
 
-const formatRelativeTime = (dateStr: string): string => {
-  if (!dateStr) return "Just now";
+const formatOriginalTime = (dateStr: string): string => {
+  if (!dateStr) return "";
   try {
     const date = new Date(dateStr);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    if (diffInSeconds < 60) return "Just now";
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    return date.toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
   } catch {
-    return "Just now";
+    return dateStr;
   }
 };
 
 export default function ActivityLogWidget({ 
   limit = 10, 
   refreshInterval = 30000,
-  showFullLog = false 
+  showFullLog = false,
+  onViewAll
 }: ActivityLogWidgetProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
@@ -173,10 +175,10 @@ export default function ActivityLogWidget({
   return (
     <div className="space-y-3 pb-2">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-        <h3 className="text-[12px] font-black uppercase tracking-widest text-slate-600 flex items-center gap-2">
-          <span className="material-symbols-outlined text-[16px]">history</span>
-          Real-Time Activity
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50">
+        <h3 className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider flex items-center gap-2">
+          <span className="material-symbols-outlined text-[18px] text-slate-600">history</span>
+          Recent Activity
         </h3>
         <div className="flex items-center gap-2.5">
           <div className="flex items-center gap-1.5">
@@ -190,11 +192,24 @@ export default function ActivityLogWidget({
               fetchActivities();
               setRefreshKey(prev => prev + 1);
             }}
-            className="p-1 hover:bg-slate-100 rounded transition-colors"
+            className="p-1 hover:bg-slate-100 rounded transition-colors flex items-center"
             title="Refresh activities"
           >
             <span className="material-symbols-outlined text-[16px] text-slate-500">refresh</span>
           </button>
+          {onViewAll && (
+            <>
+              <div className="h-4 w-px bg-slate-200 mx-1" />
+              <button
+                onClick={onViewAll}
+                className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center gap-1"
+                title="View full activity log"
+              >
+                View All
+                <span className="material-symbols-outlined text-[12px]">arrow_forward_ios</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -228,7 +243,7 @@ export default function ActivityLogWidget({
           ) : (
             activities.map((activity, index) => {
               const styles = getActivityStyles(activity.type);
-              const relativeTime = formatRelativeTime(activity.createdAt);
+              const originalTime = formatOriginalTime(activity.createdAt);
 
               return (
                 <motion.div
@@ -259,7 +274,7 @@ export default function ActivityLogWidget({
                             by {activity.actorName}
                           </span>
                         )}
-                        <span className="text-[10px] text-slate-400">{relativeTime}</span>
+                        <span className="text-[10px] text-slate-400">{originalTime}</span>
                       </div>
                     </div>
 

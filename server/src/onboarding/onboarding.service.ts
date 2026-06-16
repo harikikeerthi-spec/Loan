@@ -40,10 +40,10 @@ export class OnboardingService {
         : data.workExperience
         ? parseInt(data.workExperience)
         : undefined;
-      const entranceTestValue = data.entrance_test?.value || data.entranceTest || (testScores.gre ? 'GRE' : testScores.gmat ? 'GMAT' : testScores.sat ? 'SAT' : undefined);
-      const entranceScoreValue = data.entrance_score?.value || data.entranceScore || testScores.gre || testScores.gmat || testScores.sat;
-      const englishTestValue = data.english_test?.value || data.englishTest || (testScores.ielts ? 'IELTS' : testScores.toefl ? 'TOEFL' : testScores.pte ? 'PTE' : undefined);
-      const englishScoreValue = data.english_score?.value || data.englishScore || testScores.ielts || testScores.toefl || testScores.pte;
+      const entranceTestValue = data.entrance_test?.value || data.entranceTest || (testScores.gre ? 'GRE' : testScores.gmat ? 'GMAT' : testScores.sat ? 'SAT' : testScores.act ? 'ACT' : undefined);
+      const entranceScoreValue = data.entrance_score?.value || data.entranceScore || testScores.gre || testScores.gmat || testScores.sat || testScores.act;
+      const englishTestValue = data.english_test?.value || data.englishTest || (testScores.ielts ? 'IELTS' : testScores.toefl ? 'TOEFL' : testScores.pte ? 'PTE' : testScores.duolingo ? 'Duolingo' : undefined);
+      const englishScoreValue = data.english_score?.value || data.englishScore || testScores.ielts || testScores.toefl || testScores.pte || testScores.duolingo;
       const budgetValue = data.study_budget?.label || data.budget || data.estimatedCost;
       const pincodeValue = data.loan_pincode?.value || data.pincode;
       const loanAmountValue = data.loan_amount?.label || data.loanAmount;

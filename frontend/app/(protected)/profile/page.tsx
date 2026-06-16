@@ -62,6 +62,18 @@ export default function ProfilePage() {
     const handleSave = async () => {
         if (!user?.email) return;
 
+        // Validate first name
+        if (!form.firstName || form.firstName.trim().length < 3) {
+            alert("First name must be at least 3 characters");
+            return;
+        }
+
+        // Validate last name
+        if (!form.lastName || form.lastName.trim().length < 1) {
+            alert("Last name must be at least 1 character");
+            return;
+        }
+
         // Validate phone number
         if (form.phoneNumber && !isPhoneValid(form.phoneNumber)) {
             alert("Please enter a valid phone number");

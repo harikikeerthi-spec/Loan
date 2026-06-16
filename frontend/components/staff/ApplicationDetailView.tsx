@@ -1022,19 +1022,42 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const hasCoapplicantItr = coApplicantOcrDocs.some((doc) => String(doc.docType || "").toLowerCase().includes("itr") && getDocFieldsCount(doc) > 0);
 
   const examsList = (() => {
-    const list: Array<{ name: string; score: string }> = [];
+    const list: Array<{ name: string; score: string; maxScore?: number }> = [];
+
+    const TEST_MAX_SCORES: Record<string, number> = {
+      ielts: 9,
+      toefl: 120,
+      pte: 90,
+      duolingo: 160,
+      gre: 340,
+      gmat: 800,
+      sat: 1600,
+      act: 36
+    };
+
+    const getMaxScore = (testName: string): number | undefined => {
+      return TEST_MAX_SCORES[testName.toLowerCase()];
+    };
 
     // 1. Check direct columns
     const englishTest = application.englishTest || application.user?.englishTest || application.student?.englishTest;
     const englishScore = application.englishScore || application.user?.englishScore || application.student?.englishScore;
     if (englishTest && englishScore) {
-      list.push({ name: String(englishTest).toUpperCase(), score: String(englishScore) });
+      list.push({ 
+        name: String(englishTest).toUpperCase(), 
+        score: String(englishScore),
+        maxScore: getMaxScore(String(englishTest))
+      });
     }
 
     const entranceTest = application.entranceTest || application.user?.entranceTest || application.student?.entranceTest;
     const entranceScore = application.entranceScore || application.user?.entranceScore || application.student?.entranceScore;
     if (entranceTest && entranceScore) {
-      list.push({ name: String(entranceTest).toUpperCase(), score: String(entranceScore) });
+      list.push({ 
+        name: String(entranceTest).toUpperCase(), 
+        score: String(entranceScore),
+        maxScore: getMaxScore(String(entranceTest))
+      });
     }
 
     // 2. Check tests JSON
@@ -1043,10 +1066,14 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
       if (testsStr) {
         const parsed = typeof testsStr === 'string' ? JSON.parse(testsStr) : testsStr;
         if (parsed && typeof parsed === 'object') {
-          const testKeys = ['gre', 'gmat', 'sat', 'ielts', 'toefl', 'pte', 'duolingo'];
+          const testKeys = ['gre', 'gmat', 'sat', 'act', 'ielts', 'toefl', 'pte', 'duolingo'];
           testKeys.forEach(key => {
             if (parsed[key] && !list.some(e => e.name.toLowerCase() === key.toLowerCase())) {
-              list.push({ name: key.toUpperCase(), score: String(parsed[key]) });
+              list.push({ 
+                name: key.toUpperCase(), 
+                score: String(parsed[key]),
+                maxScore: getMaxScore(key)
+              });
             }
           });
         }
@@ -1803,7 +1830,10 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                         </div>
                         <div className="mt-6 flex items-baseline gap-2">
                           <span className="text-[36px] font-black text-[#0d1b2a] tracking-tight leading-none">{exam.score}</span>
-                          <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded">Verified</span>
+                          {exam.maxScore && (
+                            <span className="text-[18px] font-bold text-slate-400">/ {exam.maxScore}</span>
+                          )}
+                          <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2.5 py-0.5 rounded ml-auto">Verified</span>
                         </div>
                       </div>
                     ))}

@@ -38,6 +38,14 @@ const nextConfig: NextConfig = {
         source: "/api/:path*",
         destination: `${process.env.BACKEND_URL || "http://127.0.0.1:5000"}/api/:path*`,
       },
+      {
+        source: "/socket.io",
+        destination: `${process.env.BACKEND_URL || "http://127.0.0.1:5000"}/socket.io/`,
+      },
+      {
+        source: "/socket.io/:path*",
+        destination: `${process.env.BACKEND_URL || "http://127.0.0.1:5000"}/socket.io/:path*`,
+      },
     ];
   },
 };

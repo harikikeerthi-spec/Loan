@@ -296,7 +296,7 @@ function createEmptyNewStudent() {
             grade10: { country: "", state: "", board: "", institution: "", city: "", grading: "", score: "", language: "", startDate: "", endDate: "" }
         },
         workExperience: [{ employer: "", role: "", country: "", startDate: "", endDate: "", current: false }],
-        tests: { ielts: "", toefl: "", pte: "", gre: "", gmat: "", sat: "" },
+        tests: { ielts: "", toefl: "", pte: "", duolingo: "", gre: "", gmat: "", sat: "", act: "" },
         family: {
             fatherName: "", fatherMobile: "", fatherEmail: "", fatherOccupation: "", fatherAadhar: "", fatherPan: "",
             fatherEmploymentType: "", fatherMonthlyIncome: "",
@@ -977,13 +977,11 @@ export default function StaffDashboardPage() {
         const students = userSectionStats?.student ?? 0;
         const bankPartners = userSectionStats?.bank ?? 0;
         const staffMembers = userSectionStats?.staff ?? 0;
-        const admins = userSectionStats?.admin ?? 0;
         return [
             { id: 'all', label: 'Total Users', value: total, icon: 'group', color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', tag: 'ACTIVE' },
             { id: 'student', label: 'Student Accounts', value: students, icon: 'school', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', tag: 'ROLE' },
             { id: 'bank', label: 'Bank Partners', value: bankPartners, icon: 'account_balance', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', tag: 'ROLE' },
             { id: 'staff', label: 'Staff Members', value: staffMembers, icon: 'badge', color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-100', tag: 'O_ADMIN' },
-            { id: 'admin', label: 'Admins', value: admins || '—', icon: 'admin_panel_settings', color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', tag: 'ADMIN' },
         ];
     })() : [];
 
@@ -1256,8 +1254,11 @@ export default function StaffDashboardPage() {
                 ielts: fullUser.englishTest?.toLowerCase() === 'ielts' ? String(fullUser.englishScore || "") : "",
                 toefl: fullUser.englishTest?.toLowerCase() === 'toefl' ? String(fullUser.englishScore || "") : "",
                 pte: fullUser.englishTest?.toLowerCase() === 'pte' ? String(fullUser.englishScore || "") : "",
+                duolingo: fullUser.englishTest?.toLowerCase() === 'duolingo' ? String(fullUser.englishScore || "") : "",
                 gre: fullUser.entranceTest?.toLowerCase() === 'gre' ? String(fullUser.entranceScore || "") : "",
                 gmat: fullUser.entranceTest?.toLowerCase() === 'gmat' ? String(fullUser.entranceScore || "") : "",
+                sat: fullUser.entranceTest?.toLowerCase() === 'sat' ? String(fullUser.entranceScore || "") : "",
+                act: fullUser.entranceTest?.toLowerCase() === 'act' ? String(fullUser.entranceScore || "") : "",
             },
             family: safeParseJson(fullUser.family, null) || {
                 ...s.family,
@@ -5022,16 +5023,20 @@ export default function StaffDashboardPage() {
                                                                 <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">English Proficiency</h4>
                                                                 <div className="space-y-4">
                                                                     <div>
-                                                                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">IELTS Score</label>
-                                                                        <input type="text" value={newStudent.tests.ielts} onChange={e => setNewStudent({ ...newStudent, tests: { ...newStudent.tests, ielts: e.target.value } })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="0.0" />
+                                                                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">IELTS Score (out of 9)</label>
+                                                                        <input type="text" value={newStudent.tests.ielts} onChange={e => { const cleaned = e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*?)\..*/g, "$1"); setNewStudent({ ...newStudent, tests: { ...newStudent.tests, ielts: cleaned } }); }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="0.0" />
                                                                     </div>
                                                                     <div>
-                                                                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">TOEFL Score</label>
-                                                                        <input type="text" value={newStudent.tests.toefl} onChange={e => setNewStudent({ ...newStudent, tests: { ...newStudent.tests, toefl: e.target.value } })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="0" />
+                                                                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">TOEFL Score (out of 120)</label>
+                                                                        <input type="text" value={newStudent.tests.toefl} onChange={e => { const cleaned = e.target.value.replace(/[^0-9]/g, ""); setNewStudent({ ...newStudent, tests: { ...newStudent.tests, toefl: cleaned } }); }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="0" />
                                                                     </div>
                                                                     <div>
-                                                                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">PTE Score</label>
-                                                                        <input type="text" value={newStudent.tests.pte} onChange={e => setNewStudent({ ...newStudent, tests: { ...newStudent.tests, pte: e.target.value } })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="0" />
+                                                                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">PTE Score (out of 90)</label>
+                                                                        <input type="text" value={newStudent.tests.pte} onChange={e => { const cleaned = e.target.value.replace(/[^0-9]/g, ""); setNewStudent({ ...newStudent, tests: { ...newStudent.tests, pte: cleaned } }); }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="0" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">Duolingo Score (out of 160)</label>
+                                                                        <input type="text" value={newStudent.tests.duolingo || ""} onChange={e => { const cleaned = e.target.value.replace(/[^0-9]/g, ""); setNewStudent({ ...newStudent, tests: { ...newStudent.tests, duolingo: cleaned } }); }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="0" />
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -5039,16 +5044,20 @@ export default function StaffDashboardPage() {
                                                                 <h4 className="text-[11px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 pb-2">Aptitude Tests</h4>
                                                                 <div className="space-y-4">
                                                                     <div>
-                                                                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">GRE Score</label>
-                                                                        <input type="text" value={newStudent.tests.gre} onChange={e => setNewStudent({ ...newStudent, tests: { ...newStudent.tests, gre: e.target.value } })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="0" />
+                                                                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">GRE Score (out of 340)</label>
+                                                                        <input type="text" value={newStudent.tests.gre} onChange={e => { const cleaned = e.target.value.replace(/[^0-9]/g, ""); setNewStudent({ ...newStudent, tests: { ...newStudent.tests, gre: cleaned } }); }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="0" />
                                                                     </div>
                                                                     <div>
-                                                                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">GMAT Score</label>
-                                                                        <input type="text" value={newStudent.tests.gmat} onChange={e => setNewStudent({ ...newStudent, tests: { ...newStudent.tests, gmat: e.target.value } })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="0" />
+                                                                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">GMAT Score (out of 800)</label>
+                                                                        <input type="text" value={newStudent.tests.gmat} onChange={e => { const cleaned = e.target.value.replace(/[^0-9]/g, ""); setNewStudent({ ...newStudent, tests: { ...newStudent.tests, gmat: cleaned } }); }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="0" />
                                                                     </div>
                                                                     <div>
-                                                                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">SAT Score</label>
-                                                                        <input type="text" value={newStudent.tests.sat} onChange={e => setNewStudent({ ...newStudent, tests: { ...newStudent.tests, sat: e.target.value } })} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="0" />
+                                                                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">SAT Score (out of 1600)</label>
+                                                                        <input type="text" value={newStudent.tests.sat} onChange={e => { const cleaned = e.target.value.replace(/[^0-9]/g, ""); setNewStudent({ ...newStudent, tests: { ...newStudent.tests, sat: cleaned } }); }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="0" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <label className="text-[10px] font-bold text-slate-500 mb-1 block">ACT Score (out of 36)</label>
+                                                                        <input type="text" value={newStudent.tests.act || ""} onChange={e => { const cleaned = e.target.value.replace(/[^0-9]/g, ""); setNewStudent({ ...newStudent, tests: { ...newStudent.tests, act: cleaned } }); }} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20" placeholder="0" />
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -6882,24 +6891,11 @@ export default function StaffDashboardPage() {
 
                                     {/* Activity Log Widget */}
                                     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[350px]">
-                                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-slate-600 text-[18px]">history</span>
-                                                <h3 className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">Recent Activity</h3>
-                                            </div>
-                                            <button
-                                                onClick={() => navigateToSection('activities')}
-                                                className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center gap-1"
-                                                title="View full activity log"
-                                            >
-                                                View All
-                                                <span className="material-symbols-outlined text-[12px]">arrow_forward_ios</span>
-                                            </button>
-                                        </div>
                                         <ActivityLogWidget
                                             limit={6}
                                             refreshInterval={30000}
                                             showFullLog={false}
+                                            onViewAll={() => navigateToSection('activities')}
                                         />
                                     </div>
                                 </div>
@@ -7348,7 +7344,7 @@ export default function StaffDashboardPage() {
 
                             {/* User Directory — stat mini-cards */}
                             {activeSection === 'users' && (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-2">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3 mb-2">
                                     {userStatsData.map((c, i) => (
                                         <button
                                             key={i}

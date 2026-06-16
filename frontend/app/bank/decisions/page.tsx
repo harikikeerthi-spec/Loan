@@ -820,7 +820,7 @@ export default function DecisionsHub() {
             } else if (activeDecisionTab === "conditional") {
                 res = await bankApi.conditionalSanction({
                     applicationId: selectedApp.id,
-                    conditions: conditions.map(c => c.text),
+                    conditions: conditions,
                     deadline: newConditionDeadline,
                     remarks: officerRemarks
                 });

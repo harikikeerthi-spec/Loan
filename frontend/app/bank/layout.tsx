@@ -563,10 +563,10 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                         {/* Live Protocol tag & Real-time Sync Timer */}
                         <div className="hidden sm:flex items-center gap-4 border-r border-gray-100 pr-4">
 
-                            <div className="flex items-center gap-2">
+                            {/* <div className="flex items-center gap-2">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                 <span className="text-[9.5px] font-black text-emerald-600 uppercase tracking-widest">Active Node</span>
-                            </div>
+                            </div> */}
                             <div className="flex items-center gap-1.5 text-[9.5px] text-black-400 font-bold uppercase tracking-widest font-mono">
                                 {/* <span className="material-symbols-outlined text-[13px]">sync</span> */}
                                 <span>Sync: {syncTime || '--:--:--'}</span>

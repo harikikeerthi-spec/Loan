@@ -248,7 +248,11 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
         formData.append('conversationId', activeConversation);
 
         try {
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || (
+                typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')
+                    ? window.location.origin
+                    : 'http://localhost:5000'
+            );
             const res = await fetch(`${baseUrl}/api/chat/upload`, {
                 method: 'POST',
                 headers: {
@@ -762,7 +766,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                                         {msg.attachmentUrl ? (
                                                             <div className="flex flex-col gap-2">
                                                                 <a 
-                                                                    href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/chat/attachment/${msg.id}`} 
+                                                                    href={`/api/chat/attachment/${msg.id}`} 
                                                                     target="_blank" 
                                                                     rel="noopener noreferrer"
                                                                     className={`flex items-center gap-3 p-3 rounded-xl border ${isMe ? 'bg-white/10 border-white/20 hover:bg-white/20' : 'bg-white border-gray-200 hover:bg-gray-50'} transition-colors`}

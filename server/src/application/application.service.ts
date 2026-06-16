@@ -194,7 +194,7 @@ export class ApplicationService {
         submittedAt: data.status === 'draft' ? null : new Date().toISOString(),
         estimatedCompletionAt: estimatedCompletionAt.toISOString(),
       })
-      .select('*, user:User!userId(id, email, firstName, lastName)')
+      .select('*, user:User!userId(id, email, firstName, lastName, tests)')
       .single();
 
     if (error) throw error;
@@ -307,7 +307,7 @@ export class ApplicationService {
   async getApplicationById(applicationId: string) {
     const { data: application } = await this.db
       .from('LoanApplication')
-      .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth, studyDestination, intakeSeason), documents:ApplicationDocument(*), statusHistory:ApplicationStatusHistory(*), notes:ApplicationNote(id, content, type, isInternal, createdAt)')
+      .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth, studyDestination, intakeSeason, tests), documents:ApplicationDocument(*), statusHistory:ApplicationStatusHistory(*), notes:ApplicationNote(id, content, type, isInternal, createdAt)')
       .eq('id', applicationId)
       .single();
 
@@ -324,7 +324,7 @@ export class ApplicationService {
   async getApplicationByNumber(applicationNumber: string) {
     const { data: application } = await this.db
       .from('LoanApplication')
-      .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth, studyDestination, intakeSeason), documents:ApplicationDocument(*), statusHistory:ApplicationStatusHistory(*)')
+      .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth, studyDestination, intakeSeason, tests), documents:ApplicationDocument(*), statusHistory:ApplicationStatusHistory(*)')
       .eq('applicationNumber', applicationNumber)
       .single();
 
@@ -740,7 +740,7 @@ export class ApplicationService {
       
       let query = this.db
         .from('LoanApplication')
-        .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth, studyDestination, intakeSeason), documents:ApplicationDocument(id, status), ProcessingFee(*)', { count: 'exact' });
+        .select('*, user:User!userId(id, email, firstName, lastName, phoneNumber, dateOfBirth, studyDestination, intakeSeason, tests), documents:ApplicationDocument(id, status), ProcessingFee(*)', { count: 'exact' });
 
       // Apply sorting
       const sortCol = filters?.sortBy || 'updatedAt';
@@ -1305,7 +1305,7 @@ export class ApplicationService {
       // 2. Get applications for these students
       const { data: applications } = await this.db
         .from('LoanApplication')
-        .select('*, user:User!userId(id, email, firstName, lastName)')
+        .select('*, user:User!userId(id, email, firstName, lastName, tests)')
         .in('userId', refereeIds)
         .order('submittedAt', { ascending: false });
 

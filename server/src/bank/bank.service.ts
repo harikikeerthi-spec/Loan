@@ -4,6 +4,7 @@ import { LoanStateMachine } from './loan-state-machine';
 import { SlackService } from './slack.service';
 import { SalesforceService } from './salesforce.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ChatService } from '../chat/chat.service';
 
 @Injectable()
 export class BankService {
@@ -11,7 +12,8 @@ export class BankService {
     private readonly supabase: SupabaseService,
     private readonly slack: SlackService,
     private readonly salesforce: SalesforceService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
+    private readonly chatService: ChatService
   ) { }
 
   private get db() {
@@ -276,6 +278,67 @@ export class BankService {
         status: 'pending',
         createdAt: nowStr
       });
+
+      try {
+        const safeBank = (application.bank || 'Unknown_Bank').toUpperCase().replace(/[^A-Z0-9]/g, '_');
+        const syntheticPhone = `BNK_${safeBank}_APP_${applicationId}`;
+        const shortAppId = application.applicationNumber || applicationId.slice(0, 8);
+        const displayName = `${application.bank || 'Bank'} - App #${shortAppId}`;
+
+        // Get or create conversation with the bank for this application
+        const conversation = await this.chatService.getOrCreateConversation(
+          syntheticPhone,
+          `bank+${safeBank.toLowerCase()}@internal`,
+          'bank',
+          displayName,
+          application.bank || 'Bank',
+          {
+            applicationId: applicationId,
+            applicationNumber: application.applicationNumber || null,
+          }
+        );
+
+        // Build list of conditions for the chat content
+        let conditionsStr = '';
+        if (Array.isArray(details.conditions) && details.conditions.length > 0) {
+          conditionsStr = details.conditions.map((c: any, index: number) => {
+            const num = index + 1;
+            if (typeof c === 'string') {
+              return `${num}. ${c}`;
+            }
+            const typeLabel = c.type ? ` [${c.type.toUpperCase()}]` : '';
+            const deadlineLabel = c.deadline ? ` (Deadline: ${c.deadline})` : '';
+            return `${num}. ${c.text}${typeLabel}${deadlineLabel}`;
+          }).join('\n');
+        } else {
+          conditionsStr = 'None specified';
+        }
+
+        const messageContent = `🔔 **Conditional Sanction Submitted**\n\nThe bank has conditionally sanctioned the loan application.\n\n` +
+          `**Sanction Amount:** ₹${(details.sanctionAmount || application.amount || 0).toLocaleString('en-IN')}\n` +
+          `**Interest Rate:** ${details.interestRate || application.interestRate || 'N/A'}% (${details.roiType || 'floating'})\n` +
+          `**Decision Deadline:** ${details.deadline || 'N/A'}\n\n` +
+          `**Conditions List:**\n${conditionsStr}\n\n` +
+          `**Remarks/Notes:** ${details.remarks || 'No additional remarks.'}`;
+
+        // Save the support message in this conversation
+        const savedMessage = await this.chatService.saveMessage({
+          conversationId: conversation.id,
+          senderType: 'bank',
+          senderId: bankUser.email || bankUser.id || 'bank-system',
+          senderName: `${bankUser.firstName || 'Banker'} (${application.bank || 'Bank'})`,
+          content: messageContent,
+          messageType: 'text',
+          status: 'sent'
+        });
+
+        // Broadcast to WebSocket clients
+        this.eventEmitter.emit('chat.message_created', savedMessage);
+        
+        console.log(`[BankService] Real-time conditions message posted to chat conversation ${conversation.id}`);
+      } catch (chatError) {
+        console.error(`[BankService] Failed to post conditional sanction checklist to staff chat:`, chatError);
+      }
     } else if (targetStatus === 'counter_offer') {
       await this.db.from('counter_offers').insert({
         applicationId: applicationId,

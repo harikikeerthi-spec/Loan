@@ -16,6 +16,9 @@ async function check() {
     const statusCountRes = await client.query("SELECT COUNT(*), status FROM \"LoanApplication\" GROUP BY status");
     console.log('Applications by status:', statusCountRes.rows);
 
+    const userRoleCounts = await client.query("SELECT COUNT(*), role FROM \"User\" GROUP BY role");
+    console.log('Users by role:', userRoleCounts.rows);
+
     await client.end();
 }
 check().catch(console.error);
