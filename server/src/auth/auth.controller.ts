@@ -202,6 +202,7 @@ export class AuthController {
     lastName: string;
     phoneNumber: string;
     dateOfBirth: string;
+    intakeSeason?: string;
   }) {
     if (!body || !body.email) {
       return {
@@ -214,7 +215,8 @@ export class AuthController {
       body.firstName,
       body.lastName,
       body.phoneNumber,
-      body.dateOfBirth
+      body.dateOfBirth,
+      body.intakeSeason
     );
   }
 
@@ -253,6 +255,7 @@ export class AuthController {
     dateOfBirth?: string;
     address?: string;
     notes?: string;
+    intakeSeason?: string;
   }) {
     if (!body || !body.userId) {
       return {
@@ -297,6 +300,7 @@ export class AuthController {
         dateOfBirth: body.dateOfBirth,
         address: body.address,
         notes: body.notes,
+        intakeSeason: body.intakeSeason,
       });
       return {
         success: true,

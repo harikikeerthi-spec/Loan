@@ -601,6 +601,10 @@ export class AuthService {
           dateOfBirth: formattedDob || '',
           role: user.role || 'user',
           createdAt: user.createdAt,
+          intakeSeason: user.intakeSeason || '',
+          studyDestination: user.studyDestination || '',
+          courseName: user.courseName || '',
+          targetUniversity: user.targetUniversity || '',
         }
       };
     } catch (error) {
@@ -618,7 +622,8 @@ export class AuthService {
     firstName: string,
     lastName: string,
     phoneNumber: string,
-    dateOfBirth: string
+    dateOfBirth: string,
+    intakeSeason?: string
   ) {
     // First, check if user exists with the provided email
     const existingUser = await this.usersService.findOne(email);
@@ -699,7 +704,8 @@ export class AuthService {
         firstName,
         lastName,
         phoneNumber,
-        dateOfBirth
+        dateOfBirth,
+        intakeSeason
       );
 
       if (!user) {
@@ -715,6 +721,7 @@ export class AuthService {
           lastName: user.lastName,
           phoneNumber: user.phoneNumber,
           dateOfBirth: user.dateOfBirth,
+          intakeSeason: user.intakeSeason || '',
         }
       };
     } catch (error) {

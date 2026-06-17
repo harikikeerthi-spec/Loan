@@ -107,11 +107,19 @@ export default function ApplyLoanPage() {
                     firstName: prev.firstName || user?.firstName || "",
                     lastName: prev.lastName || user?.lastName || "",
                     email: prev.email || user?.email || "",
-                    phone: prev.phone || user?.phoneNumber || "",
+                    phone: prev.phone || user?.phoneNumber || user?.mobile || "",
+                    // Support both DD-MM-YYYY (from DatePicker / backend) and fallback fields
                     dateOfBirth: prev.dateOfBirth || user?.dateOfBirth || "",
                     intakeSeason: prev.intakeSeason || user?.intakeSeason || "",
                 }));
-                if (user) setProfileLoaded(true);
+                // Only mark profile as loaded once we have the DOB from the user object.
+                // This ensures that if refreshUser() resolves after the first render, the
+                // DOB (and other async-loaded fields) still get pre-filled correctly.
+                if (user && user.dateOfBirth) setProfileLoaded(true);
+                else if (user && !user.dateOfBirth) {
+                    // User loaded but DOB not yet available — keep profileLoaded false
+                    // so we retry when user object updates with DOB from refreshUser()
+                }
             }
         }
     }, [user, profileLoaded]);
@@ -564,7 +572,18 @@ export default function ApplyLoanPage() {
                                                 { label: "Legal Name", value: `${formData.firstName} ${formData.lastName}`.trim() },
                                                 { label: "Electronic ID", value: formData.email },
                                                 { label: "Mobile Line", value: formData.phone },
-                                                { label: "Birth Record", value: formData.dateOfBirth ? new Date(formData.dateOfBirth).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : "" },
+                                                { label: "Birth Record", value: (() => {
+                                                    if (!formData.dateOfBirth) return "";
+                                                    // Handle DD-MM-YYYY format (from DatePicker and backend)
+                                                    if (/^\d{2}-\d{2}-\d{4}$/.test(formData.dateOfBirth)) {
+                                                        const [dd, mm, yyyy] = formData.dateOfBirth.split("-").map(Number);
+                                                        const d = new Date(yyyy, mm - 1, dd);
+                                                        return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+                                                    }
+                                                    // Fallback: ISO or other formats
+                                                    const fallback = new Date(formData.dateOfBirth);
+                                                    return isNaN(fallback.getTime()) ? formData.dateOfBirth : fallback.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+                                                })() },
                                                 { label: "Co-Applicant", value: formData.coApplicant === "none" ? "None" : formData.coApplicant ? formData.coApplicant.charAt(0).toUpperCase() + formData.coApplicant.slice(1) : "" },
                                                 { label: "Secondary Income", value: formData.income && formData.coApplicant !== "none" ? `₹${Number(formData.income.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
                                                 { label: "Collateral", value: formData.collateral.split(':')[0] },

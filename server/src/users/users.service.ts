@@ -401,13 +401,18 @@ export class UsersService {
     lastName: string,
     phoneNumber: string,
     dateOfBirth: string,
+    intakeSeason?: string,
   ) {
     const dobDate = this.parseDate(dateOfBirth);
 
+    const updatePayload: any = { firstName, lastName, phoneNumber, dateOfBirth: dobDate };
+    if (intakeSeason !== undefined) {
+      updatePayload.intakeSeason = intakeSeason;
+    }
 
     const { data, error } = await this.db
       .from('User')
-      .update({ firstName, lastName, phoneNumber, dateOfBirth: dobDate })
+      .update(updatePayload)
       .eq('email', email)
       .select()
       .single();
@@ -632,6 +637,7 @@ export class UsersService {
       dateOfBirth?: string;
       address?: string;
       notes?: string;
+      intakeSeason?: string;
     },
   ) {
     const universityName = data.universityName || data.targetUniversity || data.university || null;
@@ -687,6 +693,21 @@ export class UsersService {
       .single();
 
     if (error) throw error;
+
+    // Sync target intake and destination to User profile
+    if (userId && (data.intakeSeason || data.country)) {
+      try {
+        await this.db
+          .from('User')
+          .update({
+            ...(data.intakeSeason ? { intakeSeason: data.intakeSeason } : {}),
+            ...(data.country ? { studyDestination: data.country } : {}),
+          })
+          .eq('id', userId);
+      } catch (err) {
+        console.error('Failed to sync target intake/destination to User profile in createLoanApplication:', err);
+      }
+    }
 
     // Emit application created event for staff notifications
     try {

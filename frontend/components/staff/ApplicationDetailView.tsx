@@ -1043,8 +1043,8 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     const englishTest = application.englishTest || application.user?.englishTest || application.student?.englishTest;
     const englishScore = application.englishScore || application.user?.englishScore || application.student?.englishScore;
     if (englishTest && englishScore) {
-      list.push({ 
-        name: String(englishTest).toUpperCase(), 
+      list.push({
+        name: String(englishTest).toUpperCase(),
         score: String(englishScore),
         maxScore: getMaxScore(String(englishTest))
       });
@@ -1053,8 +1053,8 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     const entranceTest = application.entranceTest || application.user?.entranceTest || application.student?.entranceTest;
     const entranceScore = application.entranceScore || application.user?.entranceScore || application.student?.entranceScore;
     if (entranceTest && entranceScore) {
-      list.push({ 
-        name: String(entranceTest).toUpperCase(), 
+      list.push({
+        name: String(entranceTest).toUpperCase(),
         score: String(entranceScore),
         maxScore: getMaxScore(String(entranceTest))
       });
@@ -1069,8 +1069,8 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
           const testKeys = ['gre', 'gmat', 'sat', 'act', 'ielts', 'toefl', 'pte', 'duolingo'];
           testKeys.forEach(key => {
             if (parsed[key] && !list.some(e => e.name.toLowerCase() === key.toLowerCase())) {
-              list.push({ 
-                name: key.toUpperCase(), 
+              list.push({
+                name: key.toUpperCase(),
                 score: String(parsed[key]),
                 maxScore: getMaxScore(key)
               });
@@ -1478,7 +1478,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                   <div className="flex items-center gap-10">
                     {[
                       { id: "requirements", label: "REQUIREMENTS", icon: "task_alt" },
-                      { id: "records", label: "STUDENT RECORDS", icon: "folder_shared" },
+                      // { id: "records", label: "STUDENT RECORDS", icon: "folder_shared" },
                       { id: "notes", label: "INTERNAL NOTES", icon: "sticky_note_2" },
                     ].map(tab => (
                       <button
@@ -1559,7 +1559,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                       />
                     )}
 
-                    {activeTab === "records" && (
+                    {/* {activeTab === "records" && (
                       <div className="bg-white rounded-[32px] border border-slate-100 overflow-hidden shadow-sm flex flex-col h-[620px]">
                         <div className="px-8 py-5 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
                           <div className="flex items-center gap-4">
@@ -1616,7 +1616,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                           </div>
                         </div>
                       </div>
-                    )}
+                    )} */}
 
                     {activeTab === "notes" && (
                       <div id="internal-notes-section" className="bg-white rounded-[32px] border border-slate-100 p-8 shadow-sm space-y-6">

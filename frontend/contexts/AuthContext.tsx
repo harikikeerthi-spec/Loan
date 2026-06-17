@@ -240,6 +240,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         phoneNumber: mergeField(freshUser.phoneNumber, prev?.phoneNumber),
                         dateOfBirth: mergeField(freshUser.dateOfBirth, prev?.dateOfBirth),
                         role: mergeField(freshUser.role, prev?.role),
+                        intakeSeason: mergeField((freshUser as any).intakeSeason, prev?.intakeSeason),
+                        studyDestination: mergeField((freshUser as any).studyDestination, prev?.studyDestination),
+                        courseName: mergeField((freshUser as any).courseName, prev?.courseName),
+                        targetUniversity: mergeField((freshUser as any).targetUniversity, prev?.targetUniversity),
                     };
                     localStorage.setItem(keys.user, JSON.stringify(updated));
                     if (updated.id) localStorage.setItem(keys.userId, updated.id);

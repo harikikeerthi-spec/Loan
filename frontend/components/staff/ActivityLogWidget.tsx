@@ -39,8 +39,16 @@ const getActivityStyles = (type: string) => {
 const formatOriginalTime = (dateStr: string): string => {
   if (!dateStr) return "";
   try {
-    const date = new Date(dateStr);
+    let cleanDs = dateStr;
+    if (typeof cleanDs === 'string' && !cleanDs.includes('Z') && !cleanDs.includes('+')) {
+      if (cleanDs.includes('T') || cleanDs.includes(':')) {
+        const formatted = cleanDs.replace(' ', 'T');
+        cleanDs = formatted.includes('Z') ? formatted : formatted + 'Z';
+      }
+    }
+    const date = new Date(cleanDs);
     return date.toLocaleString("en-US", {
+      timeZone: "Asia/Kolkata",
       month: "short",
       day: "numeric",
       hour: "2-digit",

@@ -703,6 +703,7 @@ export default function StaffDashboardPage() {
     const [actionRemarks, setActionRemarks] = useState("");
     const [actionLoading, setActionLoading] = useState(false);
     const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+    const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
     const [userRoleFilter, setUserRoleFilter] = useState("all");
     const [activeContactPopup, setActiveContactPopup] = useState<{ id: string; type: 'email' | 'phone' } | null>(null);
     const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
@@ -1094,6 +1095,7 @@ export default function StaffDashboardPage() {
             });
             addActivity("share", `Sent application to ${selectedBank}`, "send", "text-indigo-600 bg-indigo-50");
             setActiveMenuId(null);
+            setMenuPosition(null);
             await Promise.all([loadData(), loadOverview()]);
         } catch (e: unknown) {
             alert(e instanceof Error ? e.message : "Failed to send application to bank");
@@ -6765,13 +6767,13 @@ export default function StaffDashboardPage() {
                                     </p>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button
+                                    {/* <button
                                         onClick={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
                                         className={`px-3 py-1.5 rounded border text-[11px] font-medium transition-all flex items-center gap-1.5 shadow-sm ${autoRefreshEnabled ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}`}
                                     >
                                         <span className="material-symbols-outlined text-[14px]">{autoRefreshEnabled ? 'sync' : 'sync_disabled'}</span>
                                         {autoRefreshEnabled ? 'Live' : 'Paused'}
-                                    </button>
+                                    </button> */}
                                     <button
                                         onClick={() => { loadOverview(); setLastRefresh(new Date()); }}
                                         className="px-3 py-1.5 rounded bg-white border border-slate-200 text-slate-700 font-medium text-[11px] hover:bg-slate-50 transition-all flex items-center gap-1.5 shadow-sm"
@@ -7811,18 +7813,30 @@ export default function StaffDashboardPage() {
                                                                 <td className="px-5 py-4 text-center border-b border-slate-50 group-hover:bg-slate-50/50 transition-colors">
                                                                     <div className="relative inline-block text-left">
                                                                         <button
-                                                                            onClick={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}
+                                                                            onClick={(e) => {
+                                                                                const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                                                                                if (activeMenuId === (item.id || item._id)) {
+                                                                                    setActiveMenuId(null);
+                                                                                    setMenuPosition(null);
+                                                                                } else {
+                                                                                    setActiveMenuId(item.id || item._id);
+                                                                                    setMenuPosition({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
+                                                                                }
+                                                                            }}
                                                                             className="w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-400 hover:text-slate-900 hover:border-slate-300 hover:bg-slate-50 flex items-center justify-center transition-all shadow-sm mx-auto"
                                                                         >
                                                                             <span className="material-symbols-outlined text-[18px]">more_vert</span>
                                                                         </button>
 
-                                                                        {activeMenuId === item.id && (
+                                                                        {activeMenuId === (item.id || item._id) && menuPosition && (
                                                                             <>
-                                                                                <div className="fixed inset-0 z-40" onClick={() => setActiveMenuId(null)} />
-                                                                                <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl border border-slate-100 shadow-xl z-50 py-3 animate-in fade-in zoom-in-95 duration-200 font-sans">
+                                                                                <div className="fixed inset-0 z-40" onClick={() => { setActiveMenuId(null); setMenuPosition(null); }} />
+                                                                                <div
+                                                                                    className="fixed w-56 bg-white rounded-2xl border border-slate-100 shadow-xl z-50 py-3 animate-in fade-in zoom-in-95 duration-200 font-sans"
+                                                                                    style={{ top: menuPosition.top, right: menuPosition.right }}
+                                                                                >
                                                                                     <button
-                                                                                        onClick={() => { setSelectedApp(item); setActiveMenuId(null); }}
+                                                                                        onClick={() => { setSelectedApp(item); setActiveMenuId(null); setMenuPosition(null); }}
                                                                                         className="w-full flex gap-4 px-5 py-3 text-[12px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-colors"
                                                                                     >
                                                                                         <span className="material-symbols-outlined text-[18px] text-indigo-500">visibility</span>
@@ -7830,7 +7844,7 @@ export default function StaffDashboardPage() {
                                                                                     </button>
 
                                                                                     <button
-                                                                                        onClick={() => { setSearchQuery(item.email || item.student?.email); setActiveMenuId(null); }}
+                                                                                        onClick={() => { setSearchQuery(item.email || item.student?.email); setActiveMenuId(null); setMenuPosition(null); }}
                                                                                         className="w-full flex gap-4 px-5 py-3 text-[12px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-colors"
                                                                                     >
                                                                                         <span className="material-symbols-outlined text-[18px] text-emerald-500">list_alt</span>
