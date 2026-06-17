@@ -8,7 +8,6 @@ import { adminApi, documentApi } from "@/lib/api";
 import { format } from "date-fns";
 import { formatDate } from "@/lib/utils";
 import SendEmailModal from "@/components/staff/SendEmailModal";
-import ChatInterface from "@/components/Chat/ChatInterface";
 
 const IST_OFFSET = 5.5 * 60 * 60 * 1000; // India Standard Time offset (+5:30) in ms
 const convertToIST = (dateVal: any): Date => {
@@ -124,15 +123,13 @@ const resolveIntake = (app: any): string => {
 
 export default function StaffApplicationDetailPage({ params }: { params: Promise<{ id: string }> }) {
     const router = useRouter();
-    const { user } = useAuth();
+    useAuth();
     const { id: applicationId } = use(params);
 
     const [loading, setLoading] = useState(true);
     const [application, setApplication] = useState<any>(null);
     const [userApplications, setUserApplications] = useState<any[]>([]);
-    const [staffNotes, setStaffNotes] = useState<any[]>([]);
-    const [newNote, setNewNote] = useState("");
-    const [activeTab, setActiveTab] = useState<"details" | "history" | "documents" | "notes" | "verification" | "bank_chat">("details");
+    const [activeTab, setActiveTab] = useState<"details" | "history" | "documents" | "verification">("details");
     const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
     const [fetchedStatusHistory, setFetchedStatusHistory] = useState<any[]>([]);
 
@@ -170,11 +167,6 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
 
                     setUserApplications(userApps);
 
-                    // Load staff notes (from localStorage for demo, would be from API in production)
-                    const savedNotes = localStorage.getItem(`app_notes_${applicationId}`);
-                    if (savedNotes) {
-                        setStaffNotes(JSON.parse(savedNotes));
-                    }
                 }
             } catch (e) {
                 console.error("Error fetching application details:", e);
@@ -186,28 +178,6 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
         fetchApplicationDetails();
     }, [applicationId]);
 
-    const handleAddNote = () => {
-        if (!newNote.trim()) return;
-
-        const note = {
-            id: Date.now().toString(),
-            text: newNote,
-            author: user?.firstName || "Staff",
-            timestamp: new Date().toISOString(),
-            type: "note"
-        };
-
-        const updatedNotes = [note, ...staffNotes];
-        setStaffNotes(updatedNotes);
-        localStorage.setItem(`app_notes_${applicationId}`, JSON.stringify(updatedNotes));
-        setNewNote("");
-    };
-
-    const handlePullDocuments = () => {
-        // This would trigger DigiLocker integration
-        alert("Initiating document pull from DigiLocker for user: " + application?.email);
-        // In production, would call: window.open(`/api/digilocker/authorize?userId=${application.userId}`, '_blank')
-    };
 
     if (loading) {
         return (
@@ -329,8 +299,6 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                         { id: "history", label: "All Applications", icon: "list_alt", count: userApplications.length },
                         { id: "documents", label: "Documents", icon: "folder", count: 0 },
                         { id: "verification", label: "Verification", icon: "verified_user" },
-                        { id: "bank_chat", label: "Bank Chat", icon: "forum" },
-                        { id: "notes", label: "Internal Notes", icon: "note", count: staffNotes.length },
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -799,13 +767,6 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
 
                                     <div className="space-y-3">
                                         <button
-                                            onClick={handlePullDocuments}
-                                            className="w-full px-4 py-2.5 bg-indigo-600 text-white text-[11px] font-bold rounded hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <span className="material-symbols-outlined text-[16px]">cloud_download</span>
-                                            Pull from DigiLocker
-                                        </button>
-                                        <button
                                             onClick={() => setIsEmailModalOpen(true)}
                                             className="w-full px-4 py-2.5 bg-violet-600 text-white text-[11px] font-bold rounded hover:bg-violet-700 transition-all flex items-center justify-center gap-2"
                                         >
@@ -818,13 +779,6 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                         >
                                             <span className="material-symbols-outlined text-[16px]">verified_user</span>
                                             View Documents
-                                        </button>
-                                        <button
-                                            onClick={() => setActiveTab("notes")}
-                                            className="w-full px-4 py-2.5 bg-slate-500 text-white text-[11px] font-bold rounded hover:bg-slate-600 transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <span className="material-symbols-outlined text-[16px]">note</span>
-                                            View Notes
                                         </button>
                                     </div>
                                 </div>
@@ -941,80 +895,7 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                     </div>
                 )}
 
-                {/* Notes Tab */}
-                {activeTab === "notes" && (
-                    <div className="space-y-6">
-                        <div className="bg-white rounded-lg border border-slate-200 p-8 shadow-sm">
-                            <h2 className="text-lg font-bold text-slate-900 mb-6">Add Internal Note</h2>
-                            <textarea
-                                value={newNote}
-                                onChange={(e) => setNewNote(e.target.value)}
-                                placeholder="Add a note about this application..."
-                                className="w-full p-4 bg-slate-50 border border-slate-200 rounded text-[13px] focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[100px]"
-                            />
-                            <button
-                                onClick={handleAddNote}
-                                disabled={!newNote.trim()}
-                                className="mt-4 px-6 py-2.5 bg-emerald-600 text-white text-[11px] font-bold rounded hover:bg-emerald-700 transition-all disabled:opacity-50"
-                            >
-                                Add Note
-                            </button>
-                        </div>
 
-                        <div className="space-y-4">
-                            <h3 className="text-lg font-bold text-slate-900">Staff Notes History</h3>
-                            {staffNotes.length > 0 ? (
-                                <div className="space-y-3">
-                                    {staffNotes.map((note) => (
-                                        <div key={note.id} className="bg-white rounded-lg border border-slate-200 p-6 shadow-sm">
-                                            <div className="flex items-start justify-between mb-3">
-                                                <div>
-                                                    <p className="text-[12px] font-bold text-slate-900">{note.author}</p>
-                                                    <p className="text-[10px] text-slate-500">{formatToIST(note.timestamp, "MMM d, yyyy 'at' hh:mm a")}</p>
-                                                </div>
-                                                {note.type === 'status_change' && (
-                                                    <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase ${note.status === 'approved' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
-                                                        }`}>
-                                                        {note.status}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className="text-[13px] text-slate-700">{note.text}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center py-8 bg-slate-50 rounded-lg border border-slate-200">
-                                    <p className="text-slate-500 text-[12px]">No notes yet</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* Bank Chat Tab */}
-                {activeTab === "bank_chat" && (
-                    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col h-[700px]">
-                        {application.bank ? (
-                            <ChatInterface
-                                role="staff"
-                                hideSidebar={true}
-                                initialBank={{
-                                    bankName: application.bank,
-                                    applicationId: application.id || application._id,
-                                    applicationNumber: application.applicationNumber?.toString()
-                                }}
-                                className="flex h-full w-full border-0 rounded-none overflow-hidden bg-white text-gray-900"
-                            />
-                        ) : (
-                            <div className="flex flex-col items-center justify-center h-full p-8 text-center bg-slate-50/50">
-                                <span className="material-symbols-outlined text-slate-300 text-5xl mb-4">account_balance</span>
-                                <h3 className="text-base font-bold text-slate-700">No Bank Assigned</h3>
-                                <p className="text-xs text-slate-500 max-w-xs mt-1">This application has not been assigned or forwarded to any partner bank yet.</p>
-                            </div>
-                        )}
-                    </div>
-                )}
             </div>
 
             {application && (

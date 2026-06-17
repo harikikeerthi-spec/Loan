@@ -120,6 +120,16 @@ export default function MultiPartyChatInterface({ applicationId }: { application
     };
   }, [token]);
 
+  // Join/leave active conversation socket.io room for real-time messages
+  useEffect(() => {
+    if (socket && activeConversation) {
+      socket.emit('join_conversation', activeConversation);
+      return () => {
+        socket.emit('leave_conversation', activeConversation);
+      };
+    }
+  }, [socket, activeConversation]);
+
   // Fetch conversations
   const fetchConversations = useCallback(async () => {
     if (!token) return;

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { UniversityProvider } from "@/context/UniversityContext";
+import { DialogProvider } from "@/contexts/DialogContext";
 import SelectedUniversityWidget from "@/components/SelectedUniversityWidget";
 import ReferralTracker from "@/components/ReferralTracker";
 import CookieConsentBanner from "@/components/CookieConsentBanner";
@@ -66,12 +67,14 @@ export default function RootLayout({
 
         <div className="relative z-10">
           <AuthProvider>
-            <ReferralTracker />
-            <UniversityProvider>
-              {children}
-              <SelectedUniversityWidget />
-              <CookieConsentBanner />
-            </UniversityProvider>
+            <DialogProvider>
+              <ReferralTracker />
+              <UniversityProvider>
+                {children}
+                <SelectedUniversityWidget />
+                <CookieConsentBanner />
+              </UniversityProvider>
+            </DialogProvider>
           </AuthProvider>
         </div>
       </body>

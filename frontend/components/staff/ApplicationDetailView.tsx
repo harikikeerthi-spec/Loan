@@ -2,12 +2,14 @@
 import React, { useState, useRef, useEffect } from "react";
 import { format } from "date-fns";
 import { documentApi, staffProfileApi, adminApi, chatApi } from "@/lib/api";
+import { useDialog } from "@/contexts/DialogContext";
 import { io, Socket } from "socket.io-client";
 import { useAuth } from "@/contexts/AuthContext";
 import KycSystemDashboard from "./KycSystemDashboard";
 import ShareWithBankModal from "./ShareWithBankModal";
 import SendDocumentToBankModal from "./SendDocumentToBankModal";
 import SendEmailModal from "./SendEmailModal";
+import NotificationsPanel from "./NotificationsPanel";
 import {
   getDocumentCategory,
   getDocumentRequirementName,
@@ -19,6 +21,8 @@ interface ApplicationDetailViewProps {
   onBack: () => void;
   onAadhaarSaved?: (aadhaarNumber: string) => void;
   onApplicationUpdated?: () => void;
+  sidebarOpen?: boolean;
+  setSidebarOpen?: (open: boolean) => void;
 }
 
 type OcrSummaryDoc = {
@@ -148,7 +152,19 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   onBack,
   onAadhaarSaved,
   onApplicationUpdated,
+  sidebarOpen = false,
+  setSidebarOpen,
 }) => {
+  const { token, user, logout } = useAuth();
+  const { alert: dialogAlert, confirm: dialogConfirm, prompt: dialogPrompt } = useDialog();
+  const [nowTime, setNowTime] = useState<Date>(new Date());
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setNowTime(new Date());
+    }, 1000);
+    return () => clearInterval(intervalId);
+  }, []);
+
   const [activeTab, setActiveTab] = useState("requirements");
   const [activeSidebarMenu, setActiveSidebarMenu] = useState("application_details");
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -176,8 +192,6 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const appId = application.applicationNumber || `APP${(application.id || application._id || "MO2V2P4UQZEU").slice(-10).toUpperCase()}`;
   const studentId = application.studentId || application.userId || "—";
   const studentId10 = application.studentId || application.userId || "—";
-
-  const { token } = useAuth();
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
@@ -337,14 +351,14 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     try {
       const res = await adminApi.verifyDocument(application.id || application._id, docId, "verified") as ApiResult<unknown>;
       if (res.success || (res as any).data) {
-        alert("Document verified successfully!");
+        await dialogAlert("Document verified successfully!", "Verification Success", "success");
         fetchDocuments();
       } else {
-        alert("Failed to verify document.");
+        await dialogAlert("Failed to verify document.", "Verification Failed", "error");
       }
     } catch (err) {
       console.error("Failed to verify document:", err);
-      alert("Error verifying document.");
+      await dialogAlert("Error verifying document.", "System Error", "error");
     }
   };
 
@@ -352,14 +366,14 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     try {
       const res = await adminApi.verifyDocument(application.id || application._id, docId, "rejected", reason) as ApiResult<unknown>;
       if (res.success || (res as any).data) {
-        alert("Document rejected successfully!");
+        await dialogAlert("Document rejected successfully!", "Rejection Saved", "success");
         fetchDocuments();
       } else {
-        alert("Failed to reject document.");
+        await dialogAlert("Failed to reject document.", "Rejection Failed", "error");
       }
     } catch (err) {
       console.error("Failed to reject document:", err);
-      alert("Error rejecting document.");
+      await dialogAlert("Error rejecting document.", "System Error", "error");
     }
   };
 
@@ -460,10 +474,10 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const [isSyncing, setIsSyncing] = useState(false);
   const [activeDiscrepancy, setActiveDiscrepancy] = useState<{ doc1: OcrSummaryDoc; doc2: OcrSummaryDoc } | null>(null);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!msgInput.trim()) return;
     if (!socket || !conversationId) {
-      alert("Chat connection is not ready. Please try again in a moment.");
+      await dialogAlert("Chat connection is not ready. Please try again in a moment.", "Connection Pending", "warning");
       return;
     }
 
@@ -516,7 +530,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
       fetchNotes();
     } catch (err) {
       console.error("Failed to add note:", err);
-      alert("Failed to save note to database.");
+      await dialogAlert("Failed to save note to database.", "Database Error", "error");
     }
   };
 
@@ -537,7 +551,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
       setIsAddDocModalOpen(false);
     } catch (err) {
       console.error("Failed to add requirement:", err);
-      alert("Failed to save requirement to database. Please check your connection.");
+      await dialogAlert("Failed to save requirement to database. Please check your connection.", "Network Error", "error");
     }
   };
 
@@ -563,7 +577,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
       // Update local application object if possible (though it's a prop)
       // Ideally we should have a callback to refresh the parent application data
 
-      alert(`Synced ${field} successfully!`);
+      await dialogAlert(`Synced ${field} successfully!`, "Sync Success", "success");
     } catch (err) {
       console.error("Sync failed:", err);
     } finally {
@@ -597,7 +611,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
       }
     } catch (err) {
       console.error("Upload failed:", err);
-      alert("Failed to upload document");
+      await dialogAlert("Failed to upload document", "Upload Error", "error");
     }
   };
 
@@ -625,7 +639,8 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     const doc = documents.find(d => d.id === docId);
     if (!doc || !userId) return;
 
-    if (!confirm(`Are you sure you want to delete ${doc.name}?`)) return;
+    const confirmed = await dialogConfirm(`Are you sure you want to delete ${doc.name}?`, "Delete Document");
+    if (!confirmed) return;
 
     try {
       const res = await documentApi.delete(userId, doc.docType) as ApiResult<unknown>;
@@ -1144,13 +1159,96 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   ];
 
   return (
-    <div className="staff-dashboard-body fixed inset-y-0 right-0 left-[56px] z-[40] flex flex-col bg-[#F8FAFC] overflow-hidden animate-in fade-in duration-500" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div className={`staff-dashboard-body fixed inset-y-0 right-0 z-[40] flex flex-col bg-[#F8FAFC] overflow-hidden animate-in fade-in duration-500 transition-all duration-300 ${sidebarOpen ? 'lg:left-[280px] left-0' : 'lg:left-[68px] left-0'}`} style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      <style>{`
+        @media print {
+          /* Hide all non-printable elements */
+          .no-print,
+          aside,
+          header,
+          button,
+          .material-symbols-outlined,
+          iframe {
+            display: none !important;
+          }
+
+          /* Hide background ambient glows */
+          .bg-indigo-50\\/50, .bg-emerald-50\\/50, .blur-\\[120px\\], .blur-\\[100px\\], .blur-3xl {
+            display: none !important;
+          }
+
+          /* Reset scroll & height limits for full page pagination */
+          html, body, #__next, [data-reactroot], .staff-dashboard-shell {
+            height: auto !important;
+            overflow: visible !important;
+            position: relative !important;
+          }
+
+          /* Force detail container to occupy full width and flow naturally */
+          .staff-dashboard-body {
+            position: relative !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            display: block !important;
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            z-index: auto !important;
+          }
+
+          /* Reset layout flex wrappers so content flows vertically across pages */
+          .flex, .flex-1, .grid, main {
+            display: block !important;
+            height: auto !important;
+            overflow: visible !important;
+            position: relative !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+
+          /* Remove visual noise and box shadows */
+          .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl, .shadow-inner {
+            box-shadow: none !important;
+            border-color: #e2e8f0 !important;
+          }
+
+          /* Fix background colors for clean paper printing */
+          .bg-white\\/70, .bg-slate-50\\/60, .bg-white\\/40, .bg-slate-50\\/50, .bg-slate-50 {
+            background-color: #ffffff !important;
+            border-color: #cbd5e1 !important;
+          }
+
+          /* Avoid page breaks inside important cards */
+          .group, .rounded-3xl, .rounded-\\[40px\\], .border, .p-10, .p-8 {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+
+          /* Ensure text colors are high contrast */
+          .text-slate-400, .text-slate-500, .text-slate-600 {
+            color: #475569 !important;
+          }
+          .text-slate-900, .text-slate-800 {
+            color: #000000 !important;
+          }
+
+          /* Force page margins */
+          @page {
+            size: A4 portrait;
+            margin: 20mm 15mm 20mm 15mm;
+          }
+        }
+      `}</style>
       {/* Background Ambient Glows */}
       <div className="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] bg-indigo-50/50 blur-[120px] rounded-full -z-10" />
       <div className="absolute bottom-[-10%] left-[-5%] w-[30%] h-[40%] bg-emerald-50/50 blur-[100px] rounded-full -z-10" />
 
       {/* Top Navbar */}
-      <div className="h-[56px] bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 sticky top-0 z-40 shadow-sm">
+      <div className="h-[56px] no-print bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 sticky top-0 z-40 shadow-sm">
         <div className="flex flex-col justify-center">
           <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest leading-none mb-0.5">VIdyaLoans</p>
           <h1 className="text-[18px] font-semibold text-slate-800 leading-tight">Application Detail</h1>
@@ -1169,27 +1267,68 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
           <div className="h-5 w-px bg-slate-200"></div>
 
           <div className="flex items-center gap-3">
-            <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded transition-all relative">
-              <span className="material-symbols-outlined text-[20px]">notifications</span>
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
-            </button>
-            <div className="h-5 w-px bg-slate-200" />
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 shadow-sm">
-                <span className="material-symbols-outlined text-[16px]">person</span>
-              </div>
-              <div className="hidden sm:flex flex-col">
-                <span className="text-[12px] font-semibold text-slate-800 leading-none">Staff Member</span>
-                <span className="text-[10px] text-slate-400 capitalize leading-none mt-0.5">Level 4 Admin</span>
+            {/* Real-time Sync Timer */}
+            <div className="hidden lg:flex items-center gap-4 border-r border-slate-200 pr-4">
+              <div className="flex items-center gap-1.5 text-[14px] text-black-600 font-bold uppercase tracking-widest font-mono">
+                <span>Sync: {format(nowTime, 'MMM dd, HH:mm:ss')}</span>
               </div>
             </div>
+
+            {/* Menu Toggle */}
+            {setSidebarOpen && (
+              <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded transition-all" onClick={() => setSidebarOpen(!sidebarOpen)}>
+                <span className="material-symbols-outlined text-[20px]">menu</span>
+              </button>
+            )}
+
+            {/* Notifications Panel */}
+            {user?.id ? (
+              <NotificationsPanel
+                staffId={user.id}
+                maxDisplay={8}
+                showUnreadBadge={true}
+              />
+            ) : (
+              <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded transition-all relative">
+                <span className="material-symbols-outlined text-[20px]">notifications</span>
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
+              </button>
+            )}
+
+            <div className="h-5 w-px bg-slate-200" />
+            <div className="flex items-center gap-2">
+              <img
+                src={user?.email ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.email}` : "https://api.dicebear.com/7.x/avataaars/svg?seed=Staff"}
+                alt="Avatar"
+                className="w-7 h-7 rounded-full bg-slate-200 border border-slate-300 object-cover"
+              />
+              <div className="hidden sm:flex flex-col">
+                <span className="text-[12px] font-semibold text-slate-800 leading-none">
+                  {user?.firstName ? `${user.firstName}${user.lastName ? ' ' + user.lastName[0] + '.' : ''}` : 'Staff Member'}
+                </span>
+                <span className="text-[10px] text-slate-400 capitalize leading-none mt-0.5">
+                  {user?.role?.replace('_', ' ') || 'Level 4 Admin'}
+                </span>
+              </div>
+            </div>
+
+            {/* Sign Out Button */}
+            {logout && (
+              <button
+                onClick={logout}
+                title="Sign Out"
+                className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
+              >
+                <span className="material-symbols-outlined text-[20px]">logout</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
         {/* Secondary Left Menu */}
-        <div className="w-[120px] bg-white/60 backdrop-blur-xl border-r border-slate-100/50 flex flex-col py-8 px-4 shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
+        <div className="w-[120px] no-print bg-white/60 backdrop-blur-xl border-r border-slate-100/50 flex flex-col py-8 px-4 shrink-0 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
           <div className="space-y-4">
             {[
               { id: 'application_details', label: 'Application\ndetails', icon: 'description' },
@@ -1223,7 +1362,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                 <div className="flex items-center gap-5">
                   <button
                     onClick={onBack}
-                    className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-emerald-600 hover:border-emerald-200 hover:shadow-lg transition-all"
+                    className="w-12 h-12 no-print rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-emerald-600 hover:border-emerald-200 hover:shadow-lg transition-all"
                   >
                     <span className="material-symbols-outlined text-[22px]">arrow_back</span>
                   </button>
@@ -1235,7 +1374,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 no-print">
                   <button
                     onClick={() => {
                       setActiveSidebarMenu("application_details");
@@ -1474,7 +1613,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
 
               {/* Action Hub & Sticky Tabs Section */}
               <div id="action-hub-section" className="space-y-8 animate-in slide-in-from-bottom-10 duration-700 delay-200">
-                <div className="sticky top-0 bg-[#F8FAFC]/95 backdrop-blur-md z-[50] py-4 border-b border-slate-200 flex items-center justify-between px-6 -mx-6 shadow-sm">
+                <div className="sticky top-0 no-print bg-[#F8FAFC]/95 backdrop-blur-md z-[50] py-4 border-b border-slate-200 flex items-center justify-between px-6 -mx-6 shadow-sm">
                   <div className="flex items-center gap-10">
                     {[
                       { id: "requirements", label: "REQUIREMENTS", icon: "task_alt" },
@@ -2158,9 +2297,14 @@ const OcrDocumentIntelligence = ({
   onVerifyDocument?: (docId: string) => void;
   onRejectDocument?: (docId: string, reason: string) => void;
 }) => {
-  const [docSubTab, setDocSubTab] = useState<"action" | "completed">("action");
+  const [docSubTab, setDocSubTab] = useState<"action" | "completed" | "rejected">("action");
+
+  const isRejected = (doc: OcrSummaryDoc) => {
+    return String(doc.status || "").toLowerCase() === "rejected";
+  };
 
   const isActionRequired = (doc: OcrSummaryDoc) => {
+    if (isRejected(doc)) return false;
     if (!doc.uploaded) return true;
     const confidence = normalizeConfidence(doc.accuracy);
     if (confidence < 75) return true;
@@ -2173,11 +2317,14 @@ const OcrDocumentIntelligence = ({
     return false;
   };
 
+  const rejectedAcademic = academicDocs.filter(isRejected);
+  const rejectedCoApplicant = coApplicantDocs.filter(isRejected);
+
   const actionRequiredAcademic = academicDocs.filter(isActionRequired);
   const actionRequiredCoApplicant = coApplicantDocs.filter(isActionRequired);
 
-  const completedAcademic = academicDocs.filter((d) => !isActionRequired(d));
-  const completedCoApplicant = coApplicantDocs.filter((d) => !isActionRequired(d));
+  const completedAcademic = academicDocs.filter((d) => !isRejected(d) && !isActionRequired(d));
+  const completedCoApplicant = coApplicantDocs.filter((d) => !isRejected(d) && !isActionRequired(d));
 
   return (
     <div className="space-y-7 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -2192,6 +2339,16 @@ const OcrDocumentIntelligence = ({
         >
           <span className="material-symbols-outlined text-[16px] text-rose-500">warning</span>
           Action Required ({actionRequiredAcademic.length + actionRequiredCoApplicant.length})
+        </button>
+        <button
+          onClick={() => setDocSubTab("rejected")}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-wider transition-all ${docSubTab === "rejected"
+            ? "bg-white text-red-600 shadow-sm border border-red-100"
+            : "text-slate-500 hover:text-slate-800"
+            }`}
+        >
+          <span className="material-symbols-outlined text-[16px] text-red-500">cancel</span>
+          Rejected ({rejectedAcademic.length + rejectedCoApplicant.length})
         </button>
         <button
           onClick={() => setDocSubTab("completed")}
@@ -2209,7 +2366,13 @@ const OcrDocumentIntelligence = ({
         <OcrDocumentGroup
           title="Applicant Documents"
           icon="school"
-          docs={docSubTab === "action" ? actionRequiredAcademic : completedAcademic}
+          docs={
+            docSubTab === "action"
+              ? actionRequiredAcademic
+              : docSubTab === "rejected"
+                ? rejectedAcademic
+                : completedAcademic
+          }
           loading={loading}
           onAdd={onAddAcademic}
           normalizeConfidence={normalizeConfidence}
@@ -2228,7 +2391,13 @@ const OcrDocumentIntelligence = ({
         <OcrDocumentGroup
           title="Family & Co-Applicant Documents"
           icon="group"
-          docs={docSubTab === "action" ? actionRequiredCoApplicant : completedCoApplicant}
+          docs={
+            docSubTab === "action"
+              ? actionRequiredCoApplicant
+              : docSubTab === "rejected"
+                ? rejectedCoApplicant
+                : completedCoApplicant
+          }
           loading={loading}
           onAdd={onAddCoApplicant}
           normalizeConfidence={normalizeConfidence}
@@ -2401,6 +2570,7 @@ const OcrMiniDocumentCard = ({
   onReject?: (reason: string) => void;
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { prompt: dialogPrompt } = useDialog();
   const statusLower = String(status || "").toLowerCase();
   const hasFile = Boolean(uploaded || fileName || ["uploaded", "verified", "approved", "rejected"].includes(statusLower));
   const tone =
@@ -2512,7 +2682,7 @@ const OcrMiniDocumentCard = ({
 
       <div className="mt-4 flex flex-col gap-3">
         {/* Send to Bank Action Row */}
-        {hasFile && onSendToBank && (
+        {/* {hasFile && onSendToBank && (
           <button
             type="button"
             onClick={onSendToBank}
@@ -2521,7 +2691,7 @@ const OcrMiniDocumentCard = ({
             <span className="material-symbols-outlined text-[16px]">account_balance</span>
             Send to Bank
           </button>
-        )}
+        )} */}
 
         {hasFile ? (
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -2545,10 +2715,10 @@ const OcrMiniDocumentCard = ({
                     <span className="material-symbols-outlined text-[14px]">check</span>
                     Verify
                   </button>
-                  <button
+                   <button
                     type="button"
-                    onClick={() => {
-                      const reason = prompt("Please enter the reason for rejecting this document:");
+                    onClick={async () => {
+                      const reason = await dialogPrompt("Please enter the reason for rejecting this document:", "Enter rejection reason...");
                       if (reason !== null) {
                         onReject(reason.trim());
                       }

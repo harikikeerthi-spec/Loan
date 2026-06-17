@@ -553,10 +553,10 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                     <span className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-400 leading-none">Partner Bank</span>
                                     <span className="text-[11.5px] font-bold text-gray-800 leading-tight truncate max-w-[120px]" title={bankName}>{bankName}</span>
                                 </div>
-                                <div className="flex items-center gap-1 ml-1">
+                                {/* <div className="flex items-center gap-1 ml-1">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                     <span className="text-[8px] font-black text-emerald-600 uppercase tracking-wide">Live</span>
-                                </div>
+                                </div> */}
                             </div>
                         )}
 

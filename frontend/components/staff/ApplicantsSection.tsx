@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { staffProfileApi, adminApi } from "@/lib/api";
+import { useDialog } from "@/contexts/DialogContext";
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-amber-50 text-amber-600 border border-amber-100",
@@ -276,6 +277,7 @@ function ProfileList({ onSelect, onlineEmails = [] }: { onSelect: (p: any) => vo
 
 /* ── Profile Detail View ───────────────────────────────── */
 function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }) {
+  const { alert: dialogAlert, confirm: dialogConfirm, prompt: dialogPrompt } = useDialog();
   const [docs, setDocs] = useState<any[]>([]);
   const [shares, setShares] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -320,13 +322,13 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
     setMsg("");
     let reason: string | undefined = undefined;
     if (status === "rejected") {
-      const promptReason = prompt("Please enter the reason for rejecting this document:");
+      const promptReason = await dialogPrompt("Please enter the reason for rejecting this document:", "Enter rejection reason...");
       if (promptReason === null) {
         loadDocs();
         return;
       }
       if (!promptReason.trim()) {
-        alert("A rejection reason is required.");
+        await dialogAlert("A rejection reason is required.", "Validation Error", "error");
         loadDocs();
         return;
       }
@@ -362,7 +364,8 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
   };
 
   const removeDoc = async (docId: string) => {
-    if (!confirm("Detach this document from the profile?")) return;
+    const confirmed = await dialogConfirm("Detach this document from the profile?", "Remove Document");
+    if (!confirmed) return;
     const removedDoc = docs.find(d => d.id === docId);
     await staffProfileApi.removeDocument(profile.id, docId);
 

@@ -231,6 +231,33 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @SubscribeMessage('send_multiparty_message')
+  handleSendMultipartyMessage(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: any
+  ) {
+    this.logger.log(`Broadcasting multiparty message in conversation ${payload.conversationId}`);
+    if (this.server) {
+      this.server.to(`conv_${payload.conversationId}`).emit('new_message', payload);
+      
+      const user = client.data.user;
+      if (user) {
+        if (user.role === 'bank' || user.role === 'partner_bank') {
+          this.server.to('room_bank').emit('conversation_updated', {
+            conversationId: payload.conversationId,
+            lastMessage: payload
+          });
+        } else {
+          this.server.to('room_staff').emit('conversation_updated', {
+            conversationId: payload.conversationId,
+            lastMessage: payload
+          });
+        }
+      }
+    }
+    return { success: true };
+  }
+
   @OnEvent('user.login')
   handleUserLogin(payload: any) {
     this.logger.log(`Broadcasting login alert for ${payload.email} to staff`);

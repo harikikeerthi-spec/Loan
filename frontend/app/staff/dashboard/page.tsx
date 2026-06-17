@@ -8267,6 +8267,8 @@ export default function StaffDashboardPage() {
                 <ApplicationDetailView
                     application={selectedApp}
                     onBack={() => setSelectedApp(null)}
+                    sidebarOpen={sidebarOpen}
+                    setSidebarOpen={setSidebarOpen}
                     onAadhaarSaved={(aadhaarNumber) => {
                         const appUserId = selectedApp.userId || selectedApp.applicantId;
                         const onboardUserId = createdUser?.id || createdUser?.uid || createdUser?._id;
