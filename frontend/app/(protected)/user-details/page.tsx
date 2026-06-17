@@ -46,6 +46,16 @@ export default function UserDetailsPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!user?.email) return;
+
+        // Validate first name
+        if (!form.firstName || form.firstName.trim().length < 3) {
+            setError("First name must be at least 3 characters");
+            return;
+        }
+        if (/[^A-Za-z]/.test(form.firstName)) {
+            setError("First name must not contain numbers or special characters");
+            return;
+        }
         
         // Validate phone number
         if (!form.phoneNumber || !isPhoneValid(form.phoneNumber)) {
@@ -135,8 +145,18 @@ export default function UserDetailsPage() {
                                         }}
                                         required
                                         maxLength={30}
-                                        className="w-full px-4 py-3 bg-gray-50/50 border border-gray-100 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 transition-all"
+                                        className={`w-full px-4 py-3 bg-gray-50/50 border ${form.firstName && (form.firstName.length < 3 || /[^A-Za-z]/.test(form.firstName)) ? 'border-rose-300 focus:border-rose-500' : 'border-gray-100 focus:border-[#6605c7]'} rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-[#6605c7]/5 transition-all`}
                                     />
+                                    {form.firstName && (form.firstName.length < 3 || /[^A-Za-z]/.test(form.firstName)) && (
+                                        <div className="px-3 py-2 bg-rose-50 border border-rose-200 rounded-lg flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-rose-600 text-sm">error</span>
+                                            <span className="text-rose-600 text-xs font-medium">
+                                                {form.firstName.length < 3 
+                                                    ? "First name must be at least 3 characters" 
+                                                    : "First name must contain only letters"}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 ml-1">
@@ -199,7 +219,7 @@ export default function UserDetailsPage() {
 
                             <button
                                 type="submit"
-                                disabled={saving || !form.phoneNumber || !isPhoneValid(form.phoneNumber)}
+                                disabled={saving || !form.phoneNumber || !isPhoneValid(form.phoneNumber) || !form.firstName || form.firstName.length < 3 || /[^A-Za-z]/.test(form.firstName)}
                                 className="w-full py-3.5 bg-[#6605c7] text-white rounded-xl font-bold uppercase tracking-widest text-[11px] hover:bg-[#5a04b1] active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed shadow-lg shadow-[#6605c7]/20 mt-4"
                             >
                                 {saving ? "Updating..." : "Complete Profile"}
