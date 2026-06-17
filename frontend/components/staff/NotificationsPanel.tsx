@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { io, Socket } from "socket.io-client";
 import { useRouter } from "next/navigation";
@@ -90,13 +90,40 @@ const NotificationsPanel = ({
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
-
     if (diffMins < 1) return "Just now";
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
 
     return date.toLocaleDateString();
   };
+
+  const fetchNotifications = useCallback(async () => {
+    const token =
+      localStorage.getItem("staffAccessToken") ||
+      localStorage.getItem("adminAccessToken") ||
+      localStorage.getItem("accessToken");
+    if (!token) return;
+    try {
+      const res = await fetch("/api/notifications", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.items)) {
+          setNotifications(data.items.slice(0, 50));
+          const unread = data.items.filter((n: any) => !n.isRead).length;
+          setUnreadCount(unread);
+        }
+      } else {
+        console.error("[NotificationsPanel] Failed to fetch notifications:", res.statusText);
+      }
+    } catch (err) {
+      console.error("[NotificationsPanel] Fetch error:", err);
+    }
+  }, []);
 
   useEffect(() => {
     const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (
@@ -155,30 +182,6 @@ const NotificationsPanel = ({
       console.error("[NotificationsPanel] Socket error:", error);
     });
 
-    const fetchNotifications = async () => {
-      if (!token) return;
-      try {
-        const res = await fetch("/api/notifications", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && Array.isArray(data.items)) {
-            setNotifications(data.items.slice(0, 50));
-            const unread = data.items.filter((n: any) => !n.isRead).length;
-            setUnreadCount(unread);
-          }
-        } else {
-          console.error("[NotificationsPanel] Failed to fetch notifications:", res.statusText);
-        }
-      } catch (err) {
-        console.error("[NotificationsPanel] Fetch error:", err);
-      }
-    };
-
     fetchNotifications();
 
     return () => {
@@ -189,7 +192,26 @@ const NotificationsPanel = ({
         clearTimeout(toastTimeoutRef.current);
       }
     };
-  }, []);
+  }, [fetchNotifications]);
+
+  // Setup HTTP polling fallback when WebSocket is offline/disconnected
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    if (!isConnected) {
+      console.log("[NotificationsPanel] Starting HTTP polling fallback (10s interval)");
+      fetchNotifications(); // Poll immediately
+      interval = setInterval(() => {
+        fetchNotifications();
+      }, 10000); // Poll every 10 seconds
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [isConnected, fetchNotifications]);
 
   const handleNotificationClick = async (notification: Notification) => {
     onNotificationClick?.(notification);

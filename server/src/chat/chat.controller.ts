@@ -217,4 +217,69 @@ export class ChatController {
       throw new NotFoundException('Unable to retrieve attachment from storage.');
     }
   }
+
+  @Post('support-start-staff')
+  async startSupportToStaffConversation(
+    @Req() req: any,
+    @Body() body: { staffEmail: string; staffName?: string }
+  ) {
+    if (!body.staffEmail) {
+      throw new BadRequestException('staffEmail is required');
+    }
+
+    const safeStaff = body.staffEmail.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+    const syntheticPhone = `STF_${safeStaff}`;
+
+    const displayName = body.staffName
+      ? `Support & ${body.staffName}`
+      : `Support & Staff (${body.staffEmail})`;
+
+    const conversation = await this.chatService.getOrCreateConversation(
+      syntheticPhone,
+      body.staffEmail,
+      'support_to_staff',
+      displayName,
+      undefined,
+      {
+        staffEmail: body.staffEmail,
+      }
+    );
+
+    return {
+      success: true,
+      conversation,
+    };
+  }
+
+  @Post('support-start-bank')
+  async startSupportToBankConversation(
+    @Req() req: any,
+    @Body() body: { bankName: string; bankEmail?: string }
+  ) {
+    if (!body.bankName) {
+      throw new BadRequestException('bankName is required');
+    }
+
+    const safeBank = body.bankName.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+    const syntheticPhone = `BNK_${safeBank}_SUP`;
+
+    const displayName = `Support & ${body.bankName}`;
+
+    const conversation = await this.chatService.getOrCreateConversation(
+      syntheticPhone,
+      body.bankEmail || `bank+${safeBank.toLowerCase()}@internal`,
+      'support_to_bank',
+      displayName,
+      body.bankName,
+      {
+        bankName: body.bankName,
+        bankEmail: body.bankEmail || null,
+      }
+    );
+
+    return {
+      success: true,
+      conversation,
+    };
+  }
 }

@@ -10,10 +10,10 @@ async function runTests() {
         
         // Generate JWT token for admin user
         const payload = {
-            email: 'harikikeerthi@gmail.com',
-            sub: 'VL-STU-2026-00001',
-            firstName: 'Hariki',
-            lastName: 'Keerthi',
+            email: 'luharika28@gmail.com',
+            sub: 'some-id',
+            firstName: 'Harika',
+            lastName: 'Lu',
             role: 'admin'
         };
         
@@ -39,14 +39,13 @@ async function runTests() {
         // Users by role:
         //   staff: 1
         //   admin: 1
-        //   student: 3
-        //   bank: 6
-        //   user: 25
-        //   total: 36
+        //   student/user: 4
+        //   bank: 1
+        //   total: 7
         console.log(`\nAssertions:`);
-        console.log(`- Total Users: ${statsData.total} (Expected: 36)`);
-        console.log(`- Student Accounts: ${statsData.student} (Expected: 3)`);
-        console.log(`- Bank Partners: ${statsData.bank} (Expected: 6)`);
+        console.log(`- Total Users: ${statsData.total} (Expected: 7)`);
+        console.log(`- Student Accounts: ${statsData.student} (Expected: 4)`);
+        console.log(`- Bank Partners: ${statsData.bank} (Expected: 1)`);
         console.log(`- Staff Members: ${statsData.staff} (Expected: 1)`);
         console.log(`- Admins: ${statsData.admin} (Expected: 1)`);
 
@@ -56,14 +55,14 @@ async function runTests() {
         if (statsData.admin !== 1) {
             throw new Error(`Admin count mismatch! Expected 1, got ${statsData.admin}`);
         }
-        if (statsData.student !== 3) {
-            throw new Error(`Student count mismatch! Expected 3, got ${statsData.student}`);
+        if (statsData.student !== 4) {
+            throw new Error(`Student count mismatch! Expected 4, got ${statsData.student}`);
         }
-        if (statsData.bank !== 6) {
-            throw new Error(`Bank count mismatch! Expected 6, got ${statsData.bank}`);
+        if (statsData.bank !== 1) {
+            throw new Error(`Bank count mismatch! Expected 1, got ${statsData.bank}`);
         }
-        if (statsData.total !== 36) {
-            throw new Error(`Total users count mismatch! Expected 36, got ${statsData.total}`);
+        if (statsData.total !== 7) {
+            throw new Error(`Total users count mismatch! Expected 7, got ${statsData.total}`);
         }
 
         console.log('\n✅ User statistics verification checks passed successfully!');

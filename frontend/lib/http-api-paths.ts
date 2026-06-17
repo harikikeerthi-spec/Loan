@@ -184,6 +184,7 @@ export const HttpApiPaths = {
         queries: () => `${HTTP_API_PREFIX}/bank/queries`,
         confirmDisbursement: () => `${HTTP_API_PREFIX}/bank/disbursements/confirm`,
         conditionalSanctions: () => `${HTTP_API_PREFIX}/bank/conditional-sanctions`,
+        saveConditionalSanctions: (id: string) => `${HTTP_API_PREFIX}/bank/conditional-sanctions/${enc(id)}`,
         partialSanctions: () => `${HTTP_API_PREFIX}/bank/partial-sanctions`,
         counterOffers: () => `${HTTP_API_PREFIX}/bank/counter-offers`,
         fileQualityScore: () => `${HTTP_API_PREFIX}/bank/file-quality-score`,

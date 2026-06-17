@@ -1202,6 +1202,7 @@ export const bankApi = {
     raiseQuery: (data: any) => apiFetch(HttpApiPaths.bank.queries(), { method: "POST", body: JSON.stringify(data) }),
     confirmDisbursement: (data: any) => apiFetch(HttpApiPaths.bank.confirmDisbursement(), { method: "POST", body: JSON.stringify(data) }),
     conditionalSanction: (data: any) => apiFetch(HttpApiPaths.bank.conditionalSanctions(), { method: "POST", body: JSON.stringify(data) }),
+    saveConditionalSanctions: (id: string, data: any) => apiFetch(HttpApiPaths.bank.saveConditionalSanctions(id), { method: "POST", body: JSON.stringify(data) }),
     partialSanction: (data: any) => apiFetch(HttpApiPaths.bank.partialSanctions(), { method: "POST", body: JSON.stringify(data) }),
     counterOffer: (data: any) => apiFetch(HttpApiPaths.bank.counterOffers(), { method: "POST", body: JSON.stringify(data) }),
     fileQualityScore: (data: any) => apiFetch(HttpApiPaths.bank.fileQualityScore(), { method: "POST", body: JSON.stringify(data) }),

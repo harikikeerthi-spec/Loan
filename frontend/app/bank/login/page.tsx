@@ -178,7 +178,7 @@ function BankLoginContent() {
         // Fallbacks for seed test users
         if (lowerEmail === "joirerwerifhe@gmail.com") return "idfc";
         if (lowerEmail === "jegan14735@aratrin.com") return "credila";
-        if (lowerEmail === "luharika28@gmail.com") return "auxilo";
+        if (lowerEmail === "hellobro24@gmail.com") return "auxilo";
         if (lowerEmail === "farmatech@gmail.com") return "poonawalla";
         if (lowerEmail === "ropayi2211@aspensif.com") return "avanse";
 

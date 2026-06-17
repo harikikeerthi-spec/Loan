@@ -406,11 +406,8 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                 { label: "Nationality", value: userData.nationality?.name || (typeof userData.nationality === 'string' ? userData.nationality : '') || "Indian" },
                                                 { label: "Study Destination", value: userData.studyDestination, uppercase: true },
                                                 { label: "Target Intake", value: userData.intakeSeason },
-                                                { label: "Current Address", value: userData.permanentAddress || userData.address, fullWidth: true },
-                                                { label: "College/University Name", value: userData.targetUniversity || userData.universityName || userData.university },
-                                                { label: "Course Name", value: userData.courseName },
                                                 { label: "Access Privilege", value: userData.role, capitalize: true },
-                                            ].map((item, idx) => (
+                                            ].map((item: any, idx) => (
                                                 <div key={idx} className={item.fullWidth ? "col-span-2" : ""}>
                                                     <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">{item.label}</p>
                                                     <p className={`text-[14px] font-semibold text-slate-900 ${item.lowercase ? "lowercase" : item.capitalize ? "capitalize" : item.uppercase ? "uppercase" : ""}`}>

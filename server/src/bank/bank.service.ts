@@ -768,28 +768,37 @@ export class BankService {
   async getFileDetail(applicationId: string): Promise<any> {
     const { data, error } = await this.db
       .from('LoanApplication')
-      .select('*, BankDecision(*), disbursements(*), file_quality_scores(*), queries(*), ProcessingFee(*)')
+      .select('*')
       .eq('id', applicationId)
       .maybeSingle();
 
-    if (error) {
-      console.error(`[BankService] getFileDetail error for id ${applicationId}:`, error);
-      // Fallback query if relations fail
-      const { data: fallbackData, error: fallbackError } = await this.db
-        .from('LoanApplication')
-        .select('*')
-        .eq('id', applicationId)
-        .maybeSingle();
-        
-      if (fallbackError || !fallbackData) {
-         throw new NotFoundException(`Application not found or error: ${fallbackError?.message || error.message}`);
-      }
-      return fallbackData;
+    if (error || !data) {
+      throw new NotFoundException(`Loan application with ID "${applicationId}" not found or error: ${error?.message}`);
     }
 
-    if (!data) {
-      throw new NotFoundException(`Loan application with ID "${applicationId}" not found`);
-    }
+    // Fetch relations manually to avoid PostgREST relationship schema cache failures
+    const [
+      { data: bankDecisions },
+      { data: disbursements },
+      { data: fileQualityScores },
+      { data: queries },
+      { data: processingFee },
+      { data: condSanctions }
+    ] = await Promise.all([
+      this.db.from('BankDecision').select('*').eq('applicationId', applicationId),
+      this.db.from('disbursements').select('*').eq('applicationId', applicationId),
+      this.db.from('file_quality_scores').select('*').eq('applicationId', applicationId),
+      this.db.from('queries').select('*').eq('applicationId', applicationId),
+      this.db.from('ProcessingFee').select('*').eq('applicationId', applicationId),
+      this.db.from('conditional_sanctions').select('*').eq('applicationId', applicationId).order('createdAt', { ascending: false })
+    ]);
+
+    data.BankDecision = bankDecisions || [];
+    data.disbursements = disbursements || [];
+    data.file_quality_scores = fileQualityScores || [];
+    data.queries = queries || [];
+    data.ProcessingFee = processingFee || [];
+    data.conditional_sanctions = condSanctions || [];
 
     return data;
   }
@@ -1043,5 +1052,47 @@ export class BankService {
     }
 
     return data;
+  }
+
+  async saveConditionalSanctions(applicationId: string, conditions: any[], deadline?: string) {
+    const nowStr = new Date().toISOString();
+
+    // Check if a record already exists
+    const { data: existing, error: fetchError } = await this.db
+      .from('conditional_sanctions')
+      .select('*')
+      .eq('applicationId', applicationId)
+      .maybeSingle();
+
+    if (existing) {
+      // Update
+      const { data, error } = await this.db
+        .from('conditional_sanctions')
+        .update({
+          conditionsList: conditions,
+          deadline: deadline ? new Date(deadline).toISOString() : existing.deadline || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+        })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return { success: true, data };
+    } else {
+      // Insert
+      const { data, error } = await this.db
+        .from('conditional_sanctions')
+        .insert({
+          id: 'cond-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+          applicationId,
+          conditionsList: conditions,
+          deadline: deadline ? new Date(deadline).toISOString() : new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+          status: 'pending',
+          createdAt: nowStr
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return { success: true, data };
+    }
   }
 }

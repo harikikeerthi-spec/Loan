@@ -152,6 +152,15 @@ export class BankController {
     );
   }
 
+  @Post('conditional-sanctions/:applicationId')
+  async saveConditionalSanctions(
+    @Param('applicationId') applicationId: string,
+    @Body('conditions') conditions: any[],
+    @Body('deadline') deadline?: string
+  ) {
+    return this.bankService.saveConditionalSanctions(applicationId, conditions, deadline);
+  }
+
   @Post('partial-sanctions')
   async partialSanction(
     @Request() req,

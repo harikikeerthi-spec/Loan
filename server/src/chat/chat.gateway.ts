@@ -67,6 +67,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.join('room_staff');
       } else if (payload.role === 'bank' || payload.role === 'partner_bank') {
         client.join('room_bank');
+      } else if (payload.role === 'support') {
+        client.join('room_support');
+        client.join('room_staff');
+        client.join('room_bank');
       }
 
       // Join direct user room for personal notifications
@@ -103,9 +107,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   ) {
     // Only allow joining rooms the user's role is permitted to access
     const user = client.data.user;
-    const isStaff = user?.role === 'admin' || user?.role === 'staff' || user?.role === 'super_admin';
-    const isBank = user?.role === 'bank' || user?.role === 'partner_bank';
-    if ((room === 'room_staff' && isStaff) || (room === 'room_bank' && isBank)) {
+    const isStaff = user?.role === 'admin' || user?.role === 'staff' || user?.role === 'super_admin' || user?.role === 'support';
+    const isBank = user?.role === 'bank' || user?.role === 'partner_bank' || user?.role === 'support';
+    const isSupport = user?.role === 'support' || user?.role === 'admin' || user?.role === 'super_admin';
+    if ((room === 'room_staff' && isStaff) || (room === 'room_bank' && isBank) || (room === 'room_support' && isSupport)) {
       client.join(room);
       this.logger.log(`Client ${client.id} explicitly joined ${room}`);
     }
@@ -159,16 +164,37 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.server.to(`conv_${payload.conversationId}`).emit('new_message', msg);
       
       // Also notify general dashboard rooms for list updates
-      if (user.role === 'bank' || user.role === 'partner_bank') {
-        this.server.to('room_bank').emit('conversation_updated', {
+      const conv = await this.chatService.getConversationById(payload.conversationId);
+      const convType = conv?.metadata?.type;
+
+      if (convType === 'support_to_staff' || convType === 'support_to_bank') {
+        this.server.to('room_support').emit('conversation_updated', {
           conversationId: payload.conversationId,
           lastMessage: msg
         });
+        if (convType === 'support_to_bank') {
+          this.server.to('room_bank').emit('conversation_updated', {
+            conversationId: payload.conversationId,
+            lastMessage: msg
+          });
+        } else {
+          this.server.to('room_staff').emit('conversation_updated', {
+            conversationId: payload.conversationId,
+            lastMessage: msg
+          });
+        }
       } else {
-        this.server.to('room_staff').emit('conversation_updated', {
-          conversationId: payload.conversationId,
-          lastMessage: msg
-        });
+        if (user.role === 'bank' || user.role === 'partner_bank') {
+          this.server.to('room_bank').emit('conversation_updated', {
+            conversationId: payload.conversationId,
+            lastMessage: msg
+          });
+        } else {
+          this.server.to('room_staff').emit('conversation_updated', {
+            conversationId: payload.conversationId,
+            lastMessage: msg
+          });
+        }
       }
 
       // 3. Update WhatsApp Simulator if connected
@@ -315,14 +341,43 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @OnEvent('chat.message_created')
-  handleChatMessageCreated(msg: any) {
+  async handleChatMessageCreated(msg: any) {
     this.logger.log(`Broadcasting programmatically created message in conversation ${msg.conversationId}`);
     if (this.server) {
       this.server.to(`conv_${msg.conversationId}`).emit('new_message', msg);
-      this.server.to('room_staff').emit('conversation_updated', {
-        conversationId: msg.conversationId,
-        lastMessage: msg
-      });
+      
+      const conv = await this.chatService.getConversationById(msg.conversationId);
+      const convType = conv?.metadata?.type;
+
+      if (convType === 'support_to_staff' || convType === 'support_to_bank') {
+        this.server.to('room_support').emit('conversation_updated', {
+          conversationId: msg.conversationId,
+          lastMessage: msg
+        });
+        if (convType === 'support_to_bank') {
+          this.server.to('room_bank').emit('conversation_updated', {
+            conversationId: msg.conversationId,
+            lastMessage: msg
+          });
+        } else {
+          this.server.to('room_staff').emit('conversation_updated', {
+            conversationId: msg.conversationId,
+            lastMessage: msg
+          });
+        }
+      } else {
+        if (convType === 'bank') {
+          this.server.to('room_bank').emit('conversation_updated', {
+            conversationId: msg.conversationId,
+            lastMessage: msg
+          });
+        } else {
+          this.server.to('room_staff').emit('conversation_updated', {
+            conversationId: msg.conversationId,
+            lastMessage: msg
+          });
+        }
+      }
     }
   }
 }

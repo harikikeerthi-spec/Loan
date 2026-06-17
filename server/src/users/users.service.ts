@@ -354,7 +354,15 @@ export class UsersService {
     }
 
     if (role && role !== 'all') {
-      query = query.eq('role', role);
+      if (role === 'student') {
+        query = query.or('role.eq.student,role.eq.user');
+      } else if (role === 'staff') {
+        query = query.or('role.eq.staff,role.eq.staff_admin');
+      } else if (role === 'admin') {
+        query = query.or('role.eq.admin,role.eq.super_admin');
+      } else {
+        query = query.eq('role', role);
+      }
     }
 
     if (excludeRoles && excludeRoles.length > 0) {
@@ -380,10 +388,10 @@ export class UsersService {
 
   async getUserStats() {
     const { count: total } = await this.db.from('User').select('*', { count: 'exact', head: true });
-    const { count: student } = await this.db.from('User').select('*', { count: 'exact', head: true }).eq('role', 'student');
+    const { count: student } = await this.db.from('User').select('*', { count: 'exact', head: true }).or('role.eq.student,role.eq.user');
     const { count: bank } = await this.db.from('User').select('*', { count: 'exact', head: true }).eq('role', 'bank');
     const { count: staff } = await this.db.from('User').select('*', { count: 'exact', head: true }).or('role.eq.staff,role.eq.staff_admin');
-    const { count: admin } = await this.db.from('User').select('*', { count: 'exact', head: true }).eq('role', 'admin');
+    const { count: admin } = await this.db.from('User').select('*', { count: 'exact', head: true }).or('role.eq.admin,role.eq.super_admin');
     
     return {
       total: total || 0,

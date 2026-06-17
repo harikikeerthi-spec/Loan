@@ -47,8 +47,8 @@ export class StaffGuard implements CanActivate {
                 throw new UnauthorizedException('User not found');
             }
 
-            // Check if user is staff, admin, super_admin, or bank
-            const allowedRoles = ['staff', 'admin', 'super_admin', 'bank', 'partner_bank'];
+            // Check if user is staff, admin, super_admin, bank, or support
+            const allowedRoles = ['staff', 'admin', 'super_admin', 'bank', 'partner_bank', 'support'];
             if (!allowedRoles.includes(user.role)) {
                 console.warn(`[StaffGuard] Access denied for role: ${user.role}. User: ${user.email}`);
                 throw new ForbiddenException('Access denied. Elevated privileges required.');

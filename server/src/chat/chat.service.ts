@@ -12,8 +12,8 @@ export class ChatService {
   }
 
   private normalizePhone(phoneStr: string): string {
-    // Synthetic bank identifiers start with BNK_ — pass through unchanged
-    if (phoneStr.startsWith('BNK_')) return phoneStr;
+    // Synthetic bank/staff identifiers start with BNK_ or STF_ — pass through unchanged
+    if (phoneStr.startsWith('BNK_') || phoneStr.startsWith('STF_')) return phoneStr;
     const cleaned = phoneStr.replace('whatsapp:', '').trim().replace(/\D/g, '');
     if (cleaned.length > 10 && cleaned.startsWith('91')) {
       return cleaned.substring(2);
@@ -173,12 +173,21 @@ export class ChatService {
       }
       
       // Sort messages and format
-      return data.map((conv: any) => ({
+      let formatted = data.map((conv: any) => ({
           ...conv,
           lastMessage: conv.Message && conv.Message.length > 0 
               ? conv.Message.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
               : null
       }));
+
+      if (user && user.role === 'support') {
+          formatted = formatted.filter((conv: any) => 
+              conv.metadata?.type === 'support_to_staff' || 
+              conv.metadata?.type === 'support_to_bank'
+          );
+      }
+
+      return formatted;
   }
 
   async getMessages(conversationId: string) {
@@ -224,5 +233,18 @@ export class ChatService {
     if (!conv) return [];
 
     return this.getMessages(conv.id);
+  }
+
+  async getConversationById(id: string) {
+    const { data, error } = await this.db
+      .from('Conversation')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error) {
+      throw new HttpException('Db Error', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+    return data;
   }
 }

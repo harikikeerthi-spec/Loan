@@ -199,6 +199,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const [loadingNotes, setLoadingNotes] = useState(false);
   const [msgInput, setMsgInput] = useState("");
   const [noteInput, setNoteInput] = useState("");
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Dynamic Documents State
   const [documents, setDocuments] = useState<OcrSummaryDoc[]>([]);
@@ -559,27 +560,85 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     if (!userId) return;
     setIsSyncing(true);
     try {
-      // In a real app, this would call adminApi.updateUserDetails or similar
-      // For now we'll simulate it and update local state
       console.log(`Syncing ${field} with value ${value}`);
+      const userEmail = application.email || application.user?.email || application.student?.email;
+      if (!userEmail) {
+        throw new Error("Candidate email not found on the application.");
+      }
 
-      // Map OCR keys to application keys
-      const keyMap: any = {
-        'full_name': 'firstName', // simplified for demo
-        'date_of_birth': 'dob',
-        'document_number': 'panNumber',
-        'father_name': 'fatherName'
-      };
+      if (field === 'date_of_birth') {
+        const currentFirstName = application.firstName || application.user?.firstName || application.student?.firstName || "";
+        const currentLastName = application.lastName || application.user?.lastName || application.student?.lastName || "";
+        const currentPhone = application.phone || application.user?.phoneNumber || application.student?.phone || application.mobile || "";
 
-      // Mock update - in real app call API
-      // await adminApi.updateUserDetails({ email: application.email, [keyMap[field] || field]: value });
+        // 1. Update User Profile in the User table
+        const profileRes = await adminApi.updateUserDetails({
+          email: userEmail,
+          firstName: currentFirstName,
+          lastName: currentLastName,
+          phoneNumber: currentPhone,
+          dateOfBirth: value
+        });
 
-      // Update local application object if possible (though it's a prop)
-      // Ideally we should have a callback to refresh the parent application data
+        // 2. Update Application details in the LoanApplication table
+        const appRes = await adminApi.updateApplication(application.id, {
+          dateOfBirth: value
+        });
 
-      await dialogAlert(`Synced ${field} successfully!`, "Sync Success", "success");
-    } catch (err) {
+        if (profileRes && appRes) {
+          onApplicationUpdated?.();
+          await dialogAlert("Date of Birth synced to user profile and application successfully!", "Sync Success", "success");
+        } else {
+          throw new Error("Failed to update user details or application details.");
+        }
+      } else if (field === 'full_name') {
+        const nameParts = value.trim().split(/\s+/);
+        const firstName = nameParts[0] || "";
+        const lastName = nameParts.slice(1).join(" ") || "";
+        const currentPhone = application.phone || application.user?.phoneNumber || application.student?.phone || application.mobile || "";
+        const currentDob = application.dob || application.user?.dateOfBirth || application.student?.dob || "";
+
+        // 1. Update User Profile
+        const profileRes = await adminApi.updateUserDetails({
+          email: userEmail,
+          firstName,
+          lastName,
+          phoneNumber: currentPhone,
+          dateOfBirth: currentDob
+        });
+
+        // 2. Update Application details
+        const appRes = await adminApi.updateApplication(application.id, {
+          firstName,
+          lastName
+        });
+
+        if (profileRes && appRes) {
+          onApplicationUpdated?.();
+          await dialogAlert("Name synced to user profile and application successfully!", "Sync Success", "success");
+        } else {
+          throw new Error("Failed to update user name.");
+        }
+      } else {
+        // Fallback for other fields
+        const keyMap: any = {
+          'document_number': 'panNumber',
+          'father_name': 'fatherName'
+        };
+        const appKey = keyMap[field] || field;
+        const appRes = await adminApi.updateApplication(application.id, {
+          [appKey]: value
+        });
+        if (appRes) {
+          onApplicationUpdated?.();
+          await dialogAlert(`Synced ${field} successfully!`, "Sync Success", "success");
+        } else {
+          throw new Error(`Failed to sync field ${field}`);
+        }
+      }
+    } catch (err: any) {
       console.error("Sync failed:", err);
+      await dialogAlert(err.message || `Failed to sync ${field} to profile. Please try again.`, "Sync Failed", "error");
     } finally {
       setIsSyncing(false);
     }
@@ -1353,7 +1412,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 overflow-y-auto no-scrollbar">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto no-scrollbar">
           {activeSidebarMenu === 'application_details' && (
             <div className="max-w-[1400px] mx-auto p-10 space-y-10 animate-in fade-in zoom-in-95 duration-300">
 
@@ -1392,7 +1451,15 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                       setActiveTab("notes");
                       setTimeout(() => {
                         const notesSection = document.getElementById("internal-notes-section");
-                        notesSection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        if (scrollContainerRef.current && notesSection) {
+                          const container = scrollContainerRef.current;
+                          const containerRect = container.getBoundingClientRect();
+                          const elemRect = notesSection.getBoundingClientRect();
+                          const relativeTop = elemRect.top - containerRect.top + container.scrollTop;
+                          container.scrollTo({ top: relativeTop - 20, behavior: 'smooth' });
+                        } else {
+                          notesSection?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
                       }, 100);
                     }}
                     className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-md"
@@ -1775,8 +1842,8 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                           </button>
                         </div>
                         <div className="space-y-4">
-                          {notes.map((note) => (
-                            <div key={note.id} className="p-6 rounded-3xl bg-slate-50/80 border border-slate-100 hover:border-amber-200 transition-all">
+                          {notes.map((note, idx) => (
+                            <div key={note.id || note._id || idx} className="p-6 rounded-3xl bg-slate-50/80 border border-slate-100 hover:border-amber-200 transition-all">
                               <div className="flex items-start justify-between mb-3">
                                 <p className="text-[12px] font-black text-slate-900">
                                   {note.authorName || note.author || 'Staff Member'}{" "}

@@ -288,27 +288,37 @@ export default function DecisionsHub() {
                     setWaiverReason("");
                 }
 
-                const condDecision = detailRes.BankDecision?.find((d: any) => d.decision === 'CONDITIONAL_SANCTION' || d.decision === 'CONDITIONAL');
-                if (condDecision && condDecision.conditions) {
-                    let parsedConds = [];
-                    try {
-                        parsedConds = typeof condDecision.conditions === 'string'
-                            ? JSON.parse(condDecision.conditions)
-                            : condDecision.conditions;
-                    } catch (e) {}
-                    if (Array.isArray(parsedConds)) {
-                        setConditions(parsedConds.map((c: any, index: number) => ({
-                            id: c.id || String(index + 1),
-                            text: c.text || c,
-                            type: c.type || "mandatory",
-                            deadline: c.deadline ? format(new Date(c.deadline), "yyyy-MM-dd") : format(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), "yyyy-MM-dd")
-                        })));
-                    }
+                const condSanctionsList = detailRes.conditional_sanctions?.[0]?.conditionsList;
+                if (Array.isArray(condSanctionsList)) {
+                    setConditions(condSanctionsList.map((c: any, index: number) => ({
+                        id: c.id || String(index + 1),
+                        text: c.text || c,
+                        type: c.type || "mandatory",
+                        deadline: c.deadline ? format(new Date(c.deadline), "yyyy-MM-dd") : format(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), "yyyy-MM-dd")
+                    })));
                 } else {
-                    setConditions([
-                        { id: "1", text: "Submit original class 10 & 12 mark sheets for validation", type: "mandatory", deadline: format(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), "yyyy-MM-dd") },
-                        { id: "2", text: "Co-applicant to execute guarantor agreement and indemnity bond", type: "mandatory", deadline: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd") }
-                    ]);
+                    const condDecision = detailRes.BankDecision?.find((d: any) => d.decision === 'CONDITIONAL_SANCTION' || d.decision === 'CONDITIONAL');
+                    if (condDecision && condDecision.conditions) {
+                        let parsedConds = [];
+                        try {
+                            parsedConds = typeof condDecision.conditions === 'string'
+                                ? JSON.parse(condDecision.conditions)
+                                : condDecision.conditions;
+                        } catch (e) {}
+                        if (Array.isArray(parsedConds)) {
+                            setConditions(parsedConds.map((c: any, index: number) => ({
+                                id: c.id || String(index + 1),
+                                text: c.text || c,
+                                type: c.type || "mandatory",
+                                deadline: c.deadline ? format(new Date(c.deadline), "yyyy-MM-dd") : format(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), "yyyy-MM-dd")
+                            })));
+                        }
+                    } else {
+                        setConditions([
+                            { id: "1", text: "Submit original class 10 & 12 mark sheets for validation", type: "mandatory", deadline: format(new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), "yyyy-MM-dd") },
+                            { id: "2", text: "Co-applicant to execute guarantor agreement and indemnity bond", type: "mandatory", deadline: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd") }
+                        ]);
+                    }
                 }
 
                 const counterDecision = detailRes.BankDecision?.find((d: any) => d.decision === 'COUNTER_OFFER');
@@ -522,6 +532,18 @@ export default function DecisionsHub() {
         return requested > sanctioned ? requested - sanctioned : 0;
     }, [selectedApp, sanctionAmount]);
 
+    const saveConditionsToDb = async (updatedConditions: Condition[]) => {
+        if (!selectedApp) return;
+        try {
+            await bankApi.saveConditionalSanctions(selectedApp.id, {
+                conditions: updatedConditions,
+                deadline: newConditionDeadline
+            });
+        } catch (err) {
+            console.error("Failed to save conditions to database:", err);
+        }
+    };
+
     // F8: Condition Handlers
     const addCondition = () => {
         if (!newConditionText.trim()) return;
@@ -531,8 +553,10 @@ export default function DecisionsHub() {
             type: newConditionType,
             deadline: newConditionDeadline
         };
-        setConditions([...conditions, newCond]);
+        const updated = [...conditions, newCond];
+        setConditions(updated);
         setNewConditionText("");
+        saveConditionsToDb(updated);
 
         // Append to activity timeline
         const timeNow = format(new Date(), "HH:mm");
@@ -548,7 +572,9 @@ export default function DecisionsHub() {
     };
 
     const removeCondition = (id: string) => {
-        setConditions(conditions.filter(c => c.id !== id));
+        const updated = conditions.filter(c => c.id !== id);
+        setConditions(updated);
+        saveConditionsToDb(updated);
     };
 
     // F32: Note Handlers

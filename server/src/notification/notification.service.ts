@@ -90,6 +90,8 @@ export class NotificationService {
       query = query.eq('type', type);
     }
 
+    query = query.eq('isRead', false);
+
     const { data, error, count } = await query
       .order('timestamp', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -106,18 +108,18 @@ export class NotificationService {
   }
 
   /**
-   * Mark a single notification as read.
+   * Mark a single notification as read (actually delete it).
    */
   async markAsRead(notificationId: string, user: any) {
     const { data, error } = await this.db
       .from('Notification')
-      .update({ isRead: true })
+      .delete()
       .eq('id', notificationId)
       .select()
       .single();
 
     if (error) {
-      this.logger.error(`Failed to mark notification as read: ${error.message}`);
+      this.logger.error(`Failed to delete notification: ${error.message}`);
       throw error;
     }
 
@@ -125,14 +127,14 @@ export class NotificationService {
   }
 
   /**
-   * Mark all notifications as read for the user's role or user ID.
+   * Mark all notifications as read for the user's role or user ID (actually delete them).
    */
   async markAllAsRead(user: any) {
     const isStaffOrAdmin = user.role === 'staff' || user.role === 'admin' || user.role === 'super_admin';
     const isBank = user.role === 'bank' || user.role === 'partner_bank';
     const userId = user.id || user.uid || user._id;
 
-    let query = this.db.from('Notification').update({ isRead: true });
+    let query = this.db.from('Notification').delete();
 
     if (isStaffOrAdmin) {
       query = query.or(`userId.eq.staff,userId.eq.system,userId.eq.all,userId.eq.${userId}`);
@@ -145,7 +147,7 @@ export class NotificationService {
     const { data, error } = await query.eq('isRead', false).select();
 
     if (error) {
-      this.logger.error(`Failed to mark all notifications as read: ${error.message}`);
+      this.logger.error(`Failed to delete all notifications: ${error.message}`);
       throw error;
     }
 

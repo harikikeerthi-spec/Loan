@@ -245,12 +245,12 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                     App: #{application.applicationNumber?.toString().slice(0, 8) || "APP-0000"}
                                 </span>
                                 <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${application.status === "approved"
-                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                        : application.status === "rejected"
-                                            ? "bg-rose-50 text-rose-700 border-rose-200"
-                                            : application.status === "processing"
-                                                ? "bg-indigo-50 text-indigo-700 border-indigo-200"
-                                                : "bg-amber-50 text-amber-700 border-amber-200"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : application.status === "rejected"
+                                        ? "bg-rose-50 text-rose-700 border-rose-200"
+                                        : application.status === "processing"
+                                            ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+                                            : "bg-amber-50 text-amber-700 border-amber-200"
                                     }`}>
                                     {application.status || "PENDING"}
                                 </span>
@@ -261,8 +261,8 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                 )}
                                 {application.bank && (
                                     <span className={`px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${application.lanNumber
-                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                            : "bg-amber-50 text-amber-700 border-amber-200"
+                                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                        : "bg-amber-50 text-amber-700 border-amber-200"
                                         }`}>
                                         LAN: {application.lanNumber || "PENDING"}
                                     </span>
@@ -304,8 +304,8 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id as any)}
                             className={`py-4 font-bold text-[13px] uppercase tracking-wide border-b-2 flex items-center gap-2 transition-colors ${activeTab === tab.id
-                                    ? "border-emerald-600 text-emerald-600"
-                                    : "border-transparent text-slate-500 hover:text-slate-700"
+                                ? "border-emerald-600 text-emerald-600"
+                                : "border-transparent text-slate-500 hover:text-slate-700"
                                 }`}
                         >
                             <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
@@ -652,8 +652,8 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                                     <div key={idx} className="flex gap-6 items-start relative z-10">
                                                         {/* Timeline dot */}
                                                         <div className={`flex-shrink-0 w-10 h-10 rounded-full border-3 flex items-center justify-center font-bold transition-all shadow-md ${isCompleted || isActive
-                                                                ? 'bg-white border-emerald-500 text-emerald-600'
-                                                                : 'bg-white border-slate-200 text-slate-400'
+                                                            ? 'bg-white border-emerald-500 text-emerald-600'
+                                                            : 'bg-white border-slate-200 text-slate-400'
                                                             }`}>
                                                             {isCompleted ? (
                                                                 <span className="material-symbols-outlined text-lg">check</span>
@@ -666,10 +666,10 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
 
                                                         {/* Content */}
                                                         <div className={`flex-1 p-4 rounded-lg border-2 transition-all ${isActive
-                                                                ? `bg-gradient-to-r ${item.color} border-current`
-                                                                : isCompleted
-                                                                    ? 'bg-slate-50 border-slate-200'
-                                                                    : 'bg-white border-slate-100'
+                                                            ? `bg-gradient-to-r ${item.color} border-current`
+                                                            : isCompleted
+                                                                ? 'bg-slate-50 border-slate-200'
+                                                                : 'bg-white border-slate-100'
                                                             }`}>
                                                             <div className="flex items-start justify-between">
                                                                 <div className="flex items-start gap-3 flex-1">
@@ -714,8 +714,8 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                                                         <div
                                                                             key={sub.value}
                                                                             className={`text-center px-3 py-2 rounded text-xs font-bold transition-all ${application.bankReviewStatus === sub.value || application.status === sub.value.replace('_', '')
-                                                                                    ? 'bg-white text-slate-900 border border-slate-300'
-                                                                                    : 'text-slate-400 bg-slate-50'
+                                                                                ? 'bg-white text-slate-900 border border-slate-300'
+                                                                                : 'text-slate-400 bg-slate-50'
                                                                                 }`}
                                                                         >
                                                                             {sub.name}
@@ -820,12 +820,12 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                                                     </td>
                                                     <td className="px-6 py-4">
                                                         <span className={`px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wide border ${app.status === "approved"
-                                                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                                                                : app.status === "rejected"
-                                                                    ? "bg-rose-50 text-rose-700 border-rose-200"
-                                                                    : app.status === "processing"
-                                                                        ? "bg-indigo-50 text-indigo-700 border-indigo-200"
-                                                                        : "bg-amber-50 text-amber-700 border-amber-200"
+                                                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                                            : app.status === "rejected"
+                                                                ? "bg-rose-50 text-rose-700 border-rose-200"
+                                                                : app.status === "processing"
+                                                                    ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+                                                                    : "bg-amber-50 text-amber-700 border-amber-200"
                                                             }`}>
                                                             {app.status || "Pending"}
                                                         </span>

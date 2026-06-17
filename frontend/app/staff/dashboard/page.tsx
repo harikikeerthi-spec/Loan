@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -338,6 +338,14 @@ export default function StaffDashboardPage() {
     const [data, setData] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState("all");
+    const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+    const [filterTab, setFilterTab] = useState<'filters' | 'columns'>('filters');
+    const [filterCountry, setFilterCountry] = useState<string>("");
+    const [filterPaymentPaid, setFilterPaymentPaid] = useState<boolean | null>(null);
+    const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
+    const [visibleColumns, setVisibleColumns] = useState<string[]>([
+        'applicant_profile', 'college_name', 'target_bank', 'lan_number', 'progress', 'current_status', 'actions'
+    ]);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [autoStartUser, setAutoStartUser] = useState<any>(null);
     const [autoStartBank, setAutoStartBank] = useState<{ bankName: string; bankEmail?: string; applicationId?: string; applicationNumber?: string } | null>(null);
@@ -911,24 +919,17 @@ export default function StaffDashboardPage() {
                     setTotalItems(Array.isArray(res) ? res.length : 0);
                 }
             } else if (activeSection === "applications") {
-                const offset = (currentPage - 1) * applicationsPerPage;
                 const params: any = {
-                    limit: String(applicationsPerPage),
-                    offset: String(offset),
+                    limit: "1000",
+                    excludeStatus: "submitted",
                 };
-                if (filterStatus !== "all") {
-                    params.status = filterStatus;
-                } else {
-                    params.excludeStatus = "submitted";
-                }
-                if (searchQuery) params.search = searchQuery;
                 res = await adminApi.getApplications(params);
                 if (res && res.data) {
                     setData(res.data);
-                    setTotalItems(res.pagination?.total ?? res.total ?? res.data.length);
+                    setTotalItems(res.data.length);
                 } else {
                     setData(Array.isArray(res) ? res : []);
-                    setTotalItems(Array.isArray(res) ? res.length : 0);
+                    setTotalItems(0);
                 }
             } else if (activeSection === "community") {
                 res = await adminApi.getForumPosts(50);
@@ -2803,13 +2804,41 @@ export default function StaffDashboardPage() {
         }
     };
 
+    const isPaid = (item: any) => {
+        const status = (item.processingFeeStatus || '').toUpperCase();
+        if (status === 'PAID' || status === 'WAIVED') return true;
+        if (Array.isArray(item.ProcessingFee)) {
+            return item.ProcessingFee.some((fee: any) => {
+                const fStatus = (fee.status || '').toUpperCase();
+                return fStatus === 'PAID' || fStatus === 'WAIVED';
+            });
+        }
+        return false;
+    };
+
+    const uniqueCountries = Array.from(
+        new Set(
+            data.map(item => item.country || item.student?.studyDestination || item.studyDestination || item.user?.studyDestination || '').filter(Boolean)
+        )
+    ).sort();
+
+    const showCol = (colId: string) => {
+        return visibleColumns.includes(colId);
+    };
+
+    const clearAllFilters = () => {
+        setFilterCountry("");
+        setFilterPaymentPaid(null);
+        setFilterStatuses([]);
+    };
+
     const filteredData = data.filter(item => {
         const query = searchQuery.toLowerCase();
         if (activeSection === 'blogs') {
             return (item.title?.toLowerCase().includes(query) ||
                 item.authorName?.toLowerCase().includes(query));
         }
-        if (activeSection === 'applications' || activeSection === 'incoming_queue') {
+        if (activeSection === 'incoming_queue') {
             const fName = (item.firstName || item.student?.firstName || '').toLowerCase();
             const lName = (item.lastName || item.student?.lastName || '').toLowerCase();
             const appNum = (item.applicationNumber || '').toLowerCase();
@@ -2817,6 +2846,51 @@ export default function StaffDashboardPage() {
             const bName = (item.bank || item.targetBank || '').toLowerCase();
             const email = (item.email || item.student?.email || '').toLowerCase();
             return (appNum.includes(query) || lanNum.includes(query) || fName.includes(query) || lName.includes(query) || bName.includes(query) || email.includes(query));
+        }
+        if (activeSection === 'applications') {
+            // Text search
+            const fName = (item.firstName || item.student?.firstName || '').toLowerCase();
+            const lName = (item.lastName || item.student?.lastName || '').toLowerCase();
+            const appNum = (item.applicationNumber || '').toLowerCase();
+            const lanNum = (item.lanNumber || '').toLowerCase();
+            const bName = (item.bank || item.targetBank || '').toLowerCase();
+            const email = (item.email || item.student?.email || '').toLowerCase();
+            const matchesQuery = !query || (appNum.includes(query) || lanNum.includes(query) || fName.includes(query) || lName.includes(query) || bName.includes(query) || email.includes(query));
+
+            // School country
+            const country = (item.country || item.student?.studyDestination || item.studyDestination || item.user?.studyDestination || '').toLowerCase();
+            const matchesCountry = !filterCountry || country === filterCountry.toLowerCase();
+
+            // Payment Status
+            let matchesPayment = true;
+            if (filterPaymentPaid !== null) {
+                const paid = isPaid(item);
+                matchesPayment = filterPaymentPaid ? paid : !paid;
+            }
+
+            // Application status checkboxes
+            let matchesStatuses = true;
+            if (filterStatuses.length > 0) {
+                const itemStatus = (item.status || 'draft').toLowerCase();
+                matchesStatuses = filterStatuses.map(s => s.toLowerCase()).includes(itemStatus);
+            }
+
+            // Status dropdown next to search bar
+            let matchesDropdownStatus = true;
+            if (filterStatus !== 'all') {
+                const itemStatus = (item.status || 'draft').toLowerCase();
+                if (filterStatus === 'pending') {
+                    matchesDropdownStatus = itemStatus === 'pending';
+                } else if (filterStatus === 'processing') {
+                    matchesDropdownStatus = itemStatus === 'processing';
+                } else if (filterStatus === 'approved') {
+                    matchesDropdownStatus = ['approved', 'verified', 'disbursed'].includes(itemStatus);
+                } else if (filterStatus === 'rejected') {
+                    matchesDropdownStatus = ['rejected', 'cancelled'].includes(itemStatus);
+                }
+            }
+
+            return matchesQuery && matchesCountry && matchesPayment && matchesStatuses && matchesDropdownStatus;
         }
         if (activeSection === 'users') {
             const fName = (item.firstName || '').toLowerCase();
@@ -2835,10 +2909,10 @@ export default function StaffDashboardPage() {
 
     // Server-side pagination for applications (20 per page)
     const activePageSize = (activeSection === 'applications' || activeSection === 'incoming_queue') ? applicationsPerPage : itemsPerPage;
-    const appsTotalItems = (activeSection === 'applications' || activeSection === 'incoming_queue') ? totalItems : totalItems;
+    const appsTotalItems = activeSection === 'applications' ? filteredData.length : totalItems;
 
-    const pagedData = (activeSection === 'applications' || activeSection === 'incoming_queue')
-        ? filteredData
+    const pagedData = (activeSection === 'applications')
+        ? filteredData.slice((currentPage - 1) * applicationsPerPage, currentPage * applicationsPerPage)
         : filteredData;
 
     const totalPages = (activeSection === 'applications' || activeSection === 'incoming_queue')
@@ -3090,7 +3164,7 @@ export default function StaffDashboardPage() {
                     </div>
 
                     {/* Center: Search */}
-                    <div className="relative hidden md:block">
+                    {/* <div className="relative hidden md:block">
                         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">search</span>
                         <input
                             type="text"
@@ -3099,7 +3173,7 @@ export default function StaffDashboardPage() {
                             placeholder="Search applications, students, IDs..."
                             className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-white rounded-lg text-[12px] focus:outline-none focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 focus:bg-white w-72 transition-all text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-md hover:shadow-sm"
                         />
-                    </div>
+                    </div> */}
 
                     {/* Right: Notifications + User + Logout */}
                     <div className="flex items-center gap-3">
@@ -7296,7 +7370,10 @@ export default function StaffDashboardPage() {
                                 <div className="flex flex-wrap items-center gap-3">
                                     {activeSection === 'applications' && (
                                         <>
-                                            <button className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-700 uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm">
+                                            <button
+                                                onClick={() => setIsFilterPanelOpen(true)}
+                                                className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-slate-700 uppercase tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
+                                            >
                                                 <span className="material-symbols-outlined text-[16px]">filter_alt</span>
                                                 Filters
                                             </button>
