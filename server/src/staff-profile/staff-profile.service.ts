@@ -1221,6 +1221,28 @@ export class StaffProfileService {
           await this.db.from('Notification').insert(notifData);
           this.eventEmitter.emit('notification.created', notifData);
         }
+
+        // Send email to student telling them their application has been processed by staff and sent to the bank
+        try {
+          const { data: latestApp } = await this.db
+            .from('LoanApplication')
+            .select('*, user:User!userId(id, email, firstName, lastName)')
+            .eq('id', application.id)
+            .single();
+
+          if (latestApp) {
+            const email = latestApp.user?.email || latestApp.email;
+            if (email) {
+              const firstName = latestApp.firstName || latestApp.user?.firstName || '';
+              const lastName = latestApp.lastName || latestApp.user?.lastName || '';
+              const userName = `${firstName} ${lastName}`.trim() || 'Student';
+              const bankName = latestApp.bank || body.recipientName || 'our partner bank';
+              await this.emailService.sendApplicationSentToBankEmail(email, userName, bankName, latestApp);
+            }
+          }
+        } catch (err) {
+          console.error('[StaffProfileService] Failed to send application sent to bank email:', err);
+        }
       }
     }
 

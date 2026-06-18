@@ -356,8 +356,8 @@ export class AuthService {
         user = await this.usersService.create({ email });
         console.log(`[AuthService] New user created: ${email}`);
 
-        // Fire-and-forget: send welcome email to new user (non-blocking)
-        void this.emailService.sendWelcomeEmail(email, user.firstName ?? undefined);
+        // NOTE: Welcome email is sent AFTER the user fills /user-details (updateUserDetails),
+        // so it contains their real first name. No email sent here.
 
         // Emit candidate registered event for staff notifications
         this.eventEmitter.emit('candidate.registered', {
@@ -454,8 +454,9 @@ export class AuthService {
           lastName,
         });
         console.log(`[AuthService] New Firebase user created: ${email}`);
-        
-        void this.emailService.sendWelcomeEmail(email, user.firstName ?? undefined);
+
+        // NOTE: Welcome email fires from updateUserDetails (after /user-details form),
+        // so it contains their real name. Skip it here for Firebase users too.
       }
 
       const hasUserDetails = !!(user.firstName && user.lastName && user.phoneNumber && user.dateOfBirth);
@@ -697,6 +698,10 @@ export class AuthService {
       return { success: false, message: 'Please enter a valid date of birth' };
     }
 
+    // Detect if this is the user's first time completing their profile
+    // (existingUser had no firstName before this update)
+    const isFirstProfileCompletion = !existingUser.firstName;
+
     // Update user details
     try {
       const user = await this.usersService.updateUserDetails(
@@ -710,6 +715,12 @@ export class AuthService {
 
       if (!user) {
         return { success: false, message: 'User not found' };
+      }
+
+      // Fire-and-forget: send personalised dashboard welcome email on first profile completion
+      if (isFirstProfileCompletion) {
+        void this.emailService.sendDashboardWelcomeEmail(email, firstName, lastName);
+        console.log(`[AuthService] Dashboard welcome email queued for ${email} (${firstName} ${lastName})`);
       }
 
       return {

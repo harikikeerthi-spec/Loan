@@ -5,6 +5,7 @@ import { SlackService } from './slack.service';
 import { SalesforceService } from './salesforce.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ChatService } from '../chat/chat.service';
+import { EmailService } from '../auth/email.service';
 
 @Injectable()
 export class BankService {
@@ -13,7 +14,8 @@ export class BankService {
     private readonly slack: SlackService,
     private readonly salesforce: SalesforceService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly chatService: ChatService
+    private readonly chatService: ChatService,
+    private readonly emailService: EmailService
   ) { }
 
   private get db() {
@@ -379,6 +381,33 @@ export class BankService {
       .single();
 
     if (updateError) throw updateError;
+
+    // Fetch latest app with user relation to get the registered email and send bank decision email
+    try {
+      const { data: latestApp } = await this.db
+        .from('LoanApplication')
+        .select('*, user:User!userId(id, email, firstName, lastName)')
+        .eq('id', applicationId)
+        .single();
+
+      if (latestApp) {
+        const email = latestApp.user?.email || latestApp.email;
+        if (email) {
+          const firstName = latestApp.firstName || latestApp.user?.firstName || '';
+          const lastName = latestApp.lastName || latestApp.user?.lastName || '';
+          const userName = `${firstName} ${lastName}`.trim() || 'Student';
+          const bankName = latestApp.bank || application.bank || 'our partner bank';
+
+          if (targetStatus === 'sanctioned') {
+            await this.emailService.sendApplicationAcceptedByBankEmail(email, userName, bankName, latestApp, details);
+          } else if (targetStatus === 'rejected') {
+            await this.emailService.sendApplicationRejectedByBankEmail(email, userName, bankName, details.reason || details.remarks || '');
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[BankService.registerDecision] Failed to send bank decision email:', err);
+    }
 
     // Log status history transition
     await this.db.from('ApplicationStatusHistory').insert({

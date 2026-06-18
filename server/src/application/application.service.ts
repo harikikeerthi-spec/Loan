@@ -252,6 +252,34 @@ export class ApplicationService {
       } catch (e) {
         console.error('Failed to emit activity event for application creation:', e);
       }
+
+      // Send loan submission email to the student
+      try {
+        const email = application.user?.email || application.email;
+        if (email) {
+          const firstName = application.firstName || application.user?.firstName || '';
+          const lastName = application.lastName || application.user?.lastName || '';
+          const userName = `${firstName} ${lastName}`.trim() || 'Student';
+          const bankName = application.bank || 'our partner bank';
+          await this.emailService.sendLoanSubmissionEmail(email, userName, bankName, application);
+        }
+      } catch (e) {
+        console.error('Failed to send loan submission email on application creation:', e);
+      }
+
+      // Send loan tracking email to the registered student email
+      try {
+        const registeredEmail = application.user?.email || application.email;
+        if (registeredEmail) {
+          const firstName = application.user?.firstName || application.firstName || '';
+          const lastName = application.user?.lastName || application.lastName || '';
+          const userName = `${firstName} ${lastName}`.trim() || 'Student';
+          const bankName = application.bank || 'our partner bank';
+          await this.emailService.sendLoanTrackingEmail(registeredEmail, userName, bankName, application);
+        }
+      } catch (e) {
+        console.error('Failed to send loan tracking email on application creation:', e);
+      }
     }
 
     return { success: true, data: application, message: 'Application created successfully' };
@@ -301,7 +329,76 @@ export class ApplicationService {
       console.error('Failed to emit events for application submission:', e);
     }
 
+    // Send loan submission email to the student
+    try {
+      const email = application.user?.email || application.email;
+      if (email) {
+        const firstName = application.firstName || application.user?.firstName || '';
+        const lastName = application.lastName || application.user?.lastName || '';
+        const userName = `${firstName} ${lastName}`.trim() || 'Student';
+        const bankName = application.bank || 'our partner bank';
+        await this.emailService.sendLoanSubmissionEmail(email, userName, bankName, application);
+      }
+    } catch (e) {
+      console.error('Failed to send loan submission email on application submission:', e);
+    }
+
+    // Send loan tracking email to the registered student email
+    try {
+      const registeredEmail = application.user?.email || application.email;
+      if (registeredEmail) {
+        const firstName = application.user?.firstName || application.firstName || '';
+        const lastName = application.user?.lastName || application.lastName || '';
+        const userName = `${firstName} ${lastName}`.trim() || 'Student';
+        const bankName = application.bank || 'our partner bank';
+        await this.emailService.sendLoanTrackingEmail(registeredEmail, userName, bankName, application);
+      }
+    } catch (e) {
+      console.error('Failed to send loan tracking email on application submission:', e);
+    }
+
     return { success: true, data: updated, message: 'Application submitted successfully' };
+  }
+
+  async startApplicationReview(applicationId: string) {
+    const now = new Date().toISOString();
+    const { data: updated, error } = await this.db
+      .from('LoanApplication')
+      .update({ reviewStartedAt: now })
+      .eq('id', applicationId)
+      .select('*, user:User!userId(id, email, firstName, lastName, tests)')
+      .single();
+
+    if (error) throw error;
+
+    // Send the email to the student
+    try {
+      const email = updated.user?.email || updated.email;
+      if (email) {
+        const firstName = updated.firstName || updated.user?.firstName || '';
+        const lastName = updated.lastName || updated.user?.lastName || '';
+        const userName = `${firstName} ${lastName}`.trim() || 'Student';
+        await this.emailService.sendStaffReviewStartedEmail(email, userName, updated);
+      }
+    } catch (e) {
+      console.error('Failed to send staff review started email:', e);
+    }
+
+    // Also add to status history
+    try {
+      await this.createStatusHistory(applicationId, {
+        fromStatus: updated.status,
+        toStatus: updated.status,
+        fromStage: updated.stage,
+        toStage: updated.stage,
+        notes: 'VidyaLoan team started review of the application',
+        isAutomatic: true
+      });
+    } catch (e) {
+      console.error('Failed to record review start status history:', e);
+    }
+
+    return updated;
   }
 
   async getApplicationById(applicationId: string) {
@@ -874,6 +971,35 @@ export class ApplicationService {
           createdAt: new Date().toISOString()
         });
       }
+    }
+
+    // Send email notifications to the student on status changes
+    try {
+      const { data: latestApp } = await this.db
+        .from('LoanApplication')
+        .select('*, user:User!userId(id, email, firstName, lastName)')
+        .eq('id', applicationId)
+        .single();
+
+      if (latestApp) {
+        const email = latestApp.user?.email || latestApp.email;
+        if (email) {
+          const firstName = latestApp.firstName || latestApp.user?.firstName || '';
+          const lastName = latestApp.lastName || latestApp.user?.lastName || '';
+          const userName = `${firstName} ${lastName}`.trim() || 'Student';
+          const bankName = latestApp.bank || 'our partner bank';
+
+          if (data.status === 'approved' || data.status === 'sanctioned') {
+            await this.emailService.sendApplicationAcceptedByBankEmail(email, userName, bankName, latestApp, data);
+          } else if (data.status === 'rejected') {
+            await this.emailService.sendApplicationRejectedByBankEmail(email, userName, bankName, data.rejectionReason || data.remarks || '');
+          } else if (data.status === 'submitted_to_bank') {
+            await this.emailService.sendApplicationSentToBankEmail(email, userName, bankName, latestApp);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[ApplicationService.updateApplicationStatus] Failed to send transition email:', err);
     }
 
     return { success: true, data: updated, message: 'Application updated successfully' };

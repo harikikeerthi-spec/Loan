@@ -3400,8 +3400,11 @@ export default function OnboardingPage() {
                 <div className="welcome-screen" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '20px', textAlign: 'center', background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)' }}>
                     <div style={{ maxWidth: '600px', background: 'white', padding: '40px', borderRadius: '24px', boxShadow: '0 10px 30px rgba(0,0,0,0.05)' }}>
                         <div style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #f3e8ff, #ede9fe)', borderRadius: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', boxShadow: '0 8px 24px rgba(124,58,237,0.12)' }}>
-                            <span style={{ fontSize: '40px' }}>🎓</span>
+                            <img src="/images/vidyaloans-logo-transparent.png" alt="VidyaLoans Logo" style={{ width: '56px', height: '56px', objectFit: 'contain' }} />
                         </div>
+                        <h2 style={{ fontSize: '16px', fontWeight: '700', color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>
+                            Welcome, {user?.firstName ? (user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName) : 'Future Student'}! 👋
+                        </h2>
                         <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#1f2937', marginBottom: '12px', lineHeight: 1.3 }}>Looking for answers to your<br /><span style={{ background: 'linear-gradient(135deg,#6605c7,#a855f7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>masters abroad</span> questions?</h1>
                         <p style={{ fontSize: '16px', color: '#6b7280', lineHeight: '1.6', marginBottom: '32px' }}>
                             We've helped over <strong style={{ color: '#7c3aed' }}>2.6 lakh</strong> students across <strong style={{ color: '#7c3aed' }}>18+</strong> countries and <strong style={{ color: '#7c3aed' }}>18,000+</strong> programs. Let's find the right path for you.

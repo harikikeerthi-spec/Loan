@@ -5,7 +5,7 @@ async function inspectSchema() {
     const client = new Client({ connectionString: process.env.DIRECT_URL });
     await client.connect();
     
-    const tables = ['Message'];
+    const tables = ['LoanApplication'];
     
     for (const table of tables) {
         console.log(`\n=================== Columns for: ${table} ===================`);

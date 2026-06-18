@@ -42,9 +42,9 @@ export default function Footer() {
                                 <span className="material-symbols-outlined text-base text-gray-500 group-hover:text-[#6605c7] transition-colors">mail</span>
                                 support@Vidyaloans.in
                             </a>
-                            <a href="tel:+919240209000" className="flex items-center gap-2.5 text-gray-400 hover:text-white text-[13px] transition-colors group">
+                            <a href="tel:+918143797779" className="flex items-center gap-2.5 text-gray-400 hover:text-white text-[13px] transition-colors group">
                                 <span className="material-symbols-outlined text-base text-gray-500 group-hover:text-[#6605c7] transition-colors">call</span>
-                                +91 9240209000
+                                +91 8143797779
                             </a>
                         </div>
                     </div>

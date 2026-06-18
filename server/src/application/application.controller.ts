@@ -459,11 +459,22 @@ export class ApplicationController {
     @Get(':id')
     @UseGuards(UserGuard)
     async getApplicationById(@Request() req, @Param('id') id: string) {
-        const application = await this.applicationService.getApplicationById(id);
+        let application = await this.applicationService.getApplicationById(id);
 
         // Verify ownership (unless admin)
         if (req.user.role !== 'admin' && req.user.role !== 'super_admin' && application.userId !== req.user.id) {
             throw new BadRequestException('Unauthorized to view this application');
+        }
+
+        // Trigger staff review start email if viewed by staff/admin for the first time while status is 'submitted'
+        const isStaff = ['admin', 'super_admin', 'staff', 'support'].includes(req.user.role);
+        if (isStaff && application.status === 'submitted' && !application.reviewStartedAt) {
+            try {
+                const updated = await this.applicationService.startApplicationReview(id);
+                application = { ...application, ...updated };
+            } catch (err) {
+                console.error('Failed to trigger staff review start flow:', err);
+            }
         }
 
         return {
