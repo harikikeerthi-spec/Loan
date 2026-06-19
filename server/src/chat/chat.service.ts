@@ -7,7 +7,7 @@ export class ChatService {
 
   constructor(private readonly supabase: SupabaseService) {}
 
-  private get db() {
+  get db() {
     return this.supabase.getClient();
   }
 
@@ -115,10 +115,11 @@ export class ChatService {
     attachmentType?: string;
     senderName?: string;
   }) {
+    const { senderName, ...insertPayload } = data;
     const { data: message, error } = await this.db
       .from('Message')
       .insert({
-        ...data,
+        ...insertPayload,
         messageType: data.messageType || 'text',
         status: data.status || 'sent'
       })

@@ -41,7 +41,7 @@ export default function BankChatPage() {
             </div>
 
             <div className="flex-1 bg-white/50 backdrop-blur-xl rounded-[3rem] border border-white/20 shadow-2xl shadow-indigo-500/5 overflow-hidden flex flex-col">
-                <ChatInterface role="bank" initialBank={initialBank} className="flex h-full w-full overflow-hidden bg-white/95 text-gray-900 animate-fade-in" />
+                <ChatInterface role="bank" initialBank={initialBank} hideSidebar={!!applicationId} className="flex h-full w-full overflow-hidden bg-white/95 text-gray-900 animate-fade-in" />
             </div>
         </div>
     );

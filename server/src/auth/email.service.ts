@@ -156,7 +156,7 @@ export class EmailService {
   async sendDashboardWelcomeEmail(email: string, firstName?: string, lastName?: string) {
     const fullName = firstName ? (lastName ? `${firstName} ${lastName}` : firstName) : '';
     const name = firstName ? firstName : 'there';
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || '';
     const year = new Date().getFullYear();
 
     const mailOptions = {
@@ -189,15 +189,21 @@ export class EmailService {
               background: linear-gradient(135deg, #1a0533 0%, #2d0a5e 40%, #1e1b6e 100%);
               border-radius: 20px 20px 0 0;
               padding: 36px 40px 28px;
-              text-align: center;
               border-bottom: 1px solid rgba(139,92,246,0.3);
             ">
-              <!-- Logo mark -->
-              <div style="display:inline-block;width:52px;height:52px;margin-bottom:14px;vertical-align:middle;">
-                <img src="${frontendUrl}/images/whastapp_logo.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;" />
-              </div>
-              <h1 style="color:#ffffff;margin:0 0 4px;font-size:28px;font-weight:800;letter-spacing:-0.5px;">VidyaLoan</h1>
-              <p style="color:#a78bfa;margin:0;font-size:12px;letter-spacing:2px;font-weight:600;">EDUCATION LOAN PLATFORM</p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <!-- Left side Logo -->
+                  <td width="60" align="left" style="vertical-align: middle;">
+                    <img src="${frontendUrl}/public/vidyaloan_logo.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;border-radius:10px;" />
+                  </td>
+                  <!-- Middle Text -->
+                  <td align="center" style="vertical-align: middle; padding-right: 60px;">
+                    <h1 style="color:#ffffff;margin:0 0 4px;font-size:28px;font-weight:800;letter-spacing:-0.5px;font-family:'Inter','Segoe UI',Arial,sans-serif;">VidyaLoan</h1>
+                    <p style="color:#a78bfa;margin:0;font-size:12px;letter-spacing:2px;font-weight:600;font-family:'Inter','Segoe UI',Arial,sans-serif;text-transform:uppercase;">EDUCATION LOAN PLATFORM</p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
@@ -208,7 +214,6 @@ export class EmailService {
               padding: 40px 40px 36px;
               text-align: center;
             ">
-              <p style="margin:0 0 8px;font-size:42px;">🎉</p>
               <h2 style="color:#ffffff;margin:0 0 10px;font-size:26px;font-weight:800;line-height:1.2;">
                 Welcome aboard, <span style="color:#fde68a;">${name}!</span>
               </h2>
@@ -583,6 +588,93 @@ export class EmailService {
                 <tr>
                   <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:14px;">Requested Principal</td>
                   <td style="padding:10px 0;border-bottom:1px solid #f3f4f6;color:#6605c7;font-weight:700;font-size:14px;">${amount}</td>
+                </tr>
+              </table>
+
+              <!-- Progress bar container -->
+              <div style="background:#f3f4f6; border-radius:10px; height:8px; width:100%; margin:28px 0 12px; overflow:hidden;">
+                <div style="background:linear-gradient(to right, #6605c7, #8b5cf6); height:100%; width:30%; border-radius:10px;"></div>
+              </div>
+              <p style="color:#4b5563; font-size:12px; font-weight:600; margin:0 0 28px; text-align:right;">
+                Overall Progress: 30% completed
+              </p>
+
+              <!-- Timeline -->
+              <h3 style="color:#1e1b4b;font-size:16px;font-weight:700;margin:28px 0 20px;border-bottom:2px solid #f3f4f6;padding-bottom:8px;">
+                📍 Tracking Pipeline
+              </h3>
+              
+              <table cellpadding="0" cellspacing="0" width="100%" style="margin-bottom:28px;">
+                <!-- Step 1 -->
+                <tr>
+                  <td valign="top" style="width: 32px; text-align: center;">
+                    <div style="background-color: #059669; color: #ffffff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; display: inline-block;">✓</div>
+                    <div style="width: 2px; height: 35px; background-color: #059669; margin: 4px auto;"></div>
+                  </td>
+                  <td valign="top" style="padding-left: 12px; padding-bottom: 24px;">
+                    <span style="color: #111827; font-weight: 700; font-size: 14px; display: block;">Application Submitted</span>
+                    <span style="color: #059669; font-size: 11px; font-weight: 600; text-transform: uppercase;">Completed</span>
+                    <p style="color: #6b7280; font-size: 12px; margin: 4px 0 0; line-height: 1.4;">Your application has been received and registered under number #${appNum}.</p>
+                  </td>
+                </tr>
+                <!-- Step 2 -->
+                <tr>
+                  <td valign="top" style="width: 32px; text-align: center;">
+                    <div style="background-color: #8b5cf6; color: #ffffff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; display: inline-block;">2</div>
+                    <div style="width: 2px; height: 35px; background-color: #e5e7eb; margin: 4px auto;"></div>
+                  </td>
+                  <td valign="top" style="padding-left: 12px; padding-bottom: 24px;">
+                    <span style="color: #111827; font-weight: 700; font-size: 14px; display: block;">VidyaLoan Review</span>
+                    <span style="color: #8b5cf6; font-size: 11px; font-weight: 600; text-transform: uppercase;">Active Review</span>
+                    <p style="color: #6b7280; font-size: 12px; margin: 4px 0 0; line-height: 1.4;">Our team is actively reviewing your qualifications and matching your profile with loan structures.</p>
+                  </td>
+                </tr>
+                <!-- Step 3 -->
+                <tr>
+                  <td valign="top" style="width: 32px; text-align: center;">
+                    <div style="background-color: #f3f4f6; color: #9ca3af; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; display: inline-block;">3</div>
+                    <div style="width: 2px; height: 35px; background-color: #e5e7eb; margin: 4px auto;"></div>
+                  </td>
+                  <td valign="top" style="padding-left: 12px; padding-bottom: 24px;">
+                    <span style="color: #9ca3af; font-weight: 600; font-size: 14px; display: block;">Credit Check</span>
+                    <span style="color: #9ca3af; font-size: 11px; font-weight: 600; text-transform: uppercase;">Pending</span>
+                    <p style="color: #9ca3af; font-size: 12px; margin: 4px 0 0; line-height: 1.4;">System performs background financial and credit score checks.</p>
+                  </td>
+                </tr>
+                <!-- Step 4 -->
+                <tr>
+                  <td valign="top" style="width: 32px; text-align: center;">
+                    <div style="background-color: #f3f4f6; color: #9ca3af; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; display: inline-block;">4</div>
+                    <div style="width: 2px; height: 35px; background-color: #e5e7eb; margin: 4px auto;"></div>
+                  </td>
+                  <td valign="top" style="padding-left: 12px; padding-bottom: 24px;">
+                    <span style="color: #9ca3af; font-weight: 600; font-size: 14px; display: block;">Bank Review</span>
+                    <span style="color: #9ca3af; font-size: 11px; font-weight: 600; text-transform: uppercase;">Pending</span>
+                    <p style="color: #9ca3af; font-size: 12px; margin: 4px 0 0; line-height: 1.4;">Our partner bank will review the details for eligibility.</p>
+                  </td>
+                </tr>
+                <!-- Step 5 -->
+                <tr>
+                  <td valign="top" style="width: 32px; text-align: center;">
+                    <div style="background-color: #f3f4f6; color: #9ca3af; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; display: inline-block;">5</div>
+                    <div style="width: 2px; height: 35px; background-color: #e5e7eb; margin: 4px auto;"></div>
+                  </td>
+                  <td valign="top" style="padding-left: 12px; padding-bottom: 24px;">
+                    <span style="color: #9ca3af; font-weight: 600; font-size: 14px; display: block;">Sanction Offer</span>
+                    <span style="color: #9ca3af; font-size: 11px; font-weight: 600; text-transform: uppercase;">Pending</span>
+                    <p style="color: #9ca3af; font-size: 12px; margin: 4px 0 0; line-height: 1.4;">Official sanction letter is issued with specific loan interest rate & terms.</p>
+                  </td>
+                </tr>
+                <!-- Step 6 -->
+                <tr>
+                  <td valign="top" style="width: 32px; text-align: center;">
+                    <div style="background-color: #f3f4f6; color: #9ca3af; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; display: inline-block;">6</div>
+                  </td>
+                  <td valign="top" style="padding-left: 12px;">
+                    <span style="color: #9ca3af; font-weight: 600; font-size: 14px; display: block;">Disbursement</span>
+                    <span style="color: #9ca3af; font-size: 11px; font-weight: 600; text-transform: uppercase;">Pending</span>
+                    <p style="color: #9ca3af; font-size: 12px; margin: 4px 0 0; line-height: 1.4;">Funds are transferred directly to the educational institution.</p>
+                  </td>
                 </tr>
               </table>
 

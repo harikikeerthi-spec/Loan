@@ -73,6 +73,41 @@ const NotificationsPanel = ({
         textColor: "text-purple-700",
         badge: "bg-purple-500",
       },
+      application_approved: {
+        icon: "check_circle",
+        bgColor: "bg-emerald-50",
+        borderColor: "border-emerald-200",
+        textColor: "text-emerald-700",
+        badge: "bg-emerald-500",
+      },
+      application_conditional: {
+        icon: "rule",
+        bgColor: "bg-amber-50",
+        borderColor: "border-amber-200",
+        textColor: "text-amber-700",
+        badge: "bg-amber-500",
+      },
+      application_counter: {
+        icon: "compare_arrows",
+        bgColor: "bg-violet-50",
+        borderColor: "border-violet-200",
+        textColor: "text-violet-750",
+        badge: "bg-violet-500",
+      },
+      application_rejected: {
+        icon: "cancel",
+        bgColor: "bg-rose-50",
+        borderColor: "border-rose-200",
+        textColor: "text-rose-700",
+        badge: "bg-rose-500",
+      },
+      query_raised: {
+        icon: "help_center",
+        bgColor: "bg-sky-50",
+        borderColor: "border-sky-200",
+        textColor: "text-sky-700",
+        badge: "bg-sky-500",
+      },
       default: {
         icon: "notifications",
         bgColor: "bg-slate-50",
@@ -267,7 +302,7 @@ const NotificationsPanel = ({
           const appNum = appNumMatch[0];
           console.log(`[NotificationsPanel] Parsed application number ${appNum} from notification, fetching ID...`);
           const appsRes = await adminApi.getApplications({ search: appNum }) as any;
-          const foundApp = appsRes.data?.find((a: any) => 
+          const foundApp = appsRes.data?.find((a: any) =>
             a.applicationNumber?.toLowerCase() === appNum.toLowerCase()
           );
           if (foundApp) {
@@ -276,7 +311,7 @@ const NotificationsPanel = ({
         } else if (email) {
           console.log(`[NotificationsPanel] Parsed email ${email} from notification, fetching user ID...`);
           const usersRes = await adminApi.getUsers(20, 0, email) as any;
-          const foundUser = usersRes.items?.find((u: any) => 
+          const foundUser = usersRes.items?.find((u: any) =>
             u.email?.toLowerCase() === email.toLowerCase()
           );
           if (foundUser) {
@@ -290,7 +325,7 @@ const NotificationsPanel = ({
         console.log(`[NotificationsPanel] Attempting to find application by searching user email: ${email}`);
         const appsRes = await adminApi.getApplications({ search: email }) as any;
         if (appsRes.success && Array.isArray(appsRes.data) && appsRes.data.length > 0) {
-          const sorted = [...appsRes.data].sort((a: any, b: any) => 
+          const sorted = [...appsRes.data].sort((a: any, b: any) =>
             new Date(b.updatedAt || b.submittedAt || 0).getTime() - new Date(a.updatedAt || a.submittedAt || 0).getTime()
           );
           appId = sorted[0].id || sorted[0]._id;
@@ -359,9 +394,8 @@ const NotificationsPanel = ({
 
         {/* Connection indicator */}
         <div
-          className={`absolute bottom-1 right-1 w-2 h-2 rounded-full ${
-            isConnected ? "bg-emerald-500" : "bg-slate-300"
-          }`}
+          className={`absolute bottom-1 right-1 w-2 h-2 rounded-full ${isConnected ? "bg-emerald-500" : "bg-slate-300"
+            }`}
         />
       </button>
 
@@ -604,11 +638,10 @@ const NotificationsPanel = ({
                     <button
                       key={tab.id}
                       onClick={() => setSelectedFilter(tab.id as any)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-                        selectedFilter === tab.id
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${selectedFilter === tab.id
                           ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/10"
                           : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
-                      }`}
+                        }`}
                     >
                       {tab.label}
                     </button>
@@ -630,11 +663,10 @@ const NotificationsPanel = ({
                             handleNotificationClick(notif);
                             setIsAllModalOpen(false);
                           }}
-                          className={`p-4 bg-white rounded-2xl border transition-all cursor-pointer hover:shadow-md flex gap-4 ${
-                            notif.isRead
+                          className={`p-4 bg-white rounded-2xl border transition-all cursor-pointer hover:shadow-md flex gap-4 ${notif.isRead
                               ? "border-slate-100 opacity-75 hover:opacity-100"
                               : `border-slate-200 hover:border-slate-300 shadow-sm relative overflow-hidden`
-                          }`}
+                            }`}
                         >
                           {/* Unread dot indicator on the left side edge */}
                           {!notif.isRead && (

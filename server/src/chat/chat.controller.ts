@@ -89,27 +89,66 @@ export class ChatController {
       return { success: false, error: 'bankName is required' };
     }
 
+    // Normalize bankName to match session mappings
+    let bankName = body.bankName;
+    const BANK_NAME_MAP: Record<string, string> = {
+      auxilo: "Auxilo Finserve",
+      avanse: "Avanse Financial",
+      credila: "HDFC Credila",
+      idfc: "IDFC FIRST Bank",
+      poonawalla: "Poonawalla Fincorp",
+    };
+    const lower = bankName.toLowerCase().trim();
+    for (const [key, val] of Object.entries(BANK_NAME_MAP)) {
+      if (lower.includes(key)) {
+        bankName = val;
+        break;
+      }
+    }
+
     // Create a stable synthetic phone identifier for this bank channel
     // Using a format that won't conflict with real phone numbers
-    const safeBank = body.bankName.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+    const safeBank = bankName.toUpperCase().replace(/[^A-Z0-9]/g, '_');
     const syntheticPhone = body.applicationId
       ? `BNK_${safeBank}_APP_${body.applicationId}`
       : `BNK_${safeBank}`;
 
-    const shortAppId = body.applicationNumber || (body.applicationId ? body.applicationId.slice(0, 8) : '');
+    let studentName = '';
+    let appNumber = body.applicationNumber || '';
+
+    if (body.applicationId) {
+      try {
+        const { data: application } = await this.chatService.db
+          .from('LoanApplication')
+          .select('firstName, lastName, applicationNumber')
+          .eq('id', body.applicationId)
+          .single();
+        if (application) {
+          studentName = `${application.firstName || ''} ${application.lastName || ''}`.trim();
+          if (!appNumber && application.applicationNumber) {
+            appNumber = application.applicationNumber;
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch student name for bank conversation:', err);
+      }
+    }
+
+    const shortAppId = appNumber || (body.applicationId ? body.applicationId.slice(0, 8) : '');
     const displayName = body.applicationId
-      ? `${body.bankName} - App #${shortAppId}`
-      : `${body.bankName} (Bank)`;
+      ? `${bankName} - App #${shortAppId}`
+      : `${bankName} (Bank)`;
 
     const conversation = await this.chatService.getOrCreateConversation(
       syntheticPhone,
       body.bankEmail || `bank+${safeBank.toLowerCase()}@internal`,
       'bank',
       displayName,
-      body.bankName,
+      bankName,
       {
         applicationId: body.applicationId || null,
-        applicationNumber: body.applicationNumber || null,
+        applicationNumber: appNumber || null,
+        studentName: studentName || null,
       }
     );
 

@@ -3179,19 +3179,15 @@ export default function StaffDashboardPage() {
                     <div className="flex items-center gap-3">
                         {/* Real-time Sync Timer */}
                         <div className="hidden lg:flex items-center gap-4 border-r border-slate-200 pr-4">
-                            {/* <div className="flex items-center gap-2">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                <span className="text-[14px] font-black text-emerald-600 uppercase tracking-widest">Active System</span>
-                            </div> */}
                             <div className="flex items-center gap-1.5 text-[14px] text-black-600 font-bold uppercase tracking-widest font-mono">
                                 {/* <span className="material-symbols-outlined text-[13px]">sync</span> */}
                                 <span>Sync: {format(nowTime, 'MMM dd, HH:mm:ss')}</span>
                             </div>
                         </div>
 
-                        <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded transition-all" onClick={() => setSidebarOpen(!sidebarOpen)}>
+                        {/* <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded transition-all" onClick={() => setSidebarOpen(!sidebarOpen)}>
                             <span className="material-symbols-outlined text-[20px]">menu</span>
-                        </button>
+                        </button> */}
                         <NotificationsPanel
                             staffId={user?.id}
                             maxDisplay={8}

@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, differenceInDays, parseISO } from "date-fns";
-import { adminApi } from "@/lib/api";
+import { adminApi, bankApi } from "@/lib/api";
 import { DataTable, StatusBadge, PriorityTag } from "@/components/bank/SharedUI";
 import { useRouter } from "next/navigation";
 
@@ -32,7 +32,7 @@ export default function ApplicationManagement() {
     const [sanctionLetterUrl, setSanctionLetterUrl] = useState("");
     const [conditions, setConditions] = useState("");
     const [rejectionReason, setRejectionReason] = useState("");
-    
+
     // Counter offer terms
     const [counterAmount, setCounterAmount] = useState("");
     const [counterRate, setCounterRate] = useState("");
@@ -141,13 +141,36 @@ export default function ApplicationManagement() {
         }
     }, [selectedApp]);
 
+    const fetchSelectedAppDetails = async (appId: string) => {
+        try {
+            const [appRes, docsRes]: [any, any] = await Promise.all([
+                bankApi.getFileDetail(appId),
+                bankApi.getDocuments(appId)
+            ]);
+            if (appRes) {
+                setSelectedApp({
+                    ...appRes,
+                    documents: docsRes || [],
+                    statusHistory: appRes.statusHistory || []
+                });
+            }
+        } catch (err) {
+            console.error("Failed to fetch full application details:", err);
+        }
+    };
+
+    // Fetch full application details (with complete documents) when selected
+    useEffect(() => {
+        if (selectedApp && !selectedApp.statusHistory) {
+            fetchSelectedAppDetails(selectedApp.id);
+        }
+    }, [selectedApp]);
+
     // Handle updates in background or polling
     const handleRefresh = () => {
         fetchApplications(currentBankId);
         if (selectedApp) {
-            adminApi.getApplication(selectedApp.id).then((res: any) => {
-                if (res && res.success) setSelectedApp(res.data);
-            });
+            fetchSelectedAppDetails(selectedApp.id);
         }
     };
 
@@ -168,11 +191,11 @@ export default function ApplicationManagement() {
     // Filter applications
     const filteredApps = useMemo(() => {
         return applications.filter(app => {
-            const matchesSearch = 
+            const matchesSearch =
                 (app.applicationNumber || "").toLowerCase().includes(search.toLowerCase()) ||
                 (`${app.firstName || ""} ${app.lastName || ""}`).toLowerCase().includes(search.toLowerCase()) ||
                 (app.email || "").toLowerCase().includes(search.toLowerCase());
-            
+
             if (!matchesSearch) return false;
 
             if (selectedTagFilter) {
@@ -241,7 +264,7 @@ export default function ApplicationManagement() {
 
         try {
             const remarkText = `[Bank System - Logged]: Assigned LAN: ${lanNumber.trim()} (Priority: ${priority.toUpperCase()}) to officer ${assignedOfficer}`;
-            const mergedRemarks = selectedApp.remarks 
+            const mergedRemarks = selectedApp.remarks
                 ? `${selectedApp.remarks}\n${remarkText}`
                 : remarkText;
 
@@ -271,46 +294,81 @@ export default function ApplicationManagement() {
         if (!selectedApp) return;
 
         try {
-            let payload: any = {};
+            let res: any;
             if (decisionType === "sanctioned") {
-                payload = {
-                    status: "approved",
-                    stage: "sanction",
-                    progress: 90,
-                    approvedAt: new Date().toISOString(),
-                    sanctionAmount: sanctionAmount ? parseFloat(sanctionAmount) : selectedApp.amount,
-                    sanctionedInterestRate: sanctionedInterestRate ? parseFloat(sanctionedInterestRate) : null,
-                    roiType,
-                    roiBase: roiBase ? parseFloat(roiBase) : null,
-                    roiSubsidy: roiSubsidy ? parseFloat(roiSubsidy) : null,
-                    roiEffective: roiEffective ? parseFloat(roiEffective) : null,
-                    processingFee: processingFee ? parseFloat(processingFee) : null,
-                    sanctionDate: new Date().toISOString(),
-                    sanctionExpiry: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(), // 6 months
-                    sanctionLetterUrl: sanctionLetterUrl.trim() || "/docs/mock-sanction.pdf"
+                const sanctionVal = parseFloat(sanctionAmount) || selectedApp.amount;
+                const roiBaseVal = parseFloat(roiBase) || parseFloat(sanctionedInterestRate) || 9.5;
+                const roiEffectiveVal = parseFloat(roiEffective) || roiBaseVal;
+                const roiSubsidyVal = parseFloat(roiSubsidy) || 0;
+
+                // 1. Set ROI
+                await bankApi.setRoi(selectedApp.id, {
+                    roiType: roiType,
+                    roiBase: roiBaseVal,
+                    roiEffective: roiEffectiveVal,
+                    roiSubsidy: roiSubsidyVal
+                }).catch(err => console.error("Error setting ROI:", err));
+
+                // 2. Set Processing Fee
+                const feeAmt = parseFloat(processingFee) || 0;
+                const gst = Math.round(feeAmt * 0.18);
+                const totalFee = feeAmt + gst;
+                const feePayload = {
+                    feeAmount: feeAmt,
+                    gstAmount: gst,
+                    totalAmount: totalFee,
+                    status: 'PENDING',
+                    paymentMode: 'UPFRONT',
+                    waiverReason: null
                 };
+                await bankApi.setProcessingFee(selectedApp.id, feePayload).catch(async () => {
+                    await bankApi.updateProcessingFee(selectedApp.id, feePayload).catch(err => console.error("Error updating fee:", err));
+                });
+
+                // 3. Upload Sanction Letter if provided
+                if (sanctionLetterUrl.trim()) {
+                    await bankApi.uploadSanctionLetter(selectedApp.id, sanctionLetterUrl.trim()).catch(err => console.error("Error uploading sanction letter:", err));
+                }
+
+                // 4. Submit Decision
+                res = await bankApi.submitDecision({
+                    applicationId: selectedApp.id,
+                    decisionType: "sanction",
+                    details: {
+                        sanctionAmount: sanctionVal,
+                        interestRate: roiEffectiveVal,
+                        roiType: roiType,
+                        tenure: 120,
+                        remarks: `Sanctioned with ROI: ${roiEffectiveVal}%, processing fee: ₹${totalFee}`
+                    }
+                });
             } else if (decisionType === "rejected") {
-                payload = {
-                    status: "rejected",
-                    rejectedAt: new Date().toISOString(),
-                    progress: 0,
-                    rejectionReason: rejectionReason.trim() || "Does not meet standard credit score criteria"
-                };
+                res = await bankApi.submitDecision({
+                    applicationId: selectedApp.id,
+                    decisionType: "reject",
+                    details: {
+                        reason: rejectionReason.trim() || "Does not meet standard credit score criteria",
+                        rejectionCategory: "POLICY",
+                        remarks: rejectionReason.trim()
+                    }
+                });
             } else if (decisionType === "conditional") {
-                payload = {
-                    status: "processing",
-                    stage: "conditional_sanction",
-                    remarks: `Conditional Sanction raised: ${conditions}`
-                };
+                res = await bankApi.conditionalSanction({
+                    applicationId: selectedApp.id,
+                    conditions: [conditions],
+                    deadline: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+                    remarks: `Conditional Sanction: ${conditions}`
+                });
             } else if (decisionType === "counter") {
-                payload = {
-                    status: "processing",
-                    stage: "counter_offer",
+                res = await bankApi.counterOffer({
+                    applicationId: selectedApp.id,
+                    offeredAmount: parseFloat(counterAmount),
+                    offeredRate: parseFloat(counterRate),
+                    offeredTenure: parseInt(counterTenure),
                     remarks: `Counter Offer proposed: Amount ₹${counterAmount}, Rate ${counterRate}%, Tenure ${counterTenure} months`
-                };
+                });
             }
 
-            const res: any = await adminApi.updateApplication(selectedApp.id, payload);
             if (res && res.success) {
                 setShowDecisionModal(false);
                 // Clear form fields
@@ -325,7 +383,7 @@ export default function ApplicationManagement() {
                 setCounterAmount("");
                 setCounterRate("");
                 setCounterTenure("");
-                
+
                 handleRefresh();
             }
         } catch (err) {
@@ -336,8 +394,8 @@ export default function ApplicationManagement() {
 
     const handleAddTag = async (tag: string) => {
         if (!selectedApp || !tag.trim()) return;
-        const currentTags: string[] = selectedApp.tags 
-            ? selectedApp.tags.split(",").map((t: string) => t.trim()).filter((t: string) => !!t) 
+        const currentTags: string[] = selectedApp.tags
+            ? selectedApp.tags.split(",").map((t: string) => t.trim()).filter((t: string) => !!t)
             : [];
         if (currentTags.includes(tag.trim())) return;
         const updated = [...currentTags, tag.trim()].join(",");
@@ -354,8 +412,8 @@ export default function ApplicationManagement() {
 
     const handleRemoveTag = async (tagToRemove: string) => {
         if (!selectedApp) return;
-        const currentTags: string[] = selectedApp.tags 
-            ? selectedApp.tags.split(",").map((t: string) => t.trim()).filter((t: string) => !!t) 
+        const currentTags: string[] = selectedApp.tags
+            ? selectedApp.tags.split(",").map((t: string) => t.trim()).filter((t: string) => !!t)
             : [];
         const updated = currentTags.filter((t: string) => t !== tagToRemove).join(",");
         try {
@@ -393,10 +451,10 @@ export default function ApplicationManagement() {
 
         try {
             // update remarks in database
-            const mergedRemarks = selectedApp.remarks 
+            const mergedRemarks = selectedApp.remarks
                 ? `${selectedApp.remarks}\n[Bank Note - ${format(new Date(), 'MMM dd, HH:mm')}]: ${newRemark.trim()}`
                 : `[Bank Note - ${format(new Date(), 'MMM dd, HH:mm')}]: ${newRemark.trim()}`;
-            
+
             const res: any = await adminApi.updateApplication(selectedApp.id, { remarks: mergedRemarks });
             if (res && res.success) {
                 setNewRemark("");
@@ -415,7 +473,7 @@ export default function ApplicationManagement() {
     return (
         <div className="min-h-screen p-8 lg:p-12 transition-all duration-300">
             <div className="max-w-7xl mx-auto space-y-8">
-                
+
                 {/* Header */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6">
                     <div>
@@ -438,9 +496,9 @@ export default function ApplicationManagement() {
                             ))}
                         </select>
                         <div className="relative flex-1 lg:flex-none">
-                            <input 
-                                type="text" 
-                                placeholder="Search by name, ID..." 
+                            <input
+                                type="text"
+                                placeholder="Search by name, ID..."
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="pl-12 pr-6 py-3 w-full lg:w-72 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-[#6605c7] focus:ring-4 focus:ring-[#6605c7]/5 shadow-sm transition-all"
@@ -453,52 +511,48 @@ export default function ApplicationManagement() {
                 {/* Pipeline Tabs */}
                 <div className="bg-white/80 backdrop-blur-xl rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/20 overflow-hidden">
                     <div className="p-4 border-b border-gray-100 flex flex-wrap gap-4">
-                        <button 
+                        <button
                             onClick={() => setActiveTab("incoming")}
-                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
-                                activeTab === "incoming" 
-                                    ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25" 
+                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === "incoming"
+                                    ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25"
                                     : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-                            }`}
+                                }`}
                         >
                             <span>Incoming Files</span>
                             <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${activeTab === "incoming" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
                                 {tabCounts.incoming}
                             </span>
                         </button>
-                        <button 
+                        <button
                             onClick={() => setActiveTab("active")}
-                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
-                                activeTab === "active" 
-                                    ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25" 
+                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === "active"
+                                    ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25"
                                     : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-                            }`}
+                                }`}
                         >
                             <span>Logged / Review</span>
                             <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${activeTab === "active" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
                                 {tabCounts.active}
                             </span>
                         </button>
-                        <button 
+                        <button
                             onClick={() => setActiveTab("sanctioned")}
-                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
-                                activeTab === "sanctioned" 
-                                    ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25" 
+                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === "sanctioned"
+                                    ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25"
                                     : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-                            }`}
+                                }`}
                         >
                             <span>Sanctioned Queue</span>
                             <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${activeTab === "sanctioned" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
                                 {tabCounts.sanctioned}
                             </span>
                         </button>
-                        <button 
+                        <button
                             onClick={() => setActiveTab("rejected")}
-                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
-                                activeTab === "rejected" 
-                                    ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25" 
+                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === "rejected"
+                                    ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25"
                                     : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-                            }`}
+                                }`}
                         >
                             <span>Rejected Queue</span>
                             <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${activeTab === "rejected" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
@@ -506,7 +560,7 @@ export default function ApplicationManagement() {
                             </span>
                         </button>
                     </div>
-                    
+
                     {/* List Content */}
                     <div className="p-8">
                         {loading ? (
@@ -646,9 +700,9 @@ export default function ApplicationManagement() {
                 {selectedApp && (
                     <>
                         {/* Backdrop */}
-                        <div 
-                            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40" 
-                            onClick={() => setSelectedApp(null)} 
+                        <div
+                            className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
+                            onClick={() => setSelectedApp(null)}
                         />
                         {/* Drawer body */}
                         <motion.div
@@ -672,8 +726,8 @@ export default function ApplicationManagement() {
                                             {selectedApp.email} ┬╖ {selectedApp.phone || "No phone added"}
                                         </p>
                                     </div>
-                                    <button 
-                                        onClick={() => setSelectedApp(null)} 
+                                    <button
+                                        onClick={() => setSelectedApp(null)}
                                         className="w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:text-rose-500 hover:bg-rose-50 transition-all"
                                     >
                                         <span className="material-symbols-outlined text-lg">close</span>
@@ -721,7 +775,7 @@ export default function ApplicationManagement() {
                                     {selectedApp.documents && selectedApp.documents.length > 0 ? (
                                         <div className="space-y-2">
                                             {selectedApp.documents.map((doc: any) => (
-                                                <div 
+                                                <div
                                                     key={doc.id}
                                                     className="flex justify-between items-center p-3 rounded-xl border border-gray-100 bg-white shadow-sm hover:border-[#6605c7]/10 transition-all"
                                                 >
@@ -736,9 +790,9 @@ export default function ApplicationManagement() {
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <a 
-                                                        href={`/api/applications/admin/documents/${doc.id}/view`} 
-                                                        target="_blank" 
+                                                    <a
+                                                        href={`/api/applications/admin/${selectedApp.id}/documents/${doc.id}/view`}
+                                                        target="_blank"
                                                         rel="noreferrer"
                                                         className="px-3 py-1.5 bg-gray-50 border border-gray-100 text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-[#6605c7]/5 hover:text-[#6605c7] hover:border-[#6605c7]/10 transition-all flex items-center gap-1"
                                                     >
@@ -791,13 +845,12 @@ export default function ApplicationManagement() {
                                                     </div>
                                                 </div>
 
-                                                <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                                                    aiReview.recommendation === 'approve' 
-                                                        ? 'bg-emerald-100 text-emerald-800' 
-                                                        : aiReview.recommendation === 'reject' 
-                                                            ? 'bg-rose-100 text-rose-800' 
+                                                <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${aiReview.recommendation === 'approve'
+                                                        ? 'bg-emerald-100 text-emerald-800'
+                                                        : aiReview.recommendation === 'reject'
+                                                            ? 'bg-rose-100 text-rose-800'
                                                             : 'bg-amber-100 text-amber-800'
-                                                }`}>
+                                                    }`}>
                                                     {aiReview.recommendation?.replace('_', ' ')}
                                                 </span>
                                             </div>
@@ -816,13 +869,12 @@ export default function ApplicationManagement() {
                                                     <div className="grid grid-cols-1 gap-1.5">
                                                         {aiReview.eligibilityFlags.map((flagObj: any, i: number) => (
                                                             <div key={i} className="flex items-start gap-2 bg-white/40 p-2 rounded-lg border border-[#6605c7]/5">
-                                                                <span className={`material-symbols-outlined text-sm mt-0.5 ${
-                                                                    flagObj.status === 'pass' 
-                                                                        ? 'text-emerald-500' 
-                                                                        : flagObj.status === 'fail' 
-                                                                            ? 'text-rose-500' 
+                                                                <span className={`material-symbols-outlined text-sm mt-0.5 ${flagObj.status === 'pass'
+                                                                        ? 'text-emerald-500'
+                                                                        : flagObj.status === 'fail'
+                                                                            ? 'text-rose-500'
                                                                             : 'text-amber-500'
-                                                                }`}>
+                                                                    }`}>
                                                                     {flagObj.status === 'pass' ? 'check_circle' : flagObj.status === 'fail' ? 'cancel' : 'warning'}
                                                                 </span>
                                                                 <div>
@@ -888,13 +940,13 @@ export default function ApplicationManagement() {
                                     <div className="flex flex-wrap gap-1.5 mb-2">
                                         {selectedApp.tags ? (
                                             selectedApp.tags.split(",").map((t: string) => t.trim()).filter(Boolean).map((tag: string) => (
-                                                <span 
-                                                    key={tag} 
+                                                <span
+                                                    key={tag}
                                                     className="inline-flex items-center gap-1 text-[10px] bg-purple-50 text-purple-700 font-bold px-2 py-0.5 rounded-full border border-purple-100"
                                                 >
                                                     {tag}
-                                                    <button 
-                                                        type="button" 
+                                                    <button
+                                                        type="button"
                                                         onClick={() => handleRemoveTag(tag)}
                                                         className="text-purple-400 hover:text-rose-500 font-bold ml-0.5 transition-colors focus:outline-none text-[11px]"
                                                     >
@@ -907,7 +959,7 @@ export default function ApplicationManagement() {
                                         )}
                                     </div>
                                     <div className="flex gap-2">
-                                        <input 
+                                        <input
                                             type="text"
                                             placeholder="Add tag..."
                                             value={newTagInput}
@@ -923,7 +975,7 @@ export default function ApplicationManagement() {
                                             }}
                                             className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
                                         />
-                                        <button 
+                                        <button
                                             type="button"
                                             onClick={() => {
                                                 if (newTagInput.trim()) {
@@ -957,14 +1009,14 @@ export default function ApplicationManagement() {
 
                                     {/* Add note form */}
                                     <form onSubmit={handleAddRemark} className="flex gap-2">
-                                        <input 
+                                        <input
                                             type="text"
                                             placeholder="Write internal note to staff..."
                                             value={newRemark}
                                             onChange={(e) => setNewRemark(e.target.value)}
                                             className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-xs focus:outline-none focus:border-[#6605c7] shadow-sm transition-all"
                                         />
-                                        <button 
+                                        <button
                                             type="submit"
                                             disabled={remarksLoading}
                                             className="px-4 py-2 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-gray-800 shadow-md transition-all flex items-center justify-center shrink-0"
@@ -979,7 +1031,7 @@ export default function ApplicationManagement() {
                             <div className="border-t border-gray-100 pt-6 flex flex-col gap-3 mt-6">
                                 <div className="flex gap-4">
                                     {!selectedApp.lanNumber ? (
-                                        <button 
+                                        <button
                                             onClick={() => setShowLanModal(true)}
                                             className="flex-1 py-4 bg-[#6605c7] text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-purple-500/20 hover:bg-[#5203a4] transition-all flex items-center justify-center gap-2"
                                         >
@@ -988,7 +1040,7 @@ export default function ApplicationManagement() {
                                     ) : (
                                         <>
                                             {selectedApp.status !== "approved" && selectedApp.status !== "disbursed" && selectedApp.status !== "rejected" && (
-                                                <button 
+                                                <button
                                                     onClick={() => {
                                                         setSanctionAmount(selectedApp.amount.toString());
                                                         setShowDecisionModal(true);
@@ -1001,7 +1053,7 @@ export default function ApplicationManagement() {
                                         </>
                                     )}
                                 </div>
-                                <button 
+                                <button
                                     onClick={() => router.push(`/bank/chat?applicationId=${selectedApp.id}&applicationNumber=${selectedApp.applicationNumber || ''}`)}
                                     className="w-full py-3.5 bg-white hover:bg-gray-50 border border-gray-200 text-[#6605c7] rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-sm"
                                 >
@@ -1026,13 +1078,13 @@ export default function ApplicationManagement() {
                         >
                             <h3 className="text-xl font-black text-gray-900 mb-2 uppercase tracking-tight">Log File & Assign LAN</h3>
                             <p className="text-xs text-gray-400 mb-6 font-bold uppercase tracking-wider">Acknowledge receipt and assign the bank's internal Loan Account Number.</p>
-                            
+
                             <form onSubmit={handleLogFile} className="space-y-5">
                                 {/* LAN Number */}
                                 <div>
                                     <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-2">Loan Account Number (LAN)</label>
-                                    <input 
-                                        type="text" 
+                                    <input
+                                        type="text"
                                         required
                                         placeholder="e.g. LAN-BANK-0000000"
                                         value={lanNumber}
@@ -1050,15 +1102,14 @@ export default function ApplicationManagement() {
                                                 key={p}
                                                 type="button"
                                                 onClick={() => setPriority(p)}
-                                                className={`py-2 px-3 border rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
-                                                    priority === p 
-                                                        ? p === "high" 
+                                                className={`py-2 px-3 border rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${priority === p
+                                                        ? p === "high"
                                                             ? "border-rose-500 bg-rose-50 text-rose-600"
                                                             : p === "medium"
                                                                 ? "border-amber-500 bg-amber-50 text-amber-600"
                                                                 : "border-emerald-500 bg-emerald-50 text-emerald-600"
                                                         : "border-gray-200 text-gray-500 hover:bg-gray-50"
-                                                }`}
+                                                    }`}
                                             >
                                                 {p}
                                             </button>
@@ -1084,7 +1135,7 @@ export default function ApplicationManagement() {
 
                                 {/* Confirmation Step */}
                                 {confirmingLog && (
-                                    <motion.div 
+                                    <motion.div
                                         initial={{ height: 0, opacity: 0 }}
                                         animate={{ height: "auto", opacity: 1 }}
                                         className="p-4 bg-purple-50 border border-purple-100 rounded-2xl text-[11px] text-purple-700 font-medium leading-relaxed"
@@ -1095,8 +1146,8 @@ export default function ApplicationManagement() {
                                 )}
 
                                 <div className="flex gap-4 pt-3">
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         onClick={() => {
                                             if (confirmingLog) setConfirmingLog(false);
                                             else setShowLanModal(false);
@@ -1105,7 +1156,7 @@ export default function ApplicationManagement() {
                                     >
                                         {confirmingLog ? "Back" : "Cancel"}
                                     </button>
-                                    <button 
+                                    <button
                                         type="submit"
                                         className="flex-1 py-3 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 shadow-lg shadow-gray-900/10 transition-all"
                                     >
@@ -1131,7 +1182,7 @@ export default function ApplicationManagement() {
                         >
                             <h3 className="text-xl font-black text-gray-900 mb-2 uppercase tracking-tight">Underwriting Decision Panel</h3>
                             <p className="text-xs text-gray-400 mb-6 font-bold uppercase tracking-wider">Select the credit decision and enter rates/terms.</p>
-                            
+
                             <form onSubmit={handleDecision} className="space-y-5">
                                 {/* Decision Selection */}
                                 <div>
@@ -1147,11 +1198,10 @@ export default function ApplicationManagement() {
                                                 key={t.id}
                                                 type="button"
                                                 onClick={() => setDecisionType(t.id as any)}
-                                                className={`py-3 px-4 border rounded-xl flex items-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all ${
-                                                    decisionType === t.id 
-                                                        ? "border-[#6605c7] bg-[#6605c7]/5 text-[#6605c7]" 
+                                                className={`py-3 px-4 border rounded-xl flex items-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all ${decisionType === t.id
+                                                        ? "border-[#6605c7] bg-[#6605c7]/5 text-[#6605c7]"
                                                         : "border-gray-200 text-gray-500 hover:bg-gray-50"
-                                                }`}
+                                                    }`}
                                             >
                                                 <span className="material-symbols-outlined text-base">{t.icon}</span>
                                                 {t.label}
@@ -1166,8 +1216,8 @@ export default function ApplicationManagement() {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Sanctioned Amount (₹)</label>
-                                                <input 
-                                                    type="number" 
+                                                <input
+                                                    type="number"
                                                     required
                                                     value={sanctionAmount}
                                                     onChange={(e) => setSanctionAmount(e.target.value)}
@@ -1176,8 +1226,8 @@ export default function ApplicationManagement() {
                                             </div>
                                             <div>
                                                 <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Processing Fee (₹)</label>
-                                                <input 
-                                                    type="number" 
+                                                <input
+                                                    type="number"
                                                     placeholder="0"
                                                     value={processingFee}
                                                     onChange={(e) => setProcessingFee(e.target.value)}
@@ -1189,7 +1239,7 @@ export default function ApplicationManagement() {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Rate type (ROI)</label>
-                                                <select 
+                                                <select
                                                     value={roiType}
                                                     onChange={(e) => setRoiType(e.target.value)}
                                                     className="w-full px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:border-[#6605c7]"
@@ -1200,8 +1250,8 @@ export default function ApplicationManagement() {
                                             </div>
                                             <div>
                                                 <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Base rate (%)</label>
-                                                <input 
-                                                    type="number" 
+                                                <input
+                                                    type="number"
                                                     step="0.01"
                                                     placeholder="e.g. 8.25"
                                                     value={roiBase}
@@ -1214,8 +1264,8 @@ export default function ApplicationManagement() {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Subsidy / Spread (%)</label>
-                                                <input 
-                                                    type="number" 
+                                                <input
+                                                    type="number"
                                                     step="0.01"
                                                     placeholder="0.0"
                                                     value={roiSubsidy}
@@ -1225,8 +1275,8 @@ export default function ApplicationManagement() {
                                             </div>
                                             <div>
                                                 <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Effective ROI (%)</label>
-                                                <input 
-                                                    type="number" 
+                                                <input
+                                                    type="number"
                                                     step="0.01"
                                                     required
                                                     placeholder="e.g. 9.50"
@@ -1242,8 +1292,8 @@ export default function ApplicationManagement() {
 
                                         <div>
                                             <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Sanction Letter URL / File</label>
-                                            <input 
-                                                type="text" 
+                                            <input
+                                                type="text"
                                                 placeholder="/docs/sanction-letter-99.pdf"
                                                 value={sanctionLetterUrl}
                                                 onChange={(e) => setSanctionLetterUrl(e.target.value)}
@@ -1257,7 +1307,7 @@ export default function ApplicationManagement() {
                                     <div className="space-y-4 border-t border-gray-50 pt-4">
                                         <div>
                                             <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Rejection Reason</label>
-                                            <textarea 
+                                            <textarea
                                                 required
                                                 rows={3}
                                                 placeholder="Provide detailed reasons for decision analytics..."
@@ -1273,7 +1323,7 @@ export default function ApplicationManagement() {
                                     <div className="space-y-4 border-t border-gray-50 pt-4">
                                         <div>
                                             <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Outstanding Conditions</label>
-                                            <textarea 
+                                            <textarea
                                                 required
                                                 rows={3}
                                                 placeholder="Describe conditions student/staff must fulfill..."
@@ -1290,8 +1340,8 @@ export default function ApplicationManagement() {
                                         <div className="grid grid-cols-3 gap-3">
                                             <div>
                                                 <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Counter Amount (₹)</label>
-                                                <input 
-                                                    type="number" 
+                                                <input
+                                                    type="number"
                                                     required
                                                     value={counterAmount}
                                                     onChange={(e) => setCounterAmount(e.target.value)}
@@ -1300,8 +1350,8 @@ export default function ApplicationManagement() {
                                             </div>
                                             <div>
                                                 <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Counter ROI (%)</label>
-                                                <input 
-                                                    type="number" 
+                                                <input
+                                                    type="number"
                                                     step="0.01"
                                                     required
                                                     value={counterRate}
@@ -1311,8 +1361,8 @@ export default function ApplicationManagement() {
                                             </div>
                                             <div>
                                                 <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Counter Tenure (mo)</label>
-                                                <input 
-                                                    type="number" 
+                                                <input
+                                                    type="number"
                                                     required
                                                     placeholder="48"
                                                     value={counterTenure}
@@ -1325,14 +1375,14 @@ export default function ApplicationManagement() {
                                 )}
 
                                 <div className="flex gap-4 pt-3 border-t border-gray-100 mt-6">
-                                    <button 
-                                        type="button" 
+                                    <button
+                                        type="button"
                                         onClick={() => setShowDecisionModal(false)}
                                         className="flex-1 py-3 border border-gray-200 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all"
                                     >
                                         Cancel
                                     </button>
-                                    <button 
+                                    <button
                                         type="submit"
                                         className="flex-1 py-3 bg-[#6605c7] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#5203a4] shadow-lg shadow-purple-500/10 transition-all"
                                     >

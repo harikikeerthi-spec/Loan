@@ -60,6 +60,10 @@ interface StudentDocument {
 
 export default function ChatInterface({ role, initialUser, initialBank, portalTitle, className, hideSidebar = false }: ChatInterfaceProps) {
     const { token, user } = useAuth();
+    const getFormattedAppId = (appId?: string) => {
+        if (!appId) return '';
+        return `APP${appId.replace(/-/g, '').slice(-10).toUpperCase()}`;
+    };
     const [socket, setSocket] = useState<Socket | null>(null);
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [activeConversation, setActiveConversation] = useState<string | null>(null);
@@ -315,6 +319,10 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
             if (data.success) {
                 setSidebarTab('chats');
                 setChatTypeFilter('student');
+                setConversations(prev => {
+                    if (prev.find(c => c.id === data.conversation.id)) return prev;
+                    return [data.conversation, ...prev];
+                });
                 setActiveConversation(data.conversation.id);
                 fetchConversations();
             }
@@ -337,6 +345,10 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
             if (data.success) {
                 setSidebarTab('chats');
                 setChatTypeFilter('bank');
+                setConversations(prev => {
+                    if (prev.find(c => c.id === data.conversation.id)) return prev;
+                    return [data.conversation, ...prev];
+                });
                 setActiveConversation(data.conversation.id);
                 fetchConversations();
             }
@@ -473,6 +485,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
             // Extra client-side safety: only show bank-type conversations matching this bank
             if (c.metadata?.type !== 'bank') return false;
             if (resolvedBankName && c.metadata?.bank && c.metadata.bank !== resolvedBankName) return false;
+            if (initialBank?.applicationId && c.metadata?.applicationId !== initialBank.applicationId) return false;
             return true;
         }
         if (role !== 'staff') return true; // agent: no extra filter
@@ -585,19 +598,25 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                                             ? 'bg-amber-100 text-amber-700 border border-amber-200'
                                                             : 'bg-[#6605c7] text-white shadow-lg shadow-[#6605c7]/20'
                                                 }`}>
-                                                    {isBank
-                                                        ? <span className="material-symbols-outlined text-[16px]">account_balance</span>
-                                                        : (conv.customerName || conv.customerPhone)?.substring(0, 1)
+                                                    {role === 'bank' && conv.metadata?.applicationId
+                                                        ? 'A'
+                                                        : (isBank
+                                                            ? <span className="material-symbols-outlined text-[16px]">account_balance</span>
+                                                            : (conv.customerName || conv.customerPhone)?.substring(0, 1)
+                                                        )
                                                     }
                                                 </div>
                                                 <div className="min-w-0">
                                                     <span className={`font-black text-sm tracking-tight truncate block ${activeStyle ? 'text-white' : 'text-gray-800'}`}>
-                                                        {conv.customerName || conv.customerPhone}
+                                                        {role === 'bank' && conv.metadata?.applicationId
+                                                            ? getFormattedAppId(conv.metadata.applicationId)
+                                                            : (conv.customerName || conv.customerPhone)
+                                                        }
                                                     </span>
                                                     <div className="flex items-center gap-1.5 mt-0.5">
                                                         <span className={`w-1.5 h-1.5 rounded-full ${isBank ? 'bg-amber-400' : (conv.id.length % 2 === 0 ? 'bg-emerald-400' : 'bg-rose-400')}`}></span>
                                                         <span className={`text-[10px] font-medium block ${activeStyle ? 'text-white/80' : isBank ? 'text-amber-600' : 'text-gray-500'}`}>
-                                                            {isBank ? '🏦 Bank Channel' : 'Online'}
+                                                            {isBank ? `🏦 Bank Channel${conv.metadata?.applicationNumber ? ` - App #${conv.metadata.applicationNumber}` : ''}` : 'Online'}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -670,25 +689,45 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                 <div className="flex items-center gap-6">
                                     <div className="relative">
                                         <div className="w-14 h-14 rounded-2xl bg-[#6605c7] flex items-center justify-center font-black text-2xl shadow-2xl shadow-[#6605c7]/20 border border-white text-white">
-                                            {(conversations.find(c => c.id === activeConversation)?.customerName || conversations.find(c => c.id === activeConversation)?.customerPhone)?.substring(0, 1)}
+                                            {role === 'bank' && conversations.find(c => c.id === activeConversation)?.metadata?.applicationId
+                                                ? 'A'
+                                                : (conversations.find(c => c.id === activeConversation)?.customerName || conversations.find(c => c.id === activeConversation)?.customerPhone)?.substring(0, 1)
+                                            }
                                         </div>
                                         <div className="absolute -right-1 -bottom-1 w-4 h-4 bg-emerald-500 border-4 border-white rounded-full"></div>
                                     </div>
                                     <div>
                                         <div className="flex items-center gap-3">
                                             <h4 className="font-bold text-2xl tracking-tight text-gray-900">
-                                                {conversations.find(c => c.id === activeConversation)?.customerName || conversations.find(c => c.id === activeConversation)?.customerPhone}
+                                                {role === 'bank' && conversations.find(c => c.id === activeConversation)?.metadata?.applicationId
+                                                    ? getFormattedAppId(conversations.find(c => c.id === activeConversation)?.metadata.applicationId)
+                                                    : (conversations.find(c => c.id === activeConversation)?.customerName || conversations.find(c => c.id === activeConversation)?.customerPhone)
+                                                }
                                             </h4>
                                             <span className="px-3 py-1 bg-[#6605c7]/10 text-[#6605c7] text-[10px] font-bold uppercase tracking-wider rounded-full border border-[#6605c7]/20 whitespace-nowrap">
-                                                {conversations.find(c => c.id === activeConversation)?.customerEmail || 'Student'}
+                                                {role === 'bank' ? 'Staff Support' : (conversations.find(c => c.id === activeConversation)?.customerEmail || 'Student')}
                                             </span>
+                                            {conversations.find(c => c.id === activeConversation)?.metadata?.applicationNumber && (
+                                                <span className="px-3 py-1 bg-amber-500/10 text-amber-700 text-[10px] font-mono font-bold uppercase tracking-wider rounded-full border border-amber-500/20 whitespace-nowrap">
+                                                    App #{conversations.find(c => c.id === activeConversation)?.metadata?.applicationNumber}
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="flex items-center gap-3 mt-1.5 px-0.5">
-                                            <div className="flex items-center gap-1.5 py-0.5 px-2 bg-emerald-500/10 rounded-md border border-emerald-500/20">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                                                <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider">WhatsApp Connected</span>
-                                            </div>
-                                            <span className="text-[10px] text-gray-400 font-medium">Verified Channel</span>
+                                            {role === 'bank' || conversations.find(c => c.id === activeConversation)?.metadata?.type === 'bank' ? (
+                                                <div className="flex items-center gap-1.5 py-0.5 px-2 bg-indigo-500/10 rounded-md border border-indigo-500/20">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></div>
+                                                    <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">Staff Channel</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-1.5 py-0.5 px-2 bg-emerald-500/10 rounded-md border border-emerald-500/20">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                                                    <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider">WhatsApp Connected</span>
+                                                </div>
+                                            )}
+                                            <span className="text-[10px] text-gray-400 font-medium">
+                                                {role === 'bank' || conversations.find(c => c.id === activeConversation)?.metadata?.type === 'bank' ? 'Secure Internal Link' : 'Verified Channel'}
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -901,9 +940,12 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                         <div className="px-6 py-5 border-b border-gray-200 bg-white flex items-center justify-between">
                             <div>
                                 <p className="text-[9px] font-black uppercase tracking-widest text-[#6605c7]">Document Vault</p>
-                                <h5 className="text-sm font-black text-gray-900 mt-0.5">
-                                    {conversations.find(c => c.id === activeConversation)?.customerName || 'Student'}&apos;s Files
-                                </h5>
+                                 <h5 className="text-sm font-black text-gray-900 mt-0.5">
+                                     {role === 'bank' && conversations.find(c => c.id === activeConversation)?.metadata?.applicationId
+                                         ? getFormattedAppId(conversations.find(c => c.id === activeConversation)?.metadata.applicationId)
+                                         : (conversations.find(c => c.id === activeConversation)?.customerName || 'Student')
+                                     }&apos;s Files
+                                 </h5>
                             </div>
                             <button
                                 onClick={() => { setShowDocPanel(false); setPreviewDoc(null); }}

@@ -371,6 +371,10 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
             conversationId: msg.conversationId,
             lastMessage: msg
           });
+          this.server.to('room_staff').emit('conversation_updated', {
+            conversationId: msg.conversationId,
+            lastMessage: msg
+          });
         } else {
           this.server.to('room_staff').emit('conversation_updated', {
             conversationId: msg.conversationId,

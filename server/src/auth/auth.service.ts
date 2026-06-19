@@ -699,8 +699,8 @@ export class AuthService {
     }
 
     // Detect if this is the user's first time completing their profile
-    // (existingUser had no firstName before this update)
-    const isFirstProfileCompletion = !existingUser.firstName;
+    // (existingUser had no firstName, phoneNumber, or dateOfBirth before this update)
+    const isFirstProfileCompletion = !existingUser.firstName || !existingUser.phoneNumber || !existingUser.dateOfBirth;
 
     // Update user details
     try {

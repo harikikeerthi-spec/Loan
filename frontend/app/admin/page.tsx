@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { adminApi } from "@/lib/api";
 import { format, formatDistanceToNow } from "date-fns";
 import ChatInterface from "@/components/Chat/ChatInterface";
+import CampaignsDashboard from "@/components/Admin/CampaignsDashboard";
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -677,6 +678,7 @@ export default function AdminDashboardPage() {
         { section: "applications", icon: "description", label: "Applications", badge: pendingCount },
         { section: "system", icon: "admin_panel_settings", label: "System Control", badge: announcements.length },
         { section: "users", icon: "people", label: "Users", badge: 0 },
+        { section: "campaigns", icon: "campaign", label: "Email Campaigns", badge: 0 },
         { section: "blogs", icon: "article", label: "Blogs", badge: 0 },
         { section: "chat", icon: "forum", label: "Student Chat", badge: 0 },
         { section: "community", icon: "groups", label: "Community", badge: 0 },
@@ -690,6 +692,7 @@ export default function AdminDashboardPage() {
         applications: 'Applications',
         system: 'System Control',
         users: 'User Management',
+        campaigns: 'Email Campaigns',
         blogs: 'Blog Management',
         chat: 'Student Chat',
         community: 'Community Forum',
@@ -1332,6 +1335,9 @@ export default function AdminDashboardPage() {
 
                     {/* ─── CHAT ─────────────────────────────────────────────────── */}
                     {activeSection === "chat" && <ChatInterface role="staff" />}
+
+                    {/* ─── CAMPAIGNS ──────────────────────────────────────────────── */}
+                    {activeSection === "campaigns" && <CampaignsDashboard />}
 
                     {/* ─── COMMUNITY FORUM MANAGEMENT ────────────────────────── */}
                     {activeSection === "community" && (

@@ -176,13 +176,45 @@ export class BankService {
    * Category A: Retrieve application documents list
    */
   async getDocuments(applicationId: string): Promise<any[]> {
-    const { data, error } = await this.db
+    const { data: application, error: appError } = await this.db
+      .from('LoanApplication')
+      .select('userId, id, loanType')
+      .eq('id', applicationId)
+      .single();
+
+    if (appError || !application) {
+      return [];
+    }
+
+    const { data: documents, error: docsError } = await this.db
       .from('ApplicationDocument')
       .select('*')
       .eq('applicationId', applicationId);
 
-    if (error) throw error;
-    return data || [];
+    if (docsError) throw docsError;
+    const docs = documents || [];
+
+    // Also fetch the User's general Vault documents to show in a "Vault" section
+    const { data: vaultDocs, error: vaultError } = await this.db
+      .from('UserDocument')
+      .select('*')
+      .eq('userId', application.userId);
+
+    if (vaultError) throw vaultError;
+
+    // Merge or tag vault documents that aren't already in the application
+    const applicationDocTypes = new Set(docs.map(d => d.docType));
+    const extraVaultDocs = (vaultDocs || [])
+      .filter(vd => !applicationDocTypes.has(vd.docType) && vd.uploaded)
+      .map(vd => ({
+        ...vd,
+        id: `vault_${vd.id}`,
+        isVaultDoc: true,
+        docName: (vd.docType || '').replace(/_/g, ' ').toUpperCase(),
+        status: vd.status || 'uploaded'
+      }));
+
+    return [...docs, ...extraVaultDocs];
   }
 
   /**
@@ -272,6 +304,46 @@ export class BankService {
         tenure: details.tenure || 120,
         sanctionedAt: nowStr
       });
+
+      // Post sanction to the bank chat channel
+      try {
+        const safeBank = (application.bank || 'Unknown_Bank').toUpperCase().replace(/[^A-Z0-9]/g, '_');
+        const shortAppId = application.applicationNumber || applicationId.slice(0, 8);
+        const displayName = `${application.bank || 'Bank'} - App #${shortAppId}`;
+        const syntheticPhone = `BNK_${safeBank}_APP_${applicationId}`;
+
+        const conversation = await this.chatService.getOrCreateConversation(
+          syntheticPhone,
+          `bank+${safeBank.toLowerCase()}@internal`,
+          'bank',
+          displayName,
+          application.bank || 'Bank',
+          {
+            applicationId: applicationId,
+            applicationNumber: application.applicationNumber || null,
+          }
+        );
+
+        const messageContent = `✅ **Loan Sanctioned**\n\nThe bank has approved and sanctioned this application!\n\n` +
+          `**Sanction Amount:** ₹${(details.sanctionAmount || application.amount || 0).toLocaleString('en-IN')}\n` +
+          `**Interest Rate:** ${details.interestRate || 9.5}% (${details.roiType || 'floating'})\n` +
+          `**Tenure:** ${details.tenure || 120} months\n\n` +
+          `**Remarks/Notes:** ${details.remarks || 'No additional remarks.'}`;
+
+        const savedMessage = await this.chatService.saveMessage({
+          conversationId: conversation.id,
+          senderType: 'bank',
+          senderId: bankUser.email || bankUser.id || 'bank-system',
+          senderName: `${bankUser.firstName || 'Banker'} (${application.bank || 'Bank'})`,
+          content: messageContent,
+          messageType: 'text',
+          status: 'sent'
+        });
+
+        this.eventEmitter.emit('chat.message_created', savedMessage);
+      } catch (chatError) {
+        console.error(`[BankService] Failed to post sanction to chat:`, chatError);
+      }
     } else if (targetStatus === 'conditional_sanction') {
       await this.db.from('conditional_sanctions').insert({
         applicationId: applicationId,
@@ -349,12 +421,95 @@ export class BankService {
         offeredTenure: details.offeredTenure || 96,
         status: 'pending'
       });
+
+      // Post counter offer to the bank chat channel
+      try {
+        const safeBank = (application.bank || 'Unknown_Bank').toUpperCase().replace(/[^A-Z0-9]/g, '_');
+        const shortAppId = application.applicationNumber || applicationId.slice(0, 8);
+        const displayName = `${application.bank || 'Bank'} - App #${shortAppId}`;
+        const syntheticPhone = `BNK_${safeBank}_APP_${applicationId}`;
+
+        const conversation = await this.chatService.getOrCreateConversation(
+          syntheticPhone,
+          `bank+${safeBank.toLowerCase()}@internal`,
+          'bank',
+          displayName,
+          application.bank || 'Bank',
+          {
+            applicationId: applicationId,
+            applicationNumber: application.applicationNumber || null,
+          }
+        );
+
+        const offeredAmount = details.offeredAmount || details.sanctionAmount || (application.amount * 0.9);
+        const offeredRate = details.offeredRate || details.interestRate || 10.5;
+        const offeredTenure = details.offeredTenure || details.tenure || 96;
+
+        const messageContent = `🔄 **Counter Offer Proposed**\n\nThe bank has proposed a counter offer for the loan application.\n\n` +
+          `**Offered Amount:** ₹${(offeredAmount).toLocaleString('en-IN')}\n` +
+          `**Offered Rate:** ${offeredRate}%\n` +
+          `**Offered Tenure:** ${offeredTenure} months\n\n` +
+          `**Remarks/Notes:** ${details.remarks || 'No additional remarks.'}`;
+
+        const savedMessage = await this.chatService.saveMessage({
+          conversationId: conversation.id,
+          senderType: 'bank',
+          senderId: bankUser.email || bankUser.id || 'bank-system',
+          senderName: `${bankUser.firstName || 'Banker'} (${application.bank || 'Bank'})`,
+          content: messageContent,
+          messageType: 'text',
+          status: 'sent'
+        });
+
+        this.eventEmitter.emit('chat.message_created', savedMessage);
+      } catch (chatError) {
+        console.error(`[BankService] Failed to post counter offer to chat:`, chatError);
+      }
     } else if (targetStatus === 'rejected') {
       await this.db.from('rejections').insert({
         applicationId: applicationId,
         reason: details.reason || 'Credit score shortfall',
         rejectedAt: nowStr
       });
+
+      // Post rejection to the bank chat channel
+      try {
+        const safeBank = (application.bank || 'Unknown_Bank').toUpperCase().replace(/[^A-Z0-9]/g, '_');
+        const shortAppId = application.applicationNumber || applicationId.slice(0, 8);
+        const displayName = `${application.bank || 'Bank'} - App #${shortAppId}`;
+        const syntheticPhone = `BNK_${safeBank}_APP_${applicationId}`;
+
+        const conversation = await this.chatService.getOrCreateConversation(
+          syntheticPhone,
+          `bank+${safeBank.toLowerCase()}@internal`,
+          'bank',
+          displayName,
+          application.bank || 'Bank',
+          {
+            applicationId: applicationId,
+            applicationNumber: application.applicationNumber || null,
+          }
+        );
+
+        const messageContent = `🚨 **Application Rejected**\n\nThe bank has rejected the loan application.\n\n` +
+          `**Category:** ${details.rejectionCategory || details.category || 'N/A'}\n` +
+          `**Reason:** ${details.reason || 'Unspecified credit policy deviation'}\n\n` +
+          `**Remarks/Notes:** ${details.remarks || 'No additional remarks.'}`;
+
+        const savedMessage = await this.chatService.saveMessage({
+          conversationId: conversation.id,
+          senderType: 'bank',
+          senderId: bankUser.email || bankUser.id || 'bank-system',
+          senderName: `${bankUser.firstName || 'Banker'} (${application.bank || 'Bank'})`,
+          content: messageContent,
+          messageType: 'text',
+          status: 'sent'
+        });
+
+        this.eventEmitter.emit('chat.message_created', savedMessage);
+      } catch (chatError) {
+        console.error(`[BankService] Failed to post rejection to chat:`, chatError);
+      }
     }
 
     // Update main application status
@@ -422,6 +577,53 @@ export class BankService {
       isAutomatic: false,
       createdAt: nowStr
     });
+
+    // Notify staff via in-app notification
+    try {
+      let notifTitle = '';
+      let notifBody = '';
+      let notifType = '';
+
+      if (targetStatus === 'sanctioned') {
+        notifTitle = '✅ Loan Sanctioned';
+        notifBody = `Bank ${application.bank || 'Bank'} has sanctioned App: ${application.applicationNumber || applicationId} for ₹${(details.sanctionAmount || application.amount || 0).toLocaleString('en-IN')}`;
+        notifType = 'application_approved';
+      } else if (targetStatus === 'conditional_sanction') {
+        notifTitle = '⚠️ Conditional Sanction';
+        notifBody = `Bank ${application.bank || 'Bank'} has conditionally sanctioned App: ${application.applicationNumber || applicationId}`;
+        notifType = 'application_conditional';
+      } else if (targetStatus === 'counter_offer') {
+        notifTitle = '🔄 Counter Offer Proposed';
+        notifBody = `Bank ${application.bank || 'Bank'} proposed a counter offer for App: ${application.applicationNumber || applicationId}`;
+        notifType = 'application_counter';
+      } else if (targetStatus === 'rejected') {
+        notifTitle = '❌ Application Rejected';
+        notifBody = `Bank ${application.bank || 'Bank'} has rejected App: ${application.applicationNumber || applicationId}`;
+        notifType = 'application_rejected';
+      }
+
+      if (notifTitle) {
+        const notifData = {
+          id: 'notif-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+          userId: 'staff',
+          title: notifTitle,
+          body: notifBody,
+          type: notifType,
+          isRead: false,
+          timestamp: nowStr,
+          metadata: {
+            applicationId: applicationId,
+            applicationNumber: application.applicationNumber || null,
+            bank: application.bank || null,
+            status: targetStatus
+          }
+        };
+        await this.db.from('Notification').insert(notifData);
+        this.eventEmitter.emit('notification.created', notifData);
+      }
+    } catch (notifErr) {
+      console.error('[BankService.registerDecision] Failed to create in-app notification:', notifErr);
+    }
 
     // Thread serialization in ApplicationNote
     await this.db.from('ApplicationNote').insert({
@@ -551,6 +753,7 @@ export class BankService {
 
     // Push query message to the chat conversation
     if (application) {
+      // 1. Send message to student chat channel (as before)
       const rawPhone = application.phone || application.mobile;
       const phone = this.normalizePhone(rawPhone || '');
       if (phone) {
@@ -605,6 +808,48 @@ export class BankService {
             this.eventEmitter.emit('chat.message_created', chatMessage);
           }
         }
+      }
+
+      // 2. Also send query message to the dedicated Bank chat channel (shows up in staff chat Banks tab)
+      try {
+        const safeBank = (application.bank || 'Unknown_Bank').toUpperCase().replace(/[^A-Z0-9]/g, '_');
+        const shortAppId = application.applicationNumber || applicationId.slice(0, 8);
+        const displayName = `${application.bank || 'Bank'} - App #${shortAppId}`;
+        const syntheticPhone = `BNK_${safeBank}_APP_${applicationId}`;
+
+        const conversation = await this.chatService.getOrCreateConversation(
+          syntheticPhone,
+          `bank+${safeBank.toLowerCase()}@internal`,
+          'bank',
+          displayName,
+          application.bank || 'Bank',
+          {
+            applicationId: applicationId,
+            applicationNumber: application.applicationNumber || null,
+          }
+        );
+
+        if (conversation) {
+          const bankName = bankUser.firstName || 'Banker';
+          const msgContent = `❓ **Query Raised**\n\nThe bank has raised a query on the loan application:\n\n"${content}"`;
+
+          const savedMessage = await this.chatService.saveMessage({
+            conversationId: conversation.id,
+            senderType: 'bank',
+            senderId: bankUser.email || bankUser.id || 'bank-system',
+            senderName: `${bankUser.firstName || 'Banker'} (${application.bank || 'Bank'})`,
+            content: msgContent,
+            messageType: 'text',
+            status: 'sent'
+          });
+
+          if (savedMessage) {
+            // Emit the programmatically created message so WebSocket clients receive it in real-time
+            this.eventEmitter.emit('chat.message_created', savedMessage);
+          }
+        }
+      } catch (chatError) {
+        console.error(`[BankService] Failed to post query to bank chat channel:`, chatError);
       }
     }
 

@@ -4,6 +4,8 @@ import { extractFullNameFromOcrRaw } from '../ai/utils/ocr-fields.util';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
+import { EmailService } from '../auth/email.service';
+
 @Injectable()
 export class UsersService {
   private get db() {
@@ -13,6 +15,7 @@ export class UsersService {
   constructor(
     private supabase: SupabaseService,
     private eventEmitter: EventEmitter2,
+    private emailService: EmailService,
   ) { }
 
   private parseDate(dateStr: string | null | undefined): string | null {
@@ -697,7 +700,7 @@ export class UsersService {
         estimatedCompletionAt: estimatedCompletionAt.toISOString(),
         updatedAt: now,
       })
-      .select()
+      .select('*, user:User!userId(id, email, firstName, lastName, tests)')
       .single();
 
     if (error) throw error;
@@ -750,6 +753,34 @@ export class UsersService {
       });
     } catch (e) {
       console.error('Failed to emit activity event for application creation in UsersService:', e);
+    }
+
+    // Send loan submission email to the student
+    try {
+      const email = application.user?.email || application.email;
+      if (email) {
+        const firstName = application.firstName || application.user?.firstName || '';
+        const lastName = application.lastName || application.user?.lastName || '';
+        const userName = `${firstName} ${lastName}`.trim() || 'Student';
+        const bankName = application.bank || 'our partner bank';
+        await this.emailService.sendLoanSubmissionEmail(email, userName, bankName, application);
+      }
+    } catch (e) {
+      console.error('Failed to send loan submission email on application creation in UsersService:', e);
+    }
+
+    // Send loan tracking email to the registered student email
+    try {
+      const registeredEmail = application.user?.email || application.email;
+      if (registeredEmail) {
+        const firstName = application.user?.firstName || application.firstName || '';
+        const lastName = application.user?.lastName || application.lastName || '';
+        const userName = `${firstName} ${lastName}`.trim() || 'Student';
+        const bankName = application.bank || 'our partner bank';
+        await this.emailService.sendLoanTrackingEmail(registeredEmail, userName, bankName, application);
+      }
+    } catch (e) {
+      console.error('Failed to send loan tracking email on application creation in UsersService:', e);
     }
 
     return application;

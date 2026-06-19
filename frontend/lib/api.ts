@@ -1232,5 +1232,21 @@ export const bankApi = {
     recordConsent: (applicationId: string, data: any) => apiFetch<any>(HttpApiPaths.bank.consent(applicationId), { method: "POST", body: JSON.stringify(data) }),
 };
 
+// ─── Campaigns ─────────────────────────────────────────────────────────
+export const campaignApi = {
+    create: (data: any) => apiFetch(`${API_URL}/campaigns`, { method: "POST", body: JSON.stringify(data) }),
+    getAll: (limit = 50, offset = 0) => apiFetch(`${API_URL}/campaigns?limit=${limit}&offset=${offset}`),
+    getAudience: (filters: { studyDestination?: string; targetUniversity?: string } = {}) => {
+        const q = new URLSearchParams();
+        if (filters.studyDestination) q.set('studyDestination', filters.studyDestination);
+        if (filters.targetUniversity) q.set('targetUniversity', filters.targetUniversity);
+        return apiFetch(`${API_URL}/campaigns/audience?${q.toString()}`);
+    },
+    getById: (id: string) => apiFetch(`${API_URL}/campaigns/${id}`),
+    delete: (id: string) => apiFetch(`${API_URL}/campaigns/${id}`, { method: "DELETE" }),
+    queue: (id: string, recipientIds: string[]) => apiFetch(`${API_URL}/campaigns/${id}/queue`, { method: "POST", body: JSON.stringify({ recipientIds }) }),
+    cancel: (id: string) => apiFetch(`${API_URL}/campaigns/${id}/cancel`, { method: "POST" }),
+};
+
 /** Shared REST path builders + staff-dashboard catalog (single source for URLs). */
 export { HTTP_API_PREFIX, HttpApiPaths, staffDashboardApiCatalog } from "./http-api-paths";

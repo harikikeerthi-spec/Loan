@@ -142,12 +142,13 @@ export class BankController {
     @Request() req,
     @Body('applicationId') applicationId: string,
     @Body('conditions') conditions: string[],
-    @Body('deadline') deadline: string
+    @Body('deadline') deadline: string,
+    @Body('remarks') remarks?: string
   ) {
     return this.bankService.registerDecision(
       applicationId,
       'conditional_sanction',
-      { conditions, deadline },
+      { conditions, deadline, remarks },
       req.user
     );
   }
@@ -167,12 +168,13 @@ export class BankController {
     @Body('applicationId') applicationId: string,
     @Body('sanctionAmount') sanctionAmount: number,
     @Body('shortfallAmount') shortfallAmount: number,
-    @Body('reason') reason: string
+    @Body('reason') reason: string,
+    @Body('remarks') remarks?: string
   ) {
     return this.bankService.registerDecision(
       applicationId,
       'sanction_approved', // Treated under sanction process flow
-      { sanctionAmount, shortfallAmount, reason },
+      { sanctionAmount, shortfallAmount, reason, remarks },
       req.user
     );
   }
@@ -183,12 +185,13 @@ export class BankController {
     @Body('applicationId') applicationId: string,
     @Body('offeredAmount') offeredAmount: number,
     @Body('offeredRate') offeredRate: number,
-    @Body('offeredTenure') offeredTenure: number
+    @Body('offeredTenure') offeredTenure: number,
+    @Body('remarks') remarks?: string
   ) {
     return this.bankService.registerDecision(
       applicationId,
       'counter_offer',
-      { offeredAmount, offeredRate, offeredTenure },
+      { offeredAmount, offeredRate, offeredTenure, remarks },
       req.user
     );
   }
