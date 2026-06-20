@@ -3,7 +3,9 @@
  * Handles all API interactions for the dynamic bank dashboard
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+const API_BASE = typeof window !== 'undefined' && (window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1'))
+  ? ""
+  : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001");
 
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";

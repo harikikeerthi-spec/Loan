@@ -433,11 +433,9 @@ export default function StaffDashboardPage() {
     useEffect(() => {
         if (!token) return;
 
-        const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (
-            typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')
-                ? window.location.origin
-                : 'http://localhost:5000'
-        );
+        const baseApiUrl = typeof window !== 'undefined' && (window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1'))
+            ? 'http://localhost:5000'
+            : (process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5000'));
         const socketUrl = baseApiUrl.endsWith('/api')
             ? baseApiUrl.replace('/api', '/chat')
             : `${baseApiUrl.replace(/\/$/, '')}/chat`;
@@ -3181,7 +3179,7 @@ export default function StaffDashboardPage() {
                         <div className="hidden lg:flex items-center gap-4 border-r border-slate-200 pr-4">
                             <div className="flex items-center gap-1.5 text-[14px] text-black-600 font-bold uppercase tracking-widest font-mono">
                                 {/* <span className="material-symbols-outlined text-[13px]">sync</span> */}
-                                <span>Sync: {format(nowTime, 'MMM dd, HH:mm:ss')}</span>
+                                <span>{format(nowTime, 'MMM dd, HH:mm:ss')}</span>
                             </div>
                         </div>
 
@@ -3215,7 +3213,7 @@ export default function StaffDashboardPage() {
                     </div>
                 </header>
 
-                <div className={`staff-dashboard-body flex-1 overflow-y-auto custom-scrollbar ${(activeSection.startsWith('chat_') || activeSection === 'onboarding') ? 'p-0' : 'p-6 space-y-5'} bg-[#f8fafc]`}>
+                <div className={`staff-dashboard-body flex-1 ${(activeSection.startsWith('chat_') || activeSection === 'onboarding') ? 'p-0 overflow-hidden' : 'p-6 overflow-y-auto space-y-5 custom-scrollbar'} bg-[#f8fafc]`}>
                     {activeSection === "chat_customer" && <ChatInterface role="staff" initialUser={autoStartUser} initialBank={autoStartBank} className="flex h-full border-0 rounded-none overflow-hidden bg-white shadow-none mt-0 animate-fade-in text-gray-900" />}
 
 

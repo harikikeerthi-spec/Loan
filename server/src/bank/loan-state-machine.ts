@@ -16,7 +16,8 @@ export type LoanStatus =
   | 'rejected'
   | 'disbursement_confirmed'
   | 'closed'
-  | 'expired';
+  | 'expired'
+  | 'processing';
 
 export interface StateTransition {
   from: LoanStatus[];
@@ -42,17 +43,17 @@ export class LoanStateMachine {
       allowedRoles: ['staff', 'admin', 'super_admin']
     },
     {
-      from: ['submitted_to_bank'],
+      from: ['submitted_to_bank', 'processing'],
       to: 'file_logged',
       allowedRoles: ['bank', 'partner_bank', 'staff', 'admin', 'super_admin']
     },
     {
-      from: ['file_logged', 'submitted_to_bank'],
+      from: ['file_logged', 'submitted_to_bank', 'processing'],
       to: 'under_bank_review',
       allowedRoles: ['bank', 'partner_bank', 'staff', 'admin', 'super_admin']
     },
     {
-      from: ['under_bank_review', 'file_logged'],
+      from: ['under_bank_review', 'file_logged', 'processing'],
       to: 'query_raised',
       allowedRoles: ['bank', 'partner_bank', 'staff', 'admin', 'super_admin']
     },
@@ -62,27 +63,27 @@ export class LoanStateMachine {
       allowedRoles: ['staff', 'admin', 'super_admin', 'bank', 'partner_bank']
     },
     {
-      from: ['under_bank_review', 'file_logged', 'query_raised'],
+      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing'],
       to: 'approved',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
     {
-      from: ['under_bank_review', 'file_logged', 'query_raised', 'approved'],
+      from: ['under_bank_review', 'file_logged', 'query_raised', 'approved', 'processing'],
       to: 'sanctioned',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
     {
-      from: ['under_bank_review', 'file_logged', 'query_raised'],
+      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing'],
       to: 'conditional_sanction',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
     {
-      from: ['under_bank_review', 'file_logged', 'query_raised'],
+      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing'],
       to: 'partial_sanction',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
     {
-      from: ['under_bank_review', 'file_logged', 'query_raised'],
+      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing'],
       to: 'counter_offer',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
@@ -92,7 +93,7 @@ export class LoanStateMachine {
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
     {
-      from: ['pending', 'docs_received', 'staff_verified', 'submitted_to_bank', 'under_bank_review', 'file_logged', 'query_raised', 'conditional_sanction', 'partial_sanction', 'counter_offer', 'approved', 'sanctioned'],
+      from: ['pending', 'docs_received', 'staff_verified', 'submitted_to_bank', 'under_bank_review', 'file_logged', 'query_raised', 'conditional_sanction', 'partial_sanction', 'counter_offer', 'approved', 'sanctioned', 'processing'],
       to: 'rejected',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin', 'staff']
     },
@@ -107,7 +108,7 @@ export class LoanStateMachine {
       allowedRoles: ['admin', 'super_admin', 'staff']
     },
     {
-      from: ['approved', 'sanctioned', 'conditional_sanction', 'partial_sanction', 'counter_offer', 'under_bank_review', 'file_logged'],
+      from: ['approved', 'sanctioned', 'conditional_sanction', 'partial_sanction', 'counter_offer', 'under_bank_review', 'file_logged', 'processing'],
       to: 'expired',
       allowedRoles: ['system', 'admin', 'super_admin']
     }
@@ -165,6 +166,7 @@ export class LoanStateMachine {
       case 'staff_verified': return 40;
       case 'submitted_to_bank': return 50;
       case 'file_logged': return 60;
+      case 'processing': return 65;
       case 'under_bank_review': return 70;
       case 'query_raised': return 75;
       case 'conditional_sanction': return 80;
@@ -187,7 +189,7 @@ export class LoanStateMachine {
     const s = status?.toLowerCase();
     if (['pending', 'docs_received'].includes(s)) return 'Pre-login';
     if (['staff_verified', 'submitted_to_bank'].includes(s)) return 'Submitted';
-    if (['file_logged', 'under_bank_review', 'query_raised'].includes(s)) return 'Verification';
+    if (['file_logged', 'under_bank_review', 'query_raised', 'processing'].includes(s)) return 'Verification';
     if (['conditional_sanction', 'partial_sanction', 'counter_offer', 'approved', 'sanctioned'].includes(s)) return 'Sanctioned';
     if (['disbursement_confirmed', 'closed', 'disbursed', 'partially_disbursed'].includes(s)) return 'Disbursed';
     return 'Pre-login';

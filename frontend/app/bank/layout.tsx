@@ -569,7 +569,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                             </div> */}
                             <div className="flex items-center gap-1.5 text-[9.5px] text-black-400 font-bold uppercase tracking-widest font-mono">
                                 {/* <span className="material-symbols-outlined text-[13px]">sync</span> */}
-                                <span>Sync: {syncTime || '--:--:--'}</span>
+                                <span>{syncTime || '--:--:--'}</span>
                             </div>
                         </div>
 

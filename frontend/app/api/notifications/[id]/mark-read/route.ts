@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const getBackendUrl = (request: NextRequest) => {
+  const hostname = request.nextUrl.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:5000';
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+};
 
 export async function PUT(
   request: NextRequest,
@@ -14,7 +20,8 @@ export async function PUT(
     || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader : (cookieToken ? `Bearer ${cookieToken}` : '');
 
-  const url = `${BACKEND_URL}/api/notifications/${id}/mark-read`;
+  const backendUrl = getBackendUrl(request);
+  const url = `${backendUrl}/api/notifications/${id}/mark-read`;
 
   try {
     const response = await fetch(url, {

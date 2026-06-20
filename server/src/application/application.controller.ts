@@ -461,8 +461,9 @@ export class ApplicationController {
     async getApplicationById(@Request() req, @Param('id') id: string) {
         let application = await this.applicationService.getApplicationById(id);
 
-        // Verify ownership (unless admin)
-        if (req.user.role !== 'admin' && req.user.role !== 'super_admin' && application.userId !== req.user.id) {
+        // Verify ownership (unless admin/staff/bank/support)
+        const allowedRoles = ['admin', 'super_admin', 'staff', 'support', 'bank', 'partner_bank'];
+        if (!allowedRoles.includes(req.user.role) && application.userId !== req.user.id) {
             throw new BadRequestException('Unauthorized to view this application');
         }
 

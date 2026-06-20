@@ -105,11 +105,9 @@ export default function ActivityLogWidget({
       localStorage.getItem("accessToken");
     if (!token) return;
 
-    const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (
-      typeof window !== "undefined" && !window.location.hostname.includes("localhost") && !window.location.hostname.includes("127.0.0.1")
-        ? window.location.origin
-        : "http://localhost:5000"
-    );
+    const baseApiUrl = typeof window !== "undefined" && (window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1"))
+      ? "http://localhost:5000"
+      : (process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:5000"));
     
     const socketUrl = baseApiUrl.endsWith("/api")
       ? baseApiUrl.replace("/api", "/chat")

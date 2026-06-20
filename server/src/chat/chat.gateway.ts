@@ -141,6 +141,50 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return { status: 'left', conversationId };
   }
 
+  @SubscribeMessage('mark_read')
+  async handleMarkRead(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { conversationId: string }
+  ) {
+    const user = client.data.user;
+    const isSimulator = client.handshake.auth.simulator === true;
+    if (!user && !isSimulator) return { success: false };
+
+    const role = user ? user.role : 'customer';
+    const isStaffOrBank = user && ['admin', 'staff', 'super_admin', 'bank', 'partner_bank', 'support'].includes(role);
+    const readerType = isStaffOrBank ? 'staff_or_bank' : 'customer';
+
+    try {
+      await this.chatService.markMessagesAsRead(payload.conversationId, readerType, role);
+
+      let readerId = '';
+      if (readerType === 'customer') {
+        const conv = await this.chatService.getConversationById(payload.conversationId);
+        readerId = conv?.customerPhone || 'customer';
+      } else {
+        readerId = user?.email || user?.sub || 'staff';
+      }
+      
+      // Broadcast read receipt to room
+      this.server.to(`conv_${payload.conversationId}`).emit('messages_read', {
+        conversationId: payload.conversationId,
+        readerType,
+        readerId
+      });
+
+      // Also trigger list update to clear unread indicator
+      const listRoom = user && ['bank', 'partner_bank'].includes(role) ? 'room_bank' : 'room_staff';
+      this.server.to(listRoom).emit('conversation_updated', {
+        conversationId: payload.conversationId
+      });
+
+      return { success: true };
+    } catch (e) {
+      this.logger.error('Failed to mark messages as read', e);
+      return { success: false, error: e.message };
+    }
+  }
+
   @SubscribeMessage('send_message')
   async handleSendMessage(
     @ConnectedSocket() client: Socket,
@@ -150,6 +194,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const senderType = user.role || 'staff'; // fallback
 
     try {
+      // Check if WhatsApp Simulator is connected
+      const digits = payload.customerPhone.replace('whatsapp:', '').trim().replace(/\D/g, '');
+      const cleanPhone = digits.length > 10 && digits.startsWith('91') ? digits.substring(2) : (digits.length > 10 ? digits.slice(-10) : digits);
+      const room = this.server?.sockets?.adapter?.rooms?.get(`sim_${cleanPhone}`);
+      const isSimConnected = room ? room.size > 0 : false;
+      const initialStatus = isSimConnected ? 'read' : 'sent';
+
       // 1. Save to database
       const msg = await this.chatService.saveMessage({
         conversationId: payload.conversationId,
@@ -157,7 +208,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         senderId: user.email || user.sub,
         receiverType: 'customer',
         content: payload.content,
-        status: 'sent'
+        status: initialStatus
       });
 
       // 2. Broadcast to other dashboards observing this conversation
@@ -198,8 +249,6 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
 
       // 3. Update WhatsApp Simulator if connected
-      const digits = payload.customerPhone.replace('whatsapp:', '').trim().replace(/\D/g, '');
-      const cleanPhone = digits.length > 10 && digits.startsWith('91') ? digits.substring(2) : (digits.length > 10 ? digits.slice(-10) : digits);
       this.server.to(`sim_${cleanPhone}`).emit('wa_message_received', msg);
 
       // 4. Send out via Twilio WhatsApp (Real)

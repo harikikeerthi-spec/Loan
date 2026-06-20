@@ -9,7 +9,9 @@ interface Message {
     id: string;
     conversationId: string;
     senderType: "customer" | "staff" | "bank" | "system";
+    senderId?: string;
     content: string;
+    status?: string;
     createdAt: string;
 }
 
@@ -105,14 +107,12 @@ export default function StudentChatPanel({ onClose }: StudentChatPanelProps) {
 
         loadHistory();
 
-        // Build socket URL (same as ChatInterface)
         const baseApiUrl =
-            process.env.NEXT_PUBLIC_API_URL ||
-            (typeof window !== "undefined" &&
-            !window.location.hostname.includes("localhost") &&
-            !window.location.hostname.includes("127.0.0.1")
-                ? window.location.origin
-                : "http://localhost:5000");
+            typeof window !== "undefined" &&
+            (window.location.hostname.includes("localhost") ||
+            window.location.hostname.includes("127.0.0.1"))
+                ? "http://localhost:5000"
+                : (process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:5000"));
         const socketUrl = baseApiUrl.endsWith("/api")
             ? baseApiUrl.replace("/api", "/chat")
             : `${baseApiUrl.replace(/\/$/, "")}/chat`;
@@ -121,6 +121,7 @@ export default function StudentChatPanel({ onClose }: StudentChatPanelProps) {
 
         sock.on("connect", () => {
             sock.emit("join_conversation", conversationId);
+            sock.emit("mark_read", { conversationId });
         });
 
         sock.on("new_message", (msg: Message) => {
@@ -131,6 +132,26 @@ export default function StudentChatPanel({ onClose }: StudentChatPanelProps) {
                 });
                 // Brief typing indicator reset
                 setIsTyping(false);
+                if (msg.senderType !== "customer") {
+                    sock.emit("mark_read", { conversationId: msg.conversationId });
+                }
+            }
+        });
+
+        sock.on("messages_read", (data: { conversationId: string, readerType: string, readerId?: string }) => {
+            if (data.conversationId === conversationIdRef.current) {
+                // readerType tells us WHO read the messages:
+                // 'customer' → customer read → mark staff/bank messages as 'read'
+                // 'staff_or_bank' → staff/bank read → mark customer messages as 'read'
+                setMessages((prev) => prev.map((m) => {
+                    if (data.readerType === 'customer' && m.senderType !== 'customer') {
+                        return { ...m, status: 'read' };
+                    }
+                    if (data.readerType === 'staff_or_bank' && m.senderType === 'customer') {
+                        return { ...m, status: 'read' };
+                    }
+                    return m;
+                }));
             }
         });
 
@@ -333,7 +354,15 @@ export default function StudentChatPanel({ onClose }: StudentChatPanelProps) {
                                                 {formatTime(msg.createdAt)}
                                             </span>
                                             {isCustomer && (
-                                                <span className="material-symbols-outlined text-[10px] text-[#6605c7]/50">done_all</span>
+                                                <span className="inline-flex items-center gap-0.5 shrink-0">
+                                                    {msg.status === 'read' ? (
+                                                        <span className="material-symbols-outlined text-[12px] text-[#6605c7] font-bold leading-none">done_all</span>
+                                                    ) : msg.status === 'delivered' ? (
+                                                        <span className="material-symbols-outlined text-[12px] text-slate-400 font-bold leading-none">done_all</span>
+                                                    ) : (
+                                                        <span className="material-symbols-outlined text-[12px] text-slate-400 font-medium leading-none">done</span>
+                                                    )}
+                                                </span>
                                             )}
                                         </div>
                                     </div>

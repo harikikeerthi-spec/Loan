@@ -272,7 +272,7 @@ export default function ApplicationManagement() {
                 lanNumber: lanNumber.trim(),
                 lanEnteredAt: new Date().toISOString(),
                 stage: "under_review",
-                status: "processing",
+                status: "file_logged",
                 remarks: mergedRemarks
             };
             const res: any = await adminApi.updateApplication(selectedApp.id, payload);

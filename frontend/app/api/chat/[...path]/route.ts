@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const getBackendUrl = (request: NextRequest) => {
+  const hostname = request.nextUrl.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:5000';
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+};
 
 async function handleProxy(
   request: NextRequest,
@@ -17,7 +23,8 @@ async function handleProxy(
   // Reconstruct query parameters
   const { searchParams } = new URL(request.url);
   const queryStr = searchParams.toString();
-  const url = `${BACKEND_URL}/api/chat/${path.join('/')}${queryStr ? `?${queryStr}` : ''}`;
+  const backendUrl = getBackendUrl(request);
+  const url = `${backendUrl}/api/chat/${path.join('/')}${queryStr ? `?${queryStr}` : ''}`;
 
   const method = request.method;
   const headers: Record<string, string> = {

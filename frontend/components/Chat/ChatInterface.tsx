@@ -14,6 +14,38 @@ const BANK_NAME_MAP: Record<string, string> = {
     poonawalla: "Poonawalla Fincorp",
 };
 
+function formatMessageGroupDate(dateStr: string) {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+        return 'TODAY';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+        return 'YESTERDAY';
+    } else {
+        return date.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
+    }
+}
+
+function formatSidebarDate(dateStr: string) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (date.toDateString() === yesterday.toDateString()) {
+        return 'Yesterday';
+    } else {
+        return date.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+}
+
+
 interface Message {
     id: string;
     conversationId: string;
@@ -60,6 +92,12 @@ interface StudentDocument {
 
 export default function ChatInterface({ role, initialUser, initialBank, portalTitle, className, hideSidebar = false }: ChatInterfaceProps) {
     const { token, user } = useAuth();
+    const isMessageFromMe = (msg: Message) => {
+        const currentUserId = user?.id || (user as any)?._id || (user as any)?.uid;
+        const currentUserEmail = user?.email;
+        const isStaffRole = role === 'staff' && ['staff', 'admin', 'super_admin'].includes(msg.senderType);
+        return msg.senderId === currentUserId || msg.senderId === currentUserEmail || msg.senderType === role || isStaffRole;
+    };
     const getFormattedAppId = (appId?: string) => {
         if (!appId) return '';
         return `APP${appId.replace(/-/g, '').slice(-10).toUpperCase()}`;
@@ -83,6 +121,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
     const [docsUserId, setDocsUserId] = useState<string | null>(null);
     const [previewDoc, setPreviewDoc] = useState<{ url: string; name: string } | null>(null);
     const [previewLoading, setPreviewLoading] = useState<string | null>(null);
+    const [sharingDoc, setSharingDoc] = useState<string | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const activeConversationRef = useRef<string | null>(null);
@@ -146,11 +185,9 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
         fetchConversations();
         if (role === 'staff') fetchUsers();
 
-        const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (
-            typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')
-                ? window.location.origin
-                : 'http://localhost:5000'
-        );
+        const baseApiUrl = typeof window !== 'undefined' && (window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1'))
+            ? 'http://localhost:5000'
+            : (process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5000'));
         const socketUrl = baseApiUrl.endsWith('/api')
             ? baseApiUrl.replace('/api', '/chat')
             : `${baseApiUrl.replace(/\/$/, '')}/chat`;
@@ -173,12 +210,16 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
             fetchConversations();
         });
 
-        socketInstance.on('conversation_updated', (data: { conversationId: string, lastMessage: Message }) => {
+        socketInstance.on('conversation_updated', (data: { conversationId: string, lastMessage?: Message }) => {
             setConversations(prev => {
                 const exists = prev.find(c => c.id === data.conversationId);
                 if (exists) {
                     const updated = prev.filter(c => c.id !== data.conversationId);
-                    return [{ ...exists, lastMessage: data.lastMessage, updatedAt: data.lastMessage.createdAt }, ...updated];
+                    return [{
+                        ...exists,
+                        lastMessage: data.lastMessage !== undefined ? data.lastMessage : exists.lastMessage,
+                        updatedAt: (data.lastMessage && data.lastMessage.createdAt) ? data.lastMessage.createdAt : exists.updatedAt
+                    }, ...updated];
                 } else {
                     fetchConversations();
                     return prev;
@@ -192,6 +233,9 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                     if (prev.find(m => m.id === msg.id)) return prev;
                     return [...prev, msg];
                 });
+                if (!isMessageFromMe(msg)) {
+                    socketInstance.emit('mark_read', { conversationId: msg.conversationId });
+                }
             }
             setConversations(prev => {
                 const exists = prev.find(c => c.id === msg.conversationId);
@@ -201,6 +245,33 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                 }
                 return prev;
             });
+        });
+
+        socketInstance.on('messages_read', (data: { conversationId: string, readerType: string, readerId?: string }) => {
+            // readerType tells us WHO read the messages:
+            // 'customer' → customer read the messages, so mark staff/bank-sent messages as 'read'
+            // 'staff_or_bank' → staff/bank read the messages, so mark customer-sent messages as 'read'
+            const markAsRead = (msg: Message): Message => {
+                if (data.readerType === 'customer') {
+                    // Customer read → mark messages NOT sent by customer as 'read'
+                    if (msg.senderType !== 'customer') return { ...msg, status: 'read' };
+                } else if (data.readerType === 'staff_or_bank') {
+                    // Staff/bank read → mark messages sent by customer as 'read'
+                    if (msg.senderType === 'customer') return { ...msg, status: 'read' };
+                }
+                return msg;
+            };
+
+            if (data.conversationId === activeConversationRef.current) {
+                setMessages(prev => prev.map(markAsRead));
+            }
+            setConversations(prev => prev.map(c => {
+                if (c.id === data.conversationId) {
+                    const updatedLastMessage = c.lastMessage ? markAsRead(c.lastMessage) : undefined;
+                    return { ...c, lastMessage: updatedLastMessage };
+                }
+                return c;
+            }));
         });
 
         setSocket(socketInstance);
@@ -215,6 +286,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
     useEffect(() => {
         if (socket && activeConversation) {
             socket.emit('join_conversation', activeConversation);
+            socket.emit('mark_read', { conversationId: activeConversation });
 
             fetch(HttpApiPaths.chat.messages(activeConversation), {
                 headers: { Authorization: `Bearer ${token}` }
@@ -252,12 +324,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
         formData.append('conversationId', activeConversation);
 
         try {
-            const baseUrl = process.env.NEXT_PUBLIC_API_URL || (
-                typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')
-                    ? window.location.origin
-                    : 'http://localhost:5000'
-            );
-            const res = await fetch(`${baseUrl}/api/chat/upload`, {
+            const res = await fetch(`/api/chat/upload`, {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -265,7 +332,19 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                 body: formData
             });
             const data = await res.json();
-            if (!data.success) {
+            if (data.success && data.message) {
+                // Immediately add to local state as fallback (socket event may be missed)
+                setMessages(prev => {
+                    if (prev.find(m => m.id === data.message.id)) return prev;
+                    return [...prev, data.message];
+                });
+                // Update conversation list
+                setConversations(prev => prev.map(c =>
+                    c.id === activeConversation
+                        ? { ...c, lastMessage: data.message, updatedAt: data.message.createdAt }
+                        : c
+                ));
+            } else if (!data.success) {
                 alert(data.message || data.error || 'Upload failed');
             }
         } catch (err) {
@@ -376,6 +455,47 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
         const conv = conversations.find(c => c.id === activeConversation);
         if (!conv) return;
 
+        // Try to find if there is an applicationId in conversation metadata
+        const appId = conv.metadata?.applicationId;
+
+        if (role === 'bank' || appId) {
+            if (!appId) {
+                alert("This conversation does not have a linked loan application.");
+                return;
+            }
+            setLoadingDocs(true);
+            setShowDocPanel(true);
+            try {
+                // For bank role, we use bankApi.getDocuments. For staff role, we fetch applications/admin/...
+                const res = role === 'bank'
+                    ? await fetch(`/api/bank/documents/${appId}`, { headers: { Authorization: `Bearer ${token}` } })
+                    : await fetch(`/api/applications/admin/${appId}/documents`, { headers: { Authorization: `Bearer ${token}` } });
+                const data = await res.json();
+                const docsList = data.success && Array.isArray(data.data) ? data.data : (Array.isArray(data) ? data : []);
+
+                // Map application documents to StudentDocument format
+                const mappedDocs = docsList.map((d: any) => ({
+                    id: d.id,
+                    docType: d.docType,
+                    name: d.docName || d.name || d.docType,
+                    status: d.status,
+                    uploaded: d.uploaded !== false,
+                    fileName: d.fileName,
+                    filePath: d.filePath,
+                    uploadedAt: d.uploadedAt
+                }));
+
+                setStudentDocs(mappedDocs);
+                setDocsUserId(conv.metadata?.userId || null);
+            } catch (e) {
+                console.error("Failed to load application documents:", e);
+                setStudentDocs([]);
+            } finally {
+                setLoadingDocs(false);
+            }
+            return;
+        }
+
         // Try to find userId from conversation metadata or email match
         const customerEmail = conv.customerEmail || conv.metadata?.customerEmail;
         let userId: string | null = null;
@@ -424,7 +544,62 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
         }
     };
 
+    const handleShareDocument = async (doc: StudentDocument) => {
+        if (!activeConversation) return;
+        if (!doc.filePath) {
+            alert("This document does not have a valid file path associated.");
+            return;
+        }
+        setSharingDoc(doc.id);
+        try {
+            const res = await fetch(`/api/chat/share-document`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    conversationId: activeConversation,
+                    fileName: doc.fileName || doc.name || doc.docType,
+                    filePath: doc.filePath,
+                    mimeType: (doc.fileName || doc.name || doc.docType)?.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'
+                })
+            });
+
+            const data = await res.json();
+            if (data.success && data.message) {
+                // Immediately add shared document to local message state
+                setMessages(prev => {
+                    if (prev.find(m => m.id === data.message.id)) return prev;
+                    return [...prev, data.message];
+                });
+                setConversations(prev => prev.map(c =>
+                    c.id === activeConversation
+                        ? { ...c, lastMessage: data.message, updatedAt: data.message.createdAt }
+                        : c
+                ));
+            } else if (!data.success) {
+                alert(data.message || 'Failed to share document');
+            }
+        } catch (e) {
+            console.error("Failed to share document:", e);
+            alert("An error occurred while sharing the document.");
+        } finally {
+            setSharingDoc(null);
+        }
+    };
+
     const handleViewDocument = async (doc: StudentDocument) => {
+        const conv = conversations.find(c => c.id === activeConversation);
+        const appId = conv?.metadata?.applicationId;
+
+        if (appId) {
+            const cleanDocId = doc.id.replace('vault_', '');
+            const url = `/api/applications/admin/${appId}/documents/${cleanDocId}/view?token=${token}`;
+            setPreviewDoc({ url, name: (doc.name || doc.docType).toUpperCase().replace(/_/g, ' ') });
+            return;
+        }
+
         if (!docsUserId) return;
         setPreviewLoading(doc.docType);
         try {
@@ -448,6 +623,15 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
     };
 
     const handleDownloadDocument = async (doc: StudentDocument) => {
+        const conv = conversations.find(c => c.id === activeConversation);
+        const appId = conv?.metadata?.applicationId;
+
+        if (appId) {
+            const cleanDocId = doc.id.replace('vault_', '');
+            window.open(`/api/applications/admin/${appId}/documents/${cleanDocId}/view?download=true&token=${token}`, '_blank', 'noopener,noreferrer');
+            return;
+        }
+
         if (!docsUserId) return;
         try {
             const res = await fetch(HttpApiPaths.documents.presignedView(docsUserId, doc.docType), {
@@ -500,27 +684,27 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
     );
 
     return (
-        <div className={className || "flex h-[800px] border border-gray-200 rounded-[2.5rem] overflow-hidden bg-white shadow-[0_24px_80px_rgba(17,24,39,0.08)] mt-6 animate-fade-in text-gray-900"}>
+        <div className={(className || "flex h-[800px] border border-[#E2E8F0] rounded-[2.5rem] overflow-hidden bg-[#FFFFFF] shadow-[0_24px_80px_rgba(90,66,228,0.06)] mt-6 animate-fade-in text-[#1A1D20]") + " font-sans"}>
 
             {/* Sidebar: Conversations & Users */}
             {!hideSidebar && (
-                <div className="w-80 border-r border-gray-200 bg-[#fbfbfd] flex flex-col">
-                    <div className="p-8 border-b border-gray-200 bg-[#fbfbfd]">
+                <div className="w-96 shrink-0 border-r border-[#E2E8F0] bg-[#F8F9FC] flex flex-col h-full overflow-hidden">
+                    <div className="p-6 border-b border-[#E2E8F0] bg-[#FFFFFF]">
                         <div className="flex items-center justify-between mb-4">
-                            <h3 className="font-bold text-xl tracking-tight text-gray-900">{portalTitle || 'Conversations'}</h3>
+                            <h3 className="font-bold text-lg text-[#1A1D20] tracking-tight">{portalTitle || 'Conversations'}</h3>
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => setSidebarTab('chats')}
-                                    className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${sidebarTab === 'chats' ? 'bg-[#6605c7] text-white shadow-lg shadow-[#6605c7]/20' : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-200'}`}
+                                    className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer ${sidebarTab === 'chats' ? 'bg-[#5A42E4] text-[#FFFFFF] shadow-md shadow-[#5A42E4]/25' : 'bg-[#FFFFFF] text-[#4A525A] hover:bg-[#F2F0FF] hover:text-[#5A42E4] border border-[#E2E8F0]'}`}
                                 >
-                                    <span className="material-symbols-outlined text-sm font-black">forum</span>
+                                    <span className="material-symbols-outlined text-sm font-bold">forum</span>
                                 </button>
                                 {(role === 'staff' || role === 'agent') && (
                                     <button
                                         onClick={() => setSidebarTab('users')}
-                                        className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${sidebarTab === 'users' ? 'bg-[#6605c7] text-white shadow-lg shadow-[#6605c7]/20' : 'bg-white text-gray-500 hover:bg-gray-50 border border-gray-200'}`}
+                                        className={`w-8.5 h-8.5 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer ${sidebarTab === 'users' ? 'bg-[#5A42E4] text-[#FFFFFF] shadow-md shadow-[#5A42E4]/25' : 'bg-[#FFFFFF] text-[#4A525A] hover:bg-[#F2F0FF] hover:text-[#5A42E4] border border-[#E2E8F0]'}`}
                                     >
-                                        <span className="material-symbols-outlined text-sm font-black">person_add</span>
+                                        <span className="material-symbols-outlined text-sm font-bold">person_add</span>
                                     </button>
                                 )}
                             </div>
@@ -528,147 +712,155 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
 
                         {/* Student / Bank filter tabs — only for staff when in chats tab */}
                         {role === 'staff' && sidebarTab === 'chats' && (
-                            <div className="flex gap-1 mb-4 p-1 bg-white border border-gray-200 rounded-2xl">
+                            <div className="flex gap-1 mb-4 p-1 bg-[#F8F9FC] border border-[#E2E8F0] rounded-xl">
                                 {(['all', 'student', 'bank'] as const).map(type => (
                                     <button
                                         key={type}
                                         onClick={() => setChatTypeFilter(type)}
-                                        className={`flex-1 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1 ${
-                                            chatTypeFilter === type
-                                                ? type === 'bank'
-                                                    ? 'bg-amber-500 text-white shadow-sm'
-                                                    : type === 'student'
-                                                        ? 'bg-[#6605c7] text-white shadow-sm'
-                                                        : 'bg-gray-900 text-white shadow-sm'
-                                                : 'text-gray-400 hover:text-gray-600'
-                                        }`}
+                                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer ${chatTypeFilter === type
+                                            ? 'bg-[#5A42E4] text-[#FFFFFF] shadow-sm'
+                                            : 'text-[#4A525A] hover:bg-[#F2F0FF] hover:text-[#5A42E4]'
+                                            }`}
                                     >
-                                        <span className="material-symbols-outlined text-[12px]">
+                                        <span className="material-symbols-outlined text-[13px]">
                                             {type === 'bank' ? 'account_balance' : type === 'student' ? 'school' : 'all_inclusive'}
                                         </span>
-                                        {type === 'all' ? 'All' : type === 'student' ? 'Students' : 'Banks'}
+                                        {type === 'all' ? 'ALL' : type === 'student' ? 'STUDENTS' : 'BANKS'}
                                     </button>
                                 ))}
                             </div>
                         )}
 
                         <div className="relative">
-                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg">search</span>
+                            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[#8A94A6] text-lg font-medium">search</span>
                             <input
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder={sidebarTab === 'chats' ? "Search conversations..." : "Search students..."}
-                                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs font-medium placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-4 focus:ring-[#6605c7]/10 transition-all text-gray-700 shadow-sm"
+                                className="w-full pl-11 pr-4 py-2.5 bg-[#F8F9FC] border border-[#E2E8F0] rounded-xl text-xs font-semibold placeholder-[#8A94A6] focus:outline-none focus:bg-[#FFFFFF] focus:border-[#5A42E4] focus:ring-4 focus:ring-[#5A42E4]/10 transition-all text-[#1A1D20] shadow-sm"
                             />
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto no-scrollbar py-4 px-2 space-y-2">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1 bg-[#F8F9FC] py-2">
                         {sidebarTab === 'chats' ? (
-                            conversations.length === 0 ? (
+                            filteredConversations.length === 0 ? (
                                 <div className="p-10 text-center opacity-50">
-                                    <div className="w-16 h-16 rounded-[2rem] bg-white flex items-center justify-center mx-auto mb-4 border border-gray-200 shadow-sm">
-                                        <span className="material-symbols-outlined text-3xl">sensors_off</span>
+                                    <div className="w-14 h-14 rounded-2xl bg-[#FFFFFF] flex items-center justify-center mx-auto mb-3 border border-[#E2E8F0] shadow-sm">
+                                        <span className="material-symbols-outlined text-2xl text-[#8A94A6]">sensors_off</span>
                                     </div>
-                                    <p className="text-xs font-medium text-gray-500">No active conversations</p>
+                                    <p className="text-xs font-semibold text-[#4A525A]">No active conversations</p>
                                 </div>
                             ) : (
                                 filteredConversations.map(conv => {
                                     const isBank = conv.metadata?.type === 'bank';
                                     const activeStyle = activeConversation === conv.id;
-                                    const activeBg = isBank
-                                        ? 'bg-amber-500 shadow-xl shadow-amber-500/20'
-                                        : 'bg-[#6605c7] shadow-xl shadow-[#6605c7]/20';
                                     const mockUnreadCount = conv.id.length % 3 === 0 ? 2 : 0;
                                     const isUnread = mockUnreadCount > 0;
                                     return (
-                                    <div
-                                        key={conv.id}
-                                        onClick={() => { setActiveConversation(conv.id); setShowDocPanel(false); }}
-                                        className={`px-6 py-5 cursor-pointer transition-all relative rounded-3xl group
-                                        ${activeStyle ? activeBg : 'hover:bg-gray-50'}`}
-                                    >
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs ${
-                                                    activeStyle
-                                                        ? 'bg-white/20 text-white'
+                                        <div
+                                            key={conv.id}
+                                            onClick={() => { setActiveConversation(conv.id); setShowDocPanel(false); }}
+                                            className={`px-5 py-4 cursor-pointer transition-all duration-200 relative flex flex-col border-b border-[#F1F5F9] border-l-4 ${activeStyle ? 'bg-[#F2F0FF] border-l-[#5A42E4]' : 'bg-[#FFFFFF] hover:bg-[#F8F9FC] border-l-transparent'}`}
+                                        >
+                                            <div className="flex justify-between items-start mb-1.5">
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${activeStyle
+                                                        ? 'bg-[#5A42E4] text-[#FFFFFF] shadow-sm'
                                                         : isBank
                                                             ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                                                            : 'bg-[#6605c7] text-white shadow-lg shadow-[#6605c7]/20'
-                                                }`}>
-                                                    {role === 'bank' && conv.metadata?.applicationId
-                                                        ? 'A'
-                                                        : (isBank
-                                                            ? <span className="material-symbols-outlined text-[16px]">account_balance</span>
-                                                            : (conv.customerName || conv.customerPhone)?.substring(0, 1)
-                                                        )
-                                                    }
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <span className={`font-black text-sm tracking-tight truncate block ${activeStyle ? 'text-white' : 'text-gray-800'}`}>
+                                                            : 'bg-[#F2F0FF] text-[#5A42E4] border border-[#E2E8F0]'
+                                                        }`}>
                                                         {role === 'bank' && conv.metadata?.applicationId
-                                                            ? getFormattedAppId(conv.metadata.applicationId)
-                                                            : (conv.customerName || conv.customerPhone)
+                                                            ? 'A'
+                                                            : (isBank
+                                                                ? <span className="material-symbols-outlined text-[15px]">account_balance</span>
+                                                                : (conv.customerName || conv.customerPhone)?.substring(0, 1)
+                                                            )
                                                         }
-                                                    </span>
-                                                    <div className="flex items-center gap-1.5 mt-0.5">
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${isBank ? 'bg-amber-400' : (conv.id.length % 2 === 0 ? 'bg-emerald-400' : 'bg-rose-400')}`}></span>
-                                                        <span className={`text-[10px] font-medium block ${activeStyle ? 'text-white/80' : isBank ? 'text-amber-600' : 'text-gray-500'}`}>
-                                                            {isBank ? `🏦 Bank Channel${conv.metadata?.applicationNumber ? ` - App #${conv.metadata.applicationNumber}` : ''}` : 'Online'}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <span className="font-bold text-xs text-[#1A1D20] truncate block tracking-tight">
+                                                            {role === 'bank' && conv.metadata?.applicationId
+                                                                ? getFormattedAppId(conv.metadata.applicationId)
+                                                                : (conv.customerName || conv.customerPhone)
+                                                            }
                                                         </span>
+                                                        <div className="flex items-center gap-1 mt-0.5">
+                                                            <span className={`w-1.5 h-1.5 rounded-full ${isBank ? 'bg-amber-500' : 'bg-[#10B981]'}`}></span>
+                                                            <span className="text-[9px] font-semibold text-[#8A94A6] block truncate">
+                                                                {isBank ? `Bank Channel` : 'Online'}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
+                                                <span className="text-[9.5px] font-semibold text-[#8A94A6] shrink-0">
+                                                    {conv.updatedAt ? formatSidebarDate(conv.updatedAt) : ''}
+                                                </span>
                                             </div>
-                                            <span className={`text-[10px] font-medium ${activeStyle ? 'text-white/70' : 'text-gray-400'}`}>
-                                                {conv.updatedAt ? new Date(conv.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                                            </span>
-                                        </div>
 
-                                        <div className={`text-xs truncate px-1 mt-1 ${isUnread ? 'font-bold text-gray-900' : 'font-medium text-gray-500 opacity-80'} ${activeStyle && 'text-white'}`}>
-                                            {conv.lastMessage ? conv.lastMessage.content : 'Starting conversation...'}
-                                        </div>
+                                            <div className="flex items-center justify-between gap-2 mt-1 pl-0.5">
+                                                <div className={`text-[11px] truncate flex items-center gap-1 flex-1 ${isUnread ? 'font-bold text-[#1A1D20]' : 'font-medium text-[#4A525A]'}`}>
+                                                    {conv.lastMessage && isMessageFromMe(conv.lastMessage) && (
+                                                        <span className="inline-flex items-center shrink-0">
+                                                            {conv.lastMessage.status === 'read' ? (
+                                                                <span className="material-symbols-outlined text-[13px] text-[#10B981] font-bold leading-none">done_all</span>
+                                                            ) : conv.lastMessage.status === 'delivered' ? (
+                                                                <span className="material-symbols-outlined text-[13px] text-[#8A94A6] font-bold leading-none">done_all</span>
+                                                            ) : (
+                                                                <span className="material-symbols-outlined text-[13px] text-[#8A94A6] font-medium leading-none">done</span>
+                                                            )}
+                                                        </span>
+                                                    )}
+                                                    <span className="truncate">{conv.lastMessage ? conv.lastMessage.content : 'Starting conversation...'}</span>
+                                                </div>
 
-                                        {isUnread && !activeStyle && (
-                                            <div className="absolute right-6 bottom-5 flex items-center justify-center w-5 h-5 rounded-full bg-rose-500 text-white font-black text-[9px] shadow-sm">
-                                                {mockUnreadCount}
+                                                {conv.metadata?.applicationNumber && (
+                                                    <span className="px-1.5 py-0.5 bg-[#F2F0FF] text-[#5A42E4] text-[8.5px] font-mono font-bold rounded border border-[#E2E8F0] whitespace-nowrap shrink-0">
+                                                        #{conv.metadata.applicationNumber}
+                                                    </span>
+                                                )}
                                             </div>
-                                        )}
-                                        {conv.status === 'active' && activeConversation !== conv.id && !isUnread && (
-                                            <div className="absolute right-6 bottom-6 w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></div>
-                                        )}
-                                    </div>
+
+                                            {isUnread && (
+                                                <div className="absolute right-4 top-4 flex items-center justify-center w-4.5 h-4.5 rounded-full bg-[#EF4444] text-white font-bold text-[8px] shadow-sm">
+                                                    {mockUnreadCount}
+                                                </div>
+                                            )}
+                                        </div>
                                     );
                                 })
                             )
                         ) : (
                             loadingUsers ? (
-                                <div className="p-10 text-center"><div className="w-8 h-8 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mx-auto" /></div>
+                                <div className="p-10 text-center">
+                                    <div className="w-8 h-8 border-3 border-[#5A42E4]/20 border-t-[#5A42E4] rounded-full animate-spin mx-auto" />
+                                </div>
                             ) : filteredUsers.length === 0 ? (
-                                <div className="p-10 text-center opacity-30"><p className="text-[10px] font-black uppercase">No users found</p></div>
+                                <div className="p-10 text-center opacity-40">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#8A94A6]">No users found</p>
+                                </div>
                             ) : (
                                 filteredUsers.map(u => (
                                     <div
                                         key={u.id}
                                         onClick={() => startNewChat(u)}
-                                        className="px-6 py-5 cursor-pointer transition-all relative rounded-3xl hover:bg-gray-50 group border border-transparent hover:border-gray-200"
+                                        className="px-5 py-4 cursor-pointer transition-all duration-200 relative flex items-center gap-3 border-b border-[#F1F5F9] bg-[#FFFFFF] hover:bg-[#F8F9FC] group"
                                     >
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-[#6605c7]/10 flex items-center justify-center font-black text-xs text-[#6605c7]">
-                                                {u.firstName?.[0] || u.email?.[0]?.toUpperCase()}
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <span className="font-black text-sm tracking-tight truncate block text-gray-900">
-                                                    {u.firstName} {u.lastName}
-                                                </span>
-                                                <span className="text-xs font-medium block mt-0.5 text-gray-500">
-                                                    {u.email}
-                                                </span>
-                                            </div>
-                                            <div className="w-8 h-8 rounded-full bg-[#6605c7]/10 text-[#6605c7] items-center justify-center hidden group-hover:flex">
-                                                <span className="material-symbols-outlined text-sm">chat</span>
-                                            </div>
+                                        <div className="w-9 h-9 rounded-xl bg-[#F2F0FF] text-[#5A42E4] flex items-center justify-center font-bold text-xs shrink-0 border border-[#E2E8F0]">
+                                            {u.firstName?.[0] || u.email?.[0]?.toUpperCase()}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <span className="font-bold text-xs text-[#1A1D20] truncate block">
+                                                {u.firstName} {u.lastName}
+                                            </span>
+                                            <span className="text-[10px] font-semibold text-[#8A94A6] block truncate mt-0.5">
+                                                {u.email}
+                                            </span>
+                                        </div>
+                                        <div className="w-7 h-7 rounded-lg bg-[#F2F0FF] text-[#5A42E4] items-center justify-center hidden group-hover:flex border border-[#E2E8F0]">
+                                            <span className="material-symbols-outlined text-sm font-bold">chat</span>
                                         </div>
                                     </div>
                                 ))
@@ -679,73 +871,59 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
             )}
 
             {/* Main Chat Area */}
-            <div className="flex-1 flex overflow-hidden bg-white dark:bg-gray-900 relative">
+            <div className="flex-1 flex overflow-hidden bg-[#FFFFFF] relative">
                 {/* Chat column */}
                 <div className={`flex flex-col transition-all duration-300 ${showDocPanel ? 'flex-1' : 'w-full'}`}>
                     {activeConversation ? (
                         <>
                             {/* Chat Header */}
-                            <div className="p-8 bg-white border-b border-gray-200 flex items-center justify-between shrink-0">
-                                <div className="flex items-center gap-6">
-                                    <div className="relative">
-                                        <div className="w-14 h-14 rounded-2xl bg-[#6605c7] flex items-center justify-center font-black text-2xl shadow-2xl shadow-[#6605c7]/20 border border-white text-white">
+                            <div className="px-6 py-4 bg-[#FFFFFF] border-b border-[#E2E8F0] flex items-center justify-between shrink-0 h-20">
+                                <div className="flex items-center gap-4 min-w-0">
+                                    <div className="relative shrink-0">
+                                        <div className="w-10 h-10 rounded-xl bg-[#5A42E4] flex items-center justify-center font-bold text-lg text-white shadow-sm">
                                             {role === 'bank' && conversations.find(c => c.id === activeConversation)?.metadata?.applicationId
                                                 ? 'A'
                                                 : (conversations.find(c => c.id === activeConversation)?.customerName || conversations.find(c => c.id === activeConversation)?.customerPhone)?.substring(0, 1)
                                             }
                                         </div>
-                                        <div className="absolute -right-1 -bottom-1 w-4 h-4 bg-emerald-500 border-4 border-white rounded-full"></div>
+                                        <div className="absolute -right-0.5 -bottom-0.5 w-3 h-3 bg-[#10B981] border-2 border-white rounded-full"></div>
                                     </div>
-                                    <div>
-                                        <div className="flex items-center gap-3">
-                                            <h4 className="font-bold text-2xl tracking-tight text-gray-900">
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="font-bold text-sm text-[#1A1D20] tracking-tight truncate">
                                                 {role === 'bank' && conversations.find(c => c.id === activeConversation)?.metadata?.applicationId
                                                     ? getFormattedAppId(conversations.find(c => c.id === activeConversation)?.metadata.applicationId)
                                                     : (conversations.find(c => c.id === activeConversation)?.customerName || conversations.find(c => c.id === activeConversation)?.customerPhone)
                                                 }
                                             </h4>
-                                            <span className="px-3 py-1 bg-[#6605c7]/10 text-[#6605c7] text-[10px] font-bold uppercase tracking-wider rounded-full border border-[#6605c7]/20 whitespace-nowrap">
-                                                {role === 'bank' ? 'Staff Support' : (conversations.find(c => c.id === activeConversation)?.customerEmail || 'Student')}
-                                            </span>
-                                            {conversations.find(c => c.id === activeConversation)?.metadata?.applicationNumber && (
-                                                <span className="px-3 py-1 bg-amber-500/10 text-amber-700 text-[10px] font-mono font-bold uppercase tracking-wider rounded-full border border-amber-500/20 whitespace-nowrap">
-                                                    App #{conversations.find(c => c.id === activeConversation)?.metadata?.applicationNumber}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-3 mt-1.5 px-0.5">
-                                            {role === 'bank' || conversations.find(c => c.id === activeConversation)?.metadata?.type === 'bank' ? (
-                                                <div className="flex items-center gap-1.5 py-0.5 px-2 bg-indigo-500/10 rounded-md border border-indigo-500/20">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></div>
-                                                    <span className="text-[10px] text-indigo-500 font-bold uppercase tracking-wider">Staff Channel</span>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center gap-1.5 py-0.5 px-2 bg-emerald-500/10 rounded-md border border-emerald-500/20">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                                                    <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-wider">WhatsApp Connected</span>
-                                                </div>
-                                            )}
-                                            <span className="text-[10px] text-gray-400 font-medium">
-                                                {role === 'bank' || conversations.find(c => c.id === activeConversation)?.metadata?.type === 'bank' ? 'Secure Internal Link' : 'Verified Channel'}
+                                            <span className="px-2 py-0.5 bg-[#F2F0FF] text-[#5A42E4] text-[9px] font-bold uppercase tracking-wider rounded border border-[#5A42E4]/20 whitespace-nowrap">
+                                                STAFF CHANNEL
                                             </span>
                                         </div>
+                                        <p className="text-[10px] text-[#8A94A6] truncate mt-0.5 font-medium">
+                                            {conversations.find(c => c.id === activeConversation)?.customerEmail || 'support@student-loan.org'}
+                                        </p>
                                     </div>
                                 </div>
-                                <div className="flex gap-3">
+
+                                <div className="flex items-center gap-2 shrink-0">
                                     <button
                                         onClick={openStudentDocuments}
-                                        className={`px-5 py-3 border rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] transition-all flex items-center gap-3 group shadow-sm ${showDocPanel
-                                            ? 'bg-[#6605c7] text-white border-[#6605c7] shadow-[#6605c7]/20'
-                                            : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-700'
+                                        className={`px-4 py-2 border rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-sm cursor-pointer ${showDocPanel
+                                            ? 'bg-[#5A42E4] text-white border-[#5A42E4] shadow-md shadow-[#5A42E4]/20'
+                                            : 'bg-white hover:bg-[#F8F9FC] border-[#E2E8F0] text-[#4A525A]'
                                             }`}
                                     >
-                                        <span className={`material-symbols-outlined text-lg transition-transform ${showDocPanel ? 'rotate-0' : 'group-hover:rotate-12'}`}>description</span>
+                                        <span className="material-symbols-outlined text-base">description</span>
                                         Student Documents
                                         {showDocPanel && studentDocs.length > 0 && (
-                                            <span className="w-5 h-5 rounded-full bg-white/20 text-white text-[9px] font-black flex items-center justify-center">
+                                            <span className="ml-1 w-4.5 h-4.5 rounded-full bg-white/20 text-white text-[9px] font-bold flex items-center justify-center">
                                                 {studentDocs.length}
                                             </span>
                                         )}
+                                    </button>
+                                    <button className="w-9 h-9 flex items-center justify-center text-[#8A94A6] hover:text-[#1A1D20] hover:bg-[#F8F9FC] rounded-xl border border-[#E2E8F0] transition-all cursor-pointer">
+                                        <span className="material-symbols-outlined text-[18px]">more_vert</span>
                                     </button>
                                 </div>
                             </div>
@@ -753,135 +931,177 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                             {/* Messages */}
                             <div className="flex-1 p-10 overflow-y-auto no-scrollbar flex flex-col gap-8 bg-gradient-to-b from-[#fbfbfd] to-white">
                                 {messages.length === 0 ? (
-                                    <div className="flex-1 flex flex-col items-center justify-center opacity-70 mt-10 animate-fade-in">
-                                        <div className="w-24 h-24 bg-purple-50 border border-purple-100/50 rounded-full flex items-center justify-center mb-4 shadow-sm">
-                                            <span className="material-symbols-outlined text-4xl text-[#6605c7]/40">forum</span>
+                                    <div className="flex-1 flex flex-col items-center justify-center opacity-60 mt-10 animate-fade-in px-6 text-center">
+                                        <div className="w-16 h-16 bg-[#F2F0FF] rounded-2xl flex items-center justify-center mb-4 border border-[#5A42E4]/10 shadow-sm text-[#5A42E4]">
+                                            <span className="material-symbols-outlined text-2xl">forum</span>
                                         </div>
-                                        <p className="text-sm font-bold text-gray-500">No recent messages</p>
-                                        <p className="text-xs text-gray-400 mt-1">Send a message to start the conversation.</p>
+                                        <p className="text-sm font-bold text-[#1A1D20]">No recent messages</p>
+                                        <p className="text-xs text-[#8A94A6] mt-1">Send a message below to start the conversation.</p>
                                     </div>
                                 ) : (
                                     <>
-                                        <div className="flex justify-center mb-6">
-                                            <span className="px-4 py-1 bg-white border border-gray-200 text-[10px] text-gray-500 font-bold uppercase tracking-widest rounded-full shadow-sm">
-                                                Message History
-                                            </span>
-                                        </div>
+                                        {(() => {
+                                            let lastDateStr = '';
+                                            return messages.map(msg => {
+                                                const isMe = isMessageFromMe(msg);
+                                                const isCustomer = msg.senderType === 'customer';
 
-                                        {messages.map(msg => {
-                                            const currentUserId = user?.id || (user as any)?._id || (user as any)?.uid;
-                                            const currentUserEmail = user?.email;
-                                            const isStaffRole = role === 'staff' && ['staff', 'admin', 'super_admin'].includes(msg.senderType);
-                                            const isMe = msg.senderId === currentUserId || msg.senderId === currentUserEmail || msg.senderType === role || isStaffRole;
-                                            const isCustomer = msg.senderType === 'customer';
-                                            
-                                            // Fallback to senderId (which is usually their email) if senderName is missing
-                                            const staffOrBankName = msg.senderName || (msg.senderId && msg.senderId.includes('@') ? msg.senderId.split('@')[0] : msg.senderId) || 'Support Agent';
+                                                // Fallback to senderId (which is usually their email) if senderName is missing
+                                                const staffOrBankName = msg.senderName || (msg.senderId && msg.senderId.includes('@') ? msg.senderId.split('@')[0] : msg.senderId) || 'Support Agent';
 
-                                            const senderLabel = isCustomer 
-                                                ? 'Student' 
-                                                : (msg.senderType === 'system' ? 'System' : staffOrBankName);
+                                                const senderLabel = isCustomer
+                                                    ? 'Student'
+                                                    : (msg.senderType === 'system' ? 'System' : staffOrBankName);
 
-                                            return (
-                                                <div key={msg.id} className={`flex flex-col max-w-[70%] ${isMe ? 'self-end items-end' : 'self-start items-start'} animate-slide-up`}>
-                                                    <div className="flex items-center gap-3 mb-2 px-1">
-                                                        <span className={`text-[10px] font-bold uppercase tracking-wider ${isMe ? 'text-[#6605c7]' : 'text-gray-500'}`}>
-                                                            {isMe ? 'You' : senderLabel}
-                                                        </span>
-                                                        {isCustomer && (
-                                                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/10 rounded border border-emerald-500/20">
-                                                                <span className="w-1 h-1 rounded-full bg-[#25D366]"></span>
-                                                                <span className="text-[9px] text-[#25D366] font-bold uppercase tracking-wider">WhatsApp</span>
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                                const msgDate = new Date(msg.createdAt).toDateString();
+                                                const showDivider = msgDate !== lastDateStr;
+                                                lastDateStr = msgDate;
 
-                                                    <div className={`px-5 py-4 rounded-[2rem] shadow-sm relative border ${isMe
-                                                        ? 'bg-[#6605c7] text-white rounded-tr-none border-[#6605c7]/10 shadow-md'
-                                                        : isCustomer
-                                                            ? 'bg-slate-50 border-slate-200 text-gray-800 rounded-tl-none'
-                                                            : 'bg-indigo-50 text-indigo-900 rounded-tl-none border-indigo-100'
-                                                        }`}>
-                                                        {msg.attachmentUrl ? (
-                                                            <div className="flex flex-col gap-2">
-                                                                <a 
-                                                                    href={`/api/chat/attachment/${msg.id}`} 
-                                                                    target="_blank" 
-                                                                    rel="noopener noreferrer"
-                                                                    className={`flex items-center gap-3 p-3 rounded-xl border ${isMe ? 'bg-white/10 border-white/20 hover:bg-white/20' : 'bg-white border-gray-200 hover:bg-gray-50'} transition-colors`}
-                                                                >
-                                                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isMe ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'}`}>
-                                                                        <span className="material-symbols-outlined">
-                                                                            {msg.messageType === 'image' ? 'image' : 'description'}
-                                                                        </span>
+                                                if (msg.senderType === 'system') {
+                                                    return (
+                                                        <React.Fragment key={msg.id}>
+                                                            {showDivider && (
+                                                                <div className="flex items-center justify-center my-6 w-full relative">
+                                                                    <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                                                                        <div className="w-full border-t border-[#E2E8F0]"></div>
+                                                                    </div>
+                                                                    <span className="relative px-3 py-1 bg-[#F2F0FF] text-[#5A42E4] text-[9px] font-bold uppercase tracking-wider rounded-full border border-[#5A42E4]/25 shadow-sm">
+                                                                        {formatMessageGroupDate(msg.createdAt)}
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                            <div className="self-center my-3 max-w-[85%] w-full font-sans">
+                                                                <div className="px-5 py-4 bg-[#FFFFFF] border border-[#E2E8F0] rounded-2xl shadow-sm flex items-start gap-3">
+                                                                    <div className="w-8 h-8 rounded-lg bg-[#F2F0FF] text-[#5A42E4] flex items-center justify-center shrink-0 border border-[#E2E8F0]">
+                                                                        <span className="material-symbols-outlined text-lg font-bold">info</span>
                                                                     </div>
                                                                     <div className="flex-1 min-w-0">
-                                                                        <p className="text-xs font-bold truncate">
-                                                                            {msg.content.replace('[Attached File: ', '').replace(']', '')}
-                                                                        </p>
-                                                                        <p className={`text-[10px] ${isMe ? 'text-white/70' : 'text-gray-500'} uppercase tracking-wider`}>
-                                                                            Click to {msg.messageType === 'image' ? 'view' : 'download'}
-                                                                        </p>
+                                                                        <span className="text-[9px] font-bold text-[#5A42E4] uppercase tracking-wider block mb-0.5">SYSTEM NOTICE</span>
+                                                                        <p className="text-xs font-medium text-[#1A1D20] leading-relaxed">{msg.content}</p>
                                                                     </div>
-                                                                </a>
+                                                                </div>
                                                             </div>
-                                                        ) : (
-                                                            <p className="text-[13px] font-medium leading-relaxed tracking-tight">{msg.content}</p>
-                                                        )}
-                                                    </div>
+                                                        </React.Fragment>
+                                                    );
+                                                }
 
-                                                    <div className={`mt-2 flex items-center gap-3 px-1 text-[8px] font-black uppercase tracking-widest ${isMe ? 'text-[#6605c7]/60' : 'text-gray-400'}`}>
-                                                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                        {isMe && (
-                                                            <div className="flex items-center gap-1.5">
-                                                                <span className="material-symbols-outlined text-[10px]">check_circle</span>
-                                                                <span>Delivered</span>
+                                                return (
+                                                    <React.Fragment key={msg.id}>
+                                                        {showDivider && (
+                                                            <div className="flex items-center justify-center my-6 w-full relative">
+                                                                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                                                                    <div className="w-full border-t border-[#E2E8F0]"></div>
+                                                                </div>
+                                                                <span className="relative px-3 py-1 bg-[#F2F0FF] text-[#5A42E4] text-[9px] font-bold uppercase tracking-wider rounded-full border border-[#5A42E4]/25 shadow-sm">
+                                                                    {formatMessageGroupDate(msg.createdAt)}
+                                                                </span>
                                                             </div>
                                                         )}
-                                                    </div>
-                                                </div>
-                                            )
-                                        })}
+                                                        <div className={`flex flex-col max-w-[75%] ${isMe ? 'self-end items-end' : 'self-start items-start'} animate-slide-up font-sans`}>
+                                                            <div className="flex items-center gap-2 mb-1 px-1">
+                                                                <span className={`text-[10px] font-bold uppercase tracking-wider ${isMe ? 'text-[#5A42E4]' : 'text-[#4A525A]'}`}>
+                                                                    {isMe ? 'You' : senderLabel}
+                                                                </span>
+                                                                {isCustomer && (
+                                                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[#E8F8F5] text-[#10B981] rounded border border-[#10B981]/15">
+                                                                        <span className="w-1 h-1 rounded-full bg-[#10B981]"></span>
+                                                                        <span className="text-[8px] text-[#10B981] font-bold uppercase tracking-wider">WhatsApp</span>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+
+                                                            <div className={`px-4 py-3 rounded-2xl shadow-sm relative border ${isMe
+                                                                ? 'bg-[#5A42E4] text-[#FFFFFF] rounded-tr-none border-[#5A42E4]/10 shadow-sm'
+                                                                : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1A1D20] rounded-tl-none'
+                                                                }`}>
+                                                                {msg.attachmentUrl ? (
+                                                                    <div className="flex flex-col gap-2">
+                                                                        <a
+                                                                            href={`/api/chat/attachment/${msg.id}`}
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            className={`flex items-center gap-3 p-3 rounded-xl border ${isMe ? 'bg-white/10 border-white/20 hover:bg-white/20' : 'bg-white border-[#E2E8F0] hover:bg-gray-50'} transition-colors`}
+                                                                        >
+                                                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isMe ? 'bg-white/20 text-white' : 'bg-[#F2F0FF] text-[#5A42E4]'}`}>
+                                                                                <span className="material-symbols-outlined">
+                                                                                    {msg.messageType === 'image' ? 'image' : 'description'}
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <p className="text-xs font-bold truncate">
+                                                                                    {msg.content.replace('[Attached File: ', '').replace(']', '')}
+                                                                                </p>
+                                                                                <p className={`text-[9px] ${isMe ? 'text-white/70' : 'text-[#8A94A6]'} uppercase tracking-wider`}>
+                                                                                    Click to {msg.messageType === 'image' ? 'view' : 'download'}
+                                                                                </p>
+                                                                            </div>
+                                                                        </a>
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-xs font-medium leading-relaxed tracking-tight">{msg.content}</p>
+                                                                )}
+                                                            </div>
+
+                                                            <div className={`mt-1.5 flex items-center gap-2 px-1 text-[9px] font-bold tracking-wide uppercase ${isMe ? 'text-[#5A42E4]/70' : 'text-[#8A94A6]'}`}>
+                                                                <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                {isMe && (
+                                                                    <span className="inline-flex items-center gap-0.5 shrink-0">
+                                                                        {msg.status === 'read' ? (
+                                                                            <>
+                                                                                <span className="material-symbols-outlined text-[13px] text-[#10B981] font-bold leading-none">done_all</span>
+                                                                                <span className="text-[#10B981] text-[8px] font-bold tracking-wider">Seen</span>
+                                                                            </>
+                                                                        ) : msg.status === 'delivered' ? (
+                                                                            <>
+                                                                                <span className="material-symbols-outlined text-[13px] text-[#8A94A6] font-bold leading-none">done_all</span>
+                                                                                <span className="text-[8px] font-bold tracking-wider">Delivered</span>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <span className="material-symbols-outlined text-[13px] text-[#8A94A6] font-bold leading-none">done</span>
+                                                                                <span className="text-[8px] font-bold tracking-wider">Sent</span>
+                                                                            </>
+                                                                        )}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </React.Fragment>
+                                                );
+                                            });
+                                        })()}
                                     </>
                                 )}
                                 <div ref={messagesEndRef} />
                             </div>
 
                             {/* Input Panel */}
-                            <div className="p-8 bg-white border-t border-gray-200 shrink-0">
+                            <div className="p-6 bg-white border-t border-[#E2E8F0] shrink-0">
                                 {/* Message Presets */}
-                                <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-1.5 scroll-smooth">
+                                <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-1.5 scroll-smooth font-sans">
                                     {[
-                                        { label: "Missing Marks", color: "blue", text: "Hello! We have reviewed your initial dossier but require the original 10th and 12th standard marksheets. Please upload them in the Document Vault." },
-                                        { label: "Processing Fee", color: "amber", text: "Dear applicant, processing fees of ₹17,700 (including 18% GST) are due to advance sanctioning. Kindly deposit upfront or select deduction." },
-                                        { label: "Co-Applicant KYC", color: "emerald", text: "Hello! To proceed with duplicate checks, please upload your co-applicant's verified Aadhaar and PAN documents." },
-                                        { label: "Clarification Memo", color: "purple", text: "Dear applicant, a credit audit query has been raised on your files. Kindly check the Queries Tab and submit responses." }
-                                    ].map((preset, idx) => {
-                                        const colors: any = {
-                                            blue: "bg-blue-50 text-blue-600 border-blue-100 hover:bg-blue-600 hover:text-white hover:border-blue-600",
-                                            amber: "bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-500 hover:text-white hover:border-amber-500",
-                                            emerald: "bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-600 hover:text-white hover:border-emerald-600",
-                                            purple: "bg-purple-50 text-[#6605c7] border-purple-100 hover:bg-[#6605c7] hover:text-white hover:border-[#6605c7]",
-                                        };
-                                        return (
+                                        { label: "MISSING MARKS", text: "Hello! We have reviewed your initial dossier but require the original 10th and 12th standard marksheets. Please upload them in the Document Vault." },
+                                        { label: "PROCESSING FEE", text: "Dear applicant, processing fees of ₹17,700 (including 18% GST) are due to advance sanctioning. Kindly deposit upfront or select deduction." },
+                                        { label: "CO-APPLICANT KYC", text: "Hello! To proceed with duplicate checks, please upload your co-applicant's verified Aadhaar and PAN documents." },
+                                        { label: "CLARIFICATION MEMO", text: "Dear applicant, a credit audit query has been raised on your files. Kindly check the Queries Tab and submit responses." }
+                                    ].map((preset, idx) => (
                                         <button
                                             key={idx}
                                             type="button"
                                             onClick={() => setInputText(preset.text)}
-                                            className={`px-3.5 py-2 border text-[9.5px] font-black uppercase tracking-wider rounded-xl transition-all shrink-0 shadow-sm hover:shadow-md ${colors[preset.color]}`}
+                                            className="px-3 py-1.5 bg-[#FFFFFF] text-[#5A42E4] border border-[#E2E8F0] text-[9.5px] font-bold uppercase tracking-wider rounded-xl transition-all duration-250 hover:bg-[#F2F0FF] hover:border-[#5A42E4] hover:-translate-y-0.5 shrink-0 shadow-sm cursor-pointer"
                                         >
                                             {preset.label}
                                         </button>
-                                        )
-                                    })}
+                                    ))}
                                 </div>
-                                <form onSubmit={handleSendMessage} className="flex gap-4 items-center">
-                                    <div className="flex-1 relative flex items-center">
-                                        <label className="absolute left-2 w-10 h-10 flex items-center justify-center text-gray-400 hover:text-[#6605c7] hover:bg-purple-50 rounded-xl transition-all cursor-pointer">
+                                <form onSubmit={handleSendMessage} className="flex gap-3 items-center">
+                                    <div className="flex-1 relative flex items-center bg-[#F8F9FC] border border-[#E2E8F0] rounded-xl transition-all duration-200 focus-within:bg-white focus-within:border-[#5A42E4] focus-within:ring-4 focus-within:ring-[#5A42E4]/10 pl-11 pr-20 h-13 shadow-inner">
+                                        <label className="absolute left-2 w-8 h-8 flex items-center justify-center text-[#8A94A6] hover:text-[#5A42E4] hover:bg-[#F2F0FF] rounded-lg transition-all cursor-pointer">
                                             {uploading ? (
-                                                <div className="w-5 h-5 border-2 border-[#6605c7]/30 border-t-[#6605c7] rounded-full animate-spin" />
+                                                <div className="w-4 h-4 border-2 border-[#5A42E4]/30 border-t-[#5A42E4] rounded-full animate-spin" />
                                             ) : (
-                                                <span className="material-symbols-outlined font-black">add</span>
+                                                <span className="material-symbols-outlined text-[20px]">attach_file</span>
                                             )}
                                             <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" />
                                         </label>
@@ -890,44 +1110,43 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                             value={inputText}
                                             onChange={(e) => setInputText(e.target.value)}
                                             placeholder="Type your message here..."
-                                            className="w-full bg-[#fbfbfd] border border-gray-200 rounded-2xl pl-14 pr-24 py-5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-4 focus:ring-[#6605c7]/10 transition-all font-medium"
+                                            className="w-full bg-transparent border-none py-2 text-xs text-[#1A1D20] placeholder-[#8A94A6] focus:outline-none font-semibold h-full"
                                         />
-                                        <div className="absolute right-3 flex items-center gap-1">
-                                            <button type="button" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-amber-500 transition-all rounded-lg hover:bg-amber-50">
-                                                <span className="material-symbols-outlined text-[20px]">mood</span>
+                                        <div className="absolute right-2 flex items-center gap-0.5">
+                                            <button type="button" className="w-7 h-7 flex items-center justify-center text-[#8A94A6] hover:text-[#5A42E4] hover:bg-[#F2F0FF] transition-all rounded-lg cursor-pointer">
+                                                <span className="material-symbols-outlined text-[18px]">mood</span>
                                             </button>
-                                            <button type="button" className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-emerald-500 transition-all rounded-lg hover:bg-emerald-50">
-                                                <span className="material-symbols-outlined text-[20px]">mic</span>
+                                            <button type="button" className="w-7 h-7 flex items-center justify-center text-[#8A94A6] hover:text-[#5A42E4] hover:bg-[#F2F0FF] transition-all rounded-lg cursor-pointer">
+                                                <span className="material-symbols-outlined text-[18px]">mic</span>
                                             </button>
                                         </div>
                                     </div>
                                     <button
                                         type="submit"
                                         disabled={!inputText.trim()}
-                                        className="w-16 h-16 bg-[#6605c7] hover:bg-[#8b24e5] text-white rounded-2xl flex items-center justify-center disabled:opacity-50 transition-all shadow-2xl shadow-[#6605c7]/20 active:scale-95 group shrink-0"
+                                        className="w-13 h-13 bg-[#5A42E4] hover:bg-[#432ec4] text-white rounded-xl flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all shadow-md shadow-[#5A42E4]/20 hover:shadow-lg hover:shadow-[#5A42E4]/30 active:scale-95 group shrink-0 cursor-pointer"
                                     >
-                                        <span className="material-symbols-outlined font-black group-hover:rotate-12 transition-transform">send</span>
+                                        <span className="material-symbols-outlined text-[18px] font-bold group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">send</span>
                                     </button>
                                 </form>
-                                <div className="flex justify-between items-center mt-6 px-1">
-                                    <div className="flex items-center gap-3 opacity-30">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-[#6605c7]"></div>
-                                        <span className="text-[10px] font-bold uppercase tracking-widest">Secure Messaging</span>
+                                <div className="flex justify-between items-center mt-4 px-1 font-sans">
+                                    <div className="flex items-center gap-1.5 text-[#10B981]">
+                                        <span className="material-symbols-outlined text-sm font-bold">verified_user</span>
+                                        <span className="text-[9px] font-bold uppercase tracking-wider">End-to-End Encrypted Staff Channel</span>
                                     </div>
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Press Enter to send</p>
+                                    <p className="text-[9px] font-bold uppercase tracking-wider text-[#8A94A6]">Press Enter to send</p>
                                 </div>
                             </div>
                         </>
                     ) : (
-                        <div className="flex-1 flex items-center justify-center bg-gradient-to-b from-[#fbfbfd] to-white relative overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-t from-[#6605c7]/5 to-transparent"></div>
-                            <div className="text-center relative z-10 animate-fade-in">
-                                <div className="w-32 h-32 rounded-[3.5rem] bg-[#6605c7]/10 text-[#6605c7] flex items-center justify-center mx-auto mb-10 shadow-3xl border border-[#6605c7]/10 relative">
-                                    <div className="absolute inset-0 rounded-[3.5rem] animate-ping-slow bg-[#6605c7]/5"></div>
-                                    <span className="material-symbols-outlined text-6xl">leak_add</span>
+                        <div className="flex-1 flex items-center justify-center bg-[#F8F9FC] relative overflow-hidden font-sans">
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#5A42E4]/3 to-transparent"></div>
+                            <div className="text-center relative z-10 animate-fade-in px-6">
+                                <div className="w-24 h-24 rounded-3xl bg-[#F2F0FF] text-[#5A42E4] flex items-center justify-center mx-auto mb-6 border border-[#5A42E4]/10 relative shadow-sm">
+                                    <span className="material-symbols-outlined text-4xl">chat</span>
                                 </div>
-                                <h3 className="text-3xl font-bold tracking-tight mb-4 text-gray-900">Communication Center</h3>
-                                <p className="text-gray-500 font-medium text-sm">Select a conversation to start messaging</p>
+                                <h3 className="text-xl font-bold tracking-tight text-[#1A1D20] mb-2">Staff Communication Portal</h3>
+                                <p className="text-[#4A525A] text-sm max-w-sm mx-auto font-medium">Select a student or bank conversation from the left sidebar to start messaging in real-time.</p>
                             </div>
                         </div>
                     )}
@@ -935,92 +1154,177 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
 
                 {/* Document Side Panel */}
                 {showDocPanel && activeConversation && (
-                    <div className="w-80 border-l border-gray-200 bg-[#fbfbfd] flex flex-col shrink-0 animate-in slide-in-from-right duration-300">
+                    <div className="w-80 border-l border-[#E2E8F0] bg-[#F8F9FC] flex flex-col shrink-0 animate-in slide-in-from-right duration-300 h-full overflow-hidden font-sans">
                         {/* Panel Header */}
-                        <div className="px-6 py-5 border-b border-gray-200 bg-white flex items-center justify-between">
+                        <div className="px-5 py-4 border-b border-[#E2E8F0] bg-[#FFFFFF] flex items-center justify-between shrink-0">
                             <div>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-[#6605c7]">Document Vault</p>
-                                 <h5 className="text-sm font-black text-gray-900 mt-0.5">
-                                     {role === 'bank' && conversations.find(c => c.id === activeConversation)?.metadata?.applicationId
-                                         ? getFormattedAppId(conversations.find(c => c.id === activeConversation)?.metadata.applicationId)
-                                         : (conversations.find(c => c.id === activeConversation)?.customerName || 'Student')
-                                     }&apos;s Files
-                                 </h5>
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-[#5A42E4]">Document Vault</p>
+                                <h5 className="text-sm font-bold text-[#1A1D20] mt-0.5 truncate max-w-[180px]">
+                                    {role === 'bank' && conversations.find(c => c.id === activeConversation)?.metadata?.applicationId
+                                        ? getFormattedAppId(conversations.find(c => c.id === activeConversation)?.metadata.applicationId)
+                                        : (conversations.find(c => c.id === activeConversation)?.customerName || 'Student')
+                                    }&apos;s Files
+                                </h5>
                             </div>
                             <button
                                 onClick={() => { setShowDocPanel(false); setPreviewDoc(null); }}
-                                className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-all"
+                                className="w-8 h-8 rounded-lg hover:bg-[#F2F0FF] flex items-center justify-center text-[#8A94A6] hover:text-[#5A42E4] transition-all border border-[#E2E8F0] hover:border-[#5A42E4]/20 cursor-pointer"
                             >
-                                <span className="material-symbols-outlined text-[18px]">close</span>
+                                <span className="material-symbols-outlined text-[16px]">close</span>
                             </button>
                         </div>
 
+                        {/* Upload & Share Section */}
+                        <div className="px-5 py-3 border-b border-[#E2E8F0] bg-[#FFFFFF] shrink-0">
+                            <label className="w-full flex items-center justify-center gap-2 py-2 bg-[#5A42E4] hover:bg-[#432ec4] text-white text-[11px] font-bold uppercase tracking-wider rounded-xl cursor-pointer shadow-md shadow-[#5A42E4]/20 hover:shadow-lg transition-all text-center">
+                                <span className="material-symbols-outlined text-sm font-bold">upload_file</span>
+                                {uploading ? 'Uploading...' : 'Upload & Share File'}
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file || !activeConversation) return;
+                                        setUploading(true);
+                                        const formData = new FormData();
+                                        formData.append('file', file);
+                                        formData.append('conversationId', activeConversation);
+                                        try {
+                                            const res = await fetch(`/api/chat/upload`, {
+                                                method: 'POST',
+                                                headers: { Authorization: `Bearer ${token}` },
+                                                body: formData
+                                            });
+                                            const data = await res.json();
+                                            if (data.success && data.message) {
+                                                // Add to local message state immediately
+                                                setMessages(prev => {
+                                                    if (prev.find(m => m.id === data.message.id)) return prev;
+                                                    return [...prev, data.message];
+                                                });
+                                                setConversations(prev => prev.map(c =>
+                                                    c.id === activeConversation
+                                                        ? { ...c, lastMessage: data.message, updatedAt: data.message.createdAt }
+                                                        : c
+                                                ));
+                                                openStudentDocuments();
+                                            } else if (!data.success) {
+                                                alert(data.message || 'Upload failed');
+                                            }
+                                        } catch (err) {
+                                            console.error('Upload error:', err);
+                                            alert('An error occurred during upload');
+                                        } finally {
+                                            setUploading(false);
+                                            e.target.value = '';
+                                        }
+                                    }}
+                                    disabled={uploading}
+                                    accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
+                                />
+                            </label>
+                        </div>
+
                         {/* Document List */}
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3">
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-4 space-y-3 bg-[#F8F9FC]">
                             {loadingDocs ? (
                                 <div className="flex flex-col items-center justify-center py-16 gap-3">
-                                    <div className="w-10 h-10 border-4 border-[#6605c7]/20 border-t-[#6605c7] rounded-full animate-spin" />
-                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Loading documents...</p>
+                                    <div className="w-8 h-8 border-3 border-[#5A42E4]/20 border-t-[#5A42E4] rounded-full animate-spin" />
+                                    <p className="text-[10px] font-bold text-[#8A94A6] uppercase tracking-wider">Loading documents...</p>
                                 </div>
-                            ) : !docsUserId ? (
-                                <div className="flex flex-col items-center justify-center py-16 text-center gap-3 px-4">
-                                    <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center">
-                                        <span className="material-symbols-outlined text-amber-500 text-[28px]">person_search</span>
+                            ) : !docsUserId && studentDocs.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-16 text-center gap-3 px-4 bg-white rounded-2xl border border-[#E2E8F0] shadow-sm">
+                                    <div className="w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-500">
+                                        <span className="material-symbols-outlined text-[24px]">person_search</span>
                                     </div>
-                                    <p className="text-[11px] font-bold text-gray-500">Student profile not found for this conversation.</p>
-                                    <p className="text-[10px] text-gray-400">Make sure the student has a registered account linked to this phone/email.</p>
+                                    <div>
+                                        <p className="text-xs font-bold text-[#1A1D20]">Profile not found</p>
+                                        <p className="text-[10px] text-[#8A94A6] mt-1">Make sure the student has a registered account linked to this phone/email.</p>
+                                    </div>
                                 </div>
                             ) : studentDocs.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center py-16 text-center gap-3 px-4">
-                                    <div className="w-14 h-14 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center">
-                                        <span className="material-symbols-outlined text-slate-400 text-[28px]">folder_open</span>
+                                <div className="flex flex-col items-center justify-center py-16 text-center gap-3 px-4 bg-white rounded-2xl border border-[#E2E8F0] shadow-sm">
+                                    <div className="w-12 h-12 rounded-xl bg-[#F8F9FC] border border-[#E2E8F0] flex items-center justify-center text-[#8A94A6]">
+                                        <span className="material-symbols-outlined text-[24px]">folder_open</span>
                                     </div>
-                                    <p className="text-[11px] font-bold text-gray-500">No uploaded documents found for this student.</p>
+                                    <p className="text-xs font-bold text-[#4A525A]">No documents found</p>
                                 </div>
                             ) : (
                                 studentDocs.map(doc => {
                                     const sc = getDocStatusColor(doc.status, doc.uploaded);
                                     const docLabel = (doc.name || doc.docType || '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                                     const isLoadingThis = previewLoading === doc.docType;
+
+                                    let statusBgClass = "bg-[#F1F5F9]";
+                                    let statusTextClass = "text-[#8A94A6]";
+                                    let statusBorderClass = "border-[#E2E8F0]";
+                                    let dotClass = "bg-[#8A94A6]";
+
+                                    if (sc.label === "Verified") {
+                                        statusBgClass = "bg-[#E8F8F5]";
+                                        statusTextClass = "text-[#10B981]";
+                                        statusBorderClass = "border-[#10B981]/20";
+                                        dotClass = "bg-[#10B981]";
+                                    } else if (sc.label === "Rejected") {
+                                        statusBgClass = "bg-[#FDF2F2]";
+                                        statusTextClass = "text-[#EF4444]";
+                                        statusBorderClass = "border-[#EF4444]/20";
+                                        dotClass = "bg-[#EF4444]";
+                                    } else if (sc.label === "Uploaded") {
+                                        statusBgClass = "bg-[#F2F0FF]";
+                                        statusTextClass = "text-[#5A42E4]";
+                                        statusBorderClass = "border-[#5A42E4]/20";
+                                        dotClass = "bg-[#5A42E4]";
+                                    }
+
                                     return (
                                         <div
                                             key={doc.id || doc.docType}
-                                            className="bg-white rounded-2xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all"
+                                            className="bg-white rounded-2xl border border-[#E2E8F0] p-4 shadow-sm hover:shadow-md transition-all duration-200"
                                         >
                                             <div className="flex items-start gap-3 mb-3">
-                                                <div className={`w-9 h-9 rounded-xl ${sc.bg} border ${sc.border} flex items-center justify-center shrink-0`}>
-                                                    <span className={`material-symbols-outlined text-[18px] ${sc.text}`}>description</span>
+                                                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${statusBorderClass} ${statusBgClass} ${statusTextClass}`}>
+                                                    <span className="material-symbols-outlined text-[18px]">description</span>
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="text-[12px] font-black text-gray-900 truncate">{docLabel}</p>
+                                                    <p className="text-xs font-bold text-[#1A1D20] truncate">{docLabel}</p>
                                                     <div className="flex items-center gap-1.5 mt-1">
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${sc.dot}`}></span>
-                                                        <span className={`text-[9px] font-bold uppercase ${sc.text}`}>{sc.label}</span>
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`}></span>
+                                                        <span className={`text-[9px] font-bold uppercase ${statusTextClass}`}>{sc.label}</span>
                                                     </div>
                                                     {doc.fileName && (
-                                                        <p className="text-[9px] text-gray-400 font-medium mt-1 truncate">{doc.fileName}</p>
+                                                        <p className="text-[9px] text-[#8A94A6] font-medium mt-1 truncate">{doc.fileName}</p>
                                                     )}
                                                 </div>
                                             </div>
-                                            <div className="flex gap-2">
+                                            <div className="flex gap-1.5">
                                                 <button
                                                     onClick={() => handleViewDocument(doc)}
                                                     disabled={isLoadingThis}
-                                                    className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-[#6605c7]/5 hover:bg-[#6605c7] text-[#6605c7] hover:text-white border border-[#6605c7]/20 hover:border-[#6605c7] rounded-xl text-[10px] font-black uppercase tracking-wide transition-all"
+                                                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-[#F2F0FF] hover:bg-[#5A42E4] text-[#5A42E4] hover:text-white border border-[#5A42E4]/20 hover:border-[#5A42E4] rounded-lg text-[9px] font-bold uppercase transition-all cursor-pointer"
                                                 >
                                                     {isLoadingThis ? (
-                                                        <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                                        <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
                                                     ) : (
-                                                        <span className="material-symbols-outlined text-[14px]">visibility</span>
+                                                        "View"
                                                     )}
-                                                    View
                                                 </button>
                                                 <button
                                                     onClick={() => handleDownloadDocument(doc)}
-                                                    className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-wide transition-all"
+                                                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-white hover:bg-[#F8F9FC] text-[#4A525A] border border-[#E2E8F0] rounded-lg text-[9px] font-bold uppercase transition-all cursor-pointer"
                                                 >
-                                                    <span className="material-symbols-outlined text-[14px]">download</span>
                                                     Download
+                                                </button>
+                                                <button
+                                                    onClick={() => handleShareDocument(doc)}
+                                                    disabled={sharingDoc === doc.id}
+                                                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-emerald-50 hover:bg-[#10B981] text-[#10B981] hover:text-white border border-[#10B981]/20 hover:border-[#10B981] rounded-lg text-[9px] font-bold uppercase transition-all cursor-pointer disabled:opacity-50"
+                                                >
+                                                    {sharingDoc === doc.id ? (
+                                                        <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                                    ) : (
+                                                        "Share"
+                                                    )}
                                                 </button>
                                             </div>
                                         </div>
@@ -1031,8 +1335,8 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
 
                         {/* Panel Footer */}
                         {docsUserId && !loadingDocs && (
-                            <div className="px-5 py-3 border-t border-gray-200 bg-white">
-                                <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest text-center">
+                            <div className="px-5 py-3.5 border-t border-[#E2E8F0] bg-[#FFFFFF] shrink-0">
+                                <p className="text-[9px] text-[#8A94A6] font-bold uppercase tracking-wider text-center">
                                     {studentDocs.length} uploaded document{studentDocs.length !== 1 ? 's' : ''} found
                                 </p>
                             </div>

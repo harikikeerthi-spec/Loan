@@ -1,8 +1,24 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
+
+function formatMessageGroupDate(dateStr: string) {
+    const date = new Date(dateStr);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+
+    if (date.toDateString() === today.toDateString()) {
+        return 'TODAY';
+    } else if (date.toDateString() === yesterday.toDateString()) {
+        return 'YESTERDAY';
+    } else {
+        return date.toLocaleDateString([], { day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
+    }
+}
+
 
 export default function WhatsAppSimulator() {
     const [socket, setSocket] = useState<Socket | null>(null);
@@ -23,11 +39,9 @@ export default function WhatsAppSimulator() {
     const handleConnect = () => {
         if (!phone.trim()) return;
 
-        const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (
-            typeof window !== 'undefined' && !window.location.hostname.includes('localhost') && !window.location.hostname.includes('127.0.0.1')
-                ? window.location.origin
-                : 'http://localhost:5000'
-        );
+        const baseApiUrl = typeof window !== 'undefined' && (window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1'))
+            ? 'http://localhost:5000'
+            : (process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5000'));
         const socketUrl = baseApiUrl.endsWith('/api') 
             ? baseApiUrl.replace('/api', '/chat')
             : `${baseApiUrl.replace(/\/$/, '')}/chat`;
@@ -44,14 +58,47 @@ export default function WhatsAppSimulator() {
             fetch(`/api/webhook/whatsapp/history/${phone.trim()}`)
                 .then(res => res.json())
                 .then(data => {
-                    if (Array.isArray(data)) setMessages(data);
+                    if (Array.isArray(data)) {
+                        setMessages(data);
+                        if (data.length > 0 && data[0].conversationId) {
+                            socketInstance.emit('join_conversation', data[0].conversationId);
+                            socketInstance.emit('mark_read', { conversationId: data[0].conversationId });
+                        }
+                    }
                 })
                 .catch(e => console.error("Could not load history"));
         });
 
         socketInstance.on('wa_message_received', (msg: any) => {
-            setMessages(prev => [...prev, msg]);
+            setMessages(prev => {
+                if (prev.find(m => m.id === msg.id)) return prev;
+                return [...prev, msg];
+            });
+            if (msg.conversationId) {
+                socketInstance.emit('join_conversation', msg.conversationId);
+                socketInstance.emit('mark_read', { conversationId: msg.conversationId });
+            }
             if (navigator.vibrate) navigator.vibrate(200);
+        });
+
+        socketInstance.on('messages_read', (data: { conversationId: string, readerType: string, readerId?: string }) => {
+            setMessages(prev => prev.map(m => {
+                if (m.conversationId === data.conversationId) {
+                    if (data.readerId) {
+                        if (m.senderId !== data.readerId) {
+                            return { ...m, status: 'read' };
+                        }
+                    } else {
+                        if (data.readerType === 'staff_or_bank' && m.senderType === 'customer') {
+                            return { ...m, status: 'read' };
+                        }
+                        if (data.readerType === 'customer' && m.senderType !== 'customer') {
+                            return { ...m, status: 'read' };
+                        }
+                    }
+                }
+                return m;
+            }));
         });
 
         socketInstance.on('disconnect', () => setIsConnected(false));
@@ -67,7 +114,13 @@ export default function WhatsAppSimulator() {
             content: inputText
         }, (res: any) => {
             if (res?.success) {
-                setMessages(prev => [...prev, res.message]);
+                setMessages(prev => {
+                    if (prev.find(m => m.id === res.message.id)) return prev;
+                    return [...prev, res.message];
+                });
+                if (res.message.conversationId) {
+                    socket.emit('join_conversation', res.message.conversationId);
+                }
             }
         });
 
@@ -215,28 +268,62 @@ export default function WhatsAppSimulator() {
                                     </span>
                                 </div>
                             )}
-                            {messages.map((msg, i) => {
-                                const isCustomer = msg.senderType === 'customer';
-                                return (
-                                    <motion.div 
-                                        key={msg.id || i}
-                                        initial={{ opacity: 0, x: isCustomer ? 20 : -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        className={`flex flex-col max-w-[80%] ${isCustomer ? 'self-end items-end' : 'self-start items-start'}`}
-                                    >
-                                        <div className={`p-5 rounded-[2rem] shadow-2xl relative border ${isCustomer 
-                                            ? 'bg-[#6605c7] text-white rounded-tr-none border-[#6605c7]/10' 
-                                            : 'bg-white border-gray-200 text-gray-700 rounded-tl-none font-medium shadow-sm'}`}
-                                        >
-                                            <p className="text-sm leading-relaxed tracking-tight">{msg.content}</p>
-                                        </div>
-                                        <div className={`flex items-center gap-2 mt-3 px-2 text-[8px] font-black uppercase tracking-[0.2em] ${isCustomer ? 'text-[#6605c7]/60' : 'text-gray-500'}`}>
-                                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            {isCustomer && <span className="material-symbols-outlined text-[10px] text-[#25D366]">done_all</span>}
-                                        </div>
-                                    </motion.div>
-                                );
-                            })}
+                            {(() => {
+                                let lastDateStr = '';
+                                return messages.map((msg, i) => {
+                                    const isCustomer = msg.senderType === 'customer';
+                                    const msgDate = new Date(msg.createdAt).toDateString();
+                                    const showDivider = msgDate !== lastDateStr;
+                                    lastDateStr = msgDate;
+
+                                    return (
+                                        <React.Fragment key={msg.id || i}>
+                                            {showDivider && (
+                                                <div className="flex justify-center my-4 w-full">
+                                                    <span className="bg-[#e1f3fc] text-[#128c7e] px-4 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest border border-[#128c7e]/10 shadow-sm">
+                                                        {formatMessageGroupDate(msg.createdAt)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            <motion.div 
+                                                initial={{ opacity: 0, x: isCustomer ? 20 : -20 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                className={`flex flex-col max-w-[80%] ${isCustomer ? 'self-end items-end' : 'self-start items-start'}`}
+                                            >
+                                                <div className={`p-5 rounded-[2rem] shadow-2xl relative border ${isCustomer 
+                                                    ? 'bg-[#6605c7] text-white rounded-tr-none border-[#6605c7]/10' 
+                                                    : 'bg-white border-gray-200 text-gray-700 rounded-tl-none font-medium shadow-sm'}`}
+                                                >
+                                                    <p className="text-sm leading-relaxed tracking-tight">{msg.content}</p>
+                                                </div>
+                                                <div className={`flex items-center gap-1.5 mt-2 px-2 text-[9px] font-bold tracking-wide uppercase ${isCustomer ? 'text-[#6605c7]/70' : 'text-gray-500'}`}>
+                                                    <span>{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    {isCustomer && (
+                                                        <span className="inline-flex items-center gap-1 shrink-0">
+                                                            {msg.status === 'read' ? (
+                                                                <>
+                                                                    <span className="material-symbols-outlined text-[15px] text-sky-400 font-black leading-none">done_all</span>
+                                                                    <span className="text-sky-400 text-[8px] font-black tracking-widest">Seen</span>
+                                                                </>
+                                                            ) : msg.status === 'delivered' ? (
+                                                                <>
+                                                                    <span className="material-symbols-outlined text-[15px] text-gray-400 font-black leading-none">done_all</span>
+                                                                    <span className="text-[8px] font-black tracking-widest">Delivered</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <span className="material-symbols-outlined text-[15px] text-gray-400 font-black leading-none">done</span>
+                                                                    <span className="text-[8px] font-black tracking-widest">Sent</span>
+                                                                </>
+                                                            )}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </motion.div>
+                                        </React.Fragment>
+                                    );
+                                });
+                            })()}
                         </AnimatePresence>
                         <div ref={messagesEndRef} />
                     </div>

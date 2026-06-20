@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const getBackendUrl = (request: NextRequest) => {
+  const hostname = request.nextUrl.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:5000';
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+};
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('Authorization') || '';
@@ -22,7 +28,8 @@ export async function GET(request: NextRequest) {
   if (offset) backendQuery.set('offset', offset);
 
   const queryStr = backendQuery.toString();
-  const url = `${BACKEND_URL}/api/notifications${queryStr ? `?${queryStr}` : ''}`;
+  const backendUrl = getBackendUrl(request);
+  const url = `${backendUrl}/api/notifications${queryStr ? `?${queryStr}` : ''}`;
 
   try {
     const response = await fetch(url, {

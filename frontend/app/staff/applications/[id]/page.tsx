@@ -137,9 +137,9 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
         const fetchApplicationDetails = async () => {
             setLoading(true);
             try {
-                // Fetch all applications and find the one with matching ID
-                const appsRes = await adminApi.getApplications({}) as any;
-                const foundApp = appsRes.data?.find((a: any) => a.id === applicationId || a._id === applicationId);
+                // Fetch single application directly to trigger review start
+                const res = await adminApi.getApplication(applicationId) as any;
+                const foundApp = res && res.success && res.data ? res.data : null;
 
                 if (foundApp) {
                     setApplication(foundApp);
@@ -153,7 +153,8 @@ export default function StaffApplicationDetailPage({ params }: { params: Promise
                         console.error("Error fetching tracking history:", trackErr);
                     }
 
-                    // Fetch ALL applications for this user (including the current one)
+                    // Fetch all applications to find user's other applications
+                    const appsRes = await adminApi.getApplications({}) as any;
                     const userApps = appsRes.data?.filter((a: any) =>
                         a.userId === foundApp.userId || a.applicantId === foundApp.applicantId || a.email === foundApp.email
                     ) || [];

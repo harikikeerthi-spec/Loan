@@ -276,13 +276,9 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   useEffect(() => {
     if (!conversationId || !token) return;
 
-    const baseApiUrl = process.env.NEXT_PUBLIC_API_URL || (
-      typeof window !== 'undefined' &&
-        !window.location.hostname.includes('localhost') &&
-        !window.location.hostname.includes('127.0.0.1')
-        ? window.location.origin
-        : 'http://localhost:5000'
-    );
+    const baseApiUrl = typeof window !== 'undefined' && (window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1'))
+      ? 'http://localhost:5000'
+      : (process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5000'));
 
     const socketUrl = baseApiUrl.endsWith('/api')
       ? baseApiUrl.replace('/api', '/chat')
@@ -444,6 +440,24 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   useEffect(() => {
     fetchDocuments();
   }, [userId]);
+
+  useEffect(() => {
+    const triggerStartReview = async () => {
+      const isStaff = user?.role && ['admin', 'super_admin', 'staff', 'support'].includes(user.role);
+      const appRefId = application?.id || application?._id;
+      if (isStaff && appRefId && application?.status === 'submitted' && !application?.reviewStartedAt) {
+        try {
+          const res = await adminApi.getApplication(appRefId) as any;
+          if (res && res.success && res.data) {
+            onApplicationUpdated?.();
+          }
+        } catch (e) {
+          console.error("Failed to trigger staff review start flow:", e);
+        }
+      }
+    };
+    triggerStartReview();
+  }, [application?.id, application?._id, user?.role, application?.status, application?.reviewStartedAt]);
 
   useEffect(() => {
     const fetchStatusHistory = async () => {

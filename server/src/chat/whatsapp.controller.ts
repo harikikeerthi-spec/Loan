@@ -147,6 +147,39 @@ export class WhatsappController {
    */
   @Get('history/:phone')
   async getHistory(@Param('phone') phone: string) {
+    const cleanPhone = phone.replace('whatsapp:', '').trim().replace(/\D/g, '');
+    const phoneNo = cleanPhone.length > 10 && cleanPhone.startsWith('91') ? cleanPhone.substring(2) : (cleanPhone.length > 10 ? cleanPhone.slice(-10) : cleanPhone);
+    
+    try {
+      const { data: convData } = await this.chatService.db
+        .from('Conversation')
+        .select('id, customerPhone')
+        .eq('customerPhone', phoneNo)
+        .eq('status', 'active')
+        .limit(1);
+      
+      const conv = convData?.[0];
+      if (conv) {
+        await this.chatService.markMessagesAsRead(conv.id, 'customer');
+        if (this.chatGateway.server) {
+          this.chatGateway.server.to(`conv_${conv.id}`).emit('messages_read', {
+            conversationId: conv.id,
+            readerType: 'customer',
+            readerId: conv.customerPhone || 'customer'
+          });
+          this.chatGateway.server.to('room_staff').emit('conversation_updated', {
+            conversationId: conv.id
+          });
+          this.chatGateway.server.to('room_bank').emit('conversation_updated', {
+            conversationId: conv.id
+          });
+        }
+      }
+    } catch (e) {
+      this.logger.error(`Failed to auto-mark messages as read in history: ${e.message}`);
+    }
+
     return this.chatService.getMessagesByPhone(phone);
   }
 }
+

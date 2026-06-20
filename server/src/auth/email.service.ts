@@ -156,7 +156,7 @@ export class EmailService {
   async sendDashboardWelcomeEmail(email: string, firstName?: string, lastName?: string) {
     const fullName = firstName ? (lastName ? `${firstName} ${lastName}` : firstName) : '';
     const name = firstName ? firstName : 'there';
-    const frontendUrl = process.env.FRONTEND_URL || '';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();
 
     const mailOptions = {
@@ -195,7 +195,7 @@ export class EmailService {
                 <tr>
                   <!-- Left side Logo -->
                   <td width="60" align="left" style="vertical-align: middle;">
-                    <img src="${frontendUrl}/public/vidyaloan_logo.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;border-radius:10px;" />
+                    <img src="${frontendUrl}/vidyaloan_logo.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;border-radius:10px;" />
                   </td>
                   <!-- Middle Text -->
                   <td align="center" style="vertical-align: middle; padding-right: 60px;">

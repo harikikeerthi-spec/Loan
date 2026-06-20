@@ -128,6 +128,16 @@ export class ChatService {
 
     if (error) {
       this.logger.error('Failed to save message', error);
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        fs.appendFileSync(
+          path.join(process.cwd(), 'chat_error.log'),
+          `${new Date().toISOString()} - Payload: ${JSON.stringify(insertPayload)} - Error: ${JSON.stringify(error)}\n`
+        );
+      } catch (err) {
+        this.logger.error('Failed to write chat_error.log', err);
+      }
       throw new HttpException('Database error saving message', HttpStatus.INTERNAL_SERVER_ERROR);
     }
     
@@ -248,4 +258,58 @@ export class ChatService {
     }
     return data;
   }
+
+  async markMessagesAsRead(conversationId: string, readerType: 'customer' | 'staff_or_bank', readerRole?: string) {
+    let convType = 'staff';
+    try {
+      const { data: conv } = await this.db
+        .from('Conversation')
+        .select('metadata')
+        .eq('id', conversationId)
+        .maybeSingle();
+      if (conv?.metadata?.type) {
+        convType = conv.metadata.type;
+      }
+    } catch (e) {
+      this.logger.error('Failed to fetch conversation metadata for markMessagesAsRead', e);
+    }
+
+    let query = this.db
+      .from('Message')
+      .update({ status: 'read' })
+      .eq('conversationId', conversationId)
+      .neq('status', 'read');
+
+    const role = readerRole || (readerType === 'customer' ? 'customer' : 'staff');
+
+    if (convType === 'support_to_staff' || convType === 'support_to_bank') {
+      if (role === 'support') {
+        query = query.neq('senderType', 'support');
+      } else {
+        query = query.eq('senderType', 'support');
+      }
+    } else if (convType === 'bank') {
+      const isBankRole = ['bank', 'partner_bank'].includes(role);
+      if (isBankRole) {
+        query = query.neq('senderType', 'bank').neq('senderType', 'partner_bank');
+      } else {
+        query = query.in('senderType', ['bank', 'partner_bank']);
+      }
+    } else {
+      if (readerType === 'customer' || role === 'customer') {
+        query = query.neq('senderType', 'customer');
+      } else {
+        query = query.eq('senderType', 'customer');
+      }
+    }
+
+    const { data, error } = await query.select();
+
+    if (error) {
+      this.logger.error('Failed to mark messages as read', error);
+      throw new HttpException('Database error', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+    return data;
+  }
 }
+

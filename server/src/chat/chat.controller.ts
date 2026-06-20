@@ -225,6 +225,43 @@ export class ChatController {
     return { success: true, message: msg };
   }
 
+  @Post('share-document')
+  async shareDocument(
+    @Req() req: any,
+    @Body() body: {
+      conversationId: string;
+      fileName: string;
+      filePath: string;
+      mimeType?: string;
+    }
+  ) {
+    if (!body.conversationId) throw new BadRequestException('conversationId is required');
+    if (!body.filePath) throw new BadRequestException('filePath is required');
+
+    const user = req.user;
+    const senderType = user.role || 'staff';
+    const senderId = user.email || user.sub;
+    const senderName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || undefined;
+
+    const isImage = body.mimeType?.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif)/i.test(body.fileName);
+
+    const msg = await this.chatService.saveMessage({
+      conversationId: body.conversationId,
+      senderType,
+      senderId,
+      senderName,
+      content: body.fileName,
+      messageType: isImage ? 'image' : 'document',
+      status: 'sent',
+      attachmentUrl: body.filePath,
+      attachmentType: body.mimeType || 'application/pdf'
+    });
+
+    this.eventEmitter.emit('chat.message_created', msg);
+
+    return { success: true, message: msg };
+  }
+
   @Get('attachment/:messageId')
   async getAttachment(
     @Param('messageId') messageId: string,
@@ -235,17 +272,25 @@ export class ChatController {
       throw new NotFoundException('Attachment not found');
     }
 
+    const fs = require('fs');
+    const path = require('path');
+    let targetPath = '';
+
     if (msg.attachmentUrl.startsWith('local:')) {
-      // Local fallback logic
       const [, relativePath] = msg.attachmentUrl.split('local:');
-      const fs = require('fs');
-      const path = require('path');
-      const filePath = path.join(process.cwd(), 'uploads', 'chat', relativePath);
-      if (fs.existsSync(filePath)) {
-        return res.sendFile(filePath);
-      } else {
-        throw new NotFoundException('Local file not found');
+      targetPath = path.join(process.cwd(), 'uploads', 'chat', relativePath);
+    } else {
+      // Check if it exists as a local file path on server's disk
+      const possiblePath = path.isAbsolute(msg.attachmentUrl)
+        ? msg.attachmentUrl
+        : path.join(process.cwd(), msg.attachmentUrl);
+      if (fs.existsSync(possiblePath) && fs.statSync(possiblePath).isFile()) {
+        targetPath = possiblePath;
       }
+    }
+
+    if (targetPath) {
+      return res.sendFile(targetPath);
     }
 
     try {

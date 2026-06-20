@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const getBackendUrl = (request: NextRequest) => {
+  const hostname = request.nextUrl.hostname;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:5000';
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+};
 
 export async function GET(
   request: NextRequest,
@@ -17,8 +23,9 @@ export async function GET(
 
   try {
     // Fetch user data from backend
+    const backendUrl = getBackendUrl(request);
     const response = await fetch(
-      `${BACKEND_URL}/api/users/admin/${userId}`,
+      `${backendUrl}/api/users/admin/${userId}`,
       {
         method: 'GET',
         headers: {
