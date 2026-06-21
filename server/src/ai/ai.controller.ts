@@ -1,4 +1,7 @@
-import { Controller, Post, Body, BadRequestException, Get, Param } from '@nestjs/common';
+import { Controller, Post, Body, BadRequestException, Get, Param, Req } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { EmailService } from '../chat/email.service';
 import { EligibilityService } from './services/eligibility.service';
 import { LoanRecommendationService } from './services/loan-recommendation.service';
 import { SopAnalysisService } from './services/sop-analysis.service';
@@ -23,10 +26,56 @@ export class AiController {
     private readonly universitySearchService: UniversitySearchService,
     private readonly visaInterviewService: VisaInterviewService,
     private readonly supabase: SupabaseService,
+    private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
+    private readonly emailService: EmailService,
   ) { }
+
+  private async resolveUser(req: any, body: any): Promise<{ email: string; name: string } | null> {
+    try {
+      const authHeader = req.headers['authorization'];
+      const token = authHeader?.split(' ')[1];
+      if (token) {
+        const payload = await this.jwtService.verifyAsync(token, {
+          secret: this.configService.get('JWT_SECRET')
+        });
+        if (payload && payload.email) {
+          return {
+            email: payload.email,
+            name: `${payload.firstName || ''} ${payload.lastName || ''}`.trim() || 'Student',
+          };
+        }
+      }
+    } catch (e) {
+      // Ignore token verification errors (guest user flow)
+    }
+
+    const userId = body?.userId || body?.profile?.userId;
+    if (userId) {
+      try {
+        const { data: dbUser } = await this.supabase.getClient()
+          .from('User')
+          .select('firstName, lastName, email')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (dbUser?.email) {
+          return {
+            email: dbUser.email,
+            name: `${dbUser.firstName || ''} ${dbUser.lastName || ''}`.trim() || 'Student',
+          };
+        }
+      } catch (e) {
+        console.warn('Failed to resolve user from body userId:', e.message);
+      }
+    }
+
+    return null;
+  }
 
   @Post('eligibility-check')
   async checkEligibility(
+    @Req() req: any,
     @Body()
     data: any,
   ) {
@@ -63,6 +112,23 @@ export class AiController {
       console.error('Failed to save loan eligibility record:', e);
     }
 
+    const user = await this.resolveUser(req, data);
+    if (user) {
+      try {
+        const emailHtml = this.buildEligibilityHtml(eligibilityResult, loanRecommendations);
+        const textSummary = `Your VidyaLoan Eligibility score is ${eligibilityResult.score}/100. Status: ${eligibilityResult.status}. Recommended interest range: ${eligibilityResult.rateRange}.`;
+        await this.emailService.sendAiToolResultEmail(
+          user.email,
+          user.name,
+          'Loan Eligibility Checker',
+          emailHtml,
+          textSummary
+        );
+      } catch (err) {
+        console.error('Failed to send eligibility result email:', err);
+      }
+    }
+
     return {
       success: true,
       eligibility: eligibilityResult,
@@ -72,14 +138,34 @@ export class AiController {
 
   @Post('sop-analysis')
   async analyzeSop(
+    @Req() req: any,
     @Body()
     data: {
       text?: string;
       sop?: string;
+      userId?: string;
     },
   ) {
     const sopText = data.text || data.sop || '';
     const result = await this.sopAnalysisService.analyzeSop(sopText);
+
+    const user = await this.resolveUser(req, data);
+    if (user && sopText.trim().length >= 50) {
+      try {
+        const emailHtml = this.buildSopAnalysisHtml(result);
+        const textSummary = `Your SOP analysis score is ${result.totalScore}/100. Quality level: ${result.quality}. Plagiarism risk: ${result.plagiarismScore}%.`;
+        await this.emailService.sendAiToolResultEmail(
+          user.email,
+          user.name,
+          'SOP Analyzer',
+          emailHtml,
+          textSummary
+        );
+      } catch (err) {
+        console.error('Failed to send SOP analysis result email:', err);
+      }
+    }
+
     return {
       success: true,
       analysis: result,
@@ -88,12 +174,32 @@ export class AiController {
 
   @Post('humanize-sop')
   async humanizeSop(
+    @Req() req: any,
     @Body()
     data: {
       text: string;
+      userId?: string;
     },
   ) {
     const result = await this.sopAnalysisService.humanizeSop(data.text);
+
+    const user = await this.resolveUser(req, data);
+    if (user) {
+      try {
+        const emailHtml = this.buildHumanizeSopHtml(result);
+        const textSummary = `Thank you for using the SOP Humanizer on VidyaLoan! We have successfully humanized your Statement of Purpose.`;
+        await this.emailService.sendAiToolResultEmail(
+          user.email,
+          user.name,
+          'SOP Writer & Humanizer',
+          emailHtml,
+          textSummary
+        );
+      } catch (err) {
+        console.error('Failed to send SOP humanizer result email:', err);
+      }
+    }
+
     return {
       success: true,
       ...result,
@@ -231,8 +337,29 @@ export class AiController {
   }
 
   @Post('predict-admission')
-  async predictAdmission(@Body() body: any) {
-    const result = await this.admitPredictorService.predict(body);
+  async predictAdmission(
+    @Req() req: any,
+    @Body() body: any
+  ) {
+    const result: any = await this.admitPredictorService.predict(body);
+
+    const user = await this.resolveUser(req, body);
+    if (user) {
+      try {
+        const emailHtml = this.buildPredictAdmissionHtml(result);
+        const textSummary = `Your admission probability for ${result.university} is predicted to be ${result.probability}%.`;
+        await this.emailService.sendAiToolResultEmail(
+          user.email,
+          user.name,
+          'Admit Predictor',
+          emailHtml,
+          textSummary
+        );
+      } catch (err) {
+        console.error('Failed to send admission prediction result email:', err);
+      }
+    }
+
     return {
       success: true,
       prediction: result
@@ -581,6 +708,283 @@ export class AiController {
       console.error('Failed to save visa interview result:', error);
       return { success: false, message: 'Failed to save result' };
     }
+  }
+
+  private buildEligibilityHtml(eligibility: any, recommendations: any): string {
+    const statusColorMap = {
+      eligible: { bg: '#d1fae5', text: '#065f46' },
+      borderline: { bg: '#fef3c7', text: '#92400e' },
+      unlikely: { bg: '#fee2e2', text: '#991b1b' },
+    };
+    const status = eligibility.status || 'borderline';
+    const color = statusColorMap[status] || statusColorMap['borderline'];
+
+    return `
+      <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+        <!-- Score and Status Banner -->
+        <div style="text-align: center; padding: 20px; background-color: #f8fafc; border-radius: 8px; margin-bottom: 25px; border: 1px solid #e2e8f0;">
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: bold;">Eligibility Score</div>
+          <div style="font-size: 48px; font-weight: 800; color: #6605c7; margin: 8px 0;">${eligibility.score}<span style="font-size: 20px; color: #94a3b8; font-weight: normal;">/100</span></div>
+          
+          <span style="background-color: ${color.bg}; color: ${color.text}; padding: 6px 16px; border-radius: 50px; font-size: 13px; font-weight: bold; text-transform: uppercase;">
+            ${status}
+          </span>
+        </div>
+
+        <!-- Key Metrics -->
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 25px;">
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 14px;"><strong>Estimated APR:</strong></td>
+            <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #1e293b; font-size: 14px; text-align: right; font-weight: bold;">${eligibility.rateRange}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 14px;"><strong>Funding Coverage:</strong></td>
+            <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #1e293b; font-size: 14px; text-align: right; font-weight: bold;">${eligibility.coverage}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #64748b; font-size: 14px;"><strong>Debt-to-Income Ratio:</strong></td>
+            <td style="padding: 10px; border-bottom: 1px solid #f1f5f9; color: #1e293b; font-size: 14px; text-align: right; font-weight: bold;">${(eligibility.ratio * 100).toFixed(1)}%</td>
+          </tr>
+        </table>
+
+        <!-- Summary -->
+        <div style="margin-bottom: 25px;">
+          <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #1e293b; font-weight: bold;">Analysis Summary</h4>
+          <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #475569; background-color: #f8fafc; padding: 15px; border-left: 4px solid #6605c7; border-radius: 0 8px 8px 0;">
+            ${eligibility.summary}
+          </p>
+        </div>
+
+        <!-- Recommendations -->
+        ${eligibility.recommendations && eligibility.recommendations.length > 0 ? `
+        <div style="margin-bottom: 30px;">
+          <h4 style="margin: 0 0 10px 0; font-size: 14px; color: #1e293b; font-weight: bold;">Recommendations to Improve</h4>
+          <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.6; color: #475569;">
+            ${eligibility.recommendations.map((rec: string) => `<li style="margin-bottom: 8px;">${rec}</li>`).join('')}
+          </ul>
+        </div>
+        ` : ''}
+
+        <!-- Recommended Loans -->
+        ${recommendations ? `
+        <div style="border-top: 1px solid #e2e8f0; padding-top: 25px;">
+          <h4 style="margin: 0 0 15px 0; font-size: 15px; color: #1e293b; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Recommended Loan Offers</h4>
+          
+          <!-- Primary Offer Card -->
+          ${recommendations.primary ? `
+          <div style="background: linear-gradient(to right, #f5f3ff, #faf5ff); border: 1.5px solid #ddd6fe; border-radius: 12px; padding: 20px; margin-bottom: 15px;">
+            <table style="width: 100%; margin-bottom: 10px; border-collapse: collapse;">
+              <tr>
+                <td>
+                  <div style="font-size: 11px; color: #6605c7; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">${recommendations.primary.offer.bank}</div>
+                </td>
+                <td style="text-align: right;">
+                  <span style="background-color: #6605c7; color: white; font-size: 11px; font-weight: bold; padding: 3px 10px; border-radius: 30px; text-transform: uppercase;">
+                    Best Fit (${recommendations.primary.fit}%)
+                  </span>
+                </td>
+              </tr>
+            </table>
+            <div style="font-size: 18px; font-weight: bold; color: #1e293b; margin-bottom: 15px;">${recommendations.primary.offer.name}</div>
+            
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <tr>
+                <td style="color: #64748b; padding: 4px 0;"><strong>Estimated APR:</strong></td>
+                <td style="color: #1e293b; font-weight: bold; text-align: right; padding: 4px 0;">${recommendations.primary.offer.apr}</td>
+              </tr>
+              <tr>
+                <td style="color: #64748b; padding: 4px 0;"><strong>Max Loan Amount:</strong></td>
+                <td style="color: #1e293b; font-weight: bold; text-align: right; padding: 4px 0;">₹${(recommendations.primary.offer.maxLoan / 100000).toFixed(1)} Lakhs</td>
+              </tr>
+              <tr>
+                <td style="color: #64748b; padding: 4px 0;"><strong>Coverage:</strong></td>
+                <td style="color: #1e293b; font-weight: bold; text-align: right; padding: 4px 0;">${recommendations.primary.offer.coverage}</td>
+              </tr>
+              <tr>
+                <td style="color: #64748b; padding: 4px 0;"><strong>Key Benefit:</strong></td>
+                <td style="color: #6605c7; font-weight: bold; text-align: right; padding: 4px 0;">${recommendations.primary.offer.bestFor}</td>
+              </tr>
+            </table>
+          </div>
+          ` : ''}
+
+          <!-- Alternative Offers -->
+          ${recommendations.alternatives && recommendations.alternatives.length > 0 ? `
+            <div style="margin-top: 15px;">
+              <h5 style="margin: 0 0 10px 0; font-size: 13px; color: #475569; font-weight: bold;">Alternative Options</h5>
+              ${recommendations.alternatives.map((alt: any) => `
+                <div style="background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+                  <table style="width: 100%; margin-bottom: 5px; border-collapse: collapse;">
+                    <tr>
+                      <td><span style="font-size: 11px; color: #64748b; font-weight: bold; text-transform: uppercase;">${alt.offer.bank}</span></td>
+                      <td style="text-align: right;"><span style="background-color: #f1f5f9; color: #475569; font-size: 11px; font-weight: bold; padding: 2px 8px; border-radius: 12px;">Fit: ${alt.fit}%</span></td>
+                    </tr>
+                  </table>
+                  <div style="font-size: 14px; font-weight: bold; color: #1e293b; margin-bottom: 8px;">${alt.offer.name}</div>
+                  <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                    <tr>
+                      <td style="color: #64748b; padding: 2px 0;"><strong>APR:</strong> ${alt.offer.apr}</td>
+                      <td style="color: #64748b; padding: 2px 0; text-align: right;"><strong>Max Loan:</strong> ₹${(alt.offer.maxLoan / 100000).toFixed(1)}L</td>
+                    </tr>
+                  </table>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  private buildSopAnalysisHtml(analysis: any): string {
+    return `
+      <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+        <!-- Scores Grid -->
+        <table style="width: 100%; border-collapse: separate; border-spacing: 8px; margin-bottom: 20px; text-align: center;">
+          <tr>
+            <td style="width: 33.3%; padding: 15px 10px; background-color: #faf5ff; border: 1px solid #f3e8ff; border-radius: 8px;">
+              <div style="font-size: 11px; text-transform: uppercase; color: #7c3aed; font-weight: bold; letter-spacing: 0.5px;">Quality Score</div>
+              <div style="font-size: 28px; font-weight: bold; color: #6b21a8; margin-top: 5px;">${analysis.totalScore}<span style="font-size: 12px; color: #a21caf; font-weight: normal;">/100</span></div>
+              <div style="font-size: 11px; text-transform: capitalize; color: #7c3aed; font-weight: bold; margin-top: 5px;">${(analysis.quality || '').replace('-', ' ')}</div>
+            </td>
+            <td style="width: 33.3%; padding: 15px 10px; background-color: #f0fdf4; border: 1px solid #dcfce7; border-radius: 8px;">
+              <div style="font-size: 11px; text-transform: uppercase; color: #16a34a; font-weight: bold; letter-spacing: 0.5px;">Human Tone</div>
+              <div style="font-size: 28px; font-weight: bold; color: #166534; margin-top: 5px;">${analysis.humanizeScore}%</div>
+              <div style="font-size: 11px; color: #16a34a; font-weight: bold; margin-top: 5px;">
+                ${analysis.humanizeScore >= 80 ? 'High' : analysis.humanizeScore >= 50 ? 'Moderate' : 'Low AI'}
+              </div>
+            </td>
+            <td style="width: 33.3%; padding: 15px 10px; background-color: #fff5f5; border: 1px solid #fee2e2; border-radius: 8px;">
+              <div style="font-size: 11px; text-transform: uppercase; color: #dc2626; font-weight: bold; letter-spacing: 0.5px;">Plagiarism</div>
+              <div style="font-size: 28px; font-weight: bold; color: #991b1b; margin-top: 5px;">${analysis.plagiarismScore}%</div>
+              <div style="font-size: 11px; color: #dc2626; font-weight: bold; margin-top: 5px;">
+                ${analysis.plagiarismScore < 15 ? 'Safe' : analysis.plagiarismScore < 30 ? 'Caution' : 'High Risk'}
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Summary -->
+        <div style="margin-bottom: 25px; background-color: #f8fafc; padding: 15px; border-left: 4px solid #6605c7; border-radius: 0 8px 8px 0;">
+          <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #475569;">
+            <strong>Overall Assessment:</strong> ${analysis.summary}
+          </p>
+        </div>
+
+        <!-- Category Scores -->
+        ${analysis.categories && analysis.categories.length > 0 ? `
+        <div style="margin-bottom: 25px;">
+          <h4 style="margin: 0 0 15px 0; font-size: 14px; color: #1e293b; font-weight: bold;">Category Breakdown</h4>
+          ${analysis.categories.map((cat: any) => {
+            const percentage = (cat.score / 20) * 100;
+            return `
+              <div style="margin-bottom: 12px;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 4px;">
+                  <tr>
+                    <td style="color: #475569; font-weight: 500;">${cat.name}</td>
+                    <td style="text-align: right; color: #1e293b; font-weight: bold;">${cat.score}/20</td>
+                  </tr>
+                </table>
+                <div style="width: 100%; height: 8px; background-color: #e2e8f0; border-radius: 4px; overflow: hidden;">
+                  <div style="width: ${percentage}%; height: 100%; background-color: #6605c7; border-radius: 4px;"></div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        ` : ''}
+
+        <!-- Details -->
+        <div style="margin-bottom: 25px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+          <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #1e293b; font-weight: bold;">Analysis Details</h4>
+          
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 12px;">
+            <div style="font-size: 12px; color: #16a34a; font-weight: bold; text-transform: uppercase; margin-bottom: 6px;">AI Detection Feedback</div>
+            <div style="font-size: 13px; line-height: 1.5; color: #475569;">${analysis.humanizeFeedback}</div>
+          </div>
+          
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px;">
+            <div style="font-size: 12px; color: #dc2626; font-weight: bold; text-transform: uppercase; margin-bottom: 6px;">Plagiarism & Originality Feedback</div>
+            <div style="font-size: 13px; line-height: 1.5; color: #475569;">${analysis.plagiarismFeedback}</div>
+          </div>
+        </div>
+
+        <!-- Improvement Plan -->
+        ${analysis.weakAreas && analysis.weakAreas.length > 0 ? `
+        <div style="border-top: 1px solid #e2e8f0; padding-top: 20px;">
+          <h4 style="margin: 0 0 15px 0; font-size: 14px; color: #1e293b; font-weight: bold;">Improvement Plan (${analysis.weakAreas.length} Action Items)</h4>
+          ${analysis.weakAreas.map((wa: any, index: number) => `
+            <div style="background-color: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; padding: 15px; margin-bottom: 10px;">
+              <div style="font-size: 13px; font-weight: bold; color: #b45309; margin-bottom: 4px;">Issue ${index + 1}: ${wa.issue}</div>
+              <div style="font-size: 13px; line-height: 1.5; color: #78350f;"><strong>Recommendation:</strong> ${wa.recommendation}</div>
+            </div>
+          `).join('')}
+        </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  private buildHumanizeSopHtml(result: any): string {
+    return `
+      <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+        <!-- Improvements list -->
+        ${result.improvements && result.improvements.length > 0 ? `
+        <div style="margin-bottom: 25px;">
+          <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #1e293b; font-weight: bold;">Applied Enhancements</h4>
+          <ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6; color: #475569;">
+            ${result.improvements.map((imp: string) => `<li style="margin-bottom: 6px;">${imp}</li>`).join('')}
+          </ul>
+        </div>
+        ` : ''}
+
+        <!-- Rewritten SOP -->
+        <div style="border-top: 1px solid #e2e8f0; padding-top: 20px;">
+          <h4 style="margin: 0 0 12px 0; font-size: 14px; color: #1e293b; font-weight: bold;">Humanized Statement of Purpose</h4>
+          <div style="background-color: #fafafb; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; font-family: Consolas, Monaco, monospace; font-size: 13px; line-height: 1.6; color: #334155; white-space: pre-wrap;">${result.humanizedText}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  private buildPredictAdmissionHtml(prediction: any): string {
+    return `
+      <div style="font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+        <!-- Target University and Probability -->
+        <div style="text-align: center; padding: 25px 20px; background-color: #f8fafc; border-radius: 12px; margin-bottom: 25px; border: 1px solid #e2e8f0;">
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #64748b; font-weight: bold; margin-bottom: 5px;">Target Institution</div>
+          <div style="font-size: 20px; font-weight: bold; color: #1e293b; margin-bottom: 15px;">
+            ${prediction.university} 
+            <span style="font-size: 11px; background-color: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 10px; font-weight: bold; vertical-align: middle; margin-left: 5px;">
+              Tier ${prediction.tier}
+            </span>
+          </div>
+          
+          <div style="font-size: 11px; color: #64748b; font-weight: bold; text-transform: uppercase; margin-bottom: 5px;">Admission Probability</div>
+          <div style="font-size: 44px; font-weight: 800; color: #6605c7; margin-bottom: 15px;">${prediction.probability}%</div>
+          
+          <div style="width: 80%; height: 8px; background-color: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 0 auto;">
+            <div style="width: ${prediction.probability}%; height: 100%; background-color: #6605c7; border-radius: 4px;"></div>
+          </div>
+        </div>
+
+        <!-- Feedback -->
+        ${prediction.feedback && prediction.feedback.length > 0 ? `
+        <div>
+          <h4 style="margin: 0 0 15px 0; font-size: 14px; color: #1e293b; font-weight: bold;">Strategic Admission Advice</h4>
+          <table style="width: 100%; border-collapse: collapse;">
+            ${prediction.feedback.map((item: string) => `
+              <tr>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; width: 24px; vertical-align: top; color: #6605c7; font-size: 16px; font-weight: bold;">✓</td>
+                <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; color: #475569; font-size: 13px; line-height: 1.5;">${item}</td>
+              </tr>
+            `).join('')}
+          </table>
+        </div>
+        ` : ''}
+      </div>
+    `;
   }
 }
 

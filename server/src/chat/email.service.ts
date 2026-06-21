@@ -16,7 +16,7 @@ export class EmailService {
     const port = this.configService.get<number>('EMAIL_PORT') || 587;
     const user = this.configService.get<string>('EMAIL_USER');
     const pass = this.configService.get<string>('EMAIL_PASS');
-    const from = this.configService.get<string>('EMAIL_FROM') || `"VidyaLoan" <${user}>`;
+    const from = this.configService.get<string>('EMAIL_FROM') || `VidyaLoan <${user}>`;
 
     this.transporter = nodemailer.createTransport({
       host,
@@ -176,6 +176,70 @@ export class EmailService {
       return true;
     } catch (error) {
       this.logger.error(`Failed to send document email to ${to}:`, error);
+      return false;
+    }
+  }
+
+  async sendAiToolResultEmail(
+    to: string,
+    userName: string,
+    toolName: string,
+    resultHtml: string,
+    textSummary?: string
+  ): Promise<boolean> {
+    try {
+      const htmlContent = `
+        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+          <div style="background: linear-gradient(135deg, #6605c7 0%, #5504a6 100%); padding: 40px; border-radius: 16px; color: white; text-align: center; margin-bottom: 30px;">
+            <h1 style="margin: 0; font-size: 28px; font-weight: bold;">VidyaLoan AI</h1>
+            <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">Your AI Tool Results are Ready</p>
+          </div>
+
+          <div style="background: #f9f9f9; padding: 30px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #eef2f6;">
+            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.5; color: #1e293b;">
+              Hello ${userName || 'there'},
+            </p>
+            <p style="margin: 0 0 20px 0; font-size: 14px; line-height: 1.6; color: #475569;">
+              Thank you for using the <strong>${toolName}</strong> tool on VidyaLoan! We hope our AI insights help you make informed decisions about your study abroad and financing journey.
+            </p>
+
+            <div style="background: white; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02); margin-top: 10px;">
+              <h3 style="margin-top: 0; margin-bottom: 20px; font-size: 16px; font-weight: 800; color: #6605c7; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">
+                ${toolName} Results
+              </h3>
+              ${resultHtml}
+            </div>
+          </div>
+
+          <div style="text-align: center; margin-bottom: 30px;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard" 
+               style="display: inline-block; background: linear-gradient(135deg, #6605c7 0%, #5504a6 100%); color: white; padding: 14px 40px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 4px 6px rgba(102, 5, 199, 0.2);">
+              Go to Dashboard
+            </a>
+          </div>
+
+          <div style="border-top: 1px solid #e0e0e0; padding-top: 20px; text-align: center; color: #999; font-size: 12px;">
+            <p style="margin: 0 0 10px 0;">
+              You received this email because you used an AI tool on VidyaLoan.
+            </p>
+            <p style="margin: 0;">
+              © ${new Date().getFullYear()} VidyaLoan. All rights reserved.
+            </p>
+          </div>
+        </div>
+      `;
+
+      await this.transporter.sendMail({
+        to,
+        subject: `Your VidyaLoan AI Results: ${toolName}`,
+        html: htmlContent,
+        text: textSummary || `Thank you for using ${toolName} on VidyaLoan. Find your results attached.`,
+      });
+
+      this.logger.log(`AI Tool results email sent to ${to} for tool: ${toolName}`);
+      return true;
+    } catch (error) {
+      this.logger.error(`Failed to send AI tool email to ${to} for tool: ${toolName}:`, error);
       return false;
     }
   }

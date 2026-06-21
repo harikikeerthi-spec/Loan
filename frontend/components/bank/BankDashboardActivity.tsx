@@ -70,7 +70,10 @@ const BankDashboardActivity = ({ bankId, limit = 15 }: BankDashboardActivityProp
 
   // Initialize WebSocket for real-time updates
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token =
+      localStorage.getItem("bankAccessToken") ||
+      localStorage.getItem("accessToken") ||
+      localStorage.getItem("token");
     if (!token) return;
 
     const baseApiUrl = typeof window !== "undefined" && (window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1"))

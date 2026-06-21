@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { adminApi } from "@/lib/api";
 import { format } from "date-fns";
+import BankNotificationsPanel from "@/components/bank/BankNotificationsPanel";
 
 const bankLogos: Record<string, string> = {
     auxilo: "/banks/auxilo.png",
@@ -83,7 +84,7 @@ const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => {
 };
 
 export default function BankLayout({ children }: { children: React.ReactNode }) {
-    const { user, isBank, isAdmin, isLoading, logout } = useAuth();
+    const { user, isBank, isAdmin, isLoading, logout, token } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(false);
@@ -103,7 +104,59 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
     // Sidebar badge counts
     const [incomingCount, setIncomingCount] = useState(0);
     const [loggedCount, setLoggedCount] = useState(0);
-    const [chatCount, setChatCount] = useState(2); // Mock unread chat messages
+    const [chatCount, setChatCount] = useState(0);
+
+    const [bankName, setBankName] = useState("SBI");
+    const [selectedBankKey, setSelectedBankKey] = useState("idfc");
+    const [branchName, setBranchName] = useState("Hyderabad Branch");
+
+    // Fetch unread chat count dynamically on 15s interval
+    useEffect(() => {
+        if (isLoading || !user || !token) return;
+
+        const fetchChatUnreadCount = async () => {
+            try {
+                // Resolve bank name
+                let currentBank = bankName;
+                if (typeof window !== "undefined") {
+                    const selected = sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank");
+                    const map: Record<string, string> = {
+                        auxilo: "Auxilo Finserve",
+                        avanse: "Avanse Financial",
+                        credila: "HDFC Credila",
+                        idfc: "IDFC FIRST Bank",
+                        poonawalla: "Poonawalla Fincorp",
+                    };
+                    if (selected && map[selected]) {
+                        currentBank = map[selected];
+                    }
+                }
+                if (!currentBank) {
+                    currentBank = user.bankName || user.firstName || "SBI";
+                }
+
+                const res = await fetch(`/api/chat/conversations?role=bank&bankName=${encodeURIComponent(currentBank)}`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data)) {
+                        const totalUnread = data.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
+                        setChatCount(totalUnread);
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load chat unread count:", err);
+            }
+        };
+
+        fetchChatUnreadCount();
+        const interval = setInterval(fetchChatUnreadCount, 15000);
+        return () => clearInterval(interval);
+    }, [user, isLoading, token, bankName]);
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -117,31 +170,10 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
         }
     }, [user, isLoading, isBank, isAdmin, router, pathname]);
 
-    const [bankName, setBankName] = useState("SBI");
-    const [selectedBankKey, setSelectedBankKey] = useState("idfc");
-    const [branchName, setBranchName] = useState("Hyderabad Branch");
-
-    // --- F16 Notifications & F30 Global Search States ---
+    // --- F30 Global Search States ---
     const [globalSearch, setGlobalSearch] = useState("");
     const [showSearchPop, setShowSearchPop] = useState(false);
-    const [showNotifDropdown, setShowNotifDropdown] = useState(false);
-    const [activeNotifTab, setActiveNotifTab] = useState<"all" | "unread" | "read">("all");
     const [applications, setApplications] = useState<any[]>([]);
-    const [notifications, setNotifications] = useState([
-        { id: 1, title: "SLA Warning", text: "LAN-IDFC-89210 (Rahul Sen) has exceeded 48h underwriting window!", type: "warning", time: "12m ago", read: false },
-        { id: 2, title: "Document Uploaded", text: "Student Sneha Reddy uploaded visa approval records.", type: "info", time: "1h ago", read: false },
-        { id: 3, title: "Query Refined", text: "Re-verification file uploaded for LAN-SBI-10492.", type: "query", time: "3h ago", read: false }
-    ]);
-
-    const filteredNotifications = useMemo(() => {
-        if (activeNotifTab === "unread") return notifications.filter(n => !n.read);
-        if (activeNotifTab === "read") return notifications.filter(n => n.read);
-        return notifications;
-    }, [notifications, activeNotifTab]);
-
-    const toggleRead = (id: number) => {
-        setNotifications(notifications.map(n => n.id === id ? { ...n, read: !n.read } : n));
-    };
 
     const highlightMatch = (text: string, query: string) => {
         if (!text) return "";
@@ -278,17 +310,6 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
     if (!user || (!isBank && !isAdmin)) return null;
 
     const sidebarWidth = collapsed ? 80 : 280;
-
-
-    const unreadCount = notifications.filter(n => !n.read).length;
-
-    const markAllRead = () => {
-        setNotifications(notifications.map(n => ({ ...n, read: true })));
-    };
-
-    const clearNotification = (id: number) => {
-        setNotifications(notifications.filter(n => n.id !== id));
-    };
 
     return (
         <div className="bank-portal min-h-screen flex overflow-hidden" style={{
@@ -573,100 +594,8 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                             </div>
                         </div>
 
-                        {/* Bell Notification Trigger */}
-                        <div className="relative">
-                            <button
-                                onClick={() => setShowNotifDropdown(!showNotifDropdown)}
-                                className="w-10 h-10 rounded-xl bg-[#fbfbff] border border-purple-50 hover:bg-purple-50/40 text-gray-500 hover:text-[#6605c7] flex items-center justify-center relative transition-all"
-                            >
-                                <span className="material-symbols-outlined text-lg">notifications</span>
-                                {unreadCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-500 text-white font-black text-[9px] flex items-center justify-center shadow-md animate-bounce">
-                                        {unreadCount}
-                                    </span>
-                                )}
-                            </button>
-
-                            {/* Notifications Dropdown (F16 Center) */}
-                            <AnimatePresence>
-                                {showNotifDropdown && (
-                                    <>
-                                        <div className="fixed inset-0 z-40" onClick={() => setShowNotifDropdown(false)} />
-                                        <motion.div
-                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                            className="absolute right-0 top-12 z-50 w-80 bg-white/95 backdrop-blur-xl border border-purple-50 rounded-3xl shadow-2xl p-5 space-y-4"
-                                        >                                            <div className="flex justify-between items-center border-b border-gray-100 pb-2.5">
-                                                <h3 className="text-xs font-black text-gray-800 uppercase tracking-wide">
-                                                    Notifications Center
-                                                </h3>
-                                                {unreadCount > 0 && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={markAllRead}
-                                                        className="text-[9px] font-black text-[#6605c7] uppercase tracking-wider hover:underline"
-                                                    >
-                                                        Mark all read
-                                                    </button>
-                                                )}
-                                            </div>
-
-                                            {/* Filter Tabs */}
-                                            <div className="flex gap-1.5 p-0.5 bg-gray-50 rounded-xl border border-gray-100 text-[8.5px] font-black uppercase tracking-wider">
-                                                {(["all", "unread", "read"] as const).map(tab => (
-                                                    <button
-                                                        key={tab}
-                                                        onClick={() => setActiveNotifTab(tab)}
-                                                        className={`flex-1 py-1 rounded-lg text-center transition-all ${activeNotifTab === tab
-                                                            ? "bg-[#6605c7] text-white shadow-sm"
-                                                            : "text-gray-400 hover:text-gray-700"
-                                                            }`}
-                                                    >
-                                                        {tab} ({
-                                                            tab === "all" ? notifications.length :
-                                                                tab === "unread" ? notifications.filter(n => !n.read).length :
-                                                                    notifications.filter(n => n.read).length
-                                                        })
-                                                    </button>
-                                                ))}
-                                            </div>
-
-                                            <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
-                                                {filteredNotifications.length === 0 ? (
-                                                    <p className="text-[10px] text-gray-400 py-8 text-center uppercase tracking-wider font-bold">No notifications</p>
-                                                ) : (
-                                                    filteredNotifications.map(notif => (
-                                                        <div
-                                                            key={notif.id}
-                                                            onClick={() => toggleRead(notif.id)}
-                                                            className={`p-3 border rounded-2xl relative transition-all cursor-pointer group ${notif.read ? "bg-white border-gray-100 opacity-60 hover:opacity-100" : "bg-purple-50/20 border-purple-100 hover:bg-purple-50/30"
-                                                                }`}
-                                                        >
-                                                            <div className="flex justify-between items-start pr-4">
-                                                                <span className="text-[9.5px] font-black uppercase text-gray-800">{notif.title}</span>
-                                                                <span className="text-[8px] font-bold text-gray-400">{notif.time}</span>
-                                                            </div>
-                                                            <p className="text-[10.5px] text-gray-550 mt-1 leading-relaxed">{notif.text}</p>
-
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    clearNotification(notif.id);
-                                                                }}
-                                                                className="absolute top-2 right-2 text-gray-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                            >
-                                                                <span className="material-symbols-outlined text-xs">close</span>
-                                                            </button>
-                                                        </div>
-                                                    ))
-                                                )}
-                                            </div>
-                                        </motion.div>
-                                    </>
-                                )}
-                            </AnimatePresence>
-                        </div>
+                        {/* Real-time Notification Bell (Socket.io live) */}
+                        <BankNotificationsPanel showUnreadBadge={true} />
                     </div>
                 </header>
 

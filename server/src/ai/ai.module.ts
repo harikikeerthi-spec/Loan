@@ -1,5 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { AiController } from './ai.controller';
+import { AuthModule } from '../auth/auth.module';
+import { ChatModule } from '../chat/chat.module';
 import { EligibilityService } from './services/eligibility.service';
 import { LoanRecommendationService } from './services/loan-recommendation.service';
 import { SopAnalysisService } from './services/sop-analysis.service';
@@ -14,7 +16,7 @@ import { VisaInterviewService } from './services/visa-interview.service';
 import { KycService } from './services/kyc.service';
 
 @Module({
-  imports: [],
+  imports: [AuthModule, forwardRef(() => ChatModule)],
   controllers: [AiController],
   providers: [
     OpenRouterService,

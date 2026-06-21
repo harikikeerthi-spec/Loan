@@ -386,9 +386,9 @@ export default function ApplicationManagement() {
 
                 handleRefresh();
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Error submitting decision:", err);
-            alert("Failed to submit decision");
+            alert(`Failed to submit decision: ${err.message || err}`);
         }
     };
 

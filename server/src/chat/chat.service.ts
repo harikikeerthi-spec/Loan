@@ -1,11 +1,15 @@
 import { Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 @Injectable()
 export class ChatService {
   private readonly logger = new Logger(ChatService.name);
 
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly eventEmitter: EventEmitter2
+  ) {}
 
   get db() {
     return this.supabase.getClient();
@@ -147,6 +151,30 @@ export class ChatService {
       .update({ updatedAt: new Date().toISOString() })
       .eq('id', data.conversationId);
 
+    try {
+      const conv = await this.getConversationById(data.conversationId);
+      if (conv?.metadata?.type === 'bank' && ['staff', 'admin', 'super_admin', 'support', 'system'].includes(data.senderType)) {
+        this.eventEmitter.emit('bank.chat.received', {
+          conversationId: data.conversationId,
+          senderName: data.senderName || 'Support',
+          content: data.content,
+          metadata: conv.metadata
+        });
+      }
+      
+      if (['customer', 'bank', 'partner_bank'].includes(data.senderType)) {
+        this.eventEmitter.emit('staff.chat.received', {
+          conversationId: data.conversationId,
+          senderName: data.senderName || (data.senderType === 'customer' ? 'Student' : 'Bank Partner'),
+          content: data.content,
+          senderType: data.senderType,
+          metadata: conv?.metadata || {}
+        });
+      }
+    } catch (e) {
+      this.logger.error('Failed to emit bank chat notification event', e);
+    }
+
     return message;
   }
 
@@ -155,7 +183,7 @@ export class ChatService {
       .from('Conversation')
       .select(`
           id, customerPhone, customerEmail, customerName, metadata, status, updatedAt, createdAt,
-          Message (id, content, senderType, createdAt, status)
+          Message (id, content, senderType, senderId, createdAt, status)
       `)
       .eq('status', status)
       .order('updatedAt', { ascending: false });
@@ -184,12 +212,30 @@ export class ChatService {
       }
       
       // Sort messages and format
-      let formatted = data.map((conv: any) => ({
-          ...conv,
-          lastMessage: conv.Message && conv.Message.length > 0 
-              ? conv.Message.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
-              : null
-      }));
+      let formatted = data.map((conv: any) => {
+          const sortedMessages = conv.Message && conv.Message.length > 0
+              ? conv.Message.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+              : [];
+          
+          let unreadCount = 0;
+          if (user) {
+              const isBank = user.role === 'bank' || user.role === 'partner_bank';
+              unreadCount = sortedMessages.filter((m: any) => {
+                  if (m.status === 'read') return false;
+                  if (isBank) {
+                      return m.senderType !== 'bank' && m.senderType !== 'partner_bank';
+                  } else {
+                      return m.senderType !== 'staff' && m.senderType !== 'admin' && m.senderType !== 'super_admin' && m.senderType !== 'agent';
+                  }
+              }).length;
+          }
+
+          return {
+              ...conv,
+              lastMessage: sortedMessages[0] || null,
+              unreadCount
+          };
+      });
 
       if (user && user.role === 'support') {
           formatted = formatted.filter((conv: any) => 

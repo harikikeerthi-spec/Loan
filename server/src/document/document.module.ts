@@ -1,5 +1,5 @@
 
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { DocumentController } from './document.controller';
 import { S3Service } from './s3.service';
 import { UsersModule } from '../users/users.module';
@@ -7,7 +7,7 @@ import { IntegrationModule } from '../integration/integration.module';
 import { AiModule } from '../ai/ai.module';
 
 @Module({
-    imports: [UsersModule, IntegrationModule, AiModule],
+    imports: [UsersModule, IntegrationModule, forwardRef(() => AiModule)],
     controllers: [DocumentController],
     providers: [S3Service],
     exports: [S3Service],

@@ -429,7 +429,7 @@ export default function StaffDashboardPage() {
     const [unreadChatCount, setUnreadChatCount] = useState(0);
     const activeSectionRef = useRef<string>('overview');
 
-    // Initialize real-time WebSocket connection
+    // Initialize real-time WebSocket connection and fetch initial unread counts
     useEffect(() => {
         if (!token) return;
 
@@ -447,9 +447,36 @@ export default function StaffDashboardPage() {
 
         socketRef.current = socketInstance;
 
+        const fetchChatUnreadCount = async () => {
+            if (activeSectionRef.current === 'chat_customer') {
+                setUnreadChatCount(0);
+                return;
+            }
+            try {
+                const res = await fetch("/api/chat/conversations", {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                    },
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (Array.isArray(data)) {
+                        const totalUnread = data.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
+                        if (activeSectionRef.current !== 'chat_customer') {
+                            setUnreadChatCount(totalUnread);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load staff chat unread count:", err);
+            }
+        };
+
         socketInstance.on('connect', () => {
             console.log('[StaffDashboard] Socket connected successfully');
             socketInstance.emit('request_presence');
+            fetchChatUnreadCount();
         });
 
         socketInstance.on('presence_update', (emails: string[]) => {
@@ -463,25 +490,28 @@ export default function StaffDashboardPage() {
             console.log('[StaffDashboard] Live activity received:', newActivity);
         });
 
-        // Listen for incoming customer messages (WhatsApp) even when ChatInterface is not active
+        // Listen for incoming customer/bank messages even when ChatInterface is not active
         socketInstance.on('conversation_updated', (data: { conversationId: string, lastMessage: any }) => {
             console.log('[StaffDashboard] New incoming message on conversation:', data.conversationId);
-            // Only increment badge if staff is NOT currently on the chat section
-            if (activeSectionRef.current !== 'chat_customer') {
-                setUnreadChatCount(prev => prev + 1);
-            }
+            fetchChatUnreadCount();
         });
 
         socketInstance.on('new_message', (msg: any) => {
-            // Show badge for customer messages arriving when not on chat page
-            if (msg.senderType === 'customer' && activeSectionRef.current !== 'chat_customer') {
-                setUnreadChatCount(prev => prev + 1);
+            if (activeSectionRef.current !== 'chat_customer') {
+                fetchChatUnreadCount();
             }
         });
+
+        // Fetch initial unread count on mount/token change
+        fetchChatUnreadCount();
+
+        // 15-second polling fallback to ensure count stays synced
+        const interval = setInterval(fetchChatUnreadCount, 15000);
 
         return () => {
             console.log('[StaffDashboard] Disconnecting WebSocket');
             socketInstance.disconnect();
+            clearInterval(interval);
         };
     }, [token]);
 
@@ -760,6 +790,11 @@ export default function StaffDashboardPage() {
     useEffect(() => {
         const nextSection = getDashboardSection(searchParams.get("section"));
         const nextPage = getDashboardPage(searchParams.get("page"));
+
+        activeSectionRef.current = nextSection;
+        if (nextSection === 'chat_customer') {
+            setUnreadChatCount(0);
+        }
 
         setActiveSection(prev => prev === nextSection ? prev : nextSection);
         setCurrentPage(prev => prev === nextPage ? prev : nextPage);

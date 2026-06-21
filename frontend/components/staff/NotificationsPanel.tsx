@@ -42,6 +42,16 @@ const NotificationsPanel = ({
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'application_created' | 'document_uploaded' | 'candidate_registered'>('all');
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Time reference for dynamic relative time updates
+  const [timeRef, setTimeRef] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeRef(new Date());
+    }, 15000); // Tick every 15 seconds to keep it fresh
+    return () => clearInterval(timer);
+  }, []);
+
   // Get icon and color based on notification type
   const getNotificationStyle = (type: string) => {
     const styles: Record<string, any> = {
@@ -51,6 +61,13 @@ const NotificationsPanel = ({
         borderColor: "border-blue-200",
         textColor: "text-blue-700",
         badge: "bg-blue-500",
+      },
+      staff_chat_received: {
+        icon: "forum",
+        bgColor: "bg-emerald-50",
+        borderColor: "border-emerald-200",
+        textColor: "text-emerald-700",
+        badge: "bg-emerald-500",
       },
       application_created: {
         icon: "assignment",
@@ -121,15 +138,35 @@ const NotificationsPanel = ({
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
-    const now = new Date();
+    const now = timeRef;
     const diffMs = now.getTime() - date.getTime();
+    if (diffMs < 0) {
+      return "1min ago";
+    }
+
     const diffMins = Math.floor(diffMs / 60000);
     const diffHours = Math.floor(diffMs / 3600000);
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffMs / 86400000);
 
-    return date.toLocaleDateString();
+    if (diffMins < 60) {
+      const mins = Math.max(1, diffMins);
+      if (mins === 30) return "30 min ago";
+      return `${mins}min ago`;
+    }
+    if (diffHours < 24) {
+      if (diffHours === 1) return "1hour ago";
+      return `${diffHours} hours ago`;
+    }
+    if (diffDays < 7) {
+      if (diffDays === 1) return "1day ago";
+      return `${diffDays}days ago`;
+    }
+
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
   };
 
   const fetchNotifications = useCallback(async () => {
@@ -285,6 +322,12 @@ const NotificationsPanel = ({
         } catch (e) {
           console.warn("[NotificationsPanel] Failed to parse metadata string:", e);
         }
+      }
+
+      if (notification.type === 'staff_chat_received') {
+        const convId = metadata?.conversationId;
+        router.push(convId ? `/staff/dashboard?section=chat_customer&conversationId=${convId}` : '/staff/dashboard?section=chat_customer');
+        return;
       }
 
       let appId = metadata?.applicationId || metadata?.id;

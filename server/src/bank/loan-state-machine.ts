@@ -68,22 +68,22 @@ export class LoanStateMachine {
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
     {
-      from: ['under_bank_review', 'file_logged', 'query_raised', 'approved', 'processing'],
+      from: ['under_bank_review', 'file_logged', 'query_raised', 'approved', 'processing', 'sanctioned'],
       to: 'sanctioned',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
     {
-      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing'],
+      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing', 'conditional_sanction'],
       to: 'conditional_sanction',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
     {
-      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing'],
+      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing', 'partial_sanction'],
       to: 'partial_sanction',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
     {
-      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing'],
+      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing', 'counter_offer'],
       to: 'counter_offer',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
@@ -93,7 +93,7 @@ export class LoanStateMachine {
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
     {
-      from: ['pending', 'docs_received', 'staff_verified', 'submitted_to_bank', 'under_bank_review', 'file_logged', 'query_raised', 'conditional_sanction', 'partial_sanction', 'counter_offer', 'approved', 'sanctioned', 'processing'],
+      from: ['pending', 'docs_received', 'staff_verified', 'submitted_to_bank', 'under_bank_review', 'file_logged', 'query_raised', 'conditional_sanction', 'partial_sanction', 'counter_offer', 'approved', 'sanctioned', 'processing', 'rejected'],
       to: 'rejected',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin', 'staff']
     },

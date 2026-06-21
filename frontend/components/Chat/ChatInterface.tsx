@@ -49,7 +49,7 @@ function formatSidebarDate(dateStr: string) {
 interface Message {
     id: string;
     conversationId: string;
-    senderType: 'customer' | 'staff' | 'bank' | 'system';
+    senderType: string;
     senderId: string;
     senderName?: string;
     content: string;
@@ -68,6 +68,7 @@ interface Conversation {
     status: string;
     updatedAt: string;
     lastMessage?: Message;
+    unreadCount?: number;
 }
 
 interface ChatInterfaceProps {
@@ -96,7 +97,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
         const currentUserId = user?.id || (user as any)?._id || (user as any)?.uid;
         const currentUserEmail = user?.email;
         const isStaffRole = role === 'staff' && ['staff', 'admin', 'super_admin'].includes(msg.senderType);
-        return msg.senderId === currentUserId || msg.senderId === currentUserEmail || msg.senderType === role || isStaffRole;
+        return (msg.senderId && (msg.senderId === currentUserId || msg.senderId === currentUserEmail)) || msg.senderType === role || isStaffRole;
     };
     const getFormattedAppId = (appId?: string) => {
         if (!appId) return '';
@@ -122,6 +123,8 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
     const [previewDoc, setPreviewDoc] = useState<{ url: string; name: string } | null>(null);
     const [previewLoading, setPreviewLoading] = useState<string | null>(null);
     const [sharingDoc, setSharingDoc] = useState<string | null>(null);
+    const [pendingFile, setPendingFile] = useState<File | null>(null);
+    const [pendingVaultDoc, setPendingVaultDoc] = useState<StudentDocument | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const activeConversationRef = useRef<string | null>(null);
@@ -129,6 +132,11 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
     // Sync ref with state
     useEffect(() => {
         activeConversationRef.current = activeConversation;
+    }, [activeConversation]);
+
+    useEffect(() => {
+        setPendingFile(null);
+        setPendingVaultDoc(null);
     }, [activeConversation]);
 
     // Resolve the full bank name for the current bank session
@@ -241,7 +249,11 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                 const exists = prev.find(c => c.id === msg.conversationId);
                 if (exists) {
                     const updated = prev.filter(c => c.id !== msg.conversationId);
-                    return [{ ...exists, lastMessage: msg, updatedAt: msg.createdAt }, ...updated];
+                    let newUnreadCount = exists.unreadCount || 0;
+                    if (msg.conversationId !== activeConversationRef.current && !isMessageFromMe(msg)) {
+                        newUnreadCount += 1;
+                    }
+                    return [{ ...exists, lastMessage: msg, updatedAt: msg.createdAt, unreadCount: newUnreadCount }, ...updated];
                 }
                 return prev;
             });
@@ -256,8 +268,23 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                     // Customer read → mark messages NOT sent by customer as 'read'
                     if (msg.senderType !== 'customer') return { ...msg, status: 'read' };
                 } else if (data.readerType === 'staff_or_bank') {
-                    // Staff/bank read → mark messages sent by customer as 'read'
-                    if (msg.senderType === 'customer') return { ...msg, status: 'read' };
+                    if (data.readerId) {
+                        const isBankReader = data.readerId.toLowerCase().includes('bank') || data.readerId.toLowerCase().includes('partner');
+                        if (isBankReader) {
+                            // Bank read the messages → mark all non-bank messages as read (e.g. staff messages)
+                            if (msg.senderType !== 'bank' && msg.senderType !== 'partner_bank') {
+                                return { ...msg, status: 'read' };
+                            }
+                        } else {
+                            // Staff/agent read the messages → mark all non-staff messages as read (e.g. bank messages)
+                            if (msg.senderType !== 'staff' && msg.senderType !== 'admin' && msg.senderType !== 'super_admin' && msg.senderType !== 'agent') {
+                                return { ...msg, status: 'read' };
+                            }
+                        }
+                    } else {
+                        // Fallback: mark customer messages as read
+                        if (msg.senderType === 'customer') return { ...msg, status: 'read' };
+                    }
                 }
                 return msg;
             };
@@ -268,7 +295,18 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
             setConversations(prev => prev.map(c => {
                 if (c.id === data.conversationId) {
                     const updatedLastMessage = c.lastMessage ? markAsRead(c.lastMessage) : undefined;
-                    return { ...c, lastMessage: updatedLastMessage };
+                    let newUnreadCount = c.unreadCount || 0;
+                    if (data.readerId) {
+                        const isBankReader = data.readerId.toLowerCase().includes('bank') || data.readerId.toLowerCase().includes('partner');
+                        const isStaffReader = data.readerId.toLowerCase().includes('staff') || data.readerId.toLowerCase().includes('agent') || data.readerId.includes('@');
+                        
+                        if (role === 'bank' && isBankReader) {
+                            newUnreadCount = 0;
+                        } else if ((role === 'staff' || role === 'agent') && isStaffReader) {
+                            newUnreadCount = 0;
+                        }
+                    }
+                    return { ...c, lastMessage: updatedLastMessage, unreadCount: newUnreadCount };
                 }
                 return c;
             }));
@@ -282,11 +320,33 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
         };
     }, [token, role]);
 
+    // Auto-select conversation if conversationId is passed in URL query
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const queryConvId = params.get('conversationId');
+            if (queryConvId && conversations.some(c => c.id === queryConvId)) {
+                setActiveConversation(queryConvId);
+                
+                // Clear the conversationId from the URL to prevent resetting
+                const newParams = new URLSearchParams(window.location.search);
+                newParams.delete('conversationId');
+                const newQuery = newParams.toString();
+                const newUrl = window.location.pathname + (newQuery ? `?${newQuery}` : '');
+                window.history.replaceState({}, '', newUrl);
+            }
+        }
+    }, [conversations]);
+
     // Handle active conversation change
     useEffect(() => {
         if (socket && activeConversation) {
             socket.emit('join_conversation', activeConversation);
             socket.emit('mark_read', { conversationId: activeConversation });
+
+            setConversations(prev => prev.map(c =>
+                c.id === activeConversation ? { ...c, unreadCount: 0 } : c
+            ));
 
             fetch(HttpApiPaths.chat.messages(activeConversation), {
                 headers: { Authorization: `Bearer ${token}` }
@@ -314,61 +374,121 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
 
     const [uploading, setUploading] = useState(false);
 
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file || !activeConversation) return;
-
-        setUploading(true);
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('conversationId', activeConversation);
-
-        try {
-            const res = await fetch(`/api/chat/upload`, {
-                method: 'POST',
-                headers: {
-                    Authorization: `Bearer ${token}`
-                },
-                body: formData
-            });
-            const data = await res.json();
-            if (data.success && data.message) {
-                // Immediately add to local state as fallback (socket event may be missed)
-                setMessages(prev => {
-                    if (prev.find(m => m.id === data.message.id)) return prev;
-                    return [...prev, data.message];
-                });
-                // Update conversation list
-                setConversations(prev => prev.map(c =>
-                    c.id === activeConversation
-                        ? { ...c, lastMessage: data.message, updatedAt: data.message.createdAt }
-                        : c
-                ));
-            } else if (!data.success) {
-                alert(data.message || data.error || 'Upload failed');
-            }
-        } catch (err) {
-            console.error('Upload error:', err);
-            alert('An error occurred during upload');
-        } finally {
-            setUploading(false);
-            e.target.value = '';
-        }
+        if (!file) return;
+        setPendingFile(file);
+        setPendingVaultDoc(null);
+        e.target.value = '';
     };
 
-    const handleSendMessage = (e: React.FormEvent) => {
+    const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!inputText.trim() || !activeConversation || !socket) return;
+        if (!activeConversation) return;
 
         const conv = conversations.find(c => c.id === activeConversation);
+        const hasText = !!inputText.trim();
 
-        socket.emit('send_message', {
-            conversationId: activeConversation,
-            customerPhone: conv?.customerPhone,
-            content: inputText
-        });
+        // 1. Process pending local file upload
+        if (pendingFile) {
+            setUploading(true);
+            const formData = new FormData();
+            formData.append('file', pendingFile);
+            formData.append('conversationId', activeConversation);
 
-        setInputText('');
+            try {
+                const res = await fetch(`/api/chat/upload`, {
+                    method: 'POST',
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: formData
+                });
+                const data = await res.json();
+                if (data.success && data.message) {
+                    setMessages(prev => {
+                        if (prev.find(m => m.id === data.message.id)) return prev;
+                        return [...prev, data.message];
+                    });
+                    setConversations(prev => prev.map(c =>
+                        c.id === activeConversation
+                            ? { ...c, lastMessage: data.message, updatedAt: data.message.createdAt }
+                            : c
+                    ));
+                } else if (!data.success) {
+                    alert(data.message || data.error || 'Upload failed');
+                    setUploading(false);
+                    return; // Stop if upload failed
+                }
+            } catch (err) {
+                console.error('Upload error:', err);
+                alert('An error occurred during upload');
+                setUploading(false);
+                return; // Stop if upload failed
+            } finally {
+                setUploading(false);
+                setPendingFile(null);
+            }
+        }
+
+        // 2. Process pending vault document sharing
+        if (pendingVaultDoc) {
+            if (!pendingVaultDoc.filePath) {
+                alert("This document does not have a valid file path associated.");
+                return;
+            }
+            setSharingDoc(pendingVaultDoc.id);
+            try {
+                const res = await fetch(`/api/chat/share-document`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        conversationId: activeConversation,
+                        fileName: pendingVaultDoc.fileName || pendingVaultDoc.name || pendingVaultDoc.docType,
+                        filePath: pendingVaultDoc.filePath,
+                        mimeType: (pendingVaultDoc.fileName || pendingVaultDoc.name || pendingVaultDoc.docType)?.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'image/jpeg'
+                    })
+                });
+
+                const data = await res.json();
+                if (data.success && data.message) {
+                    setMessages(prev => {
+                        if (prev.find(m => m.id === data.message.id)) return prev;
+                        return [...prev, data.message];
+                    });
+                    setConversations(prev => prev.map(c =>
+                        c.id === activeConversation
+                            ? { ...c, lastMessage: data.message, updatedAt: data.message.createdAt }
+                            : c
+                    ));
+                } else if (!data.success) {
+                    alert(data.message || 'Failed to share document');
+                    setSharingDoc(null);
+                    return; // Stop if share failed
+                }
+            } catch (e) {
+                console.error("Failed to share document:", e);
+                alert("An error occurred while sharing the document.");
+                setSharingDoc(null);
+                return; // Stop if share failed
+            } finally {
+                setSharingDoc(null);
+                setPendingVaultDoc(null);
+            }
+        }
+
+        // 3. Process text message if any
+        if (hasText && socket) {
+            socket.emit('send_message', {
+                conversationId: activeConversation,
+                customerPhone: conv?.customerPhone,
+                content: inputText
+            });
+            setInputText('');
+        }
     };
 
     const startNewChat = async (targetUser: any) => {
@@ -756,8 +876,8 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                 filteredConversations.map(conv => {
                                     const isBank = conv.metadata?.type === 'bank';
                                     const activeStyle = activeConversation === conv.id;
-                                    const mockUnreadCount = conv.id.length % 3 === 0 ? 2 : 0;
-                                    const isUnread = mockUnreadCount > 0;
+                                    const unreadCountVal = conv.unreadCount || 0;
+                                    const isUnread = unreadCountVal > 0;
                                     return (
                                         <div
                                             key={conv.id}
@@ -783,7 +903,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                                     <div className="min-w-0">
                                                         <span className="font-bold text-xs text-[#1A1D20] truncate block tracking-tight">
                                                             {role === 'bank' && conv.metadata?.applicationId
-                                                                ? getFormattedAppId(conv.metadata.applicationId)
+                                                                ? (conv.metadata.applicationNumber || getFormattedAppId(conv.metadata.applicationId))
                                                                 : (conv.customerName || conv.customerPhone)
                                                             }
                                                         </span>
@@ -824,8 +944,8 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                             </div>
 
                                             {isUnread && (
-                                                <div className="absolute right-4 top-4 flex items-center justify-center w-4.5 h-4.5 rounded-full bg-[#EF4444] text-white font-bold text-[8px] shadow-sm">
-                                                    {mockUnreadCount}
+                                                <div className="absolute right-4 top-4 flex items-center justify-center w-5 h-5 rounded-full bg-[#EF4444] text-white font-bold text-[9px] shadow-sm">
+                                                    {unreadCountVal}
                                                 </div>
                                             )}
                                         </div>
@@ -892,7 +1012,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                         <div className="flex items-center gap-2">
                                             <h4 className="font-bold text-sm text-[#1A1D20] tracking-tight truncate">
                                                 {role === 'bank' && conversations.find(c => c.id === activeConversation)?.metadata?.applicationId
-                                                    ? getFormattedAppId(conversations.find(c => c.id === activeConversation)?.metadata.applicationId)
+                                                    ? (conversations.find(c => c.id === activeConversation)?.metadata.applicationNumber || getFormattedAppId(conversations.find(c => c.id === activeConversation)?.metadata.applicationId))
                                                     : (conversations.find(c => c.id === activeConversation)?.customerName || conversations.find(c => c.id === activeConversation)?.customerPhone)
                                                 }
                                             </h4>
@@ -1017,7 +1137,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                                                 {msg.attachmentUrl ? (
                                                                     <div className="flex flex-col gap-2">
                                                                         <a
-                                                                            href={`/api/chat/attachment/${msg.id}`}
+                                                                            href={`/api/chat/attachment/${msg.id}?token=${token}`}
                                                                             target="_blank"
                                                                             rel="noopener noreferrer"
                                                                             className={`flex items-center gap-3 p-3 rounded-xl border ${isMe ? 'bg-white/10 border-white/20 hover:bg-white/20' : 'bg-white border-[#E2E8F0] hover:bg-gray-50'} transition-colors`}
@@ -1095,6 +1215,38 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                         </button>
                                     ))}
                                 </div>
+                                {(pendingFile || pendingVaultDoc) && (
+                                    <div className="flex items-center justify-between p-3 mb-3 bg-[#F2F0FF] border border-[#5A42E4]/25 rounded-xl animate-fade-in">
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            <div className="w-8 h-8 rounded-lg bg-[#5A42E4] text-white flex items-center justify-center shrink-0 shadow-sm">
+                                                <span className="material-symbols-outlined text-lg">
+                                                    {pendingFile 
+                                                        ? (pendingFile.type.startsWith('image/') ? 'image' : 'description')
+                                                        : ((pendingVaultDoc?.fileName || pendingVaultDoc?.name || '')?.toLowerCase().endsWith('.pdf') ? 'description' : 'image')
+                                                    }
+                                                </span>
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-bold text-[#1A1D20] truncate">
+                                                    {pendingFile ? pendingFile.name : (pendingVaultDoc?.fileName || pendingVaultDoc?.name || pendingVaultDoc?.docType)}
+                                                </p>
+                                                <p className="text-[9px] text-[#5A42E4] font-bold uppercase tracking-wider">
+                                                    {pendingFile ? 'Local Attachment' : 'Vault Document'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setPendingFile(null);
+                                                setPendingVaultDoc(null);
+                                            }}
+                                            className="w-7 h-7 rounded-lg hover:bg-white/50 flex items-center justify-center text-[#8A94A6] hover:text-[#5A42E4] transition-all cursor-pointer"
+                                        >
+                                            <span className="material-symbols-outlined text-base">close</span>
+                                        </button>
+                                    </div>
+                                )}
                                 <form onSubmit={handleSendMessage} className="flex gap-3 items-center">
                                     <div className="flex-1 relative flex items-center bg-[#F8F9FC] border border-[#E2E8F0] rounded-xl transition-all duration-200 focus-within:bg-white focus-within:border-[#5A42E4] focus-within:ring-4 focus-within:ring-[#5A42E4]/10 pl-11 pr-20 h-13 shadow-inner">
                                         <label className="absolute left-2 w-8 h-8 flex items-center justify-center text-[#8A94A6] hover:text-[#5A42E4] hover:bg-[#F2F0FF] rounded-lg transition-all cursor-pointer">
@@ -1103,7 +1255,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                             ) : (
                                                 <span className="material-symbols-outlined text-[20px]">attach_file</span>
                                             )}
-                                            <input type="file" className="hidden" onChange={handleFileUpload} disabled={uploading} accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" />
+                                            <input type="file" className="hidden" onChange={handleFileUpload} accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx" />
                                         </label>
                                         <input
                                             type="text"
@@ -1113,17 +1265,17 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                             className="w-full bg-transparent border-none py-2 text-xs text-[#1A1D20] placeholder-[#8A94A6] focus:outline-none font-semibold h-full"
                                         />
                                         <div className="absolute right-2 flex items-center gap-0.5">
-                                            <button type="button" className="w-7 h-7 flex items-center justify-center text-[#8A94A6] hover:text-[#5A42E4] hover:bg-[#F2F0FF] transition-all rounded-lg cursor-pointer">
+                                            {/* <button type="button" className="w-7 h-7 flex items-center justify-center text-[#8A94A6] hover:text-[#5A42E4] hover:bg-[#F2F0FF] transition-all rounded-lg cursor-pointer">
                                                 <span className="material-symbols-outlined text-[18px]">mood</span>
-                                            </button>
-                                            <button type="button" className="w-7 h-7 flex items-center justify-center text-[#8A94A6] hover:text-[#5A42E4] hover:bg-[#F2F0FF] transition-all rounded-lg cursor-pointer">
+                                            </button> */}
+                                            {/* <button type="button" className="w-7 h-7 flex items-center justify-center text-[#8A94A6] hover:text-[#5A42E4] hover:bg-[#F2F0FF] transition-all rounded-lg cursor-pointer">
                                                 <span className="material-symbols-outlined text-[18px]">mic</span>
-                                            </button>
+                                            </button> */}
                                         </div>
                                     </div>
                                     <button
                                         type="submit"
-                                        disabled={!inputText.trim()}
+                                        disabled={!inputText.trim() && !pendingFile && !pendingVaultDoc}
                                         className="w-13 h-13 bg-[#5A42E4] hover:bg-[#432ec4] text-white rounded-xl flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all shadow-md shadow-[#5A42E4]/20 hover:shadow-lg hover:shadow-[#5A42E4]/30 active:scale-95 group shrink-0 cursor-pointer"
                                     >
                                         <span className="material-symbols-outlined text-[18px] font-bold group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform">send</span>
@@ -1178,48 +1330,11 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                         <div className="px-5 py-3 border-b border-[#E2E8F0] bg-[#FFFFFF] shrink-0">
                             <label className="w-full flex items-center justify-center gap-2 py-2 bg-[#5A42E4] hover:bg-[#432ec4] text-white text-[11px] font-bold uppercase tracking-wider rounded-xl cursor-pointer shadow-md shadow-[#5A42E4]/20 hover:shadow-lg transition-all text-center">
                                 <span className="material-symbols-outlined text-sm font-bold">upload_file</span>
-                                {uploading ? 'Uploading...' : 'Upload & Share File'}
+                                Select Local File
                                 <input
                                     type="file"
                                     className="hidden"
-                                    onChange={async (e) => {
-                                        const file = e.target.files?.[0];
-                                        if (!file || !activeConversation) return;
-                                        setUploading(true);
-                                        const formData = new FormData();
-                                        formData.append('file', file);
-                                        formData.append('conversationId', activeConversation);
-                                        try {
-                                            const res = await fetch(`/api/chat/upload`, {
-                                                method: 'POST',
-                                                headers: { Authorization: `Bearer ${token}` },
-                                                body: formData
-                                            });
-                                            const data = await res.json();
-                                            if (data.success && data.message) {
-                                                // Add to local message state immediately
-                                                setMessages(prev => {
-                                                    if (prev.find(m => m.id === data.message.id)) return prev;
-                                                    return [...prev, data.message];
-                                                });
-                                                setConversations(prev => prev.map(c =>
-                                                    c.id === activeConversation
-                                                        ? { ...c, lastMessage: data.message, updatedAt: data.message.createdAt }
-                                                        : c
-                                                ));
-                                                openStudentDocuments();
-                                            } else if (!data.success) {
-                                                alert(data.message || 'Upload failed');
-                                            }
-                                        } catch (err) {
-                                            console.error('Upload error:', err);
-                                            alert('An error occurred during upload');
-                                        } finally {
-                                            setUploading(false);
-                                            e.target.value = '';
-                                        }
-                                    }}
-                                    disabled={uploading}
+                                    onChange={handleFileUpload}
                                     accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx"
                                 />
                             </label>
@@ -1316,15 +1431,13 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                                     Download
                                                 </button>
                                                 <button
-                                                    onClick={() => handleShareDocument(doc)}
-                                                    disabled={sharingDoc === doc.id}
-                                                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-emerald-50 hover:bg-[#10B981] text-[#10B981] hover:text-white border border-[#10B981]/20 hover:border-[#10B981] rounded-lg text-[9px] font-bold uppercase transition-all cursor-pointer disabled:opacity-50"
+                                                    onClick={() => {
+                                                        setPendingVaultDoc(doc);
+                                                        setPendingFile(null);
+                                                    }}
+                                                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-emerald-50 hover:bg-[#10B981] text-[#10B981] hover:text-white border border-[#10B981]/20 hover:border-[#10B981] rounded-lg text-[9px] font-bold uppercase transition-all cursor-pointer"
                                                 >
-                                                    {sharingDoc === doc.id ? (
-                                                        <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                                    ) : (
-                                                        "Share"
-                                                    )}
+                                                    Share
                                                 </button>
                                             </div>
                                         </div>

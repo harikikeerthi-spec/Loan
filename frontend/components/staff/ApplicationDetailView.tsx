@@ -1328,31 +1328,31 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="relative group mr-2">
+          {/* <div className="relative group mr-2">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">search</span>
             <input
               type="text"
               placeholder="Search applications, students, IDs..."
               className="pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-white rounded-lg text-[12px] focus:outline-none focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 focus:bg-white w-64 transition-all text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-md"
             />
-          </div>
+          </div> */}
 
           <div className="h-5 w-px bg-slate-200"></div>
 
           <div className="flex items-center gap-3">
             {/* Real-time Sync Timer */}
             <div className="hidden lg:flex items-center gap-4 border-r border-slate-200 pr-4">
-              <div className="flex items-center gap-1.5 text-[14px] text-black-600 font-bold uppercase tracking-widest font-mono">
+              <div className="flex items-center gap-1.5 text-[14px] text-black font-bold uppercase tracking-widest font-mono">
                 <span>Sync: {format(nowTime, 'MMM dd, HH:mm:ss')}</span>
               </div>
             </div>
 
             {/* Menu Toggle */}
-            {setSidebarOpen && (
+            {/* {setSidebarOpen && (
               <button className="p-1.5 text-slate-500 hover:bg-slate-100 rounded transition-all" onClick={() => setSidebarOpen(!sidebarOpen)}>
                 <span className="material-symbols-outlined text-[20px]">menu</span>
               </button>
-            )}
+            )} */}
 
             {/* Notifications Panel */}
             {user?.id ? (
@@ -1649,9 +1649,9 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">%</span>
                         </div>
                       </div>
-                      <div className="mt-3.5 flex items-center gap-1.5 text-slate-400">
+                      <div className="mt-3.5 flex items-center gap-1.5 text-black">
                         <span className="material-symbols-outlined text-[13px]">schedule</span>
-                        <p className="text-[9px] font-black uppercase tracking-widest tabular-nums text-slate-500">
+                        <p className="text-[9px] font-black uppercase tracking-widest tabular-nums text-black">
                           Updated: {formatStepDateTime(progress <= 10 ? (application.student?.registeredAtIndia || application.registeredAtIndia || application.student?.createdAt || application.student?.created_at || application.user?.createdAt || application.user?.created_at || appUpdatedAt || appCreatedAt) : (appUpdatedAt || appCreatedAt))}
                         </p>
                       </div>
@@ -1681,7 +1681,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                             {formatStepLabel(stage.label)}
                           </p>
                           {stage.timestamp && (
-                            <p className={`mt-2 text-[12px] font-bold tabular-nums tracking-wide ${stage.active ? 'text-emerald-500' : 'text-slate-400'}`}>
+                            <p className="mt-2 text-[12px] font-bold tabular-nums tracking-wide text-black">
                               {formatStepDateTime(stage.timestamp)}
                             </p>
                           )}
@@ -1812,7 +1812,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                                     }`}>
                                     <p className="text-[14px] leading-relaxed">{msg.text}</p>
                                   </div>
-                                  <p className={`text-[10px] font-bold text-slate-400 ${msg.sender === "staff" ? "mr-2" : "ml-2"}`}>
+                                  <p className={`text-[10px] font-bold text-black ${msg.sender === "staff" ? "mr-2" : "ml-2"}`}>
                                     {msg.sender === "staff" ? "STAFF" : msg.sender === "bank" ? "BANK" : "STUDENT"} • {msg.time}
                                   </p>
                                 </div>
@@ -1863,7 +1863,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                                   {note.authorName || note.author || 'Staff Member'}{" "}
                                   <span className="font-medium text-slate-400 ml-2">{note.role}</span>
                                 </p>
-                                <p className="text-[10px] font-bold text-slate-400 uppercase">
+                                <p className="text-[10px] font-bold text-black uppercase">
                                   {note.createdAt ? formatNoteTime(note.createdAt) : (note.time || 'JUST NOW')}
                                 </p>
                               </div>
@@ -1900,7 +1900,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                   </div>
                   <div>
                     <h2 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Student Profile</h2>
-                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Registered: {createdDateIST}</p>
+                    <p className="text-[11px] font-bold text-black uppercase tracking-widest mt-1">Registered: {createdDateIST}</p>
                   </div>
                 </div>
               </div>
@@ -2744,7 +2744,7 @@ const OcrMiniDocumentCard = ({
 
       {hasFile && (
         <>
-          <div className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+          <div className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold text-black">
             <span className="material-symbols-outlined text-[15px]">schedule</span>
             Uploaded: {uploadAge}
           </div>
@@ -2796,7 +2796,7 @@ const OcrMiniDocumentCard = ({
                     <span className="material-symbols-outlined text-[14px]">check</span>
                     Verify
                   </button>
-                   <button
+                  <button
                     type="button"
                     onClick={async () => {
                       const reason = await dialogPrompt("Please enter the reason for rejecting this document:", "Enter rejection reason...");
@@ -3082,7 +3082,7 @@ const DocumentPreviewDrawer = ({
               <span className="text-[10px] font-black uppercase tracking-widest">Quick Look</span>
             </div>
             <h3 className="text-[22px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] truncate">{title}</h3>
-            <p className="mt-1 flex items-center gap-1.5 text-[12px] font-bold text-slate-500">
+            <p className="mt-1 flex items-center gap-1.5 text-[12px] font-bold text-black">
               <span className="material-symbols-outlined text-[15px]">schedule</span>
               {uploadAge}
             </p>

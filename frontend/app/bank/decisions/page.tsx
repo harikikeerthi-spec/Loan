@@ -878,9 +878,9 @@ export default function DecisionsHub() {
                 setSelectedApp(null);
                 fetchApplications(currentBankId);
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error("Failed to log underwriting decision:", err);
-            alert("Error logging underwriting decision.");
+            alert(`Error logging underwriting decision: ${err.message || err}`);
         } finally {
             setSubmitting(false);
         }
