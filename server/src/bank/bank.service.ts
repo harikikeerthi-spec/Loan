@@ -746,7 +746,13 @@ export class BankService {
       body: `Bank officer ${bankUser.firstName || 'Banker'} raised a clarification query on App: ${application?.applicationNumber || applicationId}`,
       type: 'query_raised',
       isRead: false,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      metadata: {
+        applicationId: applicationId,
+        applicationNumber: application?.applicationNumber || null,
+        bank: application?.bank || null,
+        status: 'query_raised'
+      }
     };
     await this.db.from('Notification').insert(notifData);
     this.eventEmitter.emit('notification.created', notifData);

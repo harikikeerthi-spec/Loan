@@ -72,7 +72,7 @@ const StatMiniCard = ({ label, value, subtext, trendType, trendLabel, icon, bgCo
     }
 
     return (
-        <motion.div 
+        <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay, duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
@@ -278,7 +278,7 @@ export default function BankDashboard() {
                 borderColor: '#6605c7',
                 backgroundColor: (context: any) => {
                     const chart = context.chart;
-                    const {ctx, chartArea} = chart;
+                    const { ctx, chartArea } = chart;
                     if (!chartArea) return 'rgba(102, 5, 199, 0.03)';
                     const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
                     gradient.addColorStop(0, 'rgba(102, 5, 199, 0.01)');
@@ -357,7 +357,7 @@ export default function BankDashboard() {
             {/* Header / Greet Section */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
                 <div className="space-y-4">
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         className="inline-flex items-center gap-3 px-4 py-2 bg-white/50 backdrop-blur-xl rounded-full border border-[#6605c7]/10 shadow-sm"
@@ -369,15 +369,15 @@ export default function BankDashboard() {
                         Portfolio <span className="text-[#6605c7]">Overview</span>
                     </h2>
                 </div>
-                
+
                 <div className="flex flex-wrap gap-4 items-center relative">
 
-                    <motion.button 
+                    <motion.button
                         whileHover={{ y: -2 }}
                         onClick={() => {
                             const content = document.querySelector('.admin-table')?.parentElement?.innerText || 'Dashboard Data';
                             const element = document.createElement("a");
-                            const file = new Blob([content], {type: 'text/plain'});
+                            const file = new Blob([content], { type: 'text/plain' });
                             element.href = URL.createObjectURL(file);
                             element.download = `bank-matrix-audit-${format(new Date(), 'yyyy-MM-dd')}.txt`;
                             document.body.appendChild(element);
@@ -386,16 +386,16 @@ export default function BankDashboard() {
                         }}
                         className="px-6 py-4 rounded-[1.5rem] bg-white/80 border border-black/10 hover:border-black/20 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#111111] hover:bg-white transition-all shadow-sm group"
                     >
-                        <span className="material-symbols-outlined text-xl group-hover:scale-125 transition-transform">database</span> 
+                        <span className="material-symbols-outlined text-xl group-hover:scale-125 transition-transform">database</span>
                         Extract Matrix
                     </motion.button>
-                    <motion.button 
+                    <motion.button
                         whileHover={{ y: -2, scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => router.push('/bank/applications')}
                         className="px-8 py-4 rounded-[1.5rem] bg-[#111111] hover:bg-black text-white border border-white/10 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] shadow-md hover:shadow-lg transition-all group"
                     >
-                        <span className="material-symbols-outlined text-xl group-hover:rotate-90 transition-transform duration-500">add_circle</span> 
+                        <span className="material-symbols-outlined text-xl group-hover:rotate-90 transition-transform duration-500">add_circle</span>
                         Initialize Pulse
                     </motion.button>
                 </div>
@@ -463,7 +463,7 @@ export default function BankDashboard() {
             {/* Intelligence Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
                 {/* Capital Flow Visual */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
@@ -493,8 +493,8 @@ export default function BankDashboard() {
                             options={{
                                 responsive: true,
                                 maintainAspectRatio: false,
-                                plugins: { 
-                                    legend: { display: false }, 
+                                plugins: {
+                                    legend: { display: false },
                                     tooltip: {
                                         backgroundColor: 'rgba(255, 255, 255, 0.98)',
                                         titleColor: '#111',
@@ -507,18 +507,18 @@ export default function BankDashboard() {
                                         titleFont: { weight: 'bold', size: 11 },
                                         bodyFont: { weight: 'bold', size: 13 },
                                         callbacks: { label: (c) => `₹ ${c.formattedValue} Cr` }
-                                    } 
+                                    }
                                 },
                                 scales: {
-                                    y: { 
-                                        border: { display: false }, 
-                                        grid: { color: 'rgba(0,0,0,0.06)' }, 
+                                    y: {
+                                        border: { display: false },
+                                        grid: { color: 'rgba(0,0,0,0.06)' },
                                         ticks: { font: { weight: 'bold', size: 11 }, color: '#666', padding: 6 },
                                         beginAtZero: true
                                     },
-                                    x: { 
-                                        border: { display: false }, 
-                                        grid: { display: false }, 
+                                    x: {
+                                        border: { display: false },
+                                        grid: { display: false },
                                         ticks: { font: { weight: 'bold', size: 11 }, color: '#666', padding: 4 }
                                     }
                                 }
@@ -528,7 +528,7 @@ export default function BankDashboard() {
                 </motion.div>
 
                 {/* Status Matrix */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.6 }}
@@ -553,7 +553,7 @@ export default function BankDashboard() {
                             <span className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-400 mt-1">Total</span>
                         </div>
                     </div>
-                    
+
                     <div className="space-y-1.5">
                         {statusDistribution?.labels?.map((label, i) => (
                             <div key={label} className="flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-gray-50/60 border border-gray-100/60">
@@ -593,7 +593,7 @@ export default function BankDashboard() {
                                 </div>
                                 <h4 className="text-xs font-black text-gray-800 uppercase tracking-tight truncate mt-1">{item.stage}</h4>
                             </div>
-                            
+
                             <div className="mt-4.5 space-y-2">
                                 <div className="flex justify-between items-end text-xs font-black text-gray-900">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">caseload</span>
@@ -610,7 +610,7 @@ export default function BankDashboard() {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
                 {/* Priority Desk (F29 Today's Dashboard) */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.7 }}
@@ -631,13 +631,13 @@ export default function BankDashboard() {
                     {/* F29 5-Tabs Grid */}
                     <div className="px-8 border-b border-gray-100 flex flex-wrap gap-2 pb-2">
                         {(["urgent", "new", "queries", "disbursements", "pending"] as const).map(tab => {
-                            const queue = 
+                            const queue =
                                 tab === "urgent" ? urgentQueue :
-                                tab === "new" ? newQueue :
-                                tab === "queries" ? queryQueue :
-                                tab === "disbursements" ? disbursementQueue :
-                                pendingQueue;
-                            
+                                    tab === "new" ? newQueue :
+                                        tab === "queries" ? queryQueue :
+                                            tab === "disbursements" ? disbursementQueue :
+                                                pendingQueue;
+
                             const labels = {
                                 urgent: "Urgent",
                                 new: "New Files",
@@ -650,11 +650,10 @@ export default function BankDashboard() {
                                 <button
                                     key={tab}
                                     onClick={() => setActiveTab(tab)}
-                                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-                                        activeTab === tab 
-                                            ? "bg-[#111111] text-white border border-white/10 shadow-md" 
+                                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${activeTab === tab
+                                            ? "bg-[#111111] text-white border border-white/10 shadow-md"
                                             : "text-gray-500 hover:text-gray-900 hover:bg-gray-100/50"
-                                    }`}
+                                        }`}
                                 >
                                     <span>{labels[tab]}</span>
                                     <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-bold ${activeTab === tab ? "bg-white/25 text-white" : "bg-gray-100 text-gray-500"}`}>
@@ -668,12 +667,12 @@ export default function BankDashboard() {
                     <div className="p-8 pt-4">
                         <div className="overflow-x-auto no-scrollbar max-h-[350px] overflow-y-auto">
                             {(() => {
-                                const activeQueue = 
+                                const activeQueue =
                                     activeTab === "urgent" ? urgentQueue :
-                                    activeTab === "new" ? newQueue :
-                                    activeTab === "queries" ? queryQueue :
-                                    activeTab === "disbursements" ? disbursementQueue :
-                                    pendingQueue;
+                                        activeTab === "new" ? newQueue :
+                                            activeTab === "queries" ? queryQueue :
+                                                activeTab === "disbursements" ? disbursementQueue :
+                                                    pendingQueue;
 
                                 if (activeQueue.length === 0) {
                                     return (
@@ -699,7 +698,7 @@ export default function BankDashboard() {
                                             {activeQueue.map((app, i) => {
                                                 const dateStr = app.lanEnteredAt || app.submittedAt || app.createdAt;
                                                 const ageDays = dateStr ? differenceInDays(new Date(), new Date(dateStr)) : 0;
-                                                
+
                                                 return (
                                                     <tr key={app.id || i} className="group hover:bg-[#6605c7]/[0.03] transition-all duration-300">
                                                         <td className="px-4 py-4">
@@ -742,7 +741,7 @@ export default function BankDashboard() {
                 </motion.div>
 
                 {/* Directive & Security Matrix */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.8 }}
@@ -792,7 +791,7 @@ export default function BankDashboard() {
                         <div className="relative z-10">
                             <h3 className="text-sm font-black text-white mb-2 uppercase tracking-widest">Compliance Shield</h3>
                             <p className="text-white/70 text-[9px] font-bold uppercase tracking-[0.18em] mb-4 leading-relaxed">
-                                {compliance 
+                                {compliance
                                     ? `Score: ${compliance.overallCompliance || 100}% • RBI & NHB Compliant`
                                     : 'Synchronized under RBI-GDRP-v2.0 protocol.'}
                             </p>
@@ -805,8 +804,8 @@ export default function BankDashboard() {
                                         {compliance ? 'System Validated' : 'Sentinel Engine Live'}
                                     </span>
                                     <span className="text-[7.5px] font-bold text-white/40 uppercase tracking-widest">
-                                        {compliance?.gstCompliance?.status === 'warning' 
-                                            ? compliance.gstCompliance.detail 
+                                        {compliance?.gstCompliance?.status === 'warning'
+                                            ? compliance.gstCompliance.detail
                                             : 'All nodes stable & verified'}
                                     </span>
                                 </div>
@@ -816,7 +815,7 @@ export default function BankDashboard() {
                     </div>
                 </motion.div>
             </div>
-            
+
             {/* Mesh background subtle overlay */}
             <div className="fixed inset-0 bg-mesh-gradient opacity-[0.03] pointer-events-none -z-10" />
         </div>

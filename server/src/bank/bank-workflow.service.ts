@@ -1454,7 +1454,11 @@ export class BankWorkflowService {
       body: `Application has been placed on hold by ${changedBy}. Reason: ${reason}`,
       type: 'hold',
       isRead: false,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      metadata: {
+        applicationId: submission.applicationId,
+        status: 'hold'
+      }
     };
     await this.db.client.from('Notification').insert(notifData);
     this.eventEmitter.emit('notification.created', notifData);
@@ -1509,7 +1513,11 @@ export class BankWorkflowService {
       body: `Application hold has been resumed by ${changedBy}.`,
       type: 'hold',
       isRead: false,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      metadata: {
+        applicationId: submission.applicationId,
+        status: 'active'
+      }
     };
     await this.db.client.from('Notification').insert(notifData);
     this.eventEmitter.emit('notification.created', notifData);
@@ -1561,7 +1569,11 @@ export class BankWorkflowService {
         body: `Application has been transferred and assigned to you by ${changedBy}.`,
         type: 'transfer',
         isRead: false,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        metadata: {
+          applicationId: submission.applicationId,
+          status: 'assigned'
+        }
       };
       await this.db.client.from('Notification').insert(notifData);
       this.eventEmitter.emit('notification.created', notifData);

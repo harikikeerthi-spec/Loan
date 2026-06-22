@@ -415,6 +415,42 @@ export class ApplicationService {
     if (application.statusHistory) application.statusHistory.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     if (application.notes) application.notes = application.notes.filter((n: any) => !n.isInternal).sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
+    // Fetch related BankDecision and queries manually to prevent schema cache failures
+    try {
+      const [
+        { data: bankDecisions },
+        { data: queries },
+        { data: bankQueries }
+      ] = await Promise.all([
+        this.db.from('BankDecision').select('*').eq('applicationId', applicationId),
+        this.db.from('queries').select('*').eq('applicationId', applicationId),
+        this.db.from('BankQuery').select('*').eq('applicationId', applicationId)
+      ]);
+      application.BankDecision = bankDecisions || [];
+      
+      const allQueries = [...(queries || [])];
+      if (bankQueries && bankQueries.length > 0) {
+        bankQueries.forEach((bq: any) => {
+          if (!allQueries.some(q => q.id === bq.id)) {
+            allQueries.push({
+              id: bq.id,
+              authorName: bq.raisedBy || 'Banker',
+              content: bq.description,
+              status: bq.status?.toLowerCase() || 'open',
+              createdAt: bq.raisedAt || bq.createdAt,
+              resolvedAt: bq.resolvedAt,
+              queryType: bq.queryType
+            });
+          }
+        });
+      }
+      application.queries = allQueries;
+    } catch (e) {
+      console.error('Failed to load bank decisions and queries for application:', e);
+      application.BankDecision = [];
+      application.queries = [];
+    }
+
     return application;
   }
 

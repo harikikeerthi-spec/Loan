@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { format } from "date-fns";
 import { documentApi, staffProfileApi, adminApi, chatApi } from "@/lib/api";
 import { useDialog } from "@/contexts/DialogContext";
@@ -60,6 +60,50 @@ const formatAmountInINR = (num: number) => {
   return new Intl.NumberFormat('en-IN', {
     maximumFractionDigits: 0
   }).format(num);
+};
+
+// Formats a date exactly into India Standard Time (+5:30) with timezone label
+const formatIST = (dateVal: any, includeTime: boolean = true): string => {
+  if (!dateVal) return "—";
+  try {
+    let cleanDs = dateVal;
+    if (typeof cleanDs === 'string' && !cleanDs.includes('Z') && !cleanDs.includes('+')) {
+      if (cleanDs.includes('T') || cleanDs.includes(':')) {
+        const formatted = cleanDs.replace(' ', 'T');
+        cleanDs = formatted.includes('Z') ? formatted : formatted + 'Z';
+      }
+    }
+    const d = new Date(cleanDs);
+    if (isNaN(d.getTime())) return "—";
+
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: includeTime ? "2-digit" : undefined,
+      minute: includeTime ? "2-digit" : undefined,
+      second: includeTime ? "2-digit" : undefined,
+      hour12: false
+    }).formatToParts(d);
+
+    const getPart = (type: string) => parts.find(p => p.type === type)?.value || "";
+
+    const month = getPart("month");
+    const day = getPart("day");
+    const year = getPart("year");
+
+    if (includeTime) {
+      const hour = getPart("hour");
+      const minute = getPart("minute");
+      const second = getPart("second");
+      return `${month} ${day}, ${year} • ${hour}:${minute}:${second}`;
+    } else {
+      return `${month} ${day}, ${year} `;
+    }
+  } catch {
+    return "—";
+  }
 };
 
 /** Derive a readable intake season from a raw value (named season or ISO date) */
@@ -205,6 +249,32 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const [documents, setDocuments] = useState<OcrSummaryDoc[]>([]);
   const [loadingDocs, setLoadingDocs] = useState(false);
 
+  // Bank Decisions & Queries State
+  const [bankDecisions, setBankDecisions] = useState<any[]>([]);
+  const [bankQueries, setBankQueries] = useState<any[]>([]);
+  const [loadingBankData, setLoadingBankData] = useState(false);
+
+  const fetchBankDecisionsAndQueries = useCallback(async () => {
+    const appRefId = application.id || application._id;
+    if (!appRefId) return;
+    setLoadingBankData(true);
+    try {
+      const res = await adminApi.getApplication(appRefId) as any;
+      if (res && res.success && res.data) {
+        setBankDecisions(res.data.BankDecision || []);
+        setBankQueries(res.data.queries || []);
+      }
+    } catch (err) {
+      console.error("Failed to fetch bank decisions/queries:", err);
+    } finally {
+      setLoadingBankData(false);
+    }
+  }, [application.id, application._id]);
+
+  useEffect(() => {
+    fetchBankDecisionsAndQueries();
+  }, [fetchBankDecisionsAndQueries]);
+
   const userId = application.userId || application.user_id || application.applicantId || application.student?.id || application.student?._id || application.user?.id || application.user?._id;
 
   // Fetch/start conversation
@@ -274,7 +344,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
 
   // Set up socket connection and join room
   useEffect(() => {
-    if (!conversationId || !token) return;
+    if (!token) return;
 
     const baseApiUrl = typeof window !== 'undefined' && (window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1'))
       ? 'http://localhost:5000'
@@ -293,11 +363,24 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
 
     newSocket.on('connect', () => {
       console.log('[ApplicationDetailView] Socket connected');
-      newSocket.emit('join_conversation', conversationId);
+      if (conversationId) {
+        newSocket.emit('join_conversation', conversationId);
+      }
+      newSocket.emit('joinRoom', 'room_staff');
+    });
+
+    newSocket.on('notification_received', (payload: any) => {
+      console.log('[ApplicationDetailView] Live notification received in App detail view:', payload);
+      const curAppId = application.id || application._id;
+      const notifAppId = payload.metadata?.applicationId || payload.metadata?.id;
+      if (notifAppId === curAppId || (payload.body && payload.body.includes(curAppId)) || (payload.title && payload.title.includes(curAppId))) {
+        console.log('[ApplicationDetailView] Notification matches current application, reloading bank decisions & queries...');
+        fetchBankDecisionsAndQueries();
+      }
     });
 
     newSocket.on('new_message', (msg: any) => {
-      if (msg.conversationId !== conversationId) return;
+      if (!conversationId || msg.conversationId !== conversationId) return;
 
       const isSystem = msg.senderType === "system";
       let sender = "student";
@@ -338,11 +421,13 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     setSocket(newSocket);
 
     return () => {
-      newSocket.emit('leave_conversation', conversationId);
+      if (conversationId) {
+        newSocket.emit('leave_conversation', conversationId);
+      }
       newSocket.disconnect();
       setSocket(null);
     };
-  }, [conversationId, token]);
+  }, [conversationId, token, application.id, application._id, fetchBankDecisionsAndQueries]);
 
   const handleVerifyDocument = async (docId: string) => {
     try {
@@ -1407,6 +1492,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
               { id: 'application_details', label: 'Application\ndetails', icon: 'description' },
               { id: 'student', label: 'Student', icon: 'person' },
               { id: 'exams', label: 'Exams', icon: 'school' },
+              { id: 'bankdecisions', label: 'Bank\ndecisions', icon: 'account_balance' },
             ].map(menu => (
               <button
                 key={menu.id}
@@ -2059,6 +2145,278 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                     ))}
                   </div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {activeSidebarMenu === 'bankdecisions' && (
+            <div className="max-w-[1400px] mx-auto p-10 space-y-10 animate-in fade-in zoom-in-95 duration-300">
+              {/* Header */}
+              <div className="flex items-center gap-5">
+                <button
+                  onClick={onBack}
+                  className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-lg transition-all"
+                >
+                  <span className="material-symbols-outlined text-[22px]">arrow_back</span>
+                </button>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-200">
+                    <span className="material-symbols-outlined text-[20px]">account_balance</span>
+                  </div>
+                  <div>
+                    <h2 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">Bank Decisions & Queries</h2>
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Lender Audits, Decisions and Verification Queries</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status / Overview Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm hover:shadow-md transition-all flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                    <span className="material-symbols-outlined text-[24px]">info</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Overall Status</p>
+                    <p className="text-[18px] font-extrabold text-slate-900 mt-1 uppercase">
+                      {application.status || 'PENDING'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm hover:shadow-md transition-all flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+                    <span className="material-symbols-outlined text-[24px]">gavel</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Decisions Logged</p>
+                    <p className="text-[24px] font-black text-slate-900 mt-0.5">
+                      {loadingBankData ? '...' : bankDecisions.length}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm hover:shadow-md transition-all flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+                    <span className="material-symbols-outlined text-[24px]">help_center</span>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Queries</p>
+                    <p className="text-[24px] font-black text-slate-900 mt-0.5">
+                      {loadingBankData ? '...' : bankQueries.filter(q => q.status === 'open' || q.status === 'OPEN').length}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Main Content Layout */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                {/* Queries Column (Left) */}
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-[32px] p-8 border border-slate-200/60 shadow-sm">
+                    <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <span className="material-symbols-outlined text-[22px] text-sky-600">question_answer</span>
+                        <h3 className="text-[18px] font-bold text-[#0d1b2a] font-['Playfair_Display',serif]">Bank Queries & Clarifications</h3>
+                      </div>
+                      {loadingBankData && (
+                        <div className="w-5 h-5 border-2 border-slate-200 border-t-indigo-600 rounded-full animate-spin" />
+                      )}
+                    </div>
+
+                    {bankQueries.length === 0 ? (
+                      <div className="text-center py-16">
+                        <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                          <span className="material-symbols-outlined text-3xl text-slate-300">chat_bubble_outline</span>
+                        </div>
+                        <h4 className="text-sm font-extrabold text-slate-800">No Queries Raised Yet</h4>
+                        <p className="text-xs text-slate-400 mt-1">This application has no active clarification queries from partner banks.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {bankQueries.map((query, index) => {
+                          const isOpen = query.status === 'open' || query.status === 'OPEN';
+                          return (
+                            <div key={query.id || index} className="p-6 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-all flex flex-col gap-3 relative overflow-hidden group">
+                              {isOpen && (
+                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500 animate-pulse" />
+                              )}
+                              <div className="flex justify-between items-start">
+                                <div className="flex items-center gap-2.5">
+                                  <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                    isOpen 
+                                      ? 'bg-amber-55 text-amber-700 border border-amber-100' 
+                                      : 'bg-emerald-55 text-emerald-700 border border-emerald-100'
+                                  }`}>
+                                    {isOpen ? 'Open' : 'Resolved'}
+                                  </span>
+                                  {query.queryType && (
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded">
+                                      {query.queryType}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase">
+                                  {query.createdAt || query.timestamp ? formatIST(query.createdAt || query.timestamp, true) : 'N/A'}
+                                </span>
+                              </div>
+                              <p className="text-[14px] text-slate-700 font-medium leading-relaxed mt-1">
+                                {query.content}
+                              </p>
+                              <div className="flex items-center justify-between mt-2 pt-3 border-t border-slate-200/50 text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                                <span>Raised By: {query.authorName || query.raisedBy || 'Bank Officer'}</span>
+                                {query.resolvedAt && (
+                                  <span className="text-emerald-600 flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-[14px]">done_all</span>
+                                    Resolved: {formatIST(query.resolvedAt, false)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Decisions Column (Right) */}
+                <div className="space-y-6">
+                  <div className="bg-white/80 backdrop-blur-sm rounded-[32px] p-8 border border-slate-200/60 shadow-sm">
+                    <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <span className="material-symbols-outlined text-[22px] text-emerald-600">verified</span>
+                        <h3 className="text-[18px] font-bold text-[#0d1b2a] font-['Playfair_Display',serif]">Bank Decisions</h3>
+                      </div>
+                    </div>
+
+                    {bankDecisions.length === 0 ? (
+                      <div className="text-center py-16">
+                        <div className="w-16 h-16 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                          <span className="material-symbols-outlined text-3xl text-slate-300">gavel</span>
+                        </div>
+                        <h4 className="text-sm font-extrabold text-slate-800">No Decisions Logged</h4>
+                        <p className="text-xs text-slate-400 mt-1">No formal underwriting decisions have been registered for this file yet.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-5">
+                        {bankDecisions.map((dec, index) => {
+                          const decType = String(dec.decision).toUpperCase();
+                          let style = {
+                            badgeBg: 'bg-slate-100 text-slate-700',
+                            border: 'border-slate-100',
+                            title: 'Decision Logged'
+                          };
+                          if (decType === 'APPROVED' || decType === 'SANCTIONED') {
+                            style = { badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-100', border: 'border-emerald-100', title: 'Loan Sanctioned' };
+                          } else if (decType === 'CONDITIONAL_SANCTION' || decType === 'CONDITIONAL') {
+                            style = { badgeBg: 'bg-amber-50 text-amber-700 border-amber-100', border: 'border-amber-100', title: 'Conditional Sanction' };
+                          } else if (decType === 'COUNTER_OFFER') {
+                            style = { badgeBg: 'bg-violet-50 text-violet-700 border-violet-100', border: 'border-violet-100', title: 'Counter Offer Proposed' };
+                          } else if (decType === 'REJECTED') {
+                            style = { badgeBg: 'bg-rose-50 text-rose-700 border-rose-100', border: 'border-rose-100', title: 'Application Rejected' };
+                          }
+
+                          let condList: string[] = [];
+                          try {
+                            if (dec.conditions) {
+                              const parsed = typeof dec.conditions === 'string' ? JSON.parse(dec.conditions) : dec.conditions;
+                              if (Array.isArray(parsed)) {
+                                condList = parsed.map(c => typeof c === 'string' ? c : c.text);
+                              }
+                            }
+                          } catch(e) {}
+
+                          return (
+                            <div key={dec.id || index} className={`p-5 rounded-2xl border ${style.border} bg-white transition-all flex flex-col gap-3 relative shadow-sm group hover:shadow-md`}>
+                              <div className="flex justify-between items-start">
+                                <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${style.badgeBg}`}>
+                                  {decType.replace(/_/g, ' ')}
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase">
+                                  {dec.decidedAt ? formatIST(dec.decidedAt, false) : 'N/A'}
+                                </span>
+                              </div>
+
+                              <h4 className="text-[14px] font-extrabold text-slate-900 mt-1">{style.title}</h4>
+
+                              {/* Decision specifics details */}
+                              <div className="space-y-1.5 text-[12px] text-slate-600 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+                                {dec.sanctionAmount && (
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-slate-400">Sanction Amount:</span>
+                                    <span className="font-extrabold text-slate-900">₹{Number(dec.sanctionAmount).toLocaleString('en-IN')}</span>
+                                  </div>
+                                )}
+                                {dec.interestRate && (
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-slate-400">Interest Rate:</span>
+                                    <span className="font-extrabold text-slate-900">{dec.interestRate}% {dec.roiType ? `(${dec.roiType.toLowerCase()})` : ''}</span>
+                                  </div>
+                                )}
+                                {dec.tenure && (
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-slate-400">Tenure:</span>
+                                    <span className="font-extrabold text-slate-900">{dec.tenure} Months</span>
+                                  </div>
+                                )}
+                                {dec.rejectionReason && (
+                                  <div className="flex flex-col gap-1 mt-1 border-t border-slate-200/50 pt-1.5">
+                                    <span className="font-medium text-rose-500">Rejection Reason:</span>
+                                    <span className="font-semibold text-slate-700">{dec.rejectionReason}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Conditions checklist */}
+                              {condList.length > 0 && (
+                                <div className="space-y-2 mt-1">
+                                  <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Sanction Conditions:</p>
+                                  <ul className="space-y-1">
+                                    {condList.map((cond, cIdx) => (
+                                      <li key={cIdx} className="text-[11px] text-slate-600 flex items-start gap-1.5 leading-relaxed">
+                                        <span className="material-symbols-outlined text-[13px] text-amber-500 mt-0.5 flex-shrink-0">warning</span>
+                                        <span className="font-medium">{cond}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                  {dec.conditionDeadline && (
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">
+                                      Deadline: {formatIST(dec.conditionDeadline, false)}
+                                    </p>
+                                  )}
+                                </div>
+                              )}
+
+                              {dec.remarks && (
+                                <p className="text-[12px] text-slate-500 italic mt-1 font-medium bg-slate-50/50 p-2.5 rounded border border-dashed border-slate-200">
+                                  "{dec.remarks}"
+                                </p>
+                              )}
+
+                              {dec.sanctionLetterUrl && (
+                                <a 
+                                  href={dec.sanctionLetterUrl} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="mt-2 text-[11px] font-extrabold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1 uppercase tracking-wider"
+                                >
+                                  <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                                  Download Sanction Letter
+                                </a>
+                              )}
+
+                              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2 pt-2 border-t border-slate-100 flex justify-between">
+                                <span>Decided By: {dec.decidedBy || 'Bank System'}</span>
+                                <span>Bank: {dec.bankId?.toUpperCase()}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}
