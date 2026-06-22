@@ -1,9 +1,10 @@
-import { Controller, Get, Param, UseGuards, Post, Req, Body, Query, UseInterceptors, UploadedFile, BadRequestException, Res, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Post, Req, Body, Query, UseInterceptors, UploadedFile, BadRequestException, Res, NotFoundException, Put, Delete } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ChatService } from './chat.service';
 import { UserGuard } from '../auth/user.guard';
 import { S3Service } from '../document/s3.service';
+import { KycService } from '../ai/services/kyc.service';
 import { memoryStorage } from 'multer';
 import type { Response } from 'express';
 
@@ -15,7 +16,8 @@ export class ChatController {
   constructor(
       private readonly chatService: ChatService,
       private readonly s3Service: S3Service,
-      private readonly eventEmitter: EventEmitter2
+      private readonly eventEmitter: EventEmitter2,
+      private readonly kycService: KycService
   ) {}
 
   @Get('conversations')
@@ -206,13 +208,58 @@ export class ChatController {
     }
 
     const isImage = file.mimetype.startsWith('image/');
+    const isStaff = ['staff', 'admin', 'super_admin'].includes(senderType);
+    let ocrMessage = '';
+
+    if (isStaff && (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf')) {
+      try {
+        let detectedType = 'unknown';
+        const cleanName = file.originalname.toLowerCase();
+        if (cleanName.includes('aadhaar') || cleanName.includes('aadhar') || cleanName.includes('national_id')) {
+          detectedType = 'aadhaar';
+        } else if (cleanName.includes('pan')) {
+          detectedType = 'pan';
+        } else if (cleanName.includes('passport')) {
+          detectedType = 'passport';
+        } else if (cleanName.includes('10th') || cleanName.includes('ssc') || cleanName.includes('grade10')) {
+          detectedType = 'marksheet_10';
+        } else if (cleanName.includes('12th') || cleanName.includes('hsc') || cleanName.includes('intermediate') || cleanName.includes('grade12')) {
+          detectedType = 'marksheet_12';
+        } else if (cleanName.includes('ug_degree') || cleanName.includes('undergrad') || cleanName.includes('bachelor')) {
+          detectedType = 'marksheet_ug';
+        } else if (cleanName.includes('pg_degree') || cleanName.includes('postgrad') || cleanName.includes('master')) {
+          detectedType = 'marksheet_pg';
+        }
+
+        console.log(`[CHAT UPLOAD] Performing OCR on file: ${file.originalname} as detected type: ${detectedType}`);
+        const kycResult = await this.kycService.processDocument(file.buffer, file.mimetype, detectedType);
+        
+        if (kycResult && kycResult.is_valid && kycResult.extracted_data && Object.keys(kycResult.extracted_data).length > 0) {
+          ocrMessage += `\n\n🔍 **AI OCR Extraction Results:**\n`;
+          for (const [key, value] of Object.entries(kycResult.extracted_data)) {
+            if (key !== 'raw_text_summary' && value !== null && value !== undefined && String(value).trim() !== '') {
+              const label = key.replace(/_/g, ' ').toUpperCase();
+              if (typeof value === 'object') {
+                ocrMessage += `• **${label}:** ${JSON.stringify(value)}\n`;
+              } else {
+                ocrMessage += `• **${label}:** ${value}\n`;
+              }
+            }
+          }
+        } else if (kycResult && kycResult.error) {
+          ocrMessage += `\n\n⚠️ **OCR Warning:** ${kycResult.error}`;
+        }
+      } catch (err: any) {
+        console.error('[CHAT UPLOAD] OCR extraction failed:', err.message || err);
+      }
+    }
 
     const msg = await this.chatService.saveMessage({
       conversationId,
       senderType,
       senderId,
       senderName,
-      content: file.originalname,
+      content: `${file.originalname}${ocrMessage}`,
       messageType: isImage ? 'image' : 'document',
       status: 'sent',
       attachmentUrl,
@@ -221,7 +268,6 @@ export class ChatController {
 
     this.eventEmitter.emit('chat.message_created', msg);
 
-    // Optionally you could emit an event here, or rely on frontend to emit via socket once upload is done
     return { success: true, message: msg };
   }
 
@@ -365,5 +411,53 @@ export class ChatController {
       success: true,
       conversation,
     };
+  }
+
+  @Put('messages/:id')
+  async editMessage(
+    @Req() req: any,
+    @Param('id') messageId: string,
+    @Body('content') content: string
+  ) {
+    if (!content) throw new BadRequestException('Content is required');
+    
+    // Check if message exists and user is sender
+    const msg = await this.chatService.getMessageById(messageId);
+    if (!msg) throw new NotFoundException('Message not found');
+    
+    const user = req.user;
+    const senderId = user.email || user.sub;
+    
+    if (!msg.senderId || !senderId || msg.senderId.toLowerCase() !== senderId.toLowerCase()) {
+      throw new BadRequestException('You can only edit your own messages');
+    }
+
+    const updated = await this.chatService.editMessage(messageId, content);
+    this.eventEmitter.emit('chat.message_updated', updated);
+    return { success: true, message: updated };
+  }
+
+  @Delete('messages/:id')
+  async deleteMessage(
+    @Req() req: any,
+    @Param('id') messageId: string
+  ) {
+    // Check if message exists and user is sender
+    const msg = await this.chatService.getMessageById(messageId);
+    if (!msg) throw new NotFoundException('Message not found');
+    
+    const user = req.user;
+    const senderId = user.email || user.sub;
+    
+    if (!msg.senderId || !senderId || msg.senderId.toLowerCase() !== senderId.toLowerCase()) {
+      throw new BadRequestException('You can only delete your own messages');
+    }
+
+    await this.chatService.deleteMessage(messageId);
+    this.eventEmitter.emit('chat.message_deleted', {
+      conversationId: msg.conversationId,
+      messageId: messageId
+    });
+    return { success: true };
   }
 }

@@ -1,20 +1,25 @@
 const { NestFactory } = require('@nestjs/core');
 const { AppModule } = require('./dist/app.module');
-const { CommunityService } = require('./dist/community/community.service');
+const { ChatService } = require('./dist/chat/chat.service');
 
 async function test() {
   const app = await NestFactory.createApplicationContext(AppModule);
-  const communityService = app.get(CommunityService);
+  const chatService = app.get(ChatService);
   
+  const messageId = '6abd5515-a4c9-45c1-ba4b-98eeffa2502e';
+  console.log('Testing edit messageId:', messageId);
+
   try {
-    const res = await communityService.createForumPost('1f3d3a39-331c-4b41-bc81-c313761e1702', {
-      title: 'Direct test post',
-      content: 'Hello from nestjs app context',
-      category: 'General'
-    });
-    console.log('Success:', res);
+    const msg = await chatService.getMessageById(messageId);
+    console.log('getMessageById result:', msg);
+
+    if (msg) {
+      console.log('Attempting editMessage...');
+      const edited = await chatService.editMessage(messageId, msg.content + ' (Direct edit test)');
+      console.log('editMessage result:', edited);
+    }
   } catch (err) {
-    console.error('Failed:', err);
+    console.error('Operation Failed:', err);
   }
   await app.close();
 }

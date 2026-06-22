@@ -8,7 +8,7 @@ const data = JSON.stringify({
 
 const options = {
   hostname: 'localhost',
-  port: 5000,
+  port: 3000,
   path: '/api/chat/messages/a62f8c3d-f410-45b7-b885-6ecdb8587c8d',
   method: 'PUT',
   headers: {

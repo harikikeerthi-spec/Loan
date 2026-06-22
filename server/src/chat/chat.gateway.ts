@@ -433,4 +433,40 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     }
   }
+
+  @OnEvent('chat.message_updated')
+  async handleChatMessageUpdated(msg: any) {
+    this.logger.log(`Broadcasting updated message ${msg.id} in conversation ${msg.conversationId}`);
+    if (this.server) {
+      this.server.to(`conv_${msg.conversationId}`).emit('message_updated', msg);
+      
+      const conv = await this.chatService.getConversationById(msg.conversationId);
+      const convType = conv?.metadata?.type;
+      const listRoom = convType === 'bank' ? 'room_bank' : 'room_staff';
+      this.server.to(listRoom).emit('conversation_updated', {
+        conversationId: msg.conversationId,
+        lastMessage: msg
+      });
+    }
+  }
+
+  @OnEvent('chat.message_deleted')
+  async handleChatMessageDeleted(payload: { conversationId: string, messageId: string }) {
+    this.logger.log(`Broadcasting deleted message ${payload.messageId} in conversation ${payload.conversationId}`);
+    if (this.server) {
+      this.server.to(`conv_${payload.conversationId}`).emit('message_deleted', payload);
+      
+      // Update conversation last message in lists
+      const messages = await this.chatService.getMessages(payload.conversationId);
+      const lastMsg = messages && messages.length > 0 ? messages[messages.length - 1] : null;
+      
+      const conv = await this.chatService.getConversationById(payload.conversationId);
+      const convType = conv?.metadata?.type;
+      const listRoom = convType === 'bank' ? 'room_bank' : 'room_staff';
+      this.server.to(listRoom).emit('conversation_updated', {
+        conversationId: payload.conversationId,
+        lastMessage: lastMsg
+      });
+    }
+  }
 }

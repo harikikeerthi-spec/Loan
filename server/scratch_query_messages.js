@@ -8,14 +8,9 @@ async function queryMessages() {
     });
     try {
         await client.connect();
-        
-        console.log('--- Latest 5 Messages ---');
-        const resMsg = await client.query('SELECT * FROM "Message" ORDER BY "createdAt" DESC LIMIT 5');
+        console.log('--- User ropayi2211@aspensif.com ---');
+        const resMsg = await client.query('SELECT id, email, "firstName", "lastName", role FROM "User" WHERE "email" = \'ropayi2211@aspensif.com\'');
         console.log(JSON.stringify(resMsg.rows, null, 2));
-
-        console.log('--- Latest 5 Conversations ---');
-        const resConv = await client.query('SELECT * FROM "Conversation" ORDER BY "updatedAt" DESC LIMIT 5');
-        console.log(JSON.stringify(resConv.rows, null, 2));
     } catch (e) {
         console.error('Error querying messages:', e);
     } finally {

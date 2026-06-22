@@ -139,7 +139,7 @@ function authHeaders(): HeadersInit {
 /**
  * Enhanced fetch wrapper that handles automatic token refresh on 401 "Token has expired"
  */
-async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
+export async function apiFetch<T>(url: string, options: RequestInit = {}): Promise<T> {
     const res = await fetch(url, {
         ...options,
         headers: {

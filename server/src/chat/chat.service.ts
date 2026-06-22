@@ -357,5 +357,33 @@ export class ChatService {
     }
     return data;
   }
+
+  async editMessage(messageId: string, newContent: string) {
+    const { data, error } = await this.db
+      .from('Message')
+      .update({ content: newContent })
+      .eq('id', messageId)
+      .select()
+      .single();
+
+    if (error) {
+      this.logger.error('Failed to edit message', error);
+      throw new HttpException('Database error editing message', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+    return data;
+  }
+
+  async deleteMessage(messageId: string) {
+    const { error } = await this.db
+      .from('Message')
+      .delete()
+      .eq('id', messageId);
+
+    if (error) {
+      this.logger.error('Failed to delete message', error);
+      throw new HttpException('Database error deleting message', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+    return true;
+  }
 }
 

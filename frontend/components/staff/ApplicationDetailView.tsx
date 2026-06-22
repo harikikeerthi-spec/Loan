@@ -2303,8 +2303,8 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                         {bankDecisions.map((dec, index) => {
                           const decType = String(dec.decision).toUpperCase();
                           let style = {
-                            badgeBg: 'bg-slate-100 text-slate-700',
-                            border: 'border-slate-100',
+                            badgeBg: 'bg-slate-100 text-slate-700 border-slate-200',
+                            border: 'border-slate-200',
                             title: 'Decision Logged'
                           };
                           if (decType === 'APPROVED' || decType === 'SANCTIONED') {
@@ -2315,15 +2315,31 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                             style = { badgeBg: 'bg-violet-50 text-violet-700 border-violet-100', border: 'border-violet-100', title: 'Counter Offer Proposed' };
                           } else if (decType === 'REJECTED') {
                             style = { badgeBg: 'bg-rose-50 text-rose-700 border-rose-100', border: 'border-rose-100', title: 'Application Rejected' };
+                          } else if (decType === 'PARTIAL_SANCTION') {
+                            style = { badgeBg: 'bg-cyan-50 text-cyan-700 border-cyan-100', border: 'border-cyan-100', title: 'Partial Sanction Approved' };
                           }
 
-                          let condList: string[] = [];
+                          let condList: { text: string; status?: string; deadline?: string }[] = [];
                           try {
                             if (dec.conditions) {
                               const parsed = typeof dec.conditions === 'string' ? JSON.parse(dec.conditions) : dec.conditions;
                               if (Array.isArray(parsed)) {
-                                condList = parsed.map(c => typeof c === 'string' ? c : c.text);
+                                condList = parsed.map(c => {
+                                  if (typeof c === 'string') {
+                                    return { text: c, status: 'PENDING' };
+                                  }
+                                  return { text: c.text || '', status: c.status || 'PENDING', deadline: c.deadline };
+                                });
                               }
+                            }
+                          } catch(e) {}
+
+                          let counterTerms: any = null;
+                          try {
+                            if (dec.counterOffer) {
+                              counterTerms = typeof dec.counterOffer === 'string' ? JSON.parse(dec.counterOffer) : dec.counterOffer;
+                            } else if (dec.counterOfferTerms) {
+                              counterTerms = typeof dec.counterOfferTerms === 'string' ? JSON.parse(dec.counterOfferTerms) : dec.counterOfferTerms;
                             }
                           } catch(e) {}
 
@@ -2342,22 +2358,40 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
 
                               {/* Decision specifics details */}
                               <div className="space-y-1.5 text-[12px] text-slate-600 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
-                                {dec.sanctionAmount && (
+                                {dec.sanctionAmount && decType !== 'COUNTER_OFFER' && (
                                   <div className="flex justify-between">
                                     <span className="font-medium text-slate-400">Sanction Amount:</span>
                                     <span className="font-extrabold text-slate-900">₹{Number(dec.sanctionAmount).toLocaleString('en-IN')}</span>
                                   </div>
                                 )}
-                                {dec.interestRate && (
+                                {dec.requestedAmount && (
+                                  <div className="flex justify-between">
+                                    <span className="font-medium text-slate-400">Requested Amount:</span>
+                                    <span className="font-extrabold text-slate-900">₹{Number(dec.requestedAmount).toLocaleString('en-IN')}</span>
+                                  </div>
+                                )}
+                                {dec.shortfallAmount && (
+                                  <div className="flex justify-between text-rose-600 bg-rose-50/50 px-2.5 py-1 rounded-lg border border-rose-100/50 mt-1">
+                                    <span className="font-semibold">Shortfall Amount:</span>
+                                    <span className="font-extrabold">₹{Number(dec.shortfallAmount).toLocaleString('en-IN')}</span>
+                                  </div>
+                                )}
+                                {dec.interestRate && decType !== 'COUNTER_OFFER' && (
                                   <div className="flex justify-between">
                                     <span className="font-medium text-slate-400">Interest Rate:</span>
                                     <span className="font-extrabold text-slate-900">{dec.interestRate}% {dec.roiType ? `(${dec.roiType.toLowerCase()})` : ''}</span>
                                   </div>
                                 )}
-                                {dec.tenure && (
+                                {dec.tenure && decType !== 'COUNTER_OFFER' && (
                                   <div className="flex justify-between">
                                     <span className="font-medium text-slate-400">Tenure:</span>
                                     <span className="font-extrabold text-slate-900">{dec.tenure} Months</span>
+                                  </div>
+                                )}
+                                {dec.rejectionCategory && (
+                                  <div className="flex justify-between border-t border-slate-200/50 pt-1.5 mt-1">
+                                    <span className="font-medium text-rose-500">Rejection Category:</span>
+                                    <span className="font-extrabold text-rose-700 uppercase text-[10px] tracking-wider">{dec.rejectionCategory.replace(/_/g, ' ')}</span>
                                   </div>
                                 )}
                                 {dec.rejectionReason && (
@@ -2368,15 +2402,41 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                                 )}
                               </div>
 
+                              {/* Counter Offer Specifics */}
+                              {counterTerms && (
+                                <div className="space-y-2 mt-1">
+                                  <p className="text-[10px] font-bold text-violet-600 uppercase tracking-widest">Proposed Counter Terms:</p>
+                                  <div className="space-y-1.5 text-[12px] text-slate-600 bg-violet-50/50 p-3.5 rounded-xl border border-violet-100">
+                                    <div className="flex justify-between">
+                                      <span className="font-medium text-violet-700">Offered Amount:</span>
+                                      <span className="font-extrabold text-slate-900">₹{Number(counterTerms.offeredAmount || counterTerms.sanctionAmount || 0).toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="font-medium text-violet-700">Offered ROI:</span>
+                                      <span className="font-extrabold text-slate-900">{counterTerms.offeredRate || counterTerms.interestRate || counterTerms.roiEffective || '—'}% {counterTerms.roiType ? `(${counterTerms.roiType.toLowerCase()})` : ''}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span className="font-medium text-violet-700">Offered Tenure:</span>
+                                      <span className="font-extrabold text-slate-900">{counterTerms.offeredTenure || counterTerms.tenure || '—'} Months</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
                               {/* Conditions checklist */}
                               {condList.length > 0 && (
                                 <div className="space-y-2 mt-1">
                                   <p className="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Sanction Conditions:</p>
                                   <ul className="space-y-1">
                                     {condList.map((cond, cIdx) => (
-                                      <li key={cIdx} className="text-[11px] text-slate-600 flex items-start gap-1.5 leading-relaxed">
-                                        <span className="material-symbols-outlined text-[13px] text-amber-500 mt-0.5 flex-shrink-0">warning</span>
-                                        <span className="font-medium">{cond}</span>
+                                      <li key={cIdx} className="text-[11px] text-slate-600 flex items-center justify-between gap-1.5 leading-relaxed bg-amber-50/30 px-3 py-2 rounded-xl border border-amber-100/50">
+                                        <div className="flex items-start gap-1.5">
+                                          <span className="material-symbols-outlined text-[13px] text-amber-500 mt-0.5 flex-shrink-0">warning</span>
+                                          <span className="font-medium">{cond.text}</span>
+                                        </div>
+                                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase ${cond.status === 'VERIFIED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                                          {cond.status}
+                                        </span>
                                       </li>
                                     ))}
                                   </ul>

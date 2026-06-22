@@ -45,6 +45,18 @@ function formatSidebarDate(dateStr: string) {
     }
 }
 
+function parseAttachmentMessage(content: string) {
+    if (!content) return { fileName: 'Attachment', textContent: '' };
+    const newlineIndex = content.indexOf('\n');
+    if (newlineIndex !== -1) {
+        const fileName = content.substring(0, newlineIndex).replace('[Attached File: ', '').replace(']', '').trim();
+        const textContent = content.substring(newlineIndex).trim();
+        return { fileName, textContent };
+    }
+    const fileName = content.replace('[Attached File: ', '').replace(']', '').trim();
+    return { fileName, textContent: '' };
+}
+
 
 interface Message {
     id: string;
@@ -96,8 +108,40 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
     const isMessageFromMe = (msg: Message) => {
         const currentUserId = user?.id || (user as any)?._id || (user as any)?.uid;
         const currentUserEmail = user?.email;
-        const isStaffRole = role === 'staff' && ['staff', 'admin', 'super_admin'].includes(msg.senderType);
-        return (msg.senderId && (msg.senderId === currentUserId || msg.senderId === currentUserEmail)) || msg.senderType === role || isStaffRole;
+        
+        // 1. Email or ID match (case-insensitive)
+        if (msg.senderId) {
+            const cleanSenderId = msg.senderId.toLowerCase();
+            if (currentUserId && cleanSenderId === String(currentUserId).toLowerCase()) return true;
+            if (currentUserEmail && cleanSenderId === currentUserEmail.toLowerCase()) return true;
+        }
+        
+        // 2. Staff dashboard: match staff, admin, super_admin roles, or if user is support and message is support
+        if (role === 'staff') {
+            if (['staff', 'admin', 'super_admin'].includes(msg.senderType)) {
+                return true;
+            }
+            if (user?.role === 'support' && msg.senderType === 'support') {
+                return true;
+            }
+        }
+        
+        // 3. Bank dashboard: match bank or partner_bank roles
+        if (role === 'bank') {
+            if (['bank', 'partner_bank'].includes(msg.senderType)) {
+                return true;
+            }
+        }
+        
+        // 4. Agent dashboard: match agent roles
+        if (role === 'agent') {
+            if (['agent', 'partner_agent'].includes(msg.senderType)) {
+                return true;
+            }
+        }
+
+        // 5. Fallback on exact match of role and senderType
+        return msg.senderType === role || msg.senderType === user?.role;
     };
     const getFormattedAppId = (appId?: string) => {
         if (!appId) return '';
@@ -114,6 +158,8 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
     const [allUsers, setAllUsers] = useState<any[]>([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+
+    const [editingMessage, setEditingMessage] = useState<Message | null>(null);
 
     // Document panel state
     const [showDocPanel, setShowDocPanel] = useState(false);
@@ -259,6 +305,27 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
             });
         });
 
+        socketInstance.on('message_updated', (msg: Message) => {
+            if (msg.conversationId === activeConversationRef.current) {
+                setMessages(prev => prev.map(m => m.id === msg.id ? msg : m));
+            }
+            setConversations(prev => {
+                const exists = prev.find(c => c.id === msg.conversationId);
+                if (exists && exists.lastMessage?.id === msg.id) {
+                    const updated = prev.filter(c => c.id !== msg.conversationId);
+                    return [{ ...exists, lastMessage: msg, updatedAt: msg.createdAt }, ...updated];
+                }
+                return prev;
+            });
+        });
+
+        socketInstance.on('message_deleted', (payload: { conversationId: string, messageId: string }) => {
+            if (payload.conversationId === activeConversationRef.current) {
+                setMessages(prev => prev.filter(m => m.id !== payload.messageId));
+            }
+            fetchConversations();
+        });
+
         socketInstance.on('messages_read', (data: { conversationId: string, readerType: string, readerId?: string }) => {
             // readerType tells us WHO read the messages:
             // 'customer' → customer read the messages, so mark staff/bank-sent messages as 'read'
@@ -382,9 +449,72 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
         e.target.value = '';
     };
 
+    const handleStartEdit = (msg: Message) => {
+        if (msg.messageType && msg.messageType !== 'text') {
+            alert('Only text messages can be edited.');
+            return;
+        }
+        setEditingMessage(msg);
+        setInputText(msg.content);
+    };
+
+    const handleCancelEdit = () => {
+        setEditingMessage(null);
+        setInputText('');
+    };
+
+    const handleDeleteMessage = async (messageId: string) => {
+        if (!confirm('Are you sure you want to delete this message?')) return;
+        try {
+            const res = await fetch(`/api/chat/messages/${messageId}`, {
+                method: 'DELETE',
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                setMessages(prev => prev.filter(m => m.id !== messageId));
+                fetchConversations();
+            } else {
+                alert(data.error || 'Failed to delete message');
+            }
+        } catch (err) {
+            console.error('Delete message error:', err);
+            alert('Failed to delete message');
+        }
+    };
+
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!activeConversation) return;
+
+        if (editingMessage) {
+            if (!inputText.trim()) return;
+            try {
+                const res = await fetch(`/api/chat/messages/${editingMessage.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ content: inputText })
+                });
+                const data = await res.json();
+                if (data.success && data.message) {
+                    setMessages(prev => prev.map(m => m.id === editingMessage.id ? data.message : m));
+                    setEditingMessage(null);
+                    setInputText('');
+                    fetchConversations();
+                } else {
+                    alert(data.error || 'Failed to edit message');
+                }
+            } catch (err) {
+                console.error('Edit message error:', err);
+                alert('Failed to edit message');
+            }
+            return;
+        }
 
         const conv = conversations.find(c => c.id === activeConversation);
         const hasText = !!inputText.trim();
@@ -933,7 +1063,13 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                                             )}
                                                         </span>
                                                     )}
-                                                    <span className="truncate">{conv.lastMessage ? conv.lastMessage.content : 'Starting conversation...'}</span>
+                                                    <span className="truncate">
+                                                        {conv.lastMessage 
+                                                            ? (conv.lastMessage.attachmentUrl 
+                                                                ? `📎 ${parseAttachmentMessage(conv.lastMessage.content).fileName}` 
+                                                                : conv.lastMessage.content) 
+                                                            : 'Starting conversation...'}
+                                                    </span>
                                                 </div>
 
                                                 {conv.metadata?.applicationNumber && (
@@ -1117,7 +1253,7 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                                                 </span>
                                                             </div>
                                                         )}
-                                                        <div className={`flex flex-col max-w-[75%] ${isMe ? 'self-end items-end' : 'self-start items-start'} animate-slide-up font-sans`}>
+                                                        <div className={`flex flex-col max-w-[75%] ${isMe ? 'self-end items-end animate-slide-up font-sans group' : 'self-start items-start animate-slide-up font-sans'}`}>
                                                             <div className="flex items-center gap-2 mb-1 px-1">
                                                                 <span className={`text-[10px] font-bold uppercase tracking-wider ${isMe ? 'text-[#5A42E4]' : 'text-[#4A525A]'}`}>
                                                                     {isMe ? 'You' : senderLabel}
@@ -1134,31 +1270,63 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                                                 ? 'bg-[#5A42E4] text-[#FFFFFF] rounded-tr-none border-[#5A42E4]/10 shadow-sm'
                                                                 : 'bg-[#FFFFFF] border-[#E2E8F0] text-[#1A1D20] rounded-tl-none'
                                                                 }`}>
-                                                                {msg.attachmentUrl ? (
-                                                                    <div className="flex flex-col gap-2">
-                                                                        <a
-                                                                            href={`/api/chat/attachment/${msg.id}?token=${token}`}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className={`flex items-center gap-3 p-3 rounded-xl border ${isMe ? 'bg-white/10 border-white/20 hover:bg-white/20' : 'bg-white border-[#E2E8F0] hover:bg-gray-50'} transition-colors`}
+                                                                {isMe && (
+                                                                    <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+                                                                        {!msg.attachmentUrl && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleStartEdit(msg)}
+                                                                                className="w-7 h-7 rounded-lg bg-[#FFFFFF] border border-slate-200 text-slate-500 hover:text-[#5A42E4] hover:bg-[#F2F0FF] flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                                                                                title="Edit Message"
+                                                                            >
+                                                                                <span className="material-symbols-outlined text-[15px] font-bold">edit</span>
+                                                                            </button>
+                                                                        )}
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleDeleteMessage(msg.id)}
+                                                                            className="w-7 h-7 rounded-lg bg-[#FFFFFF] border border-slate-200 text-slate-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-all cursor-pointer shadow-sm"
+                                                                            title="Delete Message"
                                                                         >
-                                                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isMe ? 'bg-white/20 text-white' : 'bg-[#F2F0FF] text-[#5A42E4]'}`}>
-                                                                                <span className="material-symbols-outlined">
-                                                                                    {msg.messageType === 'image' ? 'image' : 'description'}
-                                                                                </span>
-                                                                            </div>
-                                                                            <div className="flex-1 min-w-0">
-                                                                                <p className="text-xs font-bold truncate">
-                                                                                    {msg.content.replace('[Attached File: ', '').replace(']', '')}
-                                                                                </p>
-                                                                                <p className={`text-[9px] ${isMe ? 'text-white/70' : 'text-[#8A94A6]'} uppercase tracking-wider`}>
-                                                                                    Click to {msg.messageType === 'image' ? 'view' : 'download'}
-                                                                                </p>
-                                                                            </div>
-                                                                        </a>
+                                                                            <span className="material-symbols-outlined text-[15px] font-bold">delete</span>
+                                                                        </button>
                                                                     </div>
+                                                                )}
+                                                                {msg.attachmentUrl ? (
+                                                                    (() => {
+                                                                        const parsed = parseAttachmentMessage(msg.content);
+                                                                        return (
+                                                                            <div className="flex flex-col gap-2">
+                                                                                <a
+                                                                                    href={`/api/chat/attachment/${msg.id}?token=${token}`}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    className={`flex items-center gap-3 p-3 rounded-xl border ${isMe ? 'bg-white/10 border-white/20 hover:bg-white/20' : 'bg-white border-[#E2E8F0] hover:bg-gray-50'} transition-colors`}
+                                                                                >
+                                                                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isMe ? 'bg-white/20 text-white' : 'bg-[#F2F0FF] text-[#5A42E4]'}`}>
+                                                                                        <span className="material-symbols-outlined">
+                                                                                            {msg.messageType === 'image' ? 'image' : 'description'}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    <div className="flex-1 min-w-0">
+                                                                                        <p className="text-xs font-bold truncate">
+                                                                                            {parsed.fileName}
+                                                                                        </p>
+                                                                                        <p className={`text-[9px] ${isMe ? 'text-white/70' : 'text-[#8A94A6]'} uppercase tracking-wider`}>
+                                                                                            Click to {msg.messageType === 'image' ? 'view' : 'download'}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                </a>
+                                                                                {parsed.textContent && (
+                                                                                    <div className={`text-xs font-medium leading-relaxed tracking-tight border-t pt-2 whitespace-pre-wrap ${isMe ? 'border-white/20 text-white' : 'border-[#E2E8F0] text-slate-800'}`}>
+                                                                                        {parsed.textContent}
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    })()
                                                                 ) : (
-                                                                    <p className="text-xs font-medium leading-relaxed tracking-tight">{msg.content}</p>
+                                                                    <p className="text-xs font-medium leading-relaxed tracking-tight whitespace-pre-wrap">{msg.content}</p>
                                                                 )}
                                                             </div>
 
@@ -1242,6 +1410,30 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
                                                 setPendingVaultDoc(null);
                                             }}
                                             className="w-7 h-7 rounded-lg hover:bg-white/50 flex items-center justify-center text-[#8A94A6] hover:text-[#5A42E4] transition-all cursor-pointer"
+                                        >
+                                            <span className="material-symbols-outlined text-base">close</span>
+                                        </button>
+                                    </div>
+                                )}
+                                {editingMessage && (
+                                    <div className="flex items-center justify-between p-3 mb-3 bg-[#F2F0FF] border border-[#5A42E4]/25 rounded-xl animate-fade-in">
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            <div className="w-8 h-8 rounded-lg bg-[#5A42E4] text-white flex items-center justify-center shrink-0 border border-[#5A42E4]/10 shadow-sm">
+                                                <span className="material-symbols-outlined text-lg">edit</span>
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-xs font-bold text-[#1A1D20] truncate">
+                                                    Editing Message: <span className="font-medium text-[#4A525A]">"{editingMessage.content}"</span>
+                                                </p>
+                                                <p className="text-[9px] text-[#5A42E4] font-bold uppercase tracking-wider">
+                                                    Press Send to Save Changes or click Close to cancel
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleCancelEdit}
+                                            className="w-7 h-7 rounded-lg hover:bg-white/50 flex items-center justify-center text-[#8A94A6] hover:text-[#5A42E4] transition-all cursor-pointer shrink-0"
                                         >
                                             <span className="material-symbols-outlined text-base">close</span>
                                         </button>

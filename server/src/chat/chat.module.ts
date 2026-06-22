@@ -13,12 +13,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UsersModule } from '../users/users.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { DocumentModule } from '../document/document.module';
+import { AiModule } from '../ai/ai.module';
 
 @Module({
   imports: [
       EventEmitterModule,
       UsersModule,
       forwardRef(() => DocumentModule),
+      forwardRef(() => AiModule),
       ConfigModule,
       JwtModule.registerAsync({
         imports: [ConfigModule],

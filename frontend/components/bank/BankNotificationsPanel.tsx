@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { io, Socket } from "socket.io-client";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiFetch } from "@/lib/api";
 
 interface BankNotification {
   id: string;
@@ -198,24 +199,12 @@ export default function BankNotificationsPanel({
 
 
   const fetchNotifications = useCallback(async () => {
-    const token =
-      localStorage.getItem("bankAccessToken") ||
-      localStorage.getItem("accessToken");
-    if (!token) return;
     try {
-      const res = await fetch("/api/notifications", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && Array.isArray(data.items)) {
-          const filtered = data.items.filter(isNotificationForThisBank);
-          setNotifications(filtered.slice(0, 50));
-          setUnreadCount(filtered.filter((n: any) => !n.isRead).length);
-        }
+      const data = await apiFetch<any>("/api/notifications");
+      if (data && data.success && Array.isArray(data.items)) {
+        const filtered = data.items.filter(isNotificationForThisBank);
+        setNotifications(filtered.slice(0, 50));
+        setUnreadCount(filtered.filter((n: any) => !n.isRead).length);
       }
     } catch (err) {
       console.error("[BankNotificationsPanel] Fetch error:", err);
@@ -299,15 +288,8 @@ export default function BankNotificationsPanel({
     if (!notification.isRead) {
       setUnreadCount((prev) => Math.max(0, prev - 1));
       try {
-        const token =
-          localStorage.getItem("bankAccessToken") ||
-          localStorage.getItem("accessToken");
-        await fetch(`/api/notifications/${notification.id}/mark-read`, {
+        await apiFetch(`/api/notifications/${notification.id}/mark-read`, {
           method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
         });
       } catch (err) {
         console.error("[BankNotificationsPanel] Failed to mark read:", err);
@@ -360,15 +342,8 @@ export default function BankNotificationsPanel({
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     setUnreadCount(0);
     try {
-      const token =
-        localStorage.getItem("bankAccessToken") ||
-        localStorage.getItem("accessToken");
-      await fetch("/api/notifications/mark-all-read", {
+      await apiFetch("/api/notifications/mark-all-read", {
         method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
       });
     } catch (err) {
       console.error("[BankNotificationsPanel] Failed to mark all read:", err);
