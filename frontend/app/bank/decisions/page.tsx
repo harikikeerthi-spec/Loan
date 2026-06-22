@@ -487,7 +487,7 @@ export default function DecisionsHub() {
 
             if (filterStatus === "all") return true;
             if (filterStatus === "pending") return app.status === "processing" || app.status === "pending";
-            if (filterStatus === "approved") return app.status === "approved" || app.status === "disbursed";
+            if (filterStatus === "approved") return app.status === "approved" || app.status === "sanctioned" || app.status === "disbursed" || app.status === "disbursement_confirmed";
             if (filterStatus === "rejected") return app.status === "rejected";
             return true;
         });
@@ -499,7 +499,7 @@ export default function DecisionsHub() {
         let pendingDecisions = 0;
         let queryRaised = 0;
         applications.forEach(app => {
-            if (app.status === "approved" || app.status === "rejected" || app.status === "disbursed") {
+            if (app.status === "approved" || app.status === "sanctioned" || app.status === "rejected" || app.status === "disbursed" || app.status === "disbursement_confirmed") {
                 totalDecisions++;
             } else {
                 pendingDecisions++;

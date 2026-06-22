@@ -70,7 +70,7 @@ export default function DisbursementTracker() {
                     const bAcc = `501008291040${Math.floor(10 + Math.random() * 90)}`;
                     const bIfsc = "HDFC0000240";
 
-                    if (app.status === "disbursed") {
+                    if (app.status === "disbursed" || app.status === "disbursement_confirmed") {
                         // Pre-populate with 2 tranches
                         const t1 = Math.round(sanctionAmt * 0.6);
                         const t2 = app.disbursedAmount || (sanctionAmt - t1);
@@ -118,8 +118,8 @@ export default function DisbursementTracker() {
 
             if (!matchesSearch) return false;
 
-            const isApproved = app.status === "approved";
-            const isDisbursed = app.status === "disbursed";
+            const isApproved = app.status === "approved" || app.status === "sanctioned";
+            const isDisbursed = app.status === "disbursed" || app.status === "disbursement_confirmed";
 
             if (activeTab === "pending") {
                 return isApproved;
@@ -132,8 +132,8 @@ export default function DisbursementTracker() {
     const tabCounts = useMemo(() => {
         const counts = { pending: 0, completed: 0 };
         applications.forEach(app => {
-            if (app.status === "approved") counts.pending++;
-            else if (app.status === "disbursed") counts.completed++;
+            if (app.status === "approved" || app.status === "sanctioned") counts.pending++;
+            else if (app.status === "disbursed" || app.status === "disbursement_confirmed") counts.completed++;
         });
         return counts;
     }, [applications]);
@@ -186,8 +186,8 @@ export default function DisbursementTracker() {
                 : `[Released Tranche - ${format(new Date(), 'MMM dd, HH:mm')}]: UTR: ${trancheUtr.trim()}`;
 
             const payload = {
-                status: isFullyDisbursed ? "disbursed" : "approved",
-                stage: isFullyDisbursed ? "disbursed" : "approved",
+                status: isFullyDisbursed ? "disbursed" : selectedApp.status,
+                stage: isFullyDisbursed ? "disbursed" : selectedApp.stage,
                 disbursedAmount: totalNow,
                 disbursedAt: new Date(trancheDate).toISOString(),
                 remarks: mergedRemarks
@@ -324,7 +324,7 @@ export default function DisbursementTracker() {
                                                     </span>
                                                 </td>
                                                 <td className="py-5">
-                                                    {app.status === "disbursed" ? (
+                                                    {app.status === "disbursed" || app.status === "disbursement_confirmed" ? (
                                                         <span className="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 border border-emerald-250 rounded-lg uppercase tracking-wider">
                                                             Fully Disbursed
                                                         </span>
@@ -355,7 +355,7 @@ export default function DisbursementTracker() {
                                                         className="px-4 py-2 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider rounded-xl hover:bg-emerald-700 shadow-md shadow-emerald-500/10 transition-all flex items-center gap-1.5 ml-auto"
                                                     >
                                                         <span className="material-symbols-outlined text-xs">payments</span> 
-                                                        {app.status === "disbursed" ? "View Dossier" : "Release / History"}
+                                                        {app.status === "disbursed" || app.status === "disbursement_confirmed" ? "View Dossier" : "Release / History"}
                                                     </button>
                                                 </td>
                                             </tr>

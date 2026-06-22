@@ -217,7 +217,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                         res.data.forEach((app: any) => {
                             const hasLan = !!app.lanNumber;
                             const status = app.status;
-                            const isExcluded = ["rejected", "approved", "disbursed", "submitted", "pending", "draft", "docs_received", "staff_verified", "application_submitted"].includes(status);
+                            const isExcluded = ["rejected", "approved", "sanctioned", "disbursed", "disbursement_confirmed", "submitted", "pending", "draft", "docs_received", "staff_verified", "application_submitted"].includes(status);
                             if (!isExcluded) {
                                 if (!hasLan) {
                                     incoming++;

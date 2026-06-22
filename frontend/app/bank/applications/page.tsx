@@ -210,13 +210,13 @@ export default function ApplicationManagement() {
             if (isPreForwarded) return false;
 
             if (activeTab === "incoming") {
-                return !hasLan && status !== "rejected" && status !== "approved" && status !== "disbursed";
+                return !hasLan && status !== "rejected" && status !== "approved" && status !== "sanctioned" && status !== "disbursed" && status !== "disbursement_confirmed";
             }
             if (activeTab === "active") {
-                return hasLan && status !== "rejected" && status !== "approved" && status !== "disbursed";
+                return hasLan && status !== "rejected" && status !== "approved" && status !== "sanctioned" && status !== "disbursed" && status !== "disbursement_confirmed";
             }
             if (activeTab === "sanctioned") {
-                return status === "approved" || status === "disbursed";
+                return status === "approved" || status === "sanctioned" || status === "disbursed" || status === "disbursement_confirmed";
             }
             if (activeTab === "rejected") {
                 return status === "rejected";
@@ -235,11 +235,11 @@ export default function ApplicationManagement() {
 
             if (isPreForwarded) return;
 
-            if (!hasLan && status !== "rejected" && status !== "approved" && status !== "disbursed") {
+            if (!hasLan && status !== "rejected" && status !== "approved" && status !== "sanctioned" && status !== "disbursed" && status !== "disbursement_confirmed") {
                 counts.incoming++;
-            } else if (hasLan && status !== "rejected" && status !== "approved" && status !== "disbursed") {
+            } else if (hasLan && status !== "rejected" && status !== "approved" && status !== "sanctioned" && status !== "disbursed" && status !== "disbursement_confirmed") {
                 counts.active++;
-            } else if (status === "approved" || status === "disbursed") {
+            } else if (status === "approved" || status === "sanctioned" || status === "disbursed" || status === "disbursement_confirmed") {
                 counts.sanctioned++;
             } else if (status === "rejected") {
                 counts.rejected++;

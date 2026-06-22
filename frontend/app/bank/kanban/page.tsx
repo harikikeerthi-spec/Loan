@@ -65,9 +65,9 @@ export default function KanbanBoardPage() {
                     .map((app: any) => {
                     // Estimate stage based on LAN and status
                     let estimatedStage = "incoming";
-                    if (app.status === "disbursed") {
+                    if (app.status === "disbursed" || app.status === "disbursement_confirmed") {
                         estimatedStage = "closed";
-                    } else if (app.status === "approved" || app.status === "rejected") {
+                    } else if (app.status === "approved" || app.status === "sanctioned" || app.status === "rejected") {
                         estimatedStage = "decided";
                     } else if (app.lanNumber) {
                         estimatedStage = app.stage === "under_review" ? "review" : "logged";
@@ -267,11 +267,11 @@ export default function KanbanBoardPage() {
                     {columns.map(col => {
                         // Gather cards in this column
                         const cardsInColumn = filteredCards.filter(card => {
-                            if (col.id === "incoming") return card.stage === "incoming" || (!card.lanNumber && !["approved", "rejected", "disbursed"].includes(card.status));
+                            if (col.id === "incoming") return card.stage === "incoming" || (!card.lanNumber && !["approved", "sanctioned", "rejected", "disbursed", "disbursement_confirmed"].includes(card.status));
                             if (col.id === "logged") return card.stage === "logged";
                             if (col.id === "review") return card.stage === "review" || card.stage === "under_review";
-                            if (col.id === "decided") return card.stage === "decided" || (["approved", "rejected"].includes(card.status) && card.status !== "disbursed");
-                            if (col.id === "closed") return card.stage === "closed" || card.status === "disbursed";
+                            if (col.id === "decided") return card.stage === "decided" || (["approved", "sanctioned", "rejected"].includes(card.status) && card.status !== "disbursed" && card.status !== "disbursement_confirmed");
+                            if (col.id === "closed") return card.stage === "closed" || card.status === "disbursed" || card.status === "disbursement_confirmed";
                             return false;
                         });
 
