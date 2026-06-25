@@ -513,49 +513,93 @@ export default function ApplicationManagement() {
                     <div className="p-4 border-b border-gray-100 flex flex-wrap gap-4">
                         <button
                             onClick={() => setActiveTab("incoming")}
-                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === "incoming"
-                                    ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25"
-                                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-                                }`}
+                            className="px-5 py-3 rounded-xl text-[13.5px] font-black uppercase tracking-wider transition-all flex items-center gap-2"
+                            style={activeTab === "incoming"
+                                ? {
+                                    background: 'linear-gradient(180deg, #8b24e5 0%, #6605c7 100%)',
+                                    color: '#ffffff',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    boxShadow: '0px 4px 10px rgba(102, 5, 199, 0.3), inset 0px 1px 1px rgba(255, 255, 255, 0.4)'
+                                  }
+                                : {
+                                    background: '#f8fafc',
+                                    color: '#94a3b8',
+                                    border: '1px solid #e2e8f0',
+                                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.06)'
+                                  }
+                            }
                         >
                             <span>Incoming Files</span>
-                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${activeTab === "incoming" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                             <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${activeTab === "incoming" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
                                 {tabCounts.incoming}
                             </span>
                         </button>
                         <button
                             onClick={() => setActiveTab("active")}
-                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === "active"
-                                    ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25"
-                                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-                                }`}
+                            className="px-5 py-3 rounded-xl text-[13.5px] font-black uppercase tracking-wider transition-all flex items-center gap-2"
+                            style={activeTab === "active"
+                                ? {
+                                    background: 'linear-gradient(180deg, #8b24e5 0%, #6605c7 100%)',
+                                    color: '#ffffff',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    boxShadow: '0px 4px 10px rgba(102, 5, 199, 0.3), inset 0px 1px 1px rgba(255, 255, 255, 0.4)'
+                                  }
+                                : {
+                                    background: '#f8fafc',
+                                    color: '#94a3b8',
+                                    border: '1px solid #e2e8f0',
+                                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.06)'
+                                  }
+                            }
                         >
                             <span>Logged / Review</span>
-                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${activeTab === "active" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                             <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${activeTab === "active" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
                                 {tabCounts.active}
                             </span>
                         </button>
                         <button
                             onClick={() => setActiveTab("sanctioned")}
-                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === "sanctioned"
-                                    ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25"
-                                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-                                }`}
+                            className="px-5 py-3 rounded-xl text-[13.5px] font-black uppercase tracking-wider transition-all flex items-center gap-2"
+                            style={activeTab === "sanctioned"
+                                ? {
+                                    background: 'linear-gradient(180deg, #8b24e5 0%, #6605c7 100%)',
+                                    color: '#ffffff',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    boxShadow: '0px 4px 10px rgba(102, 5, 199, 0.3), inset 0px 1px 1px rgba(255, 255, 255, 0.4)'
+                                  }
+                                : {
+                                    background: '#f8fafc',
+                                    color: '#94a3b8',
+                                    border: '1px solid #e2e8f0',
+                                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.06)'
+                                  }
+                            }
                         >
                             <span>Sanctioned Queue</span>
-                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${activeTab === "sanctioned" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                             <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${activeTab === "sanctioned" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
                                 {tabCounts.sanctioned}
                             </span>
                         </button>
                         <button
                             onClick={() => setActiveTab("rejected")}
-                            className={`px-5 py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${activeTab === "rejected"
-                                    ? "bg-[#6605c7] text-white shadow-lg shadow-purple-500/25"
-                                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-50"
-                                }`}
+                            className="px-5 py-3 rounded-xl text-[13.5px] font-black uppercase tracking-wider transition-all flex items-center gap-2"
+                            style={activeTab === "rejected"
+                                ? {
+                                    background: 'linear-gradient(180deg, #8b24e5 0%, #6605c7 100%)',
+                                    color: '#ffffff',
+                                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                                    boxShadow: '0px 4px 10px rgba(102, 5, 199, 0.3), inset 0px 1px 1px rgba(255, 255, 255, 0.4)'
+                                  }
+                                : {
+                                    background: '#f8fafc',
+                                    color: '#94a3b8',
+                                    border: '1px solid #e2e8f0',
+                                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.06)'
+                                  }
+                            }
                         >
                             <span>Rejected Queue</span>
-                            <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${activeTab === "rejected" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                             <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${activeTab === "rejected" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
                                 {tabCounts.rejected}
                             </span>
                         </button>
@@ -583,7 +627,7 @@ export default function ApplicationManagement() {
                                         accessorKey: "lanNumber",
                                         sortable: true,
                                         cell: (row: any) => (
-                                            <span className="font-mono font-black text-purple-700 bg-purple-50 px-2.5 py-1 rounded-md uppercase text-[10px]">
+                                             <span className="font-mono font-black text-purple-700 bg-purple-50 px-2.5 py-1 rounded-md uppercase text-[11.5px]">
                                                 {row.lanNumber || "Pending"}
                                             </span>
                                         )
@@ -597,7 +641,7 @@ export default function ApplicationManagement() {
                                                 <span className="font-black text-gray-900 uppercase tracking-tight block">
                                                     {row.firstName} {row.lastName}
                                                 </span>
-                                                <span className="text-[10px] text-gray-400 block truncate max-w-[150px]">
+                                                 <span className="text-[11.5px] text-gray-400 block truncate max-w-[150px]">
                                                     {row.universityName || "Stanford University"}
                                                 </span>
                                             </div>
@@ -636,7 +680,7 @@ export default function ApplicationManagement() {
                                             const match = (row.remarks || "").match(/officer ([\w\s\(\)]+)/i);
                                             const name = match ? match[1].trim() : "Sarah Jenkins (Credit Officer)";
                                             return (
-                                                <span className="text-gray-500 font-semibold text-[11px]">
+                                                 <span className="text-gray-500 font-semibold text-[12.5px]">
                                                     {name}
                                                 </span>
                                             );
@@ -652,7 +696,7 @@ export default function ApplicationManagement() {
                                                 <div className="flex flex-wrap gap-1 max-w-[150px]">
                                                     {tagsList.length > 0 ? (
                                                         tagsList.map((tag: string) => (
-                                                            <span key={tag} className="text-[9px] bg-purple-50 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200">
+                                                             <span key={tag} className="text-[10.5px] bg-purple-50 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200">
                                                                 {tag}
                                                             </span>
                                                         ))

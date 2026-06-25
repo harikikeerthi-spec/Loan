@@ -6,6 +6,7 @@ import { io, Socket } from "socket.io-client";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiFetch } from "@/lib/api";
+import { createPortal } from "react-dom";
 
 interface BankNotification {
   id: string;
@@ -157,11 +158,13 @@ export default function BankNotificationsPanel({
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
   const socketRef = useRef<Socket | null>(null);
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   // Time reference for dynamic relative time updates
   const [timeRef, setTimeRef] = useState(new Date());
 
   useEffect(() => {
+    setMounted(true);
     const timer = setInterval(() => {
       setTimeRef(new Date());
     }, 15000); // Tick every 15 seconds to keep it fresh
@@ -523,269 +526,275 @@ export default function BankNotificationsPanel({
       </AnimatePresence>
 
       {/* Real-time Toast Popup */}
-      <AnimatePresence>
-        {activeToast && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9, x: 100 }}
-            animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95, x: 100 }}
-            transition={{ type: "spring", stiffness: 280, damping: 24 }}
-            onClick={() => {
-              handleNotificationClick(activeToast);
-              setActiveToast(null);
-            }}
-            className="fixed bottom-6 right-6 z-[9999] max-w-sm w-full rounded-2xl shadow-2xl border border-purple-50 p-4 cursor-pointer hover:shadow-[0_15px_40px_rgba(102,5,199,0.18)] transition-shadow"
-            style={{
-              background:
-                "linear-gradient(135deg, #ffffff 0%, rgba(248,244,255,0.98) 100%)",
-              backdropFilter: "blur(20px)",
-              borderColor: "rgba(102,5,199,0.15)",
-              boxShadow: "0 10px 30px rgba(102,5,199,0.12)",
-            }}
-          >
-            <div className="flex gap-3">
-              {(() => {
-                const style = getNotificationStyle(activeToast.type);
-                return (
-                  <>
-                    {/* Accent bar */}
-                    <div
-                      className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
-                      style={{ background: "linear-gradient(180deg, #6605c7, #8b24e5)" }}
-                    />
-                    <div
-                      className={`flex-shrink-0 w-11 h-11 rounded-xl ${style.bgColor} flex items-center justify-center ml-1`}
-                    >
-                      <span
-                        className={`material-symbols-outlined text-[20px] ${style.textColor}`}
+      {mounted && typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {activeToast && (
+            <motion.div
+              initial={{ opacity: 0, y: 50, scale: 0.9, x: 100 }}
+              animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95, x: 100 }}
+              transition={{ type: "spring", stiffness: 280, damping: 24 }}
+              onClick={() => {
+                handleNotificationClick(activeToast);
+                setActiveToast(null);
+              }}
+              className="fixed bottom-6 right-6 z-[9999] max-w-sm w-full rounded-2xl shadow-2xl border border-purple-50 p-4 cursor-pointer hover:shadow-[0_15px_40px_rgba(102,5,199,0.18)] transition-shadow"
+              style={{
+                background:
+                  "linear-gradient(135deg, #ffffff 0%, rgba(248,244,255,0.98) 100%)",
+                backdropFilter: "blur(20px)",
+                borderColor: "rgba(102,5,199,0.15)",
+                boxShadow: "0 10px 30px rgba(102,5,199,0.12)",
+              }}
+            >
+              <div className="flex gap-3">
+                {(() => {
+                  const style = getNotificationStyle(activeToast.type);
+                  return (
+                    <>
+                      {/* Accent bar */}
+                      <div
+                        className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
+                        style={{ background: "linear-gradient(180deg, #6605c7, #8b24e5)" }}
+                      />
+                      <div
+                        className={`flex-shrink-0 w-11 h-11 rounded-xl ${style.bgColor} flex items-center justify-center ml-1`}
                       >
-                        {style.icon}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-start">
+                        <span
+                          className={`material-symbols-outlined text-[20px] ${style.textColor}`}
+                        >
+                          {style.icon}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-start">
+                          <p
+                            className="font-black text-[9px] uppercase tracking-[0.15em] leading-none"
+                            style={{ color: "#6605c7" }}
+                          >
+                            Live Bank Alert
+                          </p>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveToast(null);
+                            }}
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">close</span>
+                          </button>
+                        </div>
+                        <h4 className="font-extrabold text-[13px] text-gray-900 mt-1 line-clamp-1">
+                          {activeToast.title}
+                        </h4>
+                        <p className="text-[11px] text-gray-600 mt-1 line-clamp-2">
+                          {activeToast.body}
+                        </p>
                         <p
-                          className="font-black text-[9px] uppercase tracking-[0.15em] leading-none"
+                          className="text-[9px] font-black mt-2 uppercase tracking-wider"
                           style={{ color: "#6605c7" }}
                         >
-                          Live Bank Alert
+                          Tap to view details →
                         </p>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveToast(null);
-                          }}
-                          className="text-gray-400 hover:text-gray-600 transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-[15px]">close</span>
-                        </button>
                       </div>
-                      <h4 className="font-extrabold text-[13px] text-gray-900 mt-1 line-clamp-1">
-                        {activeToast.title}
-                      </h4>
-                      <p className="text-[11px] text-gray-600 mt-1 line-clamp-2">
-                        {activeToast.body}
-                      </p>
-                      <p
-                        className="text-[9px] font-black mt-2 uppercase tracking-wider"
-                        style={{ color: "#6605c7" }}
-                      >
-                        Tap to view details →
-                      </p>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* View All Modal */}
-      <AnimatePresence>
-        {isAllModalOpen && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsAllModalOpen(false)}
-              className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              transition={{ duration: 0.2 }}
-              className="bg-white rounded-3xl shadow-2xl border border-purple-50 max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col relative z-10"
-            >
-              {/* Header */}
-              <div
-                className="px-7 py-6 border-b border-gray-100"
-                style={{
-                  background:
-                    "linear-gradient(135deg, rgba(102,5,199,0.04) 0%, rgba(255,255,255,1) 100%)",
-                }}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
-                      <span
-                        className="material-symbols-outlined text-[22px]"
-                        style={{ color: "#6605c7" }}
-                      >
-                        notifications_active
-                      </span>
-                      Bank Notification Center
-                    </h2>
-                    <p className="text-[11px] text-gray-500 font-semibold mt-1">
-                      Real-time alerts for files, queries, decisions &amp; SLA
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setIsAllModalOpen(false)}
-                    className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[20px]">close</span>
-                  </button>
-                </div>
-
-                {/* Filter Tabs */}
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {filterTabs.map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setSelectedFilter(tab.id)}
-                      className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border"
-                      style={
-                        selectedFilter === tab.id
-                          ? {
-                              background: "linear-gradient(135deg, #6605c7, #8b24e5)",
-                              color: "white",
-                              borderColor: "#6605c7",
-                              boxShadow: "0 4px 12px rgba(102,5,199,0.2)",
-                            }
-                          : {
-                              background: "white",
-                              color: "#6b7280",
-                              borderColor: "#e5e7eb",
-                            }
-                      }
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Body */}
-              <div className="flex-1 overflow-y-auto px-7 py-5 space-y-3">
-                {(() => {
-                  const filtered =
-                    selectedFilter === "all"
-                      ? notifications
-                      : notifications.filter((n) => n.type === selectedFilter);
-
-                  return filtered.length > 0 ? (
-                    filtered.map((notif, index) => {
-                      const style = getNotificationStyle(notif.type);
-                      return (
-                        <div
-                          key={notif.id || index}
-                          onClick={() => handleNotificationClick(notif)}
-                          className={`p-4 bg-white rounded-2xl border transition-all cursor-pointer hover:shadow-md flex gap-4 relative overflow-hidden ${
-                            notif.isRead
-                              ? "border-gray-100 opacity-70 hover:opacity-100"
-                              : "border-purple-100 shadow-sm"
-                          }`}
-                        >
-                          {!notif.isRead && (
-                            <div
-                              className="absolute left-0 top-0 bottom-0 w-1"
-                              style={{
-                                background: "linear-gradient(180deg, #6605c7, #8b24e5)",
-                              }}
-                            />
-                          )}
-                          <div
-                            className={`w-11 h-11 rounded-xl ${style.bgColor} flex items-center justify-center flex-shrink-0`}
-                          >
-                            <span
-                              className={`material-symbols-outlined text-[18px] ${style.textColor}`}
-                            >
-                              {style.icon}
-                            </span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-start gap-3">
-                              <h4 className="font-extrabold text-[12.5px] text-gray-900 line-clamp-1">
-                                {notif.title}
-                              </h4>
-                              <span className="text-[9.5px] text-gray-400 font-bold flex-shrink-0">
-                                {formatTime(notif.timestamp, timeRef)}
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
-                              {notif.body}
-                            </p>
-                          </div>
-                          {!notif.isRead && (
-                            <div
-                              className={`w-2.5 h-2.5 rounded-full ${style.badge} flex-shrink-0 self-center`}
-                            />
-                          )}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="py-16 text-center text-gray-400">
-                      <span className="material-symbols-outlined text-[48px] block mb-3 opacity-20">
-                        notifications_off
-                      </span>
-                      <p className="text-sm font-bold">No notifications in this category</p>
-                      <p className="text-[11px] text-gray-400 mt-1">
-                        Switch tabs to see other notifications
-                      </p>
-                    </div>
+                    </>
                   );
                 })()}
               </div>
-
-              {/* Footer */}
-              <div className="bg-gray-50 px-7 py-4 border-t border-gray-100 flex justify-between items-center">
-                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                  {
-                    (selectedFilter === "all"
-                      ? notifications
-                      : notifications.filter((n) => n.type === selectedFilter)
-                    ).length
-                  }{" "}
-                  total
-                </span>
-                {unreadCount > 0 && (
-                  <button
-                    onClick={handleMarkAllRead}
-                    className="px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all"
-                    style={{
-                      color: "#6605c7",
-                      borderColor: "rgba(102,5,199,0.2)",
-                      background: "rgba(102,5,199,0.04)",
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = "rgba(102,5,199,0.08)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "rgba(102,5,199,0.04)")
-                    }
-                  >
-                    Mark All as Read
-                  </button>
-                )}
-              </div>
             </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
+
+      {/* View All Modal */}
+      {mounted && typeof document !== "undefined" && createPortal(
+        <AnimatePresence>
+          {isAllModalOpen && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsAllModalOpen(false)}
+                className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 15 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                transition={{ duration: 0.2 }}
+                className="bg-white rounded-3xl shadow-2xl border border-purple-50 max-w-2xl w-full max-h-[85vh] overflow-hidden flex flex-col relative z-10"
+              >
+                {/* Header */}
+                <div
+                  className="px-7 py-6 border-b border-gray-100"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(102,5,199,0.04) 0%, rgba(255,255,255,1) 100%)",
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
+                        <span
+                          className="material-symbols-outlined text-[22px]"
+                          style={{ color: "#6605c7" }}
+                        >
+                          notifications_active
+                        </span>
+                        Bank Notification Center
+                      </h2>
+                      <p className="text-[11px] text-gray-500 font-semibold mt-1">
+                        Real-time alerts for files, queries, decisions &amp; SLA
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setIsAllModalOpen(false)}
+                      className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-[20px]">close</span>
+                    </button>
+                  </div>
+
+                  {/* Filter Tabs */}
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {filterTabs.map((tab) => (
+                      <button
+                        key={tab.id}
+                        onClick={() => setSelectedFilter(tab.id)}
+                        className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border"
+                        style={
+                          selectedFilter === tab.id
+                            ? {
+                                background: "linear-gradient(135deg, #6605c7, #8b24e5)",
+                                color: "white",
+                                borderColor: "#6605c7",
+                                boxShadow: "0 4px 12px rgba(102,5,199,0.2)",
+                              }
+                            : {
+                                background: "white",
+                                color: "#6b7280",
+                                borderColor: "#e5e7eb",
+                              }
+                        }
+                      >
+                        {tab.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto px-7 py-5 space-y-3">
+                  {(() => {
+                    const filtered =
+                      selectedFilter === "all"
+                        ? notifications
+                        : notifications.filter((n) => n.type === selectedFilter);
+
+                    return filtered.length > 0 ? (
+                      filtered.map((notif, index) => {
+                        const style = getNotificationStyle(notif.type);
+                        return (
+                          <div
+                            key={notif.id || index}
+                            onClick={() => handleNotificationClick(notif)}
+                            className={`p-4 bg-white rounded-2xl border transition-all cursor-pointer hover:shadow-md flex gap-4 relative overflow-hidden ${
+                              notif.isRead
+                                ? "border-gray-100 opacity-70 hover:opacity-100"
+                                : "border-purple-100 shadow-sm"
+                            }`}
+                          >
+                            {!notif.isRead && (
+                              <div
+                                className="absolute left-0 top-0 bottom-0 w-1"
+                                style={{
+                                  background: "linear-gradient(180deg, #6605c7, #8b24e5)",
+                                }}
+                              />
+                            )}
+                            <div
+                              className={`w-11 h-11 rounded-xl ${style.bgColor} flex items-center justify-center flex-shrink-0`}
+                            >
+                              <span
+                                className={`material-symbols-outlined text-[18px] ${style.textColor}`}
+                              >
+                                {style.icon}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start gap-3">
+                                <h4 className="font-extrabold text-[12.5px] text-gray-900 line-clamp-1">
+                                  {notif.title}
+                                </h4>
+                                <span className="text-[9.5px] text-gray-400 font-bold flex-shrink-0">
+                                  {formatTime(notif.timestamp, timeRef)}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+                                {notif.body}
+                              </p>
+                            </div>
+                            {!notif.isRead && (
+                              <div
+                                className={`w-2.5 h-2.5 rounded-full ${style.badge} flex-shrink-0 self-center`}
+                              />
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="py-16 text-center text-gray-400">
+                        <span className="material-symbols-outlined text-[48px] block mb-3 opacity-20">
+                          notifications_off
+                        </span>
+                        <p className="text-sm font-bold">No notifications in this category</p>
+                        <p className="text-[11px] text-gray-400 mt-1">
+                          Switch tabs to see other notifications
+                        </p>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Footer */}
+                <div className="bg-gray-50 px-7 py-4 border-t border-gray-100 flex justify-between items-center">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                    {
+                      (selectedFilter === "all"
+                        ? notifications
+                        : notifications.filter((n) => n.type === selectedFilter)
+                      ).length
+                    }{" "}
+                    total
+                  </span>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded-xl border transition-all"
+                      style={{
+                        color: "#6605c7",
+                        borderColor: "rgba(102,5,199,0.2)",
+                        background: "rgba(102,5,199,0.04)",
+                      }}
+                      onMouseEnter={(e) =>
+                        (e.currentTarget.style.background = "rgba(102,5,199,0.08)")
+                      }
+                      onMouseLeave={(e) =>
+                        (e.currentTarget.style.background = "rgba(102,5,199,0.04)")
+                      }
+                    >
+                      Mark All as Read
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 }

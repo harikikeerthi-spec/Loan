@@ -23,6 +23,13 @@ function AdminLoginContent() {
     const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
     useEffect(() => {
+        const queryEmail = searchParams.get("email");
+        if (queryEmail) {
+            setEmail(decodeURIComponent(queryEmail));
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
         if (countdown > 0) {
             const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
             return () => clearTimeout(timer);

@@ -161,7 +161,7 @@ function BankLoginContent() {
     const [otp, setOtp] = useState(["", "", "", "", "", ""]);
     const [step, setStep] = useState<"form" | "otp">("form");
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
+    const [error, setError] = useState<React.ReactNode>("");
     const [resendDisabled, setResendDisabled] = useState(false);
     const [countdown, setCountdown] = useState(0);
     const [devOtp, setDevOtp] = useState<string | null>(null);
@@ -225,6 +225,19 @@ function BankLoginContent() {
 
     const sendOtp = async () => {
         if (!email.trim()) { setError("Please enter your email"); return; }
+        const lowerEmail = email.trim().toLowerCase();
+        if (lowerEmail.includes("admin") || lowerEmail.startsWith("admin@")) {
+            setError(
+                <span>
+                    It looks like you are an administrator. Please use the{" "}
+                    <Link href={`/admin/login?email=${encodeURIComponent(email.trim())}`} className="underline font-bold text-[#6605c7] hover:text-[#5203a4]">
+                        Admin Login Page
+                    </Link>{" "}
+                    to access the portal.
+                </span>
+            );
+            return;
+        }
         const bankId = getBankFromEmail(email) || "idfc"; // Fallback to idfc
         setLoading(true);
         setError("");
@@ -283,7 +296,20 @@ function BankLoginContent() {
                 throw new Error(data.message || "Invalid OTP. Please enter the right one to login.");
             }
 
-            if (data.role !== "bank" && data.role !== "partner_bank" && data.role !== "admin" && data.role !== "super_admin") {
+            if (data.role === "admin" || data.role === "super_admin") {
+                setError(
+                    <span>
+                        You have administrator privileges. Please use the{" "}
+                        <Link href={`/admin/login?email=${encodeURIComponent(email.trim())}`} className="underline font-bold text-[#6605c7] hover:text-[#5203a4]">
+                            Admin Login Page
+                        </Link>{" "}
+                        to access the portal.
+                    </span>
+                );
+                return;
+            }
+
+            if (data.role !== "bank" && data.role !== "partner_bank") {
                 throw new Error("Unauthorized role. You must be bank staff to access this portal.");
             }
 

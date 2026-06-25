@@ -350,7 +350,11 @@ const NotificationsPanel = ({
       }
 
       if (appId) {
-        router.push(`/staff/applications/${appId}`);
+        if (notification.type === 'query_raised') {
+          router.push(`/staff/applications/${appId}/bank-decisions`);
+        } else {
+          router.push(`/staff/applications/${appId}`);
+        }
       } else if (userId) {
         router.push(`/staff/users/${userId}`);
       } else if (notification.type === 'application_created' || notification.type === 'application_submitted') {

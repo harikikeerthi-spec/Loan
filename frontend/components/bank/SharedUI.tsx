@@ -11,31 +11,49 @@ interface StatusBadgeProps {
 export function StatusBadge({ status }: StatusBadgeProps) {
     const normStatus = (status || "").toLowerCase().replace(/_/g, " ");
     
-    let styles = "bg-gray-100 text-gray-700 border-gray-200";
     let dotColor = "bg-gray-400";
-    
+    let styleObj: React.CSSProperties = {
+        border: "1px solid rgba(255, 255, 255, 0.5)",
+        boxShadow: "inset 0 1px 1px rgba(255, 255, 255, 0.4), 0 2px 4px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.03)",
+        textShadow: "0 1px 2px rgba(0,0,0,0.1)",
+        fontFamily: '"Plus Jakarta Sans", sans-serif'
+    };
+
     if (normStatus === "pending" || normStatus === "submitted") {
-        styles = "bg-amber-50 text-amber-700 border-amber-200/60 shadow-[0_2px_8px_rgba(245,158,11,0.08)]";
-        dotColor = "bg-amber-500";
-    } else if (normStatus === "under bank review" || normStatus === "under_bank_review") {
-        styles = "bg-amber-50 text-amber-850 border-amber-200 shadow-[0_2px_8px_rgba(245,158,11,0.08)]";
-        dotColor = "bg-amber-500 animate-pulse";
-    } else if (normStatus === "processing" || normStatus === "under review") {
-        styles = "bg-blue-50 text-blue-700 border-blue-200/60 shadow-[0_2px_8px_rgba(59,130,246,0.08)]";
-        dotColor = "bg-blue-500 animate-pulse";
+        styleObj.background = "linear-gradient(180deg, #fbbf24 0%, #d97706 100%)";
+        styleObj.color = "#ffffff";
+        dotColor = "bg-white";
+    } else if (normStatus === "under bank review" || normStatus === "under_bank_review" || normStatus === "file logged" || normStatus === "file_logged") {
+        styleObj.background = "linear-gradient(180deg, #f59e0b 0%, #b45309 100%)";
+        styleObj.color = "#ffffff";
+        dotColor = "bg-white animate-pulse";
+    } else if (normStatus === "processing" || normStatus === "under review" || normStatus === "query raised" || normStatus === "query_raised") {
+        styleObj.background = "linear-gradient(180deg, #60a5fa 0%, #2563eb 100%)";
+        styleObj.color = "#ffffff";
+        dotColor = "bg-white animate-pulse";
     } else if (normStatus === "approved" || normStatus === "sanctioned" || normStatus === "verified") {
-        styles = "bg-emerald-50 text-emerald-700 border-emerald-200/60 shadow-[0_2px_8px_rgba(16,185,129,0.08)]";
-        dotColor = "bg-emerald-500";
+        styleObj.background = "linear-gradient(180deg, #34d399 0%, #059669 100%)";
+        styleObj.color = "#ffffff";
+        dotColor = "bg-white";
     } else if (normStatus === "rejected" || normStatus === "cancelled") {
-        styles = "bg-rose-50 text-rose-700 border-rose-200/60 shadow-[0_2px_8px_rgba(239,68,68,0.08)]";
-        dotColor = "bg-rose-500";
-    } else if (normStatus === "disbursed" || normStatus === "paid out") {
-        styles = "bg-purple-50 text-purple-700 border-purple-200/60 shadow-[0_2px_8px_rgba(102,5,199,0.08)]";
-        dotColor = "bg-purple-500";
+        styleObj.background = "linear-gradient(180deg, #f87171 0%, #dc2626 100%)";
+        styleObj.color = "#ffffff";
+        dotColor = "bg-white";
+    } else if (normStatus === "disbursed" || normStatus === "paid out" || normStatus === "disbursement confirmed" || normStatus === "disbursement_confirmed") {
+        styleObj.background = "linear-gradient(180deg, #c084fc 0%, #7c3aed 100%)";
+        styleObj.color = "#ffffff";
+        dotColor = "bg-white";
+    } else {
+        styleObj.background = "linear-gradient(180deg, #9ca3af 0%, #4b5563 100%)";
+        styleObj.color = "#ffffff";
+        dotColor = "bg-white";
     }
 
     return (
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 border rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 ${styles}`}>
+        <span 
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[10.5px] font-black uppercase tracking-wider transition-all duration-300 select-none"
+            style={styleObj}
+        >
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} />
             {normStatus}
         </span>
@@ -125,64 +143,67 @@ export function DataTable<T>({
     }, [data, sortKey, sortDirection]);
 
     return (
-        <div className="overflow-x-auto w-full no-scrollbar rounded-2xl border border-gray-100 bg-white/40 shadow-sm">
-            <table className="w-full text-left border-collapse">
-                <thead>
-                    <tr className="bg-[#6605c7]/[0.02] border-b border-gray-100">
-                        {columns.map((col, idx) => {
-                            const isSortable = col.sortable !== false;
-                            const isCurrentSort = sortKey === col.accessorKey;
-                            return (
-                                <th
-                                    key={idx}
-                                    onClick={() => isSortable && handleSort(col.accessorKey as string)}
-                                    className={`px-6 py-4 text-[9px] font-black uppercase tracking-[0.25em] text-[#6605c7] select-none ${
-                                        isSortable ? "cursor-pointer hover:bg-[#6605c7]/5" : ""
-                                    }`}
-                                >
-                                    <div className="flex items-center gap-1">
-                                        <span>{col.header}</span>
-                                        {isSortable && (
-                                            <span className="material-symbols-outlined text-[12px] opacity-60">
-                                                {isCurrentSort
-                                                    ? sortDirection === "asc"
-                                                        ? "arrow_upward"
-                                                        : "arrow_downward"
-                                                    : "unfold_more"}
-                                            </span>
-                                        )}
-                                    </div>
-                                </th>
-                            );
-                        })}
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50/50">
-                    {sortedData.length === 0 ? (
-                        <tr>
-                            <td colSpan={columns.length} className="py-12">
-                                <EmptyState message={emptyMessage} />
-                            </td>
-                        </tr>
-                    ) : (
-                        sortedData.map((row: any, idx) => (
-                            <tr
-                                key={row.id || idx}
-                                onClick={() => onRowClick && onRowClick(row)}
-                                className={`group transition-all duration-200 border-b border-gray-100/50 odd:bg-white even:bg-gray-50/25 hover:bg-[#6605c7]/[0.04] ${
-                                    onRowClick ? "cursor-pointer" : ""
+        <div className="overflow-x-auto w-full no-scrollbar pb-4">
+            <div className="min-w-[1000px] flex flex-col gap-4">
+                {/* Header Row */}
+                <div 
+                    className="grid items-center px-6 py-4 bg-[#6605c7]/[0.02] border-b border-gray-100 rounded-xl"
+                    style={{ gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` }}
+                >
+                    {columns.map((col, idx) => {
+                        const isSortable = col.sortable !== false;
+                        const isCurrentSort = sortKey === col.accessorKey;
+                        return (
+                            <div
+                                key={idx}
+                                onClick={() => isSortable && handleSort(col.accessorKey as string)}
+                                className={`text-[11px] font-black uppercase tracking-[0.25em] text-[#6605c7] select-none flex items-center gap-1 ${
+                                    isSortable ? "cursor-pointer hover:text-[#5203a4]" : ""
                                 }`}
                             >
+                                <span>{col.header}</span>
+                                {isSortable && (
+                                    <span className="material-symbols-outlined text-[12px] opacity-60">
+                                        {isCurrentSort
+                                            ? sortDirection === "asc"
+                                                ? "arrow_upward"
+                                                : "arrow_downward"
+                                            : "unfold_more"}
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Body Rows as 3D Cards */}
+                <div className="flex flex-col gap-3.5">
+                    {sortedData.length === 0 ? (
+                        <div className="py-12 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                            <EmptyState message={emptyMessage} />
+                        </div>
+                    ) : (
+                        sortedData.map((row: any, idx) => (
+                            <div
+                                key={row.id || idx}
+                                onClick={() => onRowClick && onRowClick(row)}
+                                className={`grid items-center px-6 py-5 rounded-[16px] bg-white border border-gray-100/50 shadow-[0_10px_30px_rgba(0,0,0,0.02)] transition-all duration-300 hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:border-[#6605c7]/10 ${
+                                    onRowClick ? "cursor-pointer" : ""
+                                }`}
+                                style={{ 
+                                    gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))`,
+                                }}
+                            >
                                 {columns.map((col, colIdx) => (
-                                    <td key={colIdx} className="px-6 py-4.5 text-xs text-gray-700">
+                                    <div key={colIdx} className="text-[13.5px] text-gray-700 pr-2">
                                         {col.cell ? col.cell(row) : String(row[col.accessorKey] || "—")}
-                                    </td>
+                                    </div>
                                 ))}
-                            </tr>
+                            </div>
                         ))
                     )}
-                </tbody>
-            </table>
+                </div>
+            </div>
         </div>
     );
 }

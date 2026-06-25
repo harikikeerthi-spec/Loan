@@ -321,18 +321,17 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 linear-gradient(160deg, #f5f0ff 0%, #faf8ff 40%, #f0f4ff 70%, #f8f5ff 100%)
             `
         }}>
-            {/* Sidebar */}
             <motion.aside
                 initial={false}
                 animate={{ width: sidebarWidth }}
                 transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-                className="fixed h-screen z-50 flex flex-col shadow-2xl overflow-hidden"
+                className="fixed h-screen z-50 flex flex-col overflow-hidden"
                 style={{
-                    background: 'linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(248,244,255,0.88) 100%)',
-                    backdropFilter: 'blur(28px)',
-                    WebkitBackdropFilter: 'blur(28px)',
-                    borderRight: '1px solid rgba(102, 5, 199, 0.12)',
-                    boxShadow: '4px 0 40px rgba(102, 5, 199, 0.06)'
+                    background: 'rgba(255, 255, 255, 0.45)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    borderRight: '1px solid rgba(255, 255, 255, 0.6)',
+                    boxShadow: '10px 0 30px rgba(0, 0, 0, 0.03)'
                 }}
             >
                 {/* Logo Section */}
@@ -436,8 +435,9 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                     <div
                         className="flex items-center gap-2.5 p-2.5 rounded-xl border"
                         style={{
-                            backgroundColor: 'rgba(102, 5, 199, 0.03)',
-                            borderColor: 'rgba(102, 5, 199, 0.08)',
+                            backgroundColor: 'rgba(102, 5, 199, 0.02)',
+                            borderColor: 'rgba(102, 5, 199, 0.05)',
+                            boxShadow: 'inset 2px 2px 6px rgba(102, 5, 199, 0.08), inset -2px -2px 6px rgba(255, 255, 255, 0.9)',
                             justifyContent: collapsed ? 'center' : undefined
                         }}
                     >
@@ -455,10 +455,10 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                     exit={{ opacity: 0 }}
                                     className="flex-1 min-w-0"
                                 >
-                                    <p className="text-[11.5px] font-bold text-gray-900 truncate">
+                                    <p className="text-[13px] font-bold text-gray-900 truncate">
                                         {user.firstName} {user.lastName}
                                     </p>
-                                    <p className="text-[8.5px] font-semibold text-gray-400 uppercase tracking-widest mt-0.5">
+                                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mt-0.5">
                                         Bank Auditor
                                     </p>
                                 </motion.div>
