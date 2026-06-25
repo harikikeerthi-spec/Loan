@@ -36,7 +36,7 @@ function AgentLoginContent() {
         setLoading(true);
         setError("");
         try {
-            const res = await authApi.sendOtp(email.trim()) as { success: boolean; otp?: string; userExists: boolean };
+            const res = await authApi.requestOtp(email.trim()) as { success: boolean; otp?: string; userExists: boolean };
             if (res.otp) {
                 setDevOtp(res.otp);
             } else {

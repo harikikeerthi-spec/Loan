@@ -41,6 +41,24 @@ export class AuthController {
     return this.authService.sendOtpUnified(body.email);
   }
 
+  @Post('request-otp')
+  async requestOtp(@Body() body: { email: string }) {
+    if (!body || !body.email) {
+      return {
+        success: false,
+        message: 'Email address is required',
+      };
+    }
+    const user = await this.usersService.findOne(body.email);
+    if (!user || !['agent', 'partner_agent', 'staff', 'admin', 'super_admin'].includes(user.role)) {
+      return {
+        success: false,
+        message: 'Access Denied: Agent privileges required.',
+      };
+    }
+    return this.authService.sendOtpUnified(body.email);
+  }
+
   /**
    * Step 2: Verify OTP and determine user flow
    * POST /auth/verify-otp

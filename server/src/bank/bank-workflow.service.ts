@@ -1068,7 +1068,7 @@ export class BankWorkflowService {
       `Disbursement confirmed: ₹${disbursementDetails.amount} (Ref: ${disbursementDetails.referenceNo})`,
     );
 
-    await this.db.client
+    const { data: updatedApp } = await this.db.client
       .from('LoanApplication')
       .update({
         bankWorkflowStatus: 'DISBURSED',
@@ -1078,12 +1078,19 @@ export class BankWorkflowService {
         disbursedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       })
-      .eq('id', submission.applicationId);
+      .eq('id', submission.applicationId)
+      .select('userId, bank')
+      .single();
 
     this.eventEmitter.emit('bank.application.disbursed', {
       submissionId,
       applicationId: submission.applicationId,
+      userId: updatedApp?.userId,
       amount: disbursementDetails.amount,
+      bankId: updatedApp?.bank,
+      utrNumber: disbursementDetails.referenceNo,
+      trancheNumber: 1,
+      transferMode: 'NEFT/RTGS',
     });
 
     return { success: true, data: updated };

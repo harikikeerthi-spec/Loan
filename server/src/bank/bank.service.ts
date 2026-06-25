@@ -989,6 +989,9 @@ export class BankService {
       userId: application.userId,
       amount: disbursementAmount,
       bankId: application.bank,
+      utrNumber,
+      trancheNumber,
+      transferMode,
     });
 
     return {

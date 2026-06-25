@@ -428,12 +428,13 @@ export default function AgentDashboardPage() {
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
-            const [statsRes, appsRes] = await Promise.all([
+            const [statsRes, appsRes, tasksRes] = await Promise.all([
                 agentApi.getStats(),
-                agentApi.getApplications()
+                agentApi.getApplications(),
+                agentApi.getActionItems()
             ]);
             
-            const apiApps = (appsRes as any).data || [];
+            const apiApps = (appsRes as any).leads || (appsRes as any).data || [];
             
             // Map backend Application structure to our rich UI Student structure
             const mappedApiApps: StudentApplication[] = apiApps.map((apiApp: any) => {
@@ -457,43 +458,48 @@ export default function AgentDashboardPage() {
                     stage: apiApp.stage || "application_submitted",
                     bank: apiApp.bank || "Pending Partner",
                     commissionRate: 0.70,
-                    projectedCommission: projected,
+                    projectedCommission: apiApp.projectedCommission || projected,
                     lastUpdated: format(new Date(apiApp.updatedAt || Date.now()), "dd-MMM-yyyy"),
-                    documents: [],
-                    journey: [
+                    documents: apiApp.documents || [],
+                    journey: apiApp.journey || [
                         { date: format(new Date(apiApp.createdAt || Date.now()), "dd-MMM-yyyy"), title: "Lead Submitted", desc: "Submitted via Agent Network", done: true }
                     ],
-                    bankStatus: {
+                    bankStatus: apiApp.bankStatus || {
                         product: apiApp.bank ? `${apiApp.bank} Pro Scheme` : "Reviewing Scheme",
                         refNumber: `REF-${apiApp.id.slice(-6).toUpperCase()}`,
                         submittedOn: format(new Date(apiApp.submittedAt || Date.now()), "dd-MMM-yyyy"),
                         tatExpected: "10 working days"
                     },
-                    communicationLog: []
+                    communicationLog: apiApp.communicationLog || []
                 };
             });
 
-            // Merge fallback students with those from the API to guarantee a rich display
-            const merged = [...defaultStudents];
-            mappedApiApps.forEach(apiApp => {
-                if (!merged.some(x => x.email.toLowerCase() === apiApp.email.toLowerCase())) {
-                    merged.push(apiApp);
-                }
-            });
+            // Fallback merge for visualization: if API returns data, use it; if no data, fallback to default students
+            if (mappedApiApps.length > 0) {
+                setApplications(mappedApiApps);
+            } else {
+                setApplications(defaultStudents);
+            }
 
-            setApplications(merged);
+            // Set Action Items
+            if (tasksRes && (tasksRes as any).success) {
+                const apiTasks = (tasksRes as any).data || [];
+                if (apiTasks.length > 0) {
+                    setTasks(apiTasks);
+                }
+            }
 
             // Fetch dynamic stats from database, falling back if necessary
             if (statsRes && (statsRes as any).success) {
                 const apiStats = (statsRes as any).data;
                 setStats({
-                    total: apiStats.total || merged.length,
-                    totalAmount: apiStats.totalAmount || merged.reduce((acc, curr) => acc + curr.amount, 0),
-                    disbursedAmount: apiStats.disbursedAmount || merged.filter(x => x.status === "disbursed").reduce((acc, curr) => acc + curr.amount, 0),
-                    revenue: apiStats.revenue || (merged.filter(x => x.status === "disbursed" || x.status === "approved").reduce((acc, curr) => acc + curr.amount, 0) * 0.007)
+                    total: apiStats.totalLeads ?? apiStats.total ?? 0,
+                    totalAmount: apiStats.totalAmount || 0,
+                    disbursedAmount: apiStats.disbursedAmount || 0,
+                    revenue: apiStats.revenue || 0
                 });
             } else {
-                calculateStatsLocally(merged);
+                calculateStatsLocally(mappedApiApps.length > 0 ? mappedApiApps : defaultStudents);
             }
         } catch (e) {
             console.error("Failed to load agent backend data. Falling back to local data.", e);
@@ -522,83 +528,71 @@ export default function AgentDashboardPage() {
     }, [loadData]);
 
     // Handle lead submission
-    const handleLeadSubmit = (e: React.FormEvent) => {
+    const handleLeadSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!leadForm.firstName || !leadForm.lastName || !leadForm.phoneNumber || !leadForm.email || !leadForm.amount) {
             showToast("Please fill all required student basics and loan details", "warning");
             return;
         }
 
-        const amt = parseFloat(leadForm.amount) || 0;
-        const commRate = leadForm.loanType === "Abroad" ? 1.00 : 0.70;
-        const newLead: StudentApplication = {
-            id: `LEAD-${1090 + applications.length + 1}`,
-            applicationNumber: `VL-APP-2026-${String(1090 + applications.length + 1).padStart(5, "0")}`,
-            firstName: leadForm.firstName,
-            lastName: leadForm.lastName,
-            email: leadForm.email,
-            phoneNumber: leadForm.phoneNumber,
-            dob: leadForm.dob || "2004-01-01",
-            city: leadForm.city || "Hyderabad",
-            state: leadForm.state,
-            loanType: leadForm.loanType,
-            courseName: leadForm.courseName || "Undecided Course",
-            collegeName: leadForm.collegeName || "Undecided College",
-            courseStartDate: leadForm.courseStartDate || "2026-08-01",
-            amount: amt,
-            coApplicantName: leadForm.coApplicantName,
-            coApplicantRelationship: leadForm.coApplicantRelationship,
-            coApplicantMobile: leadForm.coApplicantMobile,
-            source: leadForm.source,
-            notes: leadForm.notes,
-            status: "pending",
-            stage: "application_submitted",
-            bank: "Avanse", // Default assignment for simulation
-            commissionRate: commRate,
-            projectedCommission: amt * (commRate / 100),
-            lastUpdated: format(new Date(), "dd-MMM-yyyy"),
-            documents: [
-                { docType: "identity_proof", docName: "Aadhar Card", status: "pending", version: "v1" }
-            ],
-            journey: [
-                { date: format(new Date(), "dd-MMM-yyyy"), title: "Lead Submitted", desc: "Submitted via Quick Submit Form", done: true },
-                { date: format(new Date(), "dd-MMM-yyyy"), title: "Welcome Alert", desc: "Welcome WhatsApp message dispatched to student", done: true }
-            ],
-            bankStatus: {
-                product: "Avanse Study Loan",
-                refNumber: `VL-AV-${1000 + applications.length}`,
-                submittedOn: format(new Date(), "dd-MMM-yyyy"),
-                tatExpected: "6 working days"
-            },
-            communicationLog: []
-        };
+        setLoading(true);
+        try {
+            const res = await agentApi.createLead({
+                firstName: leadForm.firstName,
+                lastName: leadForm.lastName,
+                email: leadForm.email,
+                phoneNumber: leadForm.phoneNumber,
+                dob: leadForm.dob,
+                city: leadForm.city,
+                state: leadForm.state,
+                loanType: leadForm.loanType,
+                courseName: leadForm.courseName,
+                collegeName: leadForm.collegeName,
+                courseStartDate: leadForm.courseStartDate,
+                amount: parseFloat(leadForm.amount) || 0,
+                coApplicantName: leadForm.coApplicantName,
+                coApplicantRelationship: leadForm.coApplicantRelationship,
+                coApplicantMobile: leadForm.coApplicantMobile,
+                source: leadForm.source,
+                notes: leadForm.notes,
+            });
 
-        const updatedApps = [newLead, ...applications];
-        setApplications(updatedApps);
-        calculateStatsLocally(updatedApps);
-        showToast(`Lead ${leadForm.firstName} ${leadForm.lastName} submitted successfully. WhatsApp welcome message sent!`, "success");
-        
-        // Reset form
-        setLeadForm({
-            firstName: "",
-            lastName: "",
-            phoneNumber: "",
-            email: "",
-            dob: "",
-            city: "",
-            state: "Telangana",
-            loanType: "Domestic",
-            courseName: "",
-            collegeName: "",
-            courseStartDate: "",
-            amount: "",
-            coApplicantName: "",
-            coApplicantRelationship: "Parent",
-            coApplicantMobile: "",
-            source: "Referral",
-            notes: ""
-        });
-        setActiveSection("students");
+            if (res && (res as any).success) {
+                showToast(`Lead ${leadForm.firstName} ${leadForm.lastName} submitted successfully!`, "success");
+                
+                // Reset form
+                setLeadForm({
+                    firstName: "",
+                    lastName: "",
+                    phoneNumber: "",
+                    email: "",
+                    dob: "",
+                    city: "",
+                    state: "Telangana",
+                    loanType: "Domestic",
+                    courseName: "",
+                    collegeName: "",
+                    courseStartDate: "",
+                    amount: "",
+                    coApplicantName: "",
+                    coApplicantRelationship: "Parent",
+                    coApplicantMobile: "",
+                    source: "Walk-In",
+                    notes: ""
+                });
+                
+                // Reload dashboard
+                await loadData();
+                setActiveSection("students");
+            } else {
+                showToast((res as any).message || "Failed to submit lead.", "warning");
+            }
+        } catch (err) {
+            console.error("Failed to submit lead:", err);
+            showToast("Error connecting to server. Please try again.", "warning");
+        } finally {
+            setLoading(false);
+        }
     };
 
     // Pre-submission eligibility calculator trigger

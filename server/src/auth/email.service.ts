@@ -117,8 +117,8 @@ export class EmailService {
     }
   }
 
-  async sendMail(to: string, subject: string, html: string, text?: string, replyTo?: string) {
-    const mailOptions = {
+  async sendMail(to: string, subject: string, html: string, text?: string, replyTo?: string, attachments?: any[]) {
+    const mailOptions: any = {
       from: process.env.EMAIL_FROM || '"Vidya Loan" <noreply@vidyaloan.com>',
       to: to,
       replyTo: replyTo,
@@ -126,6 +126,10 @@ export class EmailService {
       html: html,
       text: text,
     };
+
+    if (attachments) {
+      mailOptions.attachments = attachments;
+    }
 
     try {
       if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {

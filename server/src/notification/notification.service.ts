@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EventEmitter2, OnEvent } from '@nestjs/event-emitter';
+import { EmailService } from '../auth/email.service';
+import PDFDocument from 'pdfkit';
 
 @Injectable()
 export class NotificationService {
@@ -13,6 +15,7 @@ export class NotificationService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly emailService: EmailService,
   ) {}
 
   /**
@@ -527,6 +530,295 @@ export class NotificationService {
     } catch (error) {
       this.logger.error(`Failed to handle staff chat received event: ${error.message}`);
     }
+  }
+
+  /**
+   * Send PDF receipt via email when loan disbursement is completed
+   */
+  @OnEvent('bank.application.disbursed')
+  async handleBankApplicationDisbursed(payload: {
+    applicationId: string;
+    userId: string;
+    amount: number;
+    bankId?: string;
+    utrNumber?: string;
+    trancheNumber?: number;
+    transferMode?: string;
+  }) {
+    try {
+      this.logger.log(`[NotificationService] Handling disbursement notification for app: ${payload.applicationId}`);
+
+      // 1. Fetch LoanApplication
+      const { data: application } = await this.db
+        .from('LoanApplication')
+        .select('*')
+        .eq('id', payload.applicationId)
+        .single();
+
+      if (!application) {
+        this.logger.warn(`Loan application with ID ${payload.applicationId} not found for disbursement notification.`);
+        return;
+      }
+
+      // 2. Fetch User to get the email
+      let email = application.email;
+      let borrowerName = `${application.firstName || ''} ${application.lastName || ''}`.trim();
+
+      if (!email || !borrowerName) {
+        const { data: user } = await this.db
+          .from('User')
+          .select('email, firstName, lastName')
+          .eq('id', payload.userId || application.userId)
+          .single();
+
+        if (user) {
+          if (!email) email = user.email;
+          if (!borrowerName) borrowerName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        }
+      }
+
+      if (!email) {
+        this.logger.warn(`No email found for borrower of loan application ${payload.applicationId}. Cannot send email.`);
+        return;
+      }
+
+      // 3. Prepare parameters for PDF
+      const details = {
+        applicationNumber: application.applicationNumber || 'N/A',
+        borrowerName: borrowerName || 'Valued Customer',
+        bankName: application.bankName || payload.bankId || 'Partner Bank',
+        amount: payload.amount || 0,
+        utrNumber: payload.utrNumber || 'N/A',
+        trancheNumber: payload.trancheNumber || 1,
+        transferMode: payload.transferMode || 'IMPS/NEFT/RTGS',
+        date: new Date().toLocaleDateString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }),
+      };
+
+      // 4. Generate PDF buffer
+      const pdfBuffer = await this.generateDisbursementPdf(details);
+
+      // 5. Build premium email body
+      const subject = `Successful Disbursement of Your Education Loan - ${details.applicationNumber}`;
+      const emailHtml = this.buildDisbursementEmailHtml(details);
+
+      // 6. Send Email with PDF attachment
+      await this.emailService.sendMail(
+        email,
+        subject,
+        emailHtml,
+        `Dear ${details.borrowerName}, We are pleased to inform you that your education loan tranche of Rs. ${details.amount.toLocaleString('en-IN')} has been successfully disbursed. Please find the receipt attached.`,
+        undefined,
+        [
+          {
+            filename: `Disbursement_Receipt_${details.applicationNumber}.pdf`,
+            content: pdfBuffer,
+            contentType: 'application/pdf',
+          },
+        ]
+      );
+
+      // 7. Create in-app notification as well
+      await this.createNotification(
+        payload.userId || application.userId,
+        `💸 Loan Disbursement Successful`,
+        `Tranche ${details.trancheNumber} of ₹${details.amount.toLocaleString('en-IN')} has been disbursed. Receipt has been emailed to you.`,
+        'bank_disbursed',
+        {
+          applicationId: payload.applicationId,
+          amount: payload.amount,
+          utrNumber: details.utrNumber,
+        }
+      );
+
+    } catch (error) {
+      this.logger.error(`Failed to handle bank application disbursed event: ${error.message}`, error.stack);
+    }
+  }
+
+  /**
+   * Programmatically generate premium disbursement receipt PDF buffer using pdfkit
+   */
+  private generateDisbursementPdf(details: any): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({ margin: 50 });
+        const buffers: Buffer[] = [];
+        doc.on('data', buffers.push.bind(buffers));
+        doc.on('end', () => resolve(Buffer.concat(buffers)));
+        doc.on('error', (err) => reject(err));
+
+        // Styling Palette
+        const primaryColor = '#6605c7'; // Vidya Loan Deep Purple
+        const textColor = '#1f2937';
+        const lightGray = '#f3f4f6';
+        const darkGray = '#4b5563';
+
+        // --- Branded Header ---
+        doc.fillColor(primaryColor)
+           .fontSize(24)
+           .text('Vidya Loan', 50, 50, { characterSpacing: 1 });
+
+        doc.fillColor(darkGray)
+           .fontSize(10)
+           .text('Education Loan Portal', 50, 80);
+
+        doc.fillColor(textColor)
+           .fontSize(16)
+           .text('DISBURSEMENT RECEIPT', 350, 55, { align: 'right' });
+
+        doc.strokeColor(primaryColor)
+           .lineWidth(2)
+           .moveTo(50, 100)
+           .lineTo(550, 100)
+           .stroke();
+
+        // --- Details Section ---
+        doc.y = 130;
+
+        // Draw a light grey background card for the amount
+        doc.fillColor(lightGray)
+           .rect(50, doc.y, 500, 70)
+           .fill();
+
+        doc.fillColor(textColor)
+           .fontSize(11)
+           .text('DISBURSED AMOUNT', 70, doc.y + 15);
+
+        doc.fillColor(primaryColor)
+           .fontSize(22);
+        doc.font('Helvetica-Bold')
+           .text(`INR ${Number(details.amount).toLocaleString('en-IN')}.00`, 70, doc.y + 35);
+        doc.font('Helvetica');
+
+        doc.y += 90;
+
+        // Details grid
+        const drawGridItem = (label: string, value: string, x: number, y: number) => {
+          doc.fillColor(darkGray)
+             .fontSize(10)
+             .text(label, x, y);
+          doc.fillColor(textColor)
+             .fontSize(11)
+             .text(value, x, y + 15, { width: 220 });
+        };
+
+        const startY = doc.y;
+        drawGridItem('Application Number', details.applicationNumber, 50, startY);
+        drawGridItem('Borrower Name', details.borrowerName, 300, startY);
+
+        doc.y += 45;
+        const secondY = doc.y;
+        drawGridItem('Lending Institution (Bank)', details.bankName, 50, secondY);
+        drawGridItem('Disbursement Date', details.date, 300, secondY);
+
+        doc.y += 45;
+        const thirdY = doc.y;
+        drawGridItem('Transaction Reference (UTR)', details.utrNumber, 50, thirdY);
+        drawGridItem('Payment Mode', details.transferMode, 300, thirdY);
+
+        doc.y += 45;
+        const fourthY = doc.y;
+        drawGridItem('Tranche Number', `Tranche ${details.trancheNumber}`, 50, fourthY);
+
+        // Divider
+        doc.y += 60;
+        doc.strokeColor('#e5e7eb')
+           .lineWidth(1)
+           .moveTo(50, doc.y)
+           .lineTo(550, doc.y)
+           .stroke();
+
+        // --- Note/Disclaimer ---
+        doc.y += 20;
+        doc.fillColor(darkGray)
+           .fontSize(9)
+           .text('Please Note:', 50, doc.y, { underline: true });
+
+        doc.text(
+          '1. This receipt is digitally generated by Vidya Loan platform upon confirmation of payment from the lending partner.\n' +
+          '2. The actual credit time to the beneficiary account might vary depending on bank clearing cycles.\n' +
+          '3. For any discrepancies or queries regarding this transfer, please reach out to support@vidyaloan.com or raise a ticket in your student portal.',
+          50, doc.y + 15,
+          { lineGap: 4, width: 500 }
+        );
+
+        // --- Footer ---
+        doc.fontSize(8)
+           .fillColor('#9ca3af')
+           .text('Thank you for choosing Vidya Loan for your education journey.', 50, 700, { align: 'center', width: 500 });
+
+        doc.end();
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
+  /**
+   * Build premium HTML body for disbursement confirmation email
+   */
+  private buildDisbursementEmailHtml(details: any): string {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px; color: #1f2937;">
+        <div style="background: linear-gradient(135deg, #6605c7 0%, #8b5cf6 100%); padding: 30px; border-radius: 10px; text-align: center; margin-bottom: 24px;">
+          <h1 style="color: white; margin: 0; font-size: 26px; letter-spacing: 1px;">Vidya Loan</h1>
+          <p style="color: #e9d5ff; margin: 5px 0 0 0; font-size: 14px;">Your Education Journey, Funded</p>
+        </div>
+        
+        <div style="padding: 0 10px;">
+          <h2 style="color: #111827; margin-bottom: 16px; font-size: 20px;">Loan Disbursement Confirmed!</h2>
+          <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">Dear <strong>${details.borrowerName}</strong>,</p>
+          <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">We are pleased to inform you that a tranche disbursement for your education loan has been successfully processed by <strong>${details.bankName}</strong>.</p>
+          
+          <div style="background-color: #f5f3ff; border-left: 4px solid #6605c7; padding: 20px; border-radius: 8px; margin: 24px 0;">
+            <span style="color: #7c3aed; font-weight: 600; font-size: 13px; display: block; text-transform: uppercase; letter-spacing: 0.5px;">Amount Disbursed</span>
+            <span style="font-size: 28px; font-weight: bold; color: #6605c7; display: block; margin-top: 5px;">₹${Number(details.amount).toLocaleString('en-IN')}.00</span>
+          </div>
+
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px;">
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280; border-bottom: 1px solid #f3f4f6;">Application Number</td>
+              <td style="padding: 8px 0; font-weight: bold; text-align: right; border-bottom: 1px solid #f3f4f6; color: #111827;">${details.applicationNumber}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280; border-bottom: 1px solid #f3f4f6;">Transaction Ref (UTR)</td>
+              <td style="padding: 8px 0; font-weight: bold; text-align: right; border-bottom: 1px solid #f3f4f6; color: #111827;">${details.utrNumber}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280; border-bottom: 1px solid #f3f4f6;">Disbursement Date</td>
+              <td style="padding: 8px 0; font-weight: bold; text-align: right; border-bottom: 1px solid #f3f4f6; color: #111827;">${details.date}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280; border-bottom: 1px solid #f3f4f6;">Payment Mode</td>
+              <td style="padding: 8px 0; font-weight: bold; text-align: right; border-bottom: 1px solid #f3f4f6; color: #111827;">${details.transferMode}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #6b7280;">Tranche</td>
+              <td style="padding: 8px 0; font-weight: bold; text-align: right; color: #111827;">Tranche ${details.trancheNumber}</td>
+            </tr>
+          </table>
+
+          <p style="color: #4b5563; font-size: 15px; line-height: 1.6;">We have attached the official <strong>Disbursement Receipt PDF</strong> to this email for your reference and records.</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.FRONTEND_URL || 'https://vidyaloan.com'}/student/dashboard" style="background-color: #6605c7; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px -1px rgba(102, 5, 199, 0.2);">
+              Go to Student Dashboard
+            </a>
+          </div>
+
+          <div style="border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 30px;">
+            <p style="color: #9ca3af; font-size: 12px; text-align: center; line-height: 1.5;">
+              If you have any questions or did not authorize this, please contact our support team immediately at <a href="mailto:support@vidyaloan.com" style="color: #6605c7; text-decoration: none;">support@vidyaloan.com</a>.<br>
+              © ${new Date().getFullYear()} Vidya Loan. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
   }
 }
 

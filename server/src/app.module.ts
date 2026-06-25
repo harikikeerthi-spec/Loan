@@ -26,6 +26,7 @@ import { NotificationModule } from './notification/notification.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { join } from 'path';
 import { CampaignModule } from './campaign/campaign.module';
+import { AgentModule } from './agent/agent.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { CampaignModule } from './campaign/campaign.module';
     BankModule,
     NotificationModule,
     CampaignModule,
+    AgentModule,
   ],
   controllers: [AppController],
   providers: [AppService],
