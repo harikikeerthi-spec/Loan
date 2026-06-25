@@ -3,8 +3,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, differenceInDays } from "date-fns";
-import { motion } from "framer-motion";
+import { format, differenceInDays, parseISO } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -18,11 +18,9 @@ import {
     ArcElement,
     Filler
 } from 'chart.js';
-import { Doughnut } from 'react-chartjs-2';
+import { Line, Doughnut } from 'react-chartjs-2';
 import { adminApi } from "@/lib/api";
-import WebGLDisbursementPulse from "@/components/bank/WebGLDisbursementPulse";
-import WebGLUnderwritingPipeline from "@/components/bank/WebGLUnderwritingPipeline";
-import WebGLComplianceShield from "@/components/bank/WebGLComplianceShield";
+import ChatInterface from "@/components/Chat/ChatInterface";
 
 ChartJS.register(
     CategoryScale,
@@ -39,19 +37,10 @@ ChartJS.register(
 
 // --- Components ---
 
-interface QuickActionProps {
-    icon: string;
-    label: string;
-    sublabel: string;
-    bgColor?: string;
-    iconColor?: string;
-    onClick: () => void;
-}
-
-const QuickAction = ({ icon, label, sublabel, bgColor, iconColor, onClick }: QuickActionProps) => (
+const QuickAction = ({ icon, label, sublabel, bgColor, iconColor, onClick }: any) => (
     <button
         onClick={onClick}
-        className="glass-container-card p-6 rounded-[2.5rem] group hover:bg-[#6605c7]/5 text-left relative overflow-hidden"
+        className="glass-card p-6 rounded-[2.5rem] bg-white group hover:bg-[#6605c7]/5 transition-all text-left border-[#6605c7]/10 relative overflow-hidden"
     >
         <div className="relative z-10">
             <div className={`w-12 h-12 rounded-2xl ${bgColor || 'bg-[#6605c7]/10'} flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500`}>
@@ -68,58 +57,31 @@ const QuickAction = ({ icon, label, sublabel, bgColor, iconColor, onClick }: Qui
     </button>
 );
 
-interface StatMiniCardProps {
-    label: string;
-    value: string | number;
-    subtext: string;
-    trendType: "up" | "down" | "neutral" | "info" | "none";
-    trendLabel?: string;
-    icon: string;
-    bgColor?: string;
-    iconColor?: string;
-    delay?: number;
-    triggerAudit?: boolean;
-}
-
-const StatMiniCard = ({ label, value, subtext, trendType, trendLabel, icon, bgColor, iconColor, delay = 0, triggerAudit = false }: StatMiniCardProps) => {
-    let trendColorClass = "bg-gray-850 text-gray-400";
+const StatMiniCard = ({ label, value, subtext, trendType, trendLabel, icon, bgColor, iconColor, delay = 0 }: any) => {
+    let trendColorClass = "bg-gray-50 text-gray-500";
     let trendIcon = "trending_flat";
     if (trendType === "up") {
-        trendColorClass = "bg-emerald-950/50 text-emerald-400 border border-emerald-800/30";
+        trendColorClass = "bg-emerald-50 text-emerald-600 border border-emerald-100/30";
         trendIcon = "trending_up";
     } else if (trendType === "down") {
-        trendColorClass = "bg-rose-950/50 text-rose-400 border border-rose-800/30";
+        trendColorClass = "bg-rose-50 text-rose-600 border border-rose-100/30";
         trendIcon = "trending_down";
     } else if (trendType === "neutral" || trendType === "info") {
-        trendColorClass = "bg-purple-950/50 text-purple-400 border border-purple-800/30";
+        trendColorClass = "bg-purple-50 text-purple-650 border border-purple-100/30";
         trendIcon = "sync";
     }
-
-    let glowColor = "#8b24e5";
-    if (iconColor?.includes("amber") || bgColor?.includes("amber")) glowColor = "#f59e0b";
-    else if (iconColor?.includes("blue") || bgColor?.includes("blue")) glowColor = "#3b82f6";
-    else if (iconColor?.includes("emerald") || bgColor?.includes("emerald")) glowColor = "#10b981";
-    else if (iconColor?.includes("indigo") || bgColor?.includes("indigo")) glowColor = "#6366f1";
 
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay, duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
-            className={`volumetric-block p-4.5 rounded-2xl relative overflow-hidden group ${triggerAudit ? 'audit-active' : ''}`}
+            className="glass-card stat-card-gradient p-4 rounded-2xl relative overflow-hidden group"
         >
-            {/* Ripple wave for system audit simulation */}
-            <div className="audit-ripple-container">
-                <div className="audit-ripple-wave" />
-            </div>
-
             <div className="flex justify-between items-start relative z-10">
-                <div className="space-y-2.5">
-                    <p className="text-gray-400 text-[9px] font-black uppercase tracking-[0.2em]">{label}</p>
-                    <div 
-                        className="text-2xl font-black font-mono emissive-filament leading-none tracking-tight"
-                        style={{ '--glow-color': glowColor } as any}
-                    >
+                <div className="space-y-2">
+                    <p className="text-gray-500 text-[9px] font-black uppercase tracking-[0.2em]">{label}</p>
+                    <div className="text-2xl font-black font-mono text-gray-900 leading-none tracking-tight">
                         {value}
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap">
@@ -129,10 +91,10 @@ const StatMiniCard = ({ label, value, subtext, trendType, trendLabel, icon, bgCo
                                 {trendLabel}
                             </div>
                         )}
-                        <span className="text-[9.5px] font-medium text-gray-500 uppercase tracking-wider">{subtext}</span>
+                        <span className="text-[9.5px] font-medium text-gray-400 uppercase tracking-wider">{subtext}</span>
                     </div>
                 </div>
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-12 duration-500 bg-white/5 border border-white/10 shadow-sm`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 group-hover:rotate-12 duration-500 ${bgColor || 'bg-[#6605c7]/10'} shadow-sm`}>
                     <span className={`material-symbols-outlined text-xl ${iconColor || 'text-[#6605c7]'}`}>{icon}</span>
                 </div>
             </div>
@@ -140,81 +102,25 @@ const StatMiniCard = ({ label, value, subtext, trendType, trendLabel, icon, bgCo
     );
 };
 
-interface DashboardStats {
-    total?: number;
-    statusStats?: {
-        pending?: number;
-        submitted?: number;
-        processing?: number;
-        approved?: number;
-        disbursed?: number;
-        under_bank_review?: number;
-        rejected?: number;
-        sanctioned?: number;
-        disbursement_confirmed?: number;
-        [key: string]: number | undefined;
-    };
-}
-
-interface PortfolioAnalysis {
-    disbursementTrend?: { month: string; amount: number }[];
-    topUniversities?: { name: string; count: number; approvalRate: number }[];
-}
-
-interface ComplianceReport {
-    overallCompliance?: number;
-    gstCompliance?: {
-        status?: string;
-        detail?: string;
-    };
-}
-
-interface Application {
-    id: string;
-    firstName?: string;
-    lastName?: string;
-    lanNumber?: string;
-    applicationNumber?: string;
-    status?: string;
-    stage?: string;
-    amount?: number;
-    sanctionAmount?: number;
-    priorityLevel?: string;
-    priority?: string;
-    lanEnteredAt?: string;
-    submittedAt?: string;
-    createdAt?: string;
-    approvedAt?: string;
-    rejectedAt?: string;
-    disbursedAt?: string;
-    sanctionedAt?: string;
-    universityName?: string;
-    remarks?: string;
+interface AdminStatsResponse {
+    success?: boolean;
+    data?: any;
 }
 
 
-
-const EXCLUDE_STATUSES = ["submitted", "pending", "draft", "docs_received", "staff_verified", "application_submitted"];
 
 // --- Page ---
 
 export default function BankDashboard() {
     const router = useRouter();
-    useAuth();
-    const [stats, setStats] = useState<DashboardStats | null>(null);
-    const [portfolio, setPortfolio] = useState<PortfolioAnalysis | null>(null);
-    const [compliance, setCompliance] = useState<ComplianceReport | null>(null);
-    const [applications, setApplications] = useState<Application[]>([]);
+    const { user } = useAuth();
+    const [stats, setStats] = useState<any>(null);
+    const [portfolio, setPortfolio] = useState<any>(null);
+    const [compliance, setCompliance] = useState<any>(null);
+    const [applications, setApplications] = useState<any[]>([]);
     const [activeTab, setActiveTab] = useState<"urgent" | "new" | "queries" | "disbursements" | "pending">("urgent");
     const [loading, setLoading] = useState(true);
-    const [isAuditing, setIsAuditing] = useState(false);
-
-    const triggerAuditRipple = () => {
-        setIsAuditing(true);
-        setTimeout(() => {
-            setIsAuditing(false);
-        }, 1500);
-    };
+    const [mounted, setMounted] = useState(false);
 
     const [currentBankId] = useState<string>(
         typeof window !== 'undefined'
@@ -229,12 +135,7 @@ export default function BankDashboard() {
                 adminApi.getPortfolioAnalysis(bankId).catch(err => { console.error("Portfolio API error:", err); return null; }),
                 adminApi.getComplianceReport(bankId).catch(err => { console.error("Compliance API error:", err); return null; }),
                 adminApi.getApplications({ bank: bankId }).catch(err => { console.error("Apps API error:", err); return null; })
-            ]) as [
-                { success?: boolean; data?: DashboardStats } | null,
-                { success?: boolean; data?: PortfolioAnalysis } | null,
-                { success?: boolean; data?: ComplianceReport } | any,
-                { success?: boolean; data?: Application[] } | null
-            ];
+            ]) as [any, any, any, any];
 
             if (statsRes && statsRes.success) {
                 setStats(statsRes.data);
@@ -260,19 +161,21 @@ export default function BankDashboard() {
     };
 
     useEffect(() => {
+        setMounted(true);
         fetchAllData(currentBankId);
-    }, [currentBankId]);
+    }, []);
 
     // --- F13 Count + ₹ KPI Memos ---
+    const excludeStatuses = ["submitted", "pending", "draft", "docs_received", "staff_verified", "application_submitted"];
 
     const incomingApps = useMemo(() => {
-        return applications.filter(app => !app.lanNumber && !["rejected", "approved", "sanctioned", "disbursed", "disbursement_confirmed", ...EXCLUDE_STATUSES].includes(app.status || ""));
+        return applications.filter(app => !app.lanNumber && !["rejected", "approved", "sanctioned", "disbursed", "disbursement_confirmed", ...excludeStatuses].includes(app.status));
     }, [applications]);
     const incomingCount = incomingApps.length;
     const incomingVal = incomingApps.reduce((acc, app) => acc + (app.amount || 0), 0);
 
     const loggedApps = useMemo(() => {
-        return applications.filter(app => app.lanNumber && !["approved", "sanctioned", "rejected", "disbursed", "disbursement_confirmed", ...EXCLUDE_STATUSES].includes(app.status || ""));
+        return applications.filter(app => app.lanNumber && !["approved", "sanctioned", "rejected", "disbursed", "disbursement_confirmed", ...excludeStatuses].includes(app.status));
     }, [applications]);
     const loggedCount = loggedApps.length;
     const loggedVal = loggedApps.reduce((acc, app) => acc + (app.amount || 0), 0);
@@ -287,8 +190,8 @@ export default function BankDashboard() {
         const decided = applications.filter(app => (app.status === "approved" || app.status === "sanctioned" || app.status === "disbursed" || app.status === "disbursement_confirmed" || app.status === "rejected") && (app.approvedAt || app.rejectedAt || app.disbursedAt || app.sanctionedAt));
         if (decided.length === 0) return 4.2;
         const totalDays = decided.reduce((acc, app) => {
-            const start = new Date(app.submittedAt || app.createdAt || "");
-            const end = new Date(app.approvedAt || app.rejectedAt || app.disbursedAt || app.sanctionedAt || "");
+            const start = new Date(app.submittedAt || app.createdAt);
+            const end = new Date(app.approvedAt || app.rejectedAt || app.disbursedAt || app.sanctionedAt);
             const diff = differenceInDays(end, start);
             return acc + (diff >= 0 ? diff : 0);
         }, 0);
@@ -296,7 +199,7 @@ export default function BankDashboard() {
     }, [applications]);
 
     const pipelineVal = useMemo(() => {
-        const active = applications.filter(app => !["approved", "sanctioned", "disbursed", "disbursement_confirmed", "rejected", ...EXCLUDE_STATUSES].includes(app.status || ""));
+        const active = applications.filter(app => !["approved", "sanctioned", "disbursed", "disbursement_confirmed", "rejected", ...excludeStatuses].includes(app.status));
         return active.reduce((acc, app) => acc + (app.amount || 0), 0);
     }, [applications]);
 
@@ -307,12 +210,12 @@ export default function BankDashboard() {
             const dateStr = app.lanEnteredAt || app.submittedAt || app.createdAt;
             const diff = dateStr ? differenceInDays(new Date(), new Date(dateStr)) : 0;
             const isOld = diff >= 4;
-            return (isHigh || isOld) && !["approved", "sanctioned", "disbursed", "disbursement_confirmed", "rejected", ...EXCLUDE_STATUSES].includes(app.status || "");
+            return (isHigh || isOld) && !["approved", "sanctioned", "disbursed", "disbursement_confirmed", "rejected", ...excludeStatuses].includes(app.status);
         });
     }, [applications]);
 
     const newQueue = useMemo(() => {
-        return applications.filter(app => !app.lanNumber && !["approved", "sanctioned", "disbursed", "disbursement_confirmed", "rejected", ...EXCLUDE_STATUSES].includes(app.status || ""));
+        return applications.filter(app => !app.lanNumber && !["approved", "sanctioned", "disbursed", "disbursement_confirmed", "rejected", ...excludeStatuses].includes(app.status));
     }, [applications]);
 
     const queryQueue = useMemo(() => {
@@ -324,7 +227,7 @@ export default function BankDashboard() {
     }, [applications]);
 
     const pendingQueue = useMemo(() => {
-        return applications.filter(app => app.lanNumber && !["approved", "sanctioned", "disbursed", "disbursement_confirmed", "rejected", ...EXCLUDE_STATUSES].includes(app.status || ""));
+        return applications.filter(app => app.lanNumber && !["approved", "sanctioned", "disbursed", "disbursement_confirmed", "rejected", ...excludeStatuses].includes(app.status));
     }, [applications]);
 
     // Derived Charts Data
@@ -357,6 +260,42 @@ export default function BankDashboard() {
             }]
         };
     }, [stats]);
+
+    const disbursementData = useMemo(() => {
+        const hasData = portfolio?.disbursementTrend?.some((t: any) => t.amount > 0);
+        const chartDataValues = hasData
+            ? portfolio.disbursementTrend.map((t: any) => t.amount)
+            : [0.45, 0.52, 0.60, 0.48, 0.75, 0.90];
+        const chartLabels = portfolio?.disbursementTrend
+            ? portfolio.disbursementTrend.map((t: any) => t.month)
+            : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+
+        return {
+            labels: chartLabels,
+            datasets: [{
+                label: 'Capital Flow (₹ Cr)',
+                data: chartDataValues,
+                borderColor: '#6605c7',
+                backgroundColor: (context: any) => {
+                    const chart = context.chart;
+                    const { ctx, chartArea } = chart;
+                    if (!chartArea) return 'rgba(102, 5, 199, 0.03)';
+                    const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                    gradient.addColorStop(0, 'rgba(102, 5, 199, 0.01)');
+                    gradient.addColorStop(1, 'rgba(102, 5, 199, 0.08)');
+                    return gradient;
+                },
+                tension: 0.4,
+                fill: true,
+                pointRadius: 0,
+                pointHoverRadius: 8,
+                pointHoverBackgroundColor: '#6605c7',
+                pointHoverBorderColor: '#fff',
+                pointHoverBorderWidth: 4,
+                borderWidth: 4,
+            }]
+        };
+    }, [portfolio]);
 
     const funnelStats = useMemo(() => {
         if (!stats?.statusStats) {
@@ -416,12 +355,7 @@ export default function BankDashboard() {
     }
 
     return (
-        <div className="relative min-h-screen overflow-hidden">
-            {/* Ambient moving glowing mesh gradient orbs */}
-            <div className="glowing-orb orb-primary top-10 -left-44" />
-            <div className="glowing-orb orb-secondary bottom-32 -right-44" />
-
-            <div className="p-5 lg:p-8 space-y-6 animate-fade-in relative z-10">
+        <div className="p-5 lg:p-8 space-y-6 animate-fade-in relative z-10">
             {/* Header / Greet Section */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
                 <div className="space-y-4">
@@ -443,7 +377,6 @@ export default function BankDashboard() {
                     <motion.button
                         whileHover={{ y: -2 }}
                         onClick={() => {
-                            triggerAuditRipple();
                             const content = document.querySelector('.admin-table')?.parentElement?.innerText || 'Dashboard Data';
                             const element = document.createElement("a");
                             const file = new Blob([content], { type: 'text/plain' });
@@ -461,12 +394,7 @@ export default function BankDashboard() {
                     <motion.button
                         whileHover={{ y: -2, scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => {
-                            triggerAuditRipple();
-                            setTimeout(() => {
-                                router.push('/bank/applications');
-                            }, 1200);
-                        }}
+                        onClick={() => router.push('/bank/applications')}
                         className="px-8 py-4 rounded-[1.5rem] bg-[#111111] hover:bg-black text-white border border-white/10 flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] shadow-md hover:shadow-lg transition-all group"
                     >
                         <span className="material-symbols-outlined text-xl group-hover:rotate-90 transition-transform duration-500">add_circle</span>
@@ -487,7 +415,6 @@ export default function BankDashboard() {
                     iconColor="text-amber-600"
                     bgColor="bg-amber-50"
                     delay={0.1}
-                    triggerAudit={isAuditing}
                 />
                 <StatMiniCard
                     label="Logged Files"
@@ -499,7 +426,6 @@ export default function BankDashboard() {
                     iconColor="text-blue-600"
                     bgColor="bg-blue-50"
                     delay={0.2}
-                    triggerAudit={isAuditing}
                 />
                 <StatMiniCard
                     label="Sanctioned"
@@ -511,7 +437,6 @@ export default function BankDashboard() {
                     iconColor="text-emerald-600"
                     bgColor="bg-emerald-50"
                     delay={0.3}
-                    triggerAudit={isAuditing}
                 />
                 <StatMiniCard
                     label="Average TAT"
@@ -523,7 +448,6 @@ export default function BankDashboard() {
                     iconColor="text-indigo-600"
                     bgColor="bg-indigo-50"
                     delay={0.4}
-                    triggerAudit={isAuditing}
                 />
                 <StatMiniCard
                     label="Pipeline Value"
@@ -535,7 +459,6 @@ export default function BankDashboard() {
                     iconColor="text-[#6605c7]"
                     bgColor="bg-[#6605c7]/5"
                     delay={0.5}
-                    triggerAudit={isAuditing}
                 />
             </div>
 
@@ -546,7 +469,7 @@ export default function BankDashboard() {
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
-                    className="lg:col-span-8 glass-container-card p-6 rounded-3xl relative overflow-hidden group shadow-xl shadow-purple-900/[0.02]"
+                    className="lg:col-span-8 glass-card p-6 rounded-3xl border-[#6605c7]/10 bg-white/70 relative overflow-hidden group shadow-xl shadow-purple-900/[0.02]"
                 >
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 relative z-10">
                         <div className="flex items-center gap-3">
@@ -555,7 +478,7 @@ export default function BankDashboard() {
                             </div>
                             <div>
                                 <h3 className="text-base font-black font-display text-gray-900 tracking-tight">Disbursement Pulse</h3>
-                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.25em] mt-0.5">Capital Flow — Jan to Jun (3D Wavefront)</p>
+                                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.25em] mt-0.5">Capital Flow — Jan to Jun</p>
                             </div>
                         </div>
                         <div className="flex gap-1.5 p-1 bg-gray-50 rounded-xl border border-gray-100">
@@ -566,8 +489,43 @@ export default function BankDashboard() {
                             ))}
                         </div>
                     </div>
-                    <div className="h-[230px] relative z-10 overflow-hidden">
-                        <WebGLDisbursementPulse data={portfolio?.disbursementTrend || []} />
+                    <div className="h-[200px] relative z-10">
+                        <Line
+                            data={disbursementData}
+                            options={{
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { display: false },
+                                    tooltip: {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                                        titleColor: '#111',
+                                        bodyColor: '#6605c7',
+                                        padding: 12,
+                                        cornerRadius: 12,
+                                        displayColors: false,
+                                        borderColor: 'rgba(102, 5, 199, 0.15)',
+                                        borderWidth: 1,
+                                        titleFont: { weight: 'bold', size: 11 },
+                                        bodyFont: { weight: 'bold', size: 13 },
+                                        callbacks: { label: (c) => `₹ ${c.formattedValue} Cr` }
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        border: { display: false },
+                                        grid: { color: 'rgba(0,0,0,0.06)' },
+                                        ticks: { font: { weight: 'bold', size: 11 }, color: '#666', padding: 6 },
+                                        beginAtZero: true
+                                    },
+                                    x: {
+                                        border: { display: false },
+                                        grid: { display: false },
+                                        ticks: { font: { weight: 'bold', size: 11 }, color: '#666', padding: 4 }
+                                    }
+                                }
+                            }}
+                        />
                     </div>
                 </motion.div>
 
@@ -576,7 +534,7 @@ export default function BankDashboard() {
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.6 }}
-                    className="lg:col-span-4 glass-container-card p-6 rounded-3xl flex flex-col shadow-xl shadow-purple-900/[0.02]"
+                    className="lg:col-span-4 glass-card p-6 rounded-3xl border-[#6605c7]/10 bg-white/70 flex flex-col shadow-xl shadow-purple-900/[0.02]"
                 >
                     <h3 className="text-sm font-black font-display text-gray-900 mb-3 text-center uppercase tracking-widest">Application Status</h3>
                     <div className="relative flex items-center justify-center mb-4" style={{ height: 160 }}>
@@ -615,7 +573,7 @@ export default function BankDashboard() {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.65 }}
-                className="glass-container-card p-8 rounded-3xl text-left"
+                className="glass-card p-8 rounded-3xl border-[#6605c7]/10 bg-white/70 shadow-xl shadow-purple-900/[0.02] text-left"
             >
                 <div className="flex items-center gap-3 mb-6">
                     <div className="w-9 h-9 rounded-xl bg-[#6605c7]/5 flex items-center justify-center text-[#6605c7]">
@@ -623,12 +581,32 @@ export default function BankDashboard() {
                     </div>
                     <div>
                         <h3 className="text-base font-black font-display text-gray-900 tracking-tight">Underwriting Pipeline Funnel</h3>
-                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.25em] mt-0.5">Workflow conversion metrics across core phases (3D Pipeline)</p>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-[0.25em] mt-0.5">Workflow conversion metrics across core phases</p>
                     </div>
                 </div>
 
-                <div className="h-[180px] relative z-10">
-                    <WebGLUnderwritingPipeline stages={funnelStats} activeCases={incomingCount} />
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                    {funnelStats.map((item, idx) => (
+                        <div key={idx} className="relative p-4.5 bg-gray-50/50 hover:bg-white border border-gray-150 rounded-2xl transition-all group flex flex-col justify-between">
+                            <div className="space-y-1">
+                                <div className="flex justify-between items-center text-[9px] font-black uppercase text-gray-450 tracking-wider">
+                                    <span>Phase 0{idx + 1}</span>
+                                    <span className="font-mono text-[#6605c7]">{item.pct}%</span>
+                                </div>
+                                <h4 className="text-xs font-black text-gray-800 uppercase tracking-tight truncate mt-1">{item.stage}</h4>
+                            </div>
+
+                            <div className="mt-4.5 space-y-2">
+                                <div className="flex justify-between items-end text-xs font-black text-gray-900">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">caseload</span>
+                                    <span className="font-mono text-sm">{item.count} files</span>
+                                </div>
+                                <div className="w-full bg-gray-200/70 h-2.5 rounded-full overflow-hidden">
+                                    <div className={`${item.color} h-full rounded-full transition-all duration-1000 group-hover:scale-y-110`} style={{ width: `${item.pct}%` }} />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </motion.div>
 
@@ -638,7 +616,7 @@ export default function BankDashboard() {
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.7 }}
-                    className="lg:col-span-2 glass-container-card rounded-[3rem] overflow-hidden"
+                    className="lg:col-span-2 glass-card rounded-[3rem] border-[#6605c7]/10 bg-white/70 overflow-hidden shadow-2xl shadow-purple-900/[0.03]"
                 >
                     <div className="p-8 pb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div className="flex items-center gap-4">
@@ -689,7 +667,7 @@ export default function BankDashboard() {
                     </div>
 
                     <div className="p-8 pt-4">
-                        <div className="max-h-[380px] overflow-y-auto no-scrollbar">
+                        <div className="overflow-x-auto no-scrollbar max-h-[350px] overflow-y-auto">
                             {(() => {
                                 const activeQueue =
                                     activeTab === "urgent" ? urgentQueue :
@@ -709,67 +687,55 @@ export default function BankDashboard() {
                                 }
 
                                 return (
-                                    <div className="conveyor-belt-container">
-                                        <div className="conveyor-belt-track">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-[#6605c7]/[0.01] border-b border-gray-100 sticky top-0 bg-white z-10">
+                                            <tr>
+                                                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-[0.25em] text-[#6605c7]">Applicant Node</th>
+                                                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-[0.25em] text-[#6605c7]">Quantum Seek</th>
+                                                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-[0.25em] text-[#6605c7]">File Age</th>
+                                                <th className="px-4 py-4 text-[9px] font-black uppercase tracking-[0.25em] text-right text-[#6605c7]">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-50/50">
                                             {activeQueue.map((app, i) => {
                                                 const dateStr = app.lanEnteredAt || app.submittedAt || app.createdAt;
                                                 const ageDays = dateStr ? differenceInDays(new Date(), new Date(dateStr)) : 0;
-                                                
-                                                // Target age for SLA Warning/Breach is 4+ days
-                                                const isOld = ageDays >= 4;
-                                                const cardClass = isOld 
-                                                    ? "conveyor-card conveyor-card-old" 
-                                                    : "conveyor-card conveyor-card-young";
 
                                                 return (
-                                                    <div 
-                                                        key={app.id || i} 
-                                                        className={`${cardClass} p-4.5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4`}
-                                                    >
-                                                        <div className="flex items-center gap-4">
-                                                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-[#6605c7]/10 to-transparent flex items-center justify-center font-black text-[#6605c7] text-xs border border-[#6605c7]/5">
-                                                                {app.firstName?.[0] || "A"}{app.lastName?.[0] || "P"}
-                                                            </div>
-                                                            <div>
-                                                                <div className="flex items-center gap-2 flex-wrap">
-                                                                    <h4 className="text-[13px] font-black text-gray-900 uppercase">
-                                                                        {app.firstName} {app.lastName}
-                                                                    </h4>
-                                                                    <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider ${isOld ? "bg-rose-50 text-rose-500 border border-rose-100/50" : "bg-emerald-50 text-emerald-500 border border-emerald-100/50"}`}>
-                                                                        {isOld ? "SLA Alert" : "Stable Flow"}
-                                                                    </span>
+                                                    <tr key={app.id || i} className="group hover:bg-[#6605c7]/[0.03] transition-all duration-300">
+                                                        <td className="px-4 py-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#6605c7]/10 to-transparent flex items-center justify-center font-black text-[#6605c7] text-[10px] border border-[#6605c7]/5 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500">
+                                                                    {app.firstName?.[0] || "A"}{app.lastName?.[0] || "P"}
                                                                 </div>
-                                                                <p className="text-[9px] font-bold text-gray-400 font-mono tracking-tighter uppercase mt-1">
-                                                                    {app.lanNumber || app.applicationNumber || "Pending LAN"}
-                                                                </p>
+                                                                <div>
+                                                                    <p className="text-xs font-black text-gray-950 tracking-tight uppercase">{app.firstName} {app.lastName}</p>
+                                                                    <p className="text-[8.5px] font-bold text-gray-400 font-mono tracking-tighter uppercase mt-0.5">{app.lanNumber || app.applicationNumber || "Pending LAN"}</p>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                        
-                                                        <div className="flex flex-col md:items-end gap-0.5">
-                                                            <div className="text-[13.5px] font-black text-[#6605c7] font-mono leading-none">
-                                                                ₹{app.amount?.toLocaleString()}
-                                                            </div>
-                                                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                                                                {app.universityName || "Global University"}
-                                                            </p>
-                                                        </div>
-
-                                                        <div className="flex items-center gap-4 shrink-0 w-full md:w-auto justify-between md:justify-end">
-                                                            <span className={`px-2.5 py-1 rounded-full text-[8.5px] font-black uppercase tracking-wider ${isOld ? "bg-rose-100/30 text-rose-600 border border-rose-200/20" : "bg-emerald-100/30 text-emerald-600 border border-emerald-200/20"}`}>
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <p className="text-xs font-black text-[#6605c7] font-mono tracking-tight">₹{app.amount?.toLocaleString()}</p>
+                                                            <p className="text-[8.5px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{app.universityName || "Global University"}</p>
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <span className={`px-2 py-0.5 rounded-full text-[8.5px] font-black uppercase tracking-wider ${ageDays >= 4 ? "bg-rose-50 text-rose-600 border border-rose-100" : "bg-gray-50 text-gray-500 border border-gray-100"}`}>
                                                                 {ageDays} {ageDays === 1 ? "day" : "days"} old
                                                             </span>
+                                                        </td>
+                                                        <td className="px-4 py-4 text-right">
                                                             <button
                                                                 onClick={() => router.push(`/bank/applications?id=${app.id}`)}
-                                                                className="px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all tactile-btn"
+                                                                className="px-3.5 py-1.5 bg-[#6605c7]/5 hover:bg-[#6605c7] hover:text-white text-[#6605c7] text-[9px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm"
                                                             >
                                                                 Review
                                                             </button>
-                                                        </div>
-                                                    </div>
+                                                        </td>
+                                                    </tr>
                                                 );
                                             })}
-                                        </div>
-                                    </div>
+                                        </tbody>
+                                    </table>
                                 );
                             })()}
                         </div>
@@ -783,7 +749,7 @@ export default function BankDashboard() {
                     transition={{ delay: 0.8 }}
                     className="space-y-4"
                 >
-                    <div className="glass-container-card p-5 rounded-2xl relative overflow-hidden group">
+                    <div className="glass-card p-5 rounded-2xl relative overflow-hidden group">
                         <h3 className="text-sm font-black font-display text-gray-900 mb-4 tracking-tight relative z-10">Direct Commands</h3>
                         <div className="grid grid-cols-1 gap-2.5 relative z-10">
                             <QuickAction icon="chat_bubble" label="Initialize Chat" sublabel="WhatsApp Secure Channel" onClick={() => router.push('/bank/chat')} />
@@ -793,7 +759,7 @@ export default function BankDashboard() {
                     </div>
 
                     {portfolio?.topUniversities && portfolio.topUniversities.length > 0 && (
-                        <div className="glass-container-card p-5 rounded-2xl relative overflow-hidden group">
+                        <div className="glass-card p-5 rounded-2xl relative overflow-hidden group">
                             <div className="flex justify-between items-center mb-3">
                                 <h3 className="text-xs font-black font-display text-gray-900 uppercase tracking-widest">Top University Partners</h3>
                                 <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Approved %</span>
@@ -817,56 +783,43 @@ export default function BankDashboard() {
                         </div>
                     )}
 
-                    {(() => {
-                        const hasWarning = compliance?.gstCompliance?.status === 'warning' || false;
-                        
-                        return (
-                            <div
-                                className="p-5 rounded-2xl overflow-hidden relative group"
-                                style={{
-                                    background: 'linear-gradient(135deg, #121420 0%, #0a0b10 100%)',
-                                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                                    boxShadow: '0 8px 32px rgba(0,0,0,0.30)'
-                                }}
-                            >
-                                <div className="relative z-10 space-y-4">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <h3 className="text-sm font-black text-white uppercase tracking-widest">Compliance Shield</h3>
-                                            <p className="text-white/60 text-[9px] font-bold uppercase tracking-[0.18em] mt-1 leading-relaxed">
-                                                {compliance
-                                                    ? `Score: ${compliance.overallCompliance || 100}% • RBI & NHB Compliant`
-                                                    : 'Synchronized under RBI-GDRP-v2.0 protocol.'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-4 mt-2">
-                                        {/* Holographic 3D WebGL rotating mesh sphere */}
-                                        <div className="w-[60px] h-[60px] shrink-0 relative bg-white/5 rounded-xl overflow-hidden border border-white/10 shadow-inner">
-                                            <WebGLComplianceShield isWarning={hasWarning} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <span className="text-[9.5px] font-black text-white uppercase tracking-[0.25em] block">
-                                                {compliance ? (hasWarning ? 'Alert Flag Raised' : 'System Validated') : 'Sentinel Engine Live'}
-                                            </span>
-                                            <span className="text-[8.5px] font-bold text-white/40 uppercase tracking-wider block mt-1 leading-tight">
-                                                {compliance?.gstCompliance?.status === 'warning'
-                                                    ? compliance.gstCompliance.detail
-                                                    : 'All nodes stable & compliance verified.'}
-                                            </span>
-                                        </div>
-                                    </div>
+                    <div
+                        className="p-5 rounded-2xl overflow-hidden relative group"
+                        style={{
+                            background: 'linear-gradient(135deg, #6605c7 0%, #8b24e5 100%)',
+                            boxShadow: '0 8px 32px rgba(102,5,199,0.30)'
+                        }}
+                    >
+                        <div className="relative z-10">
+                            <h3 className="text-sm font-black text-white mb-2 uppercase tracking-widest">Compliance Shield</h3>
+                            <p className="text-white/70 text-[9px] font-bold uppercase tracking-[0.18em] mb-4 leading-relaxed">
+                                {compliance
+                                    ? `Score: ${compliance.overallCompliance || 100}% • RBI & NHB Compliant`
+                                    : 'Synchronized under RBI-GDRP-v2.0 protocol.'}
+                            </p>
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center">
+                                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_#4ade80]" />
+                                </div>
+                                <div>
+                                    <span className="text-[9px] font-black text-white uppercase tracking-[0.25em] block">
+                                        {compliance ? 'System Validated' : 'Sentinel Engine Live'}
+                                    </span>
+                                    <span className="text-[7.5px] font-bold text-white/40 uppercase tracking-widest">
+                                        {compliance?.gstCompliance?.status === 'warning'
+                                            ? compliance.gstCompliance.detail
+                                            : 'All nodes stable & verified'}
+                                    </span>
                                 </div>
                             </div>
-                        );
-                    })()}
+                        </div>
+                        <span className="material-symbols-outlined text-[8rem] absolute -right-6 -bottom-6 text-white/5 group-hover:scale-125 transition-transform duration-700 pointer-events-none select-none">verified_user</span>
+                    </div>
                 </motion.div>
             </div>
 
             {/* Mesh background subtle overlay */}
             <div className="fixed inset-0 bg-mesh-gradient opacity-[0.03] pointer-events-none -z-10" />
         </div>
-      </div>
     );
 }
