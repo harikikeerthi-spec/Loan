@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { staffProfileApi, adminApi } from "@/lib/api";
+import { staffProfileApi, adminApi, apiFetch } from "@/lib/api";
 import { useDialog } from "@/contexts/DialogContext";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -467,16 +467,9 @@ function ProfileDetail({ profile, onBack }: { profile: any; onBack: () => void }
       if (doc.filePath && !doc.filePath.startsWith('in.gov.') && !doc.filePath.startsWith('http')) {
         // For staff-profile docs, the filePath is an S3 key — ask backend for a signed URL
         // We don't have userId here, so use the view endpoint with the doc's userId if available
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-        const token = typeof window !== 'undefined'
-          ? (localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken'))
-          : null;
-        const res = await fetch(`${API_URL}/documents/presigned-view/${profile.linkedUserId || ''}/${doc.docType}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setPreviewUrl(data.url);
+        const resData = await apiFetch<{ success: boolean; url?: string }>(`/api/documents/presigned-view/${profile.linkedUserId || ''}/${doc.docType}`);
+        if (resData && resData.url) {
+          setPreviewUrl(resData.url);
           return;
         }
       }

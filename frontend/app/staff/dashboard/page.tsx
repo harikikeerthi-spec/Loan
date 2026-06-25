@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { io } from "socket.io-client";
-import { adminApi, authApi, documentApi, onboardingApi, staffProfileApi, referenceApi, applicationApi } from "@/lib/api";
+import { adminApi, authApi, documentApi, onboardingApi, staffProfileApi, referenceApi, applicationApi, apiFetch } from "@/lib/api";
 import { HttpApiPaths } from "@/lib/http-api-paths";
 import { normalizeOcrFieldsForAutofill, normalizeGenderForForm, normalizeCountryName, parseOcrDateForInput } from "@/lib/ocr-fields";
 import { examYearToEndDate, inferStartDate, normalizeStateName } from "@/lib/academic-ocr";
@@ -453,19 +453,11 @@ export default function StaffDashboardPage() {
                 return;
             }
             try {
-                const res = await fetch("/api/chat/conversations", {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/json",
-                    },
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (Array.isArray(data)) {
-                        const totalUnread = data.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
-                        if (activeSectionRef.current !== 'chat_customer') {
-                            setUnreadChatCount(totalUnread);
-                        }
+                const data = await apiFetch<any[]>("/api/chat/conversations");
+                if (Array.isArray(data)) {
+                    const totalUnread = data.reduce((sum: number, c: any) => sum + (c.unreadCount || 0), 0);
+                    if (activeSectionRef.current !== 'chat_customer') {
+                        setUnreadChatCount(totalUnread);
                     }
                 }
             } catch (err) {
@@ -1918,17 +1910,10 @@ export default function StaffDashboardPage() {
         const userId = getCreatedUserId();
         if (!userId) return;
         try {
-            const res = await fetch(HttpApiPaths.documents.presignedView(userId, docType), {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken')}`
-                }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success && data.url) {
-                    setPreviewDoc({ url: data.url, name: docType.toUpperCase().replace(/_/g, ' ') });
-                    return;
-                }
+            const data = await apiFetch<{ success: boolean; url?: string }>(HttpApiPaths.documents.presignedView(userId, docType));
+            if (data.success && data.url) {
+                setPreviewDoc({ url: data.url, name: docType.toUpperCase().replace(/_/g, ' ') });
+                return;
             }
         } catch (e) {
             console.error("Presigned view retrieval failed:", e);
@@ -7697,7 +7682,7 @@ export default function StaffDashboardPage() {
                                                                                             onClick={(e) => {
                                                                                                 e.stopPropagation();
                                                                                                 const appId = item.id || item._id;
-                                                                                                if (appId) window.open(`/staff/applications/${appId}`, '_blank');
+                                                                                                if (appId) router.push(`/staff/applications/${appId}`);
                                                                                             }}
                                                                                             className="text-[10px] bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-indigo-700 cursor-pointer transition-all font-bold uppercase tracking-widest inline-flex items-center gap-1.5 px-2 py-1 rounded whitespace-nowrap border border-slate-200"
                                                                                             title="Click to open Application Page"
@@ -7942,7 +7927,7 @@ export default function StaffDashboardPage() {
                                                                                     style={{ top: menuPosition.top, right: menuPosition.right }}
                                                                                 >
                                                                                     <button
-                                                                                        onClick={() => { setSelectedApp(item); setActiveMenuId(null); setMenuPosition(null); }}
+                                                                                        onClick={() => { router.push(`/staff/applications/${item.id || item._id}`); setActiveMenuId(null); setMenuPosition(null); }}
                                                                                         className="w-full flex gap-4 px-5 py-3 text-[12px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 transition-colors"
                                                                                     >
                                                                                         <span className="material-symbols-outlined text-[18px] text-indigo-500">visibility</span>

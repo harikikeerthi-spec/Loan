@@ -8,6 +8,20 @@ import { HTTP_API_PREFIX, HttpApiPaths } from "./http-api-paths";
 
 const API_URL = HTTP_API_PREFIX;
 
+export type TokenChangeCallback = (token: string | null) => void;
+const tokenChangeListeners = new Set<TokenChangeCallback>();
+
+export function subscribeToTokenChange(callback: TokenChangeCallback) {
+    tokenChangeListeners.add(callback);
+    return () => {
+        tokenChangeListeners.delete(callback);
+    };
+}
+
+export function notifyTokenChange(token: string | null) {
+    tokenChangeListeners.forEach(cb => cb(token));
+}
+
 type Portal = "student" | "staff" | "admin" | "bank" | "agent";
 
 function getPortalFromPathname(pathname?: string): Portal {
@@ -85,9 +99,9 @@ function clearAllPortalAuthStorage() {
 // ─── Agent ────────────────────────────────────────────────────────────
 export const agentApi = {
     getStats: () =>
-        fetch(`${API_URL}/applications/agent/stats`, { headers: authHeaders() }).then(handleResponse),
+        apiFetch(`${API_URL}/applications/agent/stats`),
     getApplications: () =>
-        fetch(`${API_URL}/applications/agent/list`, { headers: authHeaders() }).then(handleResponse),
+        apiFetch(`${API_URL}/applications/agent/list`),
 };
 
 function getToken(): string | null {
@@ -171,6 +185,7 @@ export async function apiFetch<T>(url: string, options: RequestInit = {}): Promi
                         if (newToken) {
                             console.log("[API] Refresh successful, retrying original request.");
                             localStorage.setItem(keys.token, newToken);
+                            notifyTokenChange(newToken);
                             // Retry with new token
                             return fetch(url, {
                                 ...options,
@@ -277,53 +292,46 @@ async function fetchBlob(url: string, options: RequestInit = {}): Promise<Blob> 
 // ─── Auth ─────────────────────────────────────────────────────────────
 export const authApi = {
     sendOtp: (email: string) =>
-        fetch(HttpApiPaths.auth.sendOtp(), {
+        apiFetch(HttpApiPaths.auth.sendOtp(), {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email }),
-        }).then(handleResponse),
+        }),
 
     verifyOtp: (email: string, otp: string, referralCode?: string) =>
-        fetch(HttpApiPaths.auth.verifyOtp(), {
+        apiFetch(HttpApiPaths.auth.verifyOtp(), {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email, otp, referralCode }),
-        }).then(handleResponse),
+        }),
 
     firebaseLogin: (idToken: string) =>
-        fetch(HttpApiPaths.auth.firebase(), {
+        apiFetch(HttpApiPaths.auth.firebase(), {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ idToken }),
-        }).then(handleResponse),
+        }),
 
     refresh: (refreshToken: string) =>
-        fetch(HttpApiPaths.auth.refresh(), {
+        apiFetch(HttpApiPaths.auth.refresh(), {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ refresh_token: refreshToken }),
-        }).then(handleResponse),
+        }),
 
     logout: (email: string) =>
-        fetch(HttpApiPaths.auth.logout(), {
+        apiFetch(HttpApiPaths.auth.logout(), {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ email }),
-        }).then(handleResponse),
+        }),
 
     getDashboard: (email: string) =>
-        fetch(HttpApiPaths.auth.dashboard(), {
+        apiFetch(HttpApiPaths.auth.dashboard(), {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify({ email }),
-        }).then(handleResponse),
+        }),
 
     getDashboardData: (userId: string) =>
-        fetch(HttpApiPaths.auth.dashboardData(), {
+        apiFetch(HttpApiPaths.auth.dashboardData(), {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify({ userId }),
-        }).then(handleResponse),
+        }),
 
     updateDetails: (email: string, details: {
         firstName: string;
@@ -333,11 +341,10 @@ export const authApi = {
         passportNumber?: string;
         intakeSeason?: string;
     }) =>
-        fetch(HttpApiPaths.auth.updateDetails(), {
+        apiFetch(HttpApiPaths.auth.updateDetails(), {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify({ email, ...details }),
-        }).then(handleResponse),
+        }),
 
     uploadDocument: (data: {
         userId: string;
@@ -345,42 +352,38 @@ export const authApi = {
         uploaded: boolean;
         filePath?: string;
     }) =>
-        fetch(HttpApiPaths.auth.uploadDocument(), {
+        apiFetch(HttpApiPaths.auth.uploadDocument(), {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 };
 
 // ─── Blogs ────────────────────────────────────────────────────────────
 export const blogApi = {
     getAll: (page = 1, limit = 10) => {
         const offset = (page - 1) * limit;
-        return fetch(`${API_URL}/blogs?offset=${offset}&limit=${limit}`).then(handleResponse);
+        return apiFetch(`${API_URL}/blogs?offset=${offset}&limit=${limit}`);
     },
 
     getBySlug: (slug: string) =>
-        fetch(`${API_URL}/blogs/${slug}`).then(handleResponse),
+        apiFetch(`${API_URL}/blogs/${slug}`),
 
     create: (data: Record<string, unknown>) =>
-        fetch(`${API_URL}/blogs`, {
+        apiFetch(`${API_URL}/blogs`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 
     update: (id: string, data: Record<string, unknown>) =>
-        fetch(`${API_URL}/blogs/${id}`, {
+        apiFetch(`${API_URL}/blogs/${id}`, {
             method: "PUT",
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 
     delete: (id: string) =>
-        fetch(`${API_URL}/blogs/${id}`, {
+        apiFetch(`${API_URL}/blogs/${id}`, {
             method: "DELETE",
-            headers: authHeaders(),
-        }).then(handleResponse),
+        }),
 };
 
 // ─── Community / Forum ───────────────────────────────────────────────
@@ -485,129 +488,115 @@ export const communityApi = {
 export const exploreApi = {
     getAll: (params?: Record<string, string>) => {
         const query = params ? "?" + new URLSearchParams(params).toString() : "";
-        return fetch(`${API_URL}/explore${query}`).then(handleResponse);
+        return apiFetch(`${API_URL}/explore${query}`);
     },
 
     getUniversities: () =>
-        fetch(`${API_URL}/explore/universities`).then(handleResponse),
+        apiFetch(`${API_URL}/explore/universities`),
 
-    getCourses: () => fetch(`${API_URL}/explore/courses`).then(handleResponse),
+    getCourses: () => apiFetch(`${API_URL}/explore/courses`),
 
     getScholarships: () =>
-        fetch(`${API_URL}/explore/scholarships`).then(handleResponse),
+        apiFetch(`${API_URL}/explore/scholarships`),
 };
 
 // ─── Applications ─────────────────────────────────────────────────────
 export const applicationApi = {
     create: (data: Record<string, unknown>) =>
-        fetch(HttpApiPaths.auth.createApplication(), {
+        apiFetch(HttpApiPaths.auth.createApplication(), {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 
     delete: (id: string) =>
-        fetch(HttpApiPaths.auth.applicationById(id), {
+        apiFetch(HttpApiPaths.auth.applicationById(id), {
             method: "DELETE",
-            headers: authHeaders(),
-        }).then(handleResponse),
+        }),
 };
 
 // ─── AI Tools ─────────────────────────────────────────────────────────
 export const aiApi = {
     sopReview: (data: Record<string, unknown>) =>
-        fetch(`${API_URL}/ai/sop-analysis`, {
+        apiFetch(`${API_URL}/ai/sop-analysis`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 
     sopHumanize: (text: string) =>
-        fetch(`${API_URL}/ai/humanize-sop`, {
+        apiFetch(`${API_URL}/ai/humanize-sop`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify({ text }),
-        }).then(handleResponse),
+        }),
 
     admitPredictor: (data: Record<string, unknown>) =>
-        fetch(`${API_URL}/ai/predict-admission`, {
+        apiFetch(`${API_URL}/ai/predict-admission`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 
     gradeConverter: (data: Record<string, unknown>) =>
-        fetch(`${API_URL}/ai/convert-grades`, {
+        apiFetch(`${API_URL}/ai/convert-grades`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 
     gradeAnalyzer: (data: Record<string, unknown>) =>
-        fetch(`${API_URL}/ai/analyze-grades`, {
+        apiFetch(`${API_URL}/ai/analyze-grades`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 
     loanEligibility: (data: Record<string, unknown>) =>
-        fetch(`${API_URL}/ai/eligibility-check`, {
+        apiFetch(`${API_URL}/ai/eligibility-check`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 
     compareUniversities: (uni1: string, uni2: string) =>
-        fetch(`${API_URL}/ai/compare-universities`, {
+        apiFetch(`${API_URL}/ai/compare-universities`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify({ uni1, uni2 }),
-        }).then(handleResponse),
+        }),
 
     compareShortlist: (shortlist: Array<{ name: string; course: string }>, profile: { bachelors?: string; workExp?: string; gpa?: string }) =>
-        fetch(`${API_URL}/ai/compare-shortlist`, {
+        apiFetch(`${API_URL}/ai/compare-shortlist`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify({ shortlist, profile }),
-        }).then(handleResponse),
+        }),
 
     searchAdvice: (query: string, type: 'university' | 'course', context?: any) =>
-        fetch(`${API_URL}/ai/search-advice`, {
+        apiFetch(`${API_URL}/ai/search-advice`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify({ query, type, context }),
-        }).then(handleResponse),
+        }),
 
     suggestTags: (title: string) =>
-        fetch(`${API_URL}/ai/suggest-tags`, {
+        apiFetch(`${API_URL}/ai/suggest-tags`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify({ title }),
-        }).then(handleResponse),
+        }),
 
     // Always use relative path; the Next.js rewrite proxy routes to the backend.
     aiSearch: (data: Record<string, unknown>) =>
-        fetch(`${API_URL}/ai/search`, {
+        apiFetch(`${API_URL}/ai/search`, {
             method: 'POST',
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 
     saveVisaReport: (data: Record<string, unknown>) =>
-        fetch(`${API_URL}/ai/visa-interview/save-report`, {
+        apiFetch(`${API_URL}/ai/visa-interview/save-report`, {
             method: "POST",
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 };
 
 // ─── Reference Data ───────────────────────────────────────────────────
 export const referenceApi = {
-    getBanks: () => fetch(HttpApiPaths.reference.banks()).then(handleResponse),
+    getBanks: () => apiFetch(HttpApiPaths.reference.banks()),
     getCountries: () =>
-        fetch(HttpApiPaths.reference.countries()).then(handleResponse),
+        apiFetch(HttpApiPaths.reference.countries()),
     getUniversities: () =>
-        fetch(HttpApiPaths.reference.universities()).then(handleResponse),
+        apiFetch(HttpApiPaths.reference.universities()),
 };
 
 // ─── Onboarding ───────────────────────────────────────────────────────
@@ -632,56 +621,45 @@ export const onboardingApi = {
 export const referralApi = {
     // Get user's referral code (or create one if doesn't exist)
     getMyCode: () =>
-        fetch(`${API_URL}/referral/my-code`, {
-            headers: authHeaders(),
-        }).then(handleResponse),
+        apiFetch(`${API_URL}/referral/my-code`),
 
     // Get referral statistics
     getStats: () =>
-        fetch(`${API_URL}/referral/stats`, {
-            headers: authHeaders(),
-        }).then(handleResponse),
+        apiFetch(`${API_URL}/referral/stats`),
 
     // Get list of referrals
     getList: (status?: string) => {
         const query = status ? `?status=${status}` : '';
-        return fetch(`${API_URL}/referral/list${query}`, {
-            headers: authHeaders(),
-        }).then(handleResponse);
+        return apiFetch(`${API_URL}/referral/list${query}`);
     },
 
     // Validate a referral code
     validateCode: (code: string) =>
-        fetch(`${API_URL}/referral/validate/${code}`).then(handleResponse),
+        apiFetch(`${API_URL}/referral/validate/${code}`),
 
     // Record a new referral (when someone signs up with code)
     recordReferral: (data: { referralCode: string; referredUserId: string }) =>
-        fetch(`${API_URL}/referral/record`, {
+        apiFetch(`${API_URL}/referral/record`, {
             method: 'POST',
-            headers: authHeaders(),
             body: JSON.stringify(data),
-        }).then(handleResponse),
+        }),
 
     // Send referral invite email
     sendInvite: (email: string) =>
-        fetch(`${API_URL}/referral/invite`, {
+        apiFetch(`${API_URL}/referral/invite`, {
             method: 'POST',
-            headers: authHeaders(),
             body: JSON.stringify({ email }),
-        }).then(handleResponse),
+        }),
 
     // Get referral leaderboard
     getLeaderboard: (limit = 10) =>
-        fetch(`${API_URL}/referral/leaderboard?limit=${limit}`, {
-            headers: authHeaders(),
-        }).then(handleResponse),
+        apiFetch(`${API_URL}/referral/leaderboard?limit=${limit}`),
 
     // Record a visit to a referral link
     recordVisit: (code: string) =>
-        fetch(`${API_URL}/referral/visit/${code}`, {
+        apiFetch(`${API_URL}/referral/visit/${code}`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-        }).then(handleResponse),
+        }),
 };
 
 // ─── Admin ────────────────────────────────────────────────────────────

@@ -8,7 +8,7 @@ import React, {
     useCallback,
 } from "react";
 import { usePathname } from "next/navigation";
-import { authApi } from "@/lib/api";
+import { authApi, subscribeToTokenChange, notifyTokenChange } from "@/lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -178,6 +178,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const portal = getPortalFromPathname(pathname);
 
+    // Subscribe to token updates from apiFetch (silent refreshes)
+    useEffect(() => {
+        const unsubscribe = subscribeToTokenChange((newToken) => {
+            console.log("[AuthContext] Token refreshed silently, updating context state.");
+            setToken(newToken);
+        });
+        return unsubscribe;
+    }, []);
+
     // Initialise from portal-specific localStorage on mount and route scope change
     useEffect(() => {
         setIsLoading(true);
@@ -280,6 +289,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (newUser.id) localStorage.setItem(keys.userId, newUser.id);
             localStorage.setItem(keys.user, JSON.stringify(newUser));
 
+            notifyTokenChange(accessToken);
+
             setToken(accessToken);
             setUser(newUser);
         },
@@ -327,6 +338,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem(keys.email);
         localStorage.removeItem(keys.userId);
         localStorage.removeItem(keys.user);
+
+        notifyTokenChange(null);
 
         setUser(null);
         setToken(null);

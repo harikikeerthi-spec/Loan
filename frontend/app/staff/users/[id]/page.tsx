@@ -3,7 +3,7 @@
 import { useState, useEffect, use, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { adminApi, documentApi, staffProfileApi } from "@/lib/api";
+import { adminApi, documentApi, staffProfileApi, apiFetch } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import ApplicationDetailView from "@/components/staff/ApplicationDetailView";
 import { motion, AnimatePresence } from "framer-motion";
@@ -110,37 +110,28 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                 ? `/api/documents/${docId}/accept`
                 : `/api/documents/${docId}/reject`;
 
-            const res = await fetch(endpoint, {
+            const result = await apiFetch<any>(endpoint, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken')}`
-                },
                 body: JSON.stringify(action === "reject" ? { rejectionReason: reason } : {})
             });
 
-            if (res.ok) {
-                const result = await res.json();
-                // Update document in state
-                setUserDocuments((prev) =>
-                    prev.map((doc) =>
-                        doc.id === docId || doc._id === docId
-                            ? {
-                                ...doc,
-                                status: action === "accept" ? "verified" : "rejected",
-                                rejectionReason: action === "reject" ? reason : undefined,
-                                rejectionDate: action === "reject" ? new Date().toISOString() : undefined
-                            }
-                            : doc
-                    )
-                );
+            // Update document in state
+            setUserDocuments((prev) =>
+                prev.map((doc) =>
+                    doc.id === docId || doc._id === docId
+                        ? {
+                            ...doc,
+                            status: action === "accept" ? "verified" : "rejected",
+                            rejectionReason: action === "reject" ? reason : undefined,
+                            rejectionDate: action === "reject" ? new Date().toISOString() : undefined
+                        }
+                        : doc
+                )
+            );
 
-                if (selectedDocForReject?.id === docId || selectedDocForReject?._id === docId) {
-                    setSelectedDocForReject(null);
-                    setDocumentRejectionReason("");
-                }
-            } else {
-                console.error("Failed to update document:", await res.text());
+            if (selectedDocForReject?.id === docId || selectedDocForReject?._id === docId) {
+                setSelectedDocForReject(null);
+                setDocumentRejectionReason("");
             }
         } catch (err) {
             console.error(`Failed to ${action} document:`, err);
@@ -721,22 +712,16 @@ export default function StaffUserDetailPage({ params }: { params: Promise<{ id: 
                                                     <button
                                                         onClick={async () => {
                                                             try {
-                                                                const token = typeof window !== 'undefined'
-                                                                    ? (localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken'))
-                                                                    : null;
-
                                                                 // Use absolute /api route to ensure it's proxied to NestJS
-                                                                const res = await fetch(`/api/documents/presigned-view/${userId}/${encodeURIComponent(doc.docType)}`, {
-                                                                    headers: token ? { Authorization: `Bearer ${token}` } : {},
-                                                                });
-                                                                if (res.ok) {
-                                                                    const data = await res.json();
+                                                                const data = await apiFetch<{ success: boolean; url?: string }>(`/api/documents/presigned-view/${userId}/${encodeURIComponent(doc.docType)}`);
+                                                                if (data && data.url) {
                                                                     window.open(data.url, '_blank');
                                                                 } else {
-                                                                    // Direct streaming view backup route
                                                                     window.open(`/api/documents/view/${userId}/${encodeURIComponent(doc.docType)}`, '_blank');
                                                                 }
                                                             } catch (e) {
+                                                                // Direct streaming view backup route
+                                                                window.open(`/api/documents/view/${userId}/${encodeURIComponent(doc.docType)}`, '_blank');
                                                                 console.error('Failed to open document:', e);
                                                             }
                                                         }}

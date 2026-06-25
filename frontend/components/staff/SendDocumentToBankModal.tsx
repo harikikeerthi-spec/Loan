@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { documentApi } from "@/lib/api";
+import { documentApi, apiFetch } from "@/lib/api";
 
 interface SendDocumentToBankModalProps {
   isOpen: boolean;
@@ -101,19 +101,8 @@ export default function SendDocumentToBankModal({
       }
 
       // Record the bank share via backend (document send-to-bank logging)
-      const response = await fetch("/api/documents/send-to-bank", {
+      const response = await apiFetch<any>("/api/documents/send-to-bank", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${
-            typeof window !== "undefined"
-              ? localStorage.getItem("staffAccessToken") ||
-                localStorage.getItem("adminAccessToken") ||
-                localStorage.getItem("accessToken") ||
-                ""
-              : ""
-          }`,
-        },
         body: JSON.stringify({
           userId,
           docType,

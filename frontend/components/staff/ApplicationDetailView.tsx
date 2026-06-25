@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { documentApi, staffProfileApi, adminApi, chatApi } from "@/lib/api";
 import { useDialog } from "@/contexts/DialogContext";
@@ -23,6 +24,8 @@ interface ApplicationDetailViewProps {
   onApplicationUpdated?: () => void;
   sidebarOpen?: boolean;
   setSidebarOpen?: (open: boolean) => void;
+  isStandalone?: boolean;
+  activeSidebarMenu?: string;
 }
 
 type OcrSummaryDoc = {
@@ -198,7 +201,10 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   onApplicationUpdated,
   sidebarOpen = false,
   setSidebarOpen,
+  isStandalone = false,
+  activeSidebarMenu: initialSidebarMenu,
 }) => {
+  const router = useRouter();
   const { token, user, logout } = useAuth();
   const { alert: dialogAlert, confirm: dialogConfirm, prompt: dialogPrompt } = useDialog();
   const [nowTime, setNowTime] = useState<Date>(new Date());
@@ -210,7 +216,46 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   }, []);
 
   const [activeTab, setActiveTab] = useState("requirements");
-  const [activeSidebarMenu, setActiveSidebarMenu] = useState("application_details");
+  const [activeSidebarMenu, setActiveSidebarMenu] = useState(initialSidebarMenu || "application_details");
+
+  useEffect(() => {
+    if (initialSidebarMenu) {
+      setActiveSidebarMenu(initialSidebarMenu);
+    }
+  }, [initialSidebarMenu]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("focus") === "notes") {
+        setTimeout(() => {
+          const notesSection = document.getElementById("internal-notes-section");
+          if (scrollContainerRef.current && notesSection) {
+            const container = scrollContainerRef.current;
+            const containerRect = container.getBoundingClientRect();
+            const elemRect = notesSection.getBoundingClientRect();
+            const relativeTop = elemRect.top - containerRect.top + container.scrollTop;
+            container.scrollTo({ top: relativeTop - 20, behavior: 'smooth' });
+          } else {
+            notesSection?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }, 800);
+      }
+    }
+  }, [activeSidebarMenu]);
+
+  const handleTabTransition = (tabName: string) => {
+    if (isStandalone) {
+      const appId = application.id || application._id;
+      if (tabName === activeSidebarMenu) return;
+      if (tabName === 'application_details') router.push(`/staff/applications/${appId}`);
+      else if (tabName === 'student') router.push(`/staff/applications/${appId}/student`);
+      else if (tabName === 'exams') router.push(`/staff/applications/${appId}/exams`);
+      else if (tabName === 'bankdecisions') router.push(`/staff/applications/${appId}/bank-decisions`);
+    } else {
+      setActiveSidebarMenu(tabName);
+    }
+  };
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [sendToBankDoc, setSendToBankDoc] = useState<OcrSummaryDoc | null>(null);
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
@@ -1317,7 +1362,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   ];
 
   return (
-    <div className={`staff-dashboard-body fixed inset-y-0 right-0 z-[40] flex flex-col bg-[#F8FAFC] overflow-hidden animate-in fade-in duration-500 transition-all duration-300 ${sidebarOpen ? 'lg:left-[280px] left-0' : 'lg:left-[68px] left-0'}`} style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div className={`staff-dashboard-body fixed inset-y-0 right-0 z-[40] flex flex-col bg-[#F8FAFC] overflow-hidden animate-in fade-in duration-500 transition-all duration-300 ${isStandalone ? 'left-0' : sidebarOpen ? 'lg:left-[280px] left-0' : 'lg:left-[68px] left-0'}`} style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <style>{`
         @media print {
           /* Hide all non-printable elements */
@@ -1496,7 +1541,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
             ].map(menu => (
               <button
                 key={menu.id}
-                onClick={() => setActiveSidebarMenu(menu.id)}
+                onClick={() => handleTabTransition(menu.id)}
                 className={`w-full flex flex-col items-center justify-center py-4 px-2 rounded-2xl transition-all group ${activeSidebarMenu === menu.id
                   ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
                   : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-900'
@@ -1536,8 +1581,14 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                 <div className="flex items-center gap-3 no-print">
                   <button
                     onClick={() => {
-                      setActiveSidebarMenu("application_details");
-                      setTimeout(() => window.print(), 300);
+                      if (isStandalone) {
+                        const appId = application.id || application._id;
+                        router.push(`/staff/applications/${appId}`);
+                        setTimeout(() => window.print(), 500);
+                      } else {
+                        setActiveSidebarMenu("application_details");
+                        setTimeout(() => window.print(), 300);
+                      }
                     }}
                     className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-lg shadow-emerald-600/20"
                   >
@@ -1547,20 +1598,25 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
 
                   <button
                     onClick={() => {
-                      setActiveSidebarMenu("application_details");
-                      setActiveTab("notes");
-                      setTimeout(() => {
-                        const notesSection = document.getElementById("internal-notes-section");
-                        if (scrollContainerRef.current && notesSection) {
-                          const container = scrollContainerRef.current;
-                          const containerRect = container.getBoundingClientRect();
-                          const elemRect = notesSection.getBoundingClientRect();
-                          const relativeTop = elemRect.top - containerRect.top + container.scrollTop;
-                          container.scrollTo({ top: relativeTop - 20, behavior: 'smooth' });
-                        } else {
-                          notesSection?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                        }
-                      }, 100);
+                      if (isStandalone) {
+                        const appId = application.id || application._id;
+                        router.push(`/staff/applications/${appId}?focus=notes`);
+                      } else {
+                        setActiveSidebarMenu("application_details");
+                        setActiveTab("notes");
+                        setTimeout(() => {
+                          const notesSection = document.getElementById("internal-notes-section");
+                          if (scrollContainerRef.current && notesSection) {
+                            const container = scrollContainerRef.current;
+                            const containerRect = container.getBoundingClientRect();
+                            const elemRect = notesSection.getBoundingClientRect();
+                            const relativeTop = elemRect.top - containerRect.top + container.scrollTop;
+                            container.scrollTo({ top: relativeTop - 20, behavior: 'smooth' });
+                          } else {
+                            notesSection?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                          }
+                        }, 100);
+                      }
                     }}
                     className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-md"
                   >
@@ -1619,7 +1675,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                       <div>
                         <div className="flex flex-wrap items-center gap-3 mb-2">
                           <p
-                            onClick={() => setActiveSidebarMenu("student")}
+                            onClick={() => handleTabTransition("student")}
                             className="text-[11px] font-['Playfair_Display',serif] font-black text-slate-400 uppercase tracking-[0.25em] cursor-pointer hover:text-emerald-600 hover:underline transition-all"
                             title="Click to view Student Profile"
                           >
@@ -1632,14 +1688,14 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                         </div>
                         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                           <h3
-                            onClick={() => setActiveSidebarMenu("student")}
+                            onClick={() => handleTabTransition("student")}
                             className="text-[30px] font-black text-slate-900 tracking-tight leading-tight cursor-pointer hover:text-emerald-600 hover:underline transition-all"
                             title="Click to view Student Profile"
                           >
                             {application.firstName || application.student?.firstName || "Abhi"} {application.lastName || application.student?.lastName || "Y"}
                           </h3>
                           <p
-                            onClick={() => setActiveSidebarMenu("student")}
+                            onClick={() => handleTabTransition("student")}
                             className="text-[18px] font-bold text-emerald-600/90 cursor-pointer hover:text-emerald-500 hover:underline transition-all"
                             title="Click to view Student Profile"
                           >
@@ -1657,7 +1713,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                         <div className="space-y-0.5 col-span-2 sm:col-span-1">
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">UNIVERSITY</p>
                           <p
-                            onClick={() => setActiveSidebarMenu("student")}
+                            onClick={() => handleTabTransition("student")}
                             className="text-[12px] font-bold text-slate-700 truncate cursor-pointer hover:text-emerald-600 hover:underline transition-all"
                             title="Click to view Student Profile"
                           >
