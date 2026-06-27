@@ -1535,7 +1535,7 @@ export class ApplicationService {
       const userEmail = application.email || (application.user as any)?.email;
       if (!userEmail) throw new Error('Recipient email not found');
 
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
       const statusColor = application.status === 'approved' ? '#10b981' : application.status === 'rejected' ? '#ef4444' : '#6366f1';
 
       const emailHtml = `

@@ -7538,10 +7538,10 @@ export default function StaffDashboardPage() {
                                                 </>
                                             )}
                                         </TableHeader>
-                                        <tbody className="divide-y divide-slate-50">
-                                            {loading ? (
+                                        <tbody className={`divide-y divide-slate-50 ${loading ? 'opacity-60 pointer-events-none transition-opacity duration-300' : 'transition-opacity duration-300'}`}>
+                                            {loading && pagedData.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan={6} className="px-8 py-32 text-center">
+                                                    <td colSpan={10} className="px-8 py-32 text-center">
                                                         <div className="flex flex-col items-center justify-center gap-4">
                                                             <div className="w-10 h-10 border-4 border-slate-100 border-t-slate-900 rounded-full animate-spin" />
                                                             <p className="text-[11px] font-black tracking-widest text-slate-400 uppercase">Synchronizing Nodes...</p>

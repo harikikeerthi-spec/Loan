@@ -100,11 +100,11 @@ export default function Navbar() {
                                         <div className="bg-gray-50/80 -mr-6 -my-6 p-6 border-l border-gray-100 rounded-r-3xl">
                                             <h3 className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-4 pl-3">Our Lending Partners</h3>
                                             <div className="space-y-1">
-                                                <PartnerItem href="/bank/idfc" initials="IF" name="IDFC First Bank" rate="From 10.5% p.a." color="text-red-600" bgColor="bg-red-500/10" />
-                                                <PartnerItem href="/bank/auxilo" initials="AX" name="Auxilo Finserve" rate="From 11.25% p.a." color="text-blue-600" bgColor="bg-blue-500/10" />
-                                                <PartnerItem href="/bank/avanse" initials="AV" name="Avanse Financial" rate="From 10.99% p.a." color="text-green-600" bgColor="bg-green-500/10" />
-                                                <PartnerItem href="/bank/credila" initials="CR" name="Credila (HDFC)" rate="From 10.75% p.a." color="text-indigo-600" bgColor="bg-indigo-500/10" />
-                                                <PartnerItem href="/bank/poonawalla" initials="PF" name="Poonawalla Fincorp" rate="From 11.50% p.a." color="text-orange-600" bgColor="bg-orange-500/10" />
+                                                <PartnerItem href="/bank/idfc" initials="IF" name="IDFC First Bank" rate="From 10.25% p.a." color="text-red-600" bgColor="bg-red-500/10" />
+                                                <PartnerItem href="/bank/auxilo" initials="AX" name="Auxilo Finserve" rate="From 10.25% p.a." color="text-blue-600" bgColor="bg-blue-500/10" />
+                                                <PartnerItem href="/bank/avanse" initials="AV" name="Avanse Financial" rate="From 10.25% p.a." color="text-green-600" bgColor="bg-green-500/10" />
+                                                <PartnerItem href="/bank/credila" initials="CR" name="Credila (HDFC)" rate="From 10.25% p.a." color="text-indigo-600" bgColor="bg-indigo-500/10" />
+                                                <PartnerItem href="/bank/poonawalla" initials="PF" name="Poonawalla Fincorp" rate="From 10.25% p.a." color="text-orange-600" bgColor="bg-orange-500/10" />
                                             </div>
                                         </div>
                                     </div>
@@ -131,7 +131,7 @@ export default function Navbar() {
                                             <NavItem href="/sop-writer" icon="auto_fix_high" title="AI SOP Writer" desc="Generate statements instantly" color="text-pink-500" />
                                             <NavItem href="/sop-analyzer" icon="analytics" title="Quality Scorer" desc="Analyze your existing SOP" color="text-pink-500" />
                                             <NavItem href="/admit-predictor" icon="insights" title="Admit Predictor" desc="Chance of acceptance" color="text-pink-500" />
-                                            <NavItem href="/visa-mock" icon="record_voice_over" title="Visa Interview Prep" desc="AI mock visa interview" color="text-pink-500" />
+                                            {/* <NavItem href="/visa-mock" icon="record_voice_over" title="Visa Interview Prep" desc="AI mock visa interview" color="text-pink-500" /> */}
                                         </div>
                                         <div>
                                             <h3 className="text-[9px] font-bold uppercase tracking-widest text-purple-500 mb-4 border-b border-purple-500/10 pb-2">Research</h3>
@@ -141,6 +141,13 @@ export default function Navbar() {
                                                 <div className="flex items-center gap-2 mt-4">
                                                     <span className="material-symbols-outlined text-sm text-gray-400">paid</span>
                                                     <span className="text-[9px] font-bold uppercase text-gray-400">Scholarships</span>
+                                                    <span className="text-[7px] bg-gray-100 text-gray-500 px-1 py-0.5 rounded">SOON</span>
+
+
+                                                </div>
+                                                <div className="flex items-center gap-2 mt-4">
+                                                    <span className="material-symbols-outlined text-sm text-gray-400">record_voice_over</span>
+                                                    <span className="text-[9px] font-bold uppercase text-gray-400">VisaInterview Prep</span>
                                                     <span className="text-[7px] bg-gray-100 text-gray-500 px-1 py-0.5 rounded">SOON</span>
                                                 </div>
                                             </div>

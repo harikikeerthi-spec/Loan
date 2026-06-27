@@ -77,11 +77,30 @@ export class UsersService {
     }
   }
 
+  private userCache = new Map<string, { user: any; expiresAt: number }>();
+
+  clearCache(email?: string) {
+    if (email) {
+      this.userCache.delete(email);
+    } else {
+      this.userCache.clear();
+    }
+  }
+
   async findOne(email: string) {
+    const now = Date.now();
+    const cached = this.userCache.get(email);
+    if (cached && cached.expiresAt > now) {
+      return cached.user;
+    }
+
     try {
       const { data, error } = await this.db.from('User').select('*').eq('email', email).single();
       if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
         console.error(`[UsersService.findOne] Supabase error for ${email}:`, error);
+      }
+      if (data) {
+        this.userCache.set(email, { user: data, expiresAt: now + 15000 }); // Cache for 15 seconds
       }
       return data;
     } catch (e) {
@@ -429,6 +448,7 @@ export class UsersService {
       .single();
 
     if (error) throw error;
+    this.clearCache(email);
     return data;
   }
 
@@ -513,6 +533,7 @@ export class UsersService {
       .single();
 
     if (error) throw error;
+    this.clearCache(email);
     return data;
   }
 
@@ -549,10 +570,12 @@ export class UsersService {
           .select()
           .single();
         if (retryError) throw retryError;
+        this.clearCache(email);
         return retryData;
       }
       throw error;
     }
+    this.clearCache(email);
     return data;
   }
 
@@ -1145,6 +1168,7 @@ export class UsersService {
       throw error;
     }
 
+    this.clearCache();
     return data;
   }
 }

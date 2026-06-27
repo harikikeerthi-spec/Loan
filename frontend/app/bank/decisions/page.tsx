@@ -792,8 +792,14 @@ export default function DecisionsHub() {
     const handleDecisionSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedApp) return;
-        setSubmitting(true);
 
+        // Check if LAN number is present before sanctioning
+        if ((activeDecisionTab === "sanction" || activeDecisionTab === "conditional") && !selectedApp.lanNumber) {
+            alert("⚠️ Cannot sanction loan application: LAN (Loan Account Number) must be entered/logged first.");
+            return;
+        }
+
+        setSubmitting(true);
         try {
             let res: any;
             const updatedRemarks = `${selectedApp.remarks || ""}\n[Appraisal - ${format(new Date(), "MMM dd, HH:mm")}]: Type: ${activeDecisionTab.toUpperCase()} | ROI: ${interestRate}% (${roiType}) | Processing Fee: ₹${totalFeeValue}`;
@@ -2287,9 +2293,30 @@ export default function DecisionsHub() {
 
                                                         {/* Final Actions block */}
                                                         {!dataConsentVerified && (
-                                                            <div className="text-[10px] text-amber-700 bg-amber-50 border border-amber-100 px-4 py-2.5 rounded-xl flex items-center gap-2 font-medium">
-                                                                <span className="material-symbols-outlined text-amber-500 text-sm animate-pulse">lock</span>
-                                                                <span>Data Consent check is required. Verify and toggle the <strong>Data Consent</strong> indicator under Underwriting Indicators above to submit.</span>
+                                                            <div className="text-[10px] text-amber-750 bg-amber-50 border border-amber-150 p-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-medium shadow-sm">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="material-symbols-outlined text-amber-500 text-sm animate-pulse">lock</span>
+                                                                    <span>Data Consent check is required. Verify and toggle the <strong>Data Consent</strong> indicator under Underwriting Indicators above, or authorize directly:</span>
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={async () => {
+                                                                        setDataConsentVerified(true);
+                                                                        if (selectedApp) {
+                                                                            try {
+                                                                                await bankApi.recordConsent(selectedApp.id, { 
+                                                                                    consentType: "officer_override" 
+                                                                                });
+                                                                            } catch (err) {
+                                                                                console.error("Failed to record consent in backend:", err);
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                    className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider shrink-0 transition-all flex items-center gap-1.5 self-end sm:self-auto cursor-pointer"
+                                                                >
+                                                                    <span className="material-symbols-outlined text-xs">check_circle</span>
+                                                                    Verify & Grant Consent
+                                                                </button>
                                                             </div>
                                                         )}
                                                         <div className="flex gap-4 pt-3">

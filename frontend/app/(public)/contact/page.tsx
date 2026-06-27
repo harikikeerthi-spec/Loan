@@ -3,11 +3,8 @@
 import { useState } from "react";
 
 const offices = [
-    { city: "Hyderabad", role: "Headquarters & Counselor Center", address: "Block D-3, IT Park, Gachibowli, Hyderabad, Telangana 500032", phone: "+91 9240209000" },
-    { city: "Bangalore", role: "Technology Hub & Counselor Center", address: "Level 4, Diamond District, Indiranagar, Bangalore 560008", phone: "+91 9240209001" },
-    { city: "Mumbai", role: "Lending Partnerships Office", address: "Executive Suite 12, BKC Fin-Tech Tower, Mumbai 400051", phone: "+91 9240209002" },
-    { city: "Delhi", role: "Counselor Center", address: "Building 18, Connaught Place, New Delhi 110001", phone: "+91 9240209003" },
-    { city: "Chennai", role: "Regional Support Desk", address: "Phase II, Tech Center, OMR, Chennai 600096", phone: "+91 9240209004" }
+    { city: "Nuzvid", role: "Headquarters & Counselor Center", address: "Nuzvid, Krishna District, Andhra Pradesh", phone: "+91 9240209000" },
+
 ];
 
 export default function ContactUsPage() {
@@ -18,11 +15,36 @@ export default function ContactUsPage() {
         subject: "Loan Eligibility",
         message: ""
     });
+    const [touched, setTouched] = useState<Record<string, boolean>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
+    const errors = {
+        name: formData.name ? (formData.name.trim().length < 3 ? "Name must be at least 3 characters" : "") : "",
+        email: formData.email ? (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) ? "" : "Please enter a valid email address") : "",
+        phone: formData.phone ? (formData.phone.length === 10 ? "" : "Phone number must be exactly 10 digits") : "",
+        message: formData.message ? (formData.message.trim().length >= 20 ? "" : `Message must be at least 20 characters (current: ${formData.message.trim().length}/20)`) : ""
+    };
+
+    const isFormValid = 
+        formData.name.trim().length >= 3 &&
+        !/[0-9]/.test(formData.name) &&
+        formData.name.length <= 30 &&
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email) &&
+        formData.phone.length === 10 &&
+        formData.message.trim().length >= 20;
+
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setTouched({
+            name: true,
+            email: true,
+            phone: true,
+            message: true
+        });
+
+        if (!isFormValid) return;
+
         setIsSubmitting(true);
 
         // Simulate high-fidelity backend submit
@@ -30,19 +52,58 @@ export default function ContactUsPage() {
             setIsSubmitting(false);
             setIsSuccess(true);
             setFormData({ name: "", email: "", phone: "", subject: "Loan Eligibility", message: "" });
+            setTouched({});
         }, 1800);
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        let val = value;
+
+        if (name === "name") {
+            val = value.replace(/[0-9]/g, "").slice(0, 30);
+        } else if (name === "phone") {
+            val = value.replace(/\D/g, "").slice(0, 10);
+        }
+
         setFormData(prev => ({
             ...prev,
-            [e.target.name]: e.target.value
+            [name]: val
         }));
+
+        setTouched(prev => ({
+            ...prev,
+            [name]: true
+        }));
+    };
+
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        const { name } = e.target;
+        setTouched(prev => ({
+            ...prev,
+            [name]: true
+        }));
+    };
+
+    const getInputClass = (name: 'name' | 'email' | 'phone' | 'message') => {
+        const isMessage = name === 'message';
+        const base = `w-full pl-12 pr-4 py-3.5 bg-white/40 hover:bg-white/60 border text-[13.5px] rounded-xl outline-none transition-all placeholder:text-gray-400 text-gray-900 font-medium shadow-sm ${isMessage ? 'resize-none' : ''}`;
+        const val = formData[name];
+        const hasError = touched[name] && !!errors[name];
+        const isValid = touched[name] && val && !errors[name];
+
+        if (hasError) {
+            return `${base} border-rose-400 focus:border-rose-500 bg-rose-50/10 focus:bg-white`;
+        }
+        if (isValid) {
+            return `${base} border-emerald-400 focus:border-emerald-500 bg-emerald-50/5 focus:bg-white`;
+        }
+        return `${base} border-gray-200 focus:border-[#6605c7]/50 focus:bg-white`;
     };
 
     return (
         <div className="min-h-screen relative text-gray-900 overflow-hidden" style={{ background: 'linear-gradient(135deg, #ede0ff 0%, #f3eaff 25%, #fdf6ff 55%, #fef3e8 80%, #fde8c8 100%)' }}>
-            
+
             {/* Elegant Background Decorators from Home Page */}
             <div className="absolute inset-0 pointer-events-none z-0">
                 <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full blur-[120px] opacity-50" style={{ background: 'radial-gradient(circle, #d8b4fe, transparent)' }} />
@@ -68,13 +129,13 @@ export default function ContactUsPage() {
             {/* Main Interactive Contact Split Layout */}
             <section className="py-12 pb-24 px-6 relative z-10 max-w-7xl mx-auto">
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
-                    
+
                     {/* Left Column: Premium Interactive Contact Form */}
                     <div className="lg:col-span-7">
                         <div className="bg-white/60 backdrop-blur-xl border border-white/80 rounded-[2.5rem] p-8 md:p-12 shadow-2xl relative overflow-hidden">
                             {/* Glow accent */}
                             <div className="absolute -left-16 -top-16 w-36 h-36 bg-purple-500/5 rounded-full blur-2xl pointer-events-none" />
-                            
+
                             {isSuccess ? (
                                 <div className="text-center py-16 animate-fade-in-up">
                                     <div className="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center text-white mx-auto mb-8 shadow-xl shadow-emerald-500/20 transform hover:scale-105 transition-transform">
@@ -96,19 +157,29 @@ export default function ContactUsPage() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {/* Name input */}
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-extrabold uppercase tracking-widest text-[#6605c7]">Full Name</label>
+                                            <div className="flex items-center justify-between">
+                                                <label className="text-[10px] font-extrabold uppercase tracking-widest text-[#6605c7]">Full Name</label>
+                                                <span className="text-[9.5px] text-gray-400 font-extrabold">{formData.name.length}/30</span>
+                                            </div>
                                             <div className="relative">
                                                 <span className="material-symbols-outlined text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 text-lg">person</span>
-                                                <input 
-                                                    type="text" 
-                                                    name="name" 
-                                                    required 
+                                                <input
+                                                    type="text"
+                                                    name="name"
+                                                    required
                                                     value={formData.name}
                                                     onChange={handleChange}
+                                                    onBlur={handleBlur}
                                                     placeholder="Enter your name"
-                                                    className="w-full pl-12 pr-4 py-3.5 bg-white/40 hover:bg-white/60 border border-gray-200 focus:border-[#6605c7]/50 focus:bg-white text-[13.5px] rounded-xl outline-none transition-all placeholder:text-gray-400 text-gray-900 font-medium shadow-sm"
+                                                    className={getInputClass('name')}
                                                 />
                                             </div>
+                                            {touched.name && errors.name && (
+                                                <p className="text-[11px] text-rose-500 font-bold mt-1 flex items-center gap-1 animate-fade-in">
+                                                    <span className="material-symbols-outlined text-[13px] font-bold">error</span>
+                                                    {errors.name}
+                                                </p>
+                                            )}
                                         </div>
 
                                         {/* Email input */}
@@ -116,35 +187,52 @@ export default function ContactUsPage() {
                                             <label className="text-[10px] font-extrabold uppercase tracking-widest text-[#6605c7]">Email Address</label>
                                             <div className="relative">
                                                 <span className="material-symbols-outlined text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 text-lg">mail</span>
-                                                <input 
-                                                    type="email" 
-                                                    name="email" 
-                                                    required 
+                                                <input
+                                                    type="email"
+                                                    name="email"
+                                                    required
                                                     value={formData.email}
                                                     onChange={handleChange}
+                                                    onBlur={handleBlur}
                                                     placeholder="Enter your email"
-                                                    className="w-full pl-12 pr-4 py-3.5 bg-white/40 hover:bg-white/60 border border-gray-200 focus:border-[#6605c7]/50 focus:bg-white text-[13.5px] rounded-xl outline-none transition-all placeholder:text-gray-400 text-gray-900 font-medium shadow-sm"
+                                                    className={getInputClass('email')}
                                                 />
                                             </div>
+                                            {touched.email && errors.email && (
+                                                <p className="text-[11px] text-rose-500 font-bold mt-1 flex items-center gap-1 animate-fade-in">
+                                                    <span className="material-symbols-outlined text-[13px] font-bold">error</span>
+                                                    {errors.email}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {/* Phone input */}
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-extrabold uppercase tracking-widest text-[#6605c7]">Phone Number</label>
+                                            <div className="flex items-center justify-between">
+                                                <label className="text-[10px] font-extrabold uppercase tracking-widest text-[#6605c7]">Phone Number</label>
+                                                <span className="text-[9.5px] text-gray-400 font-extrabold">{formData.phone.length}/10</span>
+                                            </div>
                                             <div className="relative">
                                                 <span className="material-symbols-outlined text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 text-lg">call</span>
-                                                <input 
-                                                    type="tel" 
-                                                    name="phone" 
-                                                    required 
+                                                <input
+                                                    type="tel"
+                                                    name="phone"
+                                                    required
                                                     value={formData.phone}
                                                     onChange={handleChange}
-                                                    placeholder="Enter mobile number"
-                                                    className="w-full pl-12 pr-4 py-3.5 bg-white/40 hover:bg-white/60 border border-gray-200 focus:border-[#6605c7]/50 focus:bg-white text-[13.5px] rounded-xl outline-none transition-all placeholder:text-gray-400 text-gray-900 font-medium shadow-sm"
+                                                    onBlur={handleBlur}
+                                                    placeholder="Enter 10-digit number"
+                                                    className={getInputClass('phone')}
                                                 />
                                             </div>
+                                            {touched.phone && errors.phone && (
+                                                <p className="text-[11px] text-rose-500 font-bold mt-1 flex items-center gap-1 animate-fade-in">
+                                                    <span className="material-symbols-outlined text-[13px] font-bold">error</span>
+                                                    {errors.phone}
+                                                </p>
+                                            )}
                                         </div>
 
                                         {/* Subject selector */}
@@ -152,8 +240,8 @@ export default function ContactUsPage() {
                                             <label className="text-[10px] font-extrabold uppercase tracking-widest text-[#6605c7]">Primary Inquiry</label>
                                             <div className="relative">
                                                 <span className="material-symbols-outlined text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 text-lg">help</span>
-                                                <select 
-                                                    name="subject" 
+                                                <select
+                                                    name="subject"
                                                     value={formData.subject}
                                                     onChange={handleChange}
                                                     className="w-full pl-12 pr-8 py-3.5 bg-white/40 hover:bg-white/60 border border-gray-200 focus:border-[#6605c7]/50 focus:bg-white text-[13.5px] rounded-xl outline-none transition-all text-gray-900 font-medium appearance-none cursor-pointer shadow-sm"
@@ -171,27 +259,37 @@ export default function ContactUsPage() {
 
                                     {/* Message textarea */}
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-extrabold uppercase tracking-widest text-[#6605c7]">Your Message</label>
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-[10px] font-extrabold uppercase tracking-widest text-[#6605c7]">Your Message</label>
+                                            <span className="text-[9.5px] text-gray-400 font-extrabold">{formData.message.length} chars (min 20)</span>
+                                        </div>
                                         <div className="relative">
                                             <span className="material-symbols-outlined text-gray-400 absolute left-4 top-4 text-lg">chat</span>
-                                            <textarea 
-                                                name="message" 
-                                                required 
+                                            <textarea
+                                                name="message"
+                                                required
                                                 rows={5}
                                                 value={formData.message}
                                                 onChange={handleChange}
-                                                placeholder="Detail your request, university intended, or application number..."
-                                                className="w-full pl-12 pr-4 py-3.5 bg-white/40 hover:bg-white/60 border border-gray-200 focus:border-[#6605c7]/50 focus:bg-white text-[13.5px] rounded-xl outline-none transition-all placeholder:text-gray-400 text-gray-900 font-medium resize-none shadow-sm"
+                                                onBlur={handleBlur}
+                                                placeholder="Detail your request, university intended, or application number (minimum 20 characters)..."
+                                                className={getInputClass('message')}
                                             />
                                         </div>
+                                        {touched.message && errors.message && (
+                                            <p className="text-[11px] text-rose-500 font-bold mt-1 flex items-center gap-1 animate-fade-in">
+                                                <span className="material-symbols-outlined text-[13px] font-bold">error</span>
+                                                {errors.message}
+                                            </p>
+                                        )}
                                     </div>
 
                                     {/* Tactile 3D Submit Button */}
                                     <div className="pt-4">
                                         <button
                                             type="submit"
-                                            disabled={isSubmitting}
-                                            className="w-full relative group py-4.5 text-white font-extrabold rounded-xl transition-all shadow-[0_12px_36px_rgba(102,5,199,0.25)] active:translate-y-0.5 active:shadow-inner text-xs uppercase tracking-widest cursor-pointer disabled:opacity-50"
+                                            disabled={isSubmitting || !isFormValid}
+                                            className="w-full relative group py-4.5 text-white font-extrabold rounded-xl transition-all shadow-[0_12px_36px_rgba(102,5,199,0.25)] active:translate-y-0.5 active:shadow-inner text-xs uppercase tracking-widest cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
                                             style={{ background: 'linear-gradient(135deg, #6605c7, #8b24e5)' }}
                                         >
                                             {isSubmitting ? (
@@ -220,7 +318,7 @@ export default function ContactUsPage() {
                         {/* Direct Contacts Info Card */}
                         <div className="bg-white/60 backdrop-blur-xl border border-white/80 rounded-3xl p-8 space-y-6 shadow-xl">
                             <h3 className="text-lg font-bold font-display text-gray-900">Direct Contacts</h3>
-                            
+
                             <div className="space-y-4">
                                 <a href="mailto:support@vidyaloans.in" className="flex items-center gap-4 group p-3 bg-white/20 hover:bg-white/60 border border-gray-100 hover:border-purple-500/20 rounded-2xl transition-all shadow-sm">
                                     <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
@@ -247,10 +345,10 @@ export default function ContactUsPage() {
                         {/* Physical Offices Card */}
                         <div className="bg-white/60 backdrop-blur-xl border border-white/80 rounded-3xl p-8 shadow-xl">
                             <h3 className="text-lg font-bold font-display text-gray-900 mb-6">Our Offices</h3>
-                            
+
                             <div className="space-y-6 max-h-[350px] overflow-y-auto custom-scrollbar pr-2">
                                 {offices.map((office) => (
-                                    <div 
+                                    <div
                                         key={office.city}
                                         className="relative group p-4 border border-gray-100 rounded-2xl bg-white/20 hover:bg-white hover:border-[#6605c7]/20 transition-all duration-300 shadow-sm"
                                     >
@@ -259,7 +357,7 @@ export default function ContactUsPage() {
                                             <div className="space-y-1">
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-[14px] font-bold text-gray-900">{office.city}</span>
-                                                    {office.city === "Hyderabad" && (
+                                                    {office.city === "Nuzvid" && (
                                                         <span className="text-[8px] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-100 text-purple-700">
                                                             HQ
                                                         </span>

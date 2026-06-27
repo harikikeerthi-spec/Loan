@@ -499,7 +499,7 @@ export class EmailService {
   }
 
   async sendStaffReviewStartedEmail(email: string, userName: string, application: any) {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const loanType = (application.loanType || 'Education').toUpperCase();
@@ -771,7 +771,7 @@ export class EmailService {
   }
 
   async sendLoanSubmissionEmail(email: string, userName: string, bankName: string, application: any) {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const loanType = (application.loanType || 'Education').toUpperCase();
@@ -997,7 +997,7 @@ export class EmailService {
   }
 
   async sendLoanTrackingEmail(email: string, userName: string, bankName: string, application: any) {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const loanType = (application.loanType || 'Education').toUpperCase();
@@ -1233,7 +1233,7 @@ export class EmailService {
   }
 
   async sendApplicationSentToBankEmail(email: string, userName: string, bankName: string, application: any) {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const loanType = (application.loanType || 'Education').toUpperCase();
@@ -1465,7 +1465,7 @@ export class EmailService {
   }
 
   async sendApplicationAcceptedByBankEmail(email: string, userName: string, bankName: string, application: any, details?: any) {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const progress = 85;
@@ -1687,7 +1687,7 @@ export class EmailService {
   }
 
   async sendApplicationRejectedByBankEmail(email: string, userName: string, bankName: string, reason: string) {
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();
 
     const mailOptions = {

@@ -53,7 +53,7 @@ export class LoanStateMachine {
       allowedRoles: ['bank', 'partner_bank', 'staff', 'admin', 'super_admin']
     },
     {
-      from: ['under_bank_review', 'file_logged', 'processing'],
+      from: ['under_bank_review', 'file_logged', 'processing', 'submitted_to_bank'],
       to: 'query_raised',
       allowedRoles: ['bank', 'partner_bank', 'staff', 'admin', 'super_admin']
     },
@@ -63,27 +63,27 @@ export class LoanStateMachine {
       allowedRoles: ['staff', 'admin', 'super_admin', 'bank', 'partner_bank']
     },
     {
-      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing'],
+      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing', 'submitted_to_bank'],
       to: 'approved',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
     {
-      from: ['under_bank_review', 'file_logged', 'query_raised', 'approved', 'processing', 'sanctioned'],
+      from: ['under_bank_review', 'file_logged', 'query_raised', 'approved', 'processing', 'sanctioned', 'submitted_to_bank'],
       to: 'sanctioned',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
     {
-      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing', 'conditional_sanction'],
+      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing', 'conditional_sanction', 'submitted_to_bank'],
       to: 'conditional_sanction',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
     {
-      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing', 'partial_sanction'],
+      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing', 'partial_sanction', 'submitted_to_bank'],
       to: 'partial_sanction',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },
     {
-      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing', 'counter_offer'],
+      from: ['under_bank_review', 'file_logged', 'query_raised', 'processing', 'counter_offer', 'submitted_to_bank'],
       to: 'counter_offer',
       allowedRoles: ['bank', 'partner_bank', 'admin', 'super_admin']
     },

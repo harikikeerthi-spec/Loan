@@ -69,7 +69,7 @@ const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => {
             </div>
 
             {/* Collapsed Tooltip */}
-            {collapsed && (
+            {/* {collapsed && (
                 <div className="absolute left-16 top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-gray-900 text-white text-[10px] font-bold tracking-wider uppercase rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 z-50 whitespace-nowrap shadow-lg">
                     {label}
                     {badge && (
@@ -78,7 +78,7 @@ const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => {
                         </span>
                     )}
                 </div>
-            )}
+            )} */}
         </Link>
     );
 };
@@ -88,6 +88,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
     const router = useRouter();
     const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(false);
+    const [hoverExpanded, setHoverExpanded] = useState(false);
     const [scrolled, setScrolled] = useState(false);
 
     const [syncTime, setSyncTime] = useState("");
@@ -309,7 +310,9 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
 
     if (!user || (!isBank && !isAdmin)) return null;
 
-    const sidebarWidth = collapsed ? 80 : 280;
+    const isOpened = !collapsed || hoverExpanded;
+    const sidebarWidth = isOpened ? 280 : 80;
+    const contentShiftWidth = collapsed ? 80 : 280;
 
     return (
         <div className="bank-portal min-h-screen flex overflow-hidden" style={{
@@ -325,6 +328,14 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 initial={false}
                 animate={{ width: sidebarWidth }}
                 transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+                onMouseEnter={() => {
+                    if (collapsed) {
+                        setHoverExpanded(true);
+                    }
+                }}
+                onMouseLeave={() => {
+                    setHoverExpanded(false);
+                }}
                 className="fixed h-screen z-50 flex flex-col overflow-hidden"
                 style={{
                     background: 'rgba(255, 255, 255, 0.45)',
@@ -343,7 +354,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                         <span className="material-symbols-outlined text-lg">account_balance</span>
                     </div>
                     <AnimatePresence>
-                        {!collapsed && (
+                        {isOpened && (
                             <motion.div
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}
@@ -380,7 +391,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 <nav className="flex-1 px-3 space-y-4 overflow-y-auto no-scrollbar py-2">
                     {categorizedNav.map((cat, idx) => (
                         <div key={idx} className="space-y-1">
-                            {!collapsed && (
+                            {isOpened && (
                                 <p className="px-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#6605c7] opacity-80 mb-2">
                                     {cat.category}
                                 </p>
@@ -391,7 +402,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                         key={item.path}
                                         {...item}
                                         active={pathname === item.path || (item.path !== "/bank/dashboard" && pathname.startsWith(item.path))}
-                                        collapsed={collapsed}
+                                        collapsed={!isOpened}
                                     />
                                 ))}
                             </div>
@@ -412,7 +423,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                             <span className={`material-symbols-outlined text-[18px] transition-transform duration-300 ${collapsed ? "rotate-180" : ""}`}>
                                 chevron_left
                             </span>
-                            {!collapsed && <span className="text-[11px] font-semibold tracking-wide">Collapse</span>}
+                            {isOpened && <span className="text-[11px] font-semibold tracking-wide">Collapse</span>}
                         </button>
 
                         <button
@@ -428,7 +439,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
                         >
                             <span className="material-symbols-outlined text-[18px] group-hover:rotate-12 transition-transform">power_settings_new</span>
-                            {!collapsed && <span className="text-[11px] font-semibold tracking-wide">Sign Out</span>}
+                            {isOpened && <span className="text-[11px] font-semibold tracking-wide">Sign Out</span>}
                         </button>
                     </div>
 
@@ -438,7 +449,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                             backgroundColor: 'rgba(102, 5, 199, 0.02)',
                             borderColor: 'rgba(102, 5, 199, 0.05)',
                             boxShadow: 'inset 2px 2px 6px rgba(102, 5, 199, 0.08), inset -2px -2px 6px rgba(255, 255, 255, 0.9)',
-                            justifyContent: collapsed ? 'center' : undefined
+                            justifyContent: isOpened ? undefined : 'center'
                         }}
                     >
                         <div
@@ -448,7 +459,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                             {user.firstName?.[0]}{user.lastName?.[0]}
                         </div>
                         <AnimatePresence>
-                            {!collapsed && (
+                            {isOpened && (
                                 <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
@@ -471,12 +482,12 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
             {/* Main Content */}
             <main
                 className="flex-1 min-h-screen relative transition-all duration-300 flex flex-col pt-20"
-                style={{ paddingLeft: sidebarWidth }}
+                style={{ paddingLeft: contentShiftWidth }}
             >
                 {/* Persistent Top Header (F16 Notification Center & F30 Global Search) */}
                 <header
                     className="fixed top-0 right-0 z-40 h-[72px] flex items-center justify-between px-8 border-b bg-white/70 backdrop-blur-md border-purple-50 shadow-sm"
-                    style={{ left: sidebarWidth }}
+                    style={{ left: contentShiftWidth }}
                 >
                     {/* F30 Global Search Bar */}
                     <div className="relative w-full max-w-md">

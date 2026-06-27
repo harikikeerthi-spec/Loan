@@ -117,6 +117,8 @@ export class BankService {
         stage: updatedStage,
         progress: updatedProgress,
         applicationNumber: lanNumber, // Sync LAN to applicationNumber field
+        lanNumber: lanNumber, // Sync to lanNumber column
+        lanEnteredAt: new Date().toISOString(), // Sync to lanEnteredAt column
         remarks: `LAN ${lanNumber} assigned manually by bank user: ${bankUser.firstName || 'Banker'}.`,
         updatedAt: new Date().toISOString()
       })
@@ -273,6 +275,11 @@ export class BankService {
       targetStatus = 'rejected';
     } else {
       throw new BadRequestException(`Unsupported decision type: "${decisionType}"`);
+    }
+
+    // Enforce LAN check for sanction decisions
+    if (['sanctioned', 'conditional_sanction'].includes(targetStatus) && !application.lanNumber) {
+      throw new BadRequestException('Cannot sanction loan application: LAN (Loan Account Number) must be entered/logged first.');
     }
 
     // State machine validation
@@ -1292,11 +1299,20 @@ export class BankService {
   }
 
   async recordConsent(applicationId: string, consentData: any, bankUser: any): Promise<any> {
+    const { data: appData } = await this.db
+      .from('LoanApplication')
+      .select('userId')
+      .eq('id', applicationId)
+      .single();
+
+    const userId = appData?.userId || null;
+
     const { data, error } = await this.db
       .from('ConsentRecord')
       .upsert(
         {
           applicationId,
+          userId,
           consentType: consentData.consentType || 'DATA_SHARING',
           status: 'ACCEPTED',
           recordedAt: new Date().toISOString(),

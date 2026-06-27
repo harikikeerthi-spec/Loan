@@ -6,6 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { authApi } from "@/lib/api";
 
+// Allowed agent roles for accessing agent portal
+const AGENT_ROLES = ['agent', 'partner_agent', 'admin', 'super_admin'] as const;
+
+const isAgentRole = (role: string): boolean => {
+    return AGENT_ROLES.includes(role as any);
+};
+
 function AgentLoginContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -96,8 +103,11 @@ function AgentLoginContent() {
                 throw new Error((data as any).message || "Invalid OTP. Please enter the right one to login.");
             }
 
-            if (data.role !== 'agent' && data.role !== 'partner_agent' && data.role !== 'admin' && data.role !== 'super_admin') {
-                throw new Error("Access Denied: Agent privileges required.");
+            // Check if user has agent-level access
+            if (!isAgentRole(data.role)) {
+                throw new Error(
+                    "Access Denied: You do not have agent privileges. Please contact the administrator to grant you access to the Agent Portal."
+                );
             }
 
             login(data.access_token, {

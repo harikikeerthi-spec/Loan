@@ -1751,11 +1751,20 @@ export class BankDashboardService {
   // ==================== CONSENT & REFERRAL ====================
 
   async recordConsent(applicationId: string, consentData: any, bankUser: any): Promise<any> {
+    const { data: appData } = await this.db
+      .from('LoanApplication')
+      .select('userId')
+      .eq('id', applicationId)
+      .single();
+
+    const userId = appData?.userId || null;
+
     const { data, error } = await this.db
       .from('ConsentRecord')
       .upsert(
         {
           applicationId,
+          userId,
           consentType: consentData.consentType,
           status: 'ACCEPTED',
           recordedAt: new Date().toISOString(),

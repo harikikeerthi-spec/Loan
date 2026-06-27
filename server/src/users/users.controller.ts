@@ -114,6 +114,7 @@ export class UsersController {
         @Query('role') role?: string,
     ) {
         console.log('[UsersController.listUsers] Request received', { limit, offset, search, role });
+        console.log('[UsersController.listUsers] Request Referer:', req.headers.referer || req.headers.referrer);
         try {
             const l = limit ? parseInt(limit, 10) : 30;
             const o = offset ? parseInt(offset, 10) : 0;

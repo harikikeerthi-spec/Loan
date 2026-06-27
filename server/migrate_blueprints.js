@@ -219,12 +219,18 @@ async function runMigration() {
         await createTable('ConsentRecord', `
             CREATE TABLE "ConsentRecord" (
                 "id" TEXT NOT NULL DEFAULT uuid_generate_v4(),
-                "studentId" TEXT NOT NULL,
-                "bankId" TEXT NOT NULL,
-                "consentId" TEXT NOT NULL UNIQUE,
-                "scope" TEXT NOT NULL,
-                "consentedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                "validTill" TIMESTAMP(3) NOT NULL,
+                "applicationId" TEXT NOT NULL UNIQUE,
+                "userId" TEXT,
+                "consentType" TEXT,
+                "status" TEXT NOT NULL,
+                "recordedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                "recordedBy" TEXT,
+                "studentId" TEXT,
+                "bankId" TEXT,
+                "consentId" TEXT UNIQUE,
+                "scope" TEXT,
+                "consentedAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+                "validTill" TIMESTAMP(3),
                 CONSTRAINT "ConsentRecord_pkey" PRIMARY KEY ("id")
             );
         `);
