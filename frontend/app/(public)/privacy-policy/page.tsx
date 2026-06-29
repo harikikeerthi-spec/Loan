@@ -217,7 +217,7 @@ export default function PrivacyPolicyPage() {
                                         <span className="text-gray-950 font-bold">Email:</span> privacy@vidyaloan.in
                                     </p>
                                     <p className="text-[13px] text-gray-500 font-medium">
-                                        <span className="text-gray-950 font-bold">Address:</span> VidyaLoans HQ, Block D-3, IT Park, Hyderabad, India
+                                        <span className="text-gray-950 font-bold">Address:</span> Nuzvid
                                     </p>
                                     <p className="text-[13px] text-gray-500 font-medium">
                                         <span className="text-gray-950 font-bold">Phone:</span> +91 9240209000

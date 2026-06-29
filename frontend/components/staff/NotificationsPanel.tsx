@@ -250,18 +250,24 @@ const NotificationsPanel = ({
   }, [fetchNotifications]);
 
   // Setup HTTP polling fallback when WebSocket is offline/disconnected
+  // Uses a delay before activating to avoid flooding requests during brief reconnect cycles
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
+    let delayTimer: NodeJS.Timeout | null = null;
 
     if (!isConnected) {
-      console.log("[NotificationsPanel] Starting HTTP polling fallback (10s interval)");
-      fetchNotifications(); // Poll immediately
-      interval = setInterval(() => {
-        fetchNotifications();
-      }, 10000); // Poll every 10 seconds
+      // Wait 5 seconds before activating HTTP polling — this avoids triggering during brief socket reconnects
+      delayTimer = setTimeout(() => {
+        console.log("[NotificationsPanel] Starting HTTP polling fallback (30s interval)");
+        fetchNotifications(); // Poll immediately after delay
+        interval = setInterval(() => {
+          fetchNotifications();
+        }, 30000); // Poll every 30 seconds (reduced from 10s)
+      }, 5000);
     }
 
     return () => {
+      if (delayTimer) clearTimeout(delayTimer);
       if (interval) {
         clearInterval(interval);
       }
@@ -405,10 +411,10 @@ const NotificationsPanel = ({
         )}
 
         {/* Connection indicator */}
-        <div
+        {/* <div
           className={`absolute bottom-1 right-1 w-2 h-2 rounded-full ${isConnected ? "bg-emerald-500" : "bg-slate-300"
             }`}
-        />
+        /> */}
       </button>
 
       {/* Notifications Dropdown */}
@@ -434,7 +440,7 @@ const NotificationsPanel = ({
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-slate-900 flex items-center gap-2">
                     <span className="material-symbols-outlined">notifications_active</span>
-                    Real-time Notifications
+                    Notifications
                   </h3>
                   <div className="flex items-center gap-3">
                     {unreadCount > 0 && (
@@ -651,8 +657,8 @@ const NotificationsPanel = ({
                       key={tab.id}
                       onClick={() => setSelectedFilter(tab.id as any)}
                       className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${selectedFilter === tab.id
-                          ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/10"
-                          : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-600/10"
+                        : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"
                         }`}
                     >
                       {tab.label}
@@ -676,8 +682,8 @@ const NotificationsPanel = ({
                             setIsAllModalOpen(false);
                           }}
                           className={`p-4 bg-white rounded-2xl border transition-all cursor-pointer hover:shadow-md flex gap-4 ${notif.isRead
-                              ? "border-slate-100 opacity-75 hover:opacity-100"
-                              : `border-slate-200 hover:border-slate-300 shadow-sm relative overflow-hidden`
+                            ? "border-slate-100 opacity-75 hover:opacity-100"
+                            : `border-slate-200 hover:border-slate-300 shadow-sm relative overflow-hidden`
                             }`}
                         >
                           {/* Unread dot indicator on the left side edge */}

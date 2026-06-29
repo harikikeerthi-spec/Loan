@@ -10,7 +10,7 @@ const LOAN_DATA = Object.values(banks).map(bank => ({
     logo: bank.logo,
     rate: bank.interestRate,
     maxAmount: bank.maxLoan,
-    fee: bank.specifications.find(s => s.label === "Processing Fee")?.value || "1% + GST",
+    fee: bank.specifications.find(s => s.label === "Processing Fee")?.value || "5.7% + GST",
     tenure: bank.specifications.find(s => s.label === "Repayment Tenure")?.value || "Up to 15 Years",
     collateral: bank.specifications.find(s => s.label === "Collateral")?.value || "Profile based",
     tag: bank.uniqueFeatures[0]?.title || "Premium Partner"

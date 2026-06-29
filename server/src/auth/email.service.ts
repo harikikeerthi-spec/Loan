@@ -160,7 +160,7 @@ export class EmailService {
   async sendDashboardWelcomeEmail(email: string, firstName?: string, lastName?: string) {
     const fullName = firstName ? (lastName ? `${firstName} ${lastName}` : firstName) : '';
     const name = firstName ? firstName : 'there';
-    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
+    const frontendUrl = 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();
 
     const mailOptions = {
@@ -199,7 +199,7 @@ export class EmailService {
                 <tr>
                   <!-- Left side Logo -->
                   <td width="60" align="left" style="vertical-align: middle;">
-                    <img src="${frontendUrl}/vidyaloan_logo.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;border-radius:10px;" />
+                    <img src="${frontendUrl}/images/vidyaloans-logo-transparent.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;border-radius:10px;" />
                   </td>
                   <!-- Middle Text -->
                   <td align="center" style="vertical-align: middle; padding-right: 60px;">
@@ -219,7 +219,7 @@ export class EmailService {
               text-align: center;
             ">
               <h2 style="color:#ffffff;margin:0 0 10px;font-size:26px;font-weight:800;line-height:1.2;">
-                Welcome aboard, <span style="color:#fde68a;">${name}!</span>
+                Welcome <span style="color:#fde68a;">${name}!</span>
               </h2>
               <p style="color:#ddd6fe;margin:0;font-size:15px;line-height:1.65;max-width:420px;display:inline-block;">
                 Your VidyaLoan dashboard is ready. Let's turn your education dream into reality with the smartest loan platform in India.
@@ -499,7 +499,7 @@ export class EmailService {
   }
 
   async sendStaffReviewStartedEmail(email: string, userName: string, application: any) {
-    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
+    const frontendUrl = 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const loanType = (application.loanType || 'Education').toUpperCase();
@@ -534,14 +534,21 @@ export class EmailService {
               background: linear-gradient(135deg, #1a0533 0%, #2d0a5e 40%, #1e1b6e 100%);
               border-radius: 20px 20px 0 0;
               padding: 36px 40px 28px;
-              text-align: center;
               border-bottom: 1px solid rgba(139,92,246,0.3);
             ">
-              <div style="display:inline-block;width:52px;height:52px;margin-bottom:14px;vertical-align:middle;">
-                <img src="${frontendUrl}/images/vidyaloans-logo-transparent.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;" onerror="this.style.display='none'" />
-              </div>
-              <h1 style="color:#ffffff;margin:0 0 4px;font-size:28px;font-weight:800;letter-spacing:-0.5px;">VidyaLoan</h1>
-              <p style="color:#a78bfa;margin:0;font-size:12px;letter-spacing:2px;font-weight:600;">EDUCATION LOAN PLATFORM</p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <!-- Left side Logo -->
+                  <td width="60" align="left" style="vertical-align: middle;">
+                    <img src="${frontendUrl}/images/vidyaloans-logo-transparent.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;border-radius:10px;" />
+                  </td>
+                  <!-- Middle Text -->
+                  <td align="center" style="vertical-align: middle; padding-right: 60px;">
+                    <h1 style="color:#ffffff;margin:0 0 4px;font-size:28px;font-weight:800;letter-spacing:-0.5px;font-family:'Inter','Segoe UI',Arial,sans-serif;">VidyaLoan</h1>
+                    <p style="color:#a78bfa;margin:0;font-size:12px;letter-spacing:2px;font-weight:600;font-family:'Inter','Segoe UI',Arial,sans-serif;text-transform:uppercase;">EDUCATION LOAN PLATFORM</p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
@@ -771,7 +778,7 @@ export class EmailService {
   }
 
   async sendLoanSubmissionEmail(email: string, userName: string, bankName: string, application: any) {
-    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
+    const frontendUrl = 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const loanType = (application.loanType || 'Education').toUpperCase();
@@ -808,14 +815,21 @@ export class EmailService {
               background: linear-gradient(135deg, #1a0533 0%, #2d0a5e 40%, #1e1b6e 100%);
               border-radius: 20px 20px 0 0;
               padding: 36px 40px 28px;
-              text-align: center;
               border-bottom: 1px solid rgba(139,92,246,0.3);
             ">
-              <div style="display:inline-block;width:52px;height:52px;margin-bottom:14px;vertical-align:middle;">
-                <img src="${frontendUrl}/images/vidyaloans-logo-transparent.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;" onerror="this.style.display='none'" />
-              </div>
-              <h1 style="color:#ffffff;margin:0 0 4px;font-size:28px;font-weight:800;letter-spacing:-0.5px;">VidyaLoan</h1>
-              <p style="color:#a78bfa;margin:0;font-size:12px;letter-spacing:2px;font-weight:600;">EDUCATION LOAN PLATFORM</p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <!-- Left side Logo -->
+                  <td width="60" align="left" style="vertical-align: middle;">
+                    <img src="${frontendUrl}/images/vidyaloans-logo-transparent.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;border-radius:10px;" />
+                  </td>
+                  <!-- Middle Text -->
+                  <td align="center" style="vertical-align: middle; padding-right: 60px;">
+                    <h1 style="color:#ffffff;margin:0 0 4px;font-size:28px;font-weight:800;letter-spacing:-0.5px;font-family:'Inter','Segoe UI',Arial,sans-serif;">VidyaLoan</h1>
+                    <p style="color:#a78bfa;margin:0;font-size:12px;letter-spacing:2px;font-weight:600;font-family:'Inter','Segoe UI',Arial,sans-serif;text-transform:uppercase;">EDUCATION LOAN PLATFORM</p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
@@ -997,7 +1011,7 @@ export class EmailService {
   }
 
   async sendLoanTrackingEmail(email: string, userName: string, bankName: string, application: any) {
-    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
+    const frontendUrl = 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const loanType = (application.loanType || 'Education').toUpperCase();
@@ -1031,14 +1045,21 @@ export class EmailService {
               background: linear-gradient(135deg, #1a0533 0%, #2d0a5e 40%, #1e1b6e 100%);
               border-radius: 20px 20px 0 0;
               padding: 36px 40px 28px;
-              text-align: center;
               border-bottom: 1px solid rgba(139,92,246,0.3);
             ">
-              <div style="display:inline-block;width:52px;height:52px;margin-bottom:14px;vertical-align:middle;">
-                <img src="${frontendUrl}/images/vidyaloans-logo-transparent.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;" onerror="this.style.display='none'" />
-              </div>
-              <h1 style="color:#ffffff;margin:0 0 4px;font-size:28px;font-weight:800;letter-spacing:-0.5px;">VidyaLoan</h1>
-              <p style="color:#a78bfa;margin:0;font-size:12px;letter-spacing:2px;font-weight:600;">EDUCATION LOAN PLATFORM</p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <!-- Left side Logo -->
+                  <td width="60" align="left" style="vertical-align: middle;">
+                    <img src="${frontendUrl}/images/vidyaloans-logo-transparent.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;border-radius:10px;" />
+                  </td>
+                  <!-- Middle Text -->
+                  <td align="center" style="vertical-align: middle; padding-right: 60px;">
+                    <h1 style="color:#ffffff;margin:0 0 4px;font-size:28px;font-weight:800;letter-spacing:-0.5px;font-family:'Inter','Segoe UI',Arial,sans-serif;">VidyaLoan</h1>
+                    <p style="color:#a78bfa;margin:0;font-size:12px;letter-spacing:2px;font-weight:600;font-family:'Inter','Segoe UI',Arial,sans-serif;text-transform:uppercase;">EDUCATION LOAN PLATFORM</p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
@@ -1233,7 +1254,7 @@ export class EmailService {
   }
 
   async sendApplicationSentToBankEmail(email: string, userName: string, bankName: string, application: any) {
-    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
+    const frontendUrl = 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const loanType = (application.loanType || 'Education').toUpperCase();
@@ -1262,19 +1283,26 @@ export class EmailService {
         <table width="620" cellpadding="0" cellspacing="0" style="max-width:620px;width:100%;">
           
           <!-- HEADER -->
-          <tr>
+         <tr>
             <td style="
               background: linear-gradient(135deg, #1a0533 0%, #2d0a5e 40%, #1e1b6e 100%);
               border-radius: 20px 20px 0 0;
               padding: 36px 40px 28px;
-              text-align: center;
               border-bottom: 1px solid rgba(139,92,246,0.3);
             ">
-              <div style="display:inline-block;width:52px;height:52px;margin-bottom:14px;vertical-align:middle;">
-                <img src="${frontendUrl}/images/vidyaloans-logo-transparent.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;" onerror="this.style.display='none'" />
-              </div>
-              <h1 style="color:#ffffff;margin:0 0 4px;font-size:28px;font-weight:800;letter-spacing:-0.5px;">VidyaLoan</h1>
-              <p style="color:#a78bfa;margin:0;font-size:12px;letter-spacing:2px;font-weight:600;">EDUCATION LOAN PLATFORM</p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <!-- Left side Logo -->
+                  <td width="60" align="left" style="vertical-align: middle;">
+                    <img src="${frontendUrl}/images/vidyaloans-logo-transparent.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;border-radius:10px;" />
+                  </td>
+                  <!-- Middle Text -->
+                  <td align="center" style="vertical-align: middle; padding-right: 60px;">
+                    <h1 style="color:#ffffff;margin:0 0 4px;font-size:28px;font-weight:800;letter-spacing:-0.5px;font-family:'Inter','Segoe UI',Arial,sans-serif;">VidyaLoan</h1>
+                    <p style="color:#a78bfa;margin:0;font-size:12px;letter-spacing:2px;font-weight:600;font-family:'Inter','Segoe UI',Arial,sans-serif;text-transform:uppercase;">EDUCATION LOAN PLATFORM</p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
@@ -1465,7 +1493,7 @@ export class EmailService {
   }
 
   async sendApplicationAcceptedByBankEmail(email: string, userName: string, bankName: string, application: any, details?: any) {
-    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
+    const frontendUrl = 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();
     const appNum = application.applicationNumber || 'N/A';
     const progress = 85;
@@ -1504,14 +1532,21 @@ export class EmailService {
               background: linear-gradient(135deg, #1a0533 0%, #2d0a5e 40%, #1e1b6e 100%);
               border-radius: 20px 20px 0 0;
               padding: 36px 40px 28px;
-              text-align: center;
               border-bottom: 1px solid rgba(139,92,246,0.3);
             ">
-              <div style="display:inline-block;width:52px;height:52px;margin-bottom:14px;vertical-align:middle;">
-                <img src="${frontendUrl}/images/vidyaloans-logo-transparent.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;" onerror="this.style.display='none'" />
-              </div>
-              <h1 style="color:#ffffff;margin:0 0 4px;font-size:28px;font-weight:800;letter-spacing:-0.5px;">VidyaLoan</h1>
-              <p style="color:#a78bfa;margin:0;font-size:12px;letter-spacing:2px;font-weight:600;">EDUCATION LOAN PLATFORM</p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <!-- Left side Logo -->
+                  <td width="60" align="left" style="vertical-align: middle;">
+                    <img src="${frontendUrl}/images/vidyaloans-logo-transparent.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;border-radius:10px;" />
+                  </td>
+                  <!-- Middle Text -->
+                  <td align="center" style="vertical-align: middle; padding-right: 60px;">
+                    <h1 style="color:#ffffff;margin:0 0 4px;font-size:28px;font-weight:800;letter-spacing:-0.5px;font-family:'Inter','Segoe UI',Arial,sans-serif;">VidyaLoan</h1>
+                    <p style="color:#a78bfa;margin:0;font-size:12px;letter-spacing:2px;font-weight:600;font-family:'Inter','Segoe UI',Arial,sans-serif;text-transform:uppercase;">EDUCATION LOAN PLATFORM</p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
@@ -1687,7 +1722,7 @@ export class EmailService {
   }
 
   async sendApplicationRejectedByBankEmail(email: string, userName: string, bankName: string, reason: string) {
-    const frontendUrl = process.env.FRONTEND_URL || 'https://developer.vidyaloans.in';
+    const frontendUrl = 'https://developer.vidyaloans.in';
     const year = new Date().getFullYear();
 
     const mailOptions = {
@@ -1718,14 +1753,21 @@ export class EmailService {
               background: linear-gradient(135deg, #1a0533 0%, #2d0a5e 40%, #1e1b6e 100%);
               border-radius: 20px 20px 0 0;
               padding: 36px 40px 28px;
-              text-align: center;
               border-bottom: 1px solid rgba(139,92,246,0.3);
             ">
-              <div style="display:inline-block;width:52px;height:52px;margin-bottom:14px;vertical-align:middle;">
-                <img src="${frontendUrl}/images/vidyaloans-logo-transparent.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;" onerror="this.style.display='none'" />
-              </div>
-              <h1 style="color:#ffffff;margin:0 0 4px;font-size:28px;font-weight:800;letter-spacing:-0.5px;">VidyaLoan</h1>
-              <p style="color:#a78bfa;margin:0;font-size:12px;letter-spacing:2px;font-weight:600;">EDUCATION LOAN PLATFORM</p>
+              <table width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <!-- Left side Logo -->
+                  <td width="60" align="left" style="vertical-align: middle;">
+                    <img src="${frontendUrl}/images/vidyaloans-logo-transparent.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;border-radius:10px;" />
+                  </td>
+                  <!-- Middle Text -->
+                  <td align="center" style="vertical-align: middle; padding-right: 60px;">
+                    <h1 style="color:#ffffff;margin:0 0 4px;font-size:28px;font-weight:800;letter-spacing:-0.5px;font-family:'Inter','Segoe UI',Arial,sans-serif;">VidyaLoan</h1>
+                    <p style="color:#a78bfa;margin:0;font-size:12px;letter-spacing:2px;font-weight:600;font-family:'Inter','Segoe UI',Arial,sans-serif;text-transform:uppercase;">EDUCATION LOAN PLATFORM</p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 

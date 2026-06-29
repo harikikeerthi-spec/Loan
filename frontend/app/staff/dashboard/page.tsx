@@ -890,8 +890,8 @@ export default function StaffDashboardPage() {
     const [showOcrReview, setShowOcrReview] = useState<{ [key: string]: boolean }>({});
     const fileInputRefs = useRef<{ [key: string]: HTMLInputElement }>({});
 
-    const loadOverview = useCallback(async () => {
-        setLoading(true);
+    const loadOverview = useCallback(async (silent?: boolean) => {
+        if (!silent) setLoading(true);
         try {
             const [blogStats, appStats, userStats]: [any, any, any] = await Promise.all([
                 adminApi.getBlogStats().catch(() => ({ data: {} })),
@@ -918,10 +918,19 @@ export default function StaffDashboardPage() {
         }
     }, []);
 
+    // Track whether this is the first load for the current section (show spinner) or a background refresh (silent)
+    const isInitialSectionLoad = useRef(true);
+    const lastLoadedSection = useRef("");
+
     const loadData = useCallback(async () => {
         if (activeSection === "overview" || activeSection.startsWith("chat_")) return;
-        setLoading(true);
-        setData([]);
+        // Only show loading spinner + clear data on initial section load, not on background refreshes
+        const isInitial = lastLoadedSection.current !== activeSection;
+        if (isInitial) {
+            setLoading(true);
+            setData([]);
+            lastLoadedSection.current = activeSection;
+        }
         try {
             let res: any;
             if (activeSection === "blogs") {
@@ -992,10 +1001,17 @@ export default function StaffDashboardPage() {
         }
     }, [filterStatus, searchQuery, userRoleFilter]);
 
+    // Stable refs to always call the latest version of these without adding them as dependencies
+    const loadDataRef = useRef(loadData);
+    const loadOverviewRef = useRef(loadOverview);
+    useEffect(() => { loadDataRef.current = loadData; }, [loadData]);
+    useEffect(() => { loadOverviewRef.current = loadOverview; }, [loadOverview]);
+
     useEffect(() => {
-        if (activeSection === "overview") loadOverview();
-        else loadData();
-    }, [activeSection, loadOverview, loadData]);
+        if (activeSection === "overview") loadOverviewRef.current();
+        else loadDataRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeSection, filterStatus, currentPage, searchQuery, userRoleFilter]);
 
 
     // Pre-calculate stats for different sections to avoid complex IIFEs in JSX
@@ -1039,34 +1055,35 @@ export default function StaffDashboardPage() {
         ];
     })() : [];
 
-    // Auto-refresh for real-time updates
+    // Auto-refresh for real-time updates (intentionally low frequency to avoid spamming auth checks)
     useEffect(() => {
         if (!autoRefreshEnabled) return;
+        if (autoRefreshInterval.current) clearInterval(autoRefreshInterval.current);
 
         if (activeSection === "overview") {
-            // Refresh overview every 20 seconds
+            // Refresh overview every 90 seconds (silently - no spinner)
             autoRefreshInterval.current = setInterval(() => {
-                loadOverview();
+                loadOverview(true);
                 setLastRefresh(new Date());
-            }, 20000);
+            }, 90000);
         } else if (activeSection === "applications" || activeSection === "incoming_queue") {
-            // Refresh applications every 15 seconds for real-time pipeline
+            // Refresh applications every 60 seconds
             autoRefreshInterval.current = setInterval(() => {
                 loadData();
                 setLastRefresh(new Date());
-            }, 15000);
+            }, 60000);
         } else if (activeSection === "performance") {
-            // Refresh metrics every 30 seconds
+            // Refresh metrics every 120 seconds (silently)
             autoRefreshInterval.current = setInterval(() => {
-                loadOverview();
+                loadOverview(true);
                 setLastRefresh(new Date());
-            }, 30000);
+            }, 120000);
         } else if (activeSection === "users") {
-            // Refresh users every 25 seconds
+            // Refresh users every 120 seconds
             autoRefreshInterval.current = setInterval(() => {
                 loadData();
                 setLastRefresh(new Date());
-            }, 25000);
+            }, 120000);
         }
 
         return () => {

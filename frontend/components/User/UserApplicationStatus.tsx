@@ -28,6 +28,37 @@ interface UserApplicationStatusProps {
 }
 
 const UserApplicationStatus = ({ application, onViewDetails }: UserApplicationStatusProps) => {
+    const [isDownloading, setIsDownloading] = React.useState(false);
+
+    const handleDownloadReceipt = async () => {
+        try {
+            setIsDownloading(true);
+            const token = localStorage.getItem("accessToken") || localStorage.getItem("staffAccessToken") || localStorage.getItem("adminAccessToken");
+            const response = await fetch(`/api/applications/${application.id}/disbursement-receipt`, {
+                headers: {
+                    ...(token && { Authorization: `Bearer ${token}` }),
+                },
+            });
+            if (!response.ok) {
+                throw new Error("Failed to download receipt");
+            }
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `Disbursement_Receipt_${application.applicationNumber}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("Error downloading receipt:", error);
+            alert("Failed to download disbursement receipt. Please try again.");
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
     const statusConfig: Record<string, { bg: string; text: string; icon: string; message: string }> = {
         pending: {
             bg: "bg-amber-50",
@@ -210,12 +241,24 @@ const UserApplicationStatus = ({ application, onViewDetails }: UserApplicationSt
             )}
 
             {application.status === "disbursed" && (
-                <div className="p-4 bg-purple-50 rounded-lg border border-purple-200 mt-4">
-                    <p className="text-sm font-bold text-purple-900 mb-2 flex items-center gap-2">
-                        <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                        Loan disbursed successfully!
-                    </p>
-                    <p className="text-xs text-purple-700">Amount: ₹{new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(application.amount)}</p>
+                <div className="p-4 bg-purple-50 rounded-lg border border-purple-200 mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <p className="text-sm font-bold text-purple-900 mb-1 flex items-center gap-2">
+                            <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                            Loan disbursed successfully!
+                        </p>
+                        <p className="text-xs text-purple-700 font-medium">Amount: ₹{new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(application.amount)}</p>
+                    </div>
+                    <button
+                        onClick={handleDownloadReceipt}
+                        disabled={isDownloading}
+                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg flex items-center justify-center gap-2 text-sm font-bold shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap self-start sm:self-center"
+                    >
+                        <span className="material-symbols-outlined text-[18px]">
+                            {isDownloading ? "hourglass_empty" : "download"}
+                        </span>
+                        {isDownloading ? "Downloading..." : "Download Receipt (PDF)"}
+                    </button>
                 </div>
             )}
 

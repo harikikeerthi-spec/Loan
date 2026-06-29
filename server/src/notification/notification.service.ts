@@ -642,7 +642,7 @@ export class NotificationService {
   /**
    * Programmatically generate premium disbursement receipt PDF buffer using pdfkit
    */
-  private generateDisbursementPdf(details: any): Promise<Buffer> {
+  public generateDisbursementPdf(details: any): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       try {
         const doc = new PDFDocument({ margin: 50 });

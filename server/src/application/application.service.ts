@@ -1623,4 +1623,13 @@ export class ApplicationService {
   getApplicationStages() {
     return { success: true, data: APPLICATION_STAGES };
   }
+
+  async getDisbursements(applicationId: string) {
+    const { data, error } = await this.db
+      .from('disbursements')
+      .select('*')
+      .eq('applicationId', applicationId)
+      .order('disbursedAt', { ascending: false });
+    return { data: data || [], error };
+  }
 }

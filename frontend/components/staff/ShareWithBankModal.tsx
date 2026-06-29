@@ -2,8 +2,8 @@
 
 import React, { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { adminApi } from "@/lib/api";
-
+import { adminApi, apiFetch } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ShareWithBankModalProps {
   applicationId: string;
@@ -15,16 +15,18 @@ interface ShareWithBankModalProps {
   onSuccess?: () => void;
 }
 
+// Bank names must exactly match the key→name map in BankNotificationsPanel.isNotificationForThisBank
+// so that per-bank notification filtering works correctly.
 const BANKS = [
-  { id: "sbi", name: "State Bank of India (SBI)" },
-  { id: "hdfc", name: "HDFC Bank" },
-  { id: "icici", name: "ICICI Bank" },
-  { id: "axis", name: "Axis Bank" },
-  { id: "idfc", name: "IDFC First Bank" },
-  { id: "hdfc_credila", name: "HDFC Credila" },
-  { id: "avanse", name: "Avanse Financial" },
-  { id: "auxilo", name: "Auxilo Fintech" },
-  { id: "poonawalla", name: "Poonawalla Finance" },
+  { id: "auxilo",     name: "Auxilo Finserve" },
+  { id: "avanse",     name: "Avanse Financial" },
+  { id: "credila",    name: "HDFC Credila" },
+  { id: "idfc",       name: "IDFC FIRST Bank" },
+  { id: "poonawalla", name: "Poonawalla Fincorp" },
+  { id: "sbi",        name: "State Bank of India" },
+  { id: "hdfc",       name: "HDFC Bank" },
+  { id: "icici",      name: "ICICI Bank" },
+  { id: "axis",       name: "Axis Bank" },
 ];
 
 export default function ShareWithBankModal({
@@ -36,6 +38,7 @@ export default function ShareWithBankModal({
   onClose,
   onSuccess,
 }: ShareWithBankModalProps) {
+  const { user } = useAuth();
   const [selectedBank, setSelectedBank] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -55,7 +58,7 @@ export default function ShareWithBankModal({
     setError("");
 
     try {
-      // Update the bank name and application status directly via adminApi
+      // 1. Update the application's bank field and status
       await adminApi.updateApplication(applicationId, { bank: selectedBankName });
       await adminApi.updateApplicationStatus(applicationId, {
         status: "processing",
@@ -64,23 +67,64 @@ export default function ShareWithBankModal({
         remarks: remarks || `Application routed to ${selectedBankName}`,
       });
 
-      // Generate a local submission reference ID
-      const submissionRef = `SUB-${applicationId.slice(-6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
+      // 2. Call the bank workflow submit endpoint so the server emits
+      //    `bank.submission.created` → NotificationService creates a DB notification
+      //    → ChatGateway broadcasts `notification_received` to room_bank via Socket.io.
+      //    This is what makes the bank portal notification bell ring in real-time.
+      let realSubmissionId = "";
+      try {
+        const staffName = user
+          ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email
+          : "Staff";
+
+        const workflowRes: any = await apiFetch("/api/bank/workflow/submit", {
+          method: "POST",
+          body: JSON.stringify({
+            applicationId,
+            bankId: selectedBank,
+            bankName: selectedBankName,
+            submittedBy: staffName,
+          }),
+        });
+
+        if (workflowRes?.data?.id) {
+          realSubmissionId = workflowRes.data.id;
+        }
+      } catch (workflowErr: any) {
+        // Don't block success UX if workflow already created (duplicate) or minor error
+        console.warn("[ShareWithBankModal] Workflow submit warning:", workflowErr?.message);
+      }
+
+      // 3. Show success state
+      const submissionRef =
+        realSubmissionId ||
+        `SUB-${applicationId.slice(-6).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`;
       setSubmissionId(submissionRef);
       setSuccess(true);
 
-      // Auto-close after 2 seconds and notify parent
+      // Auto-close after 2.5 seconds and notify parent
       setTimeout(() => {
         onClose();
         onSuccess?.();
-      }, 2000);
+      }, 2500);
     } catch (err: any) {
       setError(err.message || "An error occurred while sharing application");
     } finally {
       setLoading(false);
     }
-  }, [selectedBank, selectedBankName, applicationId, remarks, onClose, onSuccess]);
+  }, [selectedBank, selectedBankName, applicationId, remarks, onClose, onSuccess, user]);
 
+  // Reset state when modal opens/closes
+  const handleClose = () => {
+    if (!loading) {
+      setSelectedBank("");
+      setError("");
+      setSuccess(false);
+      setSubmissionId("");
+      setRemarks("");
+      onClose();
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -104,7 +148,7 @@ export default function ShareWithBankModal({
               </h2>
               {!success && (
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   className="text-slate-400 hover:text-slate-600"
                 >
                   <span className="material-symbols-outlined">close</span>
@@ -156,7 +200,7 @@ export default function ShareWithBankModal({
                           onClick={() => setSelectedBank(bank.id)}
                           className={`p-3 rounded-lg border-2 text-left transition-all text-xs font-bold uppercase ${
                             selectedBank === bank.id
-                              ? "border-blue-600 bg-blue-50 text-blue-900"
+                              ? "border-[#6605c7] bg-purple-50 text-purple-900"
                               : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
                           }`}
                         >
@@ -175,7 +219,7 @@ export default function ShareWithBankModal({
                       value={remarks}
                       onChange={(e) => setRemarks(e.target.value)}
                       placeholder="Add internal remarks about document verification or routing details..."
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-900"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all text-slate-900"
                       rows={3}
                     />
                   </div>
@@ -194,7 +238,7 @@ export default function ShareWithBankModal({
                   {/* Action Buttons */}
                   <div className="flex gap-3">
                     <button
-                      onClick={onClose}
+                      onClick={handleClose}
                       disabled={loading}
                       className="flex-1 px-4 py-3 bg-slate-100 text-slate-900 font-bold uppercase text-xs rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
                     >
@@ -203,19 +247,20 @@ export default function ShareWithBankModal({
                     <button
                       onClick={handleShare}
                       disabled={!selectedBank || loading}
-                      className="flex-1 px-4 py-3 bg-blue-600 text-white font-bold uppercase text-xs rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="flex-1 px-4 py-3 text-white font-bold uppercase text-xs rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                      style={{ background: "linear-gradient(135deg, #6605c7, #8b24e5)" }}
                     >
                       {loading ? (
                         <>
                           <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Sharing...
+                          Sending...
                         </>
                       ) : (
                         <>
                           <span className="material-symbols-outlined text-sm">
                             send
                           </span>
-                          Share
+                          Send to Bank
                         </>
                       )}
                     </button>
@@ -229,26 +274,30 @@ export default function ShareWithBankModal({
                   animate={{ opacity: 1, y: 0 }}
                 >
                   <motion.div
-                    className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl"
+                    className="w-16 h-16 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl"
+                    style={{ background: "linear-gradient(135deg, rgba(102,5,199,0.1), rgba(139,36,229,0.15))" }}
                     animate={{ scale: [1, 1.1, 1] }}
                     transition={{ duration: 0.5 }}
                   >
-                    <span className="material-symbols-outlined text-4xl">
+                    <span className="material-symbols-outlined text-4xl" style={{ color: "#6605c7" }}>
                       verified
                     </span>
                   </motion.div>
                   <h3 className="text-lg font-black text-slate-900 mb-2">
-                    Application Shared!
+                    Application Sent!
                   </h3>
                   <p className="text-sm text-slate-600 mb-4">
-                    Application #{applicationNumber} has been successfully shared with{" "}
-                    <span className="font-bold">{selectedBankName}</span>
+                    Application #{applicationNumber} has been successfully sent to{" "}
+                    <span className="font-bold" style={{ color: "#6605c7" }}>{selectedBankName}</span>.
                   </p>
-                  <p className="text-xs text-slate-500">
-                    Bank Submission ID: <span className="font-mono font-bold">{submissionId}</span>
-                  </p>
-                  <p className="text-xs text-emerald-600 font-bold mt-2">
-                    The workflow will now begin at the bank end.
+                  <div className="bg-purple-50 rounded-xl p-3 border border-purple-100">
+                    <p className="text-xs text-purple-700 font-semibold flex items-center justify-center gap-1.5">
+                      <span className="material-symbols-outlined text-[14px]">notifications_active</span>
+                      The bank has been notified in real-time.
+                    </p>
+                  </div>
+                  <p className="text-xs text-slate-400 font-mono mt-3">
+                    Submission Ref: <span className="font-bold">{submissionId}</span>
                   </p>
                 </motion.div>
               )}

@@ -174,28 +174,28 @@ export default function BankNotificationsPanel({
   const isNotificationForThisBank = useCallback((notif: BankNotification) => {
     let metadata = notif.metadata;
     if (typeof metadata === "string") {
-      try { metadata = JSON.parse(metadata); } catch {}
+      try { metadata = JSON.parse(metadata); } catch { }
     }
     const notifBank = metadata?.bankName || metadata?.bank;
     if (!notifBank) return true; // Global notification, show to all banks
-    
+
     // Resolve current bank name
     let currentBank = null;
     if (typeof window !== "undefined") {
       const selected = sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank");
       const map: Record<string, string> = {
-          auxilo: "Auxilo Finserve",
-          avanse: "Avanse Financial",
-          credila: "HDFC Credila",
-          idfc: "IDFC FIRST Bank",
-          poonawalla: "Poonawalla Fincorp",
+        auxilo: "Auxilo Finserve",
+        avanse: "Avanse Financial",
+        credila: "HDFC Credila",
+        idfc: "IDFC FIRST Bank",
+        poonawalla: "Poonawalla Fincorp",
       };
       if (selected && map[selected]) currentBank = map[selected];
     }
     if (!currentBank) {
       currentBank = user?.bankName || user?.firstName || null;
     }
-    
+
     if (!currentBank) return true; // If we can't determine, default to showing
     return notifBank.toLowerCase() === currentBank.toLowerCase();
   }, [user]);
@@ -217,13 +217,13 @@ export default function BankNotificationsPanel({
   useEffect(() => {
     const baseApiUrl =
       typeof window !== "undefined" &&
-      (window.location.hostname.includes("localhost") ||
-        window.location.hostname.includes("127.0.0.1"))
+        (window.location.hostname.includes("localhost") ||
+          window.location.hostname.includes("127.0.0.1"))
         ? "http://localhost:5000"
         : process.env.NEXT_PUBLIC_API_URL ||
-          (typeof window !== "undefined"
-            ? window.location.origin
-            : "http://localhost:5000");
+        (typeof window !== "undefined"
+          ? window.location.origin
+          : "http://localhost:5000");
 
     const token =
       localStorage.getItem("bankAccessToken") ||
@@ -306,7 +306,7 @@ export default function BankNotificationsPanel({
     try {
       let metadata = notification.metadata;
       if (typeof metadata === "string") {
-        try { metadata = JSON.parse(metadata); } catch {}
+        try { metadata = JSON.parse(metadata); } catch { }
       }
 
       const submissionId = metadata?.submissionId;
@@ -384,11 +384,10 @@ export default function BankNotificationsPanel({
         )}
 
         {/* Connection indicator dot */}
-        <div
-          className={`absolute bottom-1 right-1 w-2 h-2 rounded-full ${
-            isConnected ? "bg-emerald-500" : "bg-gray-300"
-          }`}
-        />
+        {/* <div
+          className={`absolute bottom-1 right-1 w-2 h-2 rounded-full ${isConnected ? "bg-emerald-500" : "bg-gray-300"
+            }`}
+        /> */}
       </button>
 
       {/* Dropdown Panel */}
@@ -416,7 +415,7 @@ export default function BankNotificationsPanel({
                     <span className="material-symbols-outlined text-[18px] text-[#6605c7]">
                       notifications_active
                     </span>
-                    Live Bank Notifications
+                    Notifications
                   </h3>
                   <div className="flex items-center gap-3">
                     {unreadCount > 0 && (
@@ -436,12 +435,12 @@ export default function BankNotificationsPanel({
                         Offline
                       </div>
                     )}
-                    {isConnected && (
+                    {/* {isConnected && (
                       <div className="flex items-center gap-1 px-2 py-1 bg-emerald-50 rounded text-[9px] text-emerald-700 border border-emerald-100">
                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
                         Live
                       </div>
-                    )}
+                    )} */}
                   </div>
                 </div>
               </div>
@@ -667,16 +666,16 @@ export default function BankNotificationsPanel({
                         style={
                           selectedFilter === tab.id
                             ? {
-                                background: "linear-gradient(135deg, #6605c7, #8b24e5)",
-                                color: "white",
-                                borderColor: "#6605c7",
-                                boxShadow: "0 4px 12px rgba(102,5,199,0.2)",
-                              }
+                              background: "linear-gradient(135deg, #6605c7, #8b24e5)",
+                              color: "white",
+                              borderColor: "#6605c7",
+                              boxShadow: "0 4px 12px rgba(102,5,199,0.2)",
+                            }
                             : {
-                                background: "white",
-                                color: "#6b7280",
-                                borderColor: "#e5e7eb",
-                              }
+                              background: "white",
+                              color: "#6b7280",
+                              borderColor: "#e5e7eb",
+                            }
                         }
                       >
                         {tab.label}
@@ -700,11 +699,10 @@ export default function BankNotificationsPanel({
                           <div
                             key={notif.id || index}
                             onClick={() => handleNotificationClick(notif)}
-                            className={`p-4 bg-white rounded-2xl border transition-all cursor-pointer hover:shadow-md flex gap-4 relative overflow-hidden ${
-                              notif.isRead
-                                ? "border-gray-100 opacity-70 hover:opacity-100"
-                                : "border-purple-100 shadow-sm"
-                            }`}
+                            className={`p-4 bg-white rounded-2xl border transition-all cursor-pointer hover:shadow-md flex gap-4 relative overflow-hidden ${notif.isRead
+                              ? "border-gray-100 opacity-70 hover:opacity-100"
+                              : "border-purple-100 shadow-sm"
+                              }`}
                           >
                             {!notif.isRead && (
                               <div

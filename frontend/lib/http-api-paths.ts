@@ -138,6 +138,7 @@ export const HttpApiPaths = {
             return `${HTTP_API_PREFIX}/applications/admin/all${query}`;
         },
         applicationById: (id: string) => `${HTTP_API_PREFIX}/applications/${enc(id)}`,
+        applicationDisbursementReceipt: (id: string) => `${HTTP_API_PREFIX}/applications/${enc(id)}/disbursement-receipt`,
         applicationTracking: (id: string) => `${HTTP_API_PREFIX}/applications/admin/${enc(id)}/tracking`,
         applicationDocuments: (id: string) => `${HTTP_API_PREFIX}/applications/admin/${enc(id)}/documents`,
         applicationStatus: (id: string) => `${HTTP_API_PREFIX}/applications/admin/${enc(id)}/status`,

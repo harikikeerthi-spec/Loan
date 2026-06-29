@@ -282,9 +282,7 @@ export class AgentService {
     const estimatedCompletionAt = new Date();
     estimatedCompletionAt.setDate(estimatedCompletionAt.getDate() + 14);
 
-    const year = new Date().getFullYear();
-    const seq = String(Math.floor(10000 + Math.random() * 90000));
-    const applicationNumber = `VL-APP-${year}-${seq}`;
+    const applicationNumber = await this.usersService.generateApplicationNumber();
 
     const { data: application, error: appError } = await this.db
       .from('LoanApplication')

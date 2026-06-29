@@ -26,6 +26,7 @@ import { UserGuard } from '../auth/user.guard';
 import { AdminGuard } from '../auth/admin.guard';
 import { StaffGuard } from '../auth/staff.guard';
 import { AgentGuard } from '../auth/agent.guard';
+import { NotificationService } from '../notification/notification.service';
 
 // Multer configuration for application documents
 const storage = diskStorage({
@@ -48,6 +49,7 @@ export class ApplicationController {
     constructor(
         private applicationService: ApplicationService,
         private s3Service: S3Service,
+        private notificationService: NotificationService,
     ) { }
 
     // ==================== PUBLIC ENDPOINTS ====================
@@ -451,6 +453,71 @@ export class ApplicationController {
     }
 
     // ==================== USER :id ENDPOINTS (must be AFTER all named routes) ====================
+
+    /**
+     * Download loan disbursement receipt PDF
+     * GET /applications/:id/disbursement-receipt
+     */
+    @Get(':id/disbursement-receipt')
+    @UseGuards(UserGuard)
+    async downloadDisbursementReceipt(
+        @Request() req,
+        @Param('id') id: string,
+        @Res() res: Response,
+    ) {
+        const application = await this.applicationService.getApplicationById(id);
+        if (!application) {
+            throw new NotFoundException('Application not found');
+        }
+
+        // Verify ownership (unless admin/staff/bank/support)
+        const allowedRoles = ['admin', 'super_admin', 'staff', 'support', 'bank', 'partner_bank'];
+        if (!allowedRoles.includes(req.user.role) && application.userId !== req.user.id) {
+            throw new BadRequestException('Unauthorized to view this application');
+        }
+
+        // Fetch disbursements
+        const { data: disbursements } = await this.applicationService.getDisbursements(id);
+        const latestDisbursement = disbursements && disbursements.length > 0 ? disbursements[0] : null;
+
+        // Extract borrower name and email
+        const user = application.user;
+        let borrowerName = `${application.firstName || ''} ${application.lastName || ''}`.trim();
+        if (!borrowerName && user) {
+            borrowerName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+        }
+
+        const details = {
+            applicationNumber: application.applicationNumber || 'N/A',
+            borrowerName: borrowerName || 'Valued Customer',
+            bankName: application.bankName || application.bank || 'Partner Bank',
+            amount: latestDisbursement ? latestDisbursement.disbursementAmount : application.amount,
+            utrNumber: latestDisbursement ? latestDisbursement.utrNumber : 'N/A',
+            trancheNumber: latestDisbursement ? latestDisbursement.trancheNumber : 1,
+            transferMode: latestDisbursement ? latestDisbursement.transferMode : 'NEFT/RTGS',
+            date: latestDisbursement && latestDisbursement.disbursedAt
+                ? new Date(latestDisbursement.disbursedAt).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })
+                : new Date().toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  }),
+        };
+
+        const pdfBuffer = await this.notificationService.generateDisbursementPdf(details);
+
+        res.set({
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `attachment; filename="Disbursement_Receipt_${details.applicationNumber}.pdf"`,
+            'Content-Length': pdfBuffer.length,
+        });
+
+        res.end(pdfBuffer);
+    }
 
     /**
      * Get application by ID

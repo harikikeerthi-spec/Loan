@@ -74,9 +74,9 @@ export const banks: Record<string, BankData> = {
             { icon: "payments", title: "Flexible Repayment", desc: "Moratorium period during course + 1 year", iconColor: "text-orange-500", bgColor: "bg-orange-500/10" }
         ],
         specifications: [
-            { label: "Interest Rate", value: "10.5% - 12.5% p.a." },
+            { label: "Interest Rate", value: "10.25% p.a." },
             { label: "Loan Amount", value: "Up to ₹40 Lakhs" },
-            { label: "Processing Fee", value: "1% + GST" },
+            { label: "Processing Fee", value: "5.7% + GST" },
             { label: "Repayment Tenure", value: "Up to 15 years" },
             { label: "Moratorium Period", value: "Course + 12 months" },
             { label: "Collateral", value: "Not required up to ₹40L" }
@@ -133,9 +133,9 @@ export const banks: Record<string, BankData> = {
             { icon: "public", title: "Global Coverage", desc: "Support for 900+ global universities across 20 countries", iconColor: "text-green-500", bgColor: "bg-green-500/10" }
         ],
         specifications: [
-            { label: "Interest Rate", value: "11.25% - 13.5% p.a." },
+            { label: "Interest Rate", value: "10.25% p.a." },
             { label: "Loan Amount", value: "No Upper Limit" },
-            { label: "Processing Fee", value: "1% - 2% + GST" },
+            { label: "Processing Fee", value: "5.7% + GST" },
             { label: "Repayment Tenure", value: "Up to 10 years" },
             { label: "Moratorium Period", value: "Course Duration + 6 months" },
             { label: "Collateral", value: "Both Secured & Unsecured" }
@@ -193,9 +193,9 @@ export const banks: Record<string, BankData> = {
             { icon: "payments", title: "Tailored Repayments", desc: "Customized grace periods and interest options", iconColor: "text-orange-500", bgColor: "bg-orange-500/10" }
         ],
         specifications: [
-            { label: "Interest Rate", value: "10.99% - 13.0% p.a." },
+            { label: "Interest Rate", value: "10.25% p.a." },
             { label: "Loan Amount", value: "No Upper Limit" },
-            { label: "Processing Fee", value: "1% - 1.5% + GST" },
+            { label: "Processing Fee", value: "5.7% + GST" },
             { label: "Repayment Tenure", value: "Up to 15 years" },
             { label: "Moratorium Period", value: "Course Duration + 6 months" },
             { label: "Collateral", value: "Not required up to ₹50L" }
@@ -252,9 +252,9 @@ export const banks: Record<string, BankData> = {
             { icon: "payments", title: "Flexible Repayment", desc: "Up to 15 years loan tenure with flexible EMI options", iconColor: "text-orange-500", bgColor: "bg-orange-500/10" }
         ],
         specifications: [
-            { label: "Interest Rate", value: "10.75% - 12.5% p.a." },
+            { label: "Interest Rate", value: "10.25% p.a." },
             { label: "Loan Amount", value: "No Upper Limit" },
-            { label: "Processing Fee", value: "1.25% + GST" },
+            { label: "Processing Fee", value: "5.7% + GST" },
             { label: "Repayment Tenure", value: "Up to 15 years" },
             { label: "Moratorium Period", value: "Course Duration + 12 months" },
             { label: "Collateral", value: "Both Secured & Unsecured" }
@@ -311,9 +311,9 @@ export const banks: Record<string, BankData> = {
             { icon: "payments", title: "Flexible Tenure", desc: "Repayment structures that align with post-study income", iconColor: "text-red-500", bgColor: "bg-red-500/10" }
         ],
         specifications: [
-            { label: "Interest Rate", value: "11.00% - 12.75% p.a." },
+            { label: "Interest Rate", value: "10.25% p.a." },
             { label: "Loan Amount", value: "Up to ₹50 Lakhs" },
-            { label: "Processing Fee", value: "1% + GST" },
+            { label: "Processing Fee", value: "5.7% + GST" },
             { label: "Repayment Tenure", value: "Up to 10 years" },
             { label: "Moratorium Period", value: "Course Duration + 6 months" },
             { label: "Collateral", value: "Unsecured up to ₹50L" }

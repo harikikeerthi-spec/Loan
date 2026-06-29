@@ -608,7 +608,7 @@ export class UsersService {
     }
   }
 
-  private async generateApplicationNumber(): Promise<string> {
+  public async generateApplicationNumber(): Promise<string> {
     const year = new Date().getFullYear();
     const prefix = `VL-APP-${year}-`;
     
