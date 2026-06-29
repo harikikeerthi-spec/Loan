@@ -8,7 +8,7 @@ import ApplicationDetailView from "@/components/staff/ApplicationDetailView";
 
 interface StandaloneApplicationViewProps {
     id: string;
-    activeTab: "application_details" | "student" | "exams" | "bankdecisions";
+    activeTab: "application_details" | "student" | "exams" | "bankdecisions" | "ai_underwriting";
 }
 
 export default function StandaloneApplicationView({ id, activeTab }: StandaloneApplicationViewProps) {

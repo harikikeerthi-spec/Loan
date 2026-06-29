@@ -1250,6 +1250,27 @@ export const staffProfileApi = {
             method: 'POST',
             body: JSON.stringify(data),
         }),
+
+    getTodayDashboard: () =>
+        apiFetch(HttpApiPaths.staffProfiles.today()),
+
+    getDashboardSummary: () =>
+        apiFetch(HttpApiPaths.staffProfiles.summary()),
+
+    getRejectionAnalytics: (period?: string) =>
+        apiFetch(HttpApiPaths.staffProfiles.rejections(period)),
+
+    getSlaTracker: () =>
+        apiFetch(HttpApiPaths.staffProfiles.sla()),
+
+    globalSearch: (q: string) =>
+        apiFetch(HttpApiPaths.staffProfiles.search(q)),
+
+    getAiPredictionScore: (id: string) =>
+        apiFetch(HttpApiPaths.staffProfiles.predict(id)),
+
+    getDeadlineCalendar: () =>
+        apiFetch(HttpApiPaths.staffProfiles.calendar()),
 };
 
 export const bankApi = {

@@ -228,6 +228,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get("focus") === "notes") {
+        setActiveTab("notes");
         setTimeout(() => {
           const notesSection = document.getElementById("internal-notes-section");
           if (scrollContainerRef.current && notesSection) {
@@ -252,6 +253,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
       else if (tabName === 'student') router.push(`/staff/applications/${appId}/student`);
       else if (tabName === 'exams') router.push(`/staff/applications/${appId}/exams`);
       else if (tabName === 'bankdecisions') router.push(`/staff/applications/${appId}/bank-decisions`);
+      else if (tabName === 'ai_underwriting') router.push(`/staff/applications/${appId}/ai-underwriting`);
     } else {
       setActiveSidebarMenu(tabName);
     }
@@ -261,6 +263,9 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [fetchedStatusHistory, setFetchedStatusHistory] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [aiPrediction, setAiPrediction] = useState<any>(null);
+  const [loadingAiPrediction, setLoadingAiPrediction] = useState<boolean>(false);
+  const [aiPredictionError, setAiPredictionError] = useState<string | null>(null);
 
   const getDynamicProgress = () => {
     const s = String(application.status || '').toLowerCase();
@@ -319,6 +324,34 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   useEffect(() => {
     fetchBankDecisionsAndQueries();
   }, [fetchBankDecisionsAndQueries]);
+
+  const fetchAiPrediction = useCallback(async () => {
+    const appId = application.id || application._id;
+    if (!appId) return;
+    setLoadingAiPrediction(true);
+    setAiPredictionError(null);
+    try {
+      const data = await staffProfileApi.getAiPredictionScore(appId) as any;
+      if (data && data.success) {
+        setAiPrediction(data.data);
+      } else if (data) {
+        setAiPrediction(data);
+      } else {
+        setAiPredictionError("Failed to load AI prediction details");
+      }
+    } catch (err: any) {
+      console.error("Error fetching AI prediction score:", err);
+      setAiPredictionError(err.message || "Failed to load AI prediction details");
+    } finally {
+      setLoadingAiPrediction(false);
+    }
+  }, [application.id, application._id]);
+
+  useEffect(() => {
+    if (activeSidebarMenu === 'ai_underwriting' && !aiPrediction) {
+      fetchAiPrediction();
+    }
+  }, [activeSidebarMenu, aiPrediction, fetchAiPrediction]);
 
   const userId = application.userId || application.user_id || application.applicantId || application.student?.id || application.student?._id || application.user?.id || application.user?._id;
 
@@ -1603,20 +1636,20 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                         router.push(`/staff/applications/${appId}?focus=notes`);
                       } else {
                         setActiveSidebarMenu("application_details");
-                        setActiveTab("notes");
-                        setTimeout(() => {
-                          const notesSection = document.getElementById("internal-notes-section");
-                          if (scrollContainerRef.current && notesSection) {
-                            const container = scrollContainerRef.current;
-                            const containerRect = container.getBoundingClientRect();
-                            const elemRect = notesSection.getBoundingClientRect();
-                            const relativeTop = elemRect.top - containerRect.top + container.scrollTop;
-                            container.scrollTo({ top: relativeTop - 20, behavior: 'smooth' });
-                          } else {
-                            notesSection?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                          }
-                        }, 100);
                       }
+                      setActiveTab("notes");
+                      setTimeout(() => {
+                        const notesSection = document.getElementById("internal-notes-section");
+                        if (scrollContainerRef.current && notesSection) {
+                          const container = scrollContainerRef.current;
+                          const containerRect = container.getBoundingClientRect();
+                          const elemRect = notesSection.getBoundingClientRect();
+                          const relativeTop = elemRect.top - containerRect.top + container.scrollTop;
+                          container.scrollTo({ top: relativeTop - 20, behavior: 'smooth' });
+                        } else {
+                          notesSection?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
+                      }, 100);
                     }}
                     className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.03] active:scale-[0.97] transition-all shadow-md"
                   >
@@ -2299,11 +2332,10 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                               )}
                               <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-2.5">
-                                  <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                    isOpen 
-                                      ? 'bg-amber-55 text-amber-700 border border-amber-100' 
-                                      : 'bg-emerald-55 text-emerald-700 border border-emerald-100'
-                                  }`}>
+                                  <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${isOpen
+                                    ? 'bg-amber-55 text-amber-700 border border-amber-100'
+                                    : 'bg-emerald-55 text-emerald-700 border border-emerald-100'
+                                    }`}>
                                     {isOpen ? 'Open' : 'Resolved'}
                                   </span>
                                   {query.queryType && (
@@ -2388,7 +2420,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                                 });
                               }
                             }
-                          } catch(e) {}
+                          } catch (e) { }
 
                           let counterTerms: any = null;
                           try {
@@ -2397,7 +2429,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                             } else if (dec.counterOfferTerms) {
                               counterTerms = typeof dec.counterOfferTerms === 'string' ? JSON.parse(dec.counterOfferTerms) : dec.counterOfferTerms;
                             }
-                          } catch(e) {}
+                          } catch (e) { }
 
                           return (
                             <div key={dec.id || index} className={`p-5 rounded-2xl border ${style.border} bg-white transition-all flex flex-col gap-3 relative shadow-sm group hover:shadow-md`}>
@@ -2511,9 +2543,9 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                               )}
 
                               {dec.sanctionLetterUrl && (
-                                <a 
-                                  href={dec.sanctionLetterUrl} 
-                                  target="_blank" 
+                                <a
+                                  href={dec.sanctionLetterUrl}
+                                  target="_blank"
                                   rel="noopener noreferrer"
                                   className="mt-2 text-[11px] font-extrabold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-1 uppercase tracking-wider"
                                 >
@@ -2534,6 +2566,191 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeSidebarMenu === 'ai_underwriting' && (
+            <div className="max-w-[1400px] mx-auto p-10 space-y-10 animate-in fade-in zoom-in-95 duration-300">
+              {/* Header */}
+              <div className="flex items-center gap-5">
+                <button
+                  onClick={onBack}
+                  className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 hover:text-indigo-600 hover:border-indigo-200 hover:shadow-lg transition-all"
+                >
+                  <span className="material-symbols-outlined text-[22px]">arrow_back</span>
+                </button>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-lg shadow-purple-200">
+                    <span className="material-symbols-outlined text-[20px]">psychology</span>
+                  </div>
+                  <div>
+                    <h2 className="text-[20px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a]">AI Underwriting Analysis</h2>
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Autonomous Credit Score and Education Abroad Parameters Check</p>
+                  </div>
+                </div>
+              </div>
+
+              {loadingAiPrediction ? (
+                <div className="py-24 flex flex-col items-center justify-center gap-4">
+                  <div className="w-10 h-10 border-4 border-slate-100 border-t-purple-600 rounded-full animate-spin" />
+                  <p className="text-[11px] font-black tracking-widest text-slate-400 uppercase">Calculating prediction score...</p>
+                </div>
+              ) : aiPredictionError ? (
+                <div className="py-24 text-center">
+                  <span className="material-symbols-outlined text-5xl text-rose-500 mb-2">error</span>
+                  <p className="text-xs font-extrabold text-slate-700">{aiPredictionError}</p>
+                </div>
+              ) : aiPrediction ? (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Left Column: Gauge & Summary Recommendation */}
+                  <div className="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm space-y-6 flex flex-col items-center text-center">
+                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider self-start">Credit Probability Rating</p>
+                    
+                    {/* Radial Dial */}
+                    <div className="relative w-40 h-40 flex items-center justify-center">
+                      <svg className="w-full h-full transform -rotate-90">
+                        <circle
+                          cx="80"
+                          cy="80"
+                          r="70"
+                          stroke="#f1f5f9"
+                          strokeWidth="12"
+                          fill="transparent"
+                        />
+                        <circle
+                          cx="80"
+                          cy="80"
+                          r="70"
+                          stroke={aiPrediction.riskLevel === 'LOW' ? '#10b981' : aiPrediction.riskLevel === 'MEDIUM' ? '#f59e0b' : '#ef4444'}
+                          strokeWidth="12"
+                          fill="transparent"
+                          strokeDasharray={2 * Math.PI * 70}
+                          strokeDashoffset={2 * Math.PI * 70 * (1 - (aiPrediction.predictionScore || 50) / 100)}
+                          strokeLinecap="round"
+                          className="transition-all duration-1000"
+                        />
+                      </svg>
+                      <div className="absolute flex flex-col items-center">
+                        <span className="text-4xl font-black text-slate-900">{aiPrediction.predictionScore || 0}%</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">Approval Probability</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase border ${
+                        aiPrediction.riskLevel === 'LOW'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                          : aiPrediction.riskLevel === 'MEDIUM'
+                          ? 'bg-amber-50 text-amber-700 border-amber-100'
+                          : 'bg-rose-50 text-rose-700 border-rose-100'
+                      }`}>
+                        {aiPrediction.riskLevel || 'UNKNOWN'} RISK
+                      </span>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-4 w-full text-left space-y-2">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">AI RECOMMENDATION</p>
+                      <p className="text-xs text-slate-600 font-medium leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        {aiPrediction.predictionScore >= 80
+                          ? 'Highly recommended for approval. Credit metrics match standard target criteria.'
+                          : aiPrediction.predictionScore >= 60
+                          ? 'Recommended with caution. Co-applicant collateral or higher down-payment might be required.'
+                          : 'Manual underwriting review recommended. Key parameters fall outside safe margins.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Rules run & Foreign Education Check */}
+                  <div className="lg:col-span-2 space-y-6">
+                    {/* Rules Run (F47) */}
+                    <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm space-y-4">
+                      <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                        <span className="material-symbols-outlined text-slate-400 text-[18px]">verified</span>
+                        Credit Underwriting Rules Evaluated (F47)
+                      </h3>
+                      <div className="divide-y divide-slate-100 text-xs">
+                        {(aiPrediction.rulesRun || []).map((rule: any, idx: number) => (
+                          <div key={idx} className="py-3 flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-3">
+                              <span className={`material-symbols-outlined text-[18px] mt-0.5 ${rule.passed ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                {rule.passed ? 'check_circle' : 'info'}
+                              </span>
+                              <div>
+                                <p className="font-semibold text-slate-800">{rule.rule}</p>
+                                <p className="text-[10px] text-slate-400 font-medium mt-0.5">{rule.details}</p>
+                              </div>
+                            </div>
+                            <span className={`font-mono font-bold whitespace-nowrap px-1.5 py-0.5 rounded text-[10px] ${
+                              rule.scoreDelta > 0
+                                ? 'bg-emerald-50 text-emerald-700'
+                                : rule.scoreDelta < 0
+                                ? 'bg-rose-50 text-rose-700'
+                                : 'bg-slate-50 text-slate-600'
+                            }`}>
+                              {rule.scoreDelta >= 0 ? `+${rule.scoreDelta}` : rule.scoreDelta} Pts
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Foreign Education Abroad Auto-Detection (F48) */}
+                    <div className="bg-white border border-slate-200 p-6 rounded-3xl shadow-sm space-y-4">
+                      <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                        <span className="material-symbols-outlined text-purple-600 text-[18px] animate-pulse">language</span>
+                        Education Abroad Auto-Detection (F48)
+                      </h3>
+
+                      {aiPrediction.educationAbroad?.isForeign ? (
+                        <div className="space-y-4">
+                          <div className="p-4 rounded-2xl bg-purple-50/50 border border-purple-100 flex items-center gap-3">
+                            <span className="material-symbols-outlined text-purple-600 text-2xl">flight_takeoff</span>
+                            <div>
+                              <p className="text-xs font-bold text-purple-900 uppercase tracking-wider">Foreign Education Program Detected</p>
+                              <p className="text-[10px] text-purple-600 font-semibold mt-0.5">Destination Country: <span className="font-extrabold uppercase">{aiPrediction.educationAbroad.destinationCountry}</span></p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Forex Parameters</p>
+                              <p className="text-xs font-bold text-slate-700 mt-1 flex items-center gap-1.5">
+                                <span className="material-symbols-outlined text-emerald-500 text-[16px]">check_circle</span>
+                                Enabled
+                              </p>
+                            </div>
+                            <div className="p-4 rounded-xl border border-slate-100 bg-slate-50/30">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Exchange Rate Buffer</p>
+                              <p className="text-xs font-bold text-slate-700 mt-1">{aiPrediction.educationAbroad.exchangeRateBufferPercent}%</p>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider ml-1">Additional Required Documents</p>
+                            <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 space-y-2">
+                              {aiPrediction.educationAbroad.additionalDocumentsNeeded.map((doc: string, idx: number) => (
+                                <div key={idx} className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                                  <span className="material-symbols-outlined text-purple-500 text-[16px]">description</span>
+                                  <span>{doc}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="p-6 text-center bg-slate-50 rounded-2xl border border-slate-100 text-slate-500 text-xs">
+                          <span className="material-symbols-outlined text-3xl mb-2 text-slate-300 block">home_pin</span>
+                          Standard domestic education program detected. Foreign currency buffers and additional travel documents are disabled.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-24 text-center text-slate-400 text-xs">
+                  No prediction data available for this application.
+                </div>
+              )}
             </div>
           )}
 

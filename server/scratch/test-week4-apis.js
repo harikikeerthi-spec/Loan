@@ -9,7 +9,7 @@ async function testApis() {
     'Authorization': `Bearer ${token}`
   };
 
-  const baseUrl = 'http://localhost:5000';
+  const baseUrl = 'http://localhost:5000/api';
   
   const endpoints = [
     { name: 'GET Notifications', url: `${baseUrl}/notifications` },

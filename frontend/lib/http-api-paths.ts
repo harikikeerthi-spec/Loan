@@ -101,6 +101,13 @@ export const HttpApiPaths = {
             `${HTTP_API_PREFIX}/staff-profiles/activities/all${httpApiQuery(opts)}`,
         shareProfile: (studentId: string) =>
             `${HTTP_API_PREFIX}/staff-profiles/share-profile/${enc(studentId)}`,
+        today: () => `${HTTP_API_PREFIX}/staff-profiles/dashboard/today`,
+        summary: () => `${HTTP_API_PREFIX}/staff-profiles/dashboard/summary`,
+        rejections: (period?: string) => `${HTTP_API_PREFIX}/staff-profiles/dashboard/rejections${httpApiQuery({ period })}`,
+        sla: () => `${HTTP_API_PREFIX}/staff-profiles/dashboard/sla`,
+        search: (q: string) => `${HTTP_API_PREFIX}/staff-profiles/dashboard/search${httpApiQuery({ q })}`,
+        predict: (id: string) => `${HTTP_API_PREFIX}/staff-profiles/dashboard/predict/${enc(id)}`,
+        calendar: () => `${HTTP_API_PREFIX}/staff-profiles/dashboard/calendar`,
     },
 
     chat: {

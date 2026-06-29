@@ -44,6 +44,7 @@ const DASHBOARD_SECTIONS = [
     "chat_customer",
     "my_profile",
     "onboarding",
+    "calendar",
 ] as const;
 
 const getDashboardSection = (section: string | null) =>
@@ -335,6 +336,16 @@ export default function StaffDashboardPage() {
         return () => clearInterval(intervalId);
     }, []);
     const [stats, setStats] = useState<any>({});
+    const [todayStats, setTodayStats] = useState<any>(null);
+    const [dashboardSummary, setDashboardSummary] = useState<any>(null);
+    const [rejectionAnalytics, setRejectionAnalytics] = useState<any>(null);
+    const [slaTracker, setSlaTracker] = useState<any>(null);
+    const [loadingPerformance, setLoadingPerformance] = useState<boolean>(false);
+    const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+    const [loadingCalendar, setLoadingCalendar] = useState<boolean>(false);
+    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
     const [data, setData] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState("all");
@@ -906,14 +917,14 @@ export default function StaffDashboardPage() {
     const [ocrResults, setOcrResults] = useState<{ [key: string]: any }>({});
     const [showOcrReview, setShowOcrReview] = useState<{ [key: string]: boolean }>({});
     const fileInputRefs = useRef<{ [key: string]: HTMLInputElement }>({});
-
     const loadOverview = useCallback(async (silent?: boolean) => {
         if (!silent) setLoading(true);
         try {
-            const [blogStats, appStats, userStats]: [any, any, any] = await Promise.all([
+            const [blogStats, appStats, userStats, todayRes]: [any, any, any, any] = await Promise.all([
                 adminApi.getBlogStats().catch(() => ({ data: {} })),
                 adminApi.getApplicationStats().catch(() => ({ data: {} })),
-                adminApi.getUsers().catch(() => ({ data: [], total: 0 }))
+                adminApi.getUsers().catch(() => ({ data: [], total: 0 })),
+                staffProfileApi.getTodayDashboard().catch(() => null)
             ]);
 
             const today = new Date();
@@ -928,10 +939,96 @@ export default function StaffDashboardPage() {
                     joinedToday
                 }
             });
+
+            if (todayRes && todayRes.success) {
+                setTodayStats(todayRes.data);
+            } else if (todayRes) {
+                setTodayStats(todayRes);
+            }
         } catch (e) {
             console.error(e);
         } finally {
             setLoading(false);
+        }
+    }, []);
+
+    const handleGlobalSearch = useCallback(async (q: string) => {
+        setSearchQuery(q);
+        if (q.trim().length < 2) {
+            setSearchResults([]);
+            setShowSearchSuggestions(false);
+            return;
+        }
+        setIsSearching(true);
+        try {
+            const res = await staffProfileApi.globalSearch(q) as any;
+            if (res && res.success) {
+                setSearchResults(res.data || []);
+                setShowSearchSuggestions(true);
+            } else if (Array.isArray(res)) {
+                setSearchResults(res);
+                setShowSearchSuggestions(true);
+            }
+        } catch (err) {
+            console.error("Global search error:", err);
+        } finally {
+            setIsSearching(false);
+        }
+    }, []);
+
+    const handleViewCalendarApp = useCallback(async (appId: string) => {
+        setLoading(true);
+        try {
+            const res = await adminApi.getApplication(appId) as any;
+            if (res && res.data) {
+                setSelectedApp(res.data);
+            } else if (res) {
+                setSelectedApp(res);
+            }
+        } catch (err) {
+            console.error("Error viewing application from calendar:", err);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const loadPerformanceData = useCallback(async () => {
+        setLoadingPerformance(true);
+        try {
+            const [summary, rejections, sla]: [any, any, any] = await Promise.all([
+                staffProfileApi.getDashboardSummary().catch(() => null),
+                staffProfileApi.getRejectionAnalytics('30').catch(() => null),
+                staffProfileApi.getSlaTracker().catch(() => null)
+            ]);
+
+            if (summary && summary.success) setDashboardSummary(summary.data);
+            else if (summary) setDashboardSummary(summary);
+
+            if (rejections && rejections.success) setRejectionAnalytics(rejections.data);
+            else if (rejections) setRejectionAnalytics(rejections);
+
+            if (sla && sla.success) setSlaTracker(sla.data);
+            else if (sla) setSlaTracker(sla);
+        } catch (err) {
+            console.error("Error loading performance data:", err);
+        } finally {
+            setLoadingPerformance(false);
+        }
+    }, []);
+
+    const loadCalendarEvents = useCallback(async () => {
+        setLoadingCalendar(true);
+        try {
+            const res = await staffProfileApi.getDeadlineCalendar() as any;
+            if (res && res.success) {
+                setCalendarEvents(res.data || []);
+            } else if (Array.isArray(res)) {
+                setCalendarEvents(res);
+            }
+        } catch (err) {
+            console.error("Error loading calendar events:", err);
+        } finally {
+            setLoadingCalendar(false);
         }
     }, []);
 
@@ -1027,10 +1124,17 @@ export default function StaffDashboardPage() {
     }, [loadOverview]);
 
     useEffect(() => {
-        if (activeSection === "overview") loadOverviewRef.current();
-        else loadDataRef.current();
+        if (activeSection === "overview") {
+            loadOverviewRef.current();
+        } else if (activeSection === "performance") {
+            loadPerformanceData();
+        } else if (activeSection === "calendar") {
+            loadCalendarEvents();
+        } else {
+            loadDataRef.current();
+        }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeSection, filterStatus, currentPage, searchQuery, userRoleFilter]);
+    }, [activeSection, filterStatus, currentPage, searchQuery, userRoleFilter, loadPerformanceData, loadCalendarEvents]);
 
 
     // Pre-calculate stats for different sections to avoid complex IIFEs in JSX
@@ -3065,6 +3169,7 @@ export default function StaffDashboardPage() {
         { section: "performance", icon: "insights", label: "Performance", badge: 0 },
         { section: "tasks", icon: "check_circle", label: "Action Items", badge: tasks.filter(t => !t.completed).length },
         { section: "communications", icon: "mail", label: "Outreach Center", badge: 0 },
+        { section: "calendar", icon: "calendar_month", label: "Deadline Calendar", badge: 0 },
         { section: "chat_customer", icon: "support_agent", label: "Support Chat", badge: unreadChatCount },
         { section: "my_profile", icon: "badge", label: "My Profile", badge: 0 },
     ];
@@ -3241,17 +3346,60 @@ export default function StaffDashboardPage() {
                         </h1>
                     </div>
 
-                    {/* Center: Search */}
-                    {/* <div className="relative hidden md:block">
+                    {/* Center: Search (F30) */}
+                    <div className="relative hidden md:block">
                         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px]">search</span>
                         <input
                             type="text"
                             value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                            placeholder="Search applications, students, IDs..."
+                            onChange={e => handleGlobalSearch(e.target.value)}
+                            onFocus={() => { if (searchResults.length > 0) setShowSearchSuggestions(true); }}
+                            placeholder="Search applications, students, banks, IDs... (F30)"
                             className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-white rounded-lg text-[12px] focus:outline-none focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 focus:bg-white w-72 transition-all text-slate-700 placeholder:text-slate-400 shadow-sm focus:shadow-md hover:shadow-sm"
                         />
-                    </div> */}
+                        {isSearching && (
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-slate-300 border-t-indigo-500 rounded-full animate-spin" />
+                        )}
+                        {showSearchSuggestions && searchResults.length > 0 && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setShowSearchSuggestions(false)} />
+                                <div className="absolute left-0 mt-2 w-[400px] max-h-[300px] overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-xl z-50 p-2 space-y-1">
+                                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 py-1 border-b border-slate-100">
+                                        Found {searchResults.length} Results
+                                    </div>
+                                    {searchResults.map(app => (
+                                        <div
+                                            key={app.id}
+                                            onClick={() => {
+                                                setSelectedApp(app);
+                                                setShowSearchSuggestions(false);
+                                                setSearchQuery("");
+                                                setSearchResults([]);
+                                            }}
+                                            className="p-3 hover:bg-slate-50 rounded-lg flex items-center justify-between cursor-pointer transition-colors group"
+                                        >
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-bold text-slate-800 group-hover:text-indigo-600 truncate">{app.firstName} {app.lastName}</p>
+                                                <p className="text-[10px] text-slate-400 font-semibold mt-0.5 truncate">{app.applicationNumber || app.id} | {app.universityName || 'Tier-2 University'}</p>
+                                            </div>
+                                            <div className="text-right flex-shrink-0">
+                                                <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${
+                                                    ['approved', 'sanctioned', 'disbursed'].includes(app.status?.toLowerCase())
+                                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                                                        : ['rejected', 'cancelled'].includes(app.status?.toLowerCase())
+                                                        ? 'bg-rose-50 text-rose-700 border border-rose-100'
+                                                        : 'bg-amber-50 text-amber-700 border border-amber-100'
+                                                }`}>
+                                                    {app.status || 'Draft'}
+                                                </span>
+                                                <p className="text-[9px] text-slate-400 mt-1 font-bold">₹{(app.amount || 0).toLocaleString('en-IN')}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
 
                     {/* Right: Notifications + User + Logout */}
                     <div className="flex items-center gap-3">
@@ -6976,6 +7124,36 @@ export default function StaffDashboardPage() {
                                 />
                             </div>
 
+                            {/* Today's Focus Areas (F29) */}
+                            <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                                <h3 className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                    <span className="material-symbols-outlined text-rose-500 text-[18px] animate-pulse">campaign</span>
+                                    Today's Operational Summary (F29)
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                                    <div className="p-4 rounded-xl border border-rose-100 bg-rose-50/30 flex flex-col justify-between min-h-[90px] hover:shadow-sm transition-all">
+                                        <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Urgent Cases</span>
+                                        <span className="text-2xl font-black text-rose-700 mt-2">{todayStats?.urgent?.count ?? 0}</span>
+                                    </div>
+                                    <div className="p-4 rounded-xl border border-blue-100 bg-blue-50/30 flex flex-col justify-between min-h-[90px] hover:shadow-sm transition-all">
+                                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">New Admissions (24h)</span>
+                                        <span className="text-2xl font-black text-blue-700 mt-2">{todayStats?.newFiles?.count ?? 0}</span>
+                                    </div>
+                                    <div className="p-4 rounded-xl border border-amber-100 bg-amber-50/30 flex flex-col justify-between min-h-[90px] hover:shadow-sm transition-all">
+                                        <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Responded Queries</span>
+                                        <span className="text-2xl font-black text-amber-700 mt-2">{todayStats?.respondedQueries?.count ?? 0}</span>
+                                    </div>
+                                    <div className="p-4 rounded-xl border border-purple-100 bg-purple-50/30 flex flex-col justify-between min-h-[90px] hover:shadow-sm transition-all">
+                                        <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">Pending Decisions</span>
+                                        <span className="text-2xl font-black text-purple-700 mt-2">{todayStats?.pendingDecisions?.count ?? 0}</span>
+                                    </div>
+                                    <div className="p-4 rounded-xl border border-emerald-100 bg-emerald-50/30 flex flex-col justify-between min-h-[90px] hover:shadow-sm transition-all">
+                                        <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Pending Disb.</span>
+                                        <span className="text-2xl font-black text-emerald-700 mt-2">{todayStats?.pendingDisbursements?.count ?? 0}</span>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                                 {/* Pipeline Breakdown */}
                                 <div className="lg:col-span-2 bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
@@ -7304,11 +7482,116 @@ export default function StaffDashboardPage() {
                                 </span>
                             </div>
 
+                            {/* Stat cards */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <StatCard label="Applications Processed" value="342" icon="task" color="text-indigo-600" loading={false} trend={8} />
-                                <StatCard label="Avg. Resolution Time" value="4.2 Hrs" icon="timer" color="text-amber-600" loading={false} />
-                                <StatCard label="Customer Rating" value="4.9/5.0" icon="star" color="text-emerald-600" loading={false} trend={2} />
-                                <StatCard label="Tasks Completed" value={tasks.filter(t => t.completed).length + 28} icon="fact_check" color="text-blue-600" loading={false} />
+                                <StatCard
+                                    label="Pipeline Value (F13)"
+                                    value={dashboardSummary ? `₹${(dashboardSummary.pipelineValue || 0).toLocaleString('en-IN')}` : '₹0'}
+                                    icon="payments"
+                                    color="text-indigo-600"
+                                    loading={loadingPerformance}
+                                    hint={`${dashboardSummary?.counts?.total ?? 0} Applications`}
+                                />
+                                <StatCard
+                                    label="Avg. Turnaround Time (F13)"
+                                    value={dashboardSummary ? `${dashboardSummary.avgTatDays || 0} Days` : '0 Days'}
+                                    icon="timer"
+                                    color="text-amber-600"
+                                    loading={loadingPerformance}
+                                    hint="Submission to Decision"
+                                />
+                                <StatCard
+                                    label="SLA Compliance Rate (F15)"
+                                    value={slaTracker ? `${slaTracker.complianceRate || 0}%` : '0%'}
+                                    icon="gavel"
+                                    color="text-emerald-600"
+                                    loading={loadingPerformance}
+                                    hint={`Avg. TAT: ${slaTracker?.averageTat || 0} Days`}
+                                />
+                                <StatCard
+                                    label="Conversion Rate (F13)"
+                                    value={dashboardSummary ? `${dashboardSummary.conversionRate || 0}%` : '0%'}
+                                    icon="trending_up"
+                                    color="text-blue-600"
+                                    loading={loadingPerformance}
+                                    hint={`${dashboardSummary?.counts?.sanctioned ?? 0} Sanctions`}
+                                />
+                            </div>
+
+                            {/* Detailed performance views */}
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                {/* SLA Stage Tracker Table (F15) */}
+                                <div className="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-slate-400 text-[18px]">query_stats</span>
+                                        SLA Stage Tracking & Benchmarks (F15)
+                                    </h3>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead>
+                                                <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                    <th className="pb-3">Processing Stage</th>
+                                                    <th className="pb-3">Average Duration</th>
+                                                    <th className="pb-3">SLA Compliance</th>
+                                                    <th className="pb-3 text-right">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100 text-xs text-slate-700">
+                                                {(slaTracker?.stages || []).map((stage: any, index: number) => (
+                                                    <tr key={index} className="hover:bg-slate-50/50">
+                                                        <td className="py-3 font-semibold text-slate-800">{stage.name}</td>
+                                                        <td className="py-3 font-mono">{stage.tatDays || stage.duration || 0} Days</td>
+                                                        <td className="py-3">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-24 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                                                    <div className={`h-full rounded-full ${stage.compliance >= 95 ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${stage.compliance}%` }} />
+                                                                </div>
+                                                                <span className="font-bold">{stage.compliance}%</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-3 text-right">
+                                                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold ${stage.compliance >= 95 ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'}`}>
+                                                                {stage.compliance >= 95 ? 'MET' : 'WARNING'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {(!slaTracker?.stages || slaTracker.stages.length === 0) && (
+                                                    <tr>
+                                                        <td colSpan={4} className="py-4 text-center text-slate-400">No SLA benchmarks available</td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {/* Rejection Analytics Widget (F14) */}
+                                <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-rose-500 text-[18px]">cancel</span>
+                                        Rejection Analytics (F14)
+                                    </h3>
+                                    <div className="space-y-4">
+                                        {(rejectionAnalytics || []).slice(0, 5).map((rej: any, index: number) => (
+                                            <div key={index} className="space-y-1">
+                                                <div className="flex justify-between items-center text-xs font-semibold text-slate-700">
+                                                    <span className="truncate max-w-[200px]" title={rej.reason}>{rej.reason}</span>
+                                                    <span className="text-[10px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">{rej.count} ({rej.percentage}%)</span>
+                                                </div>
+                                                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                                    <div className="bg-rose-500 h-full rounded-full transition-all duration-500" style={{ width: `${rej.percentage}%` }} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {(!rejectionAnalytics || rejectionAnalytics.length === 0) && (
+                                            <div className="text-center py-8 text-slate-400 text-xs">
+                                                <span className="material-symbols-outlined text-3xl mb-2 text-slate-200 block">mood_fast</span>
+                                                No rejections logged in the past 30 days
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -7394,6 +7677,87 @@ export default function StaffDashboardPage() {
                                             </>
                                         )}
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeSection === "calendar" && (
+                        <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in pb-12">
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                <div>
+                                    <h2 className="text-[26px] font-['Playfair_Display',serif] font-bold text-[#0d1b2a] tracking-tight flex items-center gap-3">
+                                        Deadline Calendar & SLA Breaches (F44)
+                                        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-rose-50 border border-rose-200 text-[11px] font-semibold text-rose-700">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                                            SYSTEM DEADLINES
+                                        </span>
+                                    </h2>
+                                    <p className="text-slate-500 text-[13px] mt-1 font-medium">Monitoring upcoming sanction expiries, SLA warnings, and disbursements.</p>
+                                </div>
+                                <button
+                                    onClick={loadCalendarEvents}
+                                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[11px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/20"
+                                >
+                                    <span className="material-symbols-outlined text-[16px]">refresh</span>
+                                    Refresh Calendar
+                                </button>
+                            </div>
+
+                            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
+                                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                                    <h3 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Upcoming Deadlines</h3>
+                                    <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{calendarEvents.length} Events</span>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {calendarEvents.map((evt: any) => {
+                                        let icon = "event";
+                                        let color = "bg-slate-50 text-slate-600 border-slate-100";
+                                        if (evt.category === 'expiry') {
+                                            icon = "warning";
+                                            color = "bg-rose-50 text-rose-600 border-rose-100";
+                                        } else if (evt.category === 'sla') {
+                                            icon = "hourglass_empty";
+                                            color = "bg-amber-50 text-amber-600 border-amber-100";
+                                        } else if (evt.category === 'disbursement') {
+                                            icon = "payments";
+                                            color = "bg-emerald-50 text-emerald-600 border-emerald-100";
+                                        }
+                                        return (
+                                            <div key={evt.id} className="p-4 rounded-xl border border-slate-100 hover:border-slate-200 bg-slate-50/20 hover:bg-white flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all hover:shadow-sm">
+                                                <div className="flex items-start gap-4 min-w-0">
+                                                    <div className={`w-10 h-10 rounded-lg border flex items-center justify-center flex-shrink-0 ${color}`}>
+                                                        <span className="material-symbols-outlined text-[20px]">{icon}</span>
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <h4 className="text-xs font-extrabold text-slate-800 truncate">{evt.title}</h4>
+                                                        <p className="text-[11px] text-slate-500 font-semibold mt-1 leading-relaxed">{evt.description}</p>
+                                                        <p className="text-[9px] text-slate-400 mt-1 font-bold flex items-center gap-1">
+                                                            <span className="material-symbols-outlined text-[12px]">calendar_today</span>
+                                                            Due: {new Date(evt.date).toLocaleDateString('en-IN', { dateStyle: 'medium' })}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                {evt.applicationId && (
+                                                    <button
+                                                        onClick={() => handleViewCalendarApp(evt.applicationId)}
+                                                        className="px-3.5 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-600 hover:text-slate-900 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-sm hover:shadow shrink-0 self-end md:self-center"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[14px]">visibility</span>
+                                                        View File
+                                                    </button>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                    {calendarEvents.length === 0 && !loadingCalendar && (
+                                        <div className="p-16 text-center">
+                                            <span className="material-symbols-outlined text-5xl text-slate-200 mb-2 block">event_busy</span>
+                                            <p className="text-xs font-extrabold text-slate-400 uppercase tracking-widest">No Events Scheduled</p>
+                                            <p className="text-[11px] text-slate-400 mt-1">There are no warning breaches or sanction expiries registered.</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
