@@ -126,6 +126,57 @@ export const agentApi = {
             method: "POST",
             body: JSON.stringify(data),
         }),
+    getLeadDetail: (id: string) =>
+        apiFetch(`${API_URL}/leads/${id}`),
+    getLeadChecklist: (id: string) =>
+        apiFetch(`${API_URL}/leads/${id}/checklist`),
+    shareUploadLink: (id: string, data: any) =>
+        apiFetch(`${API_URL}/leads/${id}/share-upload-link`, {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+    getCommissionsSummary: () =>
+        apiFetch(`${API_URL}/commissions/summary`),
+    getCommissionsLedger: () =>
+        apiFetch(`${API_URL}/commissions/ledger`),
+    getCommissionsPayouts: () =>
+        apiFetch(`${API_URL}/commissions/payouts`),
+    getCommissionsRateCard: () =>
+        apiFetch(`${API_URL}/commissions/rate-card`),
+    getMe: () =>
+        apiFetch(`${API_URL}/agents/me`),
+    getKyc: () =>
+        apiFetch(`${API_URL}/kyc`),
+    submitKyc: (data: any) =>
+        apiFetch(`${API_URL}/kyc`, {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+    getKycDocuments: () =>
+        apiFetch(`${API_URL}/kyc/documents`),
+    getBankAccount: () =>
+        apiFetch(`${API_URL}/bank-account`),
+    updateBankAccount: (data: any) =>
+        apiFetch(`${API_URL}/bank-account`, {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+    getAgreements: () =>
+        apiFetch(`${API_URL}/agreements`),
+    getSupportTickets: () =>
+        apiFetch(`${API_URL}/support/tickets`),
+    createSupportTicket: (data: any) =>
+        apiFetch(`${API_URL}/support/tickets`, {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+    getChatMessages: (staffId: string) =>
+        apiFetch(`${API_URL}/chat/${staffId}`),
+    sendChatMessage: (staffId: string, data: { content: string }) =>
+        apiFetch(`${API_URL}/chat/${staffId}`, {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
 };
 
 function getToken(): string | null {

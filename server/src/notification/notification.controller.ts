@@ -43,6 +43,12 @@ export class NotificationController {
     return { success: true, data };
   }
 
+  @Put(':id/read')
+  @HttpCode(HttpStatus.OK)
+  async markReadAlias(@Param('id') id: string, @Req() req: any) {
+    return this.markRead(id, req);
+  }
+
   @Put('mark-all-read')
   @HttpCode(HttpStatus.OK)
   async markAllRead(@Req() req: any) {

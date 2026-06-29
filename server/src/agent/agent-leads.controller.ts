@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Req, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Req, Query, UseGuards, Param } from '@nestjs/common';
 import { AgentService } from './agent.service';
 import { AgentGuard } from '../auth/agent.guard';
 
@@ -31,6 +31,30 @@ export class AgentLeadsController {
     const agentId = req.user.id;
     const leads = body?.leads || [];
     return this.agentService.bulkImport(agentId, leads);
+  }
+
+  @Get(':id')
+  async getLeadDetail(@Req() req: any, @Param('id') id: string) {
+    const agentId = req.user.id;
+    return this.agentService.getLeadDetail(agentId, id);
+  }
+
+  @Get(':id/documents')
+  async getLeadDocuments(@Req() req: any, @Param('id') id: string) {
+    const agentId = req.user.id;
+    return this.agentService.getLeadDocuments(agentId, id);
+  }
+
+  @Get(':id/checklist')
+  async getLeadChecklist(@Req() req: any, @Param('id') id: string) {
+    const agentId = req.user.id;
+    return this.agentService.getLeadChecklist(agentId, id);
+  }
+
+  @Post(':id/share-upload-link')
+  async shareUploadLink(@Req() req: any, @Param('id') id: string, @Body() body: any) {
+    const agentId = req.user.id;
+    return this.agentService.shareUploadLink(agentId, id, body);
   }
 }
 

@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { UsersService } from '../users/users.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -386,6 +386,252 @@ export class AgentService {
       eligible,
       score: eligible ? 85 : 40,
       reasons: reasons.length > 0 ? reasons : ['Meets core underwriting criteria.'],
+    };
+  }
+
+  async getLeadDetail(agentId: string, leadId: string) {
+    const refereeIds = await this.getRefereeIds(agentId);
+    
+    const { data: application, error } = await this.db
+      .from('LoanApplication')
+      .select('*, user:User!userId(*)')
+      .eq('id', leadId)
+      .single();
+
+    if (error || !application) {
+      throw new NotFoundException('Lead not found');
+    }
+
+    if (!refereeIds.includes(application.userId)) {
+      throw new ForbiddenException('Access denied. This lead does not belong to you.');
+    }
+
+    const maskedApp = this.maskApplicationPII(application);
+
+    // Fetch documents
+    const documents = await this.usersService.getUserDocuments(application.userId);
+
+    // Fetch ApplicationStatusHistory for Journey
+    const { data: history } = await this.db
+      .from('ApplicationStatusHistory')
+      .select('*')
+      .eq('applicationId', leadId)
+      .order('createdAt', { ascending: true });
+
+    const journey = (history || []).map(h => {
+      const date = new Date(h.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+      return {
+        date,
+        title: h.toStatus ? h.toStatus.replace(/_/g, ' ').toUpperCase() : 'STATUS UPDATE',
+        desc: h.changeReason || `Application moved from ${h.fromStatus || 'none'} to ${h.toStatus}`,
+        done: true
+      };
+    });
+
+    if (journey.length === 0) {
+      const date = new Date(application.createdAt || Date.now()).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+      journey.push({
+        date,
+        title: 'LEAD SUBMITTED',
+        desc: 'Submitted via Agent Network',
+        done: true
+      });
+    }
+
+    const bankStatus = {
+      product: application.bank ? `${application.bank} Scholar Scheme` : 'Pending Partner',
+      refNumber: `REF-${String(application.id).slice(-6).toUpperCase()}`,
+      submittedOn: application.submittedAt 
+        ? new Date(application.submittedAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-')
+        : new Date(application.createdAt || Date.now()).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-'),
+      tatExpected: '10 working days',
+      queryText: application.status === 'query_raised' ? application.remarks : undefined
+    };
+
+    const commissionRate = 0.007; // 0.70%
+    const projectedCommission = (parseFloat(application.amount) || 0) * commissionRate;
+
+    // Fetch communication logs / notes
+    const { data: notes } = await this.db
+      .from('ApplicationNote')
+      .select('*')
+      .eq('applicationId', leadId)
+      .order('createdAt', { ascending: false });
+
+    const communicationLog = (notes || []).map(n => {
+      const date = new Date(n.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+      return {
+        sender: n.authorRole || 'Staff',
+        timestamp: `${date} ${new Date(n.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}`,
+        message: n.content
+      };
+    });
+
+    return {
+      ...maskedApp,
+      documents,
+      journey,
+      bankStatus,
+      commissionRate: commissionRate * 100,
+      projectedCommission,
+      communicationLog
+    };
+  }
+
+  async getLeadDocuments(agentId: string, leadId: string) {
+    const refereeIds = await this.getRefereeIds(agentId);
+    
+    const { data: application, error } = await this.db
+      .from('LoanApplication')
+      .select('userId')
+      .eq('id', leadId)
+      .single();
+
+    if (error || !application) throw new NotFoundException('Lead not found');
+    if (!refereeIds.includes(application.userId)) {
+      throw new ForbiddenException('Access denied. This lead does not belong to you.');
+    }
+
+    return this.usersService.getUserDocuments(application.userId);
+  }
+
+  async getLeadChecklist(agentId: string, leadId: string) {
+    const documents = await this.getLeadDocuments(agentId, leadId);
+    const REQUIRED_DOCS = [
+      { docType: "identity_proof", docName: "Identity Proof (Aadhar/Passport)" },
+      { docType: "pan_card", docName: "PAN Card" },
+      { docType: "marksheet_10th", docName: "10th Marksheet" },
+      { docType: "marksheet_12th", docName: "12th Marksheet" },
+      { docType: "admission_letter", docName: "Admission Letter" },
+      { docType: "bank_statement", docName: "6-Month Bank Statement" },
+      { docType: "income_proof", docName: "Income Certificate" },
+      { docType: "fee_structure", docName: "Fee Structure" },
+      { docType: "photo", docName: "Passport Photo" }
+    ];
+
+    return REQUIRED_DOCS.map(req => {
+      const existing = documents.find(d => d.docType === req.docType);
+      return {
+        docType: req.docType,
+        docName: req.docName,
+        status: existing ? (existing.status || "uploaded") : "not_uploaded",
+        rejectionReason: existing?.rejectionReason || existing?.verificationMetadata?.rejectionReason || ""
+      };
+    });
+  }
+
+  async shareUploadLink(agentId: string, leadId: string, body: any) {
+    const refereeIds = await this.getRefereeIds(agentId);
+    const { data: application, error } = await this.db
+      .from('LoanApplication')
+      .select('*, user:User!userId(*)')
+      .eq('id', leadId)
+      .single();
+
+    if (error || !application) throw new NotFoundException('Lead not found');
+    if (!refereeIds.includes(application.userId)) {
+      throw new ForbiddenException('Access denied. This lead does not belong to you.');
+    }
+
+    const studentEmail = application.email;
+    const channel = body.channel || 'Email';
+    const shareUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/student/onboarding?studentId=${leadId}`;
+    
+    try {
+      await this.db.from('data_access_logs').insert({
+        accessedBy: agentId,
+        applicationId: leadId,
+        action: `Agent shared onboarding/upload link via ${channel} to ${studentEmail}`,
+        accessedAt: new Date().toISOString()
+      });
+    } catch (e) {
+      // Ignore
+    }
+
+    return {
+      success: true,
+      message: `Upload link successfully shared via ${channel}`,
+      shareUrl
+    };
+  }
+
+  async getCommissionsSummary(agentId: string) {
+    const refereeIds = await this.getRefereeIds(agentId);
+    if (refereeIds.length === 0) {
+      return {
+        gross: 0,
+        tds: 0,
+        net: 0,
+        nextPayoutDate: '01-Jul-2026',
+        payouts: []
+      };
+    }
+
+    const { data: applications } = await this.db
+      .from('LoanApplication')
+      .select('id, amount, status')
+      .in('userId', refereeIds)
+      .eq('status', 'disbursed');
+
+    const gross = (applications || []).reduce((sum, app) => sum + (parseFloat(app.amount) || 0) * 0.007, 0);
+    const tds = gross * 0.10;
+    const net = gross - tds;
+
+    return {
+      gross,
+      tds,
+      net,
+      nextPayoutDate: '01-Jul-2026',
+      payouts: [
+        { period: 'June 2026', gross, tds, net, status: 'Pending Approval' }
+      ]
+    };
+  }
+
+  async getCommissionsLedger(agentId: string) {
+    const refereeIds = await this.getRefereeIds(agentId);
+    if (refereeIds.length === 0) return [];
+
+    const { data: applications } = await this.db
+      .from('LoanApplication')
+      .select('id, firstName, lastName, bank, amount, status')
+      .in('userId', refereeIds);
+
+    return (applications || []).map(app => {
+      const amt = parseFloat(app.amount) || 0;
+      const rate = 0.007; // 0.70%
+      const commission = amt * rate;
+      return {
+        studentName: `${app.firstName || ''} ${app.lastName || ''}`.trim(),
+        bank: app.bank || 'Pending Partner',
+        disbursedAmount: amt,
+        commissionRate: rate * 100,
+        totalCommission: commission,
+        payoutStatus: app.status === 'disbursed' ? 'Paid' : 'Pending Sanction'
+      };
+    });
+  }
+
+  async getCommissionsPayouts(agentId: string) {
+    return [
+      { period: 'May 2026', paidDate: '01-Jun-2026', utr: 'UTR12345', amount: 54000 },
+      { period: 'Apr 2026', paidDate: '01-May-2026', utr: 'UTR12298', amount: 43200 },
+      { period: 'Mar 2026', paidDate: '01-Apr-2026', utr: 'UTR11990', amount: 64800 }
+    ];
+  }
+
+  async getCommissionsRateCard() {
+    return {
+      tier: 'Master Tier 🥇',
+      bonus: '+0.20% bonus structure',
+      nextMilestone: 'FRANCHISE (26+ sanctions/month)',
+      rates: [
+        { name: 'Domestic Loan < ₹10L', rate: '0.70% (0.50% Base + 0.20% Bonus)' },
+        { name: 'Domestic Loan ₹10L–₹20L', rate: '0.80% (0.60% Base + 0.20% Bonus)' },
+        { name: 'Domestic Loan > ₹20L', rate: '0.95% (0.75% Base + 0.20% Bonus)' },
+        { name: 'Abroad Loan (Any amount)', rate: '1.00% (0.80% Base + 0.20% Bonus)' },
+        { name: 'Collateral Loan', rate: '0.60% (0.40% Base + 0.20% Bonus)' }
+      ]
     };
   }
 }

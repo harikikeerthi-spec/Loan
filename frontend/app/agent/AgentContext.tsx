@@ -8,6 +8,7 @@ import { format } from "date-fns";
 // --- Types ---
 export interface StudentApplication {
     id: string;
+    userId?: string;
     applicationNumber: string;
     firstName: string;
     lastName: string;
@@ -561,6 +562,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         const projected = (parseFloat(apiApp.amount) || 0) * 0.007;
         return {
             id: apiApp.id,
+            userId: apiApp.userId || apiApp.user?.id,
             applicationNumber: apiApp.applicationNumber || `VL-APP-2026-${String(apiApp.id).slice(-5)}`,
             firstName: apiApp.firstName || apiApp.user?.firstName || "Student",
             lastName: apiApp.lastName || apiApp.user?.lastName || "",
