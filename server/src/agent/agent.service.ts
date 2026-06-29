@@ -310,6 +310,22 @@ export class AgentService {
 
     if (appError) throw appError;
 
+    // Emit live dashboard activity event for lead submission
+    try {
+      const name = `${data.firstName || ''} ${data.lastName || ''}`.trim() || email || 'Student';
+      this.eventEmitter.emit('dashboard.activity', {
+        type: 'application',
+        msg: `Agent submitted lead for Student ${name} (Application #${applicationNumber || application.id.slice(-4)}) for review.`,
+        icon: 'rocket_launch',
+        color: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+        actorName: name,
+        actorEmail: email,
+        createdAt: new Date().toISOString()
+      });
+    } catch (e) {
+      // Ignore activity emit failure
+    }
+
     // Emit event-driven notifications
     this.eventEmitter.emit('application.created', {
       applicationId: application.id,
@@ -318,8 +334,14 @@ export class AgentService {
     });
     this.eventEmitter.emit('application.submitted', {
       applicationId: application.id,
+      applicationNumber: application.applicationNumber,
       userId: user.id,
-      email: email,
+      candidateName: `${data.firstName || ''} ${data.lastName || ''}`.trim() || email || 'Student',
+      candidateEmail: email,
+      bank: application.bank,
+      loanAmount: application.amount,
+      loanType: application.loanType,
+      submittedAt: application.submittedAt || new Date().toISOString(),
     });
 
     return { success: true, application };

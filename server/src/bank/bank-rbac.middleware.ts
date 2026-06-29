@@ -79,8 +79,10 @@ export class BankRbacInterceptor implements NestInterceptor {
     }
 
     let role = user.role?.toUpperCase();
-    if (role === 'BANK') {
+    if (role === 'BANK' || role === 'PARTNER_BANK' || role === 'STAFF' || role === 'SUPPORT') {
       role = 'BANK_OFFICER';
+    } else if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
+      role = 'BANK_ADMIN';
     }
     const email = user.email;
     const method = request.method.toUpperCase();

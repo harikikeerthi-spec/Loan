@@ -520,17 +520,17 @@ export default function ApplicationManagement() {
                                     color: '#ffffff',
                                     border: '1px solid rgba(255, 255, 255, 0.2)',
                                     boxShadow: '0px 4px 10px rgba(102, 5, 199, 0.3), inset 0px 1px 1px rgba(255, 255, 255, 0.4)'
-                                  }
+                                }
                                 : {
                                     background: '#f8fafc',
                                     color: '#94a3b8',
                                     border: '1px solid #e2e8f0',
                                     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.06)'
-                                  }
+                                }
                             }
                         >
                             <span>Incoming Files</span>
-                             <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${activeTab === "incoming" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                            <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${activeTab === "incoming" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
                                 {tabCounts.incoming}
                             </span>
                         </button>
@@ -543,17 +543,17 @@ export default function ApplicationManagement() {
                                     color: '#ffffff',
                                     border: '1px solid rgba(255, 255, 255, 0.2)',
                                     boxShadow: '0px 4px 10px rgba(102, 5, 199, 0.3), inset 0px 1px 1px rgba(255, 255, 255, 0.4)'
-                                  }
+                                }
                                 : {
                                     background: '#f8fafc',
                                     color: '#94a3b8',
                                     border: '1px solid #e2e8f0',
                                     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.06)'
-                                  }
+                                }
                             }
                         >
                             <span>Logged / Review</span>
-                             <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${activeTab === "active" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                            <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${activeTab === "active" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
                                 {tabCounts.active}
                             </span>
                         </button>
@@ -566,17 +566,17 @@ export default function ApplicationManagement() {
                                     color: '#ffffff',
                                     border: '1px solid rgba(255, 255, 255, 0.2)',
                                     boxShadow: '0px 4px 10px rgba(102, 5, 199, 0.3), inset 0px 1px 1px rgba(255, 255, 255, 0.4)'
-                                  }
+                                }
                                 : {
                                     background: '#f8fafc',
                                     color: '#94a3b8',
                                     border: '1px solid #e2e8f0',
                                     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.06)'
-                                  }
+                                }
                             }
                         >
                             <span>Sanctioned Queue</span>
-                             <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${activeTab === "sanctioned" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                            <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${activeTab === "sanctioned" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
                                 {tabCounts.sanctioned}
                             </span>
                         </button>
@@ -589,17 +589,17 @@ export default function ApplicationManagement() {
                                     color: '#ffffff',
                                     border: '1px solid rgba(255, 255, 255, 0.2)',
                                     boxShadow: '0px 4px 10px rgba(102, 5, 199, 0.3), inset 0px 1px 1px rgba(255, 255, 255, 0.4)'
-                                  }
+                                }
                                 : {
                                     background: '#f8fafc',
                                     color: '#94a3b8',
                                     border: '1px solid #e2e8f0',
                                     boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.06)'
-                                  }
+                                }
                             }
                         >
                             <span>Rejected Queue</span>
-                             <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${activeTab === "rejected" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                            <span className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${activeTab === "rejected" ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
                                 {tabCounts.rejected}
                             </span>
                         </button>
@@ -627,7 +627,7 @@ export default function ApplicationManagement() {
                                         accessorKey: "lanNumber",
                                         sortable: true,
                                         cell: (row: any) => (
-                                             <span className="font-mono font-black text-purple-700 bg-purple-50 px-2.5 py-1 rounded-md uppercase text-[11.5px]">
+                                            <span className="font-mono font-black text-purple-700 bg-purple-50 px-2.5 py-1 rounded-md uppercase text-[11.5px]">
                                                 {row.lanNumber || "Pending"}
                                             </span>
                                         )
@@ -641,7 +641,7 @@ export default function ApplicationManagement() {
                                                 <span className="font-black text-gray-900 uppercase tracking-tight block">
                                                     {row.firstName} {row.lastName}
                                                 </span>
-                                                 <span className="text-[11.5px] text-gray-400 block truncate max-w-[150px]">
+                                                <span className="text-[11.5px] text-gray-400 block truncate max-w-[150px]">
                                                     {row.universityName || "Stanford University"}
                                                 </span>
                                             </div>
@@ -680,7 +680,7 @@ export default function ApplicationManagement() {
                                             const match = (row.remarks || "").match(/officer ([\w\s\(\)]+)/i);
                                             const name = match ? match[1].trim() : "Sarah Jenkins (Credit Officer)";
                                             return (
-                                                 <span className="text-gray-500 font-semibold text-[12.5px]">
+                                                <span className="text-gray-500 font-semibold text-[12.5px]">
                                                     {name}
                                                 </span>
                                             );
@@ -696,7 +696,7 @@ export default function ApplicationManagement() {
                                                 <div className="flex flex-wrap gap-1 max-w-[150px]">
                                                     {tagsList.length > 0 ? (
                                                         tagsList.map((tag: string) => (
-                                                             <span key={tag} className="text-[10.5px] bg-purple-50 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200">
+                                                            <span key={tag} className="text-[10.5px] bg-purple-50 text-purple-700 font-bold px-1.5 py-0.5 rounded border border-purple-200">
                                                                 {tag}
                                                             </span>
                                                         ))
@@ -767,7 +767,7 @@ export default function ApplicationManagement() {
                                             {selectedApp.firstName} {selectedApp.lastName}
                                         </h2>
                                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-                                            {selectedApp.email} ┬╖ {selectedApp.phone || "No phone added"}
+                                            {selectedApp.email} |{selectedApp.phone || "No phone added"}
                                         </p>
                                     </div>
                                     <button
@@ -890,10 +890,10 @@ export default function ApplicationManagement() {
                                                 </div>
 
                                                 <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${aiReview.recommendation === 'approve'
-                                                        ? 'bg-emerald-100 text-emerald-800'
-                                                        : aiReview.recommendation === 'reject'
-                                                            ? 'bg-rose-100 text-rose-800'
-                                                            : 'bg-amber-100 text-amber-800'
+                                                    ? 'bg-emerald-100 text-emerald-800'
+                                                    : aiReview.recommendation === 'reject'
+                                                        ? 'bg-rose-100 text-rose-800'
+                                                        : 'bg-amber-100 text-amber-800'
                                                     }`}>
                                                     {aiReview.recommendation?.replace('_', ' ')}
                                                 </span>
@@ -914,10 +914,10 @@ export default function ApplicationManagement() {
                                                         {aiReview.eligibilityFlags.map((flagObj: any, i: number) => (
                                                             <div key={i} className="flex items-start gap-2 bg-white/40 p-2 rounded-lg border border-[#6605c7]/5">
                                                                 <span className={`material-symbols-outlined text-sm mt-0.5 ${flagObj.status === 'pass'
-                                                                        ? 'text-emerald-500'
-                                                                        : flagObj.status === 'fail'
-                                                                            ? 'text-rose-500'
-                                                                            : 'text-amber-500'
+                                                                    ? 'text-emerald-500'
+                                                                    : flagObj.status === 'fail'
+                                                                        ? 'text-rose-500'
+                                                                        : 'text-amber-500'
                                                                     }`}>
                                                                     {flagObj.status === 'pass' ? 'check_circle' : flagObj.status === 'fail' ? 'cancel' : 'warning'}
                                                                 </span>
@@ -1147,12 +1147,12 @@ export default function ApplicationManagement() {
                                                 type="button"
                                                 onClick={() => setPriority(p)}
                                                 className={`py-2 px-3 border rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${priority === p
-                                                        ? p === "high"
-                                                            ? "border-rose-500 bg-rose-50 text-rose-600"
-                                                            : p === "medium"
-                                                                ? "border-amber-500 bg-amber-50 text-amber-600"
-                                                                : "border-emerald-500 bg-emerald-50 text-emerald-600"
-                                                        : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                                                    ? p === "high"
+                                                        ? "border-rose-500 bg-rose-50 text-rose-600"
+                                                        : p === "medium"
+                                                            ? "border-amber-500 bg-amber-50 text-amber-600"
+                                                            : "border-emerald-500 bg-emerald-50 text-emerald-600"
+                                                    : "border-gray-200 text-gray-500 hover:bg-gray-50"
                                                     }`}
                                             >
                                                 {p}
@@ -1243,8 +1243,8 @@ export default function ApplicationManagement() {
                                                 type="button"
                                                 onClick={() => setDecisionType(t.id as any)}
                                                 className={`py-3 px-4 border rounded-xl flex items-center gap-2 text-[10px] font-black uppercase tracking-wider transition-all ${decisionType === t.id
-                                                        ? "border-[#6605c7] bg-[#6605c7]/5 text-[#6605c7]"
-                                                        : "border-gray-200 text-gray-500 hover:bg-gray-50"
+                                                    ? "border-[#6605c7] bg-[#6605c7]/5 text-[#6605c7]"
+                                                    : "border-gray-200 text-gray-500 hover:bg-gray-50"
                                                     }`}
                                             >
                                                 <span className="material-symbols-outlined text-base">{t.icon}</span>

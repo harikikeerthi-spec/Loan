@@ -15,8 +15,57 @@ export default function AgentLeadSubmission() {
         showToast
     } = useAgent();
 
+    const [activeStep, setActiveStep] = React.useState(1);
+    const [errors, setErrors] = React.useState<Record<string, string>>({});
+
+    const validateStep = (step: number): boolean => {
+        const newErrors: Record<string, string> = {};
+        if (step === 1) {
+            if (!leadForm.firstName?.trim()) newErrors.firstName = "First name is required";
+            if (!leadForm.lastName?.trim()) newErrors.lastName = "Last name is required";
+            if (!leadForm.phoneNumber?.trim()) newErrors.phoneNumber = "Mobile number is required";
+            if (!leadForm.email?.trim()) {
+                newErrors.email = "Email is required";
+            } else if (!/\S+@\S+\.\S+/.test(leadForm.email)) {
+                newErrors.email = "Invalid email format";
+            }
+        } else if (step === 2) {
+            if (!leadForm.amount || parseFloat(leadForm.amount) <= 0) {
+                newErrors.amount = "A valid loan amount is required";
+            }
+        }
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const handleNext = () => {
+        if (validateStep(activeStep)) {
+            setActiveStep((prev) => Math.min(prev + 1, 4));
+        } else {
+            showToast("Please fix the validation errors on this step.", "warning");
+        }
+    };
+
+    const handleBack = () => {
+        setActiveStep((prev) => Math.max(prev - 1, 1));
+        setErrors({});
+    };
+
     const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Validate all preceding steps
+        if (!validateStep(1)) {
+            setActiveStep(1);
+            showToast("Please fill all required student basics", "warning");
+            return;
+        }
+        if (!validateStep(2)) {
+            setActiveStep(2);
+            showToast("Please fill all required loan details", "warning");
+            return;
+        }
+
         const success = await handleLeadSubmit(e);
         if (success) {
             router.push("/agent/students");
@@ -106,118 +155,261 @@ export default function AgentLeadSubmission() {
                 <div className="lg:col-span-2 bg-white border border-[#6605c7]/10 p-8 rounded-[2.5rem] shadow-sm">
                     <h3 className="font-display font-black text-xl text-gray-900 mb-6 uppercase tracking-tight">New Student Lead — Single Submit</h3>
                     
+                    {/* Stepper Header */}
+                    <div className="mb-8">
+                        {/* Progress Bar */}
+                        <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden mb-6">
+                            <div 
+                                className="bg-gradient-to-r from-[#6605c7] to-indigo-500 h-full transition-all duration-500 ease-in-out" 
+                                style={{ width: `${(activeStep / 4) * 100}%` }}
+                            />
+                        </div>
+                        {/* Steps Indicators */}
+                        <div className="grid grid-cols-4 gap-2 text-center">
+                            {[
+                                { step: 1, label: "Basics", icon: "badge" },
+                                { step: 2, label: "Loan", icon: "payments" },
+                                { step: 3, label: "Co-App", icon: "group" },
+                                { step: 4, label: "Notes", icon: "rate_review" }
+                            ].map((s) => {
+                                const isCompleted = s.step < activeStep;
+                                const isActive = s.step === activeStep;
+                                return (
+                                    <button
+                                        key={s.step}
+                                        type="button"
+                                        onClick={() => {
+                                            if (s.step <= activeStep) {
+                                                setActiveStep(s.step);
+                                            } else {
+                                                // Validate intermediate steps to prevent skipping ahead without input
+                                                let valid = true;
+                                                for (let i = activeStep; i < s.step; i++) {
+                                                    if (!validateStep(i)) {
+                                                        valid = false;
+                                                        setActiveStep(i);
+                                                        break;
+                                                    }
+                                                }
+                                                if (valid) {
+                                                    setActiveStep(s.step);
+                                                }
+                                            }
+                                        }}
+                                        className="flex flex-col items-center group focus:outline-none"
+                                    >
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                                            isActive 
+                                                ? "bg-[#6605c7] text-white ring-4 ring-[#6605c7]/20 shadow-md scale-110" 
+                                                : isCompleted 
+                                                    ? "bg-emerald-500 text-white" 
+                                                    : "bg-slate-100 text-slate-400 group-hover:bg-slate-200"
+                                        }`}>
+                                            {isCompleted ? (
+                                                <span className="material-symbols-outlined text-sm font-bold">check</span>
+                                            ) : (
+                                                <span className="material-symbols-outlined text-sm">{s.icon}</span>
+                                            )}
+                                        </div>
+                                        <span className={`text-[10px] font-black tracking-wider uppercase mt-2 hidden sm:block transition-colors ${
+                                            isActive ? "text-[#6605c7]" : isCompleted ? "text-emerald-600" : "text-slate-400"
+                                        }`}>
+                                            {s.label}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
                     <form onSubmit={onSubmit} className="space-y-6">
                         {/* STEP 1: STUDENT BASICS */}
-                        <div className="space-y-4">
-                            <h4 className="text-[10px] font-black text-[#6605c7] uppercase tracking-widest">STEP 1: STUDENT BASICS</h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">First Name *</label>
-                                    <input type="text" required value={leadForm.firstName} onChange={(e) => setLeadForm({ ...leadForm, firstName: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Last Name *</label>
-                                    <input type="text" required value={leadForm.lastName} onChange={(e) => setLeadForm({ ...leadForm, lastName: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Mobile Number *</label>
-                                    <input type="tel" required value={leadForm.phoneNumber} onChange={(e) => setLeadForm({ ...leadForm, phoneNumber: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" placeholder="Used for WhatsApp alerts" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Email Address *</label>
-                                    <input type="email" required value={leadForm.email} onChange={(e) => setLeadForm({ ...leadForm, email: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Date of Birth</label>
-                                    <input type="date" value={leadForm.dob} onChange={(e) => setLeadForm({ ...leadForm, dob: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">City / State</label>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <input type="text" value={leadForm.city} onChange={(e) => setLeadForm({ ...leadForm, city: e.target.value })} placeholder="City" className="px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
-                                        <select value={leadForm.state} onChange={(e) => setLeadForm({ ...leadForm, state: e.target.value })} className="px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none">
-                                            <option>Telangana</option>
-                                            <option>Andhra Pradesh</option>
-                                            <option>Maharashtra</option>
-                                            <option>Karnataka</option>
-                                        </select>
+                        {activeStep === 1 && (
+                            <div className="space-y-4 animate-fade-in-up">
+                                <h4 className="text-[10px] font-black text-[#6605c7] uppercase tracking-widest">STEP 1: STUDENT BASICS</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase">First Name *</label>
+                                        <input type="text" value={leadForm.firstName} onChange={(e) => {
+                                            setLeadForm({ ...leadForm, firstName: e.target.value });
+                                            if (errors.firstName) setErrors(prev => ({ ...prev, firstName: "" }));
+                                        }} className={`w-full px-4 py-3 rounded-xl bg-gray-50 border text-xs text-gray-850 focus:outline-none transition-all ${
+                                            errors.firstName ? "border-rose-400 focus:ring-2 focus:ring-rose-200" : "border-gray-100 focus:ring-2 focus:ring-[#6605c7]/15"
+                                        }`} />
+                                        {errors.firstName && <p className="text-[10px] font-semibold text-rose-500 animate-fade-in">{errors.firstName}</p>}
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase">Last Name *</label>
+                                        <input type="text" value={leadForm.lastName} onChange={(e) => {
+                                            setLeadForm({ ...leadForm, lastName: e.target.value });
+                                            if (errors.lastName) setErrors(prev => ({ ...prev, lastName: "" }));
+                                        }} className={`w-full px-4 py-3 rounded-xl bg-gray-50 border text-xs text-gray-850 focus:outline-none transition-all ${
+                                            errors.lastName ? "border-rose-400 focus:ring-2 focus:ring-rose-200" : "border-gray-100 focus:ring-2 focus:ring-[#6605c7]/15"
+                                        }`} />
+                                        {errors.lastName && <p className="text-[10px] font-semibold text-rose-500 animate-fade-in">{errors.lastName}</p>}
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase">Mobile Number *</label>
+                                        <input type="tel" value={leadForm.phoneNumber} onChange={(e) => {
+                                            setLeadForm({ ...leadForm, phoneNumber: e.target.value });
+                                            if (errors.phoneNumber) setErrors(prev => ({ ...prev, phoneNumber: "" }));
+                                        }} className={`w-full px-4 py-3 rounded-xl bg-gray-50 border text-xs text-gray-850 focus:outline-none transition-all ${
+                                            errors.phoneNumber ? "border-rose-400 focus:ring-2 focus:ring-rose-200" : "border-gray-100 focus:ring-2 focus:ring-[#6605c7]/15"
+                                        }`} placeholder="Used for WhatsApp alerts" />
+                                        {errors.phoneNumber && <p className="text-[10px] font-semibold text-rose-500 animate-fade-in">{errors.phoneNumber}</p>}
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase">Email Address *</label>
+                                        <input type="email" value={leadForm.email} onChange={(e) => {
+                                            setLeadForm({ ...leadForm, email: e.target.value });
+                                            if (errors.email) setErrors(prev => ({ ...prev, email: "" }));
+                                        }} className={`w-full px-4 py-3 rounded-xl bg-gray-50 border text-xs text-gray-850 focus:outline-none transition-all ${
+                                            errors.email ? "border-rose-400 focus:ring-2 focus:ring-rose-200" : "border-gray-100 focus:ring-2 focus:ring-[#6605c7]/15"
+                                        }`} />
+                                        {errors.email && <p className="text-[10px] font-semibold text-rose-500 animate-fade-in">{errors.email}</p>}
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase">Date of Birth</label>
+                                        <input type="date" value={leadForm.dob} onChange={(e) => setLeadForm({ ...leadForm, dob: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase">City / State</label>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <input type="text" value={leadForm.city} onChange={(e) => setLeadForm({ ...leadForm, city: e.target.value })} placeholder="City" className="px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
+                                            <select value={leadForm.state} onChange={(e) => setLeadForm({ ...leadForm, state: e.target.value })} className="px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none">
+                                                <option>Telangana</option>
+                                                <option>Andhra Pradesh</option>
+                                                <option>Maharashtra</option>
+                                                <option>Karnataka</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* STEP 2: LOAN DETAILS */}
-                        <div className="space-y-4 pt-4 border-t border-gray-50">
-                            <h4 className="text-[10px] font-black text-[#6605c7] uppercase tracking-widest">STEP 2: LOAN DETAILS</h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Loan Type</label>
-                                    <div className="flex gap-4 py-2 text-xs">
-                                        <label className="flex items-center gap-2 font-medium cursor-pointer"><input type="radio" name="loanType" checked={leadForm.loanType === "Domestic"} onChange={() => setLeadForm({ ...leadForm, loanType: "Domestic" })} /> Domestic</label>
-                                        <label className="flex items-center gap-2 font-medium cursor-pointer"><input type="radio" name="loanType" checked={leadForm.loanType === "Abroad"} onChange={() => setLeadForm({ ...leadForm, loanType: "Abroad" })} /> Abroad</label>
+                        {activeStep === 2 && (
+                            <div className="space-y-4 animate-fade-in-up">
+                                <h4 className="text-[10px] font-black text-[#6605c7] uppercase tracking-widest">STEP 2: LOAN DETAILS</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase">Loan Type</label>
+                                        <div className="flex gap-4 py-2 text-xs">
+                                            <label className="flex items-center gap-2 font-medium cursor-pointer"><input type="radio" name="loanType" checked={leadForm.loanType === "Domestic"} onChange={() => setLeadForm({ ...leadForm, loanType: "Domestic" })} /> Domestic</label>
+                                            <label className="flex items-center gap-2 font-medium cursor-pointer"><input type="radio" name="loanType" checked={leadForm.loanType === "Abroad"} onChange={() => setLeadForm({ ...leadForm, loanType: "Abroad" })} /> Abroad</label>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase">Requested Loan Amount (₹) *</label>
+                                        <input type="number" value={leadForm.amount} onChange={(e) => {
+                                            setLeadForm({ ...leadForm, amount: e.target.value });
+                                            if (errors.amount) setErrors(prev => ({ ...prev, amount: "" }));
+                                        }} className={`w-full px-4 py-3 rounded-xl bg-gray-50 border text-xs text-gray-850 focus:outline-none transition-all ${
+                                            errors.amount ? "border-rose-400 focus:ring-2 focus:ring-rose-200" : "border-gray-100 focus:ring-2 focus:ring-[#6605c7]/15"
+                                        }`} />
+                                        {errors.amount && <p className="text-[10px] font-semibold text-rose-500 animate-fade-in">{errors.amount}</p>}
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase">Course Name</label>
+                                        <input type="text" value={leadForm.courseName} onChange={(e) => setLeadForm({ ...leadForm, courseName: e.target.value })} placeholder="e.g. B.Tech, MBBS, MBA" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase">College / University Name</label>
+                                        <input type="text" value={leadForm.collegeName} onChange={(e) => setLeadForm({ ...leadForm, collegeName: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
                                     </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Requested Loan Amount (₹) *</label>
-                                    <input type="number" required value={leadForm.amount} onChange={(e) => setLeadForm({ ...leadForm, amount: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Course Name</label>
-                                    <input type="text" value={leadForm.courseName} onChange={(e) => setLeadForm({ ...leadForm, courseName: e.target.value })} placeholder="e.g. B.Tech, MBBS, MBA" className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">College / University Name</label>
-                                    <input type="text" value={leadForm.collegeName} onChange={(e) => setLeadForm({ ...leadForm, collegeName: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
-                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* STEP 3: CO-APPLICANT (Optional) */}
-                        <div className="space-y-4 pt-4 border-t border-gray-50">
-                            <h4 className="text-[10px] font-black text-[#6605c7] uppercase tracking-widest">STEP 3: CO-APPLICANT (Optional)</h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Co-App Name</label>
-                                    <input type="text" value={leadForm.coApplicantName} onChange={(e) => setLeadForm({ ...leadForm, coApplicantName: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Relationship</label>
-                                    <select value={leadForm.coApplicantRelationship} onChange={(e) => setLeadForm({ ...leadForm, coApplicantRelationship: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none">
-                                        <option>Parent</option>
-                                        <option>Spouse</option>
-                                        <option>Sibling</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Co-App Mobile</label>
-                                    <input type="tel" value={leadForm.coApplicantMobile} onChange={(e) => setLeadForm({ ...leadForm, coApplicantMobile: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
+                        {activeStep === 3 && (
+                            <div className="space-y-4 animate-fade-in-up">
+                                <h4 className="text-[10px] font-black text-[#6605c7] uppercase tracking-widest">STEP 3: CO-APPLICANT (Optional)</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase">Co-App Name</label>
+                                        <input type="text" value={leadForm.coApplicantName} onChange={(e) => setLeadForm({ ...leadForm, coApplicantName: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase">Relationship</label>
+                                        <select value={leadForm.coApplicantRelationship} onChange={(e) => setLeadForm({ ...leadForm, coApplicantRelationship: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none">
+                                            <option>Parent</option>
+                                            <option>Spouse</option>
+                                            <option>Sibling</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase">Co-App Mobile</label>
+                                        <input type="tel" value={leadForm.coApplicantMobile} onChange={(e) => setLeadForm({ ...leadForm, coApplicantMobile: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* STEP 4: SOURCE & NOTES */}
-                        <div className="space-y-4 pt-4 border-t border-gray-50">
-                            <h4 className="text-[10px] font-black text-[#6605c7] uppercase tracking-widest">STEP 4: SOURCE & NOTES</h4>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">How did they find you?</label>
-                                    <select value={leadForm.source} onChange={(e) => setLeadForm({ ...leadForm, source: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none">
-                                        <option>Referral</option>
-                                        <option>Walk-in</option>
-                                        <option>WhatsApp</option>
-                                        <option>College Event</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Internal Notes for Staff</label>
-                                    <input type="text" value={leadForm.notes} onChange={(e) => setLeadForm({ ...leadForm, notes: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" placeholder="e.g. Needs immediate dispatch check" />
+                        {activeStep === 4 && (
+                            <div className="space-y-4 animate-fade-in-up">
+                                <h4 className="text-[10px] font-black text-[#6605c7] uppercase tracking-widest">STEP 4: SOURCE & NOTES</h4>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase">How did they find you?</label>
+                                        <select value={leadForm.source} onChange={(e) => setLeadForm({ ...leadForm, source: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none">
+                                            <option>Referral</option>
+                                            <option>Walk-in</option>
+                                            <option>WhatsApp</option>
+                                            <option>College Event</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="block text-[10px] font-bold text-gray-400 uppercase">Internal Notes for Staff</label>
+                                        <input type="text" value={leadForm.notes} onChange={(e) => setLeadForm({ ...leadForm, notes: e.target.value })} className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-850 focus:outline-none" placeholder="e.g. Needs immediate dispatch check" />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
-                        <div className="flex gap-4 pt-4 border-t border-gray-50">
-                            <button type="submit" className="flex-1 py-4 bg-[#6605c7] hover:bg-[#6605c7]/95 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all">Submit Lead</button>
-                            <button type="button" onClick={() => showToast("Lead saved as draft successfully.", "info")} className="px-6 py-4 bg-gray-50 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-gray-100 transition-all border border-gray-100">Save as Draft</button>
+                        {/* Bottom controls */}
+                        <div className="flex justify-between items-center pt-6 border-t border-gray-50">
+                            <div>
+                                {activeStep > 1 && (
+                                    <button 
+                                        type="button" 
+                                        onClick={handleBack} 
+                                        className="px-5 py-3 bg-gray-50 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-gray-100 transition-all border border-gray-100 flex items-center gap-2"
+                                    >
+                                        <span className="material-symbols-outlined text-sm font-bold">arrow_back</span>
+                                        Back
+                                    </button>
+                                )}
+                            </div>
+                            <div className="flex gap-3">
+                                <button 
+                                    type="button" 
+                                    onClick={() => showToast("Lead saved as draft successfully.", "info")} 
+                                    className="px-5 py-3 bg-gray-50 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-gray-100 transition-all border border-gray-100"
+                                >
+                                    Save as Draft
+                                </button>
+                                {activeStep < 4 ? (
+                                    <button 
+                                        type="button" 
+                                        onClick={handleNext} 
+                                        className="px-5 py-3 bg-[#6605c7] hover:bg-[#6605c7]/95 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2"
+                                    >
+                                        Next
+                                        <span className="material-symbols-outlined text-sm font-bold">arrow_forward</span>
+                                    </button>
+                                ) : (
+                                    <button 
+                                        type="submit" 
+                                        className="px-5 py-3 bg-[#6605c7] hover:bg-[#6605c7]/95 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-2"
+                                    >
+                                        Submit Lead
+                                        <span className="material-symbols-outlined text-sm font-bold">check</span>
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </form>
                 </div>

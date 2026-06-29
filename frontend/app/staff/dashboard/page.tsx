@@ -429,6 +429,9 @@ export default function StaffDashboardPage() {
     const [unreadChatCount, setUnreadChatCount] = useState(0);
     const activeSectionRef = useRef<string>('overview');
 
+    const loadDataRef = useRef<any>(null);
+    const loadOverviewRef = useRef<any>(null);
+
     // Initialize real-time WebSocket connection and fetch initial unread counts
     useEffect(() => {
         if (!token) return;
@@ -480,6 +483,20 @@ export default function StaffDashboardPage() {
 
         socketInstance.on('user_activity', (newActivity: any) => {
             console.log('[StaffDashboard] Live activity received:', newActivity);
+            setRecentActivity(prev => [
+                {
+                    ...newActivity,
+                    time: "Just now"
+                },
+                ...prev
+            ].slice(0, 15));
+
+            // Refresh data dynamically based on active section
+            if (activeSectionRef.current === "overview") {
+                if (loadOverviewRef.current) loadOverviewRef.current(true);
+            } else if (activeSectionRef.current === "incoming_queue" || activeSectionRef.current === "applications") {
+                if (loadDataRef.current) loadDataRef.current();
+            }
         });
 
         // Listen for incoming customer/bank messages even when ChatInterface is not active
@@ -1001,11 +1018,13 @@ export default function StaffDashboardPage() {
         }
     }, [filterStatus, searchQuery, userRoleFilter]);
 
-    // Stable refs to always call the latest version of these without adding them as dependencies
-    const loadDataRef = useRef(loadData);
-    const loadOverviewRef = useRef(loadOverview);
-    useEffect(() => { loadDataRef.current = loadData; }, [loadData]);
-    useEffect(() => { loadOverviewRef.current = loadOverview; }, [loadOverview]);
+    useEffect(() => {
+        loadDataRef.current = loadData;
+    }, [loadData]);
+
+    useEffect(() => {
+        loadOverviewRef.current = loadOverview;
+    }, [loadOverview]);
 
     useEffect(() => {
         if (activeSection === "overview") loadOverviewRef.current();
@@ -1136,6 +1155,30 @@ export default function StaffDashboardPage() {
                 progress: 50,
                 remarks: `Sent to ${selectedBank} from staff incoming queue.`,
             });
+
+            // Map selectedBank display name to reference bank details
+            const matchingBank = availableBanks.find(b => getBankDisplayName(b) === selectedBank);
+            const bankId = matchingBank?.id || matchingBank?.bankId || selectedBank.toLowerCase();
+            const bankName = matchingBank?.name || matchingBank?.bankName || selectedBank;
+            const staffName = user
+                ? `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email
+                : "Staff";
+
+            // Submit application to bank workflow to trigger creation of BankSubmission and notifications
+            try {
+                await apiFetch("/api/bank/workflow/submit", {
+                    method: "POST",
+                    body: JSON.stringify({
+                        applicationId: appId,
+                        bankId,
+                        bankName,
+                        submittedBy: staffName,
+                    }),
+                });
+            } catch (workflowErr: any) {
+                console.warn("[Dashboard] Workflow submit warning:", workflowErr?.message);
+            }
+
             addActivity("share", `Sent application to ${selectedBank}`, "send", "text-indigo-600 bg-indigo-50");
             setActiveMenuId(null);
             setMenuPosition(null);
