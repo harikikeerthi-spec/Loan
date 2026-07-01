@@ -14,7 +14,7 @@ import { StaffGuard } from '../auth/staff.guard';
 @Controller('campaigns')
 @UseGuards(StaffGuard)
 export class CampaignController {
-  constructor(private readonly campaignService: CampaignService) {}
+  constructor(private readonly campaignService: CampaignService) { }
 
   @Post()
   async createCampaign(@Body() body: any) {

@@ -10,4 +10,4 @@ import { AuthModule } from '../auth/auth.module';
   providers: [CampaignService, CampaignProcessorService],
   exports: [CampaignService],
 })
-export class CampaignModule {}
+export class CampaignModule { }

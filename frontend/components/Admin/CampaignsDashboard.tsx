@@ -315,7 +315,7 @@ export default function CampaignsDashboard() {
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto animate-fade-in text-slate-800">
-      
+
       {/* Overview/List View */}
       {view === 'list' && (
         <>
@@ -646,7 +646,7 @@ export default function CampaignsDashboard() {
                       <input
                         type="checkbox"
                         checked={selectedAudienceIds.includes(user.id)}
-                        onChange={() => {}} // handled by div onClick
+                        onChange={() => { }} // handled by div onClick
                         className="w-4 h-4 text-indigo-600 border-slate-300 rounded focus:ring-indigo-500"
                       />
                       <div>
@@ -697,7 +697,7 @@ export default function CampaignsDashboard() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
+
             {/* Left: Email HTML Preview */}
             <div className="lg:col-span-2 space-y-4">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Email Preview</h3>
@@ -718,7 +718,7 @@ export default function CampaignsDashboard() {
             <div className="space-y-6">
               <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-5">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Campaign Summary</h3>
-                
+
                 <div className="space-y-3">
                   <div className="flex justify-between text-xs border-b border-slate-50 pb-2">
                     <span className="text-slate-400">Recipients</span>
@@ -796,11 +796,11 @@ export default function CampaignsDashboard() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
+
             {/* Left: General Stats */}
             <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-sm md:col-span-1">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Live Delivery Metrics</h3>
-              
+
               <div className="grid grid-cols-3 gap-2 text-center">
                 <div className="p-2.5 bg-indigo-50 border border-indigo-100 rounded-lg text-indigo-700">
                   <p className="text-xl font-bold">{selectedCampaign.totalCount}</p>
@@ -843,7 +843,7 @@ export default function CampaignsDashboard() {
             {/* Right: Email content preview */}
             <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-sm md:col-span-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Email Configuration</h3>
-              
+
               <div className="text-xs space-y-2 border-b border-slate-100 pb-3 mb-3">
                 <div><strong>Subject:</strong> {selectedCampaign.subject}</div>
                 {selectedCampaign.optimizationGoal && (

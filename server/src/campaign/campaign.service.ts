@@ -3,7 +3,7 @@ import { SupabaseService } from '../supabase/supabase.service';
 
 @Injectable()
 export class CampaignService {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(private readonly supabase: SupabaseService) { }
 
   async createCampaign(data: any) {
     const { data: campaign, error } = await this.supabase
@@ -127,14 +127,14 @@ export class CampaignService {
 
   async getTargetAudience(filters: any = {}) {
     let query = this.supabase.from('User').select('id, email, firstName, lastName, role');
-    
+
     // Default to only target students unless specified
     query = query.eq('role', 'student');
 
     if (filters.studyDestination) {
       query = query.eq('studyDestination', filters.studyDestination);
     }
-    
+
     if (filters.targetUniversity) {
       query = query.eq('targetUniversity', filters.targetUniversity);
     }
