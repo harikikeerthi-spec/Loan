@@ -369,6 +369,8 @@ export class NotificationService {
           submissionId: payload.submissionId,
           applicationId: payload.applicationId,
           lanNumber: payload.lanNumber,
+          bankId: payload.bankId,
+          bankName: payload.bankName,
         }
       );
     } catch (error) {
@@ -391,6 +393,8 @@ export class NotificationService {
           submissionId: payload.submissionId,
           applicationId: payload.applicationId,
           queryId: payload.queryId,
+          bankId: payload.bankId,
+          bankName: payload.bankName,
         }
       );
     } catch (error) {

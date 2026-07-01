@@ -325,6 +325,7 @@ function BankLoginContent() {
                 firstName: data.firstName,
                 lastName: data.lastName,
                 role: data.role as any,
+                refresh_token: data.refresh_token,
             });
             router.push("/bank/dashboard");
         } catch (e: unknown) {

@@ -1,0 +1,47 @@
+[
+  {
+    "id": "sub-1-staf",
+    "masterAgentId": "staff",
+    "name": "Amit Kumar",
+    "email": "amit.kumar@example.com",
+    "phone": "9876543210",
+    "status": "active",
+    "joinedAt": "2026-06-15T15:53:01.803Z"
+  },
+  {
+    "id": "sub-2-staf",
+    "masterAgentId": "staff",
+    "name": "Priya Sharma",
+    "email": "priya.sharma@example.com",
+    "phone": "9812345678",
+    "status": "invited",
+    "joinedAt": "2026-06-28T15:53:01.804Z"
+  },
+  {
+    "id": "sub-738858",
+    "masterAgentId": "staff",
+    "name": "Ravi Verma",
+    "email": "ravi.verma@example.com",
+    "phone": "9900990099",
+    "status": "invited",
+    "joinedAt": "2026-06-30T15:53:01.921Z"
+  },
+  {
+    "id": "sub-768362",
+    "masterAgentId": "staff",
+    "name": "Ravi Verma",
+    "email": "ravi.verma@example.com",
+    "phone": "9900990099",
+    "status": "invited",
+    "joinedAt": "2026-06-30T15:56:19.487Z"
+  },
+  {
+    "id": "sub-854879",
+    "masterAgentId": "staff",
+    "name": "Ravi Verma",
+    "email": "ravi.verma@example.com",
+    "phone": "9900990099",
+    "status": "invited",
+    "joinedAt": "2026-06-30T15:57:49.808Z"
+  }
+]

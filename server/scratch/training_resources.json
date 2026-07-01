@@ -1,0 +1,23 @@
+[
+  {
+    "id": "res-1",
+    "title": "Student Loan Document Checklist",
+    "description": "Comprehensive document checklist for Domestic and International education loans.",
+    "url": "/uploads/resources/checklist.pdf",
+    "type": "pdf"
+  },
+  {
+    "id": "res-2",
+    "title": "Co-Applicant Income Verification Guide",
+    "description": "Instructions for verifying salaried vs self-employed co-applicant income details.",
+    "url": "/uploads/resources/income_verification.pdf",
+    "type": "pdf"
+  },
+  {
+    "id": "res-3",
+    "title": "Avanse Student Scheme Brochure 2026",
+    "description": "Latest ROI guidelines and margins for Avanse Education Loans.",
+    "url": "/uploads/resources/avanse_brochure_2026.pdf",
+    "type": "pdf"
+  }
+]

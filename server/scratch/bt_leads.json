@@ -1,0 +1,28 @@
+[
+  {
+    "id": "bt-1-staf",
+    "agentId": "staff",
+    "studentName": "Vijay Patel",
+    "currentBank": "HDFC Credila",
+    "targetBank": "State Bank of India",
+    "loanAmount": 4500000,
+    "currentRoi": 11.5,
+    "targetRoi": 9.25,
+    "estimatedSavings": 180000,
+    "status": "UNDER_REVIEW",
+    "createdAt": "2026-06-20T15:53:02.654Z"
+  },
+  {
+    "id": "bt-2-staf",
+    "agentId": "staff",
+    "studentName": "Ananya Roy",
+    "currentBank": "Avanse",
+    "targetBank": "Bank of Baroda",
+    "loanAmount": 6000000,
+    "currentRoi": 12,
+    "targetRoi": 9.5,
+    "estimatedSavings": 250000,
+    "status": "LOGGED",
+    "createdAt": "2026-06-25T15:53:02.654Z"
+  }
+]

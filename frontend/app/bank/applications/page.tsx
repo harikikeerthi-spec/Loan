@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, differenceInDays, parseISO } from "date-fns";
-import { adminApi, bankApi } from "@/lib/api";
+import { adminApi, bankApi, getToken } from "@/lib/api";
 import { DataTable, StatusBadge, PriorityTag } from "@/components/bank/SharedUI";
 import { useRouter } from "next/navigation";
 
@@ -16,6 +16,7 @@ export default function ApplicationManagement() {
     const [search, setSearch] = useState("");
     const [activeTab, setActiveTab] = useState<"incoming" | "active" | "sanctioned" | "rejected">("incoming");
     const [selectedApp, setSelectedApp] = useState<any | null>(null);
+    const [token, setToken] = useState<string>("");
     const [showLanModal, setShowLanModal] = useState(false);
     const [showDecisionModal, setShowDecisionModal] = useState(false);
 
@@ -63,6 +64,8 @@ export default function ApplicationManagement() {
         if (typeof window !== "undefined") {
             const saved = sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank");
             if (saved) setCurrentBankId(saved);
+            const fetchedToken = getToken();
+            if (fetchedToken) setToken(fetchedToken);
         }
     }, []);
 
@@ -797,7 +800,7 @@ export default function ApplicationManagement() {
                                     <div>
                                         <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Application ID</span>
                                         <span className="text-sm font-bold text-gray-900 font-mono" title={selectedApp.id}>
-                                            APP{(selectedApp.id || "—").replace(/-/g, "").slice(-10).toUpperCase()}
+                                            {selectedApp.applicationNumber || `APP${(selectedApp.id || "—").replace(/-/g, "").slice(-10).toUpperCase()}`}
                                         </span>
                                     </div>
                                     <div className="col-span-2">
@@ -835,7 +838,7 @@ export default function ApplicationManagement() {
                                                         </div>
                                                     </div>
                                                     <a
-                                                        href={`/api/applications/admin/${selectedApp.id}/documents/${doc.id}/view`}
+                                                        href={`/api/applications/admin/${selectedApp.id}/documents/${doc.id}/view?token=${token}`}
                                                         target="_blank"
                                                         rel="noreferrer"
                                                         className="px-3 py-1.5 bg-gray-50 border border-gray-100 text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-[#6605c7]/5 hover:text-[#6605c7] hover:border-[#6605c7]/10 transition-all flex items-center gap-1"
@@ -979,7 +982,7 @@ export default function ApplicationManagement() {
                                 </div>
 
                                 {/* File Tags & Labels (F43) */}
-                                <div className="space-y-3 border-t border-gray-100 pt-5">
+                                {/* <div className="space-y-3 border-t border-gray-100 pt-5">
                                     <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 block pl-1">File Tags & Labels</span>
                                     <div className="flex flex-wrap gap-1.5 mb-2">
                                         {selectedApp.tags ? (
@@ -1032,7 +1035,7 @@ export default function ApplicationManagement() {
                                             Add Tag
                                         </button>
                                     </div>
-                                </div>
+                                </div> */}
 
                                 {/* Remarks / Activity Feed */}
                                 <div className="space-y-3 border-t border-gray-100 pt-5">

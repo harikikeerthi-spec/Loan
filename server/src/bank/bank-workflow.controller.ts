@@ -14,7 +14,7 @@ import type { Response } from 'express';
 import { BankWorkflowService } from './bank-workflow.service';
 import { StaffGuard } from '../auth/staff.guard';
 
-@Controller('api/bank/workflow')
+@Controller('bank/workflow')
 @UseGuards(StaffGuard)
 export class BankWorkflowController {
   constructor(private readonly workflowService: BankWorkflowService) {}

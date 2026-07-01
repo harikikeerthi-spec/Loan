@@ -1,0 +1,23 @@
+[
+  {
+    "id": "mod-1",
+    "title": "VidyaLoans DSA Guidelines",
+    "description": "Learn about the rules, ethical guidelines, and operational framework of becoming a VidyaLoans Direct Selling Agent.",
+    "duration": "15 mins",
+    "category": "onboarding"
+  },
+  {
+    "id": "mod-2",
+    "title": "Understanding Student Eligibility",
+    "description": "How to evaluate student marksheet, test scores, and co-applicant details to check loan eligibility.",
+    "duration": "25 mins",
+    "category": "underwriting"
+  },
+  {
+    "id": "mod-3",
+    "title": "Balance Transfer Procedures",
+    "description": "Step-by-step training on how to process a Balance Transfer (BT) request for students seeking lower interest rates.",
+    "duration": "20 mins",
+    "category": "products"
+  }
+]

@@ -12,8 +12,13 @@ export default function BankChatPage() {
     const applicationId = searchParams.get("applicationId");
     const applicationNumber = searchParams.get("applicationNumber");
 
+    let bankNameKey = "idfc";
+    if (typeof window !== "undefined") {
+        bankNameKey = sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank") || user?.bankName || user?.firstName || "idfc";
+    }
+
     const initialBank = applicationId ? {
-        bankName: user?.bankName || user?.firstName || "idfc",
+        bankName: bankNameKey,
         applicationId,
         applicationNumber: applicationNumber || undefined
     } : null;

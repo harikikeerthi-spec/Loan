@@ -179,7 +179,7 @@ export const agentApi = {
         }),
 };
 
-function getToken(): string | null {
+export function getToken(): string | null {
     if (typeof window === "undefined") return null;
     const portal = getPortalFromPathname(window.location.pathname);
     const keys = getStorageKeys(portal);
@@ -244,7 +244,7 @@ export async function apiFetch<T>(url: string, options: RequestInit = {}): Promi
             if (body.message === 'Token has expired') {
                 const portal = getPortalFromPathname(typeof window !== "undefined" ? window.location.pathname : "");
                 const keys = getStorageKeys(portal);
-                const refreshToken = localStorage.getItem(keys.refreshToken);
+                const refreshToken = localStorage.getItem(keys.refreshToken) || localStorage.getItem("refreshToken");
 
                 if (refreshToken) {
                     console.log("[API] Token expired, attempting silent refresh...");

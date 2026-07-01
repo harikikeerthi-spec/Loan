@@ -58,7 +58,7 @@ const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => {
                     </span>
                 )}
 
-                {badge && !collapsed && (
+                {(typeof badge === 'number' ? badge > 0 : !!badge) && !collapsed && (
                     <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-extrabold relative z-10 shrink-0 ${active
                         ? isDashboard ? "bg-white text-[#6605c7]" : "bg-white/20 text-white border border-white/10"
                         : "bg-[#6605c7] text-white"
@@ -87,7 +87,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
     const { user, isBank, isAdmin, isLoading, logout, token } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
-    const [collapsed, setCollapsed] = useState(false);
+    const [collapsed, setCollapsed] = useState(true);
     const [hoverExpanded, setHoverExpanded] = useState(false);
     const [scrolled, setScrolled] = useState(false);
 
@@ -413,7 +413,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 {/* Footer Section */}
                 <div className="mt-auto px-3 pb-4 space-y-2">
                     <div className="flex gap-1.5">
-                        <button
+                        {/* <button
                             onClick={() => setCollapsed(!collapsed)}
                             title="Collapse"
                             className="flex-1 flex items-center justify-center gap-2 py-2 px-2 rounded-xl text-gray-400 transition-all group"
@@ -424,7 +424,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                 chevron_left
                             </span>
                             {isOpened && <span className="text-[11px] font-semibold tracking-wide">Collapse</span>}
-                        </button>
+                        </button> */}
 
                         <button
                             onClick={async () => {

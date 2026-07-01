@@ -187,6 +187,8 @@ export class BankWorkflowService {
       submissionId,
       applicationId: submission.applicationId,
       lanNumber,
+      bankId: submission.bankId,
+      bankName: submission.bankName,
     });
 
     return { success: true, data: updated };
@@ -319,6 +321,8 @@ export class BankWorkflowService {
       submissionId,
       applicationId: submission.applicationId,
       queryId: query.id,
+      bankId: submission.bankId,
+      bankName: submission.bankName,
     });
 
     return { success: true, data: query };

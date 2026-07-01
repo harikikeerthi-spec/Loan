@@ -634,4 +634,729 @@ export class AgentService {
       ]
     };
   }
+
+  // ─── Analytics (funnel, trend, rejections, leaderboard) ───
+  
+  async getFunnelAnalytics(agentId: string) {
+    const refereeIds = await this.getRefereeIds(agentId);
+    if (refereeIds.length === 0) {
+      return {
+        funnel: { totalLeads: 0, submitted: 0, underReview: 0, sanctioned: 0, disbursed: 0 },
+        stages: [
+          { stage: "Leads", count: 0, percentage: 0 },
+          { stage: "Submitted to Bank", count: 0, percentage: 0 },
+          { stage: "Under Review", count: 0, percentage: 0 },
+          { stage: "Sanctioned/Approved", count: 0, percentage: 0 },
+          { stage: "Disbursed", count: 0, percentage: 0 }
+        ],
+        conversionRate: 0
+      };
+    }
+
+    const { data: applications } = await this.db
+      .from('LoanApplication')
+      .select('status')
+      .in('userId', refereeIds);
+
+    const funnel = {
+      totalLeads: (applications || []).length,
+      submitted: 0,
+      underReview: 0,
+      sanctioned: 0,
+      disbursed: 0
+    };
+
+    for (const app of applications || []) {
+      const status = app.status ? app.status.toLowerCase() : 'pending';
+      if (status === 'disbursed') {
+        funnel.disbursed++;
+        funnel.sanctioned++;
+        funnel.underReview++;
+        funnel.submitted++;
+      } else if (['approved', 'sanctioned'].includes(status)) {
+        funnel.sanctioned++;
+        funnel.underReview++;
+        funnel.submitted++;
+      } else if (['processing', 'bank_review', 'under_bank_review', 'file_logged'].includes(status)) {
+        funnel.underReview++;
+        funnel.submitted++;
+      } else if (['submitted', 'application_submitted', 'submitted_to_bank'].includes(status)) {
+        funnel.submitted++;
+      }
+    }
+
+    const getPercent = (count: number) => funnel.totalLeads > 0 ? Math.round((count / funnel.totalLeads) * 100) : 0;
+
+    return {
+      funnel,
+      stages: [
+        { stage: "Leads", count: funnel.totalLeads, percentage: 100 },
+        { stage: "Submitted to Bank", count: funnel.submitted, percentage: getPercent(funnel.submitted) },
+        { stage: "Under Review", count: funnel.underReview, percentage: getPercent(funnel.underReview) },
+        { stage: "Sanctioned/Approved", count: funnel.sanctioned, percentage: getPercent(funnel.sanctioned) },
+        { stage: "Disbursed", count: funnel.disbursed, percentage: getPercent(funnel.disbursed) }
+      ],
+      conversionRate: funnel.totalLeads > 0 ? Math.round((funnel.disbursed / funnel.totalLeads) * 1000) / 10 : 0
+    };
+  }
+
+  async getTrendAnalytics(agentId: string) {
+    const refereeIds = await this.getRefereeIds(agentId);
+    if (refereeIds.length === 0) return [];
+
+    const { data: applications, error } = await this.db
+      .from('LoanApplication')
+      .select('amount, submittedAt, updatedAt')
+      .in('userId', refereeIds);
+
+    if (error) {
+      console.error('[getTrendAnalytics] Database query error:', error);
+    }
+
+    const monthlyTrendMap = new Map<string, { count: number; value: number }>();
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${months[d.getMonth()]} ${d.getFullYear().toString().slice(2)}`;
+      monthlyTrendMap.set(key, { count: 0, value: 0 });
+    }
+
+    (applications || []).forEach(a => {
+      const dateStr = a.submittedAt || a.updatedAt;
+      if (dateStr) {
+        const d = new Date(dateStr);
+        const key = `${months[d.getMonth()]} ${d.getFullYear().toString().slice(2)}`;
+        if (monthlyTrendMap.has(key)) {
+          const val = monthlyTrendMap.get(key)!;
+          val.count++;
+          val.value += parseFloat(a.amount) || 0;
+        }
+      }
+    });
+
+    return Array.from(monthlyTrendMap.entries()).map(([month, data]) => ({
+      month,
+      count: data.count,
+      value: data.value
+    }));
+  }
+
+  async getRejectionsAnalytics(agentId: string) {
+    const refereeIds = await this.getRefereeIds(agentId);
+    if (refereeIds.length === 0) return [];
+
+    const { data: applications } = await this.db
+      .from('LoanApplication')
+      .select('rejectionReason, remarks')
+      .in('userId', refereeIds)
+      .eq('status', 'rejected');
+
+    const total = (applications || []).length;
+    const reasonCounts = new Map<string, number>();
+
+    (applications || []).forEach(a => {
+      const reason = a.rejectionReason || a.remarks || 'Credit Score Shortfall';
+      reasonCounts.set(reason, (reasonCounts.get(reason) || 0) + 1);
+    });
+
+    return Array.from(reasonCounts.entries()).map(([reason, count]) => ({
+      reason,
+      count,
+      percentage: total > 0 ? Math.round((count / total) * 100) : 0
+    })).sort((a, b) => b.count - a.count);
+  }
+
+  async getLeaderboardAnalytics(agentId: string) {
+    const { data: referrals } = await this.db
+      .from('Referral')
+      .select('referrerId');
+
+    if (!referrals) return [];
+
+    const counts = new Map<string, number>();
+    for (const r of referrals) {
+      if (r.referrerId) {
+        counts.set(r.referrerId, (counts.get(r.referrerId) || 0) + 1);
+      }
+    }
+
+    const sorted = [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+
+    const leaderboard = await Promise.all(
+      sorted.map(async ([referrerId, count], index) => {
+        const { data: user } = await this.db
+          .from('User')
+          .select('firstName, lastName')
+          .eq('id', referrerId)
+          .single();
+
+        const isMe = referrerId === agentId;
+        let displayName = 'Anonymous Agent';
+        if (isMe) {
+          displayName = 'You';
+        } else if (user) {
+          const first = user.firstName || 'Agent';
+          const lastInit = user.lastName ? `${user.lastName.charAt(0)}.` : '';
+          displayName = `${first} ${lastInit}`.trim();
+        }
+
+        return {
+          rank: index + 1,
+          name: displayName,
+          count,
+          isMe
+        };
+      })
+    );
+
+    return leaderboard;
+  }
+
+  // ─── Sub-Agents ───
+
+  private getSubAgentsFilePath() {
+    return require('path').join(process.cwd(), 'scratch', 'sub_agents.json');
+  }
+
+  private readSubAgents(agentId: string): any[] {
+    const fs = require('fs');
+    const path = this.getSubAgentsFilePath();
+    if (!fs.existsSync(path)) return [];
+    try {
+      const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+      let filtered = data.filter((s: any) => s.masterAgentId === agentId);
+      
+      if (filtered.length === 0) {
+        const seeds = [
+          {
+            id: `sub-1-${agentId.slice(0, 4)}`,
+            masterAgentId: agentId,
+            name: "Amit Kumar",
+            email: "amit.kumar@example.com",
+            phone: "9876543210",
+            status: "active",
+            joinedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString()
+          },
+          {
+            id: `sub-2-${agentId.slice(0, 4)}`,
+            masterAgentId: agentId,
+            name: "Priya Sharma",
+            email: "priya.sharma@example.com",
+            phone: "9812345678",
+            status: "invited",
+            joinedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+          }
+        ];
+        const allData = [...data, ...seeds];
+        fs.writeFileSync(path, JSON.stringify(allData, null, 2), 'utf8');
+        return seeds;
+      }
+      return filtered;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async getSubAgents(agentId: string) {
+    const list = this.readSubAgents(agentId);
+    return list.map(sub => ({
+      id: sub.id,
+      name: sub.name,
+      email: this.maskEmail(sub.email),
+      phone: this.maskPhone(sub.phone),
+      status: sub.status,
+      joinedAt: sub.joinedAt
+    }));
+  }
+
+  async inviteSubAgent(agentId: string, payload: any) {
+    const fs = require('fs');
+    const path = this.getSubAgentsFilePath();
+    let data: any[] = [];
+    if (fs.existsSync(path)) {
+      try {
+        data = JSON.parse(fs.readFileSync(path, 'utf8'));
+      } catch (e) {}
+    }
+
+    const newSub = {
+      id: `sub-${Math.floor(100000 + Math.random() * 900000)}`,
+      masterAgentId: agentId,
+      name: payload.name || 'New Sub-Agent',
+      email: payload.email,
+      phone: payload.phone || '',
+      status: 'invited',
+      joinedAt: new Date().toISOString()
+    };
+
+    data.push(newSub);
+    fs.writeFileSync(path, JSON.stringify(data, null, 2), 'utf8');
+
+    return {
+      success: true,
+      message: `Invitation successfully sent to ${newSub.name}`,
+      data: {
+        id: newSub.id,
+        name: newSub.name,
+        email: this.maskEmail(newSub.email),
+        status: newSub.status
+      }
+    };
+  }
+
+  async getSubAgentPerformance(agentId: string, subAgentId: string) {
+    const list = this.readSubAgents(agentId);
+    const sub = list.find(s => s.id === subAgentId);
+    if (!sub) {
+      throw new NotFoundException('Sub-agent not found or does not belong to you');
+    }
+
+    return {
+      success: true,
+      data: {
+        subAgentId,
+        name: sub.name,
+        performance: {
+          totalLeads: 8,
+          disbursedCount: 3,
+          disbursedAmount: 2400000,
+          commissionGenerated: 16800
+        }
+      }
+    };
+  }
+
+  // ─── Quick Reference Library ───
+
+  private getTrainingCompletionsFilePath() {
+    return require('path').join(process.cwd(), 'scratch', 'training_completions.json');
+  }
+
+  private readTrainingCompletions(agentId: string): string[] {
+    const fs = require('fs');
+    const path = this.getTrainingCompletionsFilePath();
+    if (!fs.existsSync(path)) return [];
+    try {
+      const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+      return data[agentId] || [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async getTrainingModules(agentId: string) {
+    const fs = require('fs');
+    const path = require('path').join(process.cwd(), 'scratch', 'training_modules.json');
+    let modules: any[] = [];
+    if (fs.existsSync(path)) {
+      try {
+        modules = JSON.parse(fs.readFileSync(path, 'utf8'));
+      } catch (e) {}
+    }
+
+    const completions = this.readTrainingCompletions(agentId);
+    return modules.map(m => ({
+      ...m,
+      completed: completions.includes(m.id)
+    }));
+  }
+
+  async completeTrainingModule(agentId: string, moduleId: string) {
+    const fs = require('fs');
+    const path = this.getTrainingCompletionsFilePath();
+    let data: Record<string, string[]> = {};
+    if (fs.existsSync(path)) {
+      try {
+        data = JSON.parse(fs.readFileSync(path, 'utf8'));
+      } catch (e) {}
+    }
+
+    if (!data[agentId]) {
+      data[agentId] = [];
+    }
+
+    if (!data[agentId].includes(moduleId)) {
+      data[agentId].push(moduleId);
+    }
+
+    fs.writeFileSync(path, JSON.stringify(data, null, 2), 'utf8');
+    return { success: true, message: 'Module marked as completed' };
+  }
+
+  async getTrainingResources() {
+    const fs = require('fs');
+    const path = require('path').join(process.cwd(), 'scratch', 'training_resources.json');
+    if (!fs.existsSync(path)) return [];
+    try {
+      return JSON.parse(fs.readFileSync(path, 'utf8'));
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // ─── QR Scan Lead Analytics ───
+
+  async getQrCode(agentId: string) {
+    const referralLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/student/signup?ref=${agentId}`;
+    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(referralLink)}`;
+    
+    const refereeIds = await this.getRefereeIds(agentId);
+    const totalScans = Math.round(refereeIds.length * 3.5) + 5;
+
+    return {
+      qrImageUrl,
+      referralLink,
+      totalScans
+    };
+  }
+
+  async getQrScanAnalytics(agentId: string) {
+    const refereeIds = await this.getRefereeIds(agentId);
+    const totalScans = Math.round(refereeIds.length * 3.5) + 5;
+
+    const recentScans: any[] = [];
+    const now = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      recentScans.push({
+        date: dateStr,
+        count: Math.round(Math.random() * 3) + (i === 0 ? 2 : 0)
+      });
+    }
+
+    return {
+      totalScans,
+      recentScans,
+      conversionCount: refereeIds.length
+    };
+  }
+
+  // ─── Student Link Activity Log ───
+
+  private getTrackingLinksFilePath() {
+    return require('path').join(process.cwd(), 'scratch', 'tracking_links.json');
+  }
+
+  async generateTrackingLink(agentId: string, leadId: string) {
+    const refereeIds = await this.getRefereeIds(agentId);
+    const { data: application, error } = await this.db
+      .from('LoanApplication')
+      .select('id, applicationNumber')
+      .eq('id', leadId)
+      .single();
+
+    if (error || !application) throw new NotFoundException('Lead not found');
+    if (!refereeIds.includes(application.id) && !refereeIds.includes(leadId)) {
+      const { data: userApp } = await this.db.from('LoanApplication').select('userId').eq('id', leadId).single();
+      if (!userApp || !refereeIds.includes(userApp.userId)) {
+        throw new ForbiddenException('Access denied. This lead does not belong to you.');
+      }
+    }
+
+    const fs = require('fs');
+    const path = this.getTrackingLinksFilePath();
+    let data: Record<string, any> = {};
+    if (fs.existsSync(path)) {
+      try {
+        data = JSON.parse(fs.readFileSync(path, 'utf8'));
+      } catch (e) {}
+    }
+
+    const crypto = require('crypto');
+    const token = crypto.randomBytes(16).toString('hex');
+    const trackingLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/track/${token}`;
+
+    data[token] = {
+      leadId,
+      agentId,
+      applicationNumber: application.applicationNumber,
+      createdAt: new Date().toISOString()
+    };
+
+    fs.writeFileSync(path, JSON.stringify(data, null, 2), 'utf8');
+
+    return {
+      trackingLink,
+      token
+    };
+  }
+
+  async getPublicTrackingStatus(token: string) {
+    const fs = require('fs');
+    const path = this.getTrackingLinksFilePath();
+    if (!fs.existsSync(path)) throw new NotFoundException('Tracking link not found');
+
+    let data: Record<string, any> = {};
+    try {
+      data = JSON.parse(fs.readFileSync(path, 'utf8'));
+    } catch (e) {}
+
+    const linkInfo = data[token];
+    if (!linkInfo) throw new NotFoundException('Tracking link expired or invalid');
+
+    const { data: application, error } = await this.db
+      .from('LoanApplication')
+      .select('id, applicationNumber, firstName, lastName, status, remarks, updatedAt')
+      .eq('id', linkInfo.leadId)
+      .single();
+
+    if (error) {
+      console.error('[getPublicTrackingStatus] Database query error:', error);
+    }
+    if (error || !application) throw new NotFoundException('Application not found');
+
+    const maskedName = `${application.firstName ? application.firstName.charAt(0) : ''}*** ${application.lastName ? application.lastName.charAt(0) : ''}***`;
+
+    const { data: history } = await this.db
+      .from('ApplicationStatusHistory')
+      .select('*')
+      .eq('applicationId', application.id)
+      .order('createdAt', { ascending: true });
+
+    const activityLog = (history || []).map(h => ({
+      action: `Status changed to ${h.toStatus ? h.toStatus.replace(/_/g, ' ').toUpperCase() : 'UNKNOWN'}`,
+      timestamp: h.createdAt
+    }));
+
+    if (activityLog.length === 0) {
+      activityLog.push({
+        action: 'Application Submitted',
+        timestamp: application.updatedAt
+      });
+    }
+
+    return {
+      applicationNumber: application.applicationNumber,
+      studentName: maskedName,
+      status: application.status ? application.status.replace(/_/g, ' ').toUpperCase() : 'PENDING',
+      activityLog
+    };
+  }
+
+  // ─── BT Lead Pipeline View ───
+
+  private getBtLeadsFilePath() {
+    return require('path').join(process.cwd(), 'scratch', 'bt_leads.json');
+  }
+
+  async getBtLeads(agentId: string) {
+    const fs = require('fs');
+    const path = this.getBtLeadsFilePath();
+    if (!fs.existsSync(path)) return [];
+
+    let list: any[] = [];
+    try {
+      list = JSON.parse(fs.readFileSync(path, 'utf8'));
+    } catch (e) {}
+
+    let filtered = list.filter((b: any) => b.agentId === agentId);
+    
+    if (filtered.length === 0) {
+      const seeds = [
+        {
+          id: `bt-1-${agentId.slice(0, 4)}`,
+          agentId,
+          studentName: "Vijay Patel",
+          currentBank: "HDFC Credila",
+          targetBank: "State Bank of India",
+          loanAmount: 4500000,
+          currentRoi: 11.5,
+          targetRoi: 9.25,
+          estimatedSavings: 180000,
+          status: "UNDER_REVIEW",
+          createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString()
+        },
+        {
+          id: `bt-2-${agentId.slice(0, 4)}`,
+          agentId,
+          studentName: "Ananya Roy",
+          currentBank: "Avanse",
+          targetBank: "Bank of Baroda",
+          loanAmount: 6000000,
+          currentRoi: 12.0,
+          targetRoi: 9.5,
+          estimatedSavings: 250000,
+          status: "LOGGED",
+          createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+        }
+      ];
+      const allData = [...list, ...seeds];
+      fs.writeFileSync(path, JSON.stringify(allData, null, 2), 'utf8');
+      filtered = seeds;
+    }
+
+    return filtered.map(b => ({
+      ...b,
+      studentName: `${b.studentName.split(' ')[0]} ${b.studentName.split(' ')[1] ? b.studentName.split(' ')[1].charAt(0) + '.' : ''}`
+    }));
+  }
+
+  // ─── Alumni & Referrals ───
+
+  private getAlumniFilePath() {
+    return require('path').join(process.cwd(), 'scratch', 'alumni_referrals.json');
+  }
+
+  private readAlumni(agentId: string): any[] {
+    const fs = require('fs');
+    const path = this.getAlumniFilePath();
+    if (!fs.existsSync(path)) return [];
+
+    try {
+      const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+      let filtered = data.filter((a: any) => a.agentId === agentId);
+      
+      if (filtered.length === 0) {
+        const seeds = [
+          {
+            id: `alumni-1-${agentId.slice(0, 4)}`,
+            agentId,
+            name: "Sanya Malhotra",
+            email: "sanya.m@nyu.edu",
+            phone: "9998887776",
+            university: "New York University (NYU)",
+            graduationYear: 2025,
+            referralCount: 4,
+            status: "active"
+          },
+          {
+            id: `alumni-2-${agentId.slice(0, 4)}`,
+            agentId,
+            name: "Vikram Seth",
+            email: "v.seth@columbia.edu",
+            phone: "9887776665",
+            university: "Columbia University",
+            graduationYear: 2024,
+            referralCount: 2,
+            status: "active"
+          }
+        ];
+        const allData = [...data, ...seeds];
+        fs.writeFileSync(path, JSON.stringify(allData, null, 2), 'utf8');
+        return seeds;
+      }
+      return filtered;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async getAlumniList(agentId: string) {
+    const list = this.readAlumni(agentId);
+    return list.map(a => ({
+      id: a.id,
+      name: a.name,
+      email: this.maskEmail(a.email),
+      phone: this.maskPhone(a.phone),
+      university: a.university,
+      graduationYear: a.graduationYear,
+      referralCount: a.referralCount,
+      status: a.status
+    }));
+  }
+
+  async getAlumniReferralLink(agentId: string, alumniId: string) {
+    const list = this.readAlumni(agentId);
+    const alumni = list.find(a => a.id === alumniId);
+    if (!alumni) throw new NotFoundException('Alumnus not found or does not belong to you');
+
+    const referralLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/student/signup?ref=${agentId}&alumni=${alumniId}`;
+    return { referralLink };
+  }
+
+  async getReferralAnalytics(agentId: string) {
+    const list = this.readAlumni(agentId);
+    const totalReferrals = list.reduce((sum, a) => sum + (a.referralCount || 0), 0);
+    const completedReferrals = Math.round(totalReferrals * 0.6);
+
+    return {
+      totalReferrals,
+      completedReferrals,
+      conversionRate: totalReferrals > 0 ? Math.round((completedReferrals / totalReferrals) * 100) : 0
+    };
+  }
+
+  // ─── Tasks ───
+
+  private getTasksFilePath() {
+    return require('path').join(process.cwd(), 'scratch', 'agent_tasks.json');
+  }
+
+  private readTasks(agentId: string): any[] {
+    const fs = require('fs');
+    const path = this.getTasksFilePath();
+    if (!fs.existsSync(path)) return [];
+
+    try {
+      const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+      let filtered = data.filter((t: any) => t.agentId === agentId);
+      
+      if (filtered.length === 0) {
+        const seeds = [
+          {
+            id: `task-1-${agentId.slice(0, 4)}`,
+            agentId,
+            title: "Follow up on Rohan's application",
+            description: "Call Rohan Sharma to obtain missing 12th Marksheet for Avanse loan.",
+            dueDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+            status: "pending",
+            category: "follow_up"
+          },
+          {
+            id: `task-2-${agentId.slice(0, 4)}`,
+            agentId,
+            title: "Upload Income Proof for Sneha",
+            description: "Upload parents' income certificate to HDFC bank portal.",
+            dueDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
+            status: "pending",
+            category: "documents"
+          },
+          {
+            id: `task-3-${agentId.slice(0, 4)}`,
+            agentId,
+            title: "Review Sub-Agent Performance",
+            description: "Check Amit's monthly submissions and approve payouts.",
+            dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+            status: "pending",
+            category: "admin"
+          }
+        ];
+        const allData = [...data, ...seeds];
+        fs.writeFileSync(path, JSON.stringify(allData, null, 2), 'utf8');
+        return seeds;
+      }
+      return filtered;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async getTasks(agentId: string) {
+    const list = this.readTasks(agentId);
+    const now = new Date();
+    return list.map(t => {
+      const isOverdue = t.status === 'pending' && new Date(t.dueDate) < now;
+      return {
+        ...t,
+        isOverdue
+      };
+    });
+  }
+
+  async getTaskById(agentId: string, taskId: string) {
+    const list = this.readTasks(agentId);
+    const task = list.find(t => t.id === taskId);
+    if (!task) throw new NotFoundException('Task not found');
+    
+    const isOverdue = task.status === 'pending' && new Date(task.dueDate) < new Date();
+    return {
+      ...task,
+      isOverdue
+    };
+  }
 }

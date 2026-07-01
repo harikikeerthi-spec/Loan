@@ -1,0 +1,29 @@
+[
+  {
+    "id": "task-1-staf",
+    "agentId": "staff",
+    "title": "Follow up on Rohan's application",
+    "description": "Call Rohan Sharma to obtain missing 12th Marksheet for Avanse loan.",
+    "dueDate": "2026-06-25T15:53:01.783Z",
+    "status": "pending",
+    "category": "follow_up"
+  },
+  {
+    "id": "task-2-staf",
+    "agentId": "staff",
+    "title": "Upload Income Proof for Sneha",
+    "description": "Upload parents' income certificate to HDFC bank portal.",
+    "dueDate": "2026-07-02T15:53:01.783Z",
+    "status": "pending",
+    "category": "documents"
+  },
+  {
+    "id": "task-3-staf",
+    "agentId": "staff",
+    "title": "Review Sub-Agent Performance",
+    "description": "Check Amit's monthly submissions and approve payouts.",
+    "dueDate": "2026-07-05T15:53:01.783Z",
+    "status": "pending",
+    "category": "admin"
+  }
+]

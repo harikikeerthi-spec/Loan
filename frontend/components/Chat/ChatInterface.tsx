@@ -232,6 +232,13 @@ export default function ChatInterface({ role, initialUser, initialBank, portalTi
         }
     };
 
+    // Refetch conversations when bank name is resolved
+    useEffect(() => {
+        if (token) {
+            fetchConversations();
+        }
+    }, [resolvedBankName, token]);
+
     // Initialize Socket Connection
     useEffect(() => {
         if (!token) return;

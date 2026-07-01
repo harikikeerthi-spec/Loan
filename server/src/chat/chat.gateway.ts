@@ -67,6 +67,15 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.join('room_staff');
       } else if (payload.role === 'bank' || payload.role === 'partner_bank') {
         client.join('room_bank');
+        // Also join a per-bank room so notifications can be targeted to a specific bank
+        // The bankId may be stored on the JWT as bankId, bank_id, or derived from bankName
+        const bankId = payload.bankId || payload.bank_id || payload.selectedBank || null;
+        if (bankId) {
+          const safeBankId = String(bankId).toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+          client.join(`room_bank_${safeBankId}`);
+          client.data.bankId = safeBankId;
+          this.logger.log(`Bank client ${client.id} joined per-bank room: room_bank_${safeBankId}`);
+        }
       } else if (payload.role === 'support') {
         client.join('room_support');
         client.join('room_staff');
@@ -110,7 +119,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const isStaff = user?.role === 'admin' || user?.role === 'staff' || user?.role === 'super_admin' || user?.role === 'support';
     const isBank = user?.role === 'bank' || user?.role === 'partner_bank' || user?.role === 'support';
     const isSupport = user?.role === 'support' || user?.role === 'admin' || user?.role === 'super_admin';
-    if ((room === 'room_staff' && isStaff) || (room === 'room_bank' && isBank) || (room === 'room_support' && isSupport)) {
+    // Allow per-bank rooms (e.g. room_bank_idfc) for bank clients
+    const isPerBankRoom = isBank && /^room_bank_[a-z0-9_-]+$/.test(room);
+    if ((room === 'room_staff' && isStaff) || (room === 'room_bank' && isBank) || (room === 'room_support' && isSupport) || isPerBankRoom) {
       client.join(room);
       this.logger.log(`Client ${client.id} explicitly joined ${room}`);
     }
@@ -380,7 +391,23 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (payload.userId === 'staff' || payload.userId === 'system') {
         this.server.to('room_staff').emit('notification_received', payload);
       } else if (payload.userId === 'bank') {
-        this.server.to('room_bank').emit('notification_received', payload);
+        // Try to emit to a per-bank room if bankId is present in metadata.
+        // This ensures only the targeted bank's dashboard receives the notification.
+        let metadata = payload.metadata;
+        if (typeof metadata === 'string') {
+          try { metadata = JSON.parse(metadata); } catch { metadata = {}; }
+        }
+        const rawBankId = metadata?.bankId || metadata?.bank_id || null;
+        if (rawBankId) {
+          const safeBankId = String(rawBankId).toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+          const perBankRoom = `room_bank_${safeBankId}`;
+          this.logger.log(`Emitting notification to per-bank room: ${perBankRoom}`);
+          this.server.to(perBankRoom).emit('notification_received', payload);
+        } else {
+          // Fallback: broadcast to all bank clients (client-side filtering still applies)
+          this.logger.log(`No bankId in metadata, broadcasting to room_bank (all banks)`);
+          this.server.to('room_bank').emit('notification_received', payload);
+        }
       } else {
         this.server.to(`user_${payload.userId}`).emit('notification_received', payload);
       }

@@ -176,11 +176,10 @@ export default function BankNotificationsPanel({
     if (typeof metadata === "string") {
       try { metadata = JSON.parse(metadata); } catch { }
     }
-    const notifBank = metadata?.bankName || metadata?.bank;
-    if (!notifBank) return true; // Global notification, show to all banks
 
-    // Resolve current bank name
-    let currentBank = null;
+    // Resolve the current bank's key and full name from storage
+    let currentBankId: string | null = null;
+    let currentBankName: string | null = null;
     if (typeof window !== "undefined") {
       const selected = sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank");
       const map: Record<string, string> = {
@@ -190,14 +189,34 @@ export default function BankNotificationsPanel({
         idfc: "IDFC FIRST Bank",
         poonawalla: "Poonawalla Fincorp",
       };
-      if (selected && map[selected]) currentBank = map[selected];
+      if (selected) {
+        currentBankId = selected.toLowerCase();
+        currentBankName = map[selected] || null;
+      }
     }
-    if (!currentBank) {
-      currentBank = user?.bankName || user?.firstName || null;
+    if (!currentBankName) {
+      currentBankName = user?.bankName || user?.firstName || null;
     }
 
-    if (!currentBank) return true; // If we can't determine, default to showing
-    return notifBank.toLowerCase() === currentBank.toLowerCase();
+    const notifBankId = metadata?.bankId ? String(metadata.bankId).toLowerCase().replace(/[^a-z0-9_-]/g, '_') : null;
+    const notifBankName = metadata?.bankName || metadata?.bank;
+
+    // No bank context on notification → global, show to all
+    if (!notifBankId && !notifBankName) return true;
+    // Can't determine current bank → show to be safe
+    if (!currentBankId && !currentBankName) return true;
+
+    // Match by bankId first (most reliable)
+    if (notifBankId && currentBankId) {
+      return notifBankId === currentBankId;
+    }
+
+    // Fall back to bankName comparison
+    if (notifBankName && currentBankName) {
+      return notifBankName.toLowerCase() === currentBankName.toLowerCase();
+    }
+
+    return true;
   }, [user]);
 
 
@@ -244,6 +263,17 @@ export default function BankNotificationsPanel({
       console.log("[BankNotificationsPanel] Connected to socket.io");
       setIsConnected(true);
       socketRef.current?.emit("joinRoom", "room_bank");
+
+      // Also join the per-bank room so this bank only receives its own notifications
+      if (typeof window !== "undefined") {
+        const selectedBankId = sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank");
+        if (selectedBankId) {
+          const safeBankId = selectedBankId.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+          const perBankRoom = `room_bank_${safeBankId}`;
+          socketRef.current?.emit("joinRoom", perBankRoom);
+          console.log(`[BankNotificationsPanel] Joined per-bank room: ${perBankRoom}`);
+        }
+      }
     });
 
     socketRef.current.on("notification_received", (payload: BankNotification) => {

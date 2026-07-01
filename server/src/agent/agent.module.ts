@@ -5,6 +5,8 @@ import { AgentLeadsController, AgentEligibilityController } from './agent-leads.
 import { AgentCommissionsController } from './agent-commissions.controller';
 import { AgentProfileController } from './agent-profile.controller';
 import { AgentMiscController } from './agent-misc.controller';
+import { AgentFeaturesController } from './agent-features.controller';
+import { PublicTrackingController } from './public-tracking.controller';
 import { SupabaseModule } from '../supabase/supabase.module';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
@@ -18,7 +20,9 @@ import { ChatModule } from '../chat/chat.module';
     AgentEligibilityController,
     AgentCommissionsController,
     AgentProfileController,
-    AgentMiscController
+    AgentMiscController,
+    AgentFeaturesController,
+    PublicTrackingController
   ],
   providers: [AgentService],
   exports: [AgentService],
