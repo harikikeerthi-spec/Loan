@@ -432,12 +432,16 @@ export class UsersService {
     phoneNumber: string,
     dateOfBirth: string,
     intakeSeason?: string,
+    profileImage?: string,
   ) {
     const dobDate = this.parseDate(dateOfBirth);
 
     const updatePayload: any = { firstName, lastName, phoneNumber, dateOfBirth: dobDate };
     if (intakeSeason !== undefined) {
       updatePayload.intakeSeason = intakeSeason;
+    }
+    if (profileImage !== undefined) {
+      updatePayload.profileImage = profileImage;
     }
 
     const { data, error } = await this.db

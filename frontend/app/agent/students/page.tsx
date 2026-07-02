@@ -121,7 +121,6 @@ export default function AgentStudentsList() {
                             className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs font-bold text-gray-700 focus:outline-none"
                         >
                             <option>All</option>
-                            <option>Domestic</option>
                             <option>Abroad</option>
                         </select>
                     </div>

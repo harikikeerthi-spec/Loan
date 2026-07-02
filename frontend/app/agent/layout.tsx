@@ -23,6 +23,7 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
         { section: "documents", icon: "folder_shared", label: "Documents" },
         { section: "calendar", icon: "calendar_month", label: "Calendar" },
         { section: "commissions", icon: "account_balance_wallet", label: "Commissions" },
+        { section: "profile", icon: "manage_accounts", label: "Profile & KYC" },
         { section: "analytics", icon: "monitoring", label: "Performance" },
         { section: "sub-agents", icon: "share_reviews", label: "Sub-Agents" },
         { section: "training", icon: "school", label: "LMS & Training" },
@@ -84,8 +85,8 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                             return (
                                 <React.Fragment key={item.section}>
                                     {idx === 3 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Backoffice</p>}
-                                    {idx === 6 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Grow Network</p>}
-                                    {idx === 9 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Live Support</p>}
+                                    {idx === 7 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Grow Network</p>}
+                                    {idx === 10 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Live Support</p>}
                                     
                                     <Link 
                                         href={`/agent/${item.section}`} 

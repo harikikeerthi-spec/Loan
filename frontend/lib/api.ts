@@ -956,7 +956,7 @@ export const documentApi = {
         return new Promise((resolve, reject) => {
             const token = (() => {
                 if (typeof window === 'undefined') return null;
-                return localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken');
+                return localStorage.getItem('agentAccessToken') || localStorage.getItem('staffAccessToken') || localStorage.getItem('adminAccessToken') || localStorage.getItem('accessToken');
             })();
 
             const xhr = new XMLHttpRequest();
