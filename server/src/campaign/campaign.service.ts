@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
+import { OpenRouterService } from '../ai/services/openrouter.service';
 
 @Injectable()
 export class CampaignService {
-  constructor(private readonly supabase: SupabaseService) { }
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly openRouterService: OpenRouterService,
+  ) { }
 
   async createCampaign(data: any) {
     const { data: campaign, error } = await this.supabase
@@ -234,5 +238,98 @@ export class CampaignService {
     }
 
     return { success: true, message: 'Campaign cancelled successfully' };
+  }
+
+  async generateCampaignEmail(data: any) {
+    const prompt = `You are an expert email marketer for VidyaLoan, an education loan platform in India.
+Generate a high-converting email campaign with the following parameters:
+- Template Type: ${data.templateType || 'newsletter'}
+- Tone: ${data.tone || 'friendly_casual'}
+- Primary Objective: ${data.primaryObjective || 'Visit our website'}
+- Target Context: ${data.targetContext || ''}
+- Optimization Goal: ${data.optimizationGoal || ''}
+
+Requirements:
+1. Subject line: Write a highly engaging, relevant subject line. It can include personalization like {{firstName}}.
+2. HTML Body: Write a beautiful, clean, responsive HTML email body template using inline styling. Use a professional color scheme (deep indigo #6605c7, slate, white). Include a clear, styled Call-To-Action (CTA) button linked to the objective.
+3. Placeholders: Use {{firstName}} and {{lastName}} inside the body where appropriate.
+4. Output format: You must return a JSON object with exactly two keys: "subject" and "bodyTemplate". Do not include markdown code block syntax.`;
+
+    try {
+      const result = await this.openRouterService.getJson<{ subject: string; bodyTemplate: string }>(prompt);
+      return { success: true, data: result };
+    } catch (error: any) {
+      throw new Error(`AI generation failed: ${error.message}`);
+    }
+  }
+
+  async trackOpen(recipientId: string) {
+    // Set openedAt if not already set
+    const { data, error } = await this.supabase
+      .from('CampaignRecipient')
+      .update({ openedAt: new Date().toISOString() })
+      .eq('id', recipientId)
+      .is('openedAt', null)
+      .select('campaignId')
+      .single();
+
+    if (error) {
+      console.error(`[CampaignService.trackOpen] Error updating recipient ${recipientId}:`, error.message);
+      return;
+    }
+
+    if (data) {
+      // Increment openCount on Campaign
+      const { data: campaign, error: campErr } = await this.supabase
+        .from('EmailCampaign')
+        .select('openCount')
+        .eq('id', data.campaignId)
+        .single();
+
+      if (campaign && !campErr) {
+        await this.supabase
+          .from('EmailCampaign')
+          .update({
+            openCount: (campaign.openCount || 0) + 1,
+            updatedAt: new Date().toISOString(),
+          })
+          .eq('id', data.campaignId);
+      }
+    }
+  }
+
+  async trackClick(recipientId: string) {
+    // Set clickedAt if not already set
+    const { data, error } = await this.supabase
+      .from('CampaignRecipient')
+      .update({ clickedAt: new Date().toISOString() })
+      .eq('id', recipientId)
+      .is('clickedAt', null)
+      .select('campaignId')
+      .single();
+
+    if (error) {
+      console.error(`[CampaignService.trackClick] Error updating recipient ${recipientId}:`, error.message);
+      return;
+    }
+
+    if (data) {
+      // Increment clickCount on Campaign
+      const { data: campaign, error: campErr } = await this.supabase
+        .from('EmailCampaign')
+        .select('clickCount')
+        .eq('id', data.campaignId)
+        .single();
+
+      if (campaign && !campErr) {
+        await this.supabase
+          .from('EmailCampaign')
+          .update({
+            clickCount: (campaign.clickCount || 0) + 1,
+            updatedAt: new Date().toISOString(),
+          })
+          .eq('id', data.campaignId);
+      }
+    }
   }
 }

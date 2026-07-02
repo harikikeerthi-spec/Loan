@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
+import PDFDocument from 'pdfkit';
 
 @Injectable()
 export class EmailService {
@@ -1711,6 +1712,22 @@ export class EmailService {
     try {
       console.log(`[EmailService] Sending application accepted email to: ${email}`);
       if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+        // Generate the entire application PDF
+        const appPdfBuffer = await this.generateApplicationPdf(application).catch(err => {
+          console.error('[EmailService] Failed to generate application PDF for sanction email:', err);
+          return null;
+        });
+        
+        if (appPdfBuffer) {
+          (mailOptions as any).attachments = [
+            {
+              filename: `Loan_Application_${appNum}.pdf`,
+              content: appPdfBuffer,
+              contentType: 'application/pdf',
+            }
+          ];
+        }
+
         await this.transporter.sendMail(mailOptions);
         console.log(`[EmailService] Application accepted email sent successfully to ${email}`);
       } else {
@@ -1892,5 +1909,130 @@ export class EmailService {
     } catch (error) {
       console.error(`[EmailService] Failed to send application rejected email to ${email}:`, error);
     }
+  }
+
+  public generateApplicationPdf(application: any): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({ margin: 50 });
+        const buffers: Buffer[] = [];
+        doc.on('data', buffers.push.bind(buffers));
+        doc.on('end', () => resolve(Buffer.concat(buffers)));
+        doc.on('error', (err) => reject(err));
+
+        // Colors
+        const primaryColor = '#6605c7'; // Vidya Loan Deep Purple
+        const textColor = '#1f2937';
+        const lightGray = '#f3f4f6';
+        const darkGray = '#4b5563';
+
+        // --- Branded Header ---
+        doc.fillColor(primaryColor)
+           .fontSize(24)
+           .text('Vidya Loan', 50, 50, { characterSpacing: 1 });
+
+        doc.fillColor(darkGray)
+           .fontSize(10)
+           .text('Education Loan Application Summary', 50, 80);
+
+        doc.moveTo(50, 95).lineTo(550, 95).strokeColor('#e5e7eb').lineWidth(1).stroke();
+
+        // Application Meta Details
+        doc.fillColor(textColor).fontSize(10).text(`Application Number: ${application.applicationNumber || 'N/A'}`, 50, 110);
+        doc.text(`Applied Bank: ${application.bank || application.bankName || 'N/A'}`, 50, 125);
+        doc.text(`Loan Amount: Rs. ${(application.amount || 0).toLocaleString('en-IN')}`, 50, 140);
+        doc.text(`Status: ${(application.status || 'pending').toUpperCase()}`, 320, 110);
+        doc.text(`Submitted On: ${application.submittedAt ? new Date(application.submittedAt).toLocaleDateString('en-IN') : 'N/A'}`, 320, 125);
+
+        doc.moveTo(50, 160).lineTo(550, 160).strokeColor('#e5e7eb').lineWidth(1).stroke();
+
+        let y = 175;
+
+        // Helper to draw sections
+        const drawSectionHeader = (title) => {
+          if (y > 620) { doc.addPage(); y = 50; }
+          doc.fillColor(primaryColor).fontSize(12).text(title, 50, y);
+          y += 18;
+          doc.moveTo(50, y).lineTo(550, y).strokeColor('#ede9fe').lineWidth(0.5).stroke();
+          y += 10;
+        };
+
+        const drawField = (label, value, halfWidth = false, rightSide = false) => {
+          if (y > 700) { doc.addPage(); y = 50; }
+          doc.fillColor(darkGray).fontSize(9).text(label, rightSide ? 300 : 50, y);
+          doc.fillColor(textColor).fontSize(10).text(String(value ?? 'N/A'), rightSide ? 380 : 150, y);
+          if (!halfWidth || rightSide) {
+            y += 16;
+          }
+        };
+
+        // 1. Personal Details
+        drawSectionHeader('1. Personal Details');
+        drawField('First Name', application.firstName, true, false);
+        drawField('Last Name', application.lastName, true, true);
+        drawField('Email ID', application.email, true, false);
+        drawField('Phone Number', application.phone, true, true);
+        drawField('Date of Birth', application.dateOfBirth ? new Date(application.dateOfBirth).toLocaleDateString('en-IN') : 'N/A', true, false);
+        drawField('Gender', application.gender, true, true);
+        drawField('Nationality', application.nationality, false, false);
+        y += 10;
+
+        // 2. Address
+        drawSectionHeader('2. Contact Address');
+        drawField('Address', application.address, false, false);
+        drawField('City', application.city, true, false);
+        drawField('State', application.state, true, true);
+        drawField('Pincode', application.pincode, true, false);
+        drawField('Country', application.country, true, true);
+        y += 10;
+
+        // 3. Academic details
+        drawSectionHeader('3. Academic Details');
+        drawField('University Name', application.universityName, false, false);
+        drawField('Course Name', application.courseName, false, false);
+        drawField('Course Duration', application.courseDuration ? `${application.courseDuration} Months` : 'N/A', true, false);
+        drawField('Admission Status', application.admissionStatus, true, true);
+        y += 10;
+
+        // 4. Employment details
+        drawSectionHeader('4. Employment Details');
+        drawField('Employment Type', application.employmentType, true, false);
+        drawField('Employer Name', application.employerName, true, true);
+        drawField('Job Title', application.jobTitle, true, false);
+        drawField('Annual Income', application.annualIncome ? `Rs. ${Number(application.annualIncome).toLocaleString('en-IN')}` : 'N/A', true, true);
+        y += 10;
+
+        // 5. Co-Applicant
+        drawSectionHeader('5. Co-Applicant & Parent Details');
+        drawField('Has Co-Applicant', application.hasCoApplicant ? 'Yes' : 'No', true, false);
+        if (application.hasCoApplicant) {
+          drawField('Name', application.coApplicantName, true, true);
+          drawField('Relation', application.coApplicantRelation, true, false);
+          drawField('Phone', application.coApplicantPhone, true, true);
+          drawField('Income', application.coApplicantIncome ? `Rs. ${Number(application.coApplicantIncome).toLocaleString('en-IN')}` : 'N/A', false, false);
+        }
+        drawField("Father's Name", application.fatherName, true, false);
+        drawField("Mother's Name", application.motherName, true, true);
+        y += 10;
+
+        // 6. Collateral
+        drawSectionHeader('6. Collateral Details');
+        drawField('Has Collateral', application.hasCollateral ? 'Yes' : 'No', true, false);
+        if (application.hasCollateral) {
+          drawField('Collateral Type', application.collateralType, true, true);
+          drawField('Collateral Value', application.collateralValue ? `Rs. ${Number(application.collateralValue).toLocaleString('en-IN')}` : 'N/A', false, false);
+          drawField('Collateral Details', application.collateralDetails, false, false);
+        }
+
+        // Footer
+        doc.fillColor(darkGray)
+           .fontSize(8)
+           .text('This is a computer-generated summary of your VidyaLoan application.', 50, 740, { align: 'center' });
+
+        doc.end();
+      } catch (err) {
+        reject(err);
+      }
+    });
   }
 }

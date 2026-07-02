@@ -348,8 +348,17 @@ export default function ApplicationsPage() {
                                                     </button>
                                                     
                                                     {isExpanded && (
-                                                        <div className="relative shrink-0 group/avatar hover:scale-105 transition-all">
-                                                            <div className="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center font-medium text-[13px] text-slate-600 transition-all relative overflow-hidden">
+                                                        <div 
+                                                            onClick={() => {
+                                                                const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
+                                                                if (uid) {
+                                                                    router.push(`/staff/chat-customer?userId=${uid}`);
+                                                                }
+                                                            }}
+                                                            className="relative shrink-0 group/avatar hover:scale-105 transition-all cursor-pointer"
+                                                            title="Click to Chat with Student"
+                                                        >
+                                                            <div className="w-10 h-10 rounded-full bg-white border border-slate-200 hover:border-indigo-500 hover:text-indigo-600 flex items-center justify-center font-medium text-[13px] text-slate-600 transition-all relative overflow-hidden">
                                                                 <span>{initials}</span>
                                                             </div>
                                                             {isOnline && (

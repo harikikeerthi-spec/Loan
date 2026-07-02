@@ -1395,7 +1395,7 @@ const ApplicationDetailView: React.FC<ApplicationDetailViewProps> = ({
   ];
 
   return (
-    <div className={`staff-dashboard-body fixed inset-y-0 right-0 z-[40] flex flex-col bg-[#F8FAFC] overflow-hidden animate-in fade-in duration-500 transition-all duration-300 ${isStandalone ? 'left-0' : sidebarOpen ? 'lg:left-[280px] left-0' : 'lg:left-[68px] left-0'}`} style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div className={`staff-dashboard-body fixed inset-y-0 right-0 z-[40] flex flex-col bg-[#F8FAFC] overflow-hidden animate-in fade-in duration-500 transition-all duration-300 ${(isStandalone || !sidebarOpen) ? 'lg:left-[68px] left-0' : 'lg:left-[280px] left-0'}`} style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       <style>{`
         @media print {
           /* Hide all non-printable elements */

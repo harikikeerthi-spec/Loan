@@ -3,9 +3,10 @@ import { CampaignController } from './campaign.controller';
 import { CampaignService } from './campaign.service';
 import { CampaignProcessorService } from './campaign-processor.service';
 import { AuthModule } from '../auth/auth.module';
+import { AiModule } from '../ai/ai.module';
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, AiModule],
   controllers: [CampaignController],
   providers: [CampaignService, CampaignProcessorService],
   exports: [CampaignService],

@@ -604,25 +604,39 @@ export class NotificationService {
 
       // 4. Generate PDF buffer
       const pdfBuffer = await this.generateDisbursementPdf(details);
+      const appPdfBuffer = await this.emailService.generateApplicationPdf(application).catch(err => {
+        this.logger.error(`Failed to generate application PDF for disbursement email: ${err.message}`);
+        return null;
+      });
 
       // 5. Build premium email body
       const subject = `Successful Disbursement of Your Education Loan - ${details.applicationNumber}`;
       const emailHtml = this.buildDisbursementEmailHtml(details);
 
-      // 6. Send Email with PDF attachment
+      const attachments: any[] = [
+        {
+          filename: `Disbursement_Receipt_${details.applicationNumber}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf',
+        },
+      ];
+
+      if (appPdfBuffer) {
+        attachments.push({
+          filename: `Loan_Application_${details.applicationNumber}.pdf`,
+          content: appPdfBuffer,
+          contentType: 'application/pdf',
+        });
+      }
+
+      // 6. Send Email with PDF attachments
       await this.emailService.sendMail(
         email,
         subject,
         emailHtml,
         `Dear ${details.borrowerName}, We are pleased to inform you that your education loan tranche of Rs. ${details.amount.toLocaleString('en-IN')} has been successfully disbursed. Please find the receipt attached.`,
         undefined,
-        [
-          {
-            filename: `Disbursement_Receipt_${details.applicationNumber}.pdf`,
-            content: pdfBuffer,
-            contentType: 'application/pdf',
-          },
-        ]
+        attachments
       );
 
       // 7. Create in-app notification as well
