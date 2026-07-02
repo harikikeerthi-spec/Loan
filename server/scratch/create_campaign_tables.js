@@ -26,6 +26,8 @@ async function createCampaignTables() {
         "totalCount" INT DEFAULT 0,
         "sentCount" INT DEFAULT 0,
         "failedCount" INT DEFAULT 0,
+        "openCount" INT DEFAULT 0,
+        "clickCount" INT DEFAULT 0,
         "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
@@ -43,6 +45,8 @@ async function createCampaignTables() {
         status VARCHAR(50) DEFAULT 'pending',
         "sentAt" TIMESTAMP WITH TIME ZONE,
         "errorMessage" TEXT,
+        "openedAt" TIMESTAMP WITH TIME ZONE,
+        "clickedAt" TIMESTAMP WITH TIME ZONE,
         "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       );
     `);

@@ -1315,6 +1315,7 @@ export const bankApi = {
 // ─── Campaigns ─────────────────────────────────────────────────────────
 export const campaignApi = {
     create: (data: any) => apiFetch(`${API_URL}/campaigns`, { method: "POST", body: JSON.stringify(data) }),
+    generate: (data: any) => apiFetch(`${API_URL}/campaigns/generate`, { method: "POST", body: JSON.stringify(data) }),
     getAll: (limit = 50, offset = 0) => apiFetch(`${API_URL}/campaigns?limit=${limit}&offset=${offset}`),
     getAudience: (filters: { studyDestination?: string; targetUniversity?: string } = {}) => {
         const q = new URLSearchParams();

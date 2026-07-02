@@ -1,11 +1,11 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import { SupabaseService } from '../supabase/supabase.service';
 import { EmailService } from '../auth/email.service';
 
 @Injectable()
-export class CampaignProcessorService implements OnModuleInit, OnModuleDestroy {
+export class CampaignProcessorService {
   private readonly logger = new Logger(CampaignProcessorService.name);
-  private intervalId: NodeJS.Timeout | null = null;
   private isProcessing = false;
 
   constructor(
@@ -13,21 +13,12 @@ export class CampaignProcessorService implements OnModuleInit, OnModuleDestroy {
     private readonly emailService: EmailService,
   ) {}
 
-  onModuleInit() {
-    this.logger.log('Campaign Processor Service initialized. Starting bulk email cron (10 emails/30s)...');
-    // Run the processor every 30 seconds
-    this.intervalId = setInterval(() => {
-      this.processQueuedEmails().catch(err => {
-        this.logger.error('Error during campaign batch processing:', err);
-      });
-    }, 30000);
-  }
-
-  onModuleDestroy() {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.logger.log('Campaign Processor Service stopped.');
-    }
+  @Cron('*/30 * * * * *')
+  async handleCron() {
+    this.logger.log('Campaign Processor Cron Triggered...');
+    await this.processQueuedEmails().catch(err => {
+      this.logger.error('Error during campaign batch processing:', err);
+    });
   }
 
   async processQueuedEmails() {
@@ -98,6 +89,9 @@ export class CampaignProcessorService implements OnModuleInit, OnModuleDestroy {
         const compiledBody = this.replacePlaceholders(campaign.bodyTemplate, variables);
         const textFallback = `Dear ${recipient.recipientName},\n\nPlease read this email in an HTML-enabled client.`;
 
+        // Inject open and click tracking
+        const trackedBody = this.injectTracking(compiledBody, recipient.id);
+
         try {
           this.logger.log(`Sending campaign email to ${recipient.recipientEmail} (${recipient.recipientName})...`);
           
@@ -105,7 +99,7 @@ export class CampaignProcessorService implements OnModuleInit, OnModuleDestroy {
           await this.emailService.sendMail(
             recipient.recipientEmail,
             compiledSubject,
-            compiledBody,
+            trackedBody,
             textFallback
           );
 
@@ -198,5 +192,32 @@ export class CampaignProcessorService implements OnModuleInit, OnModuleDestroy {
       result = result.replace(regex, value || '');
     }
     return result;
+  }
+
+  private injectTracking(html: string, recipientId: string): string {
+    if (!html) return '';
+
+    const backendUrl = process.env.BACKEND_URL || 'http://localhost:5000/api';
+
+    // 1. Inject open tracking pixel
+    const trackingPixel = `<img src="${backendUrl}/campaigns/track/open/${recipientId}" width="1" height="1" style="display:none;" />`;
+
+    let processedHtml = html;
+    if (processedHtml.includes('</body>')) {
+      processedHtml = processedHtml.replace('</body>', `${trackingPixel}</body>`);
+    } else if (processedHtml.includes('</html>')) {
+      processedHtml = processedHtml.replace('</html>', `${trackingPixel}</html>`);
+    } else {
+      processedHtml = processedHtml + trackingPixel;
+    }
+
+    // 2. Wrap links inside <a> tags
+    const anchorRegex = /<a\s+([^>]*?)href=(["'])(https?:\/\/[^"'\s>]+)(["'])([^>]*?)>/gi;
+    processedHtml = processedHtml.replace(anchorRegex, (match, before, quote1, url, quote2, after) => {
+      const trackingUrl = `${backendUrl}/campaigns/track/click/${recipientId}?redirect=${encodeURIComponent(url)}`;
+      return `<a ${before}href=${quote1}${trackingUrl}${quote2}${after}>`;
+    });
+
+    return processedHtml;
   }
 }

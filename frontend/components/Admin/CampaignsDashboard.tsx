@@ -25,6 +25,8 @@ interface Campaign {
   totalCount: number;
   sentCount: number;
   failedCount: number;
+  openCount?: number;
+  clickCount?: number;
   createdAt: string;
   stats?: CampaignStats;
 }
@@ -119,6 +121,7 @@ export default function CampaignsDashboard() {
   const [targetContext, setTargetContext] = useState('');
   const [bodyTemplate, setBodyTemplate] = useState('');
   const [priority, setPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [generatingAI, setGeneratingAI] = useState(false);
 
   // Audience State
   const [audience, setAudience] = useState<AudienceUser[]>([]);
@@ -190,6 +193,29 @@ export default function CampaignsDashboard() {
     const defaults = DEFAULT_TEMPLATES[type] || DEFAULT_TEMPLATES.newsletter;
     setSubject(defaults.subject);
     setBodyTemplate(defaults.body.trim());
+  };
+
+  const handleGenerateWithAI = async () => {
+    setGeneratingAI(true);
+    try {
+      const res: any = await campaignApi.generate({
+        templateType,
+        tone,
+        primaryObjective,
+        targetContext,
+        optimizationGoal,
+      });
+      if (res.success && res.data) {
+        setSubject(res.data.subject || '');
+        setBodyTemplate(res.data.bodyTemplate || '');
+      } else {
+        alert('Failed to generate template.');
+      }
+    } catch (e: any) {
+      alert('AI Generation failed: ' + (e.message || e));
+    } finally {
+      setGeneratingAI(false);
+    }
   };
 
   const handleNextToStep2 = async () => {
@@ -392,6 +418,12 @@ export default function CampaignsDashboard() {
                                   style={{ width: `${progressPct}%` }}
                                 />
                               </div>
+                              {completed > 0 && (
+                                <div className="flex gap-2.5 mt-1 text-[9px] font-bold text-slate-400">
+                                  <span className="flex items-center gap-0.5">👁️ {camp.openCount || 0} ({Math.round(((camp.openCount || 0) / completed) * 100)}% Open)</span>
+                                  <span className="flex items-center gap-0.5">🖱️ {camp.clickCount || 0} ({Math.round(((camp.clickCount || 0) / completed) * 100)}% CTR)</span>
+                                </div>
+                              )}
                             </div>
                           </td>
                           <td className="px-6 py-4 text-right">
@@ -526,6 +558,31 @@ export default function CampaignsDashboard() {
                   className="px-3 py-2 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500 text-xs"
                 />
               </div>
+            </div>
+
+            <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-200/60 mt-2">
+              <div>
+                <h4 className="text-[11px] font-bold text-slate-800">Generate Email copy using AI</h4>
+                <p className="text-[9px] text-slate-500">Auto-compose subject and HTML body structure using OpenRouter AI based on above configuration.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleGenerateWithAI}
+                disabled={generatingAI}
+                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded text-[10px] font-bold flex items-center gap-1.5 shadow-sm transition-colors uppercase tracking-wider"
+              >
+                {generatingAI ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-slate-400 border-t-white rounded-full animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-[13px]">auto_awesome</span>
+                    Generate with AI
+                  </>
+                )}
+              </button>
             </div>
 
             <div className="flex flex-col gap-1 border-t border-slate-100 pt-4">
@@ -813,6 +870,24 @@ export default function CampaignsDashboard() {
                 <div className="p-2.5 bg-rose-50 border border-rose-100 rounded-lg text-rose-700">
                   <p className="text-xl font-bold">{selectedCampaign.failedCount}</p>
                   <p className="text-[9px] font-black uppercase mt-0.5 opacity-80">Failed</p>
+                </div>
+              </div>
+
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 pt-3 border-t border-slate-100">Engagement Metrics</h3>
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="p-2.5 bg-sky-50 border border-sky-100 rounded-lg text-sky-700">
+                  <p className="text-xl font-bold">{selectedCampaign.openCount || 0}</p>
+                  <p className="text-[9px] font-black uppercase mt-0.5 opacity-80">Opens</p>
+                  <p className="text-[10px] font-bold opacity-60 mt-0.5">
+                    {selectedCampaign.sentCount > 0 ? Math.round(((selectedCampaign.openCount || 0) / selectedCampaign.sentCount) * 100) : 0}% Rate
+                  </p>
+                </div>
+                <div className="p-2.5 bg-violet-50 border border-violet-100 rounded-lg text-violet-700">
+                  <p className="text-xl font-bold">{selectedCampaign.clickCount || 0}</p>
+                  <p className="text-[9px] font-black uppercase mt-0.5 opacity-80">Clicks</p>
+                  <p className="text-[10px] font-bold opacity-60 mt-0.5">
+                    {selectedCampaign.sentCount > 0 ? Math.round(((selectedCampaign.clickCount || 0) / selectedCampaign.sentCount) * 100) : 0}% CTR
+                  </p>
                 </div>
               </div>
 
