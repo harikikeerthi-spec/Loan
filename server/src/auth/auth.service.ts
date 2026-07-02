@@ -28,15 +28,39 @@ export class AuthService {
   /**
    * Generate both access and refresh tokens for a user
    */
+  /**
+   * Derive the canonical bank key (e.g. "idfc") and display name from a bank user's email.
+   * This is the same mapping used by BankController.resolveBankName().
+   */
+  private resolveBankIdFromEmail(email: string): { bankId: string | null; bankName: string | null } {
+    if (!email) return { bankId: null, bankName: null };
+    const lower = email.toLowerCase().trim();
+    if (lower.includes('auxilo') || lower === 'luharika28@gmail.com')         return { bankId: 'auxilo',     bankName: 'Auxilo Finserve' };
+    if (lower.includes('avanse') || lower === 'ropayi2211@aspensif.com')      return { bankId: 'avanse',     bankName: 'Avanse Financial' };
+    if (lower.includes('credila') || lower.includes('hdfc') || lower === 'keerthichinnu0728@gmail.com') return { bankId: 'credila', bankName: 'HDFC Credila' };
+    if (lower.includes('idfc') || lower === 'abhimadasu4@gmail.com')          return { bankId: 'idfc',       bankName: 'IDFC FIRST Bank' };
+    if (lower.includes('poonawalla') || lower === 'farmatech@gmail.com')      return { bankId: 'poonawalla', bankName: 'Poonawalla Fincorp' };
+    return { bankId: null, bankName: null };
+  }
+
   private async generateTokens(user: any) {
-    const payload = {
+    const isBank = user.role === 'bank' || user.role === 'partner_bank';
+    const { bankId, bankName } = isBank ? this.resolveBankIdFromEmail(user.email) : { bankId: null, bankName: null };
+
+    const payload: Record<string, any> = {
       email: user.email,
       sub: user.id,
       firstName: user.firstName,
       lastName: user.lastName,
       phoneNumber: user.phoneNumber,
-      role: user.role
+      role: user.role,
     };
+
+    // Embed bank identity in JWT so the socket gateway can auto-join the per-bank room
+    if (isBank && bankId) {
+      payload.bankId = bankId;
+      payload.bankName = bankName;
+    }
 
     // Generate access token (short-lived)
     const accessToken = this.jwtService.sign(payload, {

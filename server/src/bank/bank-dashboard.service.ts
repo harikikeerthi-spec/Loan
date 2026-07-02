@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
 import { LoanStateMachine } from './loan-state-machine';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 // ==================== CONSTANTS ====================
 
@@ -24,7 +25,10 @@ export const PREDEFINED_TAGS = [
 
 @Injectable()
 export class BankDashboardService {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly eventEmitter: EventEmitter2,
+  ) {}
 
   private get db() {
     return this.supabase.getClient();
@@ -434,7 +438,7 @@ export class BankDashboardService {
     if (error) throw error;
 
     // Update application status
-    await this.db
+    const { data: updatedApp, error: updateError } = await this.db
       .from('LoanApplication')
       .update({
         status: 'disbursed',
@@ -443,7 +447,22 @@ export class BankDashboardService {
         disbursedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       })
-      .eq('id', applicationId);
+      .eq('id', applicationId)
+      .select('id, userId, bank')
+      .single();
+
+    if (updateError) throw updateError;
+
+    // Emit disbursement event for PDF receipt generation and emailing
+    this.eventEmitter.emit('bank.application.disbursed', {
+      applicationId: applicationId,
+      userId: updatedApp?.userId,
+      amount: disbursementData.amount,
+      bankId: updatedApp?.bank,
+      utrNumber: disbursementData.utrNumber,
+      trancheNumber: disbursementData.trancheNumber || 1,
+      transferMode: disbursementData.mode || 'IMPS/NEFT/RTGS',
+    });
 
     await this.logAudit({
       entityType: 'DISBURSEMENT',

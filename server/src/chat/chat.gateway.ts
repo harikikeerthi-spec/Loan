@@ -391,8 +391,9 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (payload.userId === 'staff' || payload.userId === 'system') {
         this.server.to('room_staff').emit('notification_received', payload);
       } else if (payload.userId === 'bank') {
-        // Try to emit to a per-bank room if bankId is present in metadata.
-        // This ensures only the targeted bank's dashboard receives the notification.
+        // Always emit to room_bank so clients with older JWTs (no bankId) still receive it.
+        // Also emit to the per-bank room when bankId is present for targeted delivery.
+        // Client-side isNotificationForThisBank() handles filtering by bank.
         let metadata = payload.metadata;
         if (typeof metadata === 'string') {
           try { metadata = JSON.parse(metadata); } catch { metadata = {}; }
@@ -401,10 +402,11 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (rawBankId) {
           const safeBankId = String(rawBankId).toLowerCase().replace(/[^a-z0-9_-]/g, '_');
           const perBankRoom = `room_bank_${safeBankId}`;
-          this.logger.log(`Emitting notification to per-bank room: ${perBankRoom}`);
+          this.logger.log(`Emitting notification to per-bank room: ${perBankRoom} and room_bank`);
+          // Dual emit: per-bank room (precise) + room_bank (fallback for older tokens)
           this.server.to(perBankRoom).emit('notification_received', payload);
+          this.server.to('room_bank').emit('notification_received', payload);
         } else {
-          // Fallback: broadcast to all bank clients (client-side filtering still applies)
           this.logger.log(`No bankId in metadata, broadcasting to room_bank (all banks)`);
           this.server.to('room_bank').emit('notification_received', payload);
         }

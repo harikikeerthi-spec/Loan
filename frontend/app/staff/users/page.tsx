@@ -291,7 +291,8 @@ export default function UserDirectoryPage() {
                                                     } catch (e) {
                                                         console.error(e);
                                                     }
-                                                    return <span className="text-[13px] font-semibold text-slate-800">{regTime}</span>;
+                                                    const displayTime = typeof regTime === 'string' ? regTime.replace(/\s*IST\s*$/i, '') : regTime;
+                                                    return <span className="text-[13px] font-semibold text-slate-800">{displayTime}</span>;
                                                 })()}
                                             </td>
                                             <td className="px-5 py-4">

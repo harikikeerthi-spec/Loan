@@ -541,7 +541,7 @@ export class EmailService {
                 <tr>
                   <!-- Left side Logo -->
                   <td width="60" align="left" style="vertical-align: middle;">
-                    <img src="${frontendUrl}/images/vidyaloans-logo-transparent.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;border-radius:10px;" />
+                    <img src="http://localhost:3000/images/vidyaloans-logo-transparent.png" alt="VidyaLoan" width="52" height="52" style="display:block;border:none;border-radius:10px;" />
                   </td>
                   <!-- Middle Text -->
                   <td align="center" style="vertical-align: middle; padding-right: 60px;">
@@ -1717,7 +1717,7 @@ export class EmailService {
           console.error('[EmailService] Failed to generate application PDF for sanction email:', err);
           return null;
         });
-        
+
         if (appPdfBuffer) {
           (mailOptions as any).attachments = [
             {
@@ -1928,12 +1928,12 @@ export class EmailService {
 
         // --- Branded Header ---
         doc.fillColor(primaryColor)
-           .fontSize(24)
-           .text('Vidya Loan', 50, 50, { characterSpacing: 1 });
+          .fontSize(24)
+          .text('Vidya Loan', 50, 50, { characterSpacing: 1 });
 
         doc.fillColor(darkGray)
-           .fontSize(10)
-           .text('Education Loan Application Summary', 50, 80);
+          .fontSize(10)
+          .text('Education Loan Application Summary', 50, 80);
 
         doc.moveTo(50, 95).lineTo(550, 95).strokeColor('#e5e7eb').lineWidth(1).stroke();
 
@@ -2026,8 +2026,8 @@ export class EmailService {
 
         // Footer
         doc.fillColor(darkGray)
-           .fontSize(8)
-           .text('This is a computer-generated summary of your VidyaLoan application.', 50, 740, { align: 'center' });
+          .fontSize(8)
+          .text('This is a computer-generated summary of your VidyaLoan application.', 50, 740, { align: 'center' });
 
         doc.end();
       } catch (err) {
