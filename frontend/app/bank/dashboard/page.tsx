@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
+import { io, Socket } from "socket.io-client";
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -127,6 +128,113 @@ export default function BankDashboard() {
             ? (sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank") || "idfc")
             : "idfc"
     );
+
+    const [incomingAlert, setIncomingAlert] = useState<any | null>(null);
+    const socketRef = useRef<Socket | null>(null);
+
+    const isNotificationForThisBank = useCallback((notif: any) => {
+        let metadata = notif.metadata;
+        if (typeof metadata === "string") {
+            try { metadata = JSON.parse(metadata); } catch { }
+        }
+
+        let currentBankName: string | null = null;
+        if (typeof window !== "undefined") {
+            const map: Record<string, string> = {
+                auxilo: "Auxilo Finserve",
+                avanse: "Avanse Financial",
+                credila: "HDFC Credila",
+                idfc: "IDFC FIRST Bank",
+                poonawalla: "Poonawalla Fincorp",
+            };
+            currentBankName = map[currentBankId] || null;
+        }
+        if (!currentBankName) {
+            currentBankName = user?.bankName || user?.firstName || null;
+        }
+
+        const notifBankId = metadata?.bankId ? String(metadata.bankId).toLowerCase().replace(/[^a-z0-9_-]/g, '_') : null;
+        const notifBankName = metadata?.bankName || metadata?.bank;
+
+        if (!notifBankId && !notifBankName) return true;
+        if (!currentBankId && !currentBankName) return true;
+
+        if (notifBankId && currentBankId) {
+            return notifBankId === currentBankId;
+        }
+        if (notifBankName && currentBankName) {
+            return notifBankName.toLowerCase() === currentBankName.toLowerCase();
+        }
+        return true;
+    }, [currentBankId, user]);
+
+    useEffect(() => {
+        const token =
+            localStorage.getItem("bankAccessToken") ||
+            localStorage.getItem("accessToken") ||
+            localStorage.getItem("token");
+        if (!token) return;
+
+        const baseApiUrl = typeof window !== "undefined" && (window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1"))
+            ? "http://localhost:5000"
+            : (process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:5000"));
+
+        const socketUrl = baseApiUrl.endsWith("/api")
+            ? baseApiUrl.replace("/api", "/chat")
+            : `${baseApiUrl.replace(/\/$/, "")}/chat`;
+
+        const socket = io(socketUrl, {
+            auth: { token },
+            reconnection: true,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+        });
+
+        socket.on("connect", () => {
+            console.log("[BankDashboard] Connected to socket.io");
+            socket.emit("joinRoom", "room_bank");
+
+            const safeBankId = currentBankId.toLowerCase().replace(/[^a-z0-9_-]/g, '_');
+            const perBankRoom = `room_bank_${safeBankId}`;
+            socket.emit("joinRoom", perBankRoom);
+            console.log(`[BankDashboard] Joined per-bank room: ${perBankRoom}`);
+        });
+
+        socket.on("notification_received", (payload: any) => {
+            console.log("[BankDashboard] Received notification:", payload);
+            if (!isNotificationForThisBank(payload)) {
+                return;
+            }
+
+            if (payload.type === "bank_application_received") {
+                let metadata = payload.metadata;
+                if (typeof metadata === "string") {
+                    try { metadata = JSON.parse(metadata); } catch { }
+                }
+
+                setIncomingAlert({
+                    id: payload.id,
+                    title: payload.title,
+                    body: payload.body,
+                    applicationId: metadata?.applicationId || metadata?.submissionId,
+                    timestamp: new Date().toISOString(),
+                });
+
+                // Soft refresh dashboard stats/metrics
+                fetchAllData(currentBankId);
+            }
+        });
+
+        socket.on("disconnect", () => {
+            console.log("[BankDashboard] Disconnected from socket.io");
+        });
+
+        socketRef.current = socket;
+
+        return () => {
+            socket.disconnect();
+        };
+    }, [currentBankId, isNotificationForThisBank]);
 
     const fetchAllData = async (bankId: string) => {
         try {
@@ -356,6 +464,58 @@ export default function BankDashboard() {
 
     return (
         <div className="p-5 lg:p-8 space-y-6 animate-fade-in relative z-10">
+            {/* <AnimatePresence>
+                {incomingAlert && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20, height: 0 }}
+                        animate={{ opacity: 1, y: 0, height: "auto" }}
+                        exit={{ opacity: 0, y: -20, height: 0 }}
+                        className="overflow-hidden mb-4"
+                    >
+                        <div
+                            className="p-4 rounded-2xl border text-white flex flex-col md:flex-row justify-between items-center gap-4 relative overflow-hidden"
+                            style={{
+                                background: "linear-gradient(135deg, #6605c7 0%, #8b24e5 100%)",
+                                borderColor: "rgba(102,5,199,0.2)",
+                                boxShadow: "0 10px 30px rgba(102,5,199,0.15)",
+                            }}
+                        >
+                            <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-radial-gradient from-white/10 to-transparent pointer-events-none" />
+                            
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center relative shrink-0">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 absolute -top-0.5 -right-0.5 animate-pulse shadow-[0_0_8px_#4ade80]" />
+                                    <span className="material-symbols-outlined text-white text-xl">download</span>
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">Incoming Queue Alert</p>
+                                    <h4 className="text-sm font-extrabold text-white mt-0.5 leading-none">{incomingAlert.title}</h4>
+                                    <p className="text-[11.5px] text-white/90 font-medium mt-1.5">{incomingAlert.body}</p>
+                                </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-3 shrink-0">
+                                <button
+                                    onClick={() => {
+                                        router.push(`/bank/applications?id=${incomingAlert.applicationId}`);
+                                        setIncomingAlert(null);
+                                    }}
+                                    className="px-4 py-2 bg-white text-[#6605c7] hover:bg-purple-50 text-[10px] font-black uppercase tracking-[0.15em] rounded-xl transition-all shadow-md active:scale-95"
+                                >
+                                    Review Application
+                                </button>
+                                <button
+                                    onClick={() => setIncomingAlert(null)}
+                                    className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all"
+                                >
+                                    <span className="material-symbols-outlined text-base">close</span>
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence> */}
+
             {/* Header / Greet Section */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8">
                 <div className="space-y-4">
