@@ -3,10 +3,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, isWithinInterval, parseISO } from "date-fns";
-import { adminApi } from "@/lib/api";
+import { adminApi, bankApi, getToken } from "@/lib/api";
 import { PageHeader, DataTable, StatusBadge, PriorityTag, EmptyState, Spinner } from "@/components/bank/SharedUI";
+import { useRouter } from "next/navigation";
 
 export default function IncomingQueuePage() {
+    const router = useRouter();
     const [mounted, setMounted] = useState(false);
     const [currentBankId, setCurrentBankId] = useState("idfc");
     const [applications, setApplications] = useState<any[]>([]);
@@ -53,11 +55,46 @@ export default function IncomingQueuePage() {
     const [confirmingLog, setConfirmingLog] = useState(false);
     const [savingLog, setSavingLog] = useState(false);
 
+    // Drawer state for View Application
+    const [showViewAppDrawer, setShowViewAppDrawer] = useState(false);
+    const [token, setToken] = useState<string>("");
+    const [loadingDetails, setLoadingDetails] = useState(false);
+
+    const fetchSelectedAppDetails = async (appId: string) => {
+        setLoadingDetails(true);
+        try {
+            const [appRes, docsRes]: [any, any] = await Promise.all([
+                bankApi.getFileDetail(appId),
+                bankApi.getDocuments(appId)
+            ]);
+            if (appRes) {
+                setSelectedApp((prev: any) => ({
+                    ...prev,
+                    ...appRes,
+                    documents: docsRes || [],
+                    statusHistory: appRes.statusHistory || []
+                }));
+            }
+        } catch (err) {
+            console.error("Failed to fetch full application details:", err);
+        } finally {
+            setLoadingDetails(false);
+        }
+    };
+
+    useEffect(() => {
+        if (showViewAppDrawer && selectedApp && !selectedApp.documents) {
+            fetchSelectedAppDetails(selectedApp.id);
+        }
+    }, [showViewAppDrawer, selectedApp]);
+
     useEffect(() => {
         setMounted(true);
         if (typeof window !== "undefined") {
             const saved = sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank");
             if (saved) setCurrentBankId(saved);
+            const fetchedToken = getToken();
+            if (fetchedToken) setToken(fetchedToken);
         }
     }, []);
 
@@ -344,12 +381,13 @@ export default function IncomingQueuePage() {
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
-                                handleOpenLogModal(row);
+                                setSelectedApp(row);
+                                setShowViewAppDrawer(true);
                             }}
                             className="px-3.5 py-1.5 border border-[#D1D5DB] text-[#374151] hover:bg-[#F8F9FA] hover:text-gray-900 hover:border-gray-400 text-[10.5px] font-bold uppercase tracking-wider rounded-md transition-all shadow-sm flex items-center gap-1.5 active:scale-95"
                         >
-                            <span className="material-symbols-outlined text-[13px] text-gray-500">note_add</span>
-                            Log File
+                            <span className="material-symbols-outlined text-[13px] text-gray-500">visibility</span>
+                            View Application
                         </button>
 
                         {/* Three-dot context menu */}
@@ -379,60 +417,12 @@ export default function IncomingQueuePage() {
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     setActiveMenuAppId(null);
-                                                    alert(`Viewing documents for: ${row.firstName} ${row.lastName} (${row.applicationNumber})`);
+                                                    router.push(`/bank/documents?id=${row.id}`);
                                                 }}
                                                 className="w-full text-left px-3.5 py-2 hover:bg-indigo-50/30 text-[10.5px] font-bold text-gray-700 hover:text-[#4F46E5] transition-colors flex items-center gap-2"
                                             >
                                                 <span className="material-symbols-outlined text-sm text-gray-450 font-normal">folder_open</span>
                                                 View Documents
-                                            </button>
-
-                                            <button
-                                                onClick={async (e) => {
-                                                    e.stopPropagation();
-                                                    setActiveMenuAppId(null);
-                                                    try {
-                                                        const remarkText = `[Bank System - Quick Action]: Assigned to self`;
-                                                        const payload = {
-                                                            remarks: row.remarks ? `${row.remarks}\n${remarkText}` : remarkText
-                                                        };
-                                                        const res: any = await adminApi.updateApplication(row.id, payload);
-                                                        if (res && res.success) {
-                                                            alert(`Application ${row.applicationNumber} assigned to self.`);
-                                                            fetchApplications(currentBankId);
-                                                        }
-                                                    } catch (err) {
-                                                        console.error("Failed to assign application to self:", err);
-                                                    }
-                                                }}
-                                                className="w-full text-left px-3.5 py-2 hover:bg-indigo-50/30 text-[10.5px] font-bold text-gray-700 hover:text-[#4F46E5] transition-colors flex items-center gap-2"
-                                            >
-                                                <span className="material-symbols-outlined text-sm text-gray-450 font-normal">person_add</span>
-                                                Assign to Self
-                                            </button>
-
-                                            <button
-                                                onClick={async (e) => {
-                                                    e.stopPropagation();
-                                                    setActiveMenuAppId(null);
-                                                    try {
-                                                        const remarkText = `[Bank System - Flagged]: Marked as flagged by bank auditor`;
-                                                        const payload = {
-                                                            remarks: row.remarks ? `${row.remarks}\n${remarkText}` : remarkText
-                                                        };
-                                                        const res: any = await adminApi.updateApplication(row.id, payload);
-                                                        if (res && res.success) {
-                                                            alert(`Application ${row.applicationNumber} flagged successfully.`);
-                                                            fetchApplications(currentBankId);
-                                                        }
-                                                    } catch (err) {
-                                                        console.error("Failed to flag application:", err);
-                                                    }
-                                                }}
-                                                className="w-full text-left px-3.5 py-2 hover:bg-rose-50/50 text-[10.5px] font-bold text-rose-650 hover:text-rose-700 transition-colors flex items-center gap-2 border-t border-gray-100"
-                                            >
-                                                <span className="material-symbols-outlined text-sm text-rose-500">flag</span>
-                                                Flag Application
                                             </button>
                                         </motion.div>
                                     </>
@@ -662,6 +652,342 @@ export default function IncomingQueuePage() {
                             </form>
                         </motion.div>
                     </div>
+                )}
+            </AnimatePresence>
+
+            {/* View Application Drawer */}
+            <AnimatePresence>
+                {showViewAppDrawer && selectedApp && (
+                    <>
+                        {/* Backdrop */}
+                        <div
+                            className="fixed inset-0 bg-black/35 backdrop-blur-sm z-40"
+                            onClick={() => {
+                                setShowViewAppDrawer(false);
+                                setSelectedApp(null);
+                            }}
+                        />
+                        {/* Drawer body */}
+                        <motion.div
+                            initial={{ x: "100%" }}
+                            animate={{ x: 0 }}
+                            exit={{ x: "100%" }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="fixed right-0 top-0 bottom-0 w-full md:w-[480px] bg-white border-l border-gray-100 shadow-2xl z-50 overflow-y-auto p-8 flex flex-col justify-between font-sans"
+                        >
+                            <div className="space-y-6">
+                                {/* Header */}
+                                <div className="flex justify-between items-start border-b border-gray-100 pb-5">
+                                    <div>
+                                        <span className="text-[8px] font-black uppercase tracking-widest text-[#6605c7] bg-purple-50 px-2 py-1 rounded-md">
+                                            {selectedApp.applicationNumber}
+                                        </span>
+                                        <h2 className="text-2xl font-black text-gray-900 mt-2 uppercase tracking-tight">
+                                            {selectedApp.firstName} {selectedApp.lastName}
+                                        </h2>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+                                            {selectedApp.email} | {selectedApp.phone || "No phone added"}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            setShowViewAppDrawer(false);
+                                            setSelectedApp(null);
+                                        }}
+                                        className="w-8 h-8 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 hover:text-rose-500 hover:bg-rose-50 transition-all"
+                                    >
+                                        <span className="material-symbols-outlined text-lg">close</span>
+                                    </button>
+                                </div>
+
+                                {loadingDetails ? (
+                                    <div className="flex flex-col items-center justify-center py-20 gap-3">
+                                        <div className="w-8 h-8 border-3 border-gray-100 border-t-[#6605c7] rounded-full animate-spin" />
+                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest animate-pulse">Fetching details...</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {/* SECTION 1: LOAN & EDUCATION PROGRAM */}
+                                        <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100/50 space-y-3 text-left">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-[#6605c7] block">Loan & Academic Program</span>
+                                            <div className="grid grid-cols-2 gap-3 text-xs">
+                                                <div>
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Requested Amount</span>
+                                                    <span className="font-semibold text-gray-900">₹{(selectedApp.amount || 0).toLocaleString("en-IN")}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Admission Status</span>
+                                                    <span className="font-semibold text-gray-900 uppercase">{selectedApp.admissionStatus || "—"}</span>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">University Name</span>
+                                                    <span className="font-semibold text-gray-900">{selectedApp.universityName || "University of Foreign Intake"}</span>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Course & Degree</span>
+                                                    <span className="font-semibold text-gray-900">{selectedApp.courseName || "—"}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Duration</span>
+                                                    <span className="font-semibold text-gray-900">{selectedApp.courseDuration ? `${selectedApp.courseDuration} months` : "—"}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Start Date</span>
+                                                    <span className="font-semibold text-gray-900">{selectedApp.courseStartDate ? format(parseISO(selectedApp.courseStartDate), "dd MMM yyyy") : "—"}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* SECTION 2: STUDENT PROFILE & CONTACT */}
+                                        <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100/50 space-y-3 text-left">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-[#6605c7] block">Student Profile & Contact</span>
+                                            <div className="grid grid-cols-2 gap-3 text-xs">
+                                                <div>
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Full Name</span>
+                                                    <span className="font-semibold text-gray-900">{selectedApp.firstName} {selectedApp.lastName}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Gender</span>
+                                                    <span className="font-semibold text-gray-900 capitalize">{selectedApp.gender || "—"}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Date of Birth</span>
+                                                    <span className="font-semibold text-gray-900">{selectedApp.dateOfBirth ? format(parseISO(selectedApp.dateOfBirth), "dd MMM yyyy") : "—"}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Nationality</span>
+                                                    <span className="font-semibold text-gray-900">{selectedApp.nationality || "—"}</span>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Email Address</span>
+                                                    <span className="font-semibold text-gray-900">{selectedApp.email || "—"}</span>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Phone Number</span>
+                                                    <span className="font-semibold text-gray-900">{selectedApp.phone || "—"}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* SECTION 3: RESIDENTIAL ADDRESS */}
+                                        <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100/50 space-y-3 text-left">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-[#6605c7] block">Residential Address</span>
+                                            <div className="text-xs space-y-2">
+                                                <div>
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Full Address</span>
+                                                    <span className="font-semibold text-gray-900 block leading-normal">
+                                                        {selectedApp.address || "—"}
+                                                    </span>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">City</span>
+                                                        <span className="font-semibold text-gray-900">{selectedApp.city || "—"}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">State</span>
+                                                        <span className="font-semibold text-gray-900">{selectedApp.state || "—"}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Pincode</span>
+                                                        <span className="font-semibold text-gray-900">{selectedApp.pincode || "—"}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Country</span>
+                                                        <span className="font-semibold text-gray-900">{selectedApp.country || "—"}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* SECTION 4: STUDENT EMPLOYMENT DETAILS */}
+                                        <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100/50 space-y-3 text-left">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-[#6605c7] block">Employment & Income</span>
+                                            <div className="grid grid-cols-2 gap-3 text-xs">
+                                                <div>
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Employment Type</span>
+                                                    <span className="font-semibold text-gray-900 capitalize">{selectedApp.employmentType || "—"}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Work Experience</span>
+                                                    <span className="font-semibold text-gray-900">{selectedApp.workExperience ? `${selectedApp.workExperience} months` : "—"}</span>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Employer Name</span>
+                                                    <span className="font-semibold text-gray-900">{selectedApp.employerName || "—"}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Job Title</span>
+                                                    <span className="font-semibold text-gray-900">{selectedApp.jobTitle || "—"}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Annual Income</span>
+                                                    <span className="font-semibold text-gray-900">
+                                                        {selectedApp.annualIncome ? `₹${selectedApp.annualIncome.toLocaleString("en-IN")}` : "—"}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* SECTION 5: CO-APPLICANT DETAILS */}
+                                        <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100/50 space-y-3 text-left">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-[#6605c7] block">Co-Applicant details</span>
+                                            {selectedApp.hasCoApplicant || selectedApp.coApplicantName ? (
+                                                <div className="grid grid-cols-2 gap-3 text-xs">
+                                                    <div>
+                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Name</span>
+                                                        <span className="font-semibold text-gray-900">{selectedApp.coApplicantName || "—"}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Relationship</span>
+                                                        <span className="font-semibold text-gray-900 capitalize">{selectedApp.coApplicantRelation || "—"}</span>
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Email Address</span>
+                                                        <span className="font-semibold text-gray-900">{selectedApp.coApplicantEmail || "—"}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Phone Number</span>
+                                                        <span className="font-semibold text-gray-900">{selectedApp.coApplicantPhone || "—"}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Annual Income</span>
+                                                        <span className="font-semibold text-gray-900">
+                                                            {selectedApp.coApplicantIncome ? `₹${selectedApp.coApplicantIncome.toLocaleString("en-IN")}` : "—"}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-gray-400 italic block">No co-applicant added to this profile.</span>
+                                            )}
+                                        </div>
+
+                                        {/* SECTION 6: PARENT DETAILS */}
+                                        <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100/50 space-y-3 text-left">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-[#6605c7] block">Parent Details</span>
+                                            <div className="grid grid-cols-1 gap-3 text-xs">
+                                                <div>
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Father's Name</span>
+                                                    <span className="font-semibold text-gray-900 block">{selectedApp.fatherName || "—"}</span>
+                                                    {(selectedApp.fatherPhone || selectedApp.fatherEmail) && (
+                                                        <span className="text-[10px] text-gray-500 block mt-0.5">
+                                                            {[selectedApp.fatherPhone, selectedApp.fatherEmail].filter(Boolean).join(" | ")}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="border-t border-gray-100 pt-2">
+                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Mother's Name</span>
+                                                    <span className="font-semibold text-gray-900 block">{selectedApp.motherName || "—"}</span>
+                                                    {(selectedApp.motherPhone || selectedApp.motherEmail) && (
+                                                        <span className="text-[10px] text-gray-500 block mt-0.5">
+                                                            {[selectedApp.motherPhone, selectedApp.motherEmail].filter(Boolean).join(" | ")}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* SECTION 7: COLLATERAL INFO */}
+                                        {(selectedApp.hasCollateral || selectedApp.collateralType) && (
+                                            <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100/50 space-y-3 text-left">
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-[#6605c7] block">Collateral Information</span>
+                                                <div className="grid grid-cols-2 gap-3 text-xs">
+                                                    <div>
+                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Collateral Type</span>
+                                                        <span className="font-semibold text-gray-900 capitalize">{selectedApp.collateralType || "—"}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Collateral Value</span>
+                                                        <span className="font-semibold text-gray-900">
+                                                            {selectedApp.collateralValue ? `₹${selectedApp.collateralValue.toLocaleString("en-IN")}` : "—"}
+                                                        </span>
+                                                    </div>
+                                                    <div className="col-span-2">
+                                                        <span className="text-[8px] font-bold text-gray-400 uppercase tracking-wider block">Collateral Details</span>
+                                                        <span className="font-semibold text-gray-900 leading-normal block">{selectedApp.collateralDetails || "—"}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Documents Package */}
+                                        <div className="space-y-3">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 block pl-1">Document Package</span>
+                                            {selectedApp.documents && selectedApp.documents.length > 0 ? (
+                                                <div className="space-y-2">
+                                                    {selectedApp.documents.map((doc: any) => (
+                                                        <div
+                                                            key={doc.id}
+                                                            className="flex justify-between items-center p-3 rounded-xl border border-gray-100 bg-white shadow-sm hover:border-[#6605c7]/10 transition-all"
+                                                        >
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="material-symbols-outlined text-gray-400 text-lg">description</span>
+                                                                <div>
+                                                                    <span className="text-[10px] font-black text-gray-700 block uppercase tracking-wider truncate max-w-[220px]">
+                                                                        {doc.docType || "Uploaded Document"}
+                                                                    </span>
+                                                                    <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">
+                                                                        Status: {doc.status || "uploaded"}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <a
+                                                                href={`/api/applications/admin/${selectedApp.id}/documents/${doc.id}/view?token=${token}`}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="px-3 py-1.5 bg-gray-50 border border-gray-100 text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-[#6605c7]/5 hover:text-[#6605c7] hover:border-[#6605c7]/10 transition-all flex items-center gap-1"
+                                                            >
+                                                                <span className="material-symbols-outlined text-xs">download</span> View
+                                                            </a>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="p-4 border border-dashed border-gray-100 rounded-xl text-center">
+                                                    <span className="text-[10px] text-gray-400 uppercase tracking-widest">No documents found.</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Activity Notes/Remarks */}
+                                        <div className="space-y-3 border-t border-gray-100 pt-5">
+                                            <span className="text-[9px] font-black uppercase tracking-widest text-gray-400 block pl-1">Underwriting Activity Notes</span>
+                                            {selectedApp.remarks ? (
+                                                <div className="bg-gray-50 rounded-2xl p-4 max-h-40 overflow-y-auto space-y-3 border border-gray-100">
+                                                    {selectedApp.remarks.split('\n').map((rem: string, idx: number) => (
+                                                        <div key={idx} className="text-[10px] font-medium text-gray-600 border-b border-gray-100/50 pb-2 last:border-0 leading-relaxed">
+                                                            {rem}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="p-4 bg-gray-50 rounded-xl text-center">
+                                                    <span className="text-[10px] text-gray-400 uppercase tracking-widest">No internal notes.</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Action Buttons */}
+                            {/* {!loadingDetails && (
+                                <div className="border-t border-gray-100 pt-6 flex flex-col gap-3 mt-6">
+                                    {!selectedApp.lanNumber && (
+                                        <button
+                                            onClick={() => {
+                                                setShowViewAppDrawer(false);
+                                                handleOpenLogModal(selectedApp);
+                                            }}
+                                            className="w-full py-4 bg-[#6605c7] text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-purple-500/20 hover:bg-[#5203a4] transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <span className="material-symbols-outlined text-lg">note_add</span> Log File (Enter LAN)
+                                        </button>
+                                    )}
+                                </div>
+                            )} */}
+                        </motion.div>
+                    </>
                 )}
             </AnimatePresence>
         </div>

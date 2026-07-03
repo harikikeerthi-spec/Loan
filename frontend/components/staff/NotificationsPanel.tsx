@@ -356,7 +356,35 @@ const NotificationsPanel = ({
       }
 
       if (appId) {
-        if (notification.type === 'query_raised') {
+        const typeLower = notification.type?.toLowerCase() || '';
+        const titleLower = notification.title?.toLowerCase() || '';
+        const bodyLower = notification.body?.toLowerCase() || '';
+
+        const isBankDecisionOrQuery = 
+          [
+            'query_raised',
+            'application_approved',
+            'application_conditional',
+            'application_counter',
+            'application_rejected',
+            'hold'
+          ].includes(typeLower) ||
+          typeLower.includes('approved') ||
+          typeLower.includes('sanction') ||
+          typeLower.includes('rejected') ||
+          typeLower.includes('query') ||
+          typeLower.includes('counter') ||
+          titleLower.includes('sanctioned') ||
+          titleLower.includes('approved') ||
+          titleLower.includes('rejected') ||
+          titleLower.includes('query') ||
+          titleLower.includes('hold') ||
+          bodyLower.includes('sanctioned') ||
+          bodyLower.includes('approved') ||
+          bodyLower.includes('rejected') ||
+          bodyLower.includes('query');
+
+        if (isBankDecisionOrQuery) {
           router.push(`/staff/applications/${appId}/bank-decisions`);
         } else {
           router.push(`/staff/applications/${appId}`);

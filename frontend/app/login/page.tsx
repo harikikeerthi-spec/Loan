@@ -188,35 +188,39 @@ function LoginContent() {
         }
     };
 
-    const handleGoogleLogin = async () => {
+    const handleGoogleLogin = () => {
+        if (!auth) {
+            setError("Google Login is not configured. Please add your Firebase API keys to .env.local");
+            return;
+        }
+
         setLoading(true);
         setError("");
-        try {
-            if (!auth) {
-                throw new Error("Google Login is not configured. Please add your Firebase API keys to .env.local");
-            }
-            const result = await signInWithPopup(auth, googleProvider);
-            const idToken = await result.user.getIdToken();
 
-            const data = await authApi.firebaseLogin(idToken) as LoginResponse;
+        signInWithPopup(auth, googleProvider)
+            .then(async (result) => {
+                const idToken = await result.user.getIdToken();
+                const data = await authApi.firebaseLogin(idToken) as LoginResponse;
 
-            if (data.role && ["staff", "admin", "super_admin", "bank", "partner_bank", "agent", "partner_agent"].includes(data.role)) {
-                let portalName = "";
-                if (data.role === "staff") portalName = "Staff Portal (/staff/login)";
-                else if (data.role === "admin" || data.role === "super_admin") portalName = "Admin Portal (/admin/login)";
-                else if (data.role === "bank" || data.role === "partner_bank") portalName = "Bank Portal (/bank/login)";
-                else if (data.role === "agent" || data.role === "partner_agent") portalName = "Agent Portal (/agent/login)";
+                if (data.role && ["staff", "admin", "super_admin", "bank", "partner_bank", "agent", "partner_agent"].includes(data.role)) {
+                    let portalName = "";
+                    if (data.role === "staff") portalName = "Staff Portal (/staff/login)";
+                    else if (data.role === "admin" || data.role === "super_admin") portalName = "Admin Portal (/admin/login)";
+                    else if (data.role === "bank" || data.role === "partner_bank") portalName = "Bank Portal (/bank/login)";
+                    else if (data.role === "agent" || data.role === "partner_agent") portalName = "Agent Portal (/agent/login)";
 
-                throw new Error(`Access Denied: Please use the ${portalName} to login.`);
-            }
+                    throw new Error(`Access Denied: Please use the ${portalName} to login.`);
+                }
 
-            triggerSuccessAndRedirect(data, result.user.email || "");
-        } catch (e: unknown) {
-            console.error("Google Login Error:", e);
-            setError(e instanceof Error ? e.message : "Failed to login with Google");
-        } finally {
-            setLoading(false);
-        }
+                triggerSuccessAndRedirect(data, result.user.email || "");
+            })
+            .catch((e: unknown) => {
+                console.error("Google Login Error:", e);
+                setError(e instanceof Error ? e.message : "Failed to login with Google");
+            })
+            .finally(() => {
+                setLoading(false);
+            });
     };
 
     const handleSubmit = (e: React.FormEvent) => {
