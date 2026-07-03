@@ -169,13 +169,22 @@ const BankDashboardActivity = ({ bankId, limit = 15 }: BankDashboardActivityProp
   const formatDate = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
+      const originalTimeStr = date.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
       const now = new Date();
       const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-      if (diffInSeconds < 60) return "Just now";
-      if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-      if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-      return date.toLocaleDateString("en-IN");
+      let relative = "";
+      if (diffInSeconds < 60) relative = "Just now";
+      else if (diffInSeconds < 3600) relative = `${Math.floor(diffInSeconds / 60)}m ago`;
+      else if (diffInSeconds < 86400) relative = `${Math.floor(diffInSeconds / 3600)}h ago`;
+      else relative = date.toLocaleDateString("en-IN");
+
+      return `${relative} (${originalTimeStr})`;
     } catch {
       return "Recently";
     }

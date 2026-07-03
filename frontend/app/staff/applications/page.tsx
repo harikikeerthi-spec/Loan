@@ -346,9 +346,9 @@ export default function ApplicationsPage() {
                                                             expand_more
                                                         </span>
                                                     </button>
-                                                    
+
                                                     {isExpanded && (
-                                                        <div 
+                                                        <div
                                                             onClick={() => {
                                                                 const uid = item.userId || item.user_id || item.student?.id || item.student?._id;
                                                                 if (uid) {
@@ -390,6 +390,20 @@ export default function ApplicationsPage() {
                                                                         <span className="material-symbols-outlined text-[12px]">description</span>
                                                                         {item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`}
                                                                     </p>
+                                                                    {(item.bank || item.targetBank) && (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                const bankParam = item.bank || item.targetBank || "";
+                                                                                const appNo = item.applicationNumber || `APP-${(item.id || item._id || 'UNKNOWN').slice(-6)}`;
+                                                                                router.push(`/staff/chat-customer?bankName=${encodeURIComponent(bankParam)}&applicationId=${item.id || item._id}&applicationNumber=${encodeURIComponent(appNo)}`);
+                                                                            }}
+                                                                            className="text-[10px] bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 cursor-pointer transition-all font-bold uppercase tracking-widest inline-flex items-center gap-1.5 px-2.5 py-1 rounded border border-indigo-200 shadow-sm whitespace-nowrap"
+                                                                            title={`Chat with ${item.bank || item.targetBank}`}
+                                                                        >
+                                                                            <span className="material-symbols-outlined text-[12px]">forum</span>
+                                                                            Chat with Bank
+                                                                        </button>
+                                                                    )}
                                                                 </div>
                                                             )}
                                                         </div>
@@ -634,8 +648,8 @@ export default function ApplicationsPage() {
                         if (appIdParam) router.push('/staff/applications');
                     }}
                     sidebarOpen={false}
-                    setSidebarOpen={() => {}}
-                    onAadhaarSaved={() => {}}
+                    setSidebarOpen={() => { }}
+                    onAadhaarSaved={() => { }}
                     onApplicationUpdated={async () => {
                         await loadData();
                     }}

@@ -138,35 +138,44 @@ const NotificationsPanel = ({
 
   const formatTime = (timestamp: string) => {
     const date = new Date(timestamp);
+    const originalTimeStr = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+
     const now = timeRef;
     const diffMs = now.getTime() - date.getTime();
+    let relative = "";
+
     if (diffMs < 0) {
-      return "1min ago";
+      relative = "1min ago";
+    } else {
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 60) {
+        const mins = Math.max(1, diffMins);
+        if (mins === 30) relative = "30 min ago";
+        else relative = `${mins}min ago`;
+      } else if (diffHours < 24) {
+        if (diffHours === 1) relative = "1hour ago";
+        else relative = `${diffHours} hours ago`;
+      } else if (diffDays < 7) {
+        if (diffDays === 1) relative = "1day ago";
+        else relative = `${diffDays}days ago`;
+      } else {
+        relative = date.toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+      }
     }
 
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 60) {
-      const mins = Math.max(1, diffMins);
-      if (mins === 30) return "30 min ago";
-      return `${mins}min ago`;
-    }
-    if (diffHours < 24) {
-      if (diffHours === 1) return "1hour ago";
-      return `${diffHours} hours ago`;
-    }
-    if (diffDays < 7) {
-      if (diffDays === 1) return "1day ago";
-      return `${diffDays}days ago`;
-    }
-
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+    return `${relative} (${originalTimeStr})`;
   };
 
   const fetchNotifications = useCallback(async () => {

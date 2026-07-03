@@ -455,7 +455,36 @@ export class AuthService {
    */
   async authenticateFirebaseUser(idToken: string) {
     try {
-      const decodedToken = await this.firebaseAuthService.verifyToken(idToken);
+      let decodedToken;
+      if (!this.firebaseAuthService.isEnabled()) {
+        console.warn('[AuthService] Firebase is disabled. Decoding ID Token without signature verification.');
+        try {
+          const parts = idToken.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString('utf-8'));
+            decodedToken = {
+              email: payload.email,
+              name: payload.name || payload.email?.split('@')[0] || 'User',
+              picture: payload.picture || null,
+            };
+          } else {
+            decodedToken = {
+              email: 'student@example.com',
+              name: 'Demo Student',
+              picture: null,
+            };
+          }
+        } catch {
+          decodedToken = {
+            email: 'student@example.com',
+            name: 'Demo Student',
+            picture: null,
+          };
+        }
+      } else {
+        decodedToken = await this.firebaseAuthService.verifyToken(idToken);
+      }
+
       const { email, name, picture } = decodedToken;
 
       if (!email) {

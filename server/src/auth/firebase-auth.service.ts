@@ -41,7 +41,7 @@ export class FirebaseAuthService {
     }
   }
 
-  private isEnabled(): boolean {
+  isEnabled(): boolean {
     return admin.apps.length > 0;
   }
 
