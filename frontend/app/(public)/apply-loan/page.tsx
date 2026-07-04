@@ -138,15 +138,12 @@ export default function ApplyLoanPage() {
 
     const validateStep1 = (): boolean => {
         const errors: Record<string, string> = {};
-        if (!formData.bank) errors.bank = "Please select a bank";
         if (!formData.loanType) errors.loanType = "Please select a loan type";
         if (!formData.courseType) errors.courseType = "Please select a course type";
         if (!formData.country) errors.country = "Please select a country";
         if (!formData.university.trim()) errors.university = "Please enter your university";
         const cleanAmount = formData.amount.replace(/,/g, "");
-        const cleanAnnualFee = formData.annualFee.replace(/,/g, "");
         if (!cleanAmount || Number(cleanAmount) <= 0) errors.amount = "Please enter a valid loan amount";
-        if (!cleanAnnualFee || Number(cleanAnnualFee) <= 0) errors.annualFee = "Please enter annual tuition fee";
         if (!formData.intakeSeason) errors.intakeSeason = "Please select target intake season";
         setStepErrors(errors);
         return Object.keys(errors).length === 0;
@@ -206,19 +203,24 @@ export default function ApplyLoanPage() {
         setError("");
         try {
             const userId = user.id;
-            const bankName = banks.find(b => b.id === formData.bank)?.name || formData.bank;
+            const bankName = banks.find(b => b.id === formData.bank)?.name || formData.bank || "Any Bank";
             const cleanAmount = formData.amount.replace(/,/g, "");
-            const cleanAnnualFee = formData.annualFee.replace(/,/g, "");
-            const cleanLivingCost = formData.livingCost.replace(/,/g, "");
-            const cleanIncome = formData.income.replace(/,/g, "");
+            const cleanAnnualFee = formData.annualFee ? formData.annualFee.replace(/,/g, "") : "";
+            const cleanLivingCost = formData.livingCost ? formData.livingCost.replace(/,/g, "") : "";
+            const cleanIncome = formData.income ? formData.income.replace(/,/g, "") : "";
+
+            const parsedAnnualFee = cleanAnnualFee ? parseFloat(cleanAnnualFee) : undefined;
+            const parsedLivingCost = cleanLivingCost ? parseFloat(cleanLivingCost) : undefined;
+            const parsedIncome = cleanIncome ? parseFloat(cleanIncome) : undefined;
+
             await applicationApi.create({
                 ...formData,
                 userId,
                 bank: bankName,
                 amount: parseFloat(cleanAmount),
-                annualFee: parseFloat(cleanAnnualFee) || undefined,
-                livingCost: parseFloat(cleanLivingCost) || undefined,
-                income: parseFloat(cleanIncome) || undefined,
+                annualFee: isNaN(parsedAnnualFee as number) ? undefined : parsedAnnualFee,
+                livingCost: isNaN(parsedLivingCost as number) ? undefined : parsedLivingCost,
+                income: isNaN(parsedIncome as number) ? undefined : parsedIncome,
             });
 
             // Sync personal details to main user profile if authenticated
@@ -264,7 +266,7 @@ export default function ApplyLoanPage() {
                 <div className="absolute top-0 right-0 w-[40vw] h-[40vw] bg-[#6605c7]/10 blur-[150px] rounded-full z-0" />
                 <div className="absolute bottom-0 left-0 w-[40vw] h-[40vw] bg-[#a855f7]/5 blur-[150px] rounded-full z-0" />
                 <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-0" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, #6605c7 1px, transparent 0)', backgroundSize: '40px 40px' }} />
-                
+
                 <div className="relative z-10 max-w-xl w-full text-center animate-fade-in-up">
                     <div className="mb-10 relative inline-block">
                         <div className="w-28 h-28 bg-emerald-500 rounded-[2rem] flex items-center justify-center shadow-2xl shadow-emerald-500/40 relative z-10 animate-bounce-slow border border-emerald-400">
@@ -272,7 +274,7 @@ export default function ApplyLoanPage() {
                         </div>
                         <div className="absolute inset-0 bg-emerald-400 rounded-[2rem] blur-2xl opacity-30 animate-pulse" />
                     </div>
-                    
+
                     <h2 className="text-4xl font-black text-gray-900 mb-6 tracking-tight" style={{ fontFamily: "'Noto Serif', 'Playfair Display', serif" }}>Application Transmitted!</h2>
                     <p className="text-gray-600 font-medium text-lg mb-4 leading-relaxed">
                         Your financing request for <span className="text-[#6605c7] font-black">{formData.university}</span> has been successfully logged.
@@ -280,7 +282,7 @@ export default function ApplyLoanPage() {
                     <p className="text-gray-500 text-sm font-medium mb-12">
                         Our credit specialists are currently reviewing your eligibility. Expect a status update within <span className="text-gray-900 font-bold">24-48 hours</span>.
                     </p>
-                    
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 group">
                         <Link href="/dashboard#applications" className="px-8 py-5 bg-[#6605c7] text-white text-[11px] uppercase tracking-[0.2em] font-black rounded-2xl hover:bg-[#7a0de8] hover:shadow-2xl hover:shadow-[#6605c7]/30 transition-all flex items-center justify-center gap-3">
                             <span className="material-symbols-outlined text-lg">dashboard_customize</span>
@@ -401,8 +403,6 @@ export default function ApplyLoanPage() {
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <SelectField label="Prefered Banking Partner" icon="account_balance" value={formData.bank} onChange={(v) => update("bank", v)}
-                                        options={banks.map((b) => ({ value: b.id, label: `${b.name} (${b.rate})` }))} error={stepErrors.bank} />
                                     <SelectField label="Loan Category" icon="category" value={formData.loanType} onChange={(v) => update("loanType", v)}
                                         options={loanTypes.map((t) => ({ value: t, label: t }))} error={stepErrors.loanType} />
                                     <SelectField label="Academic Level" icon="school" value={formData.courseType} onChange={(v) => update("courseType", v)}
@@ -415,12 +415,7 @@ export default function ApplyLoanPage() {
                                     <InputField label="Full University Name" icon="domain" value={formData.university} onChange={(v) => update("university", v)} placeholder="e.g. University of Toronto" error={stepErrors.university} />
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <InputField label="Annual Tuition Fee (₹)" icon="payments" value={formData.annualFee} onChange={(v) => update("annualFee", formatIndianCurrency(v))} placeholder="e.g. 25,00,000" type="text" error={stepErrors.annualFee} />
-                                        <InputField label="Loan Principal Amount (₹)" icon="savings" value={formData.amount} onChange={(v) => update("amount", formatIndianCurrency(v))} placeholder="e.g. 40,00,000" type="text" error={stepErrors.amount} />
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                        <InputField label="Monthly Living Budget (₹)" icon="home_work" value={formData.livingCost} onChange={(v) => update("livingCost", formatIndianCurrency(v))} placeholder="e.g. 5,00,000" type="text" />
+                                        <InputField label="Required Amount Needed (₹)" icon="savings" value={formData.amount} onChange={(v) => update("amount", formatIndianCurrency(v))} placeholder="e.g. 40,00,000" type="text" error={stepErrors.amount} required />
                                         <SelectField label="Admission Status" icon="verified" value={formData.admissionStatus} onChange={(v) => update("admissionStatus", v)}
                                             options={[
                                                 { value: "confirmed", label: "Confirmed Admission" },
@@ -542,11 +537,9 @@ export default function ApplyLoanPage() {
                                         </h3>
                                         <div className="bg-white/70 rounded-[2rem] p-8 border border-gray-100 shadow-sm space-y-4">
                                             {[
-                                                { label: "Partner Bank", value: banks.find((b) => b.id === formData.bank)?.name || formData.bank },
                                                 { label: "Loan Structure", value: formData.loanType },
                                                 { label: "Academic Goal", value: formData.courseType },
-                                                { label: "Principal", value: formData.amount ? `₹${Number(formData.amount.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
-                                                { label: "Annual Tuition", value: formData.annualFee ? `₹${Number(formData.annualFee.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
+                                                { label: "Required Amount", value: formData.amount ? `₹${Number(formData.amount.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
                                                 { label: "Destination", value: formData.country },
                                                 { label: "University", value: formData.university },
                                                 { label: "Target Intake", value: formData.intakeSeason },
@@ -572,18 +565,20 @@ export default function ApplyLoanPage() {
                                                 { label: "Legal Name", value: `${formData.firstName} ${formData.lastName}`.trim() },
                                                 { label: "Electronic ID", value: formData.email },
                                                 { label: "Mobile Line", value: formData.phone },
-                                                { label: "Birth Record", value: (() => {
-                                                    if (!formData.dateOfBirth) return "";
-                                                    // Handle DD-MM-YYYY format (from DatePicker and backend)
-                                                    if (/^\d{2}-\d{2}-\d{4}$/.test(formData.dateOfBirth)) {
-                                                        const [dd, mm, yyyy] = formData.dateOfBirth.split("-").map(Number);
-                                                        const d = new Date(yyyy, mm - 1, dd);
-                                                        return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-                                                    }
-                                                    // Fallback: ISO or other formats
-                                                    const fallback = new Date(formData.dateOfBirth);
-                                                    return isNaN(fallback.getTime()) ? formData.dateOfBirth : fallback.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
-                                                })() },
+                                                {
+                                                    label: "Birth Record", value: (() => {
+                                                        if (!formData.dateOfBirth) return "";
+                                                        // Handle DD-MM-YYYY format (from DatePicker and backend)
+                                                        if (/^\d{2}-\d{2}-\d{4}$/.test(formData.dateOfBirth)) {
+                                                            const [dd, mm, yyyy] = formData.dateOfBirth.split("-").map(Number);
+                                                            const d = new Date(yyyy, mm - 1, dd);
+                                                            return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+                                                        }
+                                                        // Fallback: ISO or other formats
+                                                        const fallback = new Date(formData.dateOfBirth);
+                                                        return isNaN(fallback.getTime()) ? formData.dateOfBirth : fallback.toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+                                                    })()
+                                                },
                                                 { label: "Co-Applicant", value: formData.coApplicant === "none" ? "None" : formData.coApplicant ? formData.coApplicant.charAt(0).toUpperCase() + formData.coApplicant.slice(1) : "" },
                                                 { label: "Secondary Income", value: formData.income && formData.coApplicant !== "none" ? `₹${Number(formData.income.replace(/,/g, "")).toLocaleString("en-IN")}` : "" },
                                                 { label: "Collateral", value: formData.collateral.split(':')[0] },
@@ -641,7 +636,7 @@ export default function ApplyLoanPage() {
                             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                                 {step < 3 ? (
                                     <button onClick={next} className="w-full sm:w-auto px-12 py-4 bg-[#6605c7] text-white text-[11px] uppercase tracking-[0.2em] font-black rounded-2xl hover:bg-[#7a0de8] hover:shadow-[0_0_20px_rgba(102,5,199,0.4)] transition-all flex items-center justify-center gap-3 group border border-[#8b24e5]">
-                                        Advance Profile
+                                        Next
                                         <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_forward</span>
                                     </button>
                                 ) : (

@@ -1779,7 +1779,7 @@ export class BankWorkflowService {
 
     // Update LoanApplication
     const isFullyDisbursed = remainingAmt <= 0;
-    await this.db.client
+    const { data: updatedApp, error: updateError } = await this.db.client
       .from('LoanApplication')
       .update({
         bankWorkflowStatus: 'DISBURSED',
@@ -1789,7 +1789,23 @@ export class BankWorkflowService {
         disbursedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       })
-      .eq('id', submission.applicationId);
+      .eq('id', submission.applicationId)
+      .select('userId, bank')
+      .single();
+
+    if (updateError) throw updateError;
+
+    // Emit disbursement event for PDF receipt generation and emailing
+    this.eventEmitter.emit('bank.application.disbursed', {
+      submissionId,
+      applicationId: submission.applicationId,
+      userId: updatedApp?.userId,
+      amount: targetTranche.amount,
+      bankId: updatedApp?.bank,
+      utrNumber: referenceNo,
+      trancheNumber: trancheNumber,
+      transferMode: 'NEFT/RTGS',
+    });
 
     return {
       success: true,

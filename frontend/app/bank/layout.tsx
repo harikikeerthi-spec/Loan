@@ -20,66 +20,42 @@ const bankLogos: Record<string, string> = {
 // --- Components ---
 
 const NavItem = ({ icon, label, path, active, collapsed, badge }: any) => {
-    const isDashboard = path === "/bank/dashboard";
-    const activeStyle = active
-        ? isDashboard
-            ? {
-                background: 'linear-gradient(135deg, #6605c7, #8b24e5)',
-                boxShadow: '0 4px 14px rgba(102, 5, 199, 0.22)'
-            }
-            : {
-                background: '#111111',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
-            }
-        : undefined;
-
     return (
         <Link
             href={path}
-            className={`flex items-center py-2 px-3 rounded-xl transition-all relative group overflow-hidden ${active ? "text-white" : "text-gray-500 hover:text-gray-900"
+            className={`flex items-center py-2.5 px-3.5 rounded-md transition-all relative group overflow-hidden ${active
+                ? "text-[#0A2540] bg-[#4F46E5]/10 font-bold"
+                : "text-gray-500 hover:text-[#0A2540] hover:bg-gray-50"
                 }`}
-            style={activeStyle}
         >
-            <div className="flex items-center gap-3 min-w-0 flex-1 relative z-10">
-                {/* Hover background */}
-                {!active && (
-                    <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={{ backgroundColor: 'rgba(102, 5, 199, 0.04)' }} />
-                )}
+            {/* Active state vertical indicator on left edge */}
+            {active && (
+                <span className="absolute left-0 top-2.5 bottom-2.5 w-1 bg-[#4F46E5] rounded-r-md" />
+            )}
 
-                <span className={`material-symbols-outlined text-[18px] relative z-10 transition-transform duration-300 ${active ? "scale-110" : "group-hover:scale-105"} ${active ? "text-white" : "text-gray-500 group-hover:text-gray-900"}`}>
+            <div className="flex items-center gap-3.5 min-w-0 flex-1 relative z-10">
+                <span className={`material-symbols-outlined text-[18px] transition-transform duration-300 ${active ? "scale-110 text-[#4F46E5]" : "group-hover:scale-105 text-gray-500 group-hover:text-[#0A2540]"
+                    }`}>
                     {icon}
                 </span>
 
                 {!collapsed && (
-                    <span className="text-[13.5px] font-bold tracking-wide relative z-10 whitespace-nowrap truncate">
+                    <span className={`text-[13px] tracking-wide whitespace-nowrap truncate font-sans ${active ? "text-[#0A2540] font-semibold" : "text-gray-650 font-medium"
+                        }`}>
                         {label}
                     </span>
                 )}
 
                 {(typeof badge === 'number' ? badge > 0 : !!badge) && !collapsed && (
-                    <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-extrabold relative z-10 shrink-0 ${active
-                        ? isDashboard ? "bg-white text-[#6605c7]" : "bg-white/20 text-white border border-white/10"
-                        : "bg-[#6605c7] text-white"
+                    <span className={`px-1.5 py-0.5 rounded-full text-[8.5px] font-bold shrink-0 ${active
+                        ? "bg-[#4F46E5] text-white"
+                        : "bg-gray-200 text-gray-700"
                         }`}>
                         {badge}
                     </span>
                 )}
             </div>
-
-            {/* Collapsed Tooltip */}
-            {/* {collapsed && (
-                <div className="absolute left-16 top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 bg-gray-900 text-white text-[10px] font-bold tracking-wider uppercase rounded-lg opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 z-50 whitespace-nowrap shadow-lg">
-                    {label}
-                    {badge && (
-                        <span className="ml-1.5 px-1 py-0.2 bg-white/20 rounded text-[8px] font-extrabold">
-                            {badge}
-                        </span>
-                    )}
-                </div>
-            )} */}
-        </Link>
+        </Link >
     );
 };
 
@@ -316,13 +292,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
 
     return (
         <div className="bank-portal min-h-screen flex overflow-hidden" style={{
-            background: `
-                radial-gradient(ellipse 80% 60% at 0% 0%, rgba(102, 5, 199, 0.12) 0%, transparent 60%),
-                radial-gradient(ellipse 60% 50% at 100% 0%, rgba(139, 36, 229, 0.08) 0%, transparent 55%),
-                radial-gradient(ellipse 70% 70% at 50% 100%, rgba(79, 70, 229, 0.07) 0%, transparent 60%),
-                radial-gradient(ellipse 50% 40% at 100% 60%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
-                linear-gradient(160deg, #f5f0ff 0%, #faf8ff 40%, #f0f4ff 70%, #f8f5ff 100%)
-            `
+            background: "linear-gradient(180deg, #F8F9FA 0%, #F4F5F7 100%)"
         }}>
             <motion.aside
                 initial={false}
@@ -338,18 +308,16 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 }}
                 className="fixed h-screen z-50 flex flex-col overflow-hidden"
                 style={{
-                    background: 'rgba(255, 255, 255, 0.45)',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
-                    borderRight: '1px solid rgba(255, 255, 255, 0.6)',
-                    boxShadow: '10px 0 30px rgba(0, 0, 0, 0.03)'
+                    background: '#FFFFFF',
+                    borderRight: '1px solid #E5E7EB',
+                    boxShadow: '4px 0 24px rgba(0, 0, 0, 0.02)'
                 }}
             >
                 {/* Logo Section */}
                 <div className="flex items-center gap-3 px-4 py-4 mb-2">
                     <div
-                        className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0 shadow-lg"
-                        style={{ background: 'linear-gradient(135deg, #6605c7, #8b24e5)', boxShadow: '0 6px 16px rgba(102,5,199,0.3)' }}
+                        className="w-9 h-9 rounded-lg flex items-center justify-center text-white shrink-0 shadow-sm"
+                        style={{ background: '#0A2540' }}
                     >
                         <span className="material-symbols-outlined text-lg">account_balance</span>
                     </div>
@@ -363,11 +331,11 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                                 className="flex items-center gap-2 min-w-0 flex-1"
                             >
                                 <div className="flex flex-col min-w-0">
-                                    <span className="text-xl font-extrabold text-gray-900 leading-none tracking-tight" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
-                                        Vidya<span style={{ color: '#6605c7' }}>Bank</span>
+                                    <span className="text-xl font-extrabold text-[#0A2540] leading-none tracking-tight font-sans">
+                                        Vidya<span style={{ color: '#4F46E5' }}>Bank</span>
                                     </span>
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] mt-1.5 opacity-55"
-                                        style={{ color: '#6605c7', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
+                                    <span className="text-[9px] font-bold uppercase tracking-[0.2em] mt-1.5 opacity-70 font-sans"
+                                        style={{ color: '#4F46E5' }}>
                                         Partner Matrix
                                     </span>
                                 </div>
@@ -388,15 +356,15 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                 </div>
 
                 {/* Nav Section */}
-                <nav className="flex-1 px-3 space-y-4 overflow-y-auto no-scrollbar py-2">
+                <nav className="flex-1 px-3 space-y-6 overflow-y-auto no-scrollbar py-2">
                     {categorizedNav.map((cat, idx) => (
-                        <div key={idx} className="space-y-1">
+                        <div key={idx} className="space-y-2.5">
                             {isOpened && (
-                                <p className="px-3 text-[10px] font-black uppercase tracking-[0.2em] text-[#6605c7] opacity-80 mb-2">
+                                <p className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#0A2540]/80 mb-2 font-sans">
                                     {cat.category}
                                 </p>
                             )}
-                            <div className="space-y-0.5">
+                            <div className="space-y-1.5">
                                 {cat.items.map((item) => (
                                     <NavItem
                                         key={item.path}
@@ -444,17 +412,15 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
                     </div>
 
                     <div
-                        className="flex items-center gap-2.5 p-2.5 rounded-xl border"
+                        className="flex items-center gap-2.5 p-2 rounded-lg border border-gray-150"
                         style={{
-                            backgroundColor: 'rgba(102, 5, 199, 0.02)',
-                            borderColor: 'rgba(102, 5, 199, 0.05)',
-                            boxShadow: 'inset 2px 2px 6px rgba(102, 5, 199, 0.08), inset -2px -2px 6px rgba(255, 255, 255, 0.9)',
+                            backgroundColor: '#F8F9FA',
                             justifyContent: isOpened ? undefined : 'center'
                         }}
                     >
                         <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-[10px] shrink-0 shadow-md"
-                            style={{ background: 'linear-gradient(135deg, #6605c7, #8b24e5)' }}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-[10px] shrink-0 shadow-sm"
+                            style={{ background: '#0A2540' }}
                         >
                             {user.firstName?.[0]}{user.lastName?.[0]}
                         </div>
@@ -486,7 +452,7 @@ export default function BankLayout({ children }: { children: React.ReactNode }) 
             >
                 {/* Persistent Top Header (F16 Notification Center & F30 Global Search) */}
                 <header
-                    className="fixed top-0 right-0 z-40 h-[72px] flex items-center justify-between px-8 border-b bg-white/70 backdrop-blur-md border-purple-50 shadow-sm"
+                    className="fixed top-0 right-0 z-40 h-[72px] flex items-center justify-between px-8 border-b bg-white/80 backdrop-blur-md border-gray-200/50 shadow-sm"
                     style={{ left: contentShiftWidth }}
                 >
                     {/* F30 Global Search Bar */}

@@ -145,10 +145,9 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
     const fetchBadgeStats = useCallback(async () => {
         if (!token) return;
         try {
-            const [appStats, conversationsRes, tasksRes]: [any, any, any] = await Promise.all([
+            const [appStats, conversationsRes]: [any, any] = await Promise.all([
                 adminApi.getApplicationStats().catch(() => null),
                 apiFetch<any[]>("/api/chat/conversations").catch(() => null),
-                adminApi.getApplications({ limit: "5", status: "submitted" }).catch(() => null),
             ]);
 
             if (appStats && appStats.data) {
@@ -164,8 +163,21 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
                 setUnreadChatCount(0);
             }
 
-            if (tasksRes && tasksRes.data) {
-                setTasksCount(tasksRes.data.length);
+            if (typeof window !== "undefined") {
+                try {
+                    const saved = localStorage.getItem("vidyaloans_staff_tasks");
+                    if (saved) {
+                        const tasksList = JSON.parse(saved);
+                        const activeTasks = Array.isArray(tasksList)
+                            ? tasksList.filter((t: any) => !t.completed).length
+                            : 0;
+                        setTasksCount(activeTasks);
+                    } else {
+                        setTasksCount(0);
+                    }
+                } catch {
+                    setTasksCount(0);
+                }
             }
         } catch (err) {
             console.error("Failed to load badge stats:", err);

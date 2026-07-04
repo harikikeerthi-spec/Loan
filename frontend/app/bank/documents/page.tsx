@@ -36,6 +36,12 @@ export default function DocumentReviewCenter() {
         if (typeof window !== "undefined") {
             const saved = sessionStorage.getItem("selectedBank") || localStorage.getItem("selectedBank");
             if (saved) setCurrentBankId(saved);
+
+            const params = new URLSearchParams(window.location.search);
+            const appId = params.get("id");
+            if (appId) {
+                setSelectedAppId(appId);
+            }
         }
     }, []);
 
@@ -73,6 +79,12 @@ export default function DocumentReviewCenter() {
             setDocsLoading(prev => ({ ...prev, [appId]: false }));
         }
     };
+
+    useEffect(() => {
+        if (selectedAppId) {
+            fetchAppDocuments(selectedAppId);
+        }
+    }, [selectedAppId]);
 
     const selectApplication = (appId: string) => {
         setSelectedAppId(appId);

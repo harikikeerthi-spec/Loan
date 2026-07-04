@@ -12,22 +12,31 @@ export class FirebaseAuthService {
 
       if (!projectId || !clientEmail || !privateKey) {
         console.warn(
-          '[FirebaseAuthService] Firebase credentials missing in .env. Firebase Authentication will be disabled.'
+          `[FirebaseAuthService] Firebase credentials missing in env. ` +
+          `FIREBASE_PROJECT_ID: ${projectId ? 'PRESENT' : 'MISSING'}, ` +
+          `FIREBASE_CLIENT_EMAIL: ${clientEmail ? 'PRESENT' : 'MISSING'}, ` +
+          `FIREBASE_PRIVATE_KEY: ${privateKey ? 'PRESENT' : 'MISSING'}. ` +
+          `Firebase Authentication will be disabled.`
         );
         return;
       }
 
       try {
-        // Handle the case where the private key might have escaped newlines
-        let formattedPrivateKey = privateKey.replace(/\\n/g, '\n');
+        // Strip surrounding quotes and trim whitespace
+        const cleanProjectId = projectId.trim().replace(/^["']|["']$/g, '');
+        const cleanClientEmail = clientEmail.trim().replace(/^["']|["']$/g, '');
+        
+        // Handle the case where the private key might have escaped newlines and strip surrounding quotes
+        let formattedPrivateKey = privateKey.trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
         // Self-heal key: replace remaining literal backslashes with newlines
         formattedPrivateKey = formattedPrivateKey.replace(/\\/g, '\n');
+        const cleanPrivateKey = formattedPrivateKey;
 
         admin.initializeApp({
           credential: admin.credential.cert({
-            projectId,
-            clientEmail,
-            privateKey: formattedPrivateKey,
+            projectId: cleanProjectId,
+            clientEmail: cleanClientEmail,
+            privateKey: cleanPrivateKey,
           }),
         });
         console.log('[FirebaseAuthService] Firebase Admin initialized successfully.');
@@ -37,7 +46,7 @@ export class FirebaseAuthService {
     }
   }
 
-  private isEnabled(): boolean {
+  isEnabled(): boolean {
     return admin.apps.length > 0;
   }
 
