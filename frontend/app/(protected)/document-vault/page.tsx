@@ -16,6 +16,7 @@ export default function DocumentVaultPage() {
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState<string | null>(null);
     const [profileType, setProfileType] = useState<"salaried" | "self-employed">("salaried");
+    const [coappRelation, setCoappRelation] = useState<"father" | "mother">("father");
     const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
     const [rejections, setRejections] = useState<Record<string, string>>({});
     const [showConsentModal, setShowConsentModal] = useState(false);
@@ -65,6 +66,14 @@ export default function DocumentVaultPage() {
                     setProfileType("salaried");
                 } else if (empType.startsWith("self_employed")) {
                     setProfileType("self-employed");
+                }
+
+                // Sync co-applicant relation toggle
+                const relation = coapp.relation || baseProfile.coApplicantRelation || "father";
+                if (relation === "mother") {
+                    setCoappRelation("mother");
+                } else {
+                    setCoappRelation("father");
                 }
             }
         } catch (e) {
@@ -127,6 +136,38 @@ export default function DocumentVaultPage() {
         }
     };
 
+    const handleCoappRelationChange = async (relation: "father" | "mother") => {
+        setCoappRelation(relation);
+        if (!user?.id) return;
+
+        const baseProfile = profile || user || {};
+        const coapp = baseProfile.coApplicant || {};
+        const updatedCoApplicant = {
+            ...coapp,
+            relation: relation,
+            name: relation === "father" ? (baseProfile.family?.fatherName || "Father") : (baseProfile.family?.motherName || "Mother")
+        };
+
+        const updatedProfile = {
+            ...baseProfile,
+            coApplicant: updatedCoApplicant
+        };
+
+        setProfile(updatedProfile);
+
+        try {
+            console.log("[VAULT] Syncing coapplicant relation toggle to DB:", relation);
+            await onboardingApi.submit(updatedProfile);
+
+            // Dispatch dynamic update event
+            const key = `dashboardDataUpdated_${user.id}`;
+            localStorage.setItem(key, String(Date.now()));
+            window.dispatchEvent(new Event('dashboard-data-changed'));
+        } catch (err) {
+            console.error("Failed to persist coapplicant relation toggle to database:", err);
+        }
+    };
+
     const getActiveProfile = () => {
         const baseProfile = profile || user || {};
 
@@ -137,9 +178,8 @@ export default function DocumentVaultPage() {
         const fatherEmploymentType = family.fatherEmploymentType || baseProfile.fatherEmploymentType || "employed";
         const motherEmploymentType = family.motherEmploymentType || baseProfile.motherEmploymentType || "employed";
 
-        // Ensure coApplicant has a default name and matches profileType
+        // Ensure coApplicant has a default name and matches coappRelation
         const coapp = baseProfile.coApplicant || {};
-        const coappEmploymentType = profileType === "salaried" ? "employed" : "self_employed_business";
         const coappName = coapp.name || baseProfile.coApplicantName || "Co-applicant";
 
         return {
@@ -154,7 +194,8 @@ export default function DocumentVaultPage() {
             coApplicant: {
                 ...coapp,
                 name: coappName,
-                employmentType: coappEmploymentType
+                relation: coappRelation,
+                employmentType: coapp.employmentType || "employed"
             }
         };
     };
@@ -181,7 +222,7 @@ export default function DocumentVaultPage() {
         if (input) input.click();
     };
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, docType: string) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, docType: string, docName?: string) => {
         const file = e.target.files?.[0];
         if (!file || !user?.id) {
             showAlert("Information Missing", "File or user information is missing.", "warning");
@@ -208,6 +249,15 @@ export default function DocumentVaultPage() {
             formData.append('file', file);
             formData.append('userId', user.id);
             formData.append('docType', docType);
+            if (docName) {
+                formData.append('docName', docName);
+            } else {
+                const existing = docs.find(d => d.docType === docType);
+                const name = existing?.docName || existing?.verificationMetadata?.docName;
+                if (name) {
+                    formData.append('docName', name);
+                }
+            }
 
             const token = localStorage.getItem("accessToken");
 
@@ -312,41 +362,142 @@ export default function DocumentVaultPage() {
         }
     };
 
+    const handleAddOtherDocument = async (category: "student" | "coapplicant" | "parent") => {
+        const docName = prompt("Enter the name of the document you want to add:");
+        if (!docName || !docName.trim()) return;
+
+        // Generate safe unique key
+        const sanitized = docName.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').trim();
+        const docType = `${category}_other_${sanitized}_${Date.now()}`;
+
+        // Dynamic file input
+        const fileInput = document.createElement("input");
+        fileInput.type = "file";
+        fileInput.accept = ".pdf,.jpg,.jpeg,.png";
+        
+        fileInput.onchange = async (e: Event) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (!file || !user?.id) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                showAlert("File Too Large", "File size exceeds the 5MB limit.", "warning");
+                return;
+            }
+
+            const validFileTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+            if (!validFileTypes.includes(file.type)) {
+                showAlert("Invalid File Type", "File must be JPG, PNG, or PDF format.", "warning");
+                return;
+            }
+
+            setUploading(docType);
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('userId', user.id);
+                formData.append('docType', docType);
+                formData.append('docName', docName.trim());
+
+                const token = localStorage.getItem("accessToken");
+
+                const response = await fetch(`/api/documents/upload`, {
+                    method: 'POST',
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    let errorMessage = `Server error: ${response.status}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.message || errorData.error || errorMessage;
+                    } catch {}
+                    throw new Error(errorMessage);
+                }
+
+                showAlert("Upload Success", `${docName.trim()} uploaded successfully!`, "success");
+                await loadDocs();
+
+                const key = `dashboardDataUpdated_${user.id}`;
+                localStorage.setItem(key, String(Date.now()));
+                window.dispatchEvent(new Event('dashboard-data-changed'));
+            } catch (e: any) {
+                console.error("Upload error:", e.message || e);
+                showAlert("Upload Failed", e.message || "Unknown error occurred.", "error");
+            } finally {
+                setUploading(null);
+            }
+        };
+
+        fileInput.click();
+    };
+
     // Dynamically calculate requirements
     const activeProfile = getActiveProfile();
     const allRequiredDocs = getProfileDocumentRequirements(activeProfile);
 
-    const studentDocs = allRequiredDocs.filter(req =>
-        !req.type.startsWith('coapplicant_') &&
-        !req.type.startsWith('father_') &&
-        !req.type.startsWith('mother_') &&
-        !req.type.startsWith('parent_')
-    ).map(req => ({
-        type: req.type,
-        label: req.label,
-        icon: getDocIcon(req.type)
-    }));
+    // Merge standard requirements with dynamically uploaded custom documents
+    const studentDocs = [
+        ...allRequiredDocs.filter(req =>
+            !req.type.startsWith('coapplicant_') &&
+            !req.type.startsWith('father_') &&
+            !req.type.startsWith('mother_') &&
+            !req.type.startsWith('parent_')
+        ).map(req => ({
+            type: req.type,
+            label: req.label,
+            icon: getDocIcon(req.type)
+        })),
+        ...docs.filter(doc => doc?.docType && (doc.docType.startsWith('student_other_') || doc.docType.startsWith('other_student_')) && !allRequiredDocs.some(req => req.type === doc.docType))
+            .map(doc => ({
+                type: doc.docType,
+                label: doc.docName || doc.verificationMetadata?.docName || doc.docType.replace(/^(student_other_|other_student_)/, '').replace(/_/g, ' '),
+                icon: "description"
+            }))
+    ];
 
-    const coappDocs = allRequiredDocs.filter(req =>
-        req.type.startsWith('coapplicant_')
-    ).map(req => ({
-        type: req.type,
-        label: req.label,
-        icon: getDocIcon(req.type)
-    }));
+    const coappDocs = [
+        ...allRequiredDocs.filter(req =>
+            req.type.startsWith('coapplicant_')
+        ).map(req => ({
+            type: req.type,
+            label: req.label,
+            icon: getDocIcon(req.type)
+        })),
+        ...docs.filter(doc => doc?.docType && (doc.docType.startsWith('coapplicant_other_') || doc.docType.startsWith('other_coapplicant_')) && !allRequiredDocs.some(req => req.type === doc.docType))
+            .map(doc => ({
+                type: doc.docType,
+                label: doc.docName || doc.verificationMetadata?.docName || doc.docType.replace(/^(coapplicant_other_|other_coapplicant_)/, '').replace(/_/g, ' '),
+                icon: "description"
+            }))
+    ];
 
-    const parentDocs = allRequiredDocs.filter(req =>
-        req.type.startsWith('father_') ||
-        req.type.startsWith('mother_') ||
-        req.type.startsWith('parent_')
-    ).map(req => ({
-        type: req.type,
-        label: req.label,
-        icon: getDocIcon(req.type)
-    }));
+    const parentDocs = [
+        ...allRequiredDocs.filter(req =>
+            req.type.startsWith('father_') ||
+            req.type.startsWith('mother_') ||
+            req.type.startsWith('parent_')
+        ).map(req => ({
+            type: req.type,
+            label: req.label,
+            icon: getDocIcon(req.type)
+        })),
+        ...docs.filter(doc => doc?.docType && (doc.docType.startsWith('parent_other_') || doc.docType.startsWith('other_parent_')) && !allRequiredDocs.some(req => req.type === doc.docType))
+            .map(doc => ({
+                type: doc.docType,
+                label: doc.docName || doc.verificationMetadata?.docName || doc.docType.replace(/^(parent_other_|other_parent_)/, '').replace(/_/g, ' '),
+                icon: "description"
+            }))
+    ];
 
     const staffRequestedDocs = docs
-        .filter((doc) => doc?.docType && !allRequiredDocs.some((req) => req.type === doc.docType))
+        .filter((doc) => 
+            doc?.docType && 
+            !allRequiredDocs.some((req) => req.type === doc.docType) &&
+            !doc.docType.startsWith('student_other_') && !doc.docType.startsWith('other_student_') &&
+            !doc.docType.startsWith('coapplicant_other_') && !doc.docType.startsWith('other_coapplicant_') &&
+            !doc.docType.startsWith('parent_other_') && !doc.docType.startsWith('other_parent_')
+        )
         .map((doc) => ({
             type: doc.docType,
             label: getDocumentRequirementName(doc.docType, doc.docName || doc.verificationMetadata?.docName || doc.docType, activeProfile),
@@ -355,14 +506,25 @@ export default function DocumentVaultPage() {
 
     const uploadedCount = docs.filter(d => d.uploaded).length;
 
-    const renderDocGroup = (title: string, icon: string, docList: any[]) => (
+    const renderDocGroup = (title: string, icon: string, docList: any[], onAddOther?: () => void) => (
         <div className="mb-10">
-            <h2 className="text-[13px] font-bold mb-5 flex items-center gap-2 text-gray-900 uppercase tracking-wider">
-                <div className="w-8 h-8 rounded-lg bg-[#6605c7]/[0.05] flex items-center justify-center">
-                    <span className="material-symbols-outlined text-[18px] text-[#6605c7]">{icon}</span>
-                </div>
-                {title}
-            </h2>
+            <div className="flex justify-between items-center mb-5">
+                <h2 className="text-[13px] font-bold flex items-center gap-2 text-gray-900 uppercase tracking-wider">
+                    <div className="w-8 h-8 rounded-lg bg-[#6605c7]/[0.05] flex items-center justify-center">
+                        <span className="material-symbols-outlined text-[18px] text-[#6605c7]">{icon}</span>
+                    </div>
+                    {title}
+                </h2>
+                {onAddOther && (
+                    <button
+                        onClick={onAddOther}
+                        className="px-4 py-2 bg-[#6605c7] hover:bg-[#5504a6] text-white text-[11px] font-bold rounded-xl transition-all flex items-center gap-2 shadow-sm shadow-purple-500/10 active:scale-95 animate-fade-in"
+                    >
+                        <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                        Add Other Documents
+                    </button>
+                )}
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {docList.map((req) => {
                     const existing = docs.find(d => d.docType === req.type);
@@ -432,7 +594,7 @@ export default function DocumentVaultPage() {
                                 accept=".pdf,.jpg,.jpeg,.png"
                             />
 
-                            {isUploaded ? (
+                             {isUploaded ? (
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => handleView(req.type)}
@@ -440,14 +602,16 @@ export default function DocumentVaultPage() {
                                     >
                                         <span className="material-symbols-outlined text-[16px]">visibility</span> View
                                     </button>
-                                    <button
-                                        onClick={() => handleDelete(req.type)}
-                                        disabled={!!uploading}
-                                        className="w-9 h-9 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-100 transition-all border border-red-100"
-                                        title="Delete Document"
-                                    >
-                                        <span className="material-symbols-outlined text-[16px]">delete</span>
-                                    </button>
+                                    {!isVerified && (
+                                        <button
+                                            onClick={() => handleDelete(req.type)}
+                                            disabled={!!uploading}
+                                            className="w-9 h-9 bg-red-50 text-red-500 rounded-lg flex items-center justify-center hover:bg-red-100 transition-all border border-red-100"
+                                            title="Delete Document"
+                                        >
+                                            <span className="material-symbols-outlined text-[16px]">delete</span>
+                                        </button>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="space-y-2">
@@ -522,7 +686,7 @@ export default function DocumentVaultPage() {
     return (
         <div className="min-h-screen bg-transparent">
             <Navbar />
-            <div className="max-w-6xl mx-auto px-6 pt-24 pb-16">
+            <div className="max-w-6xl mx-auto px-6 pt-30 pb-16">
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-12">
                     <div className="flex items-center gap-4">
                         <Link href="/dashboard" className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-gray-100 shadow-sm hover:border-gray-200 transition-all">
@@ -537,16 +701,16 @@ export default function DocumentVaultPage() {
                     <div className="flex flex-wrap items-center gap-4">
                         <div className="flex bg-gray-50 p-1.5 rounded-2xl border border-gray-100">
                             <button
-                                onClick={() => handleProfileTypeChange("salaried")}
-                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${profileType === "salaried" ? "bg-white text-[#6605c7] shadow-sm border border-gray-100" : "text-gray-400 hover:text-gray-600"}`}
+                                onClick={() => handleCoappRelationChange("father")}
+                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${coappRelation === "father" ? "bg-white text-[#6605c7] shadow-sm border border-gray-100" : "text-gray-400 hover:text-gray-600"}`}
                             >
-                                Salaried
+                                Co-app: Father
                             </button>
                             <button
-                                onClick={() => handleProfileTypeChange("self-employed")}
-                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${profileType === "self-employed" ? "bg-white text-[#6605c7] shadow-sm border border-gray-100" : "text-gray-400 hover:text-gray-600"}`}
+                                onClick={() => handleCoappRelationChange("mother")}
+                                className={`px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${coappRelation === "mother" ? "bg-white text-[#6605c7] shadow-sm border border-gray-100" : "text-gray-400 hover:text-gray-600"}`}
                             >
-                                Self-Employed
+                                Co-app: Mother
                             </button>
                         </div>
 
@@ -660,9 +824,9 @@ export default function DocumentVaultPage() {
                     </div>
                 ) : (
                     <>
-                        {renderDocGroup("Student Documents", "person", studentDocs)}
-                        {renderDocGroup(`Financial Co-Applicant (${profileType === "salaried" ? "Salaried" : "Self-Employed"})`, "account_balance", coappDocs)}
-                        {renderDocGroup("Father & Mother Documents", "family_restroom", parentDocs)}
+                        {renderDocGroup("Student Documents", "person", studentDocs, () => handleAddOtherDocument("student"))}
+                        {renderDocGroup("Financial Co-Applicant", "account_balance", coappDocs, () => handleAddOtherDocument("coapplicant"))}
+                        {renderDocGroup("Father & Mother Documents", "family_restroom", parentDocs, () => handleAddOtherDocument("parent"))}
                         {staffRequestedDocs.length > 0 && renderDocGroup("Staff Requested Documents", "assignment", staffRequestedDocs)}
                     </>
                 )}

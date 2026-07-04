@@ -53,7 +53,7 @@ export function getStudentDocumentRequirements(student: any = {}): DocumentRequi
     requirement("IELTS / TOEFL / PTE Score Card", "english_test", hasValue(tests.ielts) || hasValue(tests.toefl) || hasValue(tests.pte), "academic"),
     requirement("GRE / GMAT / SAT Score Card", "aptitude_test", hasValue(tests.gre) || hasValue(tests.gmat) || hasValue(tests.sat), "academic"),
     requirement("Work Experience Letters", "work_letters", Array.isArray(workExperience) && workExperience.some((exp) => hasValue(exp?.employer)), "academic"),
-    requirement("Resume / CV", "resume", true, "academic"),
+    requirement("Degree Certificate", "degree_certificate", true, "academic"),
   ].filter((doc) => doc.required);
 }
 
@@ -65,26 +65,8 @@ export function getPersonDocumentRequirements(
   const docs: DocumentRequirement[] = [];
   const name = personName || (personType === "coapplicant" ? "Co-applicant" : personType[0].toUpperCase() + personType.slice(1));
 
-  docs.push(requirement(`${name}'s Aadhar Card`, `${personType}_aadhar`, employmentType !== "expired", "identity"));
-  docs.push(requirement(`${name}'s PAN Card`, `${personType}_pan`, employmentType !== "expired", "identity"));
-
-  if (employmentType === "employed") {
-    docs.push(requirement(`${name} - Last 3 months Salary Slips`, `${personType}_salary_slips`, true, "financial"));
-    docs.push(requirement(`${name} - Last 6 months Bank Statements`, `${personType}_bank_statements`, true, "financial"));
-  } else if (employmentType === "self_employed_business" || employmentType === "self_employed_professional") {
-    docs.push(requirement(`${name} - Business Registration/License`, `${personType}_business_license`, true, "financial"));
-    docs.push(requirement(`${name} - Labour License (if applicable)`, `${personType}_labour_license`, false, "financial"));
-    docs.push(requirement(`${name} - Udyam Certificate`, `${personType}_udyam_cert`, false, "financial"));
-    docs.push(requirement(`${name} - Last 6 months Bank Statements`, `${personType}_bank_statements`, true, "financial"));
-    docs.push(requirement(`${name} - Last 2 years ITR (Income Tax Returns)`, `${personType}_itr`, true, "financial"));
-    docs.push(requirement(`${name} - Balance Sheet & P&L Statement`, `${personType}_balance_sheet`, false, "financial"));
-  } else if (employmentType === "retired") {
-    docs.push(requirement(`${name} - Retirement Certificate/Pension Document`, `${personType}_retirement_cert`, true, "financial"));
-    docs.push(requirement(`${name} - Last 6 months Bank Statements`, `${personType}_bank_statements`, true, "financial"));
-  } else if (employmentType === "expired" || employmentType === "deceased") {
-    docs.push(requirement(`${name}'s Death Certificate`, `${personType}_death_certificate`, true, "identity"));
-    docs.push(requirement(`${name}'s Patta / Passbook Document`, `${personType}_patta_passbook`, true, "financial"));
-  }
+  docs.push(requirement(`${name}'s Aadhar Card`, `${personType}_aadhar`, true, "identity"));
+  docs.push(requirement(`${name}'s PAN Card`, `${personType}_pan`, true, "identity"));
 
   return docs;
 }
@@ -100,17 +82,13 @@ export function getProfileDocumentRequirements(profile: any = {}): DocumentRequi
 
   const docs: DocumentRequirement[] = [...getStudentDocumentRequirements(student)];
 
-  if (hasValue(fatherName) || hasValue(family.fatherEmploymentType)) {
-    docs.push(...getPersonDocumentRequirements(family.fatherEmploymentType || profile.fatherEmploymentType || "", fatherName || "Father", "father"));
-  }
+  // Always collect Father and Mother documents
+  docs.push(...getPersonDocumentRequirements(family.fatherEmploymentType || profile.fatherEmploymentType || "", fatherName || "Father", "father"));
+  docs.push(...getPersonDocumentRequirements(family.motherEmploymentType || profile.motherEmploymentType || "", motherName || "Mother", "mother"));
 
-  if (hasValue(motherName) || hasValue(family.motherEmploymentType)) {
-    docs.push(...getPersonDocumentRequirements(family.motherEmploymentType || profile.motherEmploymentType || "", motherName || "Mother", "mother"));
-  }
-
-  if (hasValue(coApplicantName) || hasValue(coApplicant.employmentType) || hasValue(profile.coApplicantEmploymentType)) {
+  // Collect Co-applicant documents if configured
+  if (hasValue(coApplicantName) || hasValue(coApplicant.employmentType) || hasValue(profile.coApplicantEmploymentType) || hasValue(coApplicant.relation)) {
     docs.push(...getPersonDocumentRequirements(coApplicant.employmentType || profile.coApplicantEmploymentType || "", coApplicantName || "Co-applicant", "coapplicant"));
-    docs.push(requirement("Relation Proof with Applicant", "coapplicant_relation", true, "identity"));
   }
 
   const seen = new Set<string>();

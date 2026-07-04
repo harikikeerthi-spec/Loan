@@ -672,6 +672,8 @@ export class UsersService {
       address?: string;
       notes?: string;
       intakeSeason?: string;
+      pincode?: string;
+      admissionStatus?: string;
     },
   ) {
     const universityName = data.universityName || data.targetUniversity || data.university || null;
@@ -727,6 +729,42 @@ export class UsersService {
       .single();
 
     if (error) throw error;
+
+    // Log complete application lead details to separate ApplyLoan table
+    try {
+      console.log(`[UsersService] Logging details to separate ApplyLoan table for applicationNumber=${applicationNumber}`);
+      await this.db
+        .from('ApplyLoan')
+        .insert({
+          userId,
+          applicationNumber,
+          bank: data.bank || null,
+          loanType: data.loanType || null,
+          amount: data.amount || null,
+          courseType: data.courseType || null,
+          country: data.country || null,
+          university: data.university || null,
+          annualFee: data.annualFee ? parseFloat(String(data.annualFee).replace(/,/g, '')) : null,
+          livingCost: data.livingCost ? parseFloat(String(data.livingCost).replace(/,/g, '')) : null,
+          coApplicant: data.coApplicant || null,
+          income: data.income ? parseFloat(String(data.income).replace(/,/g, '')) : null,
+          collateral: data.collateral || null,
+          firstName: data.firstName || null,
+          lastName: data.lastName || null,
+          email: data.email || null,
+          phone: data.phone || null,
+          dateOfBirth: data.dateOfBirth || null,
+          address: data.address || null,
+          pincode: data.pincode || null,
+          notes: data.notes || null,
+          admissionStatus: data.admissionStatus || null,
+          intakeSeason: data.intakeSeason || null,
+          createdAt: now,
+          updatedAt: now,
+        });
+    } catch (dbErr) {
+      console.error('Failed to log to separate ApplyLoan table:', dbErr);
+    }
 
     // Sync target intake and destination to User profile
     if (userId && (data.intakeSeason || data.country)) {
@@ -807,6 +845,13 @@ export class UsersService {
     }
 
     return application;
+  }
+
+  async getApplyLoanApplications() {
+    return this.db
+      .from('ApplyLoan')
+      .select('*')
+      .order('createdAt', { ascending: false });
   }
 
   async getUserApplications(userId: string) {
