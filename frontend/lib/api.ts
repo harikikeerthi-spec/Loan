@@ -200,8 +200,16 @@ export function getToken(): string | null {
     return localStorage.getItem("accessToken");
 }
 
-function authHeaders(): HeadersInit {
-    const token = getToken();
+function authHeaders(url?: string): HeadersInit {
+    // Exclude Authorization header for public endpoints to avoid gateway/proxy 401s from stale local tokens
+    const isPublic = url && (
+        url.includes('/auth/send-otp') ||
+        url.includes('/auth/verify-otp') ||
+        url.includes('/auth/firebase') ||
+        url.includes('/auth/check-user/')
+    );
+
+    const token = isPublic ? null : getToken();
     const headers: Record<string, string> = token
         ? { "Content-Type": "application/json", Authorization: `Bearer ${token}` }
         : { "Content-Type": "application/json" };
@@ -232,7 +240,7 @@ export async function apiFetch<T>(url: string, options: RequestInit = {}): Promi
     const res = await fetch(url, {
         ...options,
         headers: {
-            ...authHeaders(),
+            ...authHeaders(url),
             ...options.headers,
         },
     });

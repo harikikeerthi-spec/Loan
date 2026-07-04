@@ -113,13 +113,19 @@ const getNotificationStyle = (type: string) => {
 };
 
 const formatTime = (timestamp: string, referenceDate: Date = new Date()) => {
-  const date = new Date(timestamp);
+  if (!timestamp) return "";
+  let safeTimestamp = timestamp;
+  if (!timestamp.endsWith("Z") && !timestamp.includes("+") && !/-\d{2}:\d{2}$/.test(timestamp)) {
+    safeTimestamp = timestamp + "Z";
+  }
+  const date = new Date(safeTimestamp);
   const originalTimeStr = date.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    hour12: true
-  });
+    hour12: true,
+    timeZone: 'Asia/Kolkata'
+  }) + ' IST';
 
   const diffMs = referenceDate.getTime() - date.getTime();
   let relative = "";
@@ -145,7 +151,8 @@ const formatTime = (timestamp: string, referenceDate: Date = new Date()) => {
       relative = date.toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
-        year: 'numeric'
+        year: 'numeric',
+        timeZone: 'Asia/Kolkata'
       });
     }
   }
