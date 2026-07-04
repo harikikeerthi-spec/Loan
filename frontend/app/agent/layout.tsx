@@ -27,8 +27,13 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
         { section: "analytics", icon: "monitoring", label: "Performance" },
         { section: "sub-agents", icon: "share_reviews", label: "Sub-Agents" },
         { section: "training", icon: "school", label: "LMS & Training" },
+        { section: "alumni", icon: "school", label: "Alumni Referrals" },
         { section: "chat-staff", icon: "support_agent", label: "Staff RM Line" },
         { section: "chat-student", icon: "forum", label: "Student Line" },
+        { section: "qr-code", icon: "qr_code_2", label: "QR Lead Capture" },
+        { section: "tracking-links", icon: "link", label: "Tracking Links" },
+        { section: "whatsapp-bot", icon: "chat_bubble", label: "WhatsApp Bot" },
+        { section: "balance-transfer", icon: "swap_horiz", label: "Balance Transfer" },
     ];
 
     // Determine current section heading name
@@ -86,7 +91,8 @@ function AgentLayoutInner({ children }: { children: React.ReactNode }) {
                                 <React.Fragment key={item.section}>
                                     {idx === 3 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Backoffice</p>}
                                     {idx === 7 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Grow Network</p>}
-                                    {idx === 10 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Live Support</p>}
+                                    {idx === 11 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Live Support</p>}
+                                    {idx === 13 && !sidebarCollapsed && <p className="text-[9px] font-black text-[#6605c7]/40 uppercase tracking-[0.25em] px-4 pt-2 mb-1">Smart Tools</p>}
                                     
                                     <Link 
                                         href={`/agent/${item.section}`} 

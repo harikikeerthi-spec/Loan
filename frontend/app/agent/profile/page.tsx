@@ -14,7 +14,7 @@ export default function AgentProfilePage() {
     const { showToast } = useAgent();
     
     // Tab State
-    const [activeTab, setActiveTab] = useState<"details" | "kyc" | "bank" | "agreements">("details");
+    const [activeTab, setActiveTab] = useState<"details" | "kyc" | "bank" | "agreements" | "notifications">("details");
     
     // Profile Data State
     const [loading, setLoading] = useState(true);
@@ -199,7 +199,8 @@ export default function AgentProfilePage() {
         { id: "details" as const, label: "Business Details" },
         { id: "kyc" as const, label: "KYC Documents" },
         { id: "bank" as const, label: "Payout Bank Account" },
-        { id: "agreements" as const, label: "Partnership Agreements" }
+        { id: "agreements" as const, label: "Partnership Agreements" },
+        { id: "notifications" as const, label: "Notification Preferences" }
     ];
 
     return (
@@ -492,6 +493,66 @@ export default function AgentProfilePage() {
                                     No legal agreements have been loaded yet.
                                 </p>
                             )}
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === "notifications" && (
+                    <div className="space-y-6 text-left max-w-xl">
+                        <h3 className="font-display font-black text-lg text-gray-900 uppercase tracking-tight">Notification Channels</h3>
+                        <p className="text-xs text-gray-455">Select how and when you want to receive transaction updates and alerts.</p>
+                        
+                        <div className="space-y-4">
+                            <div className="p-6 bg-gray-50 border border-gray-100 rounded-2xl space-y-4">
+                                <h4 className="font-bold text-gray-805 text-sm">WhatsApp Alerts</h4>
+                                <div className="space-y-3">
+                                    <label className="flex items-center gap-3 text-xs font-bold text-gray-700 cursor-pointer">
+                                        <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-[#6605c7] focus:ring-[#6605c7]" />
+                                        <span>Welcome Message & Onboarding (Immediate)</span>
+                                    </label>
+                                    <label className="flex items-center gap-3 text-xs font-bold text-gray-700 cursor-pointer">
+                                        <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-[#6605c7] focus:ring-[#6605c7]" />
+                                        <span>Daily SLA Breach Digest (Every morning)</span>
+                                    </label>
+                                    <label className="flex items-center gap-3 text-xs font-bold text-gray-700 cursor-pointer">
+                                        <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-[#6605c7] focus:ring-[#6605c7]" />
+                                        <span>Query Escalation Alerts (When bank flags an issue)</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="p-6 bg-gray-50 border border-gray-100 rounded-2xl space-y-4">
+                                <h4 className="font-bold text-gray-850 text-sm">Email Reports</h4>
+                                <div className="space-y-3">
+                                    <label className="flex items-center gap-3 text-xs font-bold text-gray-700 cursor-pointer">
+                                        <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-[#6605c7] focus:ring-[#6605c7]" />
+                                        <span>Monthly Commission Ledger & Invoices</span>
+                                    </label>
+                                    <label className="flex items-center gap-3 text-xs font-bold text-gray-700 cursor-pointer">
+                                        <input type="checkbox" className="w-4 h-4 rounded text-[#6605c7] focus:ring-[#6605c7]" />
+                                        <span>Marketing Updates & Milestones</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="p-6 bg-gray-50 border border-gray-100 rounded-2xl space-y-4">
+                                <h4 className="font-bold text-gray-805 text-sm">SMS Gateway</h4>
+                                <div className="space-y-3">
+                                    <label className="flex items-center gap-3 text-xs font-bold text-gray-700 cursor-pointer">
+                                        <input type="checkbox" defaultChecked className="w-4 h-4 rounded text-[#6605c7] focus:ring-[#6605c7]" />
+                                        <span>Critical Bank Alerts & OTPs</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-gray-50 flex justify-end">
+                            <button
+                                onClick={() => showToast("Notification settings saved successfully!", "success")}
+                                className="px-6 py-3.5 bg-[#6605c7] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#6605c7]/95 transition-all shadow-sm"
+                            >
+                                Save Preferences
+                            </button>
                         </div>
                     </div>
                 )}

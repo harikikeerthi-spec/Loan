@@ -46,6 +46,18 @@ export class AgentFeaturesController {
     return { success: true, data };
   }
 
+  @Post('tasks')
+  async createTask(@Req() req: any, @Body() body: any) {
+    const agentId = req.user.id;
+    return this.agentService.createTask(agentId, body);
+  }
+
+  @Post('tasks/:id/complete')
+  async completeTask(@Req() req: any, @Param('id') id: string, @Body() body: { completed: boolean }) {
+    const agentId = req.user.id;
+    return this.agentService.completeTask(agentId, id, body.completed);
+  }
+
   @Get('tasks/:id')
   async getTaskById(@Req() req: any, @Param('id') id: string) {
     const agentId = req.user.id;
@@ -134,6 +146,12 @@ export class AgentFeaturesController {
     const agentId = req.user.id;
     const data = await this.agentService.getBtLeads(agentId);
     return { success: true, data };
+  }
+
+  @Post('bt-leads')
+  async createBtLead(@Req() req: any, @Body() body: any) {
+    const agentId = req.user.id;
+    return this.agentService.createBtLead(agentId, body);
   }
 
   // ─── Alumni ───

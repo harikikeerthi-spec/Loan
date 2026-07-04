@@ -8,7 +8,8 @@ export default function AgentTraining() {
         lmsModules,
         botMessages,
         botInput, setBotInput,
-        handleAskBot, showToast
+        handleAskBot, showToast,
+        handleCompleteModule
     } = useAgent();
 
     return (
@@ -32,7 +33,7 @@ export default function AgentTraining() {
                                         {m.completed ? (
                                             <span className="text-emerald-600 font-bold flex items-center gap-1"><span className="material-symbols-outlined text-sm">verified</span> Passed ({m.score}%)</span>
                                         ) : (
-                                            <button onClick={() => showToast(`Module launched. Simulation starting.`, "info")} className="px-4 py-2 bg-indigo-50 hover:bg-[#6605c7] hover:text-white text-[#6605c7] font-black uppercase tracking-wider rounded-xl transition-all">Launch</button>
+                                            <button onClick={() => handleCompleteModule(m.id)} className="px-4 py-2 bg-indigo-50 hover:bg-[#6605c7] hover:text-white text-[#6605c7] font-black uppercase tracking-wider rounded-xl transition-all">Launch</button>
                                         )}
                                     </div>
                                 </div>

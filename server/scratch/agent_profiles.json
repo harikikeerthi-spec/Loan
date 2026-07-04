@@ -1,0 +1,13 @@
+{
+  "VL-STU-2026-00016": {
+    "kycStatus": "pending",
+    "kycSubmittedAt": "2026-07-02T07:59:14.221Z",
+    "businessName": "Shannu DSA Agency",
+    "gstin": "36AAAAA1111A1Z1",
+    "bankAccount": {
+      "accountNumber": "9876543210123",
+      "bankName": "IDFC FIRST Bank",
+      "ifscCode": "IDFB0040101"
+    }
+  }
+}

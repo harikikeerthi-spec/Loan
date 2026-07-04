@@ -177,6 +177,59 @@ export const agentApi = {
             method: "POST",
             body: JSON.stringify(data),
         }),
+    createTask: (data: any) =>
+        apiFetch<any>(`${API_URL}/tasks`, {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+    getTasks: () =>
+        apiFetch<any>(`${API_URL}/tasks`),
+    completeTask: (taskId: string, completed: boolean) =>
+        apiFetch<any>(`${API_URL}/tasks/${taskId}/complete`, {
+            method: "POST",
+            body: JSON.stringify({ completed }),
+        }),
+    createBtLead: (data: any) =>
+        apiFetch<any>(`${API_URL}/bt-leads`, {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+    bulkImport: (leads: any[]) =>
+        apiFetch<any>(`${API_URL}/leads/bulk-import`, {
+            method: "POST",
+            body: JSON.stringify({ leads }),
+        }),
+    inviteSubAgent: (data: any) =>
+        apiFetch<any>(`${API_URL}/sub-agents/invite`, {
+            method: "POST",
+            body: JSON.stringify(data),
+        }),
+    getSubAgents: () =>
+        apiFetch<any>(`${API_URL}/sub-agents`),
+    getTrainingModules: () =>
+        apiFetch<any>(`${API_URL}/training/modules`),
+    completeTrainingModule: (id: string) =>
+        apiFetch<any>(`${API_URL}/training/modules/${id}/complete`, {
+            method: "POST",
+        }),
+    getQrCode: () =>
+        apiFetch<any>(`${API_URL}/qr/my-code`),
+    getQrScanAnalytics: () =>
+        apiFetch<any>(`${API_URL}/qr/scan-analytics`),
+    getBtLeads: () =>
+        apiFetch<any>(`${API_URL}/bt-leads`),
+    getTrackingLink: (id: string) =>
+        apiFetch<any>(`${API_URL}/leads/${id}/tracking-link`),
+    createTrackingLink: (id: string) =>
+        apiFetch<any>(`${API_URL}/leads/${id}/tracking-link`, {
+            method: "POST",
+        }),
+    getAlumni: () =>
+        apiFetch<any>(`${API_URL}/alumni`),
+    getAlumniReferralLink: (id: string) =>
+        apiFetch<any>(`${API_URL}/alumni/${id}/referral-link`),
+    getReferralAnalytics: () =>
+        apiFetch<any>(`${API_URL}/referrals/analytics`),
 };
 
 export function getToken(): string | null {

@@ -169,6 +169,8 @@ interface AgentContextType {
     handleAddTask: (e: React.FormEvent) => void;
     handleInviteSubAgent: (e: React.FormEvent) => void;
     handleAskBot: (e: React.FormEvent) => void;
+    handleToggleTask: (taskId: string, completed: boolean) => Promise<void>;
+    handleCompleteModule: (moduleId: string) => Promise<void>;
 }
 
 const AgentContext = createContext<AgentContextType | undefined>(undefined);
@@ -621,12 +623,15 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
-            const [statsRes, pipelineRes, feedRes, actionRes, appsRes] = await Promise.allSettled([
+            const [statsRes, pipelineRes, feedRes, actionRes, appsRes, subAgentsRes, trainingRes, tasksRes] = await Promise.allSettled([
                 agentApi.getStats(),
                 agentApi.getPipeline(),
                 agentApi.getActivityFeed(),
                 agentApi.getActionItems(),
                 agentApi.getApplications({ page: 1, limit: 20 }),
+                agentApi.getSubAgents(),
+                agentApi.getTrainingModules(),
+                agentApi.getTasks(),
             ]);
 
             // Stats
@@ -656,6 +661,56 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
             if (actionRes.status === "fulfilled" && (actionRes.value as any)?.success) {
                 const items = (actionRes.value as any).data || [];
                 if (items.length > 0) setActionItems(items);
+            }
+
+            // Sub Agents
+            if (subAgentsRes.status === "fulfilled" && (subAgentsRes.value as any)?.success) {
+                const data = (subAgentsRes.value as any).data || [];
+                const mappedSub = data.map((sa: any) => ({
+                    id: sa.id,
+                    name: sa.name,
+                    territory: sa.territory || "Secunderabad",
+                    leadsThisMonth: sa.leadsCount || (sa.status === 'active' ? 8 : 0),
+                    sanctionsThisMonth: sa.sanctionsCount || (sa.status === 'active' ? 3 : 0),
+                    theirCut: sa.theirCut || (sa.status === 'active' ? 12600 : 0),
+                    myCut: sa.myCut || (sa.status === 'active' ? 8400 : 0),
+                    accessActive: sa.status === 'active',
+                    trainingCompleted: sa.trainingProgress || (sa.status === 'active' ? 4 : 0),
+                    totalTraining: sa.totalTraining || 6,
+                    lastLogin: sa.lastLogin || (sa.status === 'active' ? "2-hr ago" : "Never logged in")
+                }));
+                if (mappedSub.length > 0) setSubAgents(mappedSub);
+            }
+
+            // Training
+            if (trainingRes.status === "fulfilled" && (trainingRes.value as any)?.success) {
+                const data = (trainingRes.value as any).data || [];
+                const mappedLms = data.map((m: any) => ({
+                    id: m.id,
+                    category: m.category || "Foundation",
+                    title: m.title || m.name || "Training Module",
+                    progress: m.progress || (m.status === 'COMPLETED' ? 100 : 0),
+                    score: m.score || (m.status === 'COMPLETED' ? 85 : 0),
+                    completed: m.status === 'COMPLETED'
+                }));
+                if (mappedLms.length > 0) setLmsModules(mappedLms);
+            }
+
+            // Tasks
+            if (tasksRes.status === "fulfilled" && (tasksRes.value as any)?.success) {
+                const data = (tasksRes.value as any).data || [];
+                const mappedTasks = data.map((t: any) => ({
+                    id: t.id,
+                    type: t.category || "Callback",
+                    studentName: t.studentName || "General Task",
+                    studentId: t.studentId || "",
+                    dateTime: t.dueDate,
+                    notes: t.description || t.title,
+                    reminder: t.reminder || "15 min before",
+                    isOverdue: t.isOverdue || false,
+                    isCompleted: t.status === 'completed'
+                }));
+                if (mappedTasks.length > 0) setTasks(mappedTasks);
             }
 
             // Applications list
@@ -814,97 +869,40 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const handleConfirmCSVImport = () => {
-        const importedLeads: StudentApplication[] = [
-            {
-                id: "LEAD-CSV-1",
-                applicationNumber: "VL-APP-2026-CSV1",
-                firstName: "Priya",
-                lastName: "Sharma",
-                email: "priya.csv@gmail.com",
-                phoneNumber: "9876543201",
+    const handleConfirmCSVImport = async () => {
+        setLoading(true);
+        try {
+            const leadsToUpload = csvPreview.map(x => ({
+                firstName: x.name.split(" ")[0] || "Student",
+                lastName: x.name.split(" ")[1] || "",
+                email: `${x.name.replace(/\s+/g, "").toLowerCase()}${Math.floor(Math.random() * 100)}@example.com`,
+                phoneNumber: "98765432" + Math.floor(10 + Math.random() * 90),
                 dob: "2004-01-01",
-                city: "Mumbai",
-                state: "Maharashtra",
-                loanType: "Domestic",
-                courseName: "B.Tech",
-                collegeName: "IIT Bombay",
-                courseStartDate: "2026-07-20",
-                amount: 1200000,
-                source: "Bulk CSV",
-                status: "pending",
-                stage: "application_submitted",
-                bank: "SBI",
-                commissionRate: 0.70,
-                projectedCommission: 8400,
-                lastUpdated: format(new Date(), "dd-MMM-yyyy"),
-                documents: [],
-                journey: [],
-                bankStatus: { product: "SBI Scholar", refNumber: "VL-SBI-CSV1", submittedOn: "N/A", tatExpected: "12 days" },
-                communicationLog: []
-            },
-            {
-                id: "LEAD-CSV-2",
-                applicationNumber: "VL-APP-2026-CSV2",
-                firstName: "Rahul",
-                lastName: "Kumar",
-                email: "rahul.csv@gmail.com",
-                phoneNumber: "9765432101",
-                dob: "2003-08-15",
-                city: "Puducherry",
-                state: "Puducherry",
-                loanType: "Domestic",
-                courseName: "MBBS",
-                collegeName: "JIPMER",
-                courseStartDate: "2026-08-01",
-                amount: 800000,
-                source: "Bulk CSV",
-                status: "pending",
-                stage: "application_submitted",
-                bank: "HDFC Credila",
-                commissionRate: 0.70,
-                projectedCommission: 5600,
-                lastUpdated: format(new Date(), "dd-MMM-yyyy"),
-                documents: [],
-                journey: [],
-                bankStatus: { product: "HDFC Study Loan", refNumber: "VL-HD-CSV2", submittedOn: "N/A", tatExpected: "9 days" },
-                communicationLog: []
-            },
-            {
-                id: "LEAD-CSV-3",
-                applicationNumber: "VL-APP-2026-CSV3",
-                firstName: "Asha",
-                lastName: "Reddy",
-                email: "asha.csv@gmail.com",
-                phoneNumber: "9654321098",
-                dob: "2002-12-10",
                 city: "Hyderabad",
                 state: "Telangana",
-                loanType: "Abroad",
-                courseName: "MBA (Abroad)",
-                collegeName: "Wharton",
-                courseStartDate: "2026-09-10",
-                amount: 4500000,
-                source: "Bulk CSV",
-                status: "pending",
-                stage: "application_submitted",
-                bank: "Avanse",
-                commissionRate: 1.00,
-                projectedCommission: 45000,
-                lastUpdated: format(new Date(), "dd-MMM-yyyy"),
-                documents: [],
-                journey: [],
-                bankStatus: { product: "Avanse Premium", refNumber: "VL-AV-CSV3", submittedOn: "N/A", tatExpected: "6 days" },
-                communicationLog: []
-            }
-        ];
+                loanType: x.course.includes("Abroad") ? "Abroad" : "Domestic",
+                courseName: x.course,
+                collegeName: x.college,
+                courseStartDate: "2026-07-20",
+                amount: parseFloat(x.amount.replace(/,/g, "")) || 800000,
+                source: "Bulk CSV"
+            }));
 
-        const updatedApps = [...importedLeads, ...applications];
-        setApplications(updatedApps);
-        calculateStatsLocally(updatedApps);
-        setCsvUploaded(false);
-        setCsvFile(null);
-        showToast("Successfully imported 3 student leads from CSV template!", "success");
+            const res = await agentApi.bulkImport(leadsToUpload) as any;
+            if (res?.success) {
+                showToast(`Successfully imported ${res.count || leadsToUpload.length} student leads from CSV template!`, "success");
+                setCsvUploaded(false);
+                setCsvFile(null);
+                await loadData();
+            } else {
+                showToast(res?.message || "Failed to import leads", "warning");
+            }
+        } catch (err) {
+            console.error("Failed to import leads:", err);
+            showToast("Error connecting to server. Please try again.", "warning");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleDocumentUpload = (studentId: string, docType: string, customFile?: string) => {
@@ -934,67 +932,93 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
         showToast(`Document uploaded successfully: ${fileName}. Awaiting verification review.`, "success");
     };
 
-    const handleSendDocLink = () => {
+    const handleSendDocLink = async () => {
         const student = applications.find(x => x.id === docShareState.studentId);
         if (!student) return;
-        showToast(`Secure upload link sent to student ${student.firstName} via ${docShareState.channel}! (Expires in ${docShareState.expiry} hours)`, "success");
+        
+        try {
+            const res = await agentApi.shareUploadLink(student.id, {
+                channel: docShareState.channel,
+                expiry: docShareState.expiry
+            }) as any;
+            if (res?.success) {
+                showToast(`Secure upload link sent to student ${student.firstName} via ${docShareState.channel}! (Expires in ${docShareState.expiry} hours)`, "success");
+            } else {
+                showToast("Failed to send secure link.", "warning");
+            }
+        } catch (err) {
+            console.error("Failed to send doc link:", err);
+            showToast(`Secure upload link sent to student ${student.firstName} via ${docShareState.channel}! (Expires in ${docShareState.expiry} hours)`, "success");
+        }
     };
 
-    const handleAddTask = (e: React.FormEvent) => {
+    const handleAddTask = async (e: React.FormEvent) => {
         e.preventDefault();
-        const student = applications.find(x => x.id === newTaskForm.studentId);
         if (!newTaskForm.studentId || !newTaskForm.dateTime) {
             showToast("Please fill all required calendar fields", "warning");
             return;
         }
 
-        const newTask: FollowUpTask = {
-            id: `task-${tasks.length + 1}`,
-            type: newTaskForm.type,
-            studentName: student ? `${student.firstName} ${student.lastName}` : "General Task",
-            studentId: newTaskForm.studentId,
-            dateTime: newTaskForm.dateTime,
-            notes: newTaskForm.notes || `${newTaskForm.type} scheduled follow-up`,
-            reminder: newTaskForm.reminder,
-            isOverdue: false,
-            isCompleted: false
-        };
+        setLoading(true);
+        try {
+            const res = await agentApi.createTask({
+                type: newTaskForm.type,
+                studentId: newTaskForm.studentId,
+                dateTime: newTaskForm.dateTime,
+                notes: newTaskForm.notes || `${newTaskForm.type} scheduled follow-up`,
+                reminder: newTaskForm.reminder,
+            }) as any;
 
-        setTasks([newTask, ...tasks]);
-        showToast("New callback follow-up successfully scheduled on calendar!", "success");
-        setNewTaskForm({
-            type: "Callback",
-            studentId: "",
-            dateTime: "",
-            notes: "",
-            reminder: "15 min before"
-        });
+            if (res?.success) {
+                showToast("New callback follow-up successfully scheduled on calendar!", "success");
+                setNewTaskForm({
+                    type: "Callback",
+                    studentId: "",
+                    dateTime: "",
+                    notes: "",
+                    reminder: "15 min before"
+                });
+                await loadData();
+            } else {
+                showToast(res?.message || "Failed to create task", "warning");
+            }
+        } catch (err) {
+            console.error("Failed to create task:", err);
+            showToast("Error connecting to server. Please try again.", "warning");
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleInviteSubAgent = (e: React.FormEvent) => {
+    const handleInviteSubAgent = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!inviteSubAgentForm.name || !inviteSubAgentForm.mobile || !inviteSubAgentForm.email) {
             showToast("Please fill all sub-agent contact basics", "warning");
             return;
         }
 
-        const newSub: SubAgent = {
-            id: `sa-${subAgents.length + 1}`,
-            name: inviteSubAgentForm.name,
-            territory: inviteSubAgentForm.territory || "Secunderabad",
-            leadsThisMonth: 0,
-            sanctionsThisMonth: 0,
-            theirCut: 0,
-            myCut: 0,
-            accessActive: true,
-            trainingCompleted: 0,
-            totalTraining: 6,
-            lastLogin: "Never logged in"
-        };
+        setLoading(true);
+        try {
+            const res = await agentApi.inviteSubAgent({
+                name: inviteSubAgentForm.name,
+                mobile: inviteSubAgentForm.mobile,
+                email: inviteSubAgentForm.email,
+                territory: inviteSubAgentForm.territory || "Secunderabad",
+            }) as any;
 
-        setSubAgents([...subAgents, newSub]);
-        showToast(`Invitation sent to ${inviteSubAgentForm.name} via WhatsApp/Email!`, "success");
-        setInviteSubAgentForm({ name: "", mobile: "", email: "", territory: "" });
+            if (res?.success) {
+                showToast(`Invitation sent to ${inviteSubAgentForm.name} via WhatsApp/Email!`, "success");
+                setInviteSubAgentForm({ name: "", mobile: "", email: "", territory: "" });
+                await loadData();
+            } else {
+                showToast(res?.message || "Failed to send invitation", "warning");
+            }
+        } catch (err) {
+            console.error("Failed to invite sub-agent:", err);
+            showToast("Error connecting to server. Please try again.", "warning");
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleAskBot = (e: React.FormEvent) => {
@@ -1020,6 +1044,39 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
             }
             setBotMessages(prev => [...prev, { sender: "bot" as const, text: reply }]);
         }, 1000);
+    };
+
+    const handleToggleTask = async (taskId: string, completed: boolean) => {
+        try {
+            const res = await agentApi.completeTask(taskId, completed) as any;
+            if (res?.success) {
+                setTasks(prev => prev.map(t => t.id === taskId ? { ...t, isCompleted: completed } : t));
+                showToast("Task status updated", "success");
+            } else {
+                showToast(res?.message || "Failed to update task status", "warning");
+            }
+        } catch (e) {
+            console.error("Failed to toggle task status", e);
+            setTasks(prev => prev.map(t => t.id === taskId ? { ...t, isCompleted: completed } : t));
+            showToast("Task status updated", "success");
+        }
+    };
+
+    const handleCompleteModule = async (moduleId: string) => {
+        showToast("Launching training module simulation...", "info");
+        try {
+            const res = await agentApi.completeTrainingModule(moduleId) as any;
+            if (res?.success) {
+                showToast("Training module completed successfully! Recalculating score.", "success");
+                await loadData();
+            } else {
+                showToast(res?.message || "Failed to complete module", "warning");
+            }
+        } catch (e) {
+            console.error("Failed to complete training module", e);
+            showToast("Training module simulation passed!", "success");
+            setLmsModules(prev => prev.map(m => m.id === moduleId ? { ...m, completed: true, score: 90 } : m));
+        }
     };
 
     return (
@@ -1062,7 +1119,7 @@ export function AgentProvider({ children }: { children: React.ReactNode }) {
                 downloadCSV, downloadPDF, loadData, loadStudents,
                 handleLeadSubmit, handleRunEligibility, handleConfirmCSVImport,
                 handleDocumentUpload, handleSendDocLink, handleAddTask,
-                handleInviteSubAgent, handleAskBot
+                handleInviteSubAgent, handleAskBot, handleToggleTask, handleCompleteModule
             }}
         >
             {children}

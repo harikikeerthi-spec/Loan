@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAgent } from "../../AgentContext";
+import { agentApi } from "@/lib/api";
 
 interface PageProps {
     params: {
@@ -21,9 +22,74 @@ export default function AgentStudentDetail({ params }: PageProps) {
         handleDocumentUpload
     } = useAgent();
 
-    const selectedStudent = useMemo(() => {
-        return applications.find(x => x.id === studentId);
-    }, [applications, studentId]);
+    const [selectedStudent, setSelectedStudent] = useState<any>(null);
+    const [loadingDetail, setLoadingDetail] = useState(true);
+
+    const loadDetail = async () => {
+        setLoadingDetail(true);
+        try {
+            const apiApp = await agentApi.getLeadDetail(studentId) as any;
+            if (apiApp && apiApp.id) {
+                const projected = (parseFloat(apiApp.amount) || 0) * 0.007;
+                const mappedStudent = {
+                    id: apiApp.id,
+                    userId: apiApp.userId || apiApp.user?.id,
+                    applicationNumber: apiApp.applicationNumber || `VL-APP-2026-${String(apiApp.id).slice(-5)}`,
+                    firstName: apiApp.firstName || apiApp.user?.firstName || "Student",
+                    lastName: apiApp.lastName || apiApp.user?.lastName || "",
+                    email: apiApp.email || apiApp.user?.email || "",
+                    phoneNumber: apiApp.phoneNumber || apiApp.phone || apiApp.user?.phoneNumber || "",
+                    dob: apiApp.dateOfBirth || apiApp.user?.dateOfBirth || "2000-01-01",
+                    city: apiApp.city || "Hyderabad",
+                    state: apiApp.state || "Telangana",
+                    loanType: apiApp.loanType || "Domestic",
+                    courseName: apiApp.courseName || "Undergraduate",
+                    collegeName: apiApp.collegeName || apiApp.universityName || "State University",
+                    courseStartDate: apiApp.courseStartDate || "2026-07-01",
+                    amount: parseFloat(apiApp.amount) || 0,
+                    status: apiApp.status || "pending",
+                    stage: apiApp.stage || "application_submitted",
+                    bank: apiApp.bank || "Pending Partner",
+                    commissionRate: apiApp.commissionRate || 0.70,
+                    projectedCommission: apiApp.projectedCommission || projected,
+                    lastUpdated: apiApp.updatedAt ? new Date(apiApp.updatedAt).toLocaleDateString() : "N/A",
+                    documents: (apiApp.documents || []).map((d: any) => ({
+                        docType: d.docType,
+                        docName: d.name || d.docType.replace(/_/g, " ").toUpperCase(),
+                        status: d.status || "pending",
+                        uploadedBy: d.uploadedBy || "Student",
+                        version: d.version || "v1",
+                        rejectionReason: d.rejectionReason || ""
+                    })),
+                    journey: apiApp.journey || [
+                        { date: "N/A", title: "Lead Submitted", desc: "Submitted via Agent Network", done: true }
+                    ],
+                    bankStatus: apiApp.bankStatus || {
+                        product: apiApp.bank ? `${apiApp.bank} Scholar Scheme` : "Pending Scheme",
+                        refNumber: `REF-${String(apiApp.id).slice(-6).toUpperCase()}`,
+                        submittedOn: "N/A",
+                        tatExpected: "10 working days",
+                        queryText: apiApp.remarks
+                    },
+                    communicationLog: apiApp.communicationLog || []
+                };
+                setSelectedStudent(mappedStudent);
+            } else {
+                const local = applications.find(x => x.id === studentId);
+                setSelectedStudent(local || null);
+            }
+        } catch (e) {
+            console.error("Failed to load lead detail, using local fallback", e);
+            const local = applications.find(x => x.id === studentId);
+            setSelectedStudent(local || null);
+        } finally {
+            setLoadingDetail(false);
+        }
+    };
+
+    useEffect(() => {
+        loadDetail();
+    }, [studentId, applications]);
 
     const statusColors: Record<string, string> = {
         pending: "bg-amber-50 text-amber-700 border-amber-100",
@@ -32,6 +98,16 @@ export default function AgentStudentDetail({ params }: PageProps) {
         disbursed: "bg-purple-50 text-purple-700 border-purple-100",
         rejected: "bg-red-50 text-red-700 border-red-100"
     };
+
+    if (loadingDetail) {
+        return (
+            <div className="py-20 text-center animate-pulse space-y-4">
+                <div className="w-16 h-16 rounded-[2rem] bg-gray-150 mx-auto" />
+                <div className="h-6 w-48 bg-gray-150 mx-auto rounded" />
+                <div className="h-4 w-64 bg-gray-150 mx-auto rounded" />
+            </div>
+        );
+    }
 
     if (!selectedStudent) {
         return (
@@ -94,7 +170,7 @@ export default function AgentStudentDetail({ params }: PageProps) {
                         <h3 className="font-display font-black text-lg text-gray-900 mb-8 uppercase tracking-tight">Application Journey Timeline</h3>
                         
                         <div className="relative border-l border-gray-150 pl-6 space-y-6 ml-3">
-                            {selectedStudent.journey.map((j, i) => (
+                            {selectedStudent.journey.map((j: any, i: number) => (
                                 <div key={i} className="relative">
                                     <div className={`absolute -left-[31px] top-0 w-4 h-4 rounded-full border-2 bg-white ${j.type === 'alert' ? 'border-rose-500 shadow-[0_0_8px_rgb(239,68,68,0.3)]' : 'border-indigo-600'}`} />
                                     <div className="text-left space-y-0.5">
@@ -114,11 +190,11 @@ export default function AgentStudentDetail({ params }: PageProps) {
                     <div id="documents" className="bg-white border border-[#6605c7]/10 p-8 rounded-[2.5rem] shadow-sm">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="font-display font-black text-lg text-gray-900 uppercase tracking-tight">Student Document Checklist</h3>
-                            <span className="text-xs font-black text-indigo-600">{selectedStudent.documents.filter(d => d.status === "verified").length} / {selectedStudent.documents.length} Verified</span>
+                            <span className="text-xs font-black text-indigo-600">{selectedStudent.documents.filter((d: any) => d.status === "verified").length} / {selectedStudent.documents.length} Verified</span>
                         </div>
                         
                         <div className="divide-y divide-gray-50">
-                            {selectedStudent.documents.length > 0 ? selectedStudent.documents.map((d, i) => (
+                            {selectedStudent.documents.length > 0 ? selectedStudent.documents.map((d: any, i: number) => (
                                 <div key={i} className="py-4 flex justify-between items-center">
                                     <div>
                                         <p className="text-sm font-black text-gray-900">{d.docName}</p>
@@ -209,8 +285,8 @@ export default function AgentStudentDetail({ params }: PageProps) {
                             <h3 className="text-[11px] font-black uppercase tracking-[0.25em] text-[#6605c7]/40 mb-6">💬 MESSAGES FROM STAFF</h3>
                             
                             <div className="space-y-4 text-xs max-h-[160px] overflow-y-auto no-scrollbar">
-                                {selectedStudent.communicationLog.map((log, i) => (
-                                    <div key={i} className="p-3 bg-gray-50 border border-gray-100 rounded-xl space-y-1.5">
+                                {selectedStudent.communicationLog.map((log: any, i: number) => (
+                                    <div key={i} className="p-3 bg-gray-50 border border-gray-100 rounded-xl space-y-1.5 font-sans">
                                         <div className="flex justify-between text-[9px] font-bold text-gray-400">
                                             <span>{log.sender}</span>
                                             <span>{log.timestamp}</span>

@@ -10,6 +10,11 @@ export default function AgentAnalytics() {
     const [leaderboard, setLeaderboard] = useState<any[]>([]);
     const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
 
+    // NPS Survey states
+    const [npsScore, setNpsScore] = useState<number | null>(null);
+    const [npsComment, setNpsComment] = useState("");
+    const [npsSubmitted, setNpsSubmitted] = useState(false);
+
     useEffect(() => {
         const fetchLeaderboard = async () => {
             setLoadingLeaderboard(true);
@@ -259,6 +264,29 @@ export default function AgentAnalytics() {
                         </div>
                     </div>
 
+                    {/* Monthly Trend Report Chart */}
+                    <div className="bg-white border border-[#6605c7]/10 p-8 rounded-[2.5rem] shadow-sm">
+                        <h3 className="font-display font-black text-xl text-gray-900 mb-2 uppercase tracking-tight">Monthly Referral Submissions Trend</h3>
+                        <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-6">Historical lead pipeline activity for the current calendar year</p>
+                        
+                        <div className="h-48 flex items-end justify-between gap-4 pt-4 border-b border-gray-100">
+                            {[
+                                { month: "Jan", count: 8, height: "16%" },
+                                { month: "Feb", count: 14, height: "28%" },
+                                { month: "Mar", count: 22, height: "44%" },
+                                { month: "Apr", count: 29, height: "58%" },
+                                { month: "May", count: 38, height: "76%" },
+                                { month: "Jun", count: 48, height: "96%" }
+                            ].map((m: any, i: number) => (
+                                <div key={i} className="flex-1 flex flex-col items-center gap-2 group cursor-pointer">
+                                    <span className="text-[9px] font-mono font-black text-[#6605c7] opacity-0 group-hover:opacity-100 transition-opacity duration-200">{m.count} Leads</span>
+                                    <div className="w-full bg-[#6605c7]/10 hover:bg-[#6605c7] rounded-t-lg transition-all duration-300 shadow-sm" style={{ height: m.height }} />
+                                    <span className="text-[10px] font-bold text-gray-500 uppercase pb-2">{m.month}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* Bank performance TAT reports */}
                     <div className="bg-white border border-[#6605c7]/10 p-8 rounded-[2.5rem] shadow-sm">
                         <h3 className="font-display font-black text-xl text-gray-900 mb-6 uppercase tracking-tight">Bank Performance & TAT Report</h3>
@@ -328,6 +356,60 @@ export default function AgentAnalytics() {
                                 ))
                             )}
                         </div>
+                    </div>
+
+                    {/* Agent NPS Feedback Form */}
+                    <div className="bg-white border border-[#6605c7]/10 p-8 rounded-[2.5rem] shadow-sm">
+                        <h3 className="font-display font-black text-lg text-gray-900 mb-2 uppercase tracking-tight">Lender Satisfaction Survey (NPS)</h3>
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-6">How satisfied are you with our bank partners' query resolution response times?</p>
+                        
+                        {npsSubmitted ? (
+                            <div className="p-5 bg-indigo-50 border border-indigo-100 rounded-2xl text-[#6605c7] text-xs text-center space-y-2">
+                                <span className="material-symbols-outlined text-[#6605c7] text-2xl">check_circle</span>
+                                <p className="font-bold">Thank you for your rating!</p>
+                                <p className="text-[10px] text-[#6605c7] uppercase font-bold tracking-wider">Your feedback helps us optimize SLA performance with lenders.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="flex justify-between gap-1">
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((score) => (
+                                        <button 
+                                            key={score} 
+                                            type="button"
+                                            onClick={() => setNpsScore(score)}
+                                            className={`w-7 h-7 rounded-full text-[10px] font-black flex items-center justify-center transition-all ${
+                                                npsScore === score 
+                                                    ? "bg-[#6605c7] text-white shadow-md shadow-[#6605c7]/20" 
+                                                    : "bg-gray-50 border border-gray-100 text-gray-600 hover:bg-gray-100"
+                                            }`}
+                                        >
+                                            {score}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="space-y-1">
+                                    <textarea 
+                                        rows={2} 
+                                        placeholder="Optional: Mention details of any bank TAT delays..." 
+                                        value={npsComment}
+                                        onChange={(e) => setNpsComment(e.target.value)}
+                                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-100 text-xs text-gray-800 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#6605c7]/15 transition-all"
+                                    />
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        if (npsScore === null) {
+                                            alert("Please choose a score rating before submitting.");
+                                            return;
+                                        }
+                                        setNpsSubmitted(true);
+                                    }}
+                                    className="w-full py-3.5 bg-[#6605c7] hover:bg-[#6605c7]/95 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-sm"
+                                >
+                                    Submit Rating
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {/* Rejections Reasons */}

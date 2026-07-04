@@ -19,7 +19,9 @@ export class FirebaseAuthService {
 
       try {
         // Handle the case where the private key might have escaped newlines
-        const formattedPrivateKey = privateKey.replace(/\\n/g, '\n');
+        let formattedPrivateKey = privateKey.replace(/\\n/g, '\n');
+        // Self-heal key: replace remaining literal backslashes with newlines
+        formattedPrivateKey = formattedPrivateKey.replace(/\\/g, '\n');
 
         admin.initializeApp({
           credential: admin.credential.cert({
