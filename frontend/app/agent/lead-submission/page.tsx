@@ -384,8 +384,7 @@ export default function AgentLeadSubmission() {
                                         <div className="space-y-1">
                                             <label className="block text-[10px] font-bold text-gray-400 uppercase">Loan Type</label>
                                             <div className="flex gap-4 py-2 text-xs">
-                                                <label className="flex items-center gap-2 font-medium cursor-pointer"><input type="radio" name="loanType" checked={leadForm.loanType === "Domestic"} onChange={() => setLeadForm({ ...leadForm, loanType: "Domestic" })} /> Domestic</label>
-                                                <label className="flex items-center gap-2 font-medium cursor-pointer"><input type="radio" name="loanType" checked={leadForm.loanType === "Abroad"} onChange={() => setLeadForm({ ...leadForm, loanType: "Abroad" })} /> Abroad</label>
+                                                <label className="flex items-center gap-2 font-medium cursor-pointer"><input type="radio" name="loanType" checked={leadForm.loanType === "Abroad"} readOnly /> Abroad</label>
                                             </div>
                                         </div>
                                         <div className="space-y-1">
